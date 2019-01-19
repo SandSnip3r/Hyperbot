@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{70ce7ce5-216c-4f80-a521-9dd4469638d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common\detours">
+      <UniqueIdentifier>{18a779ed-105f-4f4f-b9b0-2e2045dbc2c1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="loaderDll.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\BlowFish.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\Common.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\pk2Reader.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\Silkroad.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\detours\creatwth.cpp">
+      <Filter>common\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\detours\detours.cpp">
+      <Filter>common\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\detours\disasm.cpp">
+      <Filter>common\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\detours\image.cpp">
+      <Filter>common\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\detours\modules.cpp">
+      <Filter>common\detours</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\common\BlowFish.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\Common.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\pk2Reader.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\Silkroad.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\detours\detours.h">
+      <Filter>common\detours</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
