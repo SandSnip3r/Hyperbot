@@ -724,14 +724,6 @@ void SilkroadSecurity::Send( uint16_t opcode, const StreamUtility & data, uint8_
 	{
 		throw( std::runtime_error( "[SilkroadSecurity::Send] Handshake packets cannot be sent through this function.") );
 	}
-	std::cout << "[True inject]: ";
-	printf("%02X ", opcode & 0xFF);
-	printf("%02X ", opcode >>   8);
-	StreamUtility datanew = data;
-	for (auto i : datanew.GetStreamVector()) {
-		printf("%02X ", i);
-	}
-	std::cout << '\n';
 	m_data->m_outgoing_packets.push_back( PacketContainer( opcode, data, encrypted, massive ) );
 }
 
