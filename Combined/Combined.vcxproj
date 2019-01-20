@@ -19,12 +19,18 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\common\Common.cpp" />
+    <ClCompile Include="..\common\pk2Reader.cpp" />
+    <ClCompile Include="..\common\Silkroad.cpp" />
     <ClCompile Include="src\phConnector.cpp" />
     <ClCompile Include="src\shared\blowfish.cpp" />
     <ClCompile Include="src\shared\silkroad_security.cpp" />
     <ClCompile Include="src\shared\stream_utility.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\common\Common.h" />
+    <ClInclude Include="..\common\pk2Reader.h" />
+    <ClInclude Include="..\common\Silkroad.h" />
     <ClInclude Include="src\shared\blowfish.h" />
     <ClInclude Include="src\shared\silkroad_security.h" />
     <ClInclude Include="src\shared\stream_utility.h" />
@@ -41,7 +47,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -99,7 +105,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>

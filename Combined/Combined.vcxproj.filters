@@ -16,6 +16,9 @@
     <Filter Include="shared">
       <UniqueIdentifier>{152d534e-a214-4f05-b4be-621d253671da}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{6ba22773-b148-4d8f-9ba1-31ea255a51e6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\phConnector.cpp">
@@ -30,6 +33,15 @@
     <ClCompile Include="src\shared\stream_utility.cpp">
       <Filter>shared</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\Common.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\pk2Reader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\Silkroad.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\shared\blowfish.h">
@@ -40,6 +52,15 @@
     </ClInclude>
     <ClInclude Include="src\shared\stream_utility.h">
       <Filter>shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\Common.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\pk2Reader.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\Silkroad.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

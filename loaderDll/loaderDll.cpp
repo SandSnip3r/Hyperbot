@@ -33,8 +33,8 @@ bool bHookInput = true;
 bool bPatchKsroImgCode = false;
 std::string defaultLoginIP = "127.0.0.1";
 std::string defaultWorldIP = "127.0.0.1";
-std::string defaultLoginPort = "15779";
-std::string defaultWorldPort = "15779";
+std::string defaultLoginPort = "15780";
+std::string defaultWorldPort = "15780";
 
 //-------------------------------------------------------------------------
 

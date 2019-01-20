@@ -20,6 +20,15 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 
+//===
+#include <windows.h>
+#include <windowsx.h>
+#include "../../Common/Common.h"
+#include "../../Common/pk2Reader.h"
+#include "shared/blowfish.h"
+#include "../../Common/Silkroad.h"
+#include <sstream>
+
 //Handles network events
 boost::asio::io_service io_service;
 
@@ -54,6 +63,56 @@ namespace Config
 	uint32_t DataMaxSize;		//The maximum number of bytes to receive in one packet
 };
 
+using namespace edxLabs;
+
+class Loader {
+private:
+	std::string dllPath;
+	const std::string kSilkroadPath;
+	SilkroadData sroData;
+	std::string arguments;
+	std::string clientPath;
+public:
+	Loader(const std::string &silkroadPath) : kSilkroadPath(silkroadPath) {
+		dllPath = GetAbsoluteDirectoryPath() + "../Debug/loaderDll.dll";
+		sroData.path = kSilkroadPath;
+		LoadPath(sroData.path, sroData); //TODO: Check result
+		std::stringstream args;
+		args << "0 /" << (int)sroData.divInfo.locale << " " << 0 << " " << 0;
+		arguments = args.str();
+		std::string pathToClient = sroData.path;
+		//TODO: Use a better filesystem utility
+		clientPath = kSilkroadPath + "sro_client.exe";
+		//TODO: Check this exists
+	}
+	void launch() {
+		WSADATA wsaData = { 0 };
+		WSAStartup(MAKEWORD(2, 2), &wsaData);
+		STARTUPINFOA si = { 0 };
+		PROCESS_INFORMATION pi = { 0 };
+
+		// Launch the client in a suspended state so we can patch it
+		bool result = CreateSuspendedProcess(clientPath, arguments, si, pi);
+		if (result == false) {
+			throw std::runtime_error("Could not start \"sro_client.exe\"");
+		}
+		std::cout << "Launched client\n";
+
+		// Inject the DLL so we can have some fun
+		result = (FALSE != InjectDLL(pi.hProcess, dllPath.c_str(), "OnInject", static_cast<DWORD>(GetEntryPoint(clientPath.c_str())), false));
+		if (result == false) {
+			TerminateThread(pi.hThread, 0);
+			throw std::runtime_error("Could not inject into the Silkroad client process");
+		}
+		std::cout << "Injected DLL\n";
+
+		// Finally resume the client.
+		ResumeThread(pi.hThread);
+		ResumeThread(pi.hProcess);
+		WSACleanup();
+	}
+};
+
 class BotConnection
 {
 private:
@@ -69,6 +128,9 @@ private:
 		}
 	};
 
+	//Loader that holds sro process
+	Loader *loader;
+
 	//Accepts TCP connections
 	boost::asio::ip::tcp::acceptor acceptor;
 
@@ -83,6 +145,16 @@ private:
 			//The newly created socket will be used when something connects
 			boost::shared_ptr<boost::asio::ip::tcp::socket> s(boost::make_shared<boost::asio::ip::tcp::socket>(io_service));
 			acceptor.async_accept(*s, boost::bind(&BotConnection::HandleAccept, this, s, boost::asio::placeholders::error));
+		}
+		std::cout << "PostAccept, Loadering\n";
+		std::string kSilkroadPath = "C:\\Program Files (x86)\\AtomixOnline\\";
+		loader = new Loader(kSilkroadPath);
+		try {
+			loader->launch();
+		}
+		catch (std::exception &ex) {
+			std::cout << "Loader::launch failed: " << ex.what() << '\n';
+			delete loader;
 		}
 	}
 
@@ -661,7 +733,7 @@ private:
 									const char *text = exepathStr.c_str();
 									wchar_t wtext[200];
 									mbstowcs(wtext, text, strlen(text) + 1);//Plus null
-									LPWSTR ptr = wtext;
+									LPSTR ptr = _strdup(exepathStr.c_str());
 									if (CreateProcess(NULL, ptr, NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo))
 									{
 										std::cout << "Created process\n";
@@ -798,6 +870,7 @@ public:
 
 int main(int argc, char* argv[])
 {
+	bool once=true;
 	std::cout << "phConnector Open Source" << std::endl;
 	std::cout << "Visit ProjectHax.com or github.com/projecthax to see our other releases." << std::endl << std::endl;
 

@@ -2,7 +2,7 @@
 #include <windows.h>
 #include "pk2Reader.h"
 #include "common.h"
-#include "BlowFish.h"
+#include "../Combined//src/shared/blowfish.h"
 #include <algorithm>
 using namespace edxLabs;
 
@@ -125,9 +125,10 @@ bool LoadPath(std::string path, SilkroadData & obj)
 		BYTE * outBuffer = new BYTE[me.size];
 		memcpy(outBuffer, me.data, me.size);
 		DWORD inputSize = *((LPDWORD)(outBuffer));
-		cBlowFish bf;
+		Blowfish bf;
 		bf.Initialize((LPBYTE)"SILKROADVERSION", 8);
-		bf.Decode(outBuffer + 4, outBuffer + 4, inputSize);
+		// bf.Decode(outBuffer + 4, outBuffer + 4, inputSize);
+		bf.Decode(outBuffer + 4, inputSize, outBuffer + 4, inputSize);
 		obj.version = atoi((char*)(outBuffer + 4));
 		delete [] outBuffer;
 	}

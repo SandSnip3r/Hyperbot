@@ -6,7 +6,7 @@
 
 #include "pk2Reader.h"
 #include <windows.h>
-#include "BlowFish.h"
+#include "../Combined/src/shared/blowfish.h"
 #include <queue>
 #include <stack>
 #include <list>
@@ -69,7 +69,7 @@ struct pk2ReaderData
 	DWORD dwSizeHigh;
 
 	// Our Blowfish decoding object
-	cBlowFish blowFish;
+	Blowfish blowFish;
 
 	// Store a pointer to the first item
 	TUINT64 rootEntryIndex;
@@ -322,7 +322,8 @@ void pk2ReaderData::ForEachPK2EntryDo_BFS(TUINT64 currentOffset, pk2EntryInterna
 			dwLastLow = dwLow;
 		}
 		currentEntry = (pk2EntryPrivate *)(pMappedFileBase + currentOffset.low - dwLow);
-		blowFish.Decode((BYTE *)currentEntry, (BYTE *)&tmpEntryPrivate, sizeof(pk2EntryPrivate));
+		// blowFish.Decode((BYTE *)currentEntry, (BYTE *)&tmpEntryPrivate, sizeof(pk2EntryPrivate));
+		blowFish.Decode((void*)currentEntry, sizeof(pk2EntryPrivate), (void*)&tmpEntryPrivate, sizeof(pk2EntryPrivate));
 
 		tmpEntry.type = tmpEntryPrivate.type;
 		tmpEntry.name = tmpEntryPrivate.name;
@@ -430,7 +431,8 @@ void pk2ReaderData::ForEachPK2EntryDo_DFS(TUINT64 currentOffset, pk2EntryInterna
 			dwLastLow = dwLow;
 		}
 		currentEntry = (pk2EntryPrivate *)(pMappedFileBase + currentOffset.low - dwLow);
-		blowFish.Decode((BYTE *)currentEntry, (BYTE *)&tmpEntryPrivate, sizeof(pk2EntryPrivate));
+		// blowFish.Decode((BYTE *)currentEntry, (BYTE *)&tmpEntryPrivate, sizeof(pk2EntryPrivate));
+		blowFish.Decode((void*)currentEntry, sizeof(currentEntry), (void*)&tmpEntryPrivate, sizeof(pk2EntryPrivate));
 
 		tmpEntry.type = tmpEntryPrivate.type;
 		tmpEntry.name = tmpEntryPrivate.name;
