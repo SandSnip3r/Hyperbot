@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <fstream>
 #include <string>
+#include <random>
+#include <vector>
+#include <chrono>
 #include <list>
 
 #include "shared/silkroad_security.h"
@@ -457,9 +460,68 @@ public:
 	}
 };
 
+class PacketLogger {
+private:
+	const std::string directoryPath;
+	std::string filePath;
+	std::ofstream logfile;
+	bool logToConsole{true};
+	int64_t getMsSinceEpoch() {
+		std::chrono::time_point<std::chrono::system_clock> p2 = std::chrono::system_clock::now();
+		return std::chrono::duration_cast<std::chrono::milliseconds>(p2.time_since_epoch()).count();
+	}
+public:
+	PacketLogger(const std::string &logDirectoryPath) : directoryPath(logDirectoryPath) {
+		std::random_device rd;
+		std::vector<int> seeds;
+		seeds.reserve(std::mt19937::state_size);
+		for (int i=0; i<std::mt19937::state_size; ++i) {
+			seeds.push_back(rd());
+		}
+		std::seed_seq ss(seeds.begin(), seeds.end());
+		std::mt19937 eng(ss);
+		std::uniform_int_distribution<int> dist(0,999999999);
+		const std::string randomFilename = std::to_string(dist(eng));
+		filePath = directoryPath + "\\" + std::to_string(getMsSinceEpoch()) + ".txt";
+		logfile.open(filePath);
+		if (!logfile) {
+			throw std::runtime_error("Unable to initialize logfile \""+filePath+"\"");
+		}
+	}
+	enum class Direction { ClientToServer, ServerToClient };
+	void logPacket(const PacketContainer &packet, bool blocked, Direction direction) {
+		if (!logfile) {
+			throw std::runtime_error("Log file \""+filePath+"\" problem");
+		}
+		std::stringstream ss;
+		ss << getMsSinceEpoch() << ',';
+		ss << blocked << ',';
+		ss << (int)packet.encrypted << ',';
+		ss << (int)packet.massive << ',';
+		if (direction == Direction::ClientToServer) {
+			ss << "C,";
+		} else if (direction == Direction::ServerToClient) {
+			ss << "S,";
+		}
+		ss << (int)packet.opcode;
+		StreamUtility stream = packet.data;
+		int byteCount = stream.GetStreamSize();
+		for (int i=0; i<byteCount; ++i) {
+			ss << ',' << (int)stream.Read<uint8_t>();
+		}
+		ss << '\n';
+		logfile << ss.str();
+		if (logToConsole) {
+			std::cout << ss.str();
+		}
+		ss << std::flush;
+	}
+};
+
 //Networking class (handles connections)
 class Network {
 private:
+	PacketLogger packetLogger{"C:\\Users\\Victor\\Documents\\Development\\packet-logs\\"};
 
 	//Accepts TCP connections
 	boost::asio::ip::tcp::acceptor acceptor;
@@ -468,8 +530,8 @@ private:
 	boost::shared_ptr<boost::asio::deadline_timer> timer;
 
 	//Silkroad connections
-	SilkroadConnection Silkroad;
-	SilkroadConnection Joymax;
+	SilkroadConnection clientConnection;
+	SilkroadConnection serverConnection;
 
 	//Starts accepting new connections
 	void PostAccept(uint32_t count = 1) {
@@ -485,18 +547,18 @@ private:
 		//Error check
 		if(!error) {
 			//Close active connections
-			Silkroad.Close();
-			Joymax.Close();
+			clientConnection.Close();
+			serverConnection.Close();
 
 			//Disable nagle
 			s->set_option(boost::asio::ip::tcp::no_delay(true));
 
-			Silkroad.Initialize(s);
-			Silkroad.security->GenerateHandshake();
+			clientConnection.Initialize(s);
+			clientConnection.security->GenerateHandshake();
 
 			//Connect to the gateway server
 			std::cout << "Connecting to " << (AgentConnect ? AgentIP : Config::GatewayIP) << ":" << (AgentConnect ? AgentPort : Config::GatewayPort) << std::endl;
-			boost::system::error_code ec = Joymax.Connect(AgentConnect ? AgentIP : Config::GatewayIP, AgentConnect ? AgentPort : Config::GatewayPort);
+			boost::system::error_code ec = serverConnection.Connect(AgentConnect ? AgentIP : Config::GatewayIP, AgentConnect ? AgentPort : Config::GatewayPort);
 
 			//Error check
 			if(ec) {
@@ -504,10 +566,10 @@ private:
 				std::cout << ec.message() << std::endl;
 
 				//Silkroad connection is no longer needed
-				Silkroad.Close();
+				clientConnection.Close();
 			} else {
-				Silkroad.PostRead();
-				Joymax.PostRead();
+				clientConnection.PostRead();
+				serverConnection.PostRead();
 			}
 
 			//Next connection goes to the gateway server
@@ -520,12 +582,12 @@ private:
 
 	void ProcessPackets(const boost::system::error_code & error) {
 		if(!error) {
-			if(Silkroad.security) {
-				while(Silkroad.security->HasPacketToRecv()) {
+			if(clientConnection.security) {
+				while(clientConnection.security->HasPacketToRecv()) {
 					bool forward = true;
 
 					//Retrieve the packet out of the security api
-					PacketContainer p = Silkroad.security->GetPacketToRecv();
+					PacketContainer p = clientConnection.security->GetPacketToRecv();
 
 					//Check the blocked list
 					if(BlockedOpcodes.find(p.opcode) != BlockedOpcodes.end()) {
@@ -537,26 +599,29 @@ private:
 						forward = false;
 					}
 
+					//Log packet
+					packetLogger.logPacket(p, !forward, PacketLogger::Direction::ClientToServer);
+
 					//Forward the packet to Joymax
-					if(forward && Joymax.security) {
+					if(forward && serverConnection.security) {
 						Bot->Send(p, 1);
-						Joymax.Inject(p);
+						serverConnection.Inject(p);
 					}
 				}
 
 				//Send packets that are currently in the security api
-				while(Silkroad.security->HasPacketToSend()) {
-					if(!Silkroad.Send(Silkroad.security->GetPacketToSend()))
+				while(clientConnection.security->HasPacketToSend()) {
+					if(!clientConnection.Send(clientConnection.security->GetPacketToSend()))
 						break;
 				}
 			}
 
-			if(Joymax.security) {
-				while(Joymax.security->HasPacketToRecv()) {
+			if(serverConnection.security) {
+				while(serverConnection.security->HasPacketToRecv()) {
 					bool forward = true;
 
 					//Retrieve the packet out of the security api
-					PacketContainer p = Joymax.security->GetPacketToRecv();
+					PacketContainer p = serverConnection.security->GetPacketToRecv();
 
 					//Check the blocked list
 					if(BlockedOpcodes.find(p.opcode) != BlockedOpcodes.end())
@@ -585,31 +650,34 @@ private:
 							w.Write<uint16_t>(Config::BindPort);				//Port
 
 							//Inject the packet
-							Silkroad.Inject(p.opcode, w);
+							clientConnection.Inject(p.opcode, w);
 
 							//Inject the packet immediately
-							while(Silkroad.security->HasPacketToSend())
-								Silkroad.Send(Silkroad.security->GetPacketToSend());
+							while(clientConnection.security->HasPacketToSend())
+								clientConnection.Send(clientConnection.security->GetPacketToSend());
 
 							//Close active connections
-							Silkroad.Close();
-							Joymax.Close();
+							clientConnection.Close();
+							serverConnection.Close();
 
 							//Security pointer is now valid so skip to the end
 							goto Post;
 						}
 					}
 
+					//Log packet
+					packetLogger.logPacket(p, !forward, PacketLogger::Direction::ServerToClient);
+
 					//Forward the packet to Silkroad
-					if(forward && Silkroad.security) {
+					if(forward && clientConnection.security) {
 						Bot->Send(p, 0);
-						Silkroad.Inject(p);
+						clientConnection.Inject(p);
 					}
 				}
 
 				//Send packets that are currently in the security api
-				while(Joymax.security->HasPacketToSend()) {
-					if(!Joymax.Send(Joymax.security->GetPacketToSend()))
+				while(serverConnection.security->HasPacketToSend()) {
+					if(!serverConnection.Send(serverConnection.security->GetPacketToSend()))
 						break;
 				}
 			}
@@ -627,8 +695,8 @@ public:
 	Network(uint16_t port) : acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
 		timer(boost::make_shared<boost::asio::deadline_timer>(io_service)) {
 		//Bind inject functions
-		InjectJoymax = boost::bind(&SilkroadConnection::Inject, &Joymax, _1, _2, _3);
-		InjectSilkroad = boost::bind(&SilkroadConnection::Inject, &Silkroad, _1, _2, _3);
+		InjectJoymax = boost::bind(&SilkroadConnection::Inject, &serverConnection, _1, _2, _3);
+		InjectSilkroad = boost::bind(&SilkroadConnection::Inject, &clientConnection, _1, _2, _3);
 
 		//Start accepting connections
 		PostAccept();
@@ -653,8 +721,8 @@ public:
 		if(timer)
 			timer->cancel(ec);
 
-		Silkroad.Close();
-		Joymax.Close();
+		clientConnection.Close();
+		serverConnection.Close();
 	}
 };
 
