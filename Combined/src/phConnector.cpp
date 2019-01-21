@@ -10,6 +10,7 @@
 
 #include "shared/silkroad_security.h"
 #include "shared/stream_utility.h"
+#include "packetLogger.hpp"
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
@@ -457,64 +458,6 @@ public:
 		}
 
 		return true;
-	}
-};
-
-class PacketLogger {
-private:
-	const std::string directoryPath;
-	std::string filePath;
-	std::ofstream logfile;
-	bool logToConsole{true};
-	int64_t getMsSinceEpoch() {
-		std::chrono::time_point<std::chrono::system_clock> p2 = std::chrono::system_clock::now();
-		return std::chrono::duration_cast<std::chrono::milliseconds>(p2.time_since_epoch()).count();
-	}
-public:
-	PacketLogger(const std::string &logDirectoryPath) : directoryPath(logDirectoryPath) {
-		std::random_device rd;
-		std::vector<int> seeds;
-		seeds.reserve(std::mt19937::state_size);
-		for (int i=0; i<std::mt19937::state_size; ++i) {
-			seeds.push_back(rd());
-		}
-		std::seed_seq ss(seeds.begin(), seeds.end());
-		std::mt19937 eng(ss);
-		std::uniform_int_distribution<int> dist(0,999999999);
-		const std::string randomFilename = std::to_string(dist(eng));
-		filePath = directoryPath + "\\" + std::to_string(getMsSinceEpoch()) + ".txt";
-		logfile.open(filePath);
-		if (!logfile) {
-			throw std::runtime_error("Unable to initialize logfile \""+filePath+"\"");
-		}
-	}
-	enum class Direction { ClientToServer, ServerToClient };
-	void logPacket(const PacketContainer &packet, bool blocked, Direction direction) {
-		if (!logfile) {
-			throw std::runtime_error("Log file \""+filePath+"\" problem");
-		}
-		std::stringstream ss;
-		ss << getMsSinceEpoch() << ',';
-		ss << blocked << ',';
-		ss << (int)packet.encrypted << ',';
-		ss << (int)packet.massive << ',';
-		if (direction == Direction::ClientToServer) {
-			ss << "C,";
-		} else if (direction == Direction::ServerToClient) {
-			ss << "S,";
-		}
-		ss << (int)packet.opcode;
-		StreamUtility stream = packet.data;
-		int byteCount = stream.GetStreamSize();
-		for (int i=0; i<byteCount; ++i) {
-			ss << ',' << (int)stream.Read<uint8_t>();
-		}
-		ss << '\n';
-		logfile << ss.str();
-		if (logToConsole) {
-			std::cout << ss.str();
-		}
-		ss << std::flush;
 	}
 };
 
