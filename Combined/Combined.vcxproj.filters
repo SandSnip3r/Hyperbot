@@ -42,6 +42,9 @@
     <ClCompile Include="..\common\Silkroad.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="src\packetLogger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\shared\blowfish.h">
@@ -61,6 +64,9 @@
     </ClInclude>
     <ClInclude Include="..\common\Silkroad.h">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\packetLogger.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

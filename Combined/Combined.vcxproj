@@ -22,6 +22,7 @@
     <ClCompile Include="..\common\Common.cpp" />
     <ClCompile Include="..\common\pk2Reader.cpp" />
     <ClCompile Include="..\common\Silkroad.cpp" />
+    <ClCompile Include="src\packetLogger.cpp" />
     <ClCompile Include="src\phConnector.cpp" />
     <ClCompile Include="src\shared\blowfish.cpp" />
     <ClCompile Include="src\shared\silkroad_security.cpp" />
@@ -31,6 +32,7 @@
     <ClInclude Include="..\common\Common.h" />
     <ClInclude Include="..\common\pk2Reader.h" />
     <ClInclude Include="..\common\Silkroad.h" />
+    <ClInclude Include="src\packetLogger.hpp" />
     <ClInclude Include="src\shared\blowfish.h" />
     <ClInclude Include="src\shared\silkroad_security.h" />
     <ClInclude Include="src\shared\stream_utility.h" />
