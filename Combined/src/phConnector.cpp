@@ -39,7 +39,7 @@ boost::asio::io_service io_service;
 //Agent server info
 std::string AgentIP;
 uint16_t AgentPort = 0;
-bool AgentConnect = false;
+bool connectToAgent = false;
 
 //Timer delay for processing packets
 #define PACKET_PROCESS_DELAY 10
@@ -499,13 +499,20 @@ private:
 			clientConnection.Initialize(s);
 			clientConnection.security->GenerateHandshake();
 
-			//Connect to the gateway server
-			std::cout << "Connecting to " << (AgentConnect ? AgentIP : Config::GatewayIP) << ":" << (AgentConnect ? AgentPort : Config::GatewayPort) << std::endl;
-			boost::system::error_code ec = serverConnection.Connect(AgentConnect ? AgentIP : Config::GatewayIP, AgentConnect ? AgentPort : Config::GatewayPort);
+			boost::system::error_code ec;
+			if (connectToAgent) {
+				//Connect to the agent server
+				std::cout << "Connecting to " << AgentIP << ":" << AgentPort << std::endl;
+				ec = serverConnection.Connect(AgentIP, AgentPort);
+			} else {
+				//Connect to the gateway server
+				std::cout << "Connecting to " << Config::GatewayIP << ":" << Config::GatewayPort << std::endl;
+				ec = serverConnection.Connect(Config::GatewayIP, Config::GatewayPort);
+			}
 
 			//Error check
 			if(ec) {
-				std::cout << "[Error] Unable to connect to " << (AgentConnect ? AgentIP : Config::GatewayIP) << ":" << (AgentConnect ? AgentPort : Config::GatewayPort) << std::endl;
+				std::cout << "[Error] Unable to connect to " << (connectToAgent ? AgentIP : Config::GatewayIP) << ":" << (connectToAgent ? AgentPort : Config::GatewayPort) << std::endl;
 				std::cout << ec.message() << std::endl;
 
 				//Silkroad connection is no longer needed
@@ -516,7 +523,7 @@ private:
 			}
 
 			//Next connection goes to the gateway server
-			AgentConnect = false;
+			connectToAgent = false;
 
 			//Post another accept
 			PostAccept();
@@ -579,7 +586,7 @@ private:
 							forward = false;
 							
 							//The next connection will go to the agent server
-							AgentConnect = true;
+							connectToAgent = true;
 
 							uint32_t LoginID = r.Read<uint32_t>();				//Login ID
 							AgentIP = r.Read_Ascii(r.Read<uint16_t>());			//Agent IP
