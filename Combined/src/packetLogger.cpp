@@ -46,7 +46,7 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
   ss << (int)blocked << ',';
   ss << (int)packet.encrypted << ',';
   ss << (int)packet.massive << ',';
-  ss << (int)packet.opcode << ' ';
+  ss << std::hex << packet.opcode << ' ';
   const int indentSize = ss.str().size();
   StreamUtility stream = packet.data;
   const auto &dataVector = stream.GetStreamVector();

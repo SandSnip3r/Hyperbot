@@ -14,6 +14,10 @@
 
 struct PacketContainer
 {
+	enum class Direction {
+		ClientToServer,
+		ServerToClient
+	};
 	uint16_t opcode;
 	StreamUtility data;
 	uint8_t encrypted;
