@@ -20,3 +20,15 @@ Lets first look at the entrypoint. `phConnector.cpp` (insert gratitudes) contain
 - Some security stuff is done to initiate the connection.
 - We first connect to the AgentServer. The client is probably asking for which ip to connect to for the game, known as the GatewayServer.
 - It looks like `ServerConnection::Connect()` is blocking?
+
+# Higher dumb-bot level
+
+## Abstract & Theory
+- The `Bot` has a real-time view into the packet stream between client and server.
+- The `Bot` can insert, remove, and modifiy any packet in the stream.
+- The `Bot` has the interface to theoretically be able to do anything any human player can do.
+
+## Code view
+- Within a `Session`, a `Bot` is constructed with a reference to `Proxy::inject()`. Incoming packets inside the proxy are given to `Bot::packetRecevied()`.
+- `Proxy::inject` provides a method to inject a packet either to the server to spoof client actions or to the client to spoof server.
+- `Bot::packetReceived` is where the main "brain" will connect. This is current lacking and is one of the next places for improvement.
