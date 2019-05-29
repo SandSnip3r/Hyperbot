@@ -1,6 +1,8 @@
 Packet topics:
 - Character movement
 - Item on ground
+- Monster spawn
+![Test](silkroad2.jpg)
 - Party invite/accept/dismiss/request/kick
 - Stall open/close
 - Update stat Str/Int
@@ -21,8 +23,6 @@ Packet topics:
 - Hp/Mp change
 - Exp/sp
 - Quit game
-- Monster spawn
 - Academy
 - Quests
 
-![Test](silkroad2.jpg)
