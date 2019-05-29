@@ -1,6 +1,8 @@
-Packet topics:
-- Character location and movement, items dropped on the ground, amd monsters' spawn, location, and health
+## Packet topics:
+### Character location and movement, items dropped on the ground, amd monsters' spawn, location, and health
 ![Test](silkroad2.jpg)
+
+
 - Party invite/accept/dismiss/request/kick
 - Stall open/close
 - Update stat Str/Int
