@@ -25,4 +25,4 @@ Packet topics:
 - Academy
 - Quests
 
-![Test](silkroad1.png)
+![Test](silkroad2.jpg)
