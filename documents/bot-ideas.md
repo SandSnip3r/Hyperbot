@@ -1,4 +1,4 @@
-#Intelligence ideas
+# Intelligence ideas
 
 ***
 ## Attacking players
