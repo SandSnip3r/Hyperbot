@@ -3,7 +3,8 @@
 Proxy::Proxy(std::function<bool(const PacketContainer&, PacketContainer::Direction)> packetHandlerFunction, uint16_t port) :
       packetHandlerFunction_(packetHandlerFunction), acceptor(ioService_, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
       timer(boost::make_shared<boost::asio::deadline_timer>(ioService_)) {
-
+  
+  std::cout << "Proxy constructed, listening on port " << port << '\n';
   //Start accepting connections
   PostAccept();
 
@@ -20,10 +21,12 @@ Proxy::~Proxy() {
 void Proxy::inject(PacketContainer &packet, PacketContainer::Direction direction) {
   if (direction == PacketContainer::Direction::ClientToServer) {
     if (serverConnection.security) {
+      packetLogger.logPacket(packet, false, PacketLogger::Direction::BotToServer);
       serverConnection.Inject(packet);
     }
-  } else if (direction == PacketContainer::Direction::ClientToServer) {
+  } else if (direction == PacketContainer::Direction::ServerToClient) {
     if (clientConnection.security) {
+      packetLogger.logPacket(packet, false, PacketLogger::Direction::BotToClient);
       clientConnection.Inject(packet);
     }
   }
@@ -31,6 +34,7 @@ void Proxy::inject(PacketContainer &packet, PacketContainer::Direction direction
 
 void Proxy::start() {
   //Start processing network events
+  std::cout << "Proxy starting\n";
   while(true) {
     try {
       //Run
@@ -53,7 +57,7 @@ void Proxy::start() {
   }
 }
 
-//Stops all networking objects
+// Stops all networking objects
 void Proxy::Stop() {
   boost::system::error_code ec;
   acceptor.close(ec);
@@ -66,7 +70,7 @@ void Proxy::Stop() {
   serverConnection.Close();
 }
 
-//Starts accepting new connections
+// Starts accepting new connections
 void Proxy::PostAccept(uint32_t count) {
   for(uint32_t x = 0; x < count; ++x) {
     //The newly created socket will be used when something connects
@@ -75,8 +79,9 @@ void Proxy::PostAccept(uint32_t count) {
   }
 }
 
-//Handles new connections
+// Handles new connections
 void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, const boost::system::error_code & error) {
+  std::cout << "Proxy received new connection\n";
   //Error check
   if(!error) {
     //Close active connections

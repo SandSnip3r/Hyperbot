@@ -1,6 +1,6 @@
 #include "silkroadConnection.hpp"
 
-std::string Config::GatewayIP{"login.atomixonline.com"};	//Gateway server IP/hostname to connect to
+std::string Config::GatewayIP{"93.158.239.40"};	//Gateway server IP/hostname to connect to
 uint16_t Config::GatewayPort{15779};											//Gateway server port
 uint16_t Config::BindPort{15780};													//Gateway server bind port
 uint16_t Config::BotBind{22580};													//The port the bot will connect to

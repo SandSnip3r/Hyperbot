@@ -4,7 +4,6 @@
 #include <iostream>
 
 Bot::Bot(std::function<void(PacketContainer&, PacketContainer::Direction)> injectionFunction) : injectionFunction_(injectionFunction), loginModule_(injectionFunction_) {
-
 }
 
 /* void Bot::configure(Config &config) {
@@ -16,6 +15,10 @@ bool Bot::packetReceived(const PacketContainer &packet, PacketContainer::Directi
   bool forwardPacket=true;
   Opcode packetOpcode = static_cast<Opcode>(packet.opcode);
   switch (packetOpcode) {
+    case Opcode::CLIENT_CAFE:
+      std::cout << "CLIENT_CAFE\n";
+      loginModule_.cafeSent();
+      break;
     case Opcode::LOGIN_CLIENT_INFO:
     // case Opcode::LOGIN_SERVER_INFO:
     // case Opcode::CLIENT_INFO:
@@ -189,9 +192,11 @@ bool Bot::packetReceived(const PacketContainer &packet, PacketContainer::Directi
       break;
     case Opcode::SERVER_LOGIN_RESULT:
       std::cout << "SERVER_LOGIN_RESULT\n";
+      loginModule_.serverLoginResultReceived(packet);
       break;
     case Opcode::SERVER_CHARACTER:
       std::cout << "SERVER_CHARACTER\n";
+      loginModule_.serverCharacterListReceived(packet);
       break;
     case Opcode::SERVER_CHARDATA:
       std::cout << "SERVER_CHARDATA\n";
@@ -397,6 +402,9 @@ bool Bot::packetReceived(const PacketContainer &packet, PacketContainer::Directi
       break;
     case Opcode::SERVER_CHARACTER_STUCK:
       std::cout << "SERVER_CHARACTER_STUCK\n";
+      break;
+    default:
+      std::cout << "UNKNOWN\n";
       break;
   }
   return forwardPacket;

@@ -162,7 +162,10 @@ enum class Opcode {
   SERVER_REPAIR = 0xB03E,
   SERVER_ITEM_DURABILITY_CHANGE = 0x3052,
 
-  SERVER_CHARACTER_STUCK = 0xB023
+  SERVER_CHARACTER_STUCK = 0xB023,
+
+  //Evolin specific packets
+  CLIENT_CAFE = 0xCAFE
 };
 
 #endif

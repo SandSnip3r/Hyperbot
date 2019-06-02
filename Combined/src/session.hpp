@@ -11,7 +11,7 @@
 class Session {
   //This is a facilitator that starts the proxy, starts the client, redirects the client, and runs the bot
 private:
-	const std::string kSilkroadPath = "C:\\Program Files (x86)\\AtomixOnline\\";
+	const std::string kSilkroadPath = "C:\\Program Files (x86)\\Evolin\\";
   const std::string kConfigPath_;
   Loader loader_{kSilkroadPath};
 

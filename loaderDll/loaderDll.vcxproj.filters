@@ -24,9 +24,6 @@
     <ClCompile Include="loaderDll.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\BlowFish.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
     <ClCompile Include="..\common\Common.cpp">
       <Filter>common</Filter>
     </ClCompile>
@@ -51,11 +48,11 @@
     <ClCompile Include="..\common\detours\modules.cpp">
       <Filter>common\detours</Filter>
     </ClCompile>
+    <ClCompile Include="..\Combined\src\shared\blowfish.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\common\BlowFish.h">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="..\common\Common.h">
       <Filter>common</Filter>
     </ClInclude>
@@ -67,6 +64,9 @@
     </ClInclude>
     <ClInclude Include="..\common\detours\detours.h">
       <Filter>common\detours</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Combined\src\shared\blowfish.h">
+      <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
