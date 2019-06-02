@@ -11,6 +11,7 @@
 #include "../common/pk2Reader.h"
 #include "../Common/detours/detours.h"
 #include "../common/Silkroad.h"
+#include <fstream>
 #include <sstream>
 #include <string>
 using namespace edxLabs;
@@ -354,7 +355,7 @@ namespace nsEnglishCaptcha
 
 //-------------------------------------------------------------------------
 
-bool doItNaooo() {
+bool modifyRoutelist() {
 	do
 	{
 		//Redirecting login
@@ -393,14 +394,12 @@ bool doItNaooo() {
 			for (size_t y = 0; y < divInfo.divisions[x].addresses.size(); ++y)
 			{
 				std::string nme = divInfo.divisions[x].addresses[y];
-				printf("nme: %s\n", nme.c_str());
 				struct hostent * remoteHost = gethostbyname(nme.c_str());
 				if (remoteHost)
 				{
 					struct in_addr addr;
 					addr.s_addr = *(u_long *)remoteHost->h_addr_list[0];
 					std::string hostip = inet_ntoa(addr);
-					printf("Original IP: %s:%i\n", hostip.c_str(), 15779);
 					tokens = TokenizeString(hostip, ".");
 					routeArray[routeListCount].srcA = atoi(tokens[0].c_str());
 					routeArray[routeListCount].srcB = atoi(tokens[1].c_str());
@@ -506,7 +505,7 @@ void UserOnInject()
 	}
 
 	// Create the configuration dialog
-	doItNaooo();
+	modifyRoutelist();
 	/*HWND hWnd = CreateDialogParam(gInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, Main_DlgProc, (LPARAM)gInstance);
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0))

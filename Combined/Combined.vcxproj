@@ -22,20 +22,33 @@
     <ClCompile Include="..\common\Common.cpp" />
     <ClCompile Include="..\common\pk2Reader.cpp" />
     <ClCompile Include="..\common\Silkroad.cpp" />
+    <ClCompile Include="src\bot.cpp" />
+    <ClCompile Include="src\loader.cpp" />
+    <ClCompile Include="src\loginModule.cpp" />
     <ClCompile Include="src\packetLogger.cpp" />
     <ClCompile Include="src\phConnector.cpp" />
+    <ClCompile Include="src\proxy.cpp" />
+    <ClCompile Include="src\session.cpp" />
     <ClCompile Include="src\shared\blowfish.cpp" />
     <ClCompile Include="src\shared\silkroad_security.cpp" />
     <ClCompile Include="src\shared\stream_utility.cpp" />
+    <ClCompile Include="src\silkroadConnection.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\Common.h" />
     <ClInclude Include="..\common\pk2Reader.h" />
     <ClInclude Include="..\common\Silkroad.h" />
+    <ClInclude Include="src\bot.hpp" />
+    <ClInclude Include="src\botConnection.hpp" />
+    <ClInclude Include="src\loader.hpp" />
+    <ClInclude Include="src\loginModule.hpp" />
     <ClInclude Include="src\packetLogger.hpp" />
+    <ClInclude Include="src\proxy.hpp" />
+    <ClInclude Include="src\session.hpp" />
     <ClInclude Include="src\shared\blowfish.h" />
     <ClInclude Include="src\shared\silkroad_security.h" />
     <ClInclude Include="src\shared\stream_utility.h" />
+    <ClInclude Include="src\silkroadConnection.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

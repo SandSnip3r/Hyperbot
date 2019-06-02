@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\BlowFish.cpp" />
+    <ClCompile Include="..\Combined\src\shared\blowfish.cpp" />
     <ClCompile Include="..\common\Common.cpp" />
     <ClCompile Include="..\common\detours\creatwth.cpp" />
     <ClCompile Include="..\common\detours\detours.cpp" />
@@ -31,7 +31,7 @@
     <ClCompile Include="loaderDll.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\common\BlowFish.h" />
+    <ClInclude Include="..\Combined\src\shared\blowfish.h" />
     <ClInclude Include="..\common\Common.h" />
     <ClInclude Include="..\common\detours\detours.h" />
     <ClInclude Include="..\common\pk2Reader.h" />

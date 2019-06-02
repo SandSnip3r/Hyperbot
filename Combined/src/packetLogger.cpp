@@ -6,7 +6,7 @@ int64_t PacketLogger::getMsSinceEpoch() const {
 }
 
 bool PacketLogger::isPrintable(uint8_t data) const {
-  return (data >= 32);
+  return (data >= ' ' && data <= '~');
 }
 
 void PacketLogger::logPacketToFile(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, Direction direction) {
@@ -22,6 +22,10 @@ void PacketLogger::logPacketToFile(int64_t msSinceEpoch, const PacketContainer &
     ss << "C,";
   } else if (direction == Direction::ServerToClient) {
     ss << "S,";
+  } else if (direction == Direction::BotToServer) {
+    ss << "B,";
+  } else if (direction == Direction::BotToClient) {
+    ss << "b,";
   }
   ss << (int)packet.opcode;
   StreamUtility stream = packet.data;
@@ -42,11 +46,15 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
     ss << " (C->S)";
   } else if (direction == Direction::ServerToClient) {
     ss << " (S->C)";
+  } else if (direction == Direction::BotToServer) {
+    ss << " (B->S)";
+  } else if (direction == Direction::BotToClient) {
+    ss << " (B->C)";
   }
   ss << (int)blocked << ',';
   ss << (int)packet.encrypted << ',';
   ss << (int)packet.massive << ',';
-  ss << (int)packet.opcode << ' ';
+  ss << std::hex << packet.opcode << ' ';
   const int indentSize = ss.str().size();
   StreamUtility stream = packet.data;
   const auto &dataVector = stream.GetStreamVector();
@@ -62,7 +70,7 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
     for (int i=startingIndex; ((i < (startingIndex + kBytesPerLine)) && (i < copiedData.size())); ++i) {
       ss << ' ';
       if (isPrintable(copiedData.at(i))) {
-        ss << copiedData.at(i);
+        ss << (char)copiedData.at(i);
       } else {
         ss << ' ';
       }
@@ -75,7 +83,7 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
     }
   }
   ss << '\n';
-  std::cout << ss.str() << std::flush;
+  std::cout << ss.rdbuf() << std::flush;
 }
 
 PacketLogger::PacketLogger(const std::string &logDirectoryPath) : directoryPath(logDirectoryPath) {
