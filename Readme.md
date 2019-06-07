@@ -1,5 +1,5 @@
 # Hyperbot
-This is a bot to automate anything a human player can do in an online MMORPG called [Silkroad Online](http://www.joymax.com/silkroad/).
+This is a bot to automate everything a human player can do in an online MMORPG called [Silkroad Online](http://www.joymax.com/silkroad/).
 
 ## Silkroad
 Silkroad Online is a historical fantasy MMORPG from Joymax based on the history of China along the famous Silk Road. Reproducing 7th century Silk Road trading while adding fantastic elements, Silkroad Online allows players to create their own characters, complete quests, fight monsters, level up, obtain pets, craft items, engage in PvP, and more.
