@@ -23,6 +23,7 @@
     <ClCompile Include="..\common\pk2Reader.cpp" />
     <ClCompile Include="..\common\Silkroad.cpp" />
     <ClCompile Include="src\bot.cpp" />
+    <ClCompile Include="src\chatEventModule.cpp" />
     <ClCompile Include="src\loader.cpp" />
     <ClCompile Include="src\loginModule.cpp" />
     <ClCompile Include="src\packetLogger.cpp" />
@@ -40,6 +41,7 @@
     <ClInclude Include="..\common\Silkroad.h" />
     <ClInclude Include="src\bot.hpp" />
     <ClInclude Include="src\botConnection.hpp" />
+    <ClInclude Include="src\chatEventModule.hpp" />
     <ClInclude Include="src\loader.hpp" />
     <ClInclude Include="src\loginModule.hpp" />
     <ClInclude Include="src\packetLogger.hpp" />

@@ -63,6 +63,9 @@
     <ClCompile Include="src\loginModule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\chatEventModule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\shared\blowfish.h">
@@ -106,6 +109,9 @@
     </ClInclude>
     <ClInclude Include="src\loginModule.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\chatEventModule.hpp">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

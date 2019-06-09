@@ -1,4 +1,5 @@
 #include "shared/silkroad_security.h"
+
 #include <functional>
 
 #ifndef LOGINMODULE_HPP_
@@ -27,7 +28,7 @@ private:
   const std::string kUsername_{"test"};
   const std::string kPassword_{"test"};
   const std::string kCharName_{"test"};
-  uint32_t macAddress_ = 0x1000;
+  uint32_t macAddress_ = 0x24453945;
 };
 
 #endif

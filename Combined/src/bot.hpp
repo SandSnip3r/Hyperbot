@@ -1,3 +1,4 @@
+#include "chatEventModule.hpp"
 #include "loginModule.hpp"
 #include "shared/silkroad_security.h"
 #include <functional>
@@ -14,6 +15,7 @@ public:
 private:
 	std::function<void(PacketContainer&, PacketContainer::Direction)> injectionFunction_;
   LoginModule loginModule_;
+  ChatEventModule chatEventModule_;
 };
 
 #endif

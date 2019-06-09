@@ -15,3 +15,10 @@ We're going to need other general blocking calls. For example, wait for all data
 Wrap Atomic Controllers in namespaces
 
 Maybe its a good idea to use the Template Method design pattern for character logic
+
+### Assumptions
+
+In the current packet abstraction layer, we'll assume that it's more often that a only single module cares about any given packet.
+
+Manuel's idea is to have desired location to always be trying to moving to.
+All party members input and the party goes in the average?

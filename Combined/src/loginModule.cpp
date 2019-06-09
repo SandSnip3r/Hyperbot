@@ -7,29 +7,6 @@ LoginModule::LoginModule(std::function<void(PacketContainer&, PacketContainer::D
 
 }
 
-void LoginModule::cafeSent() {
-  std::cout << "LoginModule::cafeSent\n";
-  //The weird 0xCAFE packet has been sent
-  if (!serverListParsed_) {
-    //Never got the serverlist packet, dont have enough info to login
-    std::cerr << "LoginModule::cafeSent Never got the serverlist packet, dont have enough info to login\n";
-    return;
-  }
-  //Build a LOGIN_CLIENT_AUTH packet
-  StreamUtility loginAuthPacketData;
-  loginAuthPacketData.Write<uint8_t>(kLocale_);
-  loginAuthPacketData.Write<uint16_t>(kUsername_.size());
-  loginAuthPacketData.Write_Ascii(kUsername_);
-  loginAuthPacketData.Write<uint16_t>(kPassword_.size());
-  loginAuthPacketData.Write_Ascii(kPassword_);
-  loginAuthPacketData.Write<uint16_t>(shardId_);
-  PacketContainer loginAuthPacket(static_cast<uint16_t>(Opcode::LOGIN_CLIENT_AUTH), loginAuthPacketData, 1, 0);
-  //Inject the packet
-  injectionFunction_(loginAuthPacket, PacketContainer::Direction::ClientToServer);
-  std::cout << "Injected LOGIN_CLIENT_AUTH\n";
-  loginPacketSentToGateway_ = true;
-}
-
 void LoginModule::serverListReceived(const PacketContainer &packet) {
   std::cout << "LoginModule::serverListReceived\n";
   StreamUtility stream = packet.data;
@@ -64,6 +41,29 @@ void LoginModule::serverListReceived(const PacketContainer &packet) {
   }
   std::cout << "Our shard id is " << shardId_ << "\n";
   serverListParsed_ = true;
+}
+
+void LoginModule::cafeSent() {
+  std::cout << "LoginModule::cafeSent\n";
+  //The weird 0xCAFE packet has been sent
+  if (!serverListParsed_) {
+    //Never got the serverlist packet, dont have enough info to login
+    std::cerr << "LoginModule::cafeSent Never got the serverlist packet, dont have enough info to login\n";
+    return;
+  }
+  //Build a LOGIN_CLIENT_AUTH packet
+  StreamUtility loginAuthPacketData;
+  loginAuthPacketData.Write<uint8_t>(kLocale_);
+  loginAuthPacketData.Write<uint16_t>(kUsername_.size());
+  loginAuthPacketData.Write_Ascii(kUsername_);
+  loginAuthPacketData.Write<uint16_t>(kPassword_.size());
+  loginAuthPacketData.Write_Ascii(kPassword_);
+  loginAuthPacketData.Write<uint16_t>(shardId_);
+  PacketContainer loginAuthPacket(static_cast<uint16_t>(Opcode::LOGIN_CLIENT_AUTH), loginAuthPacketData, 1, 0);
+  //Inject the packet
+  injectionFunction_(loginAuthPacket, PacketContainer::Direction::ClientToServer);
+  std::cout << "Injected LOGIN_CLIENT_AUTH\n";
+  loginPacketSentToGateway_ = true;
 }
 
 void LoginModule::serverAuthInfoReceived(const PacketContainer &packet) {

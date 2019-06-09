@@ -3,7 +3,11 @@
 
 #include <iostream>
 
-Bot::Bot(std::function<void(PacketContainer&, PacketContainer::Direction)> injectionFunction) : injectionFunction_(injectionFunction), loginModule_(injectionFunction_) {
+Bot::Bot(std::function<void(PacketContainer&, PacketContainer::Direction)> injectionFunction) :
+    injectionFunction_(injectionFunction),
+    loginModule_(injectionFunction_),
+    chatEventModule_(injectionFunction_) {
+  //Empty
 }
 
 /* void Bot::configure(Config &config) {
@@ -17,14 +21,14 @@ bool Bot::packetReceived(const PacketContainer &packet, PacketContainer::Directi
   switch (packetOpcode) {
     case Opcode::CLIENT_CAFE:
       std::cout << "CLIENT_CAFE\n";
-      loginModule_.cafeSent();
+      //TODO(re-enable): loginModule_.cafeSent();
       break;
     case Opcode::LOGIN_CLIENT_INFO:
     // case Opcode::LOGIN_SERVER_INFO:
     // case Opcode::CLIENT_INFO:
     // case Opcode::SERVER_INFO:
       std::cout << "LOGIN_CLIENT_INFO, LOGIN_SERVER_INFO, CLIENT_INFO, SERVER_INFO\n";
-      forwardPacket = loginModule_.loginClientInfo(packet);
+      //TODO(re-enable): forwardPacket = loginModule_.loginClientInfo(packet);
       break;
     case Opcode::LOGIN_CLIENT_KEEP_ALIVE:
     // case Opcode::CLIENT_KEEP_ALIVE:
@@ -58,11 +62,11 @@ bool Bot::packetReceived(const PacketContainer &packet, PacketContainer::Directi
       break;
     case Opcode::LOGIN_SERVER_LIST:
       std::cout << "LOGIN_SERVER_LIST\n";
-      loginModule_.serverListReceived(packet);
+      //TODO(re-enable): loginModule_.serverListReceived(packet);
       break;
     case Opcode::LOGIN_SERVER_AUTH_INFO:
       std::cout << "LOGIN_SERVER_AUTH_INFO\n";
-      loginModule_.serverAuthInfoReceived(packet);
+      //TODO(re-enable): loginModule_.serverAuthInfoReceived(packet);
       break;
     case Opcode::CLIENT_AUTH:
       std::cout << "CLIENT_AUTH\n";
@@ -192,11 +196,11 @@ bool Bot::packetReceived(const PacketContainer &packet, PacketContainer::Directi
       break;
     case Opcode::SERVER_LOGIN_RESULT:
       std::cout << "SERVER_LOGIN_RESULT\n";
-      loginModule_.serverLoginResultReceived(packet);
+      //TODO(re-enable): loginModule_.serverLoginResultReceived(packet);
       break;
     case Opcode::SERVER_CHARACTER:
       std::cout << "SERVER_CHARACTER\n";
-      loginModule_.serverCharacterListReceived(packet);
+      //TODO(re-enable): loginModule_.serverCharacterListReceived(packet);
       break;
     case Opcode::SERVER_CHARDATA:
       std::cout << "SERVER_CHARDATA\n";
@@ -294,6 +298,7 @@ bool Bot::packetReceived(const PacketContainer &packet, PacketContainer::Directi
       break;
     case Opcode::SERVER_CHAT:
       std::cout << "SERVER_CHAT\n";
+      chatEventModule_.serverChatReceived(packet);
       break;
     case Opcode::SERVER_CHAT_ACCEPT:
       std::cout << "SERVER_CHAT_ACCEPT\n";
