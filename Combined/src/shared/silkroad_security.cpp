@@ -724,6 +724,7 @@ void SilkroadSecurity::Send( uint16_t opcode, const StreamUtility & data, uint8_
 	{
 		throw( std::runtime_error( "[SilkroadSecurity::Send] Handshake packets cannot be sent through this function.") );
 	}
+	//TODO: Raceconditions?
 	m_data->m_outgoing_packets.push_back( PacketContainer( opcode, data, encrypted, massive ) );
 }
 

@@ -1,6 +1,7 @@
 ### Welcome.
 
 # Abstract
+
 - The `Loader` launches the sro_client.exe process, suspends the process, injects loaderDll.dll, then resumes the process.
 - The `Proxy` is started; ready to receive tcp connections.
 - The injected dll causes the client to initiate a tcp connection to our proxy rather than the actual gameserver.
@@ -31,4 +32,6 @@
 - Once the `Bot`'s `PacketHandleFunction` is called with a pointer to a `PacketParser`, it tries to `dynamic_cast` it to an inheriting class of `PacketParser`(ex. `ClientChatPacket`).
 - `PacketParser`s are a lazy-eval objectified wrapper around any packet. If N `PacketHandleFunction`s access the data in a packet, the packet data parsed into the object 0 times if N==0 or 1 time is N>0. `PacketParser`s always have N space overhead, where N is the size of the date in the packet after the opcode.
 - The user of an inherited class of `PacketParser`, such as `ClientChatPacket *clientChat` can directly access data of the packet in an object-oriented way via `clientChat->message()`.
-- Right before the `PacketHandleFunction 
+- If the user needs to send a packet on a channel, this is easily done by `PacketBuilder` objects. Inheriting objects of `PacketBuilder` implement sufficient constructors for each of the valid packet configurations. Then, calling `packet()` on one of these inheriting objects, a complete packet is built and returned. Finally, the packet is passed to `BrokerSystem::injectPacket` and after many levels of abstraction, it's essentially pushed into the outgoing queue of tcp messages to be sent to either the client or the server.
+- Right before the `PacketHandleFunction` exits, it returns `true` if the packet should be allowed to pass and `false` otherwise.
+- To assist with packet building, and using from the `Bot` side, the `PacketEnums` namespace exists.
