@@ -1,5 +1,4 @@
-#include "chatEventModule.hpp"
-#include "loginModule.hpp"
+#include "brokerSystem.hpp"
 #include "shared/silkroad_security.h"
 #include <functional>
 
@@ -9,13 +8,13 @@
 class Bot {
   //This contains all intelligence that acts upon packets
 public:
-  Bot(std::function<void(PacketContainer&, PacketContainer::Direction)> injectionFunction);
+  Bot(BrokerSystem &broker);
   // void configure(Config &config);
-  bool packetReceived(const PacketContainer &packet, PacketContainer::Direction packetDirection);
+  // bool packetReceived(const PacketContainer &packet, PacketContainer::Direction packetDirection);
 private:
-	std::function<void(PacketContainer&, PacketContainer::Direction)> injectionFunction_;
-  LoginModule loginModule_;
-  ChatEventModule chatEventModule_;
+  void commandHandler(const std::string &command);
+  bool handleClientChat(std::unique_ptr<PacketParsing::PacketParser> &packetParser);
+  BrokerSystem &broker_;
 };
 
 #endif

@@ -107,7 +107,7 @@ bool SilkroadConnection::Inject(uint16_t opcode, bool encrypted) {
 }
 
 //Hands packets off to the security API
-bool SilkroadConnection::Inject(PacketContainer & container) {
+bool SilkroadConnection::Inject(const PacketContainer &container) {
   if(security) {
     security->Send(container.opcode, container.data, container.encrypted, container.massive);
     return true;

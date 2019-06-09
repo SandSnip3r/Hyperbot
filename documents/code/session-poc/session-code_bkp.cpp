@@ -149,7 +149,7 @@ public:
 
 class Proxy {
 private:
-  BrokerSystem broker_;
+  BrokerSystem &broker_;
   void handlePacket(const Packet &packet, Packet::Direction packetDirection) {
     bool packetShouldBeForwarded = broker_.packetReceived(packet, packetDirection);
   }

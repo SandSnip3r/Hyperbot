@@ -13,7 +13,7 @@
 
 class PacketLogger {
 public:
-	enum class Direction { ClientToServer, ServerToClient, BotToServer, BotToClient };
+	enum class Direction { kClientToServer, kServerToClient, BotToServer, BotToClient };
 private:
 	const std::string directoryPath;
 	std::string filePath;

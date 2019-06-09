@@ -1,9 +1,10 @@
 #include "proxy.hpp"
 
-Proxy::Proxy(std::function<bool(const PacketContainer&, PacketContainer::Direction)> packetHandlerFunction, uint16_t port) :
-      packetHandlerFunction_(packetHandlerFunction), acceptor(ioService_, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+Proxy::Proxy(BrokerSystem &broker, uint16_t port) :
+      broker_(broker),
+      acceptor(ioService_, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
       timer(boost::make_shared<boost::asio::deadline_timer>(ioService_)) {
-  
+  broker_.setInjectionFunction(std::bind(&Proxy::inject, this, std::placeholders::_1, std::placeholders::_2));
   std::cout << "Proxy constructed, listening on port " << port << '\n';
   //Start accepting connections
   PostAccept();
@@ -18,13 +19,13 @@ Proxy::~Proxy() {
   Stop();
 }
 
-void Proxy::inject(PacketContainer &packet, PacketContainer::Direction direction) {
-  if (direction == PacketContainer::Direction::ClientToServer) {
+void Proxy::inject(const PacketContainer &packet, const PacketContainer::Direction direction) {
+  if (direction == PacketContainer::Direction::kClientToServer) {
     if (serverConnection.security) {
       packetLogger.logPacket(packet, false, PacketLogger::Direction::BotToServer);
       serverConnection.Inject(packet);
     }
-  } else if (direction == PacketContainer::Direction::ServerToClient) {
+  } else if (direction == PacketContainer::Direction::kServerToClient) {
     if (clientConnection.security) {
       packetLogger.logPacket(packet, false, PacketLogger::Direction::BotToClient);
       clientConnection.Inject(packet);
@@ -140,7 +141,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         }
 
         //Log packet
-        packetLogger.logPacket(p, !forward, PacketLogger::Direction::ClientToServer);
+        packetLogger.logPacket(p, !forward, PacketLogger::Direction::kClientToServer);
 
         if(p.opcode == 0x2001) {
           std::cout << "\"Silkroad\" Connected" << std::endl;
@@ -149,8 +150,10 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
 
         //Forward the packet to Joymax
         if(forward && serverConnection.security) {
-          packetHandlerFunction_(p, PacketContainer::Direction::ClientToServer);
-          serverConnection.Inject(p);
+          bool forwardToServer = broker_.packetReceived(p, PacketContainer::Direction::kClientToServer);
+          if (forwardToServer) {
+            serverConnection.Inject(p);
+          }
         }
       }
 
@@ -173,7 +176,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           forward = false;
 
         //Log packet
-        packetLogger.logPacket(p, !forward, PacketLogger::Direction::ServerToClient);
+        packetLogger.logPacket(p, !forward, PacketLogger::Direction::kServerToClient);
 
         if(p.opcode == 0xA102) {
           StreamUtility r = p.data;
@@ -209,7 +212,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             serverConnection.Close();
 
             //Want to forward this to the bot so it can grab the token
-            packetHandlerFunction_(p, PacketContainer::Direction::ServerToClient);
+            broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
             //Security pointer is now valid so skip to the end
             goto Post;
           }
@@ -217,7 +220,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
 
         //Forward the packet to Silkroad
         if(forward && clientConnection.security) {
-          bool forwardToClient = packetHandlerFunction_(p, PacketContainer::Direction::ServerToClient);
+          bool forwardToClient = broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
           if (forwardToClient) {
             clientConnection.Inject(p);
           }
