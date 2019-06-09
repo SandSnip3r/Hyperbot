@@ -25,7 +25,7 @@ void ChatEventModule::writeAllChatMessage(const std::string &message) {
   allChatPacketData.Write<uint16_t>(message.size());
   allChatPacketData.Write_Ascii(message);
   PacketContainer allChatPacket(static_cast<uint16_t>(Opcode::CLIENT_CHAT), allChatPacketData, 1, 0);
-  injectionFunction_(allChatPacket, PacketContainer::Direction::ClientToServer);
+  injectionFunction_(allChatPacket, PacketContainer::Direction::kClientToServer);
 }
 
 void ChatEventModule::serverChatReceived(const PacketContainer &packet) {

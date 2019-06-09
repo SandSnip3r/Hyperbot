@@ -18,9 +18,9 @@ void PacketLogger::logPacketToFile(int64_t msSinceEpoch, const PacketContainer &
   ss << blocked << ',';
   ss << (int)packet.encrypted << ',';
   ss << (int)packet.massive << ',';
-  if (direction == Direction::ClientToServer) {
+  if (direction == Direction::kClientToServer) {
     ss << "C,";
-  } else if (direction == Direction::ServerToClient) {
+  } else if (direction == Direction::kServerToClient) {
     ss << "S,";
   } else if (direction == Direction::BotToServer) {
     ss << "B,";
@@ -42,9 +42,9 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
 
   std::stringstream ss;
   ss << '[' << msSinceEpoch << "] ";
-  if (direction == Direction::ClientToServer) {
+  if (direction == Direction::kClientToServer) {
     ss << " (C->S)";
-  } else if (direction == Direction::ServerToClient) {
+  } else if (direction == Direction::kServerToClient) {
     ss << " (S->C)";
   } else if (direction == Direction::BotToServer) {
     ss << " (B->S)";

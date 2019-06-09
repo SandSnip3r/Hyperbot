@@ -1,3 +1,4 @@
+#include "brokerSystem.hpp"
 #include "packetLogger.hpp"
 #include "silkroadConnection.hpp"
 #include "shared/silkroad_security.h"
@@ -15,23 +16,21 @@
 //Networking class (handles connections)
 class Proxy {
 public:
-	Proxy(std::function<bool(const PacketContainer&, PacketContainer::Direction)> packetHandlerFunction, uint16_t port);
-
+	Proxy(BrokerSystem &broker, uint16_t port);
 	~Proxy();
-
-	void inject(PacketContainer &packet, PacketContainer::Direction direction);
+	void inject(const PacketContainer &packet, const PacketContainer::Direction direction);
   void start();
 
 	//Stops all networking objects
 	void Stop();
 private:
+  BrokerSystem &broker_;
   std::string agentIP_;
   uint16_t agentPort_{0};
   std::unordered_map<uint16_t, bool> blockedOpcodes_;
   bool connectToAgent{false};
   boost::asio::io_service ioService_;
   const int kPacketProcessDelayMs{10};
-	std::function<bool(const PacketContainer&, PacketContainer::Direction)> packetHandlerFunction_;
 	PacketLogger packetLogger{"C:\\Users\\Victor\\Documents\\Development\\packet-logs\\"};
 
 	//Accepts TCP connections

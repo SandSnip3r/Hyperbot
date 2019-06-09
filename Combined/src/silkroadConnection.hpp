@@ -64,7 +64,7 @@ public:
 	bool Inject(uint16_t opcode, bool encrypted = false);
 
 	//Hands packets off to the security API
-	bool Inject(PacketContainer & container);
+	bool Inject(const PacketContainer &container);
 
 	//Sends a formatted packet
 	bool Send(const std::vector<uint8_t> & packet);

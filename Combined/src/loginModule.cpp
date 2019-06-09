@@ -61,7 +61,7 @@ void LoginModule::cafeSent() {
   loginAuthPacketData.Write<uint16_t>(shardId_);
   PacketContainer loginAuthPacket(static_cast<uint16_t>(Opcode::LOGIN_CLIENT_AUTH), loginAuthPacketData, 1, 0);
   //Inject the packet
-  injectionFunction_(loginAuthPacket, PacketContainer::Direction::ClientToServer);
+  injectionFunction_(loginAuthPacket, PacketContainer::Direction::kClientToServer);
   std::cout << "Injected LOGIN_CLIENT_AUTH\n";
   loginPacketSentToGateway_ = true;
 }
@@ -116,7 +116,7 @@ bool LoginModule::loginClientInfo(const PacketContainer &packet) {
   clientAuthPacketData.Write<uint16_t>(0);
   clientAuthPacketData.Write<uint32_t>(macAddress_);
   PacketContainer clientAuthPacket(static_cast<uint16_t>(Opcode::CLIENT_AUTH), clientAuthPacketData, 1, 0);
-  injectionFunction_(clientAuthPacket, PacketContainer::Direction::ClientToServer);
+  injectionFunction_(clientAuthPacket, PacketContainer::Direction::kClientToServer);
   loginPacketSentToAgent_ = true;
   return false;
 }
@@ -138,7 +138,7 @@ void LoginModule::serverLoginResultReceived(const PacketContainer &packet) {
     requestCharacterListPacketData.Write<uint8_t>(0x02);
     PacketContainer requestCharacterListPacket(static_cast<uint16_t>(Opcode::CLIENT_CHARACTER), requestCharacterListPacketData, 0, 0);
     std::cout << "Injecting CLIENT_CHARACTER\n";
-    injectionFunction_(requestCharacterListPacket, PacketContainer::Direction::ClientToServer);
+    injectionFunction_(requestCharacterListPacket, PacketContainer::Direction::kClientToServer);
     requestedCharacterList_ = true;
   }
 }
@@ -154,5 +154,5 @@ void LoginModule::serverCharacterListReceived(const PacketContainer &packet) {
   chooseCharacterPacketData.Write_Ascii(kCharName_);
   PacketContainer chooseCharacterPacket(static_cast<uint16_t>(Opcode::CLIENT_INGAME_REQUEST), chooseCharacterPacketData, 0, 0);
   std::cout << "Injecting CLIENT_INGAME_REQUEST\n";
-  injectionFunction_(chooseCharacterPacket, PacketContainer::Direction::ClientToServer);
+  injectionFunction_(chooseCharacterPacket, PacketContainer::Direction::kClientToServer);
 }
