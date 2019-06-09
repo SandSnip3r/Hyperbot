@@ -1,32 +1,34 @@
 ### Welcome.
 
-# Low level knowledge
-
-## Abstract technical low-level view
+# Abstract
 - The `Loader` launches the sro_client.exe process, suspends the process, injects loaderDll.dll, then resumes the process.
 - The `Proxy` is started; ready to receive tcp connections.
 - The injected dll causes the client to initiate a tcp connection to our proxy rather than the actual gameserver.
 - The `Proxy` can forward any traffic to/from the client/server.
-- The `Proxy` can also inject any traffic to be indistinguishable to the server.
-
-## Code view
-Lets first look at the entrypoint. `phConnector.cpp` (insert gratitudes) contains our main function.
-- We instantiate a single `Session` and then start the session. For now, `Session::start()` will be a blocking call, so we can only run 1 session for now.
-- `Session::start()` starts the loader and the proxy.
-- `Loader::startClient()` launches the sro_client.exe process, suspends the process, injects loaderDll.dll, then resumes the process.
-- `Proxy::start()` constantly runs `boost::io_service`s where `Proxy::HandleAccept` will be called for one connection at a time.
-- Some security stuff is done to initiate the connection.
-- We first connect to the AgentServer. The client is probably asking for which ip to connect to for the game, known as the GatewayServer.
-- It looks like `ServerConnection::Connect()` is blocking?
-
-# Higher dumb-bot level
-
-## Abstract & Theory
+- The `Proxy` can block any traffic to the client or server.
+- The `Proxy` can inject indistinguishable packets to the client or server.
 - The `Bot` has a real-time view into the packet stream between client and server.
 - The `Bot` can insert, remove, and modifiy any packet in the stream.
 - The `Bot` has the interface to theoretically be able to do anything any human player can do.
 
-## Code view
-- Within a `Session`, a `Bot` is constructed with a reference to `Proxy::inject()`. Incoming packets inside the proxy are given to `Bot::packetRecevied()`.
-- `Proxy::inject` provides a method to inject a packet either to the server to spoof client actions or to the client to spoof server.
-- `Bot::packetReceived` is where the main "brain" will connect. This is current lacking and is one of the next places for improvement.
+# Code view
+
+#### Lets dive in, first looking at the entrypoint: `phConnector.cpp` (insert gratitudes).
+- We instantiate a single `Session` and then start the session. For now, `Session::start()` will be a blocking call, so we can only run 1 session.
+- `Session::start()` starts the loader and the proxy.
+- `Loader::startClient()` launches the sro_client.exe process, suspends the process, injects loaderDll.dll, then resumes the process.
+- `Proxy::start()` constantly runs `boost::io_service`s where `Proxy::HandleAccept` will be called for one connection from the game client at a time.
+- A secure connection is first established to the GatewayServer. The client asks for the ip address of the game server, known as the AgentServer, then establishes a secure connection.
+- I believe `ServerConnection::Connect()` is a blocking call.
+
+#### Now, we'll look at the important objects and their roles.
+- A `Session` contains a `BrokerSystem`, a `Proxy`, and a `Bot`.
+- The `Bot` and `Proxy` are constructed each with a reference to the `BrokerSystem`.
+- The `BrokerSystem` has two main "channels": ClientPacket and ServerPacket.
+- On the `Bot`'s construction, it subscribes to any interesting packet opcodes on either the ClientPacket or ServerPacket channel by giving a `PacketHandleFunction`.
+- On the `Proxy`'s construction, it gives the `BrokerSystem` a pointer to `Proxy::inject`.
+- As the `Proxy` runs and packets are received, they're passed to `BrokerSystem::packetReceived` for the broker to distribute to all subscribed parties.
+- Once the `Bot`'s `PacketHandleFunction` is called with a pointer to a `PacketParser`, it tries to `dynamic_cast` it to an inheriting class of `PacketParser`(ex. `ClientChatPacket`).
+- `PacketParser`s are a lazy-eval objectified wrapper around any packet. If N `PacketHandleFunction`s access the data in a packet, the packet data parsed into the object 0 times if N==0 or 1 time is N>0. `PacketParser`s always have N space overhead, where N is the size of the date in the packet after the opcode.
+- The user of an inherited class of `PacketParser`, such as `ClientChatPacket *clientChat` can directly access data of the packet in an object-oriented way via `clientChat->message()`.
+- Right before the `PacketHandleFunction 
