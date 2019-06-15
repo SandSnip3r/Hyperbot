@@ -27,6 +27,7 @@
     <ClCompile Include="src\chatEventModule.cpp" />
     <ClCompile Include="src\loader.cpp" />
     <ClCompile Include="src\loginModule.cpp" />
+    <ClCompile Include="src\opcode.cpp" />
     <ClCompile Include="src\packetBuilding.cpp" />
     <ClCompile Include="src\packetLogger.cpp" />
     <ClCompile Include="src\packetParsing.cpp" />

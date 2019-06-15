@@ -1,3 +1,5 @@
+#include <string>
+
 #ifndef OPCODE_HPP_
 #define OPCODE_HPP_
 
@@ -124,6 +126,9 @@ enum class Opcode {
   SERVER_ANIMATION_COS_REMOVE_MENU = 0x30C9,
   SERVER_COS_DELETE = 0xB0C6,
 
+  //Environment
+  kServerEnvironmentWeather = 0x3809,
+
   SERVER_ATTACK = 0xB070,
   SERVER_SKILL_ATTACK = 0xB074,
   SERVER_END_SKILL = 0xB071,
@@ -167,5 +172,9 @@ enum class Opcode {
   //Evolin specific packets
   CLIENT_CAFE = 0xCAFE
 };
+
+namespace OpcodeHelp {
+std::string toStr(Opcode opcode);
+} // namespace OpcodeHelp
 
 #endif

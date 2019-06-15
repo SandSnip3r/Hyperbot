@@ -1,3 +1,4 @@
+#include "opcode.hpp"
 #include "packetLogger.hpp"
 
 int64_t PacketLogger::getMsSinceEpoch() const {
@@ -66,7 +67,17 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
       ss << std::setfill('0') << std::setw(2) << std::hex << (int)copiedData.at(i) << ' ';
     }
     ss << '\n';
-    ss << std::string(indentSize, ' ');
+    if (lineNum == 0) {
+      const std::string kOpcodeStr = OpcodeHelp::toStr(static_cast<Opcode>(packet.opcode));
+      if (kOpcodeStr.size() >= indentSize) {
+        ss << kOpcodeStr.substr(0, indentSize);
+      } else {
+        ss << kOpcodeStr;
+        ss << std::string(indentSize-kOpcodeStr.size(), ' ');
+      }
+    } else {
+      ss << std::string(indentSize, ' ');
+    }
     for (int i=startingIndex; ((i < (startingIndex + kBytesPerLine)) && (i < copiedData.size())); ++i) {
       ss << ' ';
       if (isPrintable(copiedData.at(i))) {
