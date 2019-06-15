@@ -1,0 +1,100 @@
+https://www.elitepvpers.com/forum/sro-coding-corner/1500536-parsing-character-data-packet.html
+https://www.elitepvpers.com/forum/sro-coding-corner/1637912-need-help-character-movement-b021.html
+
+====================================User moves character====================================
+[1560268398517]  (C->S)0,0,0,7021 01 a8 60 a4 04 e1 ff 5c 04
+CLIENT_MOVEMENT                          `              \
+
+============================Server responds with movement result?============================
+[1560268398597]  (S->C)0,0,0,b021 61 6e 1c 00 01 a8 60 2d 05 e8 ff 3e 03 01 a8 60 d8 33 51 80
+SERVER_MOVEMENT                    a  n              `  -           >           `     3  Q
+                                  c7 c1 6c 1e
+                                         l
+
+=======================================Mangyang moved========================================
+[1560268398693]  (S->C)0,0,0,b021 27 cf 1c 00 01 a8 60 b8 03 d7 ff 52 03 01 a8 60 f6 25 bf 6b 27 c2 05 24
+[1560268398757]  (S->C)0,0,0,b021 0d 2b 1f 00 01 a8 60 a4 04 e1 ff 5c 04 01 a8 60 17 2f 36 ec c8 c1 39 2e
+[1560268406508]  (S->C)0,0,0,b021 61 6e 1c 00 01 a8 60 4f 05 eb ff 7d 03 00
+[1560268408047]  (S->C)0,0,0,b021 64 9f 17 00 01 a8 60 35 03 e6 ff ab 03 00
+[1560268409237]  (S->C)0,0,0,b021 27 cf 1c 00 01 a8 60 c6 03 d6 ff e0 02 01 a8 60 31 25 7e 90 2b c2 38 21
+[1560268411730]  (S->C)0,0,0,b021 20 6e 1c 00 01 a8 60 6b 04 d7 ff c7 02 01 a8 60 2f 2a 29 81 25 c2 a3 1e
+[1560268416320]  (S->C)0,0,0,b021 61 6e 1c 00 01 a8 60 9b 05 e2 ff 90 03 00
+[1560268416895]  (S->C)0,0,0,b021 64 9f 17 00 01 a8 60 1e 03 eb ff 11 04 01 a8 60 10 20 9d 26 ab c1 a9 24
+[1560268419965]  (S->C)0,0,0,b021 27 cf 1c 00 01 a8 60 8e 03 d0 ff de 02 01 a8 60 98 25 bf 83 43 c2 e4 1d
+[1560268420945]  (S->C)0,0,0,b021 20 6e 1c 00 01 a8 60 66 04 db ff 66 02 01 a8 60 d3 2b 11 60 15 c2 48 1c
+                                  aaaaaaaaaaa bb cc dd eeeee fffff ggggg hh ii jj kkkkk lllll mmmmm nnnnn
+
+uint32_t actorId
+PacketEnums::ChatType(uint8_t) chatType
+uint8_t xSector
+uint8_t ySector
+uint16_t xOffset
+uint16_t yOffset
+uint16_t zOffset
+bool(uint8_t) hasOrigin
+if (hasOrigin) {
+  uint8_t xSector
+  uint8_t ySector
+  uint16_t xOffset
+  uint16_t yOffset
+  uint16_t zOffset
+  uint16_t unknown
+}
+
+Moved character towards screen. Same movement distance and direction each time. Testing different intervals
+[1560270209725]  (S->C)0,0,0,b021 0d 2b 1f 00 01 a9 60 91 00 00 00 5c 07 01 a9 60 28 05 ab d3 60 be 98 49
+1 sec delay
+[1560270210683]  (S->C)0,0,0,b021 0d 2b 1f 00 01 a9 60 9e 00 00 00 5c 07 01 a9 60 aa 05 ab d3 60 be 98 49
+1 sec delay
+[1560270211737]  (S->C)0,0,0,b021 0d 2b 1f 00 01 a9 60 ab 00 00 00 5c 07 01 a9 60 2c 06 8c f0 74 be 98 49
+1 sec delay
+[1560270212713]  (S->C)0,0,0,b021 0d 2b 1f 00 01 a9 60 b8 00 00 00 5c 07 01 a9 60 ae 06 0f d2 2f be 98 49
+2 sec delay
+[1560270214718]  (S->C)0,0,0,b021 0d 2b 1f 00 01 a9 60 c5 00 00 00 5c 07 01 a9 60 30 07 0f d2 2f be 98 49
+2 sec delay
+[1560270216635]  (S->C)0,0,0,b021 0d 2b 1f 00 01 a9 60 d2 00 00 00 5c 07 01 a9 60 b2 07 20 34 60 be 98 49
+4 sec delay
+[1560270220599]  (S->C)0,0,0,b021 0d 2b 1f 00 01 a9 60 df 00 00 00 5c 07 01 a9 60 34 08 fc c2 9c be 98 49
+4 sec delay
+[1560270224659]  (S->C)0,0,0,b021 0d 2b 1f 00 01 a9 60 ec 00 00 00 5c 07 01 a9 60 b6 08 4b 3b cd be 98 49
+
+ src: (a9) (60) (91 00) (00 00) (5c 07)
+dest: (a9) (60) (28 05) (ab d3) (60 be) 98 49
+
+ src: (a9) (60) (9e 00) (00 00) (5c 07)
+dest: (a9) (60) (aa 05) (ab d3) (60 be) 98 49
+
+ src: (a9) (60) (ab 00) (00 00) (5c 07)
+dest: (a9) (60) (2c 06) (8c f0) (74 be) 98 49
+
+ src: (a9) (60) (b8 00) (00 00) (5c 07)
+dest: (a9) (60) (ae 06) (0f d2) (2f be) 98 49
+
+ src: (a9) (60) (c5 00) (00 00) (5c 07)
+dest: (a9) (60) (30 07) (0f d2) (2f be) 98 49
+
+ src: (a9) (60) (d2 00) (00 00) (5c 07)
+dest: (a9) (60) (b2 07) (20 34) (60 be) 98 49
+
+ src: (a9) (60) (df 00) (00 00) (5c 07)
+dest: (a9) (60) (34 08) (fc c2) (9c be) 98 49
+
+ src: (a9) (60) (ec 00) (00 00) (5c 07)
+dest: (a9) (60) (b6 08) (4b 3b) (cd be) 98 49
+
+ src: (a9) (60) (28 05) (ab d3 60 be) (98 49)
+dest: (a9) (60) (91 00) (00 00)       (5c 07)
+ src: (a9) (60) (aa 05) (ab d3 60 be) (98 49)
+dest: (a9) (60) (9e 00) (00 00)       (5c 07)
+ src: (a9) (60) (2c 06) (8c f0 74 be) (98 49)
+dest: (a9) (60) (ab 00) (00 00)       (5c 07)
+ src: (a9) (60) (ae 06) (0f d2 2f be) (98 49)
+dest: (a9) (60) (b8 00) (00 00)       (5c 07)
+ src: (a9) (60) (30 07) (0f d2 2f be) (98 49)
+dest: (a9) (60) (c5 00) (00 00)       (5c 07)
+ src: (a9) (60) (b2 07) (20 34 60 be) (98 49)
+dest: (a9) (60) (d2 00) (00 00)       (5c 07)
+ src: (a9) (60) (34 08) (fc c2 9c be) (98 49)
+dest: (a9) (60) (df 00) (00 00)       (5c 07)
+ src: (a9) (60) (b6 08) (4b 3b cd be) (98 49)
+dest: (a9) (60) (ec 00) (00 00)       (5c 07)
