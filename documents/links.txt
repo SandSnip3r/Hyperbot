@@ -1,0 +1,16 @@
+edx packet analyzer
+https://www.elitepvpers.com/forum/sro-hacks-bots-cheats-exploits/685912-edxsilkroadloader5-beta-testing-7.html#post8781756
+
+Reverse engineering packets
+https://www.ghidra-sre.org/
+https://github.com/ReClassNET/ReClass.NET
+
+florian0
+https://gitlab.com/florian0/sro_devkit
+
+Chernobyl
+https://gitlab.com/Chernobyl_/phoenix
+
+Packets
+CharacterData
+https://www.elitepvpers.com/forum/sro-coding-corner/3970615-release-characterdata-entityspawn.html
