@@ -55,7 +55,7 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
   ss << (int)blocked << ',';
   ss << (int)packet.encrypted << ',';
   ss << (int)packet.massive << ',';
-  ss << std::hex << packet.opcode << ' ';
+  ss << std::hex << packet.opcode << std::dec << ' ';
   const int indentSize = ss.str().size();
   StreamUtility stream = packet.data;
   const auto &dataVector = stream.GetStreamVector();
@@ -64,7 +64,7 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
   for (int lineNum=0; lineNum<lineCount; ++lineNum) {
     const int startingIndex = kBytesPerLine*lineNum;
     for (int i=startingIndex; ((i < (startingIndex + kBytesPerLine)) && (i < copiedData.size())); ++i) {
-      ss << std::setfill('0') << std::setw(2) << std::hex << (int)copiedData.at(i) << ' ';
+      ss << std::setfill('0') << std::setw(2) << std::hex << (int)copiedData.at(i) << std::dec << ' ';
     }
     ss << '\n';
     if (lineNum == 0) {
