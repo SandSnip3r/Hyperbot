@@ -368,7 +368,7 @@ std::string DumpToString( const void * stream, int32_t size )
 			{
 				if( cur - 16 + y < size )
 				{
-					ss << std::hex << std::setfill( '0' ) << std::setw( 2 ) << fields[ y ] << " ";
+					ss << std::hex << std::setfill( '0' ) << std::setw( 2 ) << fields[ y ] << std::dec << " ";
 				}
 				else
 				{
