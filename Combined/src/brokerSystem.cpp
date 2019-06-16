@@ -64,7 +64,7 @@ void BrokerSystem::subscribeToPacket(PacketSubscriptionMap &subscriptions, Opcod
       subscriptionIt = itBoolResult.first;
     }
   }
-  std::cout << "Successfully subscribed to " << std::hex << static_cast<uint16_t>(subscriptionIt->first) << '\n';
+  std::cout << "Successfully subscribed to " << std::hex << static_cast<uint16_t>(subscriptionIt->first) << std::dec << '\n';
   subscriptionIt->second.emplace_back(std::move(handleFunc));
   std::cout << " -clientPacketSubscriptions.size() = " << clientPacketSubscriptions_.size() << '\n';
   std::cout << " -serverPacketSubscriptions.size() = " << serverPacketSubscriptions_.size() << '\n';
