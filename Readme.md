@@ -43,5 +43,5 @@ There are a few popular bots that have been used by players such as:
 Some people have also made some tools like an automatic alchemy tool or an auto staller.
 
 ## Documentation
-More documentation can be found in the [documentation directory](documents).
+More of my documentation can be found in the [documentation directory](documents).
 
