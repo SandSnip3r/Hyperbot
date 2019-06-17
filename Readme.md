@@ -21,7 +21,7 @@ I've spent some time removing a lot of excess code and have trimmed down Drew Be
 Currently, the focus is on an extensible framework that abstracts the packet parsing process and adds an internal event layer for information transmission.
 
 #### Future
-Near term, I'm starting to work on a pvp bot as a quick demo-able proof of concept. The focus during this development will be good architecture. I plan to try to reuse as much code as possible for a grinding bot.
+Near term, I'm starting to work on a pvp bot as a quick demoable proof of concept. The focus during this development will be good architecture. I plan to try to reuse as much code as possible for a grinding bot.
 Long term, I want to create a 90ish cap chinese only cooperating and coordinating goldbot farm.
 Ultralong term, the goal is to create a bot, that when set free in an empty server, can reach the level cap in the minimum amount of time and produce the strongest character possible. This includes but is not limited to:
 - Advanced algorithms to select a dynamic leveling route up to the level cap
