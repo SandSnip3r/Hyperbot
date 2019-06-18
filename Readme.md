@@ -30,11 +30,11 @@ Ultralong term, the goal is to create a bot, that when set free in an empty serv
 - Bot farms in the fields to collect gold, resources, and equipment for the main party
 - Bot assembly lines to filter and enhance the best equipment for the main party
 - An academy farm running to give King/Gold/Silver/Bronze Honor Buffs to the main character and party
-- Dungeon running parties to build Egyptian sets and Find Egyptian weapons & shields for the main character and party
+- Dungeon running parties to build Egyptian sets and find Egyptian weapons & shields for the main character and party
 - Pvp bots battling in battle arena for coins to build Egyptian accessories for the main character and party
 
 ## Other bots as inspiration
-There are a few popular bots that have been used by players such as:
+There are a few popular single-character bots that have been used by players such as:
 - mBot
 - Sbot
 - Centerbot
