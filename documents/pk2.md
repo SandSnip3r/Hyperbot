@@ -17,7 +17,7 @@ The headers are encrypted with a blowfish key.
 #### Map.pk2
 
 - The ground, water, and sky textures
-- Terrain mech information _(.m)_
+- Terrain mesh information _(.m)_
 - Terrain object placement information _(.02)_
 - Terrain lighting information _(.t)_
  
