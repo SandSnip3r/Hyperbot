@@ -56,8 +56,10 @@ _*Unexplored_
 - default base key: 0x03, 0xF8, 0xE4, 0x44, 0x88, 0x99, 0x3F, 0x64, 0xFE, 0x35
 - default ascii key: 169841
 - byte[] bKey = new byte[] { 0x32, 0xCE, 0xDD, 0x7C, 0xBC, 0xA8 };*
+- "\x32\x30\x30\x39\xC4\xEA" **
 
-_*From AlchemyTool source, unknown reliability_
+_*From AlchemyTool source, unknown reliability_    
+_**pushedx's backup key from PK2Tools_
 
 ## Unorganized information
 
