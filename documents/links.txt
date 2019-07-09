@@ -14,3 +14,20 @@ https://gitlab.com/Chernobyl_/phoenix
 Packets
 CharacterData
 https://www.elitepvpers.com/forum/sro-coding-corner/3970615-release-characterdata-entityspawn.html
+
+Loader
+https://www.elitepvpers.com/forum/sro-hacks-bots-cheats-exploits/685912-edxsilkroadloader5-beta-testing-7.html#post8781756
+
+PK2
+pushedx's PK2Tools
+https://www.elitepvpers.com/forum/sro-hacks-bots-cheats-exploits/690658-pk2tools-5-1-bundle.html
+
+Coordinate system
+Translation functions
+https://www.elitepvpers.com/forum/sro-coding-corner/1992345-coordinate-converter-open-source.html#post17651107
+DaxterSoul's movement packet
+https://www.elitepvpers.com/forum/sro-pserver-guides-releases/3998274-exploit-movement-spoofing.html#post33965771
+
+PServer
+Ragezone
+http://forum.ragezone.com/f722/vsro-server-files-v188-779870/
