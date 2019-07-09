@@ -1,158 +1,178 @@
 #include "loginModule.hpp"
 #include "opcode.hpp"
+#include "packetBuilding.hpp"
+
 #include <iostream>
 #include <Windows.h>
 
-LoginModule::LoginModule(std::function<void(PacketContainer&, PacketContainer::Direction)> injectionFunction) : injectionFunction_(injectionFunction) {
-
+LoginModule::LoginModule(BrokerSystem &brokerSystem) : broker_(brokerSystem) {
+  // Client packets
+  broker_.subscribeToClientPacket(Opcode::CLIENT_CAFE, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
+  broker_.subscribeToClientPacket(Opcode::CLIENT_AUTH, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
+  // Server packets
+  broker_.subscribeToServerPacket(Opcode::LOGIN_SERVER_LIST, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
+  broker_.subscribeToServerPacket(Opcode::LOGIN_SERVER_AUTH_INFO, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
+  broker_.subscribeToServerPacket(Opcode::LOGIN_CLIENT_INFO, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
+  broker_.subscribeToServerPacket(Opcode::SERVER_LOGIN_RESULT, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
+  broker_.subscribeToServerPacket(Opcode::SERVER_CHARACTER, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
+  broker_.subscribeToServerPacket(Opcode::SERVER_INGAME_ACCEPT, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
+  broker_.subscribeToServerPacket(Opcode::SERVER_CHARDATA, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
+  // broker_.subscribeToServerPacket(static_cast<Opcode>(0x6005), std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
 }
 
-void LoginModule::serverListReceived(const PacketContainer &packet) {
-  std::cout << "LoginModule::serverListReceived\n";
-  StreamUtility stream = packet.data;
-  uint8_t globalOpFlag = stream.Read<uint8_t>();
-  while (globalOpFlag == 0x01) {
-    // Read a "global op" , will be something like "SRO_Vietnam_TestLocal"
-    uint8_t globalOpType = stream.Read<uint8_t>(); // For Atomix, its SRO_Taiwan_TestIn
-    uint16_t globalNameLength = stream.Read<uint16_t>();
-    std::string globalName;
-    for (int i=0; i<globalNameLength; ++i) {
-      globalName += stream.Read<uint8_t>();
-    }
-    std::cout << "LoginModule::serverListReceived: Read a global op, name: \"" << globalName << "\"\n";
-    globalOpFlag = stream.Read<uint8_t>();
-  }
-  uint8_t shardFlag = stream.Read<uint8_t>();
-  while (shardFlag == 0x01) {
-    // Read a "shard" , will be something like "Atomix"
-    shardId_ = stream.Read<uint16_t>();
-    uint16_t shardNameLength = stream.Read<uint16_t>();
-    std::string shardName;
-    for (int i=0; i<shardNameLength; ++i) {
-      shardName += stream.Read<uint8_t>();
-    }
-    std::cout << "LoginModule::serverListReceived: Read a shard, name: \"" << shardName << "\"\n";
-    uint16_t shardCurrent = stream.Read<uint16_t>();
-    uint16_t shardCapacity = stream.Read<uint16_t>();
-    bool shardOnline = stream.Read<uint8_t>();
-    std::cout << "LoginModule::serverListReceived: Server capacity is " << shardCurrent << '/' << shardCapacity << " and " << (shardOnline ? "is" : "isnt") << "online\n";
-    uint8_t globalOpId = stream.Read<uint8_t>(); // Idk what this is, i guess globalOpType from above
-    shardFlag = stream.Read<uint8_t>();
-  }
-  std::cout << "Our shard id is " << shardId_ << "\n";
-  serverListParsed_ = true;
-}
-
-void LoginModule::cafeSent() {
-  std::cout << "LoginModule::cafeSent\n";
-  //The weird 0xCAFE packet has been sent
-  if (!serverListParsed_) {
-    //Never got the serverlist packet, dont have enough info to login
-    std::cerr << "LoginModule::cafeSent Never got the serverlist packet, dont have enough info to login\n";
-    return;
-  }
-  //Build a LOGIN_CLIENT_AUTH packet
-  StreamUtility loginAuthPacketData;
-  loginAuthPacketData.Write<uint8_t>(kLocale_);
-  loginAuthPacketData.Write<uint16_t>(kUsername_.size());
-  loginAuthPacketData.Write_Ascii(kUsername_);
-  loginAuthPacketData.Write<uint16_t>(kPassword_.size());
-  loginAuthPacketData.Write_Ascii(kPassword_);
-  loginAuthPacketData.Write<uint16_t>(shardId_);
-  PacketContainer loginAuthPacket(static_cast<uint16_t>(Opcode::LOGIN_CLIENT_AUTH), loginAuthPacketData, 1, 0);
-  //Inject the packet
-  injectionFunction_(loginAuthPacket, PacketContainer::Direction::kClientToServer);
-  std::cout << "Injected LOGIN_CLIENT_AUTH\n";
-  loginPacketSentToGateway_ = true;
-}
-
-void LoginModule::serverAuthInfoReceived(const PacketContainer &packet) {
-  if (!loginPacketSentToGateway_) {
-    // We didnt cause this, the client must have. Nothing to do
-    return;
-  }
-  StreamUtility stream = packet.data;
-  uint8_t result = stream.Read<uint8_t>();
-  if (result == 0x01) {
-    // Success!
-    loginToken_ = stream.Read<uint32_t>();
-    gatewayLoginSuccessful_ = true;
-    // Dont care about the rest, the proxy is handling that
-  }
-}
-
-bool LoginModule::loginClientInfo(const PacketContainer &packet) {
-  if (!loginPacketSentToGateway_ && !gatewayLoginSuccessful_) {
-    // TODO: That if condition logic is bad. Handle failures better
-    // We're not doing the login, let this be forwarded this to the client
+bool LoginModule::handlePacket(std::unique_ptr<PacketParsing::PacketParser> &packetParser) {
+  std::cout << "LoginModule::handlePacket\n";
+  if (!packetParser) {
+    // No packet parser
     return true;
   }
-  // Check to make sure this is the AgentServer and not GatewayServer
-  StreamUtility stream = packet.data;
-  uint16_t serverTypeStrLength = stream.Read<uint16_t>();
-  std::string server = stream.Read_Ascii(serverTypeStrLength);
-  if (server == "GatewayServer") {
-    // Not what we want
-    std::cout << "LoginModule::loginClientInfo, looking for AgentServer but found GatewayServer\n";
+
+  PacketParsing::ClientCafePacket *cafe = dynamic_cast<PacketParsing::ClientCafePacket*>(packetParser.get());
+  if (cafe != nullptr) {
+    cafeReceived();
     return true;
   }
-  std::cout << "LoginModule::loginClientInfo, creating ClientAuthPacket for AgentServer\n";
-  // Build a agentserver login packet
-  //  4   uint    Token
-  //  2   ushort  Username.Length
-  //  *   string  Username
-  //  2   ushort  Password.Length
-  //  *   string  Password
-  //  1   byte    Locale
-  //  6   byte[]  MAC-Address
-  StreamUtility clientAuthPacketData;
-  clientAuthPacketData.Write<uint32_t>(loginToken_);
-  clientAuthPacketData.Write<uint16_t>(kUsername_.size());
-  clientAuthPacketData.Write_Ascii(kUsername_);
-  clientAuthPacketData.Write<uint16_t>(kPassword_.size());
-  clientAuthPacketData.Write_Ascii(kPassword_);
-  clientAuthPacketData.Write<uint8_t>(kLocale_);
-  //TODO: Handle mac address better
-  clientAuthPacketData.Write<uint16_t>(0);
-  clientAuthPacketData.Write<uint32_t>(macAddress_);
-  PacketContainer clientAuthPacket(static_cast<uint16_t>(Opcode::CLIENT_AUTH), clientAuthPacketData, 1, 0);
-  injectionFunction_(clientAuthPacket, PacketContainer::Direction::kClientToServer);
-  loginPacketSentToAgent_ = true;
-  return false;
+
+  PacketParsing::LoginServerListPacket *serverList = dynamic_cast<PacketParsing::LoginServerListPacket*>(packetParser.get());
+  if (serverList != nullptr) {
+    serverListReceived(*serverList);
+    return true;
+  }
+
+  PacketParsing::LoginResponsePacket *loginResponse = dynamic_cast<PacketParsing::LoginResponsePacket*>(packetParser.get());
+  if (loginResponse != nullptr) {
+    loginResponseReceived(*loginResponse);
+    return true;
+  }
+
+  // This packet is a response to the client sending 0x2001 where the client indicates that it is the "SR_Client"
+  PacketParsing::LoginClientInfoPacket *loginClientInfo = dynamic_cast<PacketParsing::LoginClientInfoPacket*>(packetParser.get());
+  if (loginClientInfo != nullptr) {
+    loginClientInfoReceived(*loginClientInfo);
+    return true;
+  }
+
+  PacketParsing::UnknownPacket *unknownPacket = dynamic_cast<PacketParsing::UnknownPacket*>(packetParser.get());
+  if (unknownPacket != nullptr) {
+    auto fowardReturnValue = unknownPacketReceived(*unknownPacket);
+    return fowardReturnValue;
+  }
+
+  PacketParsing::ServerAuthResponsePacket *serverAuthResponse = dynamic_cast<PacketParsing::ServerAuthResponsePacket*>(packetParser.get());
+  if (serverAuthResponse != nullptr) {
+    serverAuthReceived(*serverAuthResponse);
+    return true;
+  }
+
+  PacketParsing::ServerAgentCharacterSelectionActionResponsePacket *charListResponse = dynamic_cast<PacketParsing::ServerAgentCharacterSelectionActionResponsePacket*>(packetParser.get());
+  if (charListResponse != nullptr) {
+    charListReceived(*charListResponse);
+    return true;
+  }
+
+  PacketParsing::ServerAgentCharacterSelectionJoinResponsePacket *charSelectionJoinResponse = dynamic_cast<PacketParsing::ServerAgentCharacterSelectionJoinResponsePacket*>(packetParser.get());
+  if (charSelectionJoinResponse != nullptr) {
+    charSelectionJoinResponseReceived(*charSelectionJoinResponse);
+    return true;
+  }
+
+  PacketParsing::ServerAgentCharacterDataPacket *charData = dynamic_cast<PacketParsing::ServerAgentCharacterDataPacket*>(packetParser.get());
+  if (charData != nullptr) {
+    std::cout << "Got character data\n";
+    return true;
+  }
+
+  std::cout << "Unhandled packet subscribed to\n";
+  return true;
 }
 
-void LoginModule::serverLoginResultReceived(const PacketContainer &packet) {
-  std::cout << "LoginModule::serverLoginResultReceived\n";
-  if (!loginPacketSentToAgent_) {
-    // TODO: This if condition logic is bad
-    // We didnt try to login
-    return;
-  }
-  StreamUtility stream = packet.data;
-  uint8_t result = stream.Read<uint8_t>();
-  if (result == 0x02) {
-    //Error! TODO: Handle
+void LoginModule::cafeReceived() {
+  std::cout << " CAFE packet received, injecting loginauth packet\n";
+  auto loginAuthPacket = PacketBuilding::LoginAuthPacketBuilder(kLocale_, kUsername_, kPassword_, shardId_).packet();
+  broker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
+}
+
+void LoginModule::serverListReceived(PacketParsing::LoginServerListPacket &packet) {
+  std::cout << "Server List Received\n";
+  shardId_ = packet.shardId();
+  std::cout << " Server List packet, shardId:" << shardId_ << "\n";
+}
+
+void LoginModule::loginResponseReceived(PacketParsing::LoginResponsePacket &packet) {
+  std::cout << " Login response, result:" << static_cast<int>(packet.result()) << ", token:" << packet.token() << "\n";
+  if (packet.result() != PacketEnums::LoginResult::kSuccess) {
+    std::cout << " Login failed\n";
   } else {
-    //Success. Request character info
-    StreamUtility requestCharacterListPacketData;
-    requestCharacterListPacketData.Write<uint8_t>(0x02);
-    PacketContainer requestCharacterListPacket(static_cast<uint16_t>(Opcode::CLIENT_CHARACTER), requestCharacterListPacketData, 0, 0);
-    std::cout << "Injecting CLIENT_CHARACTER\n";
-    injectionFunction_(requestCharacterListPacket, PacketContainer::Direction::kClientToServer);
-    requestedCharacterList_ = true;
+    std::cout << " Login Success, saving token\n";
+    token_ = packet.token();
   }
 }
 
-void LoginModule::serverCharacterListReceived(const PacketContainer &packet) {
-  std::cout << "LoginModule::serverCharacterListReceived\n";
-  if (!requestedCharacterList_) {
-    //Dont care
+void LoginModule::loginClientInfoReceived(PacketParsing::LoginClientInfoPacket &packet) {
+  std::cout << " Login client info, service name:" << packet.serviceName() << "\n";
+  if (packet.serviceName() != "AgentServer") {
+    std::cout << "Not agentserver\n";
+  } else {
+    std::cout << "Injecting client auth packet to agentserver\n";
+    // Connected to agentserver, send client auth packet
+    auto clientAuthPacket = PacketBuilding::ClientAuthPacketBuilder(token_, kUsername_, kPassword_, kLocale_, kMacAddress_).packet();
+    broker_.injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
+    loggingIn_ = true;
+    // Allow this packet to continue to the client
+    // Warning: The client will send an empty clientAuth packet. block it from the server
+  }
+}
+
+bool LoginModule::unknownPacketReceived(PacketParsing::UnknownPacket &packet) {
+  std::cout << "Unknown packet\n";
+  if (packet.opcode() == Opcode::CLIENT_AUTH) {
+    std::cout << "Client_auth packet, actually\n";
+    // Client auth packet
+    if (loggingIn_) {
+      std::cout << "client trying to authenticate\n";
+      // Block this from going to the server
+      return false;
+    }
+  }
+  return true;
+}
+
+void LoginModule::serverAuthReceived(PacketParsing::ServerAuthResponsePacket &packet) {
+  std::cout << " Server auth response: " << (int)packet.result() << "\n";
+  if (packet.result() == 0x01) {
+    loggingIn_ = false;
+    // TODO: remove this function and opcode subscription. Client will already take care of this
+    // std::cout << "Successfully logged in! Request character list\n";
+    // auto characterListPacket = PacketBuilding::CharacterSelectionActionPacketBuilder(PacketEnums::CharacterSelectionAction::kList).packet();
+    // broker_.injectPacket(characterListPacket, PacketContainer::Direction::kClientToServer);
+  }
+}
+
+void LoginModule::charListReceived(PacketParsing::ServerAgentCharacterSelectionActionResponsePacket &packet) {
+  auto &charList = packet.characters();
+  std::cout << "Char list received, " << charList.size() << " character(s)\n";
+  // Search for our character in the character list
+  auto it = std::find_if(charList.begin(), charList.end(), [this](const PacketInnerStructures::CharacterSelection::Character &character) {
+    return character.name == kCharName_;
+  });
+  if (it == charList.end()) {
+    std::cout << "Unable to find character \"" << kCharName_ << "\". Options are [";
+    for (const auto &character : charList) {
+      std::cout << character.name << ',';
+    }
+    std::cout << "]\n";
     return;
   }
-  StreamUtility chooseCharacterPacketData;
-  chooseCharacterPacketData.Write<uint16_t>(kCharName_.size());
-  chooseCharacterPacketData.Write_Ascii(kCharName_);
-  PacketContainer chooseCharacterPacket(static_cast<uint16_t>(Opcode::CLIENT_INGAME_REQUEST), chooseCharacterPacketData, 0, 0);
-  std::cout << "Injecting CLIENT_INGAME_REQUEST\n";
-  injectionFunction_(chooseCharacterPacket, PacketContainer::Direction::kClientToServer);
+  // Found our character, select it
+  auto charSelectionPacket = PacketBuilding::ClientAgentSelectionJoinPacketBuilder(kCharName_).packet();
+  broker_.injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
+}
+
+void LoginModule::charSelectionJoinResponseReceived(PacketParsing::ServerAgentCharacterSelectionJoinResponsePacket &packet) {
+  // A character was selected after login, this is the response
+  if (packet.result() != 0x01) {
+    // Character selection failed
+    // TODO: Properly handle error
+    std::cout << "Failed when selecting character\n";
+  }
 }

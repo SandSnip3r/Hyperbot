@@ -11,6 +11,77 @@ PacketContainer PacketBuilder::packet(const StreamUtility &stream, bool encrypte
   return PacketContainer(static_cast<uint16_t>(opcode_), stream, (encrypted ? 1 : 0), (massive ? 1 : 0));
 }
 
+ClientAgentSelectionJoinPacketBuilder::ClientAgentSelectionJoinPacketBuilder(const std::string &name) :
+      PacketBuilder(Opcode::CLIENT_INGAME_REQUEST),
+      name_(name) {
+  //
+}
+
+PacketContainer ClientAgentSelectionJoinPacketBuilder::packet() const {
+  StreamUtility packetData;
+  packetData.Write<uint16_t>(static_cast<uint16_t>(name_.size()));
+  packetData.Write_Ascii(name_);
+  return PacketBuilder::packet(packetData, true, false);
+}
+
+CharacterSelectionActionPacketBuilder::CharacterSelectionActionPacketBuilder(PacketEnums::CharacterSelectionAction action) :
+      PacketBuilder(Opcode::CLIENT_CHARACTER),
+      action_(action) {
+  //
+}
+
+PacketContainer CharacterSelectionActionPacketBuilder::packet() const {
+  StreamUtility packetData;
+  packetData.Write<uint8_t>(static_cast<uint8_t>(action_));
+  return PacketBuilder::packet(packetData, true, false);
+
+}
+
+ClientAuthPacketBuilder::ClientAuthPacketBuilder(uint32_t loginToken, const std::string &kUsername, const std::string &kPassword, uint8_t kLocale, const std::array<uint8_t,6> &macAddress) :
+      PacketBuilder(Opcode::CLIENT_AUTH),
+      loginToken_(loginToken),
+      kUsername_(kUsername),
+      kPassword_(kPassword),
+      kLocale_(kLocale),
+      macAddress_(macAddress) {
+  //
+}
+
+PacketContainer ClientAuthPacketBuilder::packet() const {
+  StreamUtility clientAuthPacketData;
+  clientAuthPacketData.Write<uint32_t>(loginToken_);
+  clientAuthPacketData.Write<uint16_t>(kUsername_.size());
+  clientAuthPacketData.Write_Ascii(kUsername_);
+  clientAuthPacketData.Write<uint16_t>(kPassword_.size());
+  clientAuthPacketData.Write_Ascii(kPassword_);
+  clientAuthPacketData.Write<uint8_t>(kLocale_); //Content.ID
+  for (const uint8_t macAddrByte : macAddress_) {
+    clientAuthPacketData.Write<uint8_t>(macAddrByte);
+
+  }
+  return PacketBuilder::packet(clientAuthPacketData, true, false);
+}
+
+LoginAuthPacketBuilder::LoginAuthPacketBuilder(uint8_t locale, const std::string &username, const std::string &password, uint16_t shardId) :
+      PacketBuilder(Opcode::LOGIN_CLIENT_AUTH),
+      locale_(locale),
+      username_(username),
+      password_(password),
+      shardId_(shardId) {
+  //
+}
+
+PacketContainer LoginAuthPacketBuilder::packet() const {
+  StreamUtility loginAuthPacketData;
+  loginAuthPacketData.Write<uint8_t>(locale_);
+  loginAuthPacketData.Write<uint16_t>(username_.size());
+  loginAuthPacketData.Write_Ascii(username_);
+  loginAuthPacketData.Write<uint16_t>(password_.size());
+  loginAuthPacketData.Write_Ascii(password_);
+  loginAuthPacketData.Write<uint16_t>(shardId_);
+  return PacketBuilder::packet(loginAuthPacketData, true, false);
+}
+
 ClientMovementRequestPacketBuilder::ClientMovementRequestPacketBuilder(uint16_t angle) :
       PacketBuilder(Opcode::CLIENT_MOVEMENT),
       hasDestination_(false),

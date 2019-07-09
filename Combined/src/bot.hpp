@@ -1,4 +1,5 @@
 #include "brokerSystem.hpp"
+#include "loginModule.hpp"
 #include "shared/silkroad_security.h"
 #include <functional>
 
@@ -10,11 +11,12 @@ class Bot {
 public:
   Bot(BrokerSystem &broker);
   // void configure(Config &config);
-  // bool packetReceived(const PacketContainer &packet, PacketContainer::Direction packetDirection);
 private:
-  void commandHandler(const std::string &command);
-  bool handleClientChat(std::unique_ptr<PacketParsing::PacketParser> &packetParser);
+  // LoginState loginState_{LoginState::kWaitingForServerList};
   BrokerSystem &broker_;
+  LoginModule loginModule_{broker_};
+  // bool handleClientChat(std::unique_ptr<PacketParsing::PacketParser> &packetParser);
+  // void commandHandler(const std::string &command);
 };
 
 #endif
