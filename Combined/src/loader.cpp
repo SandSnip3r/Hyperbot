@@ -8,14 +8,14 @@
 // locale
 // Gateway port
 
-Loader::Loader(const std::string &silkroadPath, uint8_t locale) : kSilkroadPath_(silkroadPath), kLocale_(locale) {
+Loader::Loader(const fs::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo) : kSilkroadDirectoryPath_(kSilkroadDirectoryPath), kDivisionInfo_(divisionInfo) {
   // TODO: Ensure this dll path is updated for release builds
   dllPath_ = edxLabs::GetAbsoluteDirectoryPath() + "../Debug/loaderDll.dll";
   std::stringstream args;
-  args << "0 /" << (int)kLocale_ << " " << 0 << " " << 0;
+  args << "0 /" << (int)kDivisionInfo_.locale << " " << 0 << " " << 0;
   arguments_ = args.str();
   //TODO: Use a better filesystem utility
-  clientPath_ = kSilkroadPath_ + "sro_client.exe";
+  clientPath_ = (kSilkroadDirectoryPath_ / "sro_client.exe").string();
   //TODO: Check this exists
   std::cout << "Loader constructed\n";
   std::cout << " Silkroad client path: \"" << clientPath_ << "\"\n";

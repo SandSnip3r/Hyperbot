@@ -10,14 +10,16 @@
 
 namespace pk2 {
 
+namespace fs = std::experimental::filesystem::v1;
+
 class Pk2ReaderModern {
 public:
-	Pk2ReaderModern(const std::experimental::filesystem::v1::path &pk2Path);
+	Pk2ReaderModern(const fs::path &pk2Path);
 	~Pk2ReaderModern();
 	PK2Entry getEntry(const std::string &entryName);
 	std::vector<uint8_t> getEntryData(PK2Entry &entry);
 private:
-	std::experimental::filesystem::v1::path pk2Path_;
+	fs::path pk2Path_;
 	PK2Reader pk2Reader_;
 };
 

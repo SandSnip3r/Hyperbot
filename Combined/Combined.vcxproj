@@ -31,6 +31,8 @@
     <ClCompile Include="src\bot.cpp" />
     <ClCompile Include="src\brokerSystem.cpp" />
     <ClCompile Include="src\chatEventModule.cpp" />
+    <ClCompile Include="src\gameData.cpp" />
+    <ClCompile Include="src\itemData.cpp" />
     <ClCompile Include="src\loader.cpp" />
     <ClCompile Include="src\loginModule.cpp" />
     <ClCompile Include="src\opcode.cpp" />
@@ -43,6 +45,7 @@
     <ClCompile Include="src\shared\silkroad_security.cpp" />
     <ClCompile Include="src\shared\stream_utility.cpp" />
     <ClCompile Include="src\silkroadConnection.cpp" />
+    <ClCompile Include="src\skillData.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\blowfish.h" />
@@ -60,6 +63,8 @@
     <ClInclude Include="src\botConnection.hpp" />
     <ClInclude Include="src\brokerSystem.hpp" />
     <ClInclude Include="src\chatEventModule.hpp" />
+    <ClInclude Include="src\gameData.hpp" />
+    <ClInclude Include="src\itemData.hpp" />
     <ClInclude Include="src\loader.hpp" />
     <ClInclude Include="src\loginModule.hpp" />
     <ClInclude Include="src\packetBuilding.hpp" />
@@ -71,6 +76,7 @@
     <ClInclude Include="src\shared\silkroad_security.h" />
     <ClInclude Include="src\shared\stream_utility.h" />
     <ClInclude Include="src\silkroadConnection.hpp" />
+    <ClInclude Include="src\skillData.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

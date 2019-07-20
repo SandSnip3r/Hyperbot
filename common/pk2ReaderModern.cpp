@@ -5,8 +5,8 @@
 
 namespace pk2 {
 
-Pk2ReaderModern::Pk2ReaderModern(const std::experimental::filesystem::v1::path &pk2Path) : pk2Path_(pk2Path) {
-  if (!std::experimental::filesystem::v1::exists(pk2Path_)) {
+Pk2ReaderModern::Pk2ReaderModern(const fs::path &pk2Path) : pk2Path_(pk2Path) {
+  if (!fs::exists(pk2Path_)) {
     throw std::runtime_error("PK2 file \""+pk2Path_.string()+"\" does not exist");
   }
   bool pk2OpenResult = pk2Reader_.Open(pk2Path_.string().c_str());

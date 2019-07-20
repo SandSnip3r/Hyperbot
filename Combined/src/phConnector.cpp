@@ -47,6 +47,7 @@
 #include "../../common/divisionInfo.hpp"
 #include "../../common/parsing.hpp"
 #include "../../common/pk2ReaderModern.hpp"
+#include "gameData.hpp"
 
 #include <iostream>
 
@@ -65,24 +66,19 @@ int main(int argc, char* argv[]) {
   // Use config to get silkroad path
   // Find and parse the Media.pk2
   // Parse the Media.pk2 into some game data
-	const std::string kSilkroadPath = "C:\\Program Files (x86)\\Evolin\\"; // TODO: Get from config file
-  pk2::DivisionInfo divisionInfo;
+	const std::string kSilkroadDirectory = "C:\\Program Files (x86)\\Evolin\\"; // TODO: Get from config file
+
   try {
-    std::string kMediaPath = kSilkroadPath+"Media.pk2";
-    pk2::Pk2ReaderModern pk2Reader{kMediaPath};
-    const string kDivisionInfoEntryName = "DIVISIONINFO.TXT";
-		PK2Entry divisionInfoEntry = pk2Reader.getEntry(kDivisionInfoEntryName);
-		auto divisionInfoData = pk2Reader.getEntryData(divisionInfoEntry);
-		divisionInfo = pk2::parsing::parseDivisionInfo(divisionInfoData);
+    pk2::media::GameData gameData(kSilkroadDirectory);
+
+    // Pass game data object to the Session
+    // Pass config object to the Session
+	  Session session{gameData, kSilkroadDirectory};
+
+	  session.start();
   } catch (std::exception &ex) {
-    cerr << "Failed to parse Media.Pk2. Error: \"" << ex.what() << "\"" << '\n';
+    cerr << ex.what() << '\n';
     return 1;
   }
-
-  // Pass game data object to the Session
-  // Pass config object to the Session
-	Session session{kSilkroadPath, divisionInfo.locale};
-
-	session.start();
 	return 0;
 }
