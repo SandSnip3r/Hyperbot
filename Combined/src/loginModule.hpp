@@ -26,7 +26,7 @@ private:
   bool loggingIn_ = false;
   uint32_t token_;
   uint16_t shardId_;
-  const uint8_t kLocale_{0x16};
+  const uint8_t kLocale_{0x16}; // TODO: Get from pk2::DivisionInfo
   const std::string kUsername_{"test"};
   const std::string kPassword_{"test"};
   const std::string kCharName_{"test"};

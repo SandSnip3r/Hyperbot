@@ -19,9 +19,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\common\blowfish.cpp" />
     <ClCompile Include="..\common\Common.cpp" />
-    <ClCompile Include="..\common\pk2Reader.cpp" />
-    <ClCompile Include="..\common\Silkroad.cpp" />
+    <ClCompile Include="..\common\division.cpp" />
+    <ClCompile Include="..\common\divisionInfo.cpp" />
+    <ClCompile Include="..\common\item.cpp" />
+    <ClCompile Include="..\common\parsing.cpp" />
+    <ClCompile Include="..\common\PK2Reader.cpp" />
+    <ClCompile Include="..\common\pk2ReaderModern.cpp" />
+    <ClCompile Include="..\common\shared_io.cpp" />
     <ClCompile Include="src\bot.cpp" />
     <ClCompile Include="src\brokerSystem.cpp" />
     <ClCompile Include="src\chatEventModule.cpp" />
@@ -34,15 +40,22 @@
     <ClCompile Include="src\phConnector.cpp" />
     <ClCompile Include="src\proxy.cpp" />
     <ClCompile Include="src\session.cpp" />
-    <ClCompile Include="src\shared\blowfish.cpp" />
     <ClCompile Include="src\shared\silkroad_security.cpp" />
     <ClCompile Include="src\shared\stream_utility.cpp" />
     <ClCompile Include="src\silkroadConnection.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\common\blowfish.h" />
     <ClInclude Include="..\common\Common.h" />
-    <ClInclude Include="..\common\pk2Reader.h" />
-    <ClInclude Include="..\common\Silkroad.h" />
+    <ClInclude Include="..\common\division.hpp" />
+    <ClInclude Include="..\common\divisionInfo.hpp" />
+    <ClInclude Include="..\common\item.hpp" />
+    <ClInclude Include="..\common\parsing.hpp" />
+    <ClInclude Include="..\common\PK2.h" />
+    <ClInclude Include="..\common\PK2Reader.h" />
+    <ClInclude Include="..\common\pk2ReaderModern.hpp" />
+    <ClInclude Include="..\common\shared_io.h" />
+    <ClInclude Include="..\common\shared_types.h" />
     <ClInclude Include="src\bot.hpp" />
     <ClInclude Include="src\botConnection.hpp" />
     <ClInclude Include="src\brokerSystem.hpp" />
@@ -55,7 +68,6 @@
     <ClInclude Include="src\packetParsing.hpp" />
     <ClInclude Include="src\proxy.hpp" />
     <ClInclude Include="src\session.hpp" />
-    <ClInclude Include="src\shared\blowfish.h" />
     <ClInclude Include="src\shared\silkroad_security.h" />
     <ClInclude Include="src\shared\stream_utility.h" />
     <ClInclude Include="src\silkroadConnection.hpp" />
@@ -133,6 +145,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -150,6 +163,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>C:\boost\boost_1_67_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -168,6 +182,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -187,6 +202,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

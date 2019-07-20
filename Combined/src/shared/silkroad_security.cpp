@@ -1,5 +1,5 @@
 #include "silkroad_security.h"
-#include "blowfish.h"
+#include "../../../common/blowfish.h"
 #include <boost/random.hpp>
 #include <exception>
 #include <list>
