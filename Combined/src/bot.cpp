@@ -6,7 +6,9 @@
 #include <iostream>
 #include <thread>
 
-Bot::Bot(BrokerSystem &broker) : broker_(broker) {
+Bot::Bot(const config::ConfigData &configData, BrokerSystem &broker) :
+      configData_(configData),
+      broker_(broker) {
   // Client packets
   // broker_.subscribeToClientPacket(Opcode::CLIENT_CHAT, std::bind(&Bot::handleClientChat, this, std::placeholders::_1));
 }

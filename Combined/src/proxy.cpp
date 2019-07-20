@@ -1,9 +1,18 @@
 #include "proxy.hpp"
 
-Proxy::Proxy(BrokerSystem &broker, uint16_t port) :
+Proxy::Proxy(const pk2::media::GameData &gameData, BrokerSystem &broker, uint16_t port) :
+      divisionInfo_(gameData.divisionInfo()),
       broker_(broker),
       acceptor(ioService_, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
       timer(boost::make_shared<boost::asio::deadline_timer>(ioService_)) {
+  if (divisionInfo_.divisions.empty()) {
+    throw std::runtime_error("Proxy given DivisionInfo without any divisions");
+  }
+  if (divisionInfo_.divisions[0].gatewayIpAddresses.empty()) {
+    throw std::runtime_error("Proxy given Division without any addresses");
+  }
+  gatewayAddress_ = divisionInfo_.divisions[0].gatewayIpAddresses[0];
+
   broker_.setInjectionFunction(std::bind(&Proxy::inject, this, std::placeholders::_1, std::placeholders::_2));
   std::cout << "Proxy constructed, listening on port " << port << '\n';
   //Start accepting connections
@@ -102,13 +111,13 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
       ec = serverConnection.Connect(agentIP_, agentPort_);
     } else {
       //Connect to the gateway server
-      std::cout << "Connecting to " << Config::GatewayIP << ":" << Config::GatewayPort << std::endl;
-      ec = serverConnection.Connect(Config::GatewayIP, Config::GatewayPort);
+      std::cout << "Connecting to " << gatewayAddress_ << ":" << Config::GatewayPort << std::endl;
+      ec = serverConnection.Connect(gatewayAddress_, Config::GatewayPort);
     }
 
     //Error check
     if(ec) {
-      std::cout << "[Error] Unable to connect to " << (connectToAgent ? agentIP_ : Config::GatewayIP) << ":" << (connectToAgent ? agentPort_ : Config::GatewayPort) << std::endl;
+      std::cout << "[Error] Unable to connect to " << (connectToAgent ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent ? agentPort_ : Config::GatewayPort) << std::endl;
       std::cout << ec.message() << std::endl;
 
       //Silkroad connection is no longer needed

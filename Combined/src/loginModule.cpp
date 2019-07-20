@@ -5,7 +5,11 @@
 #include <iostream>
 #include <Windows.h>
 
-LoginModule::LoginModule(BrokerSystem &brokerSystem) : broker_(brokerSystem) {
+LoginModule::LoginModule(const config::ConfigData &configData, BrokerSystem &brokerSystem) :
+      broker_(brokerSystem),
+      kCharName_(configData.charName()),
+      kUsername_(configData.charId()),
+      kPassword_(configData.charPassword()) {
   // Client packets
   broker_.subscribeToClientPacket(Opcode::CLIENT_CAFE, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
   broker_.subscribeToClientPacket(Opcode::CLIENT_AUTH, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));

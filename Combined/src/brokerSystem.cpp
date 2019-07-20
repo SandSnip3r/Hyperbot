@@ -57,15 +57,10 @@ void BrokerSystem::subscribeToPacket(PacketSubscriptionMap &subscriptions, Opcod
   if (subscriptionIt == subscriptions.end()) {
     auto itBoolResult = subscriptions.emplace(opcode, std::vector<PacketHandleFunction>());
     if (!itBoolResult.second) {
-      std::cerr << "Unable to subscribe!\n";
-      // TODO: Handle error better
-      return;
+      throw std::runtime_error("BrokerSystem unable to create subscription for opcode "+std::to_string(int(opcode)));
     } else {
       subscriptionIt = itBoolResult.first;
     }
   }
-  std::cout << "Successfully subscribed to " << std::hex << static_cast<uint16_t>(subscriptionIt->first) << std::dec << '\n';
   subscriptionIt->second.emplace_back(std::move(handleFunc));
-  std::cout << " -clientPacketSubscriptions.size() = " << clientPacketSubscriptions_.size() << '\n';
-  std::cout << " -serverPacketSubscriptions.size() = " << serverPacketSubscriptions_.size() << '\n';
 }

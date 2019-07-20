@@ -1,8 +1,8 @@
 #include "session.hpp"
 
-Session::Session(const pk2::media::GameData &gameData, const fs::path &kSilkroadDirectoryPath) :
+Session::Session(const pk2::media::GameData &gameData, const config::ConfigData &configData) :
     gameData_(gameData),
-    loader_(kSilkroadDirectoryPath, gameData_.divisionInfo()) {
+    configData_(configData) {
   //
 }
 

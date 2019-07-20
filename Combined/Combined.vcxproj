@@ -31,7 +31,9 @@
     <ClCompile Include="src\bot.cpp" />
     <ClCompile Include="src\brokerSystem.cpp" />
     <ClCompile Include="src\chatEventModule.cpp" />
+    <ClCompile Include="src\configData.cpp" />
     <ClCompile Include="src\gameData.cpp" />
+    <ClCompile Include="src\iniReader.cpp" />
     <ClCompile Include="src\itemData.cpp" />
     <ClCompile Include="src\loader.cpp" />
     <ClCompile Include="src\loginModule.cpp" />
@@ -63,7 +65,9 @@
     <ClInclude Include="src\botConnection.hpp" />
     <ClInclude Include="src\brokerSystem.hpp" />
     <ClInclude Include="src\chatEventModule.hpp" />
+    <ClInclude Include="src\configData.hpp" />
     <ClInclude Include="src\gameData.hpp" />
+    <ClInclude Include="src\iniReader.hpp" />
     <ClInclude Include="src\itemData.hpp" />
     <ClInclude Include="src\loader.hpp" />
     <ClInclude Include="src\loginModule.hpp" />

@@ -42,43 +42,32 @@
 // InjectJoymax = boost::bind(&SilkroadConnection::Inject, &serverConnection, _1, _2, _3);
 // InjectSilkroad = boost::bind(&SilkroadConnection::Inject, &clientConnection, _1, _2, _3);
 
+#include "configData.hpp"
 #include "session.hpp"
+#include "iniReader.hpp"
 #include "silkroadConnection.hpp"
 #include "../../common/divisionInfo.hpp"
 #include "../../common/parsing.hpp"
 #include "../../common/pk2ReaderModern.hpp"
 #include "gameData.hpp"
 
+#include <filesystem>
 #include <iostream>
 
 using namespace std;
+namespace fs = std::experimental::filesystem::v1;
 
-//Packet from server when char already logged in
-//41218 02 03
 int main(int argc, char* argv[]) {
-	//Let the user know which ports to connect to
-	cout << "Redirect Silkroad to 127.0.0.1:" << Config::BindPort << endl;
-	cout << "Redirect the bot to 127.0.0.1:" << Config::BotBind << endl << endl;
-
-	const string kConfigFilePath{"config.ini"};
-  // Parse config into an object
-
-  // Use config to get silkroad path
-  // Find and parse the Media.pk2
-  // Parse the Media.pk2 into some game data
-	const std::string kSilkroadDirectory = "C:\\Program Files (x86)\\Evolin\\"; // TODO: Get from config file
-
+	const fs::path kConfigFilePath{"config.ini"};
   try {
-    pk2::media::GameData gameData(kSilkroadDirectory);
-
-    // Pass game data object to the Session
-    // Pass config object to the Session
-	  Session session{gameData, kSilkroadDirectory};
-
+    ini::IniReader configReader{kConfigFilePath};
+    config::ConfigData configData(configReader);
+    pk2::media::GameData gameData(configData.silkroadDirectory());
+	  Session session{gameData, configData};
 	  session.start();
   } catch (std::exception &ex) {
     cerr << ex.what() << '\n';
-    return 1;
+    return 2;
   }
 	return 0;
 }
