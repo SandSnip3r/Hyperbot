@@ -64,6 +64,7 @@
     <ClInclude Include="src\bot.hpp" />
     <ClInclude Include="src\botConnection.hpp" />
     <ClInclude Include="src\brokerSystem.hpp" />
+    <ClInclude Include="src\characterLoginData.hpp" />
     <ClInclude Include="src\chatEventModule.hpp" />
     <ClInclude Include="src\configData.hpp" />
     <ClInclude Include="src\gameData.hpp" />

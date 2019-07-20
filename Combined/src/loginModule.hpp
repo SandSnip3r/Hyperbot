@@ -20,13 +20,11 @@ private:
   //   kLoginResponseReceived
   // };
 public:
-  LoginModule(const config::ConfigData &configData, BrokerSystem &brokerSystem);
+  LoginModule(const config::CharacterLoginData &loginData, BrokerSystem &brokerSystem);
   bool handlePacket(std::unique_ptr<PacketParsing::PacketParser> &packetParser);
 private:
+  const config::CharacterLoginData &loginData_;
   BrokerSystem &broker_;
-  const std::string kUsername_;
-  const std::string kPassword_;
-  const std::string kCharName_;
   bool loggingIn_ = false;
   uint32_t token_;
   uint16_t shardId_;

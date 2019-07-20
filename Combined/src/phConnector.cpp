@@ -63,11 +63,11 @@ int main(int argc, char* argv[]) {
     ini::IniReader configReader{kConfigFilePath};
     config::ConfigData configData(configReader);
     pk2::media::GameData gameData(configData.silkroadDirectory());
-	  Session session{gameData, configData};
+	  Session session{gameData, configData.silkroadDirectory(), configData.characterLoginData()};
 	  session.start();
   } catch (std::exception &ex) {
     cerr << ex.what() << '\n';
-    return 2;
+    return 1;
   }
 	return 0;
 }

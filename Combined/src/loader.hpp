@@ -6,15 +6,11 @@
 #include <filesystem>
 #include <string>
 
-namespace {
-namespace fs = std::experimental::filesystem::v1;
-}
-
 class Loader {
 public:
 	// Construct a Loader with the given silkroad directory
 	// The Loader is now ready to start a client
-	Loader(const fs::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo);
+	Loader(const std::experimental::filesystem::v1::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo);
 	
 	// Starts the Silkroad client process and injects the DLL
 	void startClient();
@@ -22,7 +18,7 @@ public:
 	// TODO
   // void killClient();
 private:
-	const fs::path kSilkroadDirectoryPath_;
+	const std::experimental::filesystem::v1::path kSilkroadDirectoryPath_;
   const pk2::DivisionInfo &kDivisionInfo_;
 	std::string dllPath_;
 	std::string arguments_;

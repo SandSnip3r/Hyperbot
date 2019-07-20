@@ -203,5 +203,8 @@
     <ClInclude Include="src\configData.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\characterLoginData.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

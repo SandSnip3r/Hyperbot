@@ -5,11 +5,9 @@
 #include <iostream>
 #include <Windows.h>
 
-LoginModule::LoginModule(const config::ConfigData &configData, BrokerSystem &brokerSystem) :
-      broker_(brokerSystem),
-      kCharName_(configData.charName()),
-      kUsername_(configData.charId()),
-      kPassword_(configData.charPassword()) {
+LoginModule::LoginModule(const config::CharacterLoginData &loginData, BrokerSystem &brokerSystem) :
+      loginData_(loginData),
+      broker_(brokerSystem) {
   // Client packets
   broker_.subscribeToClientPacket(Opcode::CLIENT_CAFE, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
   broker_.subscribeToClientPacket(Opcode::CLIENT_AUTH, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
@@ -92,7 +90,7 @@ bool LoginModule::handlePacket(std::unique_ptr<PacketParsing::PacketParser> &pac
 
 void LoginModule::cafeReceived() {
   std::cout << " CAFE packet received, injecting loginauth packet\n";
-  auto loginAuthPacket = PacketBuilding::LoginAuthPacketBuilder(kLocale_, kUsername_, kPassword_, shardId_).packet();
+  auto loginAuthPacket = PacketBuilding::LoginAuthPacketBuilder(kLocale_, loginData_.id, loginData_.password, shardId_).packet();
   broker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
 }
 
@@ -119,7 +117,7 @@ void LoginModule::loginClientInfoReceived(PacketParsing::LoginClientInfoPacket &
   } else {
     std::cout << "Injecting client auth packet to agentserver\n";
     // Connected to agentserver, send client auth packet
-    auto clientAuthPacket = PacketBuilding::ClientAuthPacketBuilder(token_, kUsername_, kPassword_, kLocale_, kMacAddress_).packet();
+    auto clientAuthPacket = PacketBuilding::ClientAuthPacketBuilder(token_, loginData_.id, loginData_.password, kLocale_, kMacAddress_).packet();
     broker_.injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
     loggingIn_ = true;
     // Allow this packet to continue to the client
@@ -157,10 +155,10 @@ void LoginModule::charListReceived(PacketParsing::ServerAgentCharacterSelectionA
   std::cout << "Char list received, " << charList.size() << " character(s)\n";
   // Search for our character in the character list
   auto it = std::find_if(charList.begin(), charList.end(), [this](const PacketInnerStructures::CharacterSelection::Character &character) {
-    return character.name == kCharName_;
+    return character.name == loginData_.name;
   });
   if (it == charList.end()) {
-    std::cout << "Unable to find character \"" << kCharName_ << "\". Options are [";
+    std::cout << "Unable to find character \"" << loginData_.name << "\". Options are [";
     for (const auto &character : charList) {
       std::cout << character.name << ',';
     }
@@ -168,7 +166,7 @@ void LoginModule::charListReceived(PacketParsing::ServerAgentCharacterSelectionA
     return;
   }
   // Found our character, select it
-  auto charSelectionPacket = PacketBuilding::ClientAgentSelectionJoinPacketBuilder(kCharName_).packet();
+  auto charSelectionPacket = PacketBuilding::ClientAgentSelectionJoinPacketBuilder(loginData_.name).packet();
   broker_.injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
 }
 

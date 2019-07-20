@@ -1,6 +1,7 @@
 #ifndef CONFIG_DATA_HPP_
 #define CONFIG_DATA_HPP_
 
+#include "characterLoginData.hpp"
 #include "iniReader.hpp"
 
 #include <filesystem>
@@ -12,14 +13,10 @@ class ConfigData {
 public:
   ConfigData(ini::IniReader &configReader);
   std::experimental::filesystem::v1::path silkroadDirectory() const;
-  std::string charName() const;
-  std::string charId() const;
-  std::string charPassword() const;
+  const CharacterLoginData& characterLoginData() const;
 private:
   std::experimental::filesystem::v1::path silkroadDirectory_;
-  std::string charName_;
-  std::string charId_;
-  std::string charPassword_;
+  CharacterLoginData characterLoginData_;
   void readConfig(ini::IniReader &configReader);
 };
 

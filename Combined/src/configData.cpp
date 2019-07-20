@@ -13,16 +13,8 @@ std::experimental::filesystem::v1::path ConfigData::silkroadDirectory() const {
   return silkroadDirectory_;
 }
 
-std::string ConfigData::charName() const {
-  return charName_;
-}
-
-std::string ConfigData::charId() const {
-  return charId_;
-}
-
-std::string ConfigData::charPassword() const {
-  return charPassword_;
+const CharacterLoginData& ConfigData::characterLoginData() const {
+  return characterLoginData_;
 }
 
 void ConfigData::readConfig(ini::IniReader &configReader) {
@@ -40,16 +32,16 @@ void ConfigData::readConfig(ini::IniReader &configReader) {
     throw std::runtime_error("Unable to find section for character");
   }
 
-  charName_ = sections[0];
-  if (!configReader.valueExists(charName_, "id")) {
-    throw std::runtime_error("Missing \"id\" entry for character \""+charName_+"\"");
+  characterLoginData_.name = sections[0];
+  if (!configReader.valueExists(characterLoginData_.name, "id")) {
+    throw std::runtime_error("Missing \"id\" entry for character \""+characterLoginData_.name+"\"");
   }
-  if (!configReader.valueExists(charName_, "password")) {
-    throw std::runtime_error("Missing \"password\" entry for character \""+charName_+"\"");
+  if (!configReader.valueExists(characterLoginData_.name, "password")) {
+    throw std::runtime_error("Missing \"password\" entry for character \""+characterLoginData_.name+"\"");
   }
   
-  charId_ = configReader.get<std::string>(charName_, "id");
-  charPassword_ = configReader.get<std::string>(charName_, "password");
+  characterLoginData_.id = configReader.get<std::string>(characterLoginData_.name, "id");
+  characterLoginData_.password = configReader.get<std::string>(characterLoginData_.name, "password");
 }
 
 } // namespace config

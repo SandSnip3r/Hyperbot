@@ -6,8 +6,13 @@
 #include <iostream>
 #include <thread>
 
-Bot::Bot(const config::ConfigData &configData, BrokerSystem &broker) :
-      configData_(configData),
+Bot::Bot(const config::CharacterLoginData &loginData,
+         const pk2::media::ItemData &itemData,
+         const pk2::media::SkillData &skillData,
+         BrokerSystem &broker) :
+      loginData_(loginData),
+      itemData_(itemData),
+      skillData_(skillData),
       broker_(broker) {
   // Client packets
   // broker_.subscribeToClientPacket(Opcode::CLIENT_CHAT, std::bind(&Bot::handleClientChat, this, std::placeholders::_1));

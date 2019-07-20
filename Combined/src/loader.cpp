@@ -8,7 +8,7 @@
 // locale
 // Gateway port
 
-Loader::Loader(const fs::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo) : kSilkroadDirectoryPath_(kSilkroadDirectoryPath), kDivisionInfo_(divisionInfo) {
+Loader::Loader(const std::experimental::filesystem::v1::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo) : kSilkroadDirectoryPath_(kSilkroadDirectoryPath), kDivisionInfo_(divisionInfo) {
   // TODO: Ensure this dll path is updated for release builds
   dllPath_ = edxLabs::GetAbsoluteDirectoryPath() + "../Debug/loaderDll.dll";
   std::stringstream args;
