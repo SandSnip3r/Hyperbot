@@ -28,8 +28,6 @@
 #include <windows.h>
 #include <windowsx.h>
 #include "../../Common/Common.h"
-#include "../../Common/pk2Reader.h"
-#include "shared/blowfish.h"
 #include "../../Common/Silkroad.h"
 #include <sstream> */
 
@@ -46,6 +44,9 @@
 
 #include "session.hpp"
 #include "silkroadConnection.hpp"
+#include "../../common/divisionInfo.hpp"
+#include "../../common/parsing.hpp"
+#include "../../common/pk2ReaderModern.hpp"
 
 #include <iostream>
 
@@ -59,7 +60,28 @@ int main(int argc, char* argv[]) {
 	cout << "Redirect the bot to 127.0.0.1:" << Config::BotBind << endl << endl;
 
 	const string kConfigFilePath{"config.ini"};
-	Session session(kConfigFilePath);
+  // Parse config into an object
+
+  // Use config to get silkroad path
+  // Find and parse the Media.pk2
+  // Parse the Media.pk2 into some game data
+	const std::string kSilkroadPath = "C:\\Program Files (x86)\\Evolin\\"; // TODO: Get from config file
+  pk2::DivisionInfo divisionInfo;
+  try {
+    std::string kMediaPath = kSilkroadPath+"Media.pk2";
+    pk2::Pk2ReaderModern pk2Reader{kMediaPath};
+    const string kDivisionInfoEntryName = "DIVISIONINFO.TXT";
+		PK2Entry divisionInfoEntry = pk2Reader.getEntry(kDivisionInfoEntryName);
+		auto divisionInfoData = pk2Reader.getEntryData(divisionInfoEntry);
+		divisionInfo = pk2::parsing::parseDivisionInfo(divisionInfoData);
+  } catch (std::exception &ex) {
+    cerr << "Failed to parse Media.Pk2. Error: \"" << ex.what() << "\"" << '\n';
+    return 1;
+  }
+
+  // Pass game data object to the Session
+  // Pass config object to the Session
+	Session session{kSilkroadPath, divisionInfo.locale};
 
 	session.start();
 	return 0;

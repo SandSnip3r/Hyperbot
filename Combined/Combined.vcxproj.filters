@@ -24,9 +24,6 @@
     <ClCompile Include="src\phConnector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\shared\blowfish.cpp">
-      <Filter>shared</Filter>
-    </ClCompile>
     <ClCompile Include="src\shared\silkroad_security.cpp">
       <Filter>shared</Filter>
     </ClCompile>
@@ -34,12 +31,6 @@
       <Filter>shared</Filter>
     </ClCompile>
     <ClCompile Include="..\common\Common.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\pk2Reader.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\Silkroad.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="src\packetLogger.cpp">
@@ -78,11 +69,32 @@
     <ClCompile Include="src\opcode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\division.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\divisionInfo.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\item.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\parsing.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\PK2Reader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\pk2ReaderModern.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\shared_io.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\blowfish.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\shared\blowfish.h">
-      <Filter>shared</Filter>
-    </ClInclude>
     <ClInclude Include="src\shared\silkroad_security.h">
       <Filter>shared</Filter>
     </ClInclude>
@@ -90,12 +102,6 @@
       <Filter>shared</Filter>
     </ClInclude>
     <ClInclude Include="..\common\Common.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2Reader.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\Silkroad.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="src\packetLogger.hpp">
@@ -136,6 +142,36 @@
     </ClInclude>
     <ClInclude Include="src\packetEnums.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\division.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\divisionInfo.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\item.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\parsing.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\PK2Reader.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\pk2ReaderModern.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\PK2.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\shared_io.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\shared_types.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\blowfish.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

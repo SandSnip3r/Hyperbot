@@ -1,678 +1,552 @@
-// pk2Reader Lite
-
-#ifndef _CRT_SECURE_NO_WARNINGS
-	#define _CRT_SECURE_NO_WARNINGS
-#endif
-
-#include "pk2Reader.h"
-#include <windows.h>
-#include "../Combined/src/shared/blowfish.h"
-#include <queue>
-#include <stack>
-#include <list>
-#include <set>
-#include <sstream>
+#include "PK2Reader.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <algorithm>
+#include "shared_io.h"
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
-typedef int (*pk2EntryInternalFunc)(pk2Entry & entry, void * userData);
-
-//-------------------------------------------------------------------------
-
-#pragma pack(push, 1)
-	struct pk2Header
-	{
-		char header[30];
-		DWORD version;
-		DWORD unk2;
-		unsigned char reserved[218];
-	};
-	struct pk2EntryPrivate
-	{
-		BYTE type;
-		char name[81];
-		FILETIME accessTime;
-		FILETIME createTime;
-		FILETIME modifyTime;
-		DWORD positionLow;
-		DWORD positionHigh;
-		DWORD size;
-		DWORD nextChainLow;
-		DWORD nextChainHigh;
-		BYTE padding[2];
-	};
-	struct TUINT64
-	{
-		DWORD low;
-		DWORD high;
-		TUINT64() {low = 0; high = 0;}
-		TUINT64(DWORD l, DWORD h) : low(l), high(h) { }
-	};
-#pragma pack(pop)
-
-//-------------------------------------------------------------------------
-
-struct pk2ReaderData
+int MakePathSlashWindows_1(int ch)
 {
-	// A handle to the file
-	HANDLE hFile;
+	return ch == '/' ? '\\' : ch;
+}
 
-	// The file mapping object used to read from the file
-	HANDLE hFileMapping;
+//-----------------------------------------------------------------------------
 
-	// A pointer to the bytes of the file
-	PBYTE pMappedFileBase;
-
-	// File size
-	DWORD dwSizeLow;
-	DWORD dwSizeHigh;
-
-	// Our Blowfish decoding object
-	Blowfish blowFish;
-
-	// Store a pointer to the first item
-	TUINT64 rootEntryIndex;
-
-	// Data structures we need for the parsing algorithm
-	std::queue<TUINT64> bfsQueue;
-	std::list<std::string> dfsPath;
-	std::queue<std::string> bfsPath;
-	std::string outputPath;
-
-	// Track the entries extracted into memory to cleanup on application exit
-	std::set<PBYTE> memoryListSet;
-
-	// We need to store the system information for the dwAllocationGranularity field
-	SYSTEM_INFO sysInfo;
-
-	void ForEachPK2EntryDo_Reset();
-	void ForEachPK2EntryDo_BFS(TUINT64 currentOffset, pk2EntryInternalFunc userFunc, void * userData);
-	void ForEachPK2EntryDo_DFS(TUINT64 currentOffset, pk2EntryInternalFunc userFunc, void * userData);
-
-	// Default ctor
-	pk2ReaderData()
+// I use different variations of this code depending on the program, so it's not going
+// to be in a common file.
+std::list<std::string> TokenizeString_1(const std::string& str, const std::string& delim)
+{
+	// http://www.gamedev.net/community/forums/topic.asp?topic_id=381544#TokenizeString
+	using namespace std;
+	list<string> tokens;
+	size_t p0 = 0, p1 = string::npos;
+	while(p0 != string::npos)
 	{
-		hFile = INVALID_HANDLE_VALUE;
-		hFileMapping = 0;
-		pMappedFileBase = 0;
-		dwSizeLow = 0;
-		dwSizeHigh = 0;
-		rootEntryIndex.low = 0;
-		rootEntryIndex.high = 0;
-		GetSystemInfo(&sysInfo);
+		p1 = str.find_first_of(delim, p0);
+		if(p1 != p0)
+		{
+			string token = str.substr(p0, p1 - p0);
+			tokens.push_back(token);
+		}
+		p0 = str.find_first_not_of(delim, p1);
 	}
-};
-
-//-------------------------------------------------------------------------
-
-struct GetAllEntriesStruct
-{
-	pk2EntryUserFunc func;
-	void * data;
-	pk2Reader * reader;
-	GetAllEntriesStruct(pk2EntryUserFunc f, void * d, pk2Reader * r)
-		: func(f), data(d), reader(r) { }
-};
-
-//-------------------------------------------------------------------------
-
-struct GetEntryStruct
-{
-	std::string name;
-	std::list<pk2Entry> & results;
-	GetEntryStruct(std::string n, std::list<pk2Entry> & r)
-		: name(n), results(r) { }
-};
-
-//-------------------------------------------------------------------------
-
-memoryEntry::memoryEntry()
-{
-	data = 0;
-	size = 0;
-	privatePtr = 0;
+	return tokens;
 }
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
-memoryEntry::~memoryEntry()
+void PK2Reader::Cache(std::string & base_name, PK2Entry & e)
 {
+	m_cache[base_name] = e;
 }
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
-pk2Reader::pk2Reader()
+PK2Reader::PK2Reader()
 {
-	privateData = new pk2ReaderData;
+	m_root_offset = 0;
+	m_file = 0;
+	memset(&m_header, 0, sizeof(PK2Header));
+	SetDecryptionKey();
 }
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
-pk2Reader::~pk2Reader()
+PK2Reader::~PK2Reader()
 {
-	// Cleanup the object if it is reused
 	Close();
-	delete privateData;
 }
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
-// Opens the PK2 file with the specified Blowfish key
-bool pk2Reader::Open(const std::string & filename, void * keyData, int keyCount)
+size_t PK2Reader::GetCacheSize()
 {
-	// Cleanup the object if it is reused
-	Close();
+	return m_cache.size();
+}
 
-	// Try to open the file
-	privateData->hFile = CreateFileA(filename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if(privateData->hFile == INVALID_HANDLE_VALUE)
+//-----------------------------------------------------------------------------
+
+void PK2Reader::ClearCache()
+{
+	m_cache.clear();
+}
+
+//-----------------------------------------------------------------------------
+
+std::string PK2Reader::GetError()
+{
+	std::string e = m_error.str();
+	m_error.str("");
+	return e;
+}
+
+//-----------------------------------------------------------------------------
+
+void PK2Reader::SetDecryptionKey(const char * ascii_key, uint8_t ascii_key_length, const char * base_key, uint8_t base_key_length)
+{
+	if(ascii_key_length > 56)
 	{
-		MessageBoxA(0, "Could not open the file.", "Error", MB_ICONERROR);
+		ascii_key_length = 56;
+	}
+
+	uint8_t bf_key[56] = { 0x00 };
+
+	uint8_t a_key[56] = { 0x00 };
+	memcpy(a_key, ascii_key, ascii_key_length);
+
+	uint8_t b_key[56] = { 0x00 };
+	memcpy(b_key, base_key, base_key_length);
+
+	for(int x = 0; x < ascii_key_length; ++x)
+	{
+		bf_key[x] = a_key[x] ^ b_key[x];
+	}
+
+	m_blowfish.Initialize(bf_key, ascii_key_length);
+}
+
+//-----------------------------------------------------------------------------
+
+void PK2Reader::Close()
+{
+	if(m_file)
+	{
+		fclose(m_file);
+		m_file = 0;
+	}
+
+	m_cache.clear();
+	m_root_offset = 0;
+	m_error.str("");
+	memset(&m_header, 0, sizeof(PK2Header));
+}
+
+//-----------------------------------------------------------------------------
+
+bool PK2Reader::Open(const char * filename)
+{
+	size_t read_count = 0;
+
+	if(m_file != 0)
+	{
+		m_error.str(""); m_error << "There is already a PK2 opened.";
 		return false;
 	}
 
-	// Get the file size
-	privateData->dwSizeLow = GetFileSize(privateData->hFile, &privateData->dwSizeHigh);
-
-	// Create a file mapping object of the file
-	privateData->hFileMapping = CreateFileMapping(privateData->hFile, NULL, PAGE_READONLY, privateData->dwSizeHigh, privateData->dwSizeLow, NULL);
-	if(privateData->hFileMapping == NULL)
+	fopen_s(&m_file, filename, "rb");
+	if(m_file == 0)
 	{
-		Close();
-		MessageBoxA(0, "Could not create a file mapping of the client.", "Error", MB_ICONERROR);
+		m_error.str(""); m_error << "Could not open the file \"" << filename << "\".";
 		return false;
 	}
 
-	// Map the view of the file
-	privateData->pMappedFileBase = (PBYTE)MapViewOfFile(privateData->hFileMapping, FILE_MAP_READ, 0, 0, sizeof(pk2Header));
-	if(privateData->pMappedFileBase == NULL)
+	read_count = fread(&m_header, 1, sizeof(PK2Header), m_file);
+	if(read_count != sizeof(PK2Header))
 	{
-		Close();
-		MessageBoxA(0, "Could not map a view of the file.", "Error", MB_ICONERROR);
+		fclose(m_file);
+		m_file = 0;
+		m_error.str(""); m_error << "Could not read in the PK2Header.";
 		return false;
 	}
 
-	// Setup our blowfish object for decoding
-	privateData->blowFish.Initialize((LPBYTE)keyData, keyCount);
-
-	// Store a pointer to the pk2 header
-	pk2Header * header = (pk2Header *)privateData->pMappedFileBase;
-	if(header->version != 0x01000002)
+	char name[30] = {0};
+	memcpy(name, "JoyMax File Manager!\n", 21);
+	if(memcmp(name, m_header.name, 30) != 0)
 	{
-		Close();
-		MessageBoxA(0, "header->version != 0x01000002", "Error", MB_ICONERROR);
+		fclose(m_file);
+		m_file = 0;
+		m_error.str(""); m_error << "Invalid PK2 name.";
 		return false;
 	}
 
-	// Do some sanity checks
-	std::string headerName = header->header;
-	if(headerName != "JoyMax File Manager!\n")
+	if(m_header.version != 0x01000002)
 	{
-		Close();
-		MessageBoxA(0, "headerName != \"JoyMax File Manager!\n\"", "Error", MB_ICONERROR);
+		fclose(m_file);
+		m_file = 0;
+		m_error.str(""); m_error << "Invalid PK2 version.";
 		return false;
 	}
-	UnmapViewOfFile(privateData->pMappedFileBase);
-	privateData->pMappedFileBase = 0;
-	privateData->rootEntryIndex.low = sizeof(pk2Header);
+
+	m_root_offset = file_tell(m_file);
+
+	if(m_header.encryption == 0)
+	{
+		return true;
+	}
+
+	uint8_t verify[16] = {0};
+	m_blowfish.Encode("Joymax Pak File", 16, verify, 16);
+	memset(verify + 3, 0, 13); // PK2s only store 1st 3 bytes
+
+	if(memcmp(verify, m_header.verify, 16) != 0)
+	{
+		fclose(m_file);
+		m_file = 0;
+		m_error.str(""); m_error << "Invalid Blowfish key.";
+		return false;
+	}
+
 	return true;
 }
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
-// Closes the pk2Reader and frees all memory
-void pk2Reader::Close()
+bool PK2Reader::GetEntries(PK2Entry & parent, std::list<PK2Entry> & entries)
 {
-	if(!privateData->memoryListSet.empty())
+	if(m_file == 0)
 	{
-		std::set<PBYTE>::iterator itr = privateData->memoryListSet.begin();
-		while(itr != privateData->memoryListSet.end())
-		{
-			PBYTE ptr = (*itr);
-			++itr;
-			UnmapViewOfFile(ptr);
-		}
-		privateData->memoryListSet.clear();
+		m_error.str(""); m_error << "There is no PK2 loaded yet.";
+		return false;
 	}
 
-	if(privateData->pMappedFileBase)
+	PK2EntryBlock block;
+	size_t read_count = 0;
+
+	if(parent.type != 1)
 	{
-		UnmapViewOfFile(privateData->pMappedFileBase);
-		privateData->pMappedFileBase = 0;
+		m_error.str(""); m_error << "Invalid entry type. Only folders are allowed.";
+		return false;
 	}
 
-	if(privateData->hFileMapping != NULL)
+	if(parent.position < m_root_offset)
 	{
-		CloseHandle(privateData->hFileMapping);
-		privateData->hFileMapping = NULL;
+		m_error.str(""); m_error << "Invalid seek index.";
+		return false;
 	}
 
-	if(privateData->hFile != INVALID_HANDLE_VALUE)
+	if(file_seek(m_file, parent.position, SEEK_SET) != 0)
 	{
-		CloseHandle(privateData->hFile);
-		privateData->hFile = INVALID_HANDLE_VALUE;
+		m_error.str(""); m_error << "Invalid seek index.";
+		return false;
 	}
 
-	privateData->dwSizeLow = 0;
-	privateData->dwSizeHigh = 0;
-}
-
-//-------------------------------------------------------------------------
-
-std::string PathFromList(std::list<std::string> & xfsPath)
-{
-	std::stringstream ss;
-	std::list<std::string>::iterator itr = xfsPath.begin();
-	while(itr != xfsPath.end())
-	{
-		ss << (*itr);
-		++itr;
-		if(itr != xfsPath.end())
-			ss << "\\";
-	}
-	return ss.str();
-}
-
-//-------------------------------------------------------------------------
-
-void pk2ReaderData::ForEachPK2EntryDo_BFS(TUINT64 currentOffset, pk2EntryInternalFunc userFunc, void * userData)
-{
-	pk2EntryPrivate * currentEntry = 0;
-	pk2EntryPrivate tmpEntryPrivate;
-	int entryIndexCtr = 0;
-	std::string currentPath = "";
-	if(bfsPath.empty()== false)
-	{
-		currentPath = bfsPath.front();
-		bfsPath.pop();
-	}
-	int result = -1;
-	DWORD dwLastHigh = -1;
-	DWORD dwLastLow = -1;
 	while(true)
 	{
-		pk2Entry tmpEntry;
-		entryIndexCtr++;
-		DWORD dwHigh = (currentOffset.high / sysInfo.dwAllocationGranularity) * sysInfo.dwAllocationGranularity;
-		DWORD dwLow = (currentOffset.low / sysInfo.dwAllocationGranularity) * sysInfo.dwAllocationGranularity;
-		if(dwLastHigh != dwHigh || dwLastLow != dwLow || pMappedFileBase == 0)
+		read_count = fread(&block, 1, sizeof(PK2EntryBlock), m_file);
+		if(read_count != sizeof(PK2EntryBlock))
 		{
-			if(pMappedFileBase)
-			{
-				UnmapViewOfFile(pMappedFileBase);
-			}
-			// Store how many bytes we need to map in order to extract the entire file
-			DWORD dwFinalCount = sysInfo.dwAllocationGranularity + sizeof(pk2EntryPrivate);
-
-			// At this point, we need to make sure we don't over map into the file,
-			// which would cause the MapViewOfFile function to fail.
-			if(dwLow + dwFinalCount > dwSizeLow)
-			{
-				dwFinalCount = dwSizeLow - dwLow;
-			}
-
-			pMappedFileBase = (PBYTE)MapViewOfFile(hFileMapping, FILE_MAP_READ, dwHigh, dwLow, dwFinalCount);
-			if(pMappedFileBase == 0) // Fatal error
-			{
-				printf("MapViewOfFile(%X, %i, %i, %i, %i) failed.\n", hFileMapping, FILE_MAP_READ, dwHigh, dwLow, sysInfo.dwAllocationGranularity + sizeof(pk2EntryPrivate));
-				return;
-			}
-			dwLastHigh = dwHigh;
-			dwLastLow = dwLow;
+			m_error.str(""); m_error << "Could not read a PK2EntryBlock object";
+			return false;
 		}
-		currentEntry = (pk2EntryPrivate *)(pMappedFileBase + currentOffset.low - dwLow);
-		// blowFish.Decode((BYTE *)currentEntry, (BYTE *)&tmpEntryPrivate, sizeof(pk2EntryPrivate));
-		blowFish.Decode((void*)currentEntry, sizeof(pk2EntryPrivate), (void*)&tmpEntryPrivate, sizeof(pk2EntryPrivate));
 
-		tmpEntry.type = tmpEntryPrivate.type;
-		tmpEntry.name = tmpEntryPrivate.name;
-		tmpEntry.path = currentPath;
-		tmpEntry.position[0] = tmpEntryPrivate.positionLow;
-		tmpEntry.position[1] = tmpEntryPrivate.positionHigh;
-		tmpEntry.size = tmpEntryPrivate.size;
-		tmpEntry.accessTime[0] = tmpEntryPrivate.accessTime.dwLowDateTime;
-		tmpEntry.accessTime[1] = tmpEntryPrivate.accessTime.dwHighDateTime;
-		tmpEntry.createTime[0] = tmpEntryPrivate.createTime.dwLowDateTime;
-		tmpEntry.createTime[1] = tmpEntryPrivate.createTime.dwHighDateTime;
-		tmpEntry.modifyTime[0] = tmpEntryPrivate.modifyTime.dwLowDateTime;
-		tmpEntry.modifyTime[1] = tmpEntryPrivate.modifyTime.dwHighDateTime;
-		result = userFunc(tmpEntry, userData);
-		if(result == -1) // Stop entire search
-			break;
+		for(int x = 0; x < 20; ++x)
+		{
+			PK2Entry & e = block.entries[x];
 
-		std::string entryName = tmpEntryPrivate.name;
-		if(tmpEntryPrivate.type == 1 && entryName != "." && entryName != "..")
-		{
-			bfsQueue.push(TUINT64(tmpEntryPrivate.positionLow, tmpEntryPrivate.positionHigh));
-			std::stringstream ss;
-			if(currentPath.empty())
-				ss << entryName;
-			else
-				ss << currentPath  << "\\" << entryName;
-			bfsPath.push(ss.str());
-		}
-		if(tmpEntryPrivate.nextChainLow || tmpEntryPrivate.nextChainHigh)
-		{
-			currentOffset.low = tmpEntryPrivate.nextChainLow;
-			currentOffset.high = tmpEntryPrivate.nextChainHigh;
-			if(entryIndexCtr == 20)
+			if(m_header.encryption)
 			{
-				entryIndexCtr = 0;
+				m_blowfish.Decode(&e, sizeof(PK2Entry), &e, sizeof(PK2Entry));
+			}
+
+			// Protect against possible user seeking errors
+			if(e.padding[0] != 0 || e.padding[1] != 0)
+			{
+				m_error.str(""); m_error << "The padding is not NULL. User seek error.";
+				return false;
+			}
+
+			if(e.type == 1 || e.type == 2)
+			{
+				entries.push_back(e);
+			}
+		}
+
+		if(block.entries[19].nextChain)
+		{
+			// More entries in the current directory
+			if(file_seek(m_file, block.entries[19].nextChain, SEEK_SET) != 0)
+			{
+				m_error.str(""); m_error << "Invalid seek index for nextChain.";
+				return false;
 			}
 		}
 		else
 		{
-			// TODO: check for overflows
-			currentOffset.low += sizeof(pk2EntryPrivate);
-			if(entryIndexCtr == 20)
-			{
-				entryIndexCtr = 0;
-				break;
-			}
-		}
-		if(result == 0)// Stop current search
+			// Out of the entries for the current directory
 			break;
-	}
-	if(result == -1) // Stop entire search
-	{
-		return;
-	}
-	if(bfsQueue.empty() == false)
-	{
-		TUINT64 nextPosition = bfsQueue.front();
-		bfsQueue.pop();
-		ForEachPK2EntryDo_BFS(nextPosition, userFunc, userData);
-	}
-}
-
-//-------------------------------------------------------------------------
-
-void pk2ReaderData::ForEachPK2EntryDo_DFS(TUINT64 currentOffset, pk2EntryInternalFunc userFunc, void * userData)
-{
-	pk2EntryPrivate * currentEntry = 0;
-	pk2EntryPrivate tmpEntryPrivate;
-	int entryIndexCtr = 0;
-	std::string currentPath = PathFromList(dfsPath);
-	DWORD dwLastHigh = -1;
-	DWORD dwLastLow = -1;
-	while(true)
-	{
-		int result = 1;
-		pk2Entry tmpEntry;
-		entryIndexCtr++;
-		DWORD dwHigh = (currentOffset.high / sysInfo.dwAllocationGranularity) * sysInfo.dwAllocationGranularity;
-		DWORD dwLow = (currentOffset.low / sysInfo.dwAllocationGranularity) * sysInfo.dwAllocationGranularity;
-		if(dwLastHigh != dwHigh || dwLastLow != dwLow || pMappedFileBase == 0)
-		{
-			if(pMappedFileBase)
-			{
-				UnmapViewOfFile(pMappedFileBase);
-			}
-
-			// Store how many bytes we need to map in order to extract the entire file
-			DWORD dwFinalCount = sysInfo.dwAllocationGranularity + sizeof(pk2EntryPrivate);
-
-			// At this point, we need to make sure we don't over map into the file,
-			// which would cause the MapViewOfFile function to fail.
-			if(dwLow + dwFinalCount > dwSizeLow)
-			{
-				dwFinalCount = dwSizeLow - dwLow;
-			}
-
-			pMappedFileBase = (PBYTE)MapViewOfFile(hFileMapping, FILE_MAP_READ, dwHigh, dwLow, dwFinalCount);
-			if(pMappedFileBase == 0) // Fatal error
-			{
-				//MessageBox(0, "MapViewOfFile failed!", "Fatal Error", MB_ICONERROR);
-				printf("MapViewOfFile(%X, %i, %i, %i, %i) failed for %s\n", hFileMapping, FILE_MAP_READ, dwHigh, dwLow, sysInfo.dwAllocationGranularity + sizeof(pk2EntryPrivate));
-				return;
-			}
-			dwLastHigh = dwHigh;
-			dwLastLow = dwLow;
-		}
-		currentEntry = (pk2EntryPrivate *)(pMappedFileBase + currentOffset.low - dwLow);
-		// blowFish.Decode((BYTE *)currentEntry, (BYTE *)&tmpEntryPrivate, sizeof(pk2EntryPrivate));
-		blowFish.Decode((void*)currentEntry, sizeof(currentEntry), (void*)&tmpEntryPrivate, sizeof(pk2EntryPrivate));
-
-		tmpEntry.type = tmpEntryPrivate.type;
-		tmpEntry.name = tmpEntryPrivate.name;
-		tmpEntry.path = currentPath;
-		tmpEntry.position[0] = tmpEntryPrivate.positionLow;
-		tmpEntry.position[1] = tmpEntryPrivate.positionHigh;
-		tmpEntry.size = tmpEntryPrivate.size;
-		tmpEntry.accessTime[0] = tmpEntryPrivate.accessTime.dwLowDateTime;
-		tmpEntry.accessTime[1] = tmpEntryPrivate.accessTime.dwHighDateTime;
-		tmpEntry.createTime[0] = tmpEntryPrivate.createTime.dwLowDateTime;
-		tmpEntry.createTime[1] = tmpEntryPrivate.createTime.dwHighDateTime;
-		tmpEntry.modifyTime[0] = tmpEntryPrivate.modifyTime.dwLowDateTime;
-		tmpEntry.modifyTime[1] = tmpEntryPrivate.modifyTime.dwHighDateTime;
-		result = userFunc(tmpEntry, userData);
-		if(result == -1)
-			break;
-
-		std::string entryName = tmpEntryPrivate.name;
-		if(tmpEntryPrivate.type == 1 && entryName != "." && entryName != ".." && result == 1)
-		{
-			dfsPath.push_back(entryName);
-			ForEachPK2EntryDo_DFS(TUINT64(tmpEntryPrivate.positionLow, tmpEntryPrivate.positionHigh), userFunc, userData);
-			dfsPath.pop_back();
-			dwLastHigh = -1;
-			dwLastLow = -1;
-		}
-		if(tmpEntryPrivate.nextChainLow || tmpEntryPrivate.nextChainHigh)
-		{
-			currentOffset.low = tmpEntryPrivate.nextChainLow;
-			currentOffset.high = tmpEntryPrivate.nextChainHigh;
-			if(entryIndexCtr == 20)
-			{
-				entryIndexCtr = 0;
-			}
-		}
-		else
-		{
-			// TODO: check for overflows
-			currentOffset.low += sizeof(pk2EntryPrivate);
-			if(entryIndexCtr == 20)
-			{
-				entryIndexCtr = 0;
-				break;
-			}
 		}
 	}
+
+	return true;
 }
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
-void pk2ReaderData::ForEachPK2EntryDo_Reset()
+bool PK2Reader::GetEntry(const char * pathname, PK2Entry & entry)
 {
-	while(!bfsQueue.empty())
-		bfsQueue.pop();
-	dfsPath.clear();
-	while(!bfsPath.empty())
-		bfsPath.pop();
-}
-
-//-------------------------------------------------------------------------
-
-int onGetAllEntries(pk2Entry & entry, void * userData)
-{
-	GetAllEntriesStruct * obj = (GetAllEntriesStruct *)userData;
-	obj->func(obj->reader, entry, obj->data);
-	return 1;
-}
-
-//-------------------------------------------------------------------------
-
-// Processes all of the PK2 entries in a DFS manner and calls the user function
-// with the user data passed in.
-void pk2Reader::ForEachPK2EntryDo_DFS(pk2EntryUserFunc func, void * data)
-{
-	GetAllEntriesStruct obj(func, data, this);
-	privateData->ForEachPK2EntryDo_Reset();
-	privateData->ForEachPK2EntryDo_DFS(privateData->rootEntryIndex, onGetAllEntries, &obj);
-	privateData->ForEachPK2EntryDo_Reset();
-}
-
-//-------------------------------------------------------------------------
-
-// Processes all of the PK2 entries in a BFS manner and calls the user function
-// with the user data passed in.
-void pk2Reader::ForEachPK2EntryDo_BFS(pk2EntryUserFunc func, void * data)
-{
-	GetAllEntriesStruct obj(func, data, this);
-	privateData->ForEachPK2EntryDo_Reset();
-	privateData->ForEachPK2EntryDo_BFS(privateData->rootEntryIndex, onGetAllEntries, &obj);
-	privateData->ForEachPK2EntryDo_Reset();
-}
-
-//-------------------------------------------------------------------------
-
-// Returns a list of memoryEntry objects that contain pointers and sizes
-// of the pk2Entry entries passed in the results object.
-std::list<memoryEntry> pk2Reader::ExtractToMemory(std::list<pk2Entry> & results)
-{
-	std::list<memoryEntry> mem;
-	std::list<pk2Entry>::iterator itr = results.begin();
-	while(itr != results.end())
+	if(m_file == 0)
 	{
-		mem.push_back(ExtractToMemory(*itr));
-		++itr;
-	}
-	return mem;
-}
-
-//-------------------------------------------------------------------------
-
-// Returns a memoryEntry object that contains the pointer and size
-// of the pk2Entry object result.
-memoryEntry pk2Reader::ExtractToMemory(const pk2Entry & entry)
-{
-	memoryEntry mem;
-
-	mem.size = entry.size;
-
-	// Page aligned offsets for the view
-	DWORD dwHigh = (entry.position[1] / privateData->sysInfo.dwAllocationGranularity) * privateData->sysInfo.dwAllocationGranularity;
-	DWORD dwLow = (entry.position[0] / privateData->sysInfo.dwAllocationGranularity) * privateData->sysInfo.dwAllocationGranularity;
-
-	// The size of the view we need at minimal to extract the entire file
-	DWORD viewSize = entry.position[0] - dwLow + entry.size;
-
-	// How many pages we need
-	int pageCount = 1;
-
-	// Calculate how many pages of dwAllocationGranularity we need for an
-	// aligned allocation (more efficient).
-	while(viewSize > privateData->sysInfo.dwAllocationGranularity)
-	{
-		viewSize -= privateData->sysInfo.dwAllocationGranularity;
-		pageCount++;
+		m_error.str(""); m_error << "There is no PK2 loaded yet.";
+		return false;
 	}
 
-	// Store how many bytes we need to map in order to extract the entire file
-	DWORD dwFinalCount = privateData->sysInfo.dwAllocationGranularity * pageCount;
+	std::string base_name = pathname;
+	std::transform(base_name.begin(), base_name.end(), base_name.begin(), tolower);
+	std::transform(base_name.begin(), base_name.end(), base_name.begin(), MakePathSlashWindows_1);
 
-	// At this point, we need to make sure we don't over map into the file,
-	// which would cause the MapViewOfFile function to fail.
-	if(dwLow + dwFinalCount > privateData->dwSizeLow)
+	std::list<std::string> tokens = TokenizeString_1(base_name, "\\");
+
+	// Check the cache first so we can save some time on frequent accesses
+	std::map<std::string, PK2Entry>::iterator itr = m_cache.find(base_name);
+	if(itr != m_cache.end())
 	{
-		dwFinalCount = privateData->dwSizeLow - dwLow;
+		entry = itr->second;
+		return true;
 	}
 
-	// Create a memory aligned view of the file
-	mem.privatePtr = (PBYTE)MapViewOfFile(privateData->hFileMapping, FILE_MAP_READ, dwHigh, dwLow, dwFinalCount);
-	if(mem.privatePtr == 0) // Fatal error
+	PK2EntryBlock block;
+	size_t read_count = 0;
+	std::string name;
+
+	if(entry.position == 0)
 	{
-		printf("MapViewOfFile(%X, %i, %i, %i, %i) failed for %s\n", privateData->hFileMapping, FILE_MAP_READ, dwHigh, dwLow, dwFinalCount, entry.name.c_str());
-		return memoryEntry();
-	}
-
-	// Store where the file begins at
-	mem.data = mem.privatePtr + entry.position[0] - dwLow;
-
-	// Manage the list internally so we don't leak memory
-	privateData->memoryListSet.insert(mem.privatePtr);
-
-	// Return the object
-	return mem;
-}
-
-//-------------------------------------------------------------------------
-
-// Frees a memoryEntry object
-void pk2Reader::FreeMemoryEntry(memoryEntry & entry)
-{
-	PBYTE ptr = entry.privatePtr;
-	if(privateData->memoryListSet.find(ptr) != privateData->memoryListSet.end())
-		privateData->memoryListSet.erase(ptr);
-	UnmapViewOfFile(ptr);
-	entry = memoryEntry();
-}
-
-//-------------------------------------------------------------------------
-
-// Frees a list of memoryEntry objects
-void pk2Reader::FreeMemoryEntryList(std::list<memoryEntry> & entries)
-{
-	std::list<memoryEntry>::iterator itr = entries.begin();
-	while(itr != entries.end())
-	{
-		PBYTE ptr = (*itr).privatePtr;
-		++itr;
-		if(privateData->memoryListSet.find(ptr) != privateData->memoryListSet.end())
-			privateData->memoryListSet.erase(ptr);
-		UnmapViewOfFile(ptr);
-	}
-	entries.clear();
-}
-
-//-------------------------------------------------------------------------
-
-int onGetEntry(pk2Entry & entry, void * userData)
-{
-	GetEntryStruct * obj = (GetEntryStruct *)userData;
-	if(entry.path.empty())
-	{
-		if(obj->name.find_first_of("\\") != std::string::npos)
-			return 1;
-		std::transform(entry.name.begin(), entry.name.end(), entry.name.begin(), tolower);
-		if(obj->name == entry.name)
+		if(file_seek(m_file, m_root_offset, SEEK_SET) != 0)
 		{
-			obj->results.push_back(entry);
-			return -1;
+			m_error.str(""); m_error << "Invalid seek index.";
+			return false;
 		}
 	}
 	else
 	{
-		if(obj->name.find(entry.path) != 0)
-			return 0;
-		if(entry.type != 2)
-			return 1;
-		std::stringstream ss;
-		ss << entry.path << "\\" << entry.name;
-		std::string cmps = ss.str();
-		std::transform(cmps.begin(), cmps.end(), cmps.begin(), tolower);
-		if(cmps == obj->name)
+		if(file_seek(m_file, entry.position, SEEK_SET) != 0)
 		{
-			obj->results.push_back(entry);
-			return -1;
+			m_error.str(""); m_error << "Invalid seek index.";
+			return false;
 		}
 	}
-	return 1;
+
+	while(!tokens.empty())
+	{
+		std::string path = tokens.front();
+		tokens.pop_front();
+
+		read_count = fread(&block, 1, sizeof(PK2EntryBlock), m_file);
+		if(read_count != sizeof(PK2EntryBlock))
+		{
+			m_error.str(""); m_error << "Could not read a PK2EntryBlock object";
+			return false;
+		}
+
+		bool cycle = false;
+
+		for(int x = 0; x < 20; ++x)
+		{
+			PK2Entry & e = block.entries[x];
+
+			// I opt to decode entries as we process them rather than before hand to save 'some' processing
+			// from extra entries we don't have to search.
+			if(m_header.encryption)
+			{
+				m_blowfish.Decode(&e, sizeof(PK2Entry), &e, sizeof(PK2Entry));
+			}
+
+			// Protect against possible user seeking errors
+			if(e.padding[0] != 0 || e.padding[1] != 0)
+			{
+				m_error.str(""); m_error << "The padding is not NULL. User seek error.";
+				return false;
+			}
+
+			if(e.type == 0)
+			{
+				continue;
+			}
+
+			// Incurs some overhead in the long run, but the convenience it gives of not knowing exact
+			// case is well worth it!
+			name = e.name;
+			std::transform(name.begin(), name.end(), name.begin(), tolower);
+
+			if(name == path)
+			{
+				// We are at the end of the list of paths to find
+				if(tokens.empty())
+				{
+					entry = e;
+					Cache(base_name, e);
+					return true;
+				}
+				else
+				{
+					// We want to make sure we only search folders, otherwise
+					// bugs could result.
+					if(e.type == 1)
+					{
+						if(file_seek(m_file, e.position, SEEK_SET) != 0)
+						{
+							m_error.str(""); m_error << "Invalid seek index.";
+							return false;
+						}
+						cycle = true;
+						break;
+					}
+
+					m_error.str(""); m_error << "Invalid entry, files cannot have children!";
+
+					// Invalid entry (files can't have children!)
+					return false;
+				}
+			}
+		}
+
+		// We found a path entry, continue down the list
+		if(cycle)
+		{
+			continue;
+		}
+
+		// More entries to search in the current directory
+		if(block.entries[19].nextChain)
+		{
+			if(file_seek(m_file, block.entries[19].nextChain, SEEK_SET) != 0)
+			{
+				m_error.str(""); m_error << "Invalid seek index for nextChain.";
+				return false;
+			}
+			tokens.push_front(path);
+			continue;
+		}
+
+		// If we get here, what we looking for does not exist
+		break;
+	}
+
+	m_error.str(""); m_error << "The entry does not exist";
+
+	return false;
 }
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
-// Returns the entry at the final path of name
-std::list<pk2Entry> pk2Reader::GetEntry(std::string name)
+bool PK2Reader::ForEachEntryDo(bool (* UserFunc)(PK2Reader *, const std::string &, PK2EntryBlock &, void *), void * userdata)
 {
-	std::list<pk2Entry> results;
-	std::transform(name.begin(), name.end(), name.begin(), tolower);
-	GetEntryStruct obj(name, results);
-	privateData->ForEachPK2EntryDo_Reset();
-	privateData->ForEachPK2EntryDo_BFS(privateData->rootEntryIndex, onGetEntry, &obj);
-	privateData->ForEachPK2EntryDo_Reset();
-	return results;
+	if(m_file == 0)
+	{
+		m_error.str(""); m_error << "There is no PK2 loaded yet.";
+		return false;
+	}
+
+	PK2EntryBlock block;
+	size_t read_count = 0;
+
+	if(file_seek(m_file, m_root_offset, SEEK_SET) != 0)
+	{
+		m_error.str(""); m_error << "Invalid seek index.";
+		return false;
+	}
+
+	std::list<PK2Entry> folders;
+	std::list<std::string> paths;
+
+	std::string path;
+
+	do
+	{
+		if(!folders.empty())
+		{
+			PK2Entry e = folders.front();
+			folders.pop_front();
+			if(file_seek(m_file, e.position, SEEK_SET) != 0)
+			{
+				m_error.str(""); m_error << "Invalid seek index.";
+				return false;
+			}
+		}
+
+		if(!paths.empty())
+		{
+			path = paths.front();
+			paths.pop_front();
+		}
+
+		read_count = fread(&block, 1, sizeof(PK2EntryBlock), m_file);
+		if(read_count != sizeof(PK2EntryBlock))
+		{
+			m_error.str(""); m_error << "Could not read a PK2EntryBlock object";
+			return false;
+		}
+
+		for(int x = 0; x < 20; ++x)
+		{
+			PK2Entry & e = block.entries[x];
+
+			if(m_header.encryption)
+			{
+				m_blowfish.Decode(&e, sizeof(PK2Entry), &e, sizeof(PK2Entry));
+
+				// Protect against possible user seeking errors
+				if(e.padding[0] != 0 || e.padding[1] != 0)
+				{
+					m_error.str(""); m_error << "The padding is not NULL. User seek error.";
+					return false;
+				}
+			}
+
+			if(e.type == 1)
+			{
+				if(e.name[0] == '.' && (e.name[1] == 0 || (e.name[1] == '.' && e.name[2] == 0)))
+				{
+				}
+				else
+				{
+					std::string cpath = path;
+					if(cpath.empty())
+					{
+						cpath = e.name;
+					}
+					else
+					{
+						cpath += "\\";
+						cpath += e.name;
+					}
+					folders.push_back(e);
+					paths.push_back(cpath);
+				}
+			}
+		}
+
+		if(block.entries[19].nextChain)
+		{
+			int64_t pos = block.entries[19].position;
+			block.entries[19].position = block.entries[19].nextChain;
+			folders.push_front(block.entries[19]);
+			paths.push_front(path);
+			block.entries[19].position = pos;
+		}
+
+		if((*UserFunc)(this, path, block, userdata) == false)
+		{
+			break;
+		}
+	} while(!folders.empty());
+
+	return true;
 }
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
+bool PK2Reader::ExtractToMemory(PK2Entry & entry, std::vector<uint8_t> & buffer)
+{
+	if(entry.type != 2)
+	{
+		m_error.str(""); m_error << "The entry is not a file.";
+		return false;
+	}
+	buffer.resize(entry.size);
+	if(buffer.empty())
+	{
+		return true;
+	}
+	file_seek(m_file, entry.position, SEEK_SET);
+	size_t read_count = fread(&buffer[0], 1, entry.size, m_file);
+	if(read_count != entry.size)
+	{
+		buffer.clear();
+		m_error.str(""); m_error << "Could read all of the file data.";
+		return false;
+	}
+	return true;
+}
+
+//-----------------------------------------------------------------------------

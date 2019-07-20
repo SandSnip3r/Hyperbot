@@ -4,23 +4,22 @@
 #include <iostream>
 #include <sstream>
 
-Loader::Loader(const std::string &silkroadPath) : kSilkroadPath(silkroadPath) {
-  dllPath = edxLabs::GetAbsoluteDirectoryPath() + "../Debug/loaderDll.dll";
-  sroData.path = kSilkroadPath;
-  if (!LoadPath(sroData.path, sroData)) {
-    throw std::runtime_error("Unable to load Silkroad data from \""+sroData.path+"\"");
-  }
+// Silkroad path
+// locale
+// Gateway port
+
+Loader::Loader(const std::string &silkroadPath, uint8_t locale) : kSilkroadPath_(silkroadPath), kLocale_(locale) {
+  // TODO: Ensure this dll path is updated for release builds
+  dllPath_ = edxLabs::GetAbsoluteDirectoryPath() + "../Debug/loaderDll.dll";
   std::stringstream args;
-  args << "0 /" << (int)sroData.divInfo.locale << " " << 0 << " " << 0;
-  arguments = args.str();
-  std::string pathToClient = sroData.path;
+  args << "0 /" << (int)kLocale_ << " " << 0 << " " << 0;
+  arguments_ = args.str();
   //TODO: Use a better filesystem utility
-  clientPath = kSilkroadPath + "sro_client.exe";
+  clientPath_ = kSilkroadPath_ + "sro_client.exe";
   //TODO: Check this exists
   std::cout << "Loader constructed\n";
-  std::cout << " Silkroad client path: \"" << clientPath << "\"\n";
-  std::cout << " DLL path: \"" << dllPath << "\"\n";
-  std::cout << " Gateway port " << sroData.gatePort << '\n';
+  std::cout << " Silkroad client path: \"" << clientPath_ << "\"\n";
+  std::cout << " DLL path: \"" << dllPath_ << "\"\n";
 }
 
 void Loader::startClient() {
@@ -30,14 +29,14 @@ void Loader::startClient() {
   PROCESS_INFORMATION pi = { 0 };
 
   // Launch the client in a suspended state so we can patch it
-  bool result = edxLabs::CreateSuspendedProcess(clientPath, arguments, si, pi);
+  bool result = edxLabs::CreateSuspendedProcess(clientPath_, arguments_, si, pi);
   if (result == false) {
-    throw std::runtime_error("Could not start \""+clientPath+"\"");
+    throw std::runtime_error("Could not start \""+clientPath_+"\"");
   }
-  std::cout << "Client launched with arguments \"" << arguments << "\"\n";
+  std::cout << "Client launched with arguments \"" << arguments_ << "\"\n";
 
   // Inject the DLL so we can have some fun
-  result = (FALSE != edxLabs::InjectDLL(pi.hProcess, dllPath.c_str(), "OnInject", static_cast<DWORD>(edxLabs::GetEntryPoint(clientPath.c_str())), false));
+  result = (FALSE != edxLabs::InjectDLL(pi.hProcess, dllPath_.c_str(), "OnInject", static_cast<DWORD>(edxLabs::GetEntryPoint(clientPath_.c_str())), false));
   if (result == false) {
     TerminateThread(pi.hThread, 0);
     throw std::runtime_error("Could not inject into the Silkroad client process");
@@ -50,6 +49,4 @@ void Loader::startClient() {
   WSACleanup();
 }
 
-void Loader::killClient() {
-
-}
+// void Loader::killClient() {}

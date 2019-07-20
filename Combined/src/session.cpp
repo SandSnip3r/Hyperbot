@@ -1,15 +1,15 @@
 #include "session.hpp"
 
-Session::Session(const std::string &configPath) : kConfigPath_(configPath) {
-  //Load config
-  // Config config(kConfigPath_); //throws if file not found or cant open
-  // bot_.configure(config);
-  // proxy_.configure(config);
+Session::Session(const std::string &silkroadPath, uint8_t locale) :
+    kSilkroadPath_(silkroadPath),
+    kLocale_(locale),
+    loader_(kSilkroadPath_, kLocale_) {
+  //
 }
 
 Session::~Session() {
   proxy_.Stop();
-  loader_.killClient();
+  // loader_.killClient();
 }
 
 void Session::start() {

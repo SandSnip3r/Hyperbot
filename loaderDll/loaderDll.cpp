@@ -8,9 +8,10 @@
 #include <windows.h>
 #include <windowsx.h>
 #include "../common/common.h"
-#include "../common/pk2Reader.h"
+#include "../common/pk2ReaderModern.hpp"
+#include "../common/divisionInfo.hpp"
+#include "../common/parsing.hpp"
 #include "../Common/detours/detours.h"
-#include "../common/Silkroad.h"
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -20,7 +21,7 @@ using namespace edxLabs;
 
 HINSTANCE gInstance = 0;
 DWORD languageFlag = 0;
-DivisionInfo divInfo;
+pk2::DivisionInfo gDivisionInfo;
 bool bDoLanguagePatch = true;
 bool bDoMulticlient = true;
 bool bDoZoomhack = true;
@@ -389,11 +390,12 @@ bool modifyRoutelist() {
 		WSADATA wsaData = { 0 };
 		WSAStartup(MAKEWORD(2, 2), &wsaData);
 		routeListCount = 0;
-		for (size_t x = 0; x < divInfo.divisions.size(); ++x)
+    //gatewayIpAddresses
+		for (size_t x = 0; x < gDivisionInfo.divisions.size(); ++x)
 		{
-			for (size_t y = 0; y < divInfo.divisions[x].addresses.size(); ++y)
+			for (size_t y = 0; y < gDivisionInfo.divisions[x].gatewayIpAddresses.size(); ++y)
 			{
-				std::string nme = divInfo.divisions[x].addresses[y];
+				std::string nme = gDivisionInfo.divisions[x].gatewayIpAddresses[y];
 				struct hostent * remoteHost = gethostbyname(nme.c_str());
 				if (remoteHost)
 				{
@@ -464,35 +466,21 @@ void UserOnInject()
 	mpk2 = mpk2.substr(0, 1 + mpk2.find_last_of("\\/"));
 	mpk2 += "media.pk2";
 
-	pk2Reader reader;
-	unsigned char keyData[] = { 0x32, 0xCE, 0xDD, 0x7C, 0xBC, 0xA8 };
-	if (reader.Open(mpk2, keyData, 6))
-	{
-		std::list<pk2Entry> list1 = reader.GetEntry("DIVISIONINFO.TXT");
-		if (!list1.empty())
-		{
-			memoryEntry me = reader.ExtractToMemory(*list1.begin());
-			if (me.size != 0)
-			{
-				try
-				{
-					divInfo = ParseDivisionInfo(me.data, me.size);
-					languageFlag = divInfo.locale;
-				}
-				catch (std::exception & e)
-				{
-					UNREFERENCED_PARAMETER(e);
-					MessageBox(0, "The DivisionInfo could not be parsed.", "Fatal Error", MB_ICONERROR);
-				}
-			}
-		}
-		reader.Close();
-	}
+  try {
+    pk2::Pk2ReaderModern pk2Reader(mpk2);
+    auto divisionInfoEntry = pk2Reader.getEntry("DIVISIONINFO.TXT");
+    auto divisionInfoData = pk2Reader.getEntryData(divisionInfoEntry);
+    gDivisionInfo = pk2::parsing::parseDivisionInfo(divisionInfoData);
+  } catch (std::exception &ex) {
+	  std::string errorMsg = ex.what();
+	  errorMsg = "The DivisionInfo could not be parsed.\nError: \"" + errorMsg + "\"";
+	  MessageBox(0, errorMsg.c_str(), "Fatal Error", MB_ICONERROR);
+  }
 
 	// If we obtained the locale from the PK2
-	if (languageFlag != 0)
+	if (gDivisionInfo.locale != 0)
 	{
-		switch (languageFlag)
+		switch (gDivisionInfo.locale)
 		{
 		case 2: languageFlag = 0; break; // KSRO
 		case 4: languageFlag = 1; break; // CSRO
