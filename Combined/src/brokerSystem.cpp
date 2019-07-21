@@ -6,18 +6,16 @@ void BrokerSystem::setInjectionFunction(PacketInjectionFunction &&injectionFunct
 }
 
 bool BrokerSystem::packetReceived(const PacketContainer &packet, PacketContainer::Direction packetDirection) {
-  //COUT std::cout << "Broker received packet " << PacketPrinting::opcodeToStr(packet.opcode()) << "\n";
   // A new packet has arrived
   // First, determine which "event bus" to "put it on"
   PacketSubscriptionMap *subscriptionMap;
   if (packetDirection == PacketContainer::Direction::kClientToServer) {
     // The packet goes on the Client->Server event bus
     subscriptionMap = &clientPacketSubscriptions_;
-  } else if (packetDirection == PacketContainer::Direction::kServerToClient) {
+  } else {
+    // packetDirection == PacketContainer::Direction::kServerToClient
     // The packet goes on the Server->Client event bus
     subscriptionMap = &serverPacketSubscriptions_;
-  } else {
-    return true;
   }
   
   
@@ -31,11 +29,9 @@ bool BrokerSystem::packetReceived(const PacketContainer &packet, PacketContainer
       // Wrap the packet into an object with lazy-eval-parsing
       std::unique_ptr<PacketParsing::PacketParser> packetParser{PacketParsing::newPacketParser(packet)};
       // Send this packet and make note if the packet should be forwarded
-      //COUT std::cout << " Broker sending packet " << PacketPrinting::opcodeToStr(packet.opcode()) << " to subscriber\n";
       forwardPacket &= handleFunction(packetParser);
     }
   } else {
-    //COUT std::cout << " Nobody subscribed\n";
   }
   return forwardPacket;
 }

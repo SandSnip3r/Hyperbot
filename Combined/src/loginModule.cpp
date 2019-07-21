@@ -5,21 +5,25 @@
 #include <iostream>
 #include <Windows.h>
 
-LoginModule::LoginModule(const config::CharacterLoginData &loginData, BrokerSystem &brokerSystem) :
+LoginModule::LoginModule(const config::CharacterLoginData &loginData,
+                         const pk2::DivisionInfo &divisionInfo,
+                         BrokerSystem &brokerSystem) :
       loginData_(loginData),
+      divisionInfo_(divisionInfo),
       broker_(brokerSystem) {
+  auto packetHandleFunction = std::bind(&LoginModule::handlePacket, this, std::placeholders::_1);
   // Client packets
-  broker_.subscribeToClientPacket(Opcode::CLIENT_CAFE, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
-  broker_.subscribeToClientPacket(Opcode::CLIENT_AUTH, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
+  broker_.subscribeToClientPacket(Opcode::CLIENT_CAFE, packetHandleFunction);
+  broker_.subscribeToClientPacket(Opcode::CLIENT_AUTH, packetHandleFunction);
   // Server packets
-  broker_.subscribeToServerPacket(Opcode::LOGIN_SERVER_LIST, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
-  broker_.subscribeToServerPacket(Opcode::LOGIN_SERVER_AUTH_INFO, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
-  broker_.subscribeToServerPacket(Opcode::LOGIN_CLIENT_INFO, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
-  broker_.subscribeToServerPacket(Opcode::SERVER_LOGIN_RESULT, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
-  broker_.subscribeToServerPacket(Opcode::SERVER_CHARACTER, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
-  broker_.subscribeToServerPacket(Opcode::SERVER_INGAME_ACCEPT, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
-  broker_.subscribeToServerPacket(Opcode::SERVER_CHARDATA, std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
-  // broker_.subscribeToServerPacket(static_cast<Opcode>(0x6005), std::bind(&LoginModule::handlePacket, this, std::placeholders::_1));
+  broker_.subscribeToServerPacket(Opcode::LOGIN_SERVER_LIST, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::LOGIN_SERVER_AUTH_INFO, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::LOGIN_CLIENT_INFO, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::SERVER_LOGIN_RESULT, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::SERVER_CHARACTER, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::SERVER_INGAME_ACCEPT, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::SERVER_CHARDATA, packetHandleFunction);
+  // broker_.subscribeToServerPacket(static_cast<Opcode>(0x6005), packetHandleFunction);
 }
 
 bool LoginModule::handlePacket(std::unique_ptr<PacketParsing::PacketParser> &packetParser) {
@@ -90,7 +94,7 @@ bool LoginModule::handlePacket(std::unique_ptr<PacketParsing::PacketParser> &pac
 
 void LoginModule::cafeReceived() {
   std::cout << " CAFE packet received, injecting loginauth packet\n";
-  auto loginAuthPacket = PacketBuilding::LoginAuthPacketBuilder(kLocale_, loginData_.id, loginData_.password, shardId_).packet();
+  auto loginAuthPacket = PacketBuilding::LoginAuthPacketBuilder(divisionInfo_.locale, loginData_.id, loginData_.password, shardId_).packet();
   broker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
 }
 
@@ -117,7 +121,7 @@ void LoginModule::loginClientInfoReceived(PacketParsing::LoginClientInfoPacket &
   } else {
     std::cout << "Injecting client auth packet to agentserver\n";
     // Connected to agentserver, send client auth packet
-    auto clientAuthPacket = PacketBuilding::ClientAuthPacketBuilder(token_, loginData_.id, loginData_.password, kLocale_, kMacAddress_).packet();
+    auto clientAuthPacket = PacketBuilding::ClientAuthPacketBuilder(token_, loginData_.id, loginData_.password, divisionInfo_.locale, kMacAddress_).packet();
     broker_.injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
     loggingIn_ = true;
     // Allow this packet to continue to the client

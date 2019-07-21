@@ -11,8 +11,12 @@
 #include <functional>
 #include <string>
 
+// Session is a facilitator that:
+//  - Starts the Proxy
+//  - Starts the client and redirects its connection to Proxy using Loader
+//  - Acts upon packets by the intelligence in Bot
+// BrokerSystem is the communication channel between Bot and Proxy
 class Session {
-  // This is a facilitator that starts the proxy, starts the client, redirects the client, and contains intelligence in the bot
 public:
   Session(const pk2::media::GameData &gameData,
           const std::experimental::filesystem::v1::path &kSilkroadDirectoryPath,
@@ -26,7 +30,7 @@ private:
   Loader loader_{kSilkroadDirectoryPath_, gameData_.divisionInfo()};
   BrokerSystem broker_;
   Proxy proxy_{gameData_, broker_, Config::BindPort};
-  Bot bot_{loginData_, gameData_.itemData(), gameData_.skillData(), broker_};
+  Bot bot_{loginData_, gameData_, broker_};
 };
 
 #endif

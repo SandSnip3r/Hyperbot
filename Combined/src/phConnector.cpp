@@ -1,46 +1,4 @@
-/* #include "shared/silkroad_security.h"
-#include "shared/stream_utility.h"
-#include "packetLogger.hpp"
-
-#include "stdio.h"
-#include <iostream>
-#include <stdint.h>
-#include <fstream>
-#include <string>
-#include <random>
-#include <vector>
-#include <chrono>
-#include <list>
-
-#include <boost/asio.hpp>
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/function.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/ini_parser.hpp>
-
-//===
-#include <windows.h>
-#include <windowsx.h>
-#include "../../Common/Common.h"
-#include "../../Common/Silkroad.h"
-#include <sstream> */
-
-//Handles network events
-
-//Agent server info
-
-//Inject functions
-// boost::function<void(uint16_t opcode, StreamUtility & p, bool encrypted)> InjectJoymax;
-// boost::function<void(uint16_t opcode, StreamUtility & p, bool encrypted)> InjectSilkroad;
-//Bind inject functions (From proxy internal)
-// InjectJoymax = boost::bind(&SilkroadConnection::Inject, &serverConnection, _1, _2, _3);
-// InjectSilkroad = boost::bind(&SilkroadConnection::Inject, &clientConnection, _1, _2, _3);
+/* Shout out to Weeman! */
 
 #include "configData.hpp"
 #include "session.hpp"
@@ -57,23 +15,7 @@
 using namespace std;
 namespace fs = std::experimental::filesystem::v1;
 
-void generateBlankConfig(const fs::path &path) {
-  ofstream outFile(path);
-  if (!outFile) {
-    cerr << "Unable to open new file at path \"" << path << "\"\n";
-  }
-  outFile << "; This is the Hyperbot config file\n";
-  outFile << "\n";
-  outFile << "; Provide the path to the silkroad directory\n";
-  outFile << "[Silkroad]\n";
-  outFile << "path=\n";
-  outFile << "\n";
-  outFile << "; One section is required where the section name is the character name\n";
-  outFile << "; Replace \"CharacterName\" with your character's name\n";
-  outFile << "[CharacterName]\n";
-  outFile << "id=\n";
-  outFile << "password=\n";
-}
+void generateBlankConfig(const fs::path &path);
 
 int main(int argc, char* argv[]) {
 	const fs::path kConfigFilePath{"config.ini"};
@@ -93,4 +35,22 @@ int main(int argc, char* argv[]) {
     return 2;
   }
 	return 0;
+}
+
+void generateBlankConfig(const fs::path &path) {
+  ofstream outFile(path);
+  if (!outFile) {
+    cerr << "Unable to open new file at path \"" << path << "\"\n";
+  }
+  outFile << "; This is the Hyperbot config file\n";
+  outFile << "\n";
+  outFile << "; Provide the path to the silkroad directory\n";
+  outFile << "[Silkroad]\n";
+  outFile << "path=\n";
+  outFile << "\n";
+  outFile << "; One section is required where the section name is the character name\n";
+  outFile << "; Replace \"CharacterName\" with your character's name\n";
+  outFile << "[CharacterName]\n";
+  outFile << "id=\n";
+  outFile << "password=\n";
 }

@@ -1,18 +1,10 @@
 #include "bot.hpp"
-#include "opcode.hpp"
-#include "packetBuilding.hpp"
-
-#include <chrono>
-#include <iostream>
-#include <thread>
 
 Bot::Bot(const config::CharacterLoginData &loginData,
-         const pk2::media::ItemData &itemData,
-         const pk2::media::SkillData &skillData,
+         const pk2::media::GameData &gameData,
          BrokerSystem &broker) :
       loginData_(loginData),
-      itemData_(itemData),
-      skillData_(skillData),
+      gameData_(gameData),
       broker_(broker) {
   // Client packets
   // broker_.subscribeToClientPacket(Opcode::CLIENT_CHAT, std::bind(&Bot::handleClientChat, this, std::placeholders::_1));

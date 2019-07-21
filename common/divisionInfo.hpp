@@ -1,5 +1,5 @@
-#ifndef DIVISION_INFO_HPP
-#define DIVISION_INFO_HPP
+#ifndef PK2_DIVISION_INFO_HPP_
+#define PK2_DIVISION_INFO_HPP_
 
 #include "division.hpp"
 
@@ -18,4 +18,4 @@ struct DivisionInfo {
 
 std::ostream& operator<<(std::ostream &stream, const pk2::DivisionInfo &divisionInfo);
 
-#endif // DIVISION_INFO_HPP
+#endif // PK2_DIVISION_INFO_HPP_
