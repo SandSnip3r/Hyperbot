@@ -5,12 +5,14 @@
 #include <iostream>
 #include <Windows.h>
 
-LoginModule::LoginModule(const config::CharacterLoginData &loginData,
-                         const pk2::DivisionInfo &divisionInfo,
-                         BrokerSystem &brokerSystem) :
+LoginModule::LoginModule(BrokerSystem &brokerSystem,
+                         const packet::parsing::PacketParser &packetParser,
+                         const config::CharacterLoginData &loginData,
+                         const pk2::DivisionInfo &divisionInfo) :
+      broker_(brokerSystem),
+      packetParser_(packetParser),
       loginData_(loginData),
-      divisionInfo_(divisionInfo),
-      broker_(brokerSystem) {
+      divisionInfo_(divisionInfo) {
   auto packetHandleFunction = std::bind(&LoginModule::handlePacket, this, std::placeholders::_1);
   // Client packets
   broker_.subscribeToClientPacket(Opcode::CLIENT_CAFE, packetHandleFunction);
@@ -26,63 +28,65 @@ LoginModule::LoginModule(const config::CharacterLoginData &loginData,
   // broker_.subscribeToServerPacket(static_cast<Opcode>(0x6005), packetHandleFunction);
 }
 
-bool LoginModule::handlePacket(std::unique_ptr<PacketParsing::PacketParser> &packetParser) {
+bool LoginModule::handlePacket(const PacketContainer &packet) {
   std::cout << "LoginModule::handlePacket\n";
-  if (!packetParser) {
-    // No packet parser
+
+  std::unique_ptr<packet::parsing::ParsedPacket> parsedPacket = packetParser_.parsePacket(packet);
+  if (!parsedPacket) {
+    // Not yet parsing this packet
     return true;
   }
 
-  PacketParsing::ClientCafePacket *cafe = dynamic_cast<PacketParsing::ClientCafePacket*>(packetParser.get());
+  packet::parsing::ParsedClientCafe *cafe = dynamic_cast<packet::parsing::ParsedClientCafe*>(parsedPacket.get());
   if (cafe != nullptr) {
     cafeReceived();
     return true;
   }
 
-  PacketParsing::LoginServerListPacket *serverList = dynamic_cast<PacketParsing::LoginServerListPacket*>(packetParser.get());
+  packet::parsing::ParsedLoginServerList *serverList = dynamic_cast<packet::parsing::ParsedLoginServerList*>(parsedPacket.get());
   if (serverList != nullptr) {
     serverListReceived(*serverList);
     return true;
   }
 
-  PacketParsing::LoginResponsePacket *loginResponse = dynamic_cast<PacketParsing::LoginResponsePacket*>(packetParser.get());
+  packet::parsing::ParsedLoginResponse *loginResponse = dynamic_cast<packet::parsing::ParsedLoginResponse*>(parsedPacket.get());
   if (loginResponse != nullptr) {
     loginResponseReceived(*loginResponse);
     return true;
   }
 
   // This packet is a response to the client sending 0x2001 where the client indicates that it is the "SR_Client"
-  PacketParsing::LoginClientInfoPacket *loginClientInfo = dynamic_cast<PacketParsing::LoginClientInfoPacket*>(packetParser.get());
+  packet::parsing::ParsedLoginClientInfo *loginClientInfo = dynamic_cast<packet::parsing::ParsedLoginClientInfo*>(parsedPacket.get());
   if (loginClientInfo != nullptr) {
     loginClientInfoReceived(*loginClientInfo);
     return true;
   }
 
-  PacketParsing::UnknownPacket *unknownPacket = dynamic_cast<PacketParsing::UnknownPacket*>(packetParser.get());
+  packet::parsing::ParsedUnknown *unknownPacket = dynamic_cast<packet::parsing::ParsedUnknown*>(parsedPacket.get());
   if (unknownPacket != nullptr) {
     auto fowardReturnValue = unknownPacketReceived(*unknownPacket);
     return fowardReturnValue;
   }
 
-  PacketParsing::ServerAuthResponsePacket *serverAuthResponse = dynamic_cast<PacketParsing::ServerAuthResponsePacket*>(packetParser.get());
+  packet::parsing::ParsedServerAuthResponse *serverAuthResponse = dynamic_cast<packet::parsing::ParsedServerAuthResponse*>(parsedPacket.get());
   if (serverAuthResponse != nullptr) {
     serverAuthReceived(*serverAuthResponse);
     return true;
   }
 
-  PacketParsing::ServerAgentCharacterSelectionActionResponsePacket *charListResponse = dynamic_cast<PacketParsing::ServerAgentCharacterSelectionActionResponsePacket*>(packetParser.get());
+  packet::parsing::ParsedServerAgentCharacterSelectionActionResponse *charListResponse = dynamic_cast<packet::parsing::ParsedServerAgentCharacterSelectionActionResponse*>(parsedPacket.get());
   if (charListResponse != nullptr) {
     charListReceived(*charListResponse);
     return true;
   }
 
-  PacketParsing::ServerAgentCharacterSelectionJoinResponsePacket *charSelectionJoinResponse = dynamic_cast<PacketParsing::ServerAgentCharacterSelectionJoinResponsePacket*>(packetParser.get());
+  packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse *charSelectionJoinResponse = dynamic_cast<packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse*>(parsedPacket.get());
   if (charSelectionJoinResponse != nullptr) {
     charSelectionJoinResponseReceived(*charSelectionJoinResponse);
     return true;
   }
 
-  PacketParsing::ServerAgentCharacterDataPacket *charData = dynamic_cast<PacketParsing::ServerAgentCharacterDataPacket*>(packetParser.get());
+  packet::parsing::ParsedServerAgentCharacterData *charData = dynamic_cast<packet::parsing::ParsedServerAgentCharacterData*>(parsedPacket.get());
   if (charData != nullptr) {
     std::cout << "Got character data\n";
     return true;
@@ -98,13 +102,13 @@ void LoginModule::cafeReceived() {
   broker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
 }
 
-void LoginModule::serverListReceived(PacketParsing::LoginServerListPacket &packet) {
+void LoginModule::serverListReceived(const packet::parsing::ParsedLoginServerList &packet) {
   std::cout << "Server List Received\n";
   shardId_ = packet.shardId();
   std::cout << " Server List packet, shardId:" << shardId_ << "\n";
 }
 
-void LoginModule::loginResponseReceived(PacketParsing::LoginResponsePacket &packet) {
+void LoginModule::loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) {
   std::cout << " Login response, result:" << static_cast<int>(packet.result()) << ", token:" << packet.token() << "\n";
   if (packet.result() != PacketEnums::LoginResult::kSuccess) {
     std::cout << " Login failed\n";
@@ -114,7 +118,7 @@ void LoginModule::loginResponseReceived(PacketParsing::LoginResponsePacket &pack
   }
 }
 
-void LoginModule::loginClientInfoReceived(PacketParsing::LoginClientInfoPacket &packet) {
+void LoginModule::loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet) {
   std::cout << " Login client info, service name:" << packet.serviceName() << "\n";
   if (packet.serviceName() != "AgentServer") {
     std::cout << "Not agentserver\n";
@@ -129,7 +133,7 @@ void LoginModule::loginClientInfoReceived(PacketParsing::LoginClientInfoPacket &
   }
 }
 
-bool LoginModule::unknownPacketReceived(PacketParsing::UnknownPacket &packet) {
+bool LoginModule::unknownPacketReceived(const packet::parsing::ParsedUnknown &packet) {
   std::cout << "Unknown packet\n";
   if (packet.opcode() == Opcode::CLIENT_AUTH) {
     std::cout << "Client_auth packet, actually\n";
@@ -143,7 +147,7 @@ bool LoginModule::unknownPacketReceived(PacketParsing::UnknownPacket &packet) {
   return true;
 }
 
-void LoginModule::serverAuthReceived(PacketParsing::ServerAuthResponsePacket &packet) {
+void LoginModule::serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet) {
   std::cout << " Server auth response: " << (int)packet.result() << "\n";
   if (packet.result() == 0x01) {
     loggingIn_ = false;
@@ -154,7 +158,7 @@ void LoginModule::serverAuthReceived(PacketParsing::ServerAuthResponsePacket &pa
   }
 }
 
-void LoginModule::charListReceived(PacketParsing::ServerAgentCharacterSelectionActionResponsePacket &packet) {
+void LoginModule::charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet) {
   auto &charList = packet.characters();
   std::cout << "Char list received, " << charList.size() << " character(s)\n";
   // Search for our character in the character list
@@ -174,7 +178,7 @@ void LoginModule::charListReceived(PacketParsing::ServerAgentCharacterSelectionA
   broker_.injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
 }
 
-void LoginModule::charSelectionJoinResponseReceived(PacketParsing::ServerAgentCharacterSelectionJoinResponsePacket &packet) {
+void LoginModule::charSelectionJoinResponseReceived(const packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse &packet) {
   // A character was selected after login, this is the response
   if (packet.result() != 0x01) {
     // Character selection failed

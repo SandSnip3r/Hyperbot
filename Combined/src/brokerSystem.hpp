@@ -1,9 +1,7 @@
 #include "opcode.hpp"
-#include "packetParsing.hpp"
 #include "shared/silkroad_security.h"
 
 #include <functional>
-#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -16,7 +14,7 @@
 /// TODO: Allow registration of multiple events in one call if necessary
 class BrokerSystem {
 private:
-  using PacketHandleFunction = std::function<bool(std::unique_ptr<PacketParsing::PacketParser>&)>;
+  using PacketHandleFunction = std::function<bool(const PacketContainer&)>;
   using PacketInjectionFunction = std::function<void(const PacketContainer&, const PacketContainer::Direction)>;
   using PacketSubscriptionMap = std::unordered_map<Opcode, std::vector<PacketHandleFunction>>;
   PacketSubscriptionMap clientPacketSubscriptions_, serverPacketSubscriptions_;

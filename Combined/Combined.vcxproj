@@ -40,7 +40,8 @@
     <ClCompile Include="src\opcode.cpp" />
     <ClCompile Include="src\packetBuilding.cpp" />
     <ClCompile Include="src\packetLogger.cpp" />
-    <ClCompile Include="src\packetParsing.cpp" />
+    <ClCompile Include="src\packetParser.cpp" />
+    <ClCompile Include="src\parsedPacket.cpp" />
     <ClCompile Include="src\phConnector.cpp" />
     <ClCompile Include="src\proxy.cpp" />
     <ClCompile Include="src\session.cpp" />
@@ -75,7 +76,8 @@
     <ClInclude Include="src\packetBuilding.hpp" />
     <ClInclude Include="src\packetEnums.hpp" />
     <ClInclude Include="src\packetLogger.hpp" />
-    <ClInclude Include="src\packetParsing.hpp" />
+    <ClInclude Include="src\packetParser.hpp" />
+    <ClInclude Include="src\parsedPacket.hpp" />
     <ClInclude Include="src\proxy.hpp" />
     <ClInclude Include="src\session.hpp" />
     <ClInclude Include="src\shared\silkroad_security.h" />

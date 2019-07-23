@@ -5,6 +5,7 @@
 #include "characterLoginData.hpp"
 #include "gameData.hpp"
 #include "loginModule.hpp"
+#include "packetParser.hpp"
 
 class Bot {
 public:
@@ -15,7 +16,8 @@ private:
   const config::CharacterLoginData &loginData_;
   const pk2::media::GameData &gameData_;
   BrokerSystem &broker_;
-  LoginModule loginModule_{loginData_, gameData_.divisionInfo(), broker_};
+  packet::parsing::PacketParser packetParser_{gameData_};
+  LoginModule loginModule_{broker_, packetParser_, loginData_, gameData_.divisionInfo()};
 };
 
 #endif

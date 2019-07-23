@@ -26,10 +26,8 @@ bool BrokerSystem::packetReceived(const PacketContainer &packet, PacketContainer
     // We have one or more subscribers for this opcode, forward it to each
     std::vector<PacketHandleFunction> &handleFunctions = subscriptionIt->second;
     for (auto &handleFunction : handleFunctions) {
-      // Wrap the packet into an object with lazy-eval-parsing
-      std::unique_ptr<PacketParsing::PacketParser> packetParser{PacketParsing::newPacketParser(packet)};
       // Send this packet and make note if the packet should be forwarded
-      forwardPacket &= handleFunction(packetParser);
+      forwardPacket &= handleFunction(packet);
     }
   } else {
   }

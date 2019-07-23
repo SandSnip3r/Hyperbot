@@ -60,9 +60,6 @@
     <ClCompile Include="src\brokerSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\packetParsing.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\packetBuilding.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -108,6 +105,12 @@
     <ClCompile Include="src\configData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\packetParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\parsedPacket.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\shared\silkroad_security.h">
@@ -147,9 +150,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\brokerSystem.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\packetParsing.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\packetBuilding.hpp">
@@ -204,6 +204,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\characterLoginData.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\packetParser.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\parsedPacket.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

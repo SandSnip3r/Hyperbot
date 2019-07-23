@@ -1,65 +1,27 @@
-#include "opcode.hpp"
-#include "packetParsing.hpp"
+#include "parsedPacket.hpp"
 
 #include <iostream>
 
-namespace PacketParsing {
+namespace packet::parsing {
 
-PacketParser* newPacketParser(const PacketContainer &packet) {
-  // Given a packet's opcode, determine which parser is appropriate
-  switch (static_cast<Opcode>(packet.opcode)) {
-    case Opcode::CLIENT_CHAT:
-      return new ClientChatPacket(packet);
-    case Opcode::LOGIN_SERVER_LIST:
-      return new LoginServerListPacket(packet);
-    case Opcode::CLIENT_CAFE:
-      return new ClientCafePacket(packet);
-    case Opcode::LOGIN_SERVER_AUTH_INFO:
-      return new LoginResponsePacket(packet);
-    case Opcode::LOGIN_CLIENT_INFO:
-      return new LoginClientInfoPacket(packet);
-    case Opcode::SERVER_LOGIN_RESULT:
-      return new ServerAuthResponsePacket(packet);
-    case Opcode::SERVER_CHARACTER:
-      return new ServerAgentCharacterSelectionActionResponsePacket(packet);
-    case Opcode::SERVER_INGAME_ACCEPT:
-      return new ServerAgentCharacterSelectionJoinResponsePacket(packet);
-    case Opcode::SERVER_CHARDATA:
-      return new ServerAgentCharacterDataPacket(packet);
-    case Opcode::CLIENT_AUTH:
-    // case static_cast<Opcode>(0x2005):
-    // case static_cast<Opcode>(0x6005):
-      return new UnknownPacket(packet);
-  }
-  std::cout << "Warning! No packet parser found for opcode " << std::hex << (int)packet.opcode << std::dec << '\n';
-  return nullptr;
+//=========================================================================================================================================================
+
+ParsedPacket::ParsedPacket(const PacketContainer &packet) : opcode_(static_cast<Opcode>(packet.opcode)) {}
+
+Opcode ParsedPacket::opcode() const {
+  return opcode_;
 }
 
-// PacketParser
-void PacketParser::parsedCheck() {
-  // Lazy-eval mechanism
-  if (!parsed_) {
-    parsePacket();
-    parsed_ = true;
-  }
-}
+ParsedPacket::~ParsedPacket() {}
 
-PacketParser::~PacketParser() {}
+//=========================================================================================================================================================
 
-// UnknownPacket
-UnknownPacket::UnknownPacket(const PacketContainer &packet) : packet_(packet) {}
+ParsedUnknown::ParsedUnknown(const PacketContainer &packet) : ParsedPacket(packet) {}
 
-Opcode UnknownPacket::opcode() const {
-  return static_cast<Opcode>(packet_.opcode);
-}
+//=========================================================================================================================================================
 
-void UnknownPacket::parsePacket() {
-}
-
-ServerAgentCharacterDataPacket::ServerAgentCharacterDataPacket(const PacketContainer &packet) : packet_(packet) { parsePacket(); }
-
-void ServerAgentCharacterDataPacket::parsePacket() {
-  StreamUtility stream = packet_.data;
+ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketContainer &packet) : ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
   uint32_t serverTime = stream.Read<uint32_t>();
   std::cout << "serverTime: " << serverTime << '\n';
   uint32_t refObjID = stream.Read<uint32_t>();
@@ -474,50 +436,30 @@ void ServerAgentCharacterDataPacket::parsePacket() {
   // 1   byte    unkByte4        //Structure changes!!!
 }
 
-ServerAgentCharacterSelectionJoinResponsePacket::ServerAgentCharacterSelectionJoinResponsePacket(const PacketContainer &packet) : packet_(packet) {}
+//=========================================================================================================================================================
 
-uint8_t ServerAgentCharacterSelectionJoinResponsePacket::result() {
-  parsedCheck();  
-  return result_;
-}
-
-uint16_t ServerAgentCharacterSelectionJoinResponsePacket::errorCode() {
-  parsedCheck();  
-  return errorCode_;
-}
-
-void ServerAgentCharacterSelectionJoinResponsePacket::parsePacket() {
-  StreamUtility stream = packet_.data;
+ParsedServerAgentCharacterSelectionJoinResponse::ParsedServerAgentCharacterSelectionJoinResponse(const PacketContainer &packet) :
+      ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
   result_ = stream.Read<uint8_t>();
   if (result_ == 0x02) {
     errorCode_ = stream.Read<uint16_t>();
   }
 }
 
-ServerAgentCharacterSelectionActionResponsePacket::ServerAgentCharacterSelectionActionResponsePacket(const PacketContainer &packet) : packet_(packet) {}
-
-PacketEnums::CharacterSelectionAction ServerAgentCharacterSelectionActionResponsePacket::action() {
-  parsedCheck();  
-  return action_;
-}
-
-uint8_t ServerAgentCharacterSelectionActionResponsePacket::result() {
-  parsedCheck();  
+uint8_t ParsedServerAgentCharacterSelectionJoinResponse::result() const {
   return result_;
 }
 
-const std::vector<PacketInnerStructures::CharacterSelection::Character>& ServerAgentCharacterSelectionActionResponsePacket::characters() {
-  parsedCheck();  
-  return characters_;
-}
-
-uint16_t ServerAgentCharacterSelectionActionResponsePacket::errorCode() {
-  parsedCheck();  
+uint16_t ParsedServerAgentCharacterSelectionJoinResponse::errorCode() const {
   return errorCode_;
 }
 
-void ServerAgentCharacterSelectionActionResponsePacket::parsePacket() {
-  StreamUtility stream = packet_.data;
+//=========================================================================================================================================================
+
+ParsedServerAgentCharacterSelectionActionResponse::ParsedServerAgentCharacterSelectionActionResponse(const PacketContainer &packet) :
+      ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
   action_ = static_cast<PacketEnums::CharacterSelectionAction>(stream.Read<uint8_t>());
   result_ = stream.Read<uint8_t>();
   if (result_ == 0x01 && action_ == PacketEnums::CharacterSelectionAction::kList) {
@@ -568,57 +510,60 @@ void ServerAgentCharacterSelectionActionResponsePacket::parsePacket() {
   }
 }
 
-// ServerAuthResponsePacket
-ServerAuthResponsePacket::ServerAuthResponsePacket(const PacketContainer &packet) : packet_(packet) {}
+PacketEnums::CharacterSelectionAction ParsedServerAgentCharacterSelectionActionResponse::action() const {
+  return action_;
+}
 
-uint8_t ServerAuthResponsePacket::result() {
-  parsedCheck();
+uint8_t ParsedServerAgentCharacterSelectionActionResponse::result() const {
   return result_;
 }
 
-uint8_t ServerAuthResponsePacket::errorCode() {
-  parsedCheck();
+const std::vector<PacketInnerStructures::CharacterSelection::Character>& ParsedServerAgentCharacterSelectionActionResponse::characters() const {
+  return characters_;
+}
+
+uint16_t ParsedServerAgentCharacterSelectionActionResponse::errorCode() const {
   return errorCode_;
 }
 
-void ServerAuthResponsePacket::parsePacket() {
-  StreamUtility stream = packet_.data;
+//=========================================================================================================================================================
+
+ParsedServerAuthResponse::ParsedServerAuthResponse(const PacketContainer &packet) :
+      ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
   result_ = stream.Read<uint8_t>();
   if (result_ == 0x02) {
     errorCode_ = stream.Read<uint8_t>();
   }
 }
 
-// LoginClientInfoPacket
-LoginClientInfoPacket::LoginClientInfoPacket(const PacketContainer &packet) : packet_(packet) {}
-
-std::string LoginClientInfoPacket::serviceName() {
-  parsedCheck();
-  return serviceName_;
+uint8_t ParsedServerAuthResponse::result() const {
+  return result_;
 }
 
-void LoginClientInfoPacket::parsePacket() {
-  StreamUtility stream = packet_.data;
+uint8_t ParsedServerAuthResponse::errorCode() const {
+  return errorCode_;
+}
+
+//=========================================================================================================================================================
+
+ParsedLoginClientInfo::ParsedLoginClientInfo(const PacketContainer &packet) :
+      ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
   uint16_t serviceNameLength = stream.Read<uint16_t>();
   serviceName_ = stream.Read_Ascii(serviceNameLength);
   /* uint8_t isLocal = */ stream.Read<uint8_t>();
 }
 
-// LoginResponsePacket
-LoginResponsePacket::LoginResponsePacket(const PacketContainer &packet) : packet_(packet) {}
-
-PacketEnums::LoginResult LoginResponsePacket::result() {
-  parsedCheck();
-  return result_;
+std::string ParsedLoginClientInfo::serviceName() const {
+  return serviceName_;
 }
 
-uint32_t LoginResponsePacket::token() {
-  parsedCheck();
-  return token_;
-}
+//=========================================================================================================================================================
 
-void LoginResponsePacket::parsePacket() {
-  StreamUtility stream = packet_.data;
+ParsedLoginResponse::ParsedLoginResponse(const PacketContainer &packet) :
+      ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
   result_ = static_cast<PacketEnums::LoginResult>(stream.Read<uint8_t>());
   if (result_ == PacketEnums::LoginResult::kSuccess) {
     token_ = stream.Read<uint32_t>();
@@ -653,16 +598,20 @@ void LoginResponsePacket::parsePacket() {
   }
 }
 
-// LoginServerListPacket
-LoginServerListPacket::LoginServerListPacket(const PacketContainer &packet) : packet_(packet) {}
-
-uint16_t LoginServerListPacket::shardId() {
-  parsedCheck();
-  return shardId_;
+PacketEnums::LoginResult ParsedLoginResponse::result() const {
+  return result_;
 }
 
-void LoginServerListPacket::parsePacket() {
-  StreamUtility stream = packet_.data;
+uint32_t ParsedLoginResponse::token() const {
+  return token_;
+}
+
+
+//=========================================================================================================================================================
+
+ParsedLoginServerList::ParsedLoginServerList(const PacketContainer &packet) :
+    ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
   uint8_t globalOpFlag = stream.Read<uint8_t>();
   while (globalOpFlag == 0x01) {
     // Read a "global op" , will be something like "SRO_Vietnam_TestLocal"
@@ -685,36 +634,21 @@ void LoginServerListPacket::parsePacket() {
   }
 }
 
-// ClientCafePacket
-ClientCafePacket::ClientCafePacket(const PacketContainer &packet) : packet_(packet) {}
-
-void ClientCafePacket::parsePacket() {
+uint16_t ParsedLoginServerList::shardId() const {
+  return shardId_;
 }
 
-// ClientChatPacket
-ClientChatPacket::ClientChatPacket(const PacketContainer &packet) : packet_(packet) {}
+//=========================================================================================================================================================
 
-PacketEnums::ChatType ClientChatPacket::chatType() {
-  parsedCheck();
-  return chatType_;
+ParsedClientCafe::ParsedClientCafe(const PacketContainer &packet) :
+      ParsedPacket(packet) {
+  //
 }
 
-uint8_t ClientChatPacket::chatIndex() {
-  parsedCheck();
-  return chatIndex_;
-}
+//=========================================================================================================================================================
 
-const std::string& ClientChatPacket::receiverName() {
-  parsedCheck();
-  return receiverName_;
-}
-
-const std::string& ClientChatPacket::message() {
-  parsedCheck();
-  return message_;
-}
-
-void ClientChatPacket::parsePacket() {
+ParsedClientChat::ParsedClientChat(const PacketContainer &packet) :
+      ParsedPacket(packet) {
   // 1   byte    chatType
   // 1   byte    chatIndex
   // if(chatType == ChatType.PM)
@@ -724,7 +658,7 @@ void ClientChatPacket::parsePacket() {
   // }
   // 2   ushort  message.Length
   // *   string  message
-  StreamUtility stream = packet_.data;
+  StreamUtility stream = packet.data;
   chatType_ = static_cast<PacketEnums::ChatType>(stream.Read<uint8_t>());
   chatIndex_ = stream.Read<uint8_t>();
   if (chatType_ == PacketEnums::ChatType::kPm) {
@@ -735,4 +669,21 @@ void ClientChatPacket::parsePacket() {
   message_ = stream.Read_Ascii(kMessageLength);
 }
 
-} // namespace PacketParsing
+PacketEnums::ChatType ParsedClientChat::chatType() const {
+  return chatType_;
+}
+
+uint8_t ParsedClientChat::chatIndex() const {
+  return chatIndex_;
+}
+
+const std::string& ParsedClientChat::receiverName() const {
+  return receiverName_;
+}
+
+const std::string& ParsedClientChat::message() const {
+  return message_;
+}
+
+//=========================================================================================================================================================
+} // namespace packet::parsing

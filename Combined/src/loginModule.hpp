@@ -4,7 +4,8 @@
 #include "../../common/divisionInfo.hpp"
 #include "brokerSystem.hpp"
 #include "configData.hpp"
-#include "packetParsing.hpp"
+#include "packetParser.hpp"
+#include "parsedPacket.hpp"
 #include "shared/silkroad_security.h"
 
 #include <array>
@@ -12,7 +13,7 @@
 #include <string>
 
 class LoginModule {
-private:
+public:
   // enum class LoginState {
   //   kWaitingForServerList,
   //   kWaitingForClientCafe,
@@ -20,25 +21,28 @@ private:
   //   kCafeSent,
   //   kLoginResponseReceived
   // };
-public:
-  LoginModule(const config::CharacterLoginData &loginData, const pk2::DivisionInfo &divisionInfo, BrokerSystem &brokerSystem);
-  bool handlePacket(std::unique_ptr<PacketParsing::PacketParser> &packetParser);
+  LoginModule(BrokerSystem &brokerSystem,
+              const packet::parsing::PacketParser &packetParser,
+              const config::CharacterLoginData &loginData,
+              const pk2::DivisionInfo &divisionInfo);
+  bool handlePacket(const PacketContainer &packet);
 private:
+  BrokerSystem &broker_;
+  const packet::parsing::PacketParser &packetParser_;
   const config::CharacterLoginData &loginData_;
   const pk2::DivisionInfo &divisionInfo_;
-  BrokerSystem &broker_;
   bool loggingIn_ = false;
   uint32_t token_;
   uint16_t shardId_;
   const std::array<uint8_t,6> kMacAddress_ = {0,0,0,0,0,0};
   void cafeReceived();
-  void serverListReceived(PacketParsing::LoginServerListPacket &packet);
-  void loginResponseReceived(PacketParsing::LoginResponsePacket &packet);
-  void loginClientInfoReceived(PacketParsing::LoginClientInfoPacket &packet);
-  bool unknownPacketReceived(PacketParsing::UnknownPacket &packet);
-  void serverAuthReceived(PacketParsing::ServerAuthResponsePacket &packet);
-  void charListReceived(PacketParsing::ServerAgentCharacterSelectionActionResponsePacket &packet);
-  void charSelectionJoinResponseReceived(PacketParsing::ServerAgentCharacterSelectionJoinResponsePacket &packet);
+  void serverListReceived(const packet::parsing::ParsedLoginServerList &packet);
+  void loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet);
+  void loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet);
+  bool unknownPacketReceived(const packet::parsing::ParsedUnknown &packet);
+  void serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet);
+  void charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet);
+  void charSelectionJoinResponseReceived(const packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse &packet);
 };
 
 #endif // LOGINMODULE_HPP_
