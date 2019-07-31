@@ -111,6 +111,9 @@
     <ClCompile Include="src\parsedPacket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\characterInfoModule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\shared\silkroad_security.h">
@@ -210,6 +213,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\parsedPacket.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\characterInfoModule.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

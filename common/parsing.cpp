@@ -1,4 +1,5 @@
 #include "parsing.hpp"
+#include "item.hpp"
 
 namespace pk2::parsing {
 
@@ -15,7 +16,7 @@ std::string fileDataToString(const std::vector<uint8_t> &data) {
 	return result;
 }
 
-Item parseItemdataLine(const std::string &line) {
+pk2::media::Item parseItemdataLine(const std::string &line) {
 	// int service; //0
 	// int id; //1
 	// std::string codeName128; //2
@@ -183,7 +184,7 @@ Item parseItemdataLine(const std::string &line) {
 		// TODO: This check for validity of data should be more robust
 		throw std::runtime_error("Parsing item data, but line contains wrong number of fields");
 	}
-	Item item;
+	pk2::media::Item item;
 	item.id = std::stoi(fields[0]);
 	item.codeName128 = fields[1];
 	item.typeId1 = std::stoi(fields[2]);

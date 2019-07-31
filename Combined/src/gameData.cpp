@@ -3,6 +3,8 @@
 #include "../../common/PK2.h"
 #include "../../common/parsing.hpp"
 
+#include <iostream>
+
 namespace pk2::media {
 
 namespace fs = std::experimental::filesystem::v1;
@@ -43,7 +45,31 @@ void GameData::parseDivisionInfo(pk2::Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseItemData(pk2::Pk2ReaderModern &pk2Reader) {
+	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kMasterItemdataName = "itemdata.txt";
+  const std::string kMasterItemdataPath = kTextdataDirectory + kMasterItemdataName;
+  PK2Entry masterItemdataEntry = pk2Reader.getEntry(kMasterItemdataPath);
 
+  auto masterItemdataData = pk2Reader.getEntryData(masterItemdataEntry);
+  auto masterItemdataStr = pk2::parsing::fileDataToString(masterItemdataData);
+  auto itemdataFilenames = pk2::parsing::split(masterItemdataStr, "\r\n");
+
+  for (auto itemdataFilename : itemdataFilenames) {
+    std::cout << "Parsing item data file \"" << itemdataFilename << "\"\n";
+    auto itemdataPath = kTextdataDirectory + itemdataFilename;
+    PK2Entry itemdataEntry = pk2Reader.getEntry(itemdataPath);
+    auto itemdataData = pk2Reader.getEntryData(itemdataEntry);
+    auto itemdataStr = pk2::parsing::fileDataToString(itemdataData);
+    auto itemdataLines = pk2::parsing::split(itemdataStr, "\r\n");
+    for (const auto &line : itemdataLines) {
+      try {
+        itemData_.addItem(pk2::parsing::parseItemdataLine(line));
+      } catch (...) {
+        std::cerr << "Failed to parse item data \"" << line << "\"\n";
+      }
+    }
+  }
+  std::cout << "Cached " << itemData_.size() << " item(s)\n";
 }
 
 void GameData::parseSkillData(pk2::Pk2ReaderModern &pk2Reader) {

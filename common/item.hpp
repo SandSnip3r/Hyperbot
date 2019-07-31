@@ -1,13 +1,15 @@
-#ifndef ITEM_HPP
-#define ITEM_HPP
+#ifndef PK2_MEDIA_ITEM_HPP_
+#define PK2_MEDIA_ITEM_HPP_
 
 #include <string>
 #include <ostream>
 
-namespace pk2 {
+namespace pk2::media {
+
+using ItemId = uint32_t;
 
 struct Item {
-	int id;
+	ItemId id;
 	std::string codeName128;
 	uint8_t typeId1;
 	uint8_t typeId2;
@@ -17,6 +19,6 @@ struct Item {
 
 std::ostream& operator<<(std::ostream &stream, const Item &item);
 
-} // namespace pk2
+} // namespace pk2::media
 
-#endif // ITEM_HPP
+#endif // PK2_MEDIA_ITEM_HPP_

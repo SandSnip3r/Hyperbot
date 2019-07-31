@@ -3,7 +3,7 @@
 #include "packetBuilding.hpp"
 
 #include <iostream>
-#include <Windows.h>
+#include <memory>
 
 LoginModule::LoginModule(BrokerSystem &brokerSystem,
                          const packet::parsing::PacketParser &packetParser,
@@ -15,7 +15,6 @@ LoginModule::LoginModule(BrokerSystem &brokerSystem,
       divisionInfo_(divisionInfo) {
   auto packetHandleFunction = std::bind(&LoginModule::handlePacket, this, std::placeholders::_1);
   // Client packets
-  broker_.subscribeToClientPacket(Opcode::CLIENT_CAFE, packetHandleFunction);
   broker_.subscribeToClientPacket(Opcode::CLIENT_AUTH, packetHandleFunction);
   // Server packets
   broker_.subscribeToServerPacket(Opcode::LOGIN_SERVER_LIST, packetHandleFunction);
@@ -24,22 +23,21 @@ LoginModule::LoginModule(BrokerSystem &brokerSystem,
   broker_.subscribeToServerPacket(Opcode::SERVER_LOGIN_RESULT, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_CHARACTER, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_INGAME_ACCEPT, packetHandleFunction);
-  broker_.subscribeToServerPacket(Opcode::SERVER_CHARDATA, packetHandleFunction);
   // broker_.subscribeToServerPacket(static_cast<Opcode>(0x6005), packetHandleFunction);
 }
 
 bool LoginModule::handlePacket(const PacketContainer &packet) {
   std::cout << "LoginModule::handlePacket\n";
 
-  std::unique_ptr<packet::parsing::ParsedPacket> parsedPacket = packetParser_.parsePacket(packet);
-  if (!parsedPacket) {
-    // Not yet parsing this packet
+  std::unique_ptr<packet::parsing::ParsedPacket> parsedPacket;
+  try {
+    parsedPacket = packetParser_.parsePacket(packet);
+  } catch (std::exception &ex) {
+    std::cerr << "[LoginModule] Failed to parse packet " << std::hex << packet.opcode << std::dec << "\n  Error: \"" << ex.what() << "\"\n";
     return true;
   }
-
-  packet::parsing::ParsedClientCafe *cafe = dynamic_cast<packet::parsing::ParsedClientCafe*>(parsedPacket.get());
-  if (cafe != nullptr) {
-    cafeReceived();
+  if (!parsedPacket) {
+    // Not yet parsing this packet
     return true;
   }
 
@@ -86,26 +84,16 @@ bool LoginModule::handlePacket(const PacketContainer &packet) {
     return true;
   }
 
-  packet::parsing::ParsedServerAgentCharacterData *charData = dynamic_cast<packet::parsing::ParsedServerAgentCharacterData*>(parsedPacket.get());
-  if (charData != nullptr) {
-    std::cout << "Got character data\n";
-    return true;
-  }
-
   std::cout << "Unhandled packet subscribed to\n";
   return true;
-}
-
-void LoginModule::cafeReceived() {
-  std::cout << " CAFE packet received, injecting loginauth packet\n";
-  auto loginAuthPacket = PacketBuilding::LoginAuthPacketBuilder(divisionInfo_.locale, loginData_.id, loginData_.password, shardId_).packet();
-  broker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
 }
 
 void LoginModule::serverListReceived(const packet::parsing::ParsedLoginServerList &packet) {
   std::cout << "Server List Received\n";
   shardId_ = packet.shardId();
-  std::cout << " Server List packet, shardId:" << shardId_ << "\n";
+  std::cout << " Server List packet, shardId:" << shardId_ << ". Injecting loginauth packet\n";
+  auto loginAuthPacket = PacketBuilding::LoginAuthPacketBuilder(divisionInfo_.locale, loginData_.id, loginData_.password, shardId_).packet();
+  broker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
 }
 
 void LoginModule::loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) {

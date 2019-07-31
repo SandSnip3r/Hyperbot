@@ -1,7 +1,8 @@
-#include "shared/silkroad_security.h"
+#include "itemData.hpp"
+#include "opcode.hpp"
 #include "packetEnums.hpp"
 #include "packetInnerStructures.hpp"
-#include "opcode.hpp"
+#include "shared/silkroad_security.h"
 
 #include <string>
 
@@ -33,7 +34,7 @@ private:
 
 class ParsedServerAgentCharacterData : public ParsedPacket {
 public:
-  ParsedServerAgentCharacterData(const PacketContainer &packet);
+  ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::media::ItemData &itemData);
 private:
 };
   
@@ -107,14 +108,6 @@ public:
   uint16_t shardId() const;
 private:
   uint16_t shardId_;
-};
-
-//=========================================================================================================================================================
-
-class ParsedClientCafe : public ParsedPacket {
-public:
-  ParsedClientCafe(const PacketContainer &packet);
-private:
 };
 
 //=========================================================================================================================================================

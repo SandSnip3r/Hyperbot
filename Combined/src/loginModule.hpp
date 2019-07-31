@@ -1,5 +1,5 @@
-#ifndef LOGINMODULE_HPP_
-#define LOGINMODULE_HPP_
+#ifndef LOGIN_MODULE_HPP_
+#define LOGIN_MODULE_HPP_
 
 #include "../../common/divisionInfo.hpp"
 #include "brokerSystem.hpp"
@@ -9,7 +9,6 @@
 #include "shared/silkroad_security.h"
 
 #include <array>
-#include <memory>
 #include <string>
 
 class LoginModule {
@@ -35,7 +34,6 @@ private:
   uint32_t token_;
   uint16_t shardId_;
   const std::array<uint8_t,6> kMacAddress_ = {0,0,0,0,0,0};
-  void cafeReceived();
   void serverListReceived(const packet::parsing::ParsedLoginServerList &packet);
   void loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet);
   void loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet);

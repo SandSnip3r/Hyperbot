@@ -2,7 +2,7 @@
 
 #include <vector>
 
-namespace pk2 {
+namespace pk2::media {
 
 std::ostream& operator<<(std::ostream &stream, const Item &item) {
 	stream << "{id:" << item.id << ','
@@ -14,4 +14,4 @@ std::ostream& operator<<(std::ostream &stream, const Item &item) {
 	return stream;
 }
 
-} // namespace pk2
+} // namespace pk2::media

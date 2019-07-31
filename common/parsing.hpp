@@ -1,5 +1,5 @@
-#ifndef PARSING_HPP
-#define PARSING_HPP
+#ifndef PK2_PARSING_HPP_
+#define PK2_PARSING_HPP_
 
 #include "divisionInfo.hpp"
 #include "item.hpp"
@@ -20,7 +20,7 @@ std::string fileDataToString(const std::vector<uint8_t> &data);
 //
 // [param] line   A line of text
 // [return]       A populated Item object
-Item parseItemdataLine(const std::string &line);
+pk2::media::Item parseItemdataLine(const std::string &line);
 
 // Parses raw pk2 data into DivisionInfo object
 //
@@ -59,4 +59,4 @@ T get(const std::vector<uint8_t> &data, int &readIndex) {
 
 } // namespace pk2::parsing
 
-#endif // PARSING_HPP
+#endif // PK2_PARSING_HPP_

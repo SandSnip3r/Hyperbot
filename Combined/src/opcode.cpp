@@ -413,9 +413,6 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_CHARACTER_STUCK) {
     return "SERVER_CHARACTER_STUCK";
   }
-  if (opcode == Opcode::CLIENT_CAFE) {
-    return "CLIENT_CAFE";
-  }
   return "UNKNOWN";
 }
 } // namespace OpcodeHelp

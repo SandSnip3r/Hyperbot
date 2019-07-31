@@ -17,8 +17,6 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       return std::make_unique<ParsedClientChat>(packet);
     case Opcode::LOGIN_SERVER_LIST:
       return std::make_unique<ParsedLoginServerList>(packet);
-    case Opcode::CLIENT_CAFE:
-      return std::make_unique<ParsedClientCafe>(packet);
     case Opcode::LOGIN_SERVER_AUTH_INFO:
       return std::make_unique<ParsedLoginResponse>(packet);
     case Opcode::LOGIN_CLIENT_INFO:
@@ -30,7 +28,7 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
     case Opcode::SERVER_INGAME_ACCEPT:
       return std::make_unique<ParsedServerAgentCharacterSelectionJoinResponse>(packet);
     case Opcode::SERVER_CHARDATA:
-      return std::make_unique<ParsedServerAgentCharacterData>(packet);
+      return std::make_unique<ParsedServerAgentCharacterData>(packet, gameData_.itemData());
     case Opcode::CLIENT_AUTH:
     // case static_cast<Opcode>(0x2005):
     // case static_cast<Opcode>(0x6005):

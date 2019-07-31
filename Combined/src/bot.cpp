@@ -6,8 +6,7 @@ Bot::Bot(const config::CharacterLoginData &loginData,
       loginData_(loginData),
       gameData_(gameData),
       broker_(broker) {
-  // Client packets
-  // broker_.subscribeToClientPacket(Opcode::CLIENT_CHAT, std::bind(&Bot::handleClientChat, this, std::placeholders::_1));
+  //
 }
 
 // bool Bot::handleClientChat(std::unique_ptr<PacketParsing::PacketParser> &packetParser) {
