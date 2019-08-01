@@ -104,5 +104,8 @@
     <ClInclude Include="..\common\blowfish.h">
       <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="..\common\skill.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -73,7 +73,31 @@ void GameData::parseItemData(pk2::Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseSkillData(pk2::Pk2ReaderModern &pk2Reader) {
+	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kMasterSkilldataName = "skilldata.txt";
+  const std::string kMasterSkilldataPath = kTextdataDirectory + kMasterSkilldataName;
+  PK2Entry masterSkilldataEntry = pk2Reader.getEntry(kMasterSkilldataPath);
 
+  auto masterSkilldataData = pk2Reader.getEntryData(masterSkilldataEntry);
+  auto masterSkilldataStr = pk2::parsing::fileDataToString(masterSkilldataData);
+  auto skilldataFilenames = pk2::parsing::split(masterSkilldataStr, "\r\n");
+
+  for (auto skilldataFilename : skilldataFilenames) {
+    std::cout << "Parsing skill data file \"" << skilldataFilename << "\"\n";
+    auto skilldataPath = kTextdataDirectory + skilldataFilename;
+    PK2Entry skilldataEntry = pk2Reader.getEntry(skilldataPath);
+    auto skilldataData = pk2Reader.getEntryData(skilldataEntry);
+    auto skilldataStr = pk2::parsing::fileDataToString(skilldataData);
+    auto skilldataLines = pk2::parsing::split(skilldataStr, "\r\n");
+    for (const auto &line : skilldataLines) {
+      try {
+        skillData_.addSkill(pk2::parsing::parseSkilldataLine(line));
+      } catch (...) {
+        std::cerr << "Failed to parse skill data \"" << line << "\"\n";
+      }
+    }
+  }
+  std::cout << "Cached " << skillData_.size() << " skill(s)\n";
 }
 
 } // namespace pk2::media

@@ -3,6 +3,7 @@
 
 #include "divisionInfo.hpp"
 #include "item.hpp"
+#include "skill.hpp"
 
 #include <filesystem>
 #include <ostream>
@@ -15,6 +16,12 @@ namespace pk2::parsing {
 // [param] data   Data from a PK2Entry
 // [return]       data as an std::string
 std::string fileDataToString(const std::vector<uint8_t> &data);
+
+// Parses string representing a line of text from skilldata_xxxx.txt in the Media.pk2 into a Skill object
+//
+// [param] line   A line of text
+// [return]       A populated Skill object
+pk2::media::Skill parseSkilldataLine(const std::string &line);
 
 // Parses string representing a line of text from itemdata_xxxx.txt in the Media.pk2 into an Item object
 //

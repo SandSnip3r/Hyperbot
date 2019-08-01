@@ -11,7 +11,7 @@ PacketParser::PacketParser(const pk2::media::GameData &gameData) :
 }
 
 std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &packet) const {
-  // Given a packet's opcode, determine which parser is appropriate
+  // Given a packet's opcode, determine which parsed packet type is appropriate
   switch (static_cast<Opcode>(packet.opcode)) {
     case Opcode::CLIENT_CHAT:
       return std::make_unique<ParsedClientChat>(packet);

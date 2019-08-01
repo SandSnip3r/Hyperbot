@@ -48,6 +48,7 @@
     <ClInclude Include="..\common\pk2ReaderModern.hpp" />
     <ClInclude Include="..\common\shared_io.h" />
     <ClInclude Include="..\common\shared_types.h" />
+    <ClInclude Include="..\common\skill.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
