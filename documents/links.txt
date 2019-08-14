@@ -32,3 +32,6 @@ PServer
 Ragezone
 http://forum.ragezone.com/f722/vsro-server-files-v188-779870/
 http://forum.ragezone.com/f722/release-jetgameserver-advanced-stuff-inside-1153127/
+
+Offsets (setting cap of private server)
+https://www.elitepvpers.com/forum/sro-pserver-guides-releases/3501477-release-ollydbg-offsets-patches.html
