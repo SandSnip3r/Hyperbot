@@ -24,7 +24,7 @@ PacketContainer ClientAgentSelectionJoinPacketBuilder::packet() const {
   return PacketBuilder::packet(packetData, true, false);
 }
 
-CharacterSelectionActionPacketBuilder::CharacterSelectionActionPacketBuilder(PacketEnums::CharacterSelectionAction action) :
+CharacterSelectionActionPacketBuilder::CharacterSelectionActionPacketBuilder(packet_enums::CharacterSelectionAction action) :
       PacketBuilder(Opcode::CLIENT_CHARACTER),
       action_(action) {
   //
@@ -147,20 +147,20 @@ PacketContainer ClientMovementRequestPacketBuilder::packet() const {
       clientMovementRequestPacketData.Write<uint32_t>(zOffset_);
     }
   } else {
-    clientMovementRequestPacketData.Write<uint8_t>(static_cast<uint8_t>(PacketEnums::AngleAction::kGoForward));
+    clientMovementRequestPacketData.Write<uint8_t>(static_cast<uint8_t>(packet_enums::AngleAction::kGoForward));
     clientMovementRequestPacketData.Write<uint16_t>(angle_);
   }
   return PacketBuilder::packet(clientMovementRequestPacketData, true, false);
 }
 
-ServerChatPacketBuilder::ServerChatPacketBuilder(PacketEnums::ChatType chatType, const std::string &message) :
+ServerChatPacketBuilder::ServerChatPacketBuilder(packet_enums::ChatType chatType, const std::string &message) :
       PacketBuilder(Opcode::SERVER_CHAT),
       chatType_(chatType),
       message_(message) {
   //
 }
 
-ServerChatPacketBuilder::ServerChatPacketBuilder(PacketEnums::ChatType chatType, uint32_t senderId, const std::string &message) :
+ServerChatPacketBuilder::ServerChatPacketBuilder(packet_enums::ChatType chatType, uint32_t senderId, const std::string &message) :
       PacketBuilder(Opcode::SERVER_CHAT),
       chatType_(chatType),
       senderId_(senderId),
@@ -168,7 +168,7 @@ ServerChatPacketBuilder::ServerChatPacketBuilder(PacketEnums::ChatType chatType,
   //
 }
 
-ServerChatPacketBuilder::ServerChatPacketBuilder(PacketEnums::ChatType chatType, const std::string &senderName, const std::string &message) :
+ServerChatPacketBuilder::ServerChatPacketBuilder(packet_enums::ChatType chatType, const std::string &senderName, const std::string &message) :
       PacketBuilder(Opcode::SERVER_CHAT),
       chatType_(chatType),
       senderName_(senderName),
@@ -201,17 +201,17 @@ PacketContainer ServerChatPacketBuilder::packet() const {
   // *   string  message
   StreamUtility serverChatPacketData;
   serverChatPacketData.Write<uint8_t>(static_cast<uint8_t>(chatType_));
-  if (chatType_ == PacketEnums::ChatType::kAll ||
-      chatType_ == PacketEnums::ChatType::kAllGm ||
-      chatType_ == PacketEnums::ChatType::kNpc) {
+  if (chatType_ == packet_enums::ChatType::kAll ||
+      chatType_ == packet_enums::ChatType::kAllGm ||
+      chatType_ == packet_enums::ChatType::kNpc) {
     serverChatPacketData.Write<uint32_t>(senderId_);
-  } else if (chatType_ == PacketEnums::ChatType::kPm ||
-             chatType_ == PacketEnums::ChatType::kParty ||
-             chatType_ == PacketEnums::ChatType::kGuild ||
-             chatType_ == PacketEnums::ChatType::kGlobal ||
-             chatType_ == PacketEnums::ChatType::kStall ||
-             chatType_ == PacketEnums::ChatType::kUnion ||
-             chatType_ == PacketEnums::ChatType::kAcademy) {
+  } else if (chatType_ == packet_enums::ChatType::kPm ||
+             chatType_ == packet_enums::ChatType::kParty ||
+             chatType_ == packet_enums::ChatType::kGuild ||
+             chatType_ == packet_enums::ChatType::kGlobal ||
+             chatType_ == packet_enums::ChatType::kStall ||
+             chatType_ == packet_enums::ChatType::kUnion ||
+             chatType_ == packet_enums::ChatType::kAcademy) {
     serverChatPacketData.Write<uint16_t>(senderName_.size());
     serverChatPacketData.Write_Ascii(senderName_);
   }

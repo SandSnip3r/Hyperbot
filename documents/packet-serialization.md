@@ -18,12 +18,12 @@ private:
   void parsePacket() override;
 public:
   ClientChatPacket(const PacketContainer &packet);
-  PacketEnums::ChatType chatType();
+  packet_enums::ChatType chatType();
   uint8_t chatIndex();
   const std::string& receiverName();
   const std::string& message();
 private:
-  PacketEnums::ChatType chatType_;
+  packet_enums::ChatType chatType_;
   uint8_t chatIndex_;
   std::string receiverName_;
   std::string message_;
@@ -34,7 +34,7 @@ From the packet handler's perspective, usage looks like this:
 ```cpp
 void Bot::handleClientChat(std::unique_ptr<PacketParsing::PacketParser> &packetParser) {
   PacketParsing::ClientChatPacket *clientChat = dynamic_cast<PacketParsing::ClientChatPacket*>(packetParser.get());
-  if (clientChat->chatType() == PacketEnums::ChatType::kAll) {
+  if (clientChat->chatType() == packet_enums::ChatType::kAll) {
     const std::string &msg = clientChat->message();
     std::cout << "Player said \"" << msg << "\" in all chat\n";
   }
@@ -50,14 +50,14 @@ Here's an example of a class deriving from `PacketBuilder`:
 ```cpp
 class ServerChatPacketBuilder : public PacketBuilder {
 private:
-  PacketEnums::ChatType chatType_;
+  packet_enums::ChatType chatType_;
   uint32_t senderId_;
   std::string senderName_;
   std::string message_;
 public:
-  ServerChatPacketBuilder(PacketEnums::ChatType chatType, const std::string &message);
-  ServerChatPacketBuilder(PacketEnums::ChatType chatType, uint32_t senderId, const std::string &message);
-  ServerChatPacketBuilder(PacketEnums::ChatType chatType, const std::string &senderName, const std::string &message);
+  ServerChatPacketBuilder(packet_enums::ChatType chatType, const std::string &message);
+  ServerChatPacketBuilder(packet_enums::ChatType chatType, uint32_t senderId, const std::string &message);
+  ServerChatPacketBuilder(packet_enums::ChatType chatType, const std::string &senderName, const std::string &message);
   PacketContainer packet() const;
 };
 ```
@@ -65,6 +65,6 @@ public:
 When you need to build a packet, you just create the object like this:
 ```cpp
 const std::string kNoticeMessage = "I am a GM";
-auto noticePacket = PacketBuilding::ServerChatPacketBuilder(PacketEnums::ChatType::kNotice, kNoticeMessage).packet();
+auto noticePacket = PacketBuilding::ServerChatPacketBuilder(packet_enums::ChatType::kNotice, kNoticeMessage).packet();
 broker_.injectPacket(noticePacket, PacketContainer::Direction::kServerToClient);
 ```

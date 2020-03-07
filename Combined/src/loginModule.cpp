@@ -98,7 +98,7 @@ void LoginModule::serverListReceived(const packet::parsing::ParsedLoginServerLis
 
 void LoginModule::loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) {
   std::cout << " Login response, result:" << static_cast<int>(packet.result()) << ", token:" << packet.token() << "\n";
-  if (packet.result() != PacketEnums::LoginResult::kSuccess) {
+  if (packet.result() != packet_enums::LoginResult::kSuccess) {
     std::cout << " Login failed\n";
   } else {
     std::cout << " Login Success, saving token\n";
@@ -141,7 +141,7 @@ void LoginModule::serverAuthReceived(const packet::parsing::ParsedServerAuthResp
     loggingIn_ = false;
     // TODO: remove this function and opcode subscription. Client will already take care of this
     // std::cout << "Successfully logged in! Request character list\n";
-    // auto characterListPacket = PacketBuilding::CharacterSelectionActionPacketBuilder(PacketEnums::CharacterSelectionAction::kList).packet();
+    // auto characterListPacket = PacketBuilding::CharacterSelectionActionPacketBuilder(packet_enums::CharacterSelectionAction::kList).packet();
     // broker_.injectPacket(characterListPacket, PacketContainer::Direction::kClientToServer);
   }
 }

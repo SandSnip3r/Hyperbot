@@ -1,9 +1,18 @@
 #ifndef PACKET_ENUMS_HPP
 #define PACKET_ENUMS_HPP
 
-namespace PacketEnums {
+namespace packet_enums {
 
 enum class AngleAction { kObsolete=0, kGoForward=1 };
+
+enum class CharacterSelectionAction {
+  kCreate = 1,
+  kList = 2,
+  kDelete = 3,
+  kCheckName = 4,
+  kRestore = 5
+};
+
 enum class ChatType {
   kAll = 1,
   kPm = 2,
@@ -17,25 +26,20 @@ enum class ChatType {
   kNpc = 13,
   kAcademy = 16,
 };
+
 enum class LoginResult {
   kSuccess = 1,
   kFailed = 2,
   kOther = 3
 };
+
 enum class LoginBlockType {
   kPunishment = 1,
   kAccountInspection = 2,
   kNoAccountInfo = 3,
   kFreeServiceOver = 4
 };
-enum class CharacterSelectionAction {
-  kCreate = 1,
-  kList = 2,
-  kDelete = 3,
-  kCheckName = 4,
-  kRestore = 5
-};
 
-} // namespace PacketEnums
+} // namespace packet_enums
 
 #endif // PACKET_ENUMS_HPP

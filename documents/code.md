@@ -34,7 +34,7 @@
 - The user of an inherited class of `PacketParser`, such as `ClientChatPacket *clientChat` can directly access data of the packet in an object-oriented way via a function call like `clientChat->message()`.
 - If the user needs to send a packet on a channel, this is easily done by `PacketBuilder` objects. Inheriting classes of `PacketBuilder` implement sufficient constructors for each of the valid packet configurations. Then, calling `packet()` on one of these instantiated objects returns a completely built and ready to send `PacketContainer`. Finally, the `PacketContainer` is passed to `BrokerSystem::injectPacket` and after many levels of abstraction, raw packet data is pushed into the outgoing queue of tcp messages to be sent to either the client or the server.
 - Right before the `PacketHandleFunction` exits, it returns `true` if the packet should be allowed to pass (to its original destination, client or server) and `false` otherwise.
-- To assist with packet building and using from the `Bot` side, the `PacketEnums` namespace exists.
+- To assist with packet building and using from the `Bot` side, the `packet_enums` namespace exists.
 
 #### More reading
 For further details on packet serialization and deserialization, see [this document](packet-serialization.md)

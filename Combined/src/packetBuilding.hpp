@@ -26,9 +26,9 @@ public:
 
 class CharacterSelectionActionPacketBuilder : public PacketBuilder {
 private:
-  PacketEnums::CharacterSelectionAction action_;
+  packet_enums::CharacterSelectionAction action_;
 public:
-  CharacterSelectionActionPacketBuilder(PacketEnums::CharacterSelectionAction action);
+  CharacterSelectionActionPacketBuilder(packet_enums::CharacterSelectionAction action);
   PacketContainer packet() const;
 };
 
@@ -71,14 +71,14 @@ public:
 
 class ServerChatPacketBuilder : public PacketBuilder {
 private:
-  PacketEnums::ChatType chatType_;
+  packet_enums::ChatType chatType_;
   uint32_t senderId_;
   std::string senderName_;
   std::string message_;
 public:
-  ServerChatPacketBuilder(PacketEnums::ChatType chatType, const std::string &message);
-  ServerChatPacketBuilder(PacketEnums::ChatType chatType, uint32_t senderId, const std::string &message);
-  ServerChatPacketBuilder(PacketEnums::ChatType chatType, const std::string &senderName, const std::string &message);
+  ServerChatPacketBuilder(packet_enums::ChatType chatType, const std::string &message);
+  ServerChatPacketBuilder(packet_enums::ChatType chatType, uint32_t senderId, const std::string &message);
+  ServerChatPacketBuilder(packet_enums::ChatType chatType, const std::string &senderName, const std::string &message);
   PacketContainer packet() const;
 };
 

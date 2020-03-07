@@ -13,6 +13,7 @@ CharacterInfoModule::CharacterInfoModule(BrokerSystem &brokerSystem,
   // Client packets
   // Server packets
   broker_.subscribeToServerPacket(Opcode::SERVER_CHARDATA, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::SERVER_HPMP_UPDATE, packetHandleFunction);
 }
 
 bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
@@ -34,6 +35,11 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
   packet::parsing::ParsedServerAgentCharacterData *charData = dynamic_cast<packet::parsing::ParsedServerAgentCharacterData*>(parsedPacket.get());
   if (charData != nullptr) {
     characterInfoReceived(*charData);
+    return true;
+  }
+
+  packet::parsing::ParsedServerHpMpUpdate *hpMpUpdate = dynamic_cast<packet::parsing::ParsedServerHpMpUpdate*>(parsedPacket.get());
+  if (hpMpUpdate != nullptr) {
     return true;
   }
 

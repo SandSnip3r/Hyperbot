@@ -29,6 +29,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       return std::make_unique<ParsedServerAgentCharacterSelectionJoinResponse>(packet);
     case Opcode::SERVER_CHARDATA:
       return std::make_unique<ParsedServerAgentCharacterData>(packet, gameData_.itemData());
+    case Opcode::SERVER_HPMP_UPDATE:
+      return std::make_unique<ParsedServerHpMpUpdate>(packet);
     case Opcode::CLIENT_AUTH:
     // case static_cast<Opcode>(0x2005):
     // case static_cast<Opcode>(0x6005):

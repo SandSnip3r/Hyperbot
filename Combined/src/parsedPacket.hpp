@@ -32,6 +32,17 @@ private:
 
 //=========================================================================================================================================================
 
+class ParsedServerHpMpUpdate : public ParsedPacket {
+public:
+  ParsedServerHpMpUpdate(const PacketContainer &packet);
+  // packet_enums::WhichVital whichVital() const;
+  uint8_t newValue() const;
+private:
+  uint32_t newValue_;
+  // packet_enums::WhichVital whichVital_;
+};
+
+//=========================================================================================================================================================
 class ParsedServerAgentCharacterData : public ParsedPacket {
 public:
   ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::media::ItemData &itemData);
@@ -55,12 +66,12 @@ private:
 class ParsedServerAgentCharacterSelectionActionResponse : public ParsedPacket {
 public:
   ParsedServerAgentCharacterSelectionActionResponse(const PacketContainer &packet);
-  PacketEnums::CharacterSelectionAction action() const;
+  packet_enums::CharacterSelectionAction action() const;
   uint8_t result() const;
   const std::vector<PacketInnerStructures::CharacterSelection::Character>& characters() const;
   uint16_t errorCode() const;
 private:
-  PacketEnums::CharacterSelectionAction action_;
+  packet_enums::CharacterSelectionAction action_;
   uint8_t result_;
   std::vector<PacketInnerStructures::CharacterSelection::Character> characters_;
   uint16_t errorCode_; // TODO: Create enum for this
@@ -93,10 +104,10 @@ private:
 class ParsedLoginResponse : public ParsedPacket {
 public:
   ParsedLoginResponse(const PacketContainer &packet);
-  PacketEnums::LoginResult result() const;
+  packet_enums::LoginResult result() const;
   uint32_t token() const;
 private:
-  PacketEnums::LoginResult result_;
+  packet_enums::LoginResult result_;
   uint32_t token_;
 };
 
@@ -115,12 +126,12 @@ private:
 class ParsedClientChat : public ParsedPacket {
 public:
   ParsedClientChat(const PacketContainer &packet);
-  PacketEnums::ChatType chatType() const;
+  packet_enums::ChatType chatType() const;
   uint8_t chatIndex() const;
   const std::string& receiverName() const;
   const std::string& message() const;
 private:
-  PacketEnums::ChatType chatType_;
+  packet_enums::ChatType chatType_;
   uint8_t chatIndex_;
   std::string receiverName_;
   std::string message_;

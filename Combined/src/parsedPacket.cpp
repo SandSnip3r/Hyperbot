@@ -20,6 +20,68 @@ ParsedUnknown::ParsedUnknown(const PacketContainer &packet) : ParsedPacket(packe
 
 //=========================================================================================================================================================
 
+ParsedServerHpMpUpdate::ParsedServerHpMpUpdate(const PacketContainer &packet) :
+      ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
+  std::cout << "ParsedServerHpMpUpdate: ";
+
+  uint32_t entityUniqueId = stream.Read<uint32_t>();
+  std::cout << "entityUniqueId: " << entityUniqueId << ", ";
+
+  uint16_t unknown1 = stream.Read<uint16_t>();
+  std::cout << "unknown1: " << unknown1 << ", ";
+  // 10 00 when increased from standing or sitting
+  // 40 00 when increased from skill
+  // 00 01 when got division
+
+  uint8_t vitalFlag = stream.Read<uint8_t>();
+  std::cout << "vitalFlag: " << static_cast<int>(vitalFlag) << ", ";
+  // 1 == hp, 2 == mp, 4 == (division?)
+
+  if (vitalFlag & 1) {
+    uint32_t newHpValue = stream.Read<uint32_t>();
+    std::cout << "newHpValue: " << newHpValue << '\n';
+  }
+
+  if (vitalFlag & 2) {
+    uint32_t newMpValue = stream.Read<uint32_t>();
+    std::cout << "newMpValue: " << newMpValue << '\n';
+  }
+
+  if (vitalFlag & 4) {
+    uint32_t unknown2 = stream.Read<uint32_t>();
+    std::cout << "unknown2: " << unknown2 << '\n';
+    // 00 00 02 00 decay
+    // 00 00 04 00 weaken
+    // 00 00 08 00 impotent
+    // 00 00 10 00 division
+    // 00 80 00 00 disease
+    // 40 00 00 00 sleep
+    // 00 00 20 00 panic
+    // 00 40 00 00 stun
+    // 00 04 00 00 short-sight
+    // 00 01 00 00 dull
+    // 00 00 00 01 hidden
+    // 00 08 00 00 bleed
+    // 08 00 00 00 burn
+    // 10 00 00 00 poison
+    if (unknown2 & 0x00000200) {
+      uint8_t effectLevel = stream.Read<uint8_t>();
+    }
+    if (unknown2 & 0x00000400) {
+      uint8_t effectLevel = stream.Read<uint8_t>();
+    }
+    if (unknown2 & 0x00000800) {
+      uint8_t effectLevel = stream.Read<uint8_t>();
+    }
+    if (unknown2 & 0x00001000) {
+      uint8_t effectLevel = stream.Read<uint8_t>();
+    }
+  }
+}
+
+//=========================================================================================================================================================
+
 ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::media::ItemData &itemData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   uint32_t serverTime = stream.Read<uint32_t>();
@@ -46,10 +108,10 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   std::cout << "remainHwanCount: " << (int)remainHwanCount << '\n';
   uint32_t gatheredExpPoint = stream.Read<uint32_t>();
   std::cout << "gatheredExpPoint: " << gatheredExpPoint << '\n';
-  uint32_t hP = stream.Read<uint32_t>();
-  std::cout << "hP: " << hP << '\n';
-  uint32_t mP = stream.Read<uint32_t>();
-  std::cout << "mP: " << mP << '\n';
+  uint32_t hp = stream.Read<uint32_t>();
+  std::cout << "hp: " << hp << '\n';
+  uint32_t mp = stream.Read<uint32_t>();
+  std::cout << "mp: " << mp << '\n';
   uint8_t autoInverstExp = stream.Read<uint8_t>();
   std::cout << "autoInverstExp: " << (int)autoInverstExp << '\n';
   uint8_t dailyPK = stream.Read<uint8_t>();
@@ -577,9 +639,9 @@ uint16_t ParsedServerAgentCharacterSelectionJoinResponse::errorCode() const {
 ParsedServerAgentCharacterSelectionActionResponse::ParsedServerAgentCharacterSelectionActionResponse(const PacketContainer &packet) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  action_ = static_cast<PacketEnums::CharacterSelectionAction>(stream.Read<uint8_t>());
+  action_ = static_cast<packet_enums::CharacterSelectionAction>(stream.Read<uint8_t>());
   result_ = stream.Read<uint8_t>();
-  if (result_ == 0x01 && action_ == PacketEnums::CharacterSelectionAction::kList) {
+  if (result_ == 0x01 && action_ == packet_enums::CharacterSelectionAction::kList) {
     // Listing characters
     const uint8_t kCharCount = stream.Read<uint8_t>();
     for (int i=0; i<kCharCount; ++i) {
@@ -627,7 +689,7 @@ ParsedServerAgentCharacterSelectionActionResponse::ParsedServerAgentCharacterSel
   }
 }
 
-PacketEnums::CharacterSelectionAction ParsedServerAgentCharacterSelectionActionResponse::action() const {
+packet_enums::CharacterSelectionAction ParsedServerAgentCharacterSelectionActionResponse::action() const {
   return action_;
 }
 
@@ -681,20 +743,20 @@ std::string ParsedLoginClientInfo::serviceName() const {
 ParsedLoginResponse::ParsedLoginResponse(const PacketContainer &packet) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  result_ = static_cast<PacketEnums::LoginResult>(stream.Read<uint8_t>());
-  if (result_ == PacketEnums::LoginResult::kSuccess) {
+  result_ = static_cast<packet_enums::LoginResult>(stream.Read<uint8_t>());
+  if (result_ == packet_enums::LoginResult::kSuccess) {
     token_ = stream.Read<uint32_t>();
     uint16_t ipLength = stream.Read<uint16_t>();
     std::string ip = stream.Read_Ascii(ipLength);
     uint16_t port = stream.Read<uint16_t>();
-  } else if (result_ == PacketEnums::LoginResult::kFailed) {
+  } else if (result_ == packet_enums::LoginResult::kFailed) {
     uint8_t errorCode = stream.Read<uint8_t>();
     if (errorCode == 0x01) {
       uint32_t maxAttempts = stream.Read<uint32_t>();
       uint32_t currentAttempts = stream.Read<uint32_t>();
     } else if (errorCode == 0x02) {
-      PacketEnums::LoginBlockType blockType = static_cast<PacketEnums::LoginBlockType>(stream.Read<uint8_t>());
-      if (blockType == PacketEnums::LoginBlockType::kPunishment) {
+      packet_enums::LoginBlockType blockType = static_cast<packet_enums::LoginBlockType>(stream.Read<uint8_t>());
+      if (blockType == packet_enums::LoginBlockType::kPunishment) {
         uint16_t reasonLength = stream.Read<uint16_t>();
         std::string reason = stream.Read_Ascii(reasonLength);
         uint16_t endDateYear = stream.Read<uint16_t>();
@@ -706,7 +768,7 @@ ParsedLoginResponse::ParsedLoginResponse(const PacketContainer &packet) :
         uint16_t endDateMicrosecond = stream.Read<uint16_t>();
       }
     }
-  } else if (result_ == PacketEnums::LoginResult::kOther) {
+  } else if (result_ == packet_enums::LoginResult::kOther) {
     /* uint8_t unkByte0 = */ stream.Read<uint8_t>();
     /* uint8_t unkByte1 = */ stream.Read<uint8_t>();
     uint16_t messageLength = stream.Read<uint16_t>();
@@ -715,7 +777,7 @@ ParsedLoginResponse::ParsedLoginResponse(const PacketContainer &packet) :
   }
 }
 
-PacketEnums::LoginResult ParsedLoginResponse::result() const {
+packet_enums::LoginResult ParsedLoginResponse::result() const {
   return result_;
 }
 
@@ -769,9 +831,9 @@ ParsedClientChat::ParsedClientChat(const PacketContainer &packet) :
   // 2   ushort  message.Length
   // *   string  message
   StreamUtility stream = packet.data;
-  chatType_ = static_cast<PacketEnums::ChatType>(stream.Read<uint8_t>());
+  chatType_ = static_cast<packet_enums::ChatType>(stream.Read<uint8_t>());
   chatIndex_ = stream.Read<uint8_t>();
-  if (chatType_ == PacketEnums::ChatType::kPm) {
+  if (chatType_ == packet_enums::ChatType::kPm) {
     const uint16_t kReceiverNameLength = stream.Read<uint16_t>();
     receiverName_ = stream.Read_Ascii(kReceiverNameLength);
   }
@@ -779,7 +841,7 @@ ParsedClientChat::ParsedClientChat(const PacketContainer &packet) :
   message_ = stream.Read_Ascii(kMessageLength);
 }
 
-PacketEnums::ChatType ParsedClientChat::chatType() const {
+packet_enums::ChatType ParsedClientChat::chatType() const {
   return chatType_;
 }
 

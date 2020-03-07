@@ -25,7 +25,7 @@ SERVER_MOVEMENT                    a  n              `  -           >           
                                   aaaaaaaaaaa bb cc dd eeeee fffff ggggg hh ii jj kkkkk lllll mmmmm nnnnn
 
 uint32_t actorId
-PacketEnums::ChatType(uint8_t) chatType
+packet_enums::ChatType(uint8_t) chatType
 uint8_t xSector
 uint8_t ySector
 uint16_t xOffset
