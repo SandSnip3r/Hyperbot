@@ -1,7 +1,7 @@
 #ifndef PK2_MEDIA_ITEM_DATA_HPP_
 #define PK2_MEDIA_ITEM_DATA_HPP_
 
-#include "../../common/item.hpp"
+#include "../../common/itemInfo.hpp"
 
 #include <unordered_map>
 

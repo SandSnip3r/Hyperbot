@@ -28,7 +28,7 @@
     <ClCompile Include="..\common\detours\modules.cpp" />
     <ClCompile Include="..\common\division.cpp" />
     <ClCompile Include="..\common\divisionInfo.cpp" />
-    <ClCompile Include="..\common\item.cpp" />
+    <ClCompile Include="..\common\itemInfo.cpp" />
     <ClCompile Include="..\common\parsing.cpp" />
     <ClCompile Include="..\common\PK2Reader.cpp" />
     <ClCompile Include="..\common\pk2ReaderModern.cpp" />
@@ -41,7 +41,7 @@
     <ClInclude Include="..\common\detours\detours.h" />
     <ClInclude Include="..\common\division.hpp" />
     <ClInclude Include="..\common\divisionInfo.hpp" />
-    <ClInclude Include="..\common\item.hpp" />
+    <ClInclude Include="..\common\itemInfo.hpp" />
     <ClInclude Include="..\common\parsing.hpp" />
     <ClInclude Include="..\common\PK2.h" />
     <ClInclude Include="..\common\PK2Reader.h" />

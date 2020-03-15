@@ -2,7 +2,7 @@
 #define PK2_PARSING_HPP_
 
 #include "divisionInfo.hpp"
-#include "item.hpp"
+#include "itemInfo.hpp"
 #include "skill.hpp"
 
 #include <filesystem>

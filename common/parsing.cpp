@@ -310,7 +310,7 @@ pk2::media::Item parseItemdataLine(const std::string &line) {
 	// uint8_t maxMagicOptCount; // 158
 	// uint8_t childItemCount; // 159
 	// auto fields = split(line, "\t");
-	const std::vector<int> kDesiredFields = {1,2,9,10,11,12};
+	const std::vector<int> kDesiredFields = {1,2,7,8,9,10,11,12};
 	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
 	if (fields.size() != kDesiredFields.size()) {
 		// TODO: This check for validity of data should be more robust
@@ -319,10 +319,12 @@ pk2::media::Item parseItemdataLine(const std::string &line) {
 	pk2::media::Item item;
 	item.id = std::stoi(fields[0]);
 	item.codeName128 = fields[1];
-	item.typeId1 = std::stoi(fields[2]);
-	item.typeId2 = std::stoi(fields[3]);
-	item.typeId3 = std::stoi(fields[4]);
-	item.typeId4 = std::stoi(fields[5]);
+	item.cashItem = std::stoi(fields[2]);
+	item.bionic = std::stoi(fields[3]);
+	item.typeId1 = std::stoi(fields[4]);
+	item.typeId2 = std::stoi(fields[5]);
+	item.typeId3 = std::stoi(fields[6]);
+	item.typeId4 = std::stoi(fields[7]);
 	return item;
 }
 

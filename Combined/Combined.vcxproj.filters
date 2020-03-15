@@ -72,9 +72,6 @@
     <ClCompile Include="..\common\divisionInfo.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\item.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\common\parsing.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -113,6 +110,12 @@
     </ClCompile>
     <ClCompile Include="src\characterInfoModule.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\item.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\itemInfo.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -167,9 +170,6 @@
     <ClInclude Include="..\common\divisionInfo.hpp">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\item.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="..\common\parsing.hpp">
       <Filter>Common</Filter>
     </ClInclude>
@@ -217,6 +217,12 @@
     </ClInclude>
     <ClInclude Include="src\characterInfoModule.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\item.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\itemInfo.hpp">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

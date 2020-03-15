@@ -44,6 +44,23 @@ public:
   PacketContainer packet() const;
 };
 
+class ClientCaptchaBuilder : public PacketBuilder {
+private:
+  std::string answer_;
+public:
+  ClientCaptchaBuilder(const std::string &answer);
+  PacketContainer packet() const;
+};
+
+class ClientUseItemBuilder : public PacketBuilder {
+private:
+  uint8_t slotNum_;
+  uint16_t itemData_;
+public:
+  ClientUseItemBuilder(uint8_t slotNum, uint16_t itemData);
+  PacketContainer packet() const;
+};
+
 class LoginAuthPacketBuilder : public PacketBuilder {
 private:
   uint8_t locale_;

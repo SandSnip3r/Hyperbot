@@ -57,9 +57,30 @@ PacketContainer ClientAuthPacketBuilder::packet() const {
   clientAuthPacketData.Write<uint8_t>(kLocale_); //Content.ID
   for (const uint8_t macAddrByte : macAddress_) {
     clientAuthPacketData.Write<uint8_t>(macAddrByte);
-
   }
   return PacketBuilder::packet(clientAuthPacketData, true, false);
+}
+
+ClientCaptchaBuilder::ClientCaptchaBuilder(const std::string &answer) : PacketBuilder(Opcode::LOGIN_CLIENT_CAPTCHA_ANSWER), answer_(answer) {
+  //
+}
+
+PacketContainer ClientCaptchaBuilder::packet() const {
+  StreamUtility clientCaptchaPacketData;
+  clientCaptchaPacketData.Write<uint16_t>(answer_.size());
+  clientCaptchaPacketData.Write_Ascii(answer_);
+  return PacketBuilder::packet(clientCaptchaPacketData, true, false);
+}
+
+ClientUseItemBuilder::ClientUseItemBuilder(uint8_t slotNum, uint16_t itemData) : PacketBuilder(Opcode::CLIENT_ITEM_USE), slotNum_(slotNum), itemData_(itemData) {
+  //
+}
+
+PacketContainer ClientUseItemBuilder::packet() const {
+  StreamUtility clientUseItemData;
+  clientUseItemData.Write<uint8_t>(slotNum_);
+  clientUseItemData.Write<uint16_t>(itemData_);
+  return PacketBuilder::packet(clientUseItemData, true, false);
 }
 
 LoginAuthPacketBuilder::LoginAuthPacketBuilder(uint8_t locale, const std::string &username, const std::string &password, uint16_t shardId) :

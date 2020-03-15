@@ -34,6 +34,7 @@ private:
   uint32_t token_;
   uint16_t shardId_;
   const std::array<uint8_t,6> kMacAddress_ = {0,0,0,0,0,0};
+  const std::string kCaptchaAnswer_ = "";
   void serverListReceived(const packet::parsing::ParsedLoginServerList &packet);
   void loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet);
   void loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet);

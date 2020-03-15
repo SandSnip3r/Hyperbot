@@ -18,7 +18,7 @@ private:
   const pk2::media::GameData &gameData_;
   BrokerSystem &broker_;
   packet::parsing::PacketParser packetParser_{gameData_};
-  CharacterInfoModule characterInfoModule_{broker_, packetParser_};
+  CharacterInfoModule characterInfoModule_{broker_, packetParser_, gameData_};
   LoginModule loginModule_{broker_, packetParser_, loginData_, gameData_.divisionInfo()};
 };
 

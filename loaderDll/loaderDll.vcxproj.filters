@@ -48,9 +48,6 @@
     <ClCompile Include="..\common\divisionInfo.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\item.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
     <ClCompile Include="..\common\parsing.cpp">
       <Filter>common</Filter>
     </ClCompile>
@@ -66,6 +63,9 @@
     <ClCompile Include="..\common\blowfish.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\itemInfo.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\Common.h">
@@ -78,9 +78,6 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\common\divisionInfo.hpp">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\item.hpp">
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\common\parsing.hpp">
@@ -105,6 +102,9 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\common\skill.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\itemInfo.hpp">
       <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>

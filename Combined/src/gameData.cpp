@@ -15,7 +15,7 @@ GameData::GameData(const fs::path &kSilkroadPath) : kSilkroadPath_(kSilkroadPath
     pk2::Pk2ReaderModern pk2Reader{kMediaPath};
     parseMedia(pk2Reader);
   } catch (std::exception &ex) {
-    throw std::runtime_error(std::string("Failed to parse Media.Pk2. Error: \"")+ex.what()+"\"");
+    throw std::runtime_error(std::string("Failed to parse Media.Pk2 at path \""+kSilkroadPath_.string()+"\". Error: \"")+ex.what()+"\"");
   }
 }
 

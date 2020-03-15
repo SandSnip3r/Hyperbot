@@ -3,6 +3,30 @@
 #ifndef OPCODE_HPP_
 #define OPCODE_HPP_
 
+// Game packets
+//0x7___ Request
+//0xB___ Ack
+// Framework packets
+//0x6___ Request
+//0xA___ Ack
+// Net Engine packets
+//0x5___ Request
+//0x9___ Ack
+/*
+0000 = App_NoDir
+1000 = NetEngine_NoDir
+2000 = Framework_NoDir
+3000 = Game_NoDir
+4000 = App_Req
+5000 = NetEngine_Req
+6000 = Framework_Req
+7000 = Game_Req
+8000 = App_Ack
+9000 = NetEngine_Ack
+A000 = Framework_Ack
+B000 = Game_Ack
+*/
+
 enum class Opcode {
   HACK = 0xA003,
 
@@ -13,6 +37,11 @@ enum class Opcode {
   LOGIN_CLIENT_AUTH = 0x6102,
   LOGIN_CLIENT_ACCEPT_HANDSHAKE = 0x9000, // LOGIN_CLIENT_ACCEPT_HANDSHAKE, CLIENT_ACCEPT_HANDSHAKE
   LOGIN_CLIENT_LAUNCHER = 0x6104,
+
+  // TODO: Verify ==============================
+  LOGIN_CLIENT_CAPTCHA_ANSWER = 0x6323,
+  LOGIN_SERVER_CAPTCHA = 0x2322,
+  // ===========================================
 
   LOGIN_SERVER_INFO = 0x2001, // LOGIN_CLIENT_INFO, LOGIN_SERVER_INFO, CLIENT_INFO, SERVER_INFO
   LOGIN_SERVER_HANDSHAKE = 0x5000, // LOGIN_SERVER_HANDSHAKE, SERVER_HANDSHAKE

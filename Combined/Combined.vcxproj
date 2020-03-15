@@ -23,7 +23,7 @@
     <ClCompile Include="..\common\Common.cpp" />
     <ClCompile Include="..\common\division.cpp" />
     <ClCompile Include="..\common\divisionInfo.cpp" />
-    <ClCompile Include="..\common\item.cpp" />
+    <ClCompile Include="..\common\itemInfo.cpp" />
     <ClCompile Include="..\common\parsing.cpp" />
     <ClCompile Include="..\common\PK2Reader.cpp" />
     <ClCompile Include="..\common\pk2ReaderModern.cpp" />
@@ -35,6 +35,7 @@
     <ClCompile Include="src\configData.cpp" />
     <ClCompile Include="src\gameData.cpp" />
     <ClCompile Include="src\iniReader.cpp" />
+    <ClCompile Include="src\item.cpp" />
     <ClCompile Include="src\itemData.cpp" />
     <ClCompile Include="src\loader.cpp" />
     <ClCompile Include="src\loginModule.cpp" />
@@ -56,7 +57,7 @@
     <ClInclude Include="..\common\Common.h" />
     <ClInclude Include="..\common\division.hpp" />
     <ClInclude Include="..\common\divisionInfo.hpp" />
-    <ClInclude Include="..\common\item.hpp" />
+    <ClInclude Include="..\common\itemInfo.hpp" />
     <ClInclude Include="..\common\parsing.hpp" />
     <ClInclude Include="..\common\PK2.h" />
     <ClInclude Include="..\common\PK2Reader.h" />
@@ -72,6 +73,7 @@
     <ClInclude Include="src\configData.hpp" />
     <ClInclude Include="src\gameData.hpp" />
     <ClInclude Include="src\iniReader.hpp" />
+    <ClInclude Include="src\item.hpp" />
     <ClInclude Include="src\itemData.hpp" />
     <ClInclude Include="src\loader.hpp" />
     <ClInclude Include="src\loginModule.hpp" />

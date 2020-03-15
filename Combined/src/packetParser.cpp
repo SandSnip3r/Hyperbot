@@ -31,7 +31,10 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       return std::make_unique<ParsedServerAgentCharacterData>(packet, gameData_.itemData());
     case Opcode::SERVER_HPMP_UPDATE:
       return std::make_unique<ParsedServerHpMpUpdate>(packet);
+    case Opcode::SERVER_STATS:
+      return std::make_unique<ParsedServerAgentCharacterUpdateStats>(packet);
     case Opcode::CLIENT_AUTH:
+    case Opcode::LOGIN_SERVER_CAPTCHA:
     // case static_cast<Opcode>(0x2005):
     // case static_cast<Opcode>(0x6005):
       return std::make_unique<ParsedUnknown>(packet);

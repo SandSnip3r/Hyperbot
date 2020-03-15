@@ -23,6 +23,7 @@ LoginModule::LoginModule(BrokerSystem &brokerSystem,
   broker_.subscribeToServerPacket(Opcode::SERVER_LOGIN_RESULT, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_CHARACTER, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_INGAME_ACCEPT, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::LOGIN_SERVER_CAPTCHA, packetHandleFunction);
   // broker_.subscribeToServerPacket(static_cast<Opcode>(0x6005), packetHandleFunction);
 }
 
@@ -131,6 +132,10 @@ bool LoginModule::unknownPacketReceived(const packet::parsing::ParsedUnknown &pa
       // Block this from going to the server
       return false;
     }
+  } else if (packet.opcode() == Opcode::LOGIN_SERVER_CAPTCHA) {
+    std::cout << "Got captcha. Sending answer\n";
+    auto captchaAnswerPacket = PacketBuilding::ClientCaptchaBuilder(kCaptchaAnswer_).packet();
+    broker_.injectPacket(captchaAnswerPacket, PacketContainer::Direction::kClientToServer);
   }
   return true;
 }

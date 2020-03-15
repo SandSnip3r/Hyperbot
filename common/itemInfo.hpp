@@ -11,6 +11,8 @@ using ItemId = uint32_t;
 struct Item {
 	ItemId id;
 	std::string codeName128;
+	uint8_t cashItem;
+	uint8_t bionic;
 	uint8_t typeId1;
 	uint8_t typeId2;
 	uint8_t typeId3;

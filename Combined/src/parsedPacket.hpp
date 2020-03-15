@@ -1,10 +1,13 @@
+#include "item.hpp"
 #include "itemData.hpp"
 #include "opcode.hpp"
 #include "packetEnums.hpp"
 #include "packetInnerStructures.hpp"
 #include "shared/silkroad_security.h"
 
+#include <map>
 #include <string>
+#include <variant>
 
 #ifndef PACKET_PARSING_HPP
 #define PACKET_PARSING_HPP
@@ -35,18 +38,52 @@ private:
 class ParsedServerHpMpUpdate : public ParsedPacket {
 public:
   ParsedServerHpMpUpdate(const PacketContainer &packet);
-  // packet_enums::WhichVital whichVital() const;
-  uint8_t newValue() const;
+  uint32_t entityUniqueId() const;
+  packet_enums::UpdateFlag updateFlag() const;
+  uint8_t vitalBitmask() const;
+  uint32_t newHpValue() const;
+  uint32_t newMpValue() const;
+  uint16_t newHgpValue() const;
+  uint32_t stateBitmask() const;
+  const std::vector<uint8_t>& stateLevels() const;
 private:
-  uint32_t newValue_;
-  // packet_enums::WhichVital whichVital_;
+  uint32_t entityUniqueId_;
+  packet_enums::UpdateFlag updateFlag_;
+  uint8_t vitalBitmask_;
+  uint32_t newHpValue_;
+  uint32_t newMpValue_;
+  uint16_t newHgpValue_;
+  uint32_t stateBitmask_;
+  std::vector<uint8_t> stateLevels_;
 };
 
 //=========================================================================================================================================================
+
+class ParsedServerAgentCharacterUpdateStats : public ParsedPacket {
+public:
+  ParsedServerAgentCharacterUpdateStats(const PacketContainer &packet);
+  uint32_t maxHp() const;
+  uint32_t maxMp() const;
+private:
+  uint32_t maxHp_;
+  uint32_t maxMp_;
+};
+
+//=========================================================================================================================================================
+
 class ParsedServerAgentCharacterData : public ParsedPacket {
 public:
+  using ItemVariantType = std::variant<item::ItemEquipment, item::ItemCosGrowthSummoner, item::ItemCosAbilitySummoner, item::ItemMonsterCapsule, item::ItemStorage, item::ItemExpendable, item::ItemStone, item::ItemMagicPop>;
   ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::media::ItemData &itemData);
+  uint32_t entityUniqueId() const;
+  uint32_t hp() const;
+  uint32_t mp() const;
+  const std::map<uint8_t,ItemVariantType>& inventoryItemMap() const;
 private:
+  uint32_t entityUniqueId_;
+  uint32_t hp_;
+  uint32_t mp_;
+  std::map<uint8_t,ItemVariantType> inventoryItemMap_;
 };
   
 //=========================================================================================================================================================

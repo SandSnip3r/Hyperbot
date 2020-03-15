@@ -20,67 +20,226 @@ ParsedUnknown::ParsedUnknown(const PacketContainer &packet) : ParsedPacket(packe
 
 //=========================================================================================================================================================
 
-ParsedServerHpMpUpdate::ParsedServerHpMpUpdate(const PacketContainer &packet) :
-      ParsedPacket(packet) {
+ParsedServerHpMpUpdate::ParsedServerHpMpUpdate(const PacketContainer &packet) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  std::cout << "ParsedServerHpMpUpdate: ";
 
-  uint32_t entityUniqueId = stream.Read<uint32_t>();
-  std::cout << "entityUniqueId: " << entityUniqueId << ", ";
+  entityUniqueId_ = stream.Read<uint32_t>();
+  updateFlag_ = static_cast<packet_enums::UpdateFlag>(stream.Read<uint16_t>());
+  vitalBitmask_ = stream.Read<uint8_t>();
 
-  uint16_t unknown1 = stream.Read<uint16_t>();
-  std::cout << "unknown1: " << unknown1 << ", ";
-  // 10 00 when increased from standing or sitting
-  // 40 00 when increased from skill
-  // 00 01 when got division
-
-  uint8_t vitalFlag = stream.Read<uint8_t>();
-  std::cout << "vitalFlag: " << static_cast<int>(vitalFlag) << ", ";
-  // 1 == hp, 2 == mp, 4 == (division?)
-
-  if (vitalFlag & 1) {
-    uint32_t newHpValue = stream.Read<uint32_t>();
-    std::cout << "newHpValue: " << newHpValue << '\n';
+  if (vitalBitmask_ & static_cast<uint8_t>(packet_enums::VitalInfoFlag::kVitalInfoHp)) {
+    newHpValue_ = stream.Read<uint32_t>();
   }
 
-  if (vitalFlag & 2) {
-    uint32_t newMpValue = stream.Read<uint32_t>();
-    std::cout << "newMpValue: " << newMpValue << '\n';
+  if (vitalBitmask_ & static_cast<uint8_t>(packet_enums::VitalInfoFlag::kVitalInfoMp)) {
+    newMpValue_ = stream.Read<uint32_t>();
   }
 
-  if (vitalFlag & 4) {
-    uint32_t unknown2 = stream.Read<uint32_t>();
-    std::cout << "unknown2: " << unknown2 << '\n';
-    // 00 00 02 00 decay
-    // 00 00 04 00 weaken
-    // 00 00 08 00 impotent
-    // 00 00 10 00 division
-    // 00 80 00 00 disease
-    // 40 00 00 00 sleep
-    // 00 00 20 00 panic
-    // 00 40 00 00 stun
-    // 00 04 00 00 short-sight
-    // 00 01 00 00 dull
-    // 00 00 00 01 hidden
-    // 00 08 00 00 bleed
-    // 08 00 00 00 burn
-    // 10 00 00 00 poison
-    if (unknown2 & 0x00000200) {
-      uint8_t effectLevel = stream.Read<uint8_t>();
-    }
-    if (unknown2 & 0x00000400) {
-      uint8_t effectLevel = stream.Read<uint8_t>();
-    }
-    if (unknown2 & 0x00000800) {
-      uint8_t effectLevel = stream.Read<uint8_t>();
-    }
-    if (unknown2 & 0x00001000) {
-      uint8_t effectLevel = stream.Read<uint8_t>();
+  if (vitalBitmask_ & static_cast<uint8_t>(packet_enums::VitalInfoFlag::kVitalInfoHgp)) {
+    newHgpValue_ = stream.Read<uint16_t>();
+  }
+
+  if (vitalBitmask_ & static_cast<uint8_t>(packet_enums::VitalInfoFlag::kVitalInfoAbnormal)) {
+    stateBitmask_ = stream.Read<uint32_t>();
+    for (uint32_t i=0; i<32; ++i) {
+      const auto bit = (1 << i);
+      if (bit > static_cast<uint32_t>(packet_enums::AbnormalStateFlag::kZombie) && stateBitmask_ & bit) {
+        stateLevels_.push_back(stream.Read<uint8_t>());
+      }
     }
   }
 }
 
+uint32_t ParsedServerHpMpUpdate::entityUniqueId() const {
+  return entityUniqueId_;
+}
+
+packet_enums::UpdateFlag ParsedServerHpMpUpdate::updateFlag() const {
+  return updateFlag_;
+}
+
+uint8_t ParsedServerHpMpUpdate::vitalBitmask() const {
+  return vitalBitmask_;
+}
+
+uint32_t ParsedServerHpMpUpdate::newHpValue() const {
+  return newHpValue_;
+}
+
+uint32_t ParsedServerHpMpUpdate::newMpValue() const {
+  return newMpValue_;
+}
+
+uint16_t ParsedServerHpMpUpdate::newHgpValue() const {
+  return newHgpValue_;
+}
+
+uint32_t ParsedServerHpMpUpdate::stateBitmask() const {
+  return stateBitmask_;
+}
+
+const std::vector<uint8_t>& ParsedServerHpMpUpdate::stateLevels() const {
+  return stateLevels_;
+}
+
 //=========================================================================================================================================================
+
+uint32_t ParsedServerAgentCharacterUpdateStats::maxHp() const {
+  return maxHp_;
+}
+
+uint32_t ParsedServerAgentCharacterUpdateStats::maxMp() const {
+  return maxMp_;
+}
+
+ParsedServerAgentCharacterUpdateStats::ParsedServerAgentCharacterUpdateStats(const PacketContainer &packet) : ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
+
+  uint32_t phyAtkMin = stream.Read<uint32_t>();
+  uint32_t phyAtkMax = stream.Read<uint32_t>();
+  uint32_t magAtkMin = stream.Read<uint32_t>();
+  uint32_t magAtkMax = stream.Read<uint32_t>();
+  uint16_t phyDef = stream.Read<uint16_t>();
+  uint16_t magDef = stream.Read<uint16_t>();
+  uint16_t hitRate = stream.Read<uint16_t>();
+  uint16_t parryRate = stream.Read<uint16_t>();
+  maxHp_ = stream.Read<uint32_t>();
+  maxMp_ = stream.Read<uint32_t>();
+  uint16_t strPts = stream.Read<uint16_t>();
+  uint16_t intPts = stream.Read<uint16_t>();
+}
+
+//=========================================================================================================================================================
+
+uint32_t ParsedServerAgentCharacterData::entityUniqueId() const {
+  return entityUniqueId_;
+}
+
+uint32_t ParsedServerAgentCharacterData::hp() const {
+  return hp_;
+}
+
+uint32_t ParsedServerAgentCharacterData::mp() const {
+  return mp_;
+}
+
+const std::map<uint8_t,ParsedServerAgentCharacterData::ItemVariantType>& ParsedServerAgentCharacterData::inventoryItemMap() const {
+  return inventoryItemMap_;
+}
+
+item::ItemEquipment parseItemEquipment(StreamUtility &stream) {
+  std::cout << "Parsing Item Equipment\n";
+  item::ItemEquipment item;
+  item.optLevel = stream.Read<uint8_t>();
+  item.variance = stream.Read<uint64_t>();
+  item.durability = stream.Read<uint32_t>();
+  uint8_t magParamNum = stream.Read<uint8_t>();
+  for (int paramIndex=0; paramIndex<magParamNum; ++paramIndex) {
+    item.magicParams.emplace_back();
+    auto &magParam = item.magicParams.back();
+    magParam.type = stream.Read<uint32_t>();
+    magParam.value = stream.Read<uint32_t>();
+  }
+  
+  uint8_t bindingOptionType1 = stream.Read<uint8_t>(); // Weird useless byte (to represent Socket)
+  uint8_t bindingOptionCount1 = stream.Read<uint8_t>();
+  for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount1; ++bindingOptionIndex) {
+    item.socketOptions.emplace_back();
+    auto &socketOption = item.socketOptions.back();
+    socketOption.slot = stream.Read<uint8_t>();
+    socketOption.id = stream.Read<uint32_t>();
+    socketOption.nParam1 = stream.Read<uint32_t>();
+  }
+  
+  uint8_t bindingOptionType2 = stream.Read<uint8_t>(); // Weird useless byte (to represent Advanced Elixir)
+  uint8_t bindingOptionCount2 = stream.Read<uint8_t>();
+  for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount2; ++bindingOptionIndex) {
+    item.advancedElixirOptions.emplace_back();
+    auto &advancedElixirOption = item.advancedElixirOptions.back();
+    advancedElixirOption.slot = stream.Read<uint8_t>();
+    advancedElixirOption.id = stream.Read<uint32_t>();
+    advancedElixirOption.optValue = stream.Read<uint32_t>();
+  }
+  return item;
+}
+
+void parseItemCosSummoner(StreamUtility &stream, item::ItemCosGrowthSummoner *cosSummoner) {  
+  cosSummoner->lifeState = static_cast<item::CosLifeState>(stream.Read<uint8_t>());
+  if (cosSummoner->lifeState != item::CosLifeState::kInactive) {
+    cosSummoner->refObjID = stream.Read<uint32_t>();
+    uint16_t nameLength = stream.Read<uint16_t>();
+    cosSummoner->name = stream.Read_Ascii(nameLength);
+
+    // Special case for ability pets
+    item::ItemCosAbilitySummoner *cosAbilitySummoner;
+    if (cosAbilitySummoner = dynamic_cast<item::ItemCosAbilitySummoner*>(cosSummoner)) {
+      cosAbilitySummoner->secondsToRentEndTime = stream.Read<uint32_t>();
+    }
+
+    uint8_t timedJobCount = stream.Read<uint8_t>();
+    for (int jobNum=0; jobNum<timedJobCount; ++jobNum) {
+      cosSummoner->jobs.emplace_back();
+      auto &job = cosSummoner->jobs.back();
+      job.category = stream.Read<uint8_t>();
+      job.jobId = stream.Read<uint32_t>();
+      job.timeToKeep = stream.Read<uint32_t>();
+      if (job.category == 5) {
+        job.data1 = stream.Read<uint32_t>();
+        job.data2 = stream.Read<uint8_t>();
+      }
+    }
+  }
+}
+
+item::ItemCosGrowthSummoner parseItemCosGrowthSummoner(StreamUtility &stream) {
+  item::ItemCosGrowthSummoner item;
+  parseItemCosSummoner(stream, &item);
+  return item;
+}
+
+item::ItemCosAbilitySummoner parseItemCosAbilitySummoner(StreamUtility &stream) {
+  item::ItemCosAbilitySummoner item;
+  parseItemCosSummoner(stream, &item);
+  return item;
+}
+
+item::ItemMonsterCapsule parseItemMonsterCapsule(StreamUtility &stream) {
+  item::ItemMonsterCapsule item;
+  item.refObjID = stream.Read<uint32_t>();
+  return item;
+}
+
+item::ItemStorage parseItemStorage(StreamUtility &stream) {
+  item::ItemStorage item;
+  item.quantity = stream.Read<uint32_t>();
+  return item;
+}
+
+item::ItemExpendable parseItemExpendable(StreamUtility &stream) {
+  item::ItemExpendable item;
+  item.stackCount = stream.Read<uint16_t>();
+  return item;
+}
+
+item::ItemStone parseItemStone(StreamUtility &stream) {
+  item::ItemStone item;
+  item.stackCount = stream.Read<uint16_t>();
+  item.attributeAssimilationProbability = stream.Read<uint8_t>();
+  return item;
+}
+
+item::ItemMagicPop parseItemMagicPop(StreamUtility &stream) {
+  item::ItemMagicPop item;
+  item.stackCount = stream.Read<uint16_t>();
+  uint8_t magParamCount = stream.Read<uint8_t>();
+  for (int paramIndex=0; paramIndex<magParamCount; ++paramIndex) {
+    item.magicParams.emplace_back();
+    auto &magicParam = item.magicParams.back();
+    magicParam.type = stream.Read<uint32_t>();
+    magicParam.value = stream.Read<uint32_t>();
+  }
+  return item;
+}
 
 ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::media::ItemData &itemData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
@@ -108,10 +267,10 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   std::cout << "remainHwanCount: " << (int)remainHwanCount << '\n';
   uint32_t gatheredExpPoint = stream.Read<uint32_t>();
   std::cout << "gatheredExpPoint: " << gatheredExpPoint << '\n';
-  uint32_t hp = stream.Read<uint32_t>();
-  std::cout << "hp: " << hp << '\n';
-  uint32_t mp = stream.Read<uint32_t>();
-  std::cout << "mp: " << mp << '\n';
+  hp_ = stream.Read<uint32_t>();
+  std::cout << "hp_: " << hp_ << '\n';
+  mp_ = stream.Read<uint32_t>();
+  std::cout << "mp_: " << mp_ << '\n';
   uint8_t autoInverstExp = stream.Read<uint8_t>();
   std::cout << "autoInverstExp: " << (int)autoInverstExp << '\n';
   uint8_t dailyPK = stream.Read<uint8_t>();
@@ -134,17 +293,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   uint8_t inventoryItemCount = stream.Read<uint8_t>();
   std::cout << "inventoryItemCount: " << (int)inventoryItemCount << '\n';
 
-  struct ItemInfo {
-    uint8_t slotNum;
-    std::string name;
-    uint16_t count;
-    ItemInfo(uint8_t s, std::string n, uint16_t c) : slotNum(s), name(n), count(c) {}
-  };
-  std::vector<ItemInfo> items;
-  items.reserve(inventoryItemCount);
-
   for (int itemNum=0; itemNum<inventoryItemCount; ++itemNum) {
-    auto startIndex = stream.GetReadIndex();
     uint8_t slotNum = stream.Read<uint8_t>();
     uint32_t rentType = stream.Read<uint32_t>(); // TODO: Enum for this
     
@@ -164,6 +313,8 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
       uint32_t packingTime = stream.Read<uint32_t>();
     }
 
+    ItemVariantType parsedItem;
+
     uint32_t refItemId = stream.Read<uint32_t>();
     std::cout << "Item " << refItemId << " in slot " << (int)slotNum << ", with rentType: " << rentType << '\n';
     if (!itemData.haveItemWithId(refItemId)) {
@@ -175,20 +326,106 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
     std::cout << "typeId3: " << (int)item.typeId3 << ", ";
     std::cout << "typeId4: " << (int)item.typeId4 << '\n';
 
-    ItemInfo itemData{slotNum, item.codeName128, 1};
-    // struct Item {
-    //   ItemId id;
-    //   std::string codeName128;
-    //   uint8_t typeId1;
-    //   uint8_t typeId2;
-    //   uint8_t typeId3;
-    //   uint8_t typeId4;
-    // };
     if (item.typeId1 == 3) {
+      if (item.typeId2 == 1) {
+        // CGItemEquip
+        parsedItem = parseItemEquipment(stream);
+      } else if (item.typeId2 == 2) {
+        if (item.typeId3 == 1) {                                
+          // CGItemCOSSummoner
+          if (item.typeId4 == 2) {
+            parsedItem = parseItemCosGrowthSummoner(stream);
+          } else {
+            parsedItem = parseItemCosAbilitySummoner(stream);
+          }
+        } else if (item.typeId3 == 2) {
+          // CGItemMonsterCapsule (rogue mask)
+          parsedItem = parseItemMonsterCapsule(stream);
+        } else if (item.typeId3 == 3) {
+          // CGItemStorage
+          parsedItem = parseItemStorage(stream);
+        }
+      } else if (item.typeId2 == 3) {
+        // CGItemExpendable
+        if (item.typeId3 == 11) {
+          if (item.typeId4 == 1 || item.typeId4 == 2) {
+            // MAGICSTONE, ATTRSTONE
+            parsedItem = parseItemStone(stream);
+          } else {
+            // Other expendable
+            parsedItem = parseItemExpendable(stream);
+          }
+        } else if (item.typeId3 == 14 && item.typeId4 == 2) {
+          // Magic pop
+          parsedItem = parseItemMagicPop(stream);
+        } else {
+          // Other expendable
+          parsedItem = parseItemExpendable(stream);
+        }
+      }
+    }
+
+    // Set item's refItemId
+    // TODO: Improve
+    if (std::holds_alternative<item::ItemEquipment>(parsedItem)) {
+      auto &specificItem = std::get<item::ItemEquipment>(parsedItem);
+      specificItem.refItemId = refItemId;
+      specificItem.itemInfo = &item;
+      item::print(specificItem);
+      std::cout << '\n';
+    } else if (std::holds_alternative<item::ItemCosGrowthSummoner>(parsedItem)) {
+      auto &specificItem = std::get<item::ItemCosGrowthSummoner>(parsedItem);
+      specificItem.refItemId = refItemId;
+      specificItem.itemInfo = &item;
+      item::print(specificItem);
+      std::cout << '\n';
+    } else if (std::holds_alternative<item::ItemCosAbilitySummoner>(parsedItem)) {
+      auto &specificItem = std::get<item::ItemCosAbilitySummoner>(parsedItem);
+      specificItem.refItemId = refItemId;
+      specificItem.itemInfo = &item;
+      item::print(specificItem);
+      std::cout << '\n';
+    } else if (std::holds_alternative<item::ItemMonsterCapsule>(parsedItem)) {
+      auto &specificItem = std::get<item::ItemMonsterCapsule>(parsedItem);
+      specificItem.refItemId = refItemId;
+      specificItem.itemInfo = &item;
+      item::print(specificItem);
+      std::cout << '\n';
+    } else if (std::holds_alternative<item::ItemStorage>(parsedItem)) {
+      auto &specificItem = std::get<item::ItemStorage>(parsedItem);
+      specificItem.refItemId = refItemId;
+      specificItem.itemInfo = &item;
+      item::print(specificItem);
+      std::cout << '\n';
+    } else if (std::holds_alternative<item::ItemExpendable>(parsedItem)) {
+      auto &specificItem = std::get<item::ItemExpendable>(parsedItem);
+      specificItem.refItemId = refItemId;
+      specificItem.itemInfo = &item;
+      item::print(specificItem);
+      std::cout << '\n';
+    } else if (std::holds_alternative<item::ItemStone>(parsedItem)) {
+      auto &specificItem = std::get<item::ItemStone>(parsedItem);
+      specificItem.refItemId = refItemId;
+      specificItem.itemInfo = &item;
+      item::print(specificItem);
+      std::cout << '\n';
+    } else if (std::holds_alternative<item::ItemMagicPop>(parsedItem)) {
+      auto &specificItem = std::get<item::ItemMagicPop>(parsedItem);
+      specificItem.refItemId = refItemId;
+      specificItem.itemInfo = &item;
+      item::print(specificItem);
+      std::cout << '\n';
+    }
+
+    inventoryItemMap_.insert({slotNum, parsedItem});
+
+    /*if (item.typeId1 == 3) {
       std::cout << "item.typeId1 == 3\n";
+      // CGItem
       // ITEM_
       if (item.typeId2 == 1) {
         std::cout << "item.typeId2 == 1\n";
+        // CGItemEquip
         // ITEM_CH
         // ITEM_EU
         // AVATAR_
@@ -218,10 +455,12 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
           uint32_t optValue = stream.Read<uint32_t>();
         }
       } else if (item.typeId2 == 2) {
+        // CGItemContainer
         if (item.typeId3 == 1) {                                
-          //ITEM_COS_P
-          uint8_t lifeState = stream.Read<uint8_t>();
-          if (lifeState == 1) { // "Embryo"
+          // CGItemCOSSummoner
+          // ITEM_COS_P
+          uint8_t lifeState = stream.Read<uint8_t>(); // 1=inactive, 2=summoned, 3=active, 4=dead
+          if (lifeState == 1) { // "Embryo"/inactive
             // Nothing to read
           } else {
             uint32_t refObjID = stream.Read<uint32_t>();
@@ -231,27 +470,39 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
               //ITEM_COS_P (Ability)
               uint32_t secondsToRentEndTime = stream.Read<uint32_t>();
             }
-            uint8_t unkByte0 = stream.Read<uint8_t>();
+            uint8_t timedJobCount = stream.Read<uint8_t>();
+            for (int jobNum=0; jobNum<timedJobCount; ++jobNum) {
+              uint8_t category = stream.Read<uint8_t>();
+              uint32_t jobId = stream.Read<uint32_t>(); // category3 = RefSkillId, category5 = RefItemId
+              uint32_t timeToKeep = stream.Read<uint32_t>();
+              if (category == 5) {
+                uint32_t data1 = stream.Read<uint32_t>();
+                uint8_t data2 = stream.Read<uint8_t>();
+              }
+            }
           }
         } else if (item.typeId3 == 2) {
-          //ITEM_ETC_TRANS_MONSTER
+          // CGItemMonsterCapsule (rogue mask)
+          // ITEM_ETC_TRANS_MONSTER
           uint32_t refObjID = stream.Read<uint32_t>();
         } else if (item.typeId3 == 3) {
-          //MAGIC_CUBE
+          // CGItemStorage
+          // MAGIC_CUBE
           uint32_t quantity = stream.Read<uint32_t>(); // Do not confuse with StackCount, this indicates the amount of elixirs in the cube
         }
       } else if (item.typeId2 == 3) {
-        //ITEM_ETC
+        // CGItemExpendable
+        // ITEM_ETC
         uint16_t stackCount = stream.Read<uint16_t>();
-        itemData.count = stackCount; // TODO: Remove
         if (item.typeId3 == 11) {
           if (item.typeId4 == 1 || item.typeId4 == 2) {
-            //MAGICSTONE, ATTRSTONE
-            uint8_t attributeAssimilationProbability = stream.Read<uint8_t>();
+            // MAGICSTONE, ATTRSTONE
+            uint8_t attributeAssimilationProbability = stream.Read<uint8_t>(); // stored in _Items.OptLevel on the server side
           }
         } else if (item.typeId3 == 14 && item.typeId4 == 2) {
-          //ITEM_MALL_GACHA_CARD_WIN
-          //ITEM_MALL_GACHA_CARD_LOSE
+          // Magic pop
+          // ITEM_MALL_GACHA_CARD_WIN
+          // ITEM_MALL_GACHA_CARD_LOSE
           uint8_t magParamCount = stream.Read<uint8_t>();
           for (int paramIndex=0; paramIndex<magParamCount; ++paramIndex) {
               uint32_t type = stream.Read<uint32_t>();
@@ -259,18 +510,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
           }
         }
       }
-    }
-    std::cout << "Successfully parsed item \"" << item.codeName128 << "\" which was " << stream.GetReadIndex()-startIndex << " bytes\n";
-    items.push_back(itemData);
-  }
-
-  std::cout << "Your inventory contains:\n";
-  for (const auto &i : items) {
-    std::cout << '[' << (int)i.slotNum << "] " << i.name;
-    if (i.count > 1) {
-      std::cout << " x " << i.count;
-    }
-    std::cout << '\n';
+    }*/
   }
 
   //=====================================================================================
@@ -320,31 +560,32 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
         // ITEM_CH
         // ITEM_EU
         // AVATAR_
-        uint8_t optLevel = stream.Read<uint8_t>();
-        uint64_t variance = stream.Read<uint64_t>();
-        uint32_t durability = stream.Read<uint32_t>(); //"Data"
-        uint8_t magParamNum = stream.Read<uint8_t>();
+        item::ItemEquipment avatarItem = parseItemEquipment(stream);
+        // uint8_t optLevel = stream.Read<uint8_t>();
+        // uint64_t variance = stream.Read<uint64_t>();
+        // uint32_t durability = stream.Read<uint32_t>(); //"Data"
+        // uint8_t magParamNum = stream.Read<uint8_t>();
 
-        for (int paramIndex=0; paramIndex<magParamNum; ++paramIndex) {
-          uint32_t type = stream.Read<uint32_t>();
-          uint32_t value = stream.Read<uint32_t>();
-        }
+        // for (int paramIndex=0; paramIndex<magParamNum; ++paramIndex) {
+        //   uint32_t type = stream.Read<uint32_t>();
+        //   uint32_t value = stream.Read<uint32_t>();
+        // }
         
-        uint8_t bindingOptionType1 = stream.Read<uint8_t>(); // 1 = Socket
-        uint8_t bindingOptionCount1 = stream.Read<uint8_t>();
-        for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount1; ++bindingOptionIndex) {
-          uint8_t slot = stream.Read<uint8_t>();
-          uint32_t id = stream.Read<uint32_t>();
-          uint32_t nParam1 = stream.Read<uint32_t>();
-        }
+        // uint8_t bindingOptionType1 = stream.Read<uint8_t>(); // 1 = Socket
+        // uint8_t bindingOptionCount1 = stream.Read<uint8_t>();
+        // for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount1; ++bindingOptionIndex) {
+        //   uint8_t slot = stream.Read<uint8_t>();
+        //   uint32_t id = stream.Read<uint32_t>();
+        //   uint32_t nParam1 = stream.Read<uint32_t>();
+        // }
         
-        uint8_t bindingOptionType2 = stream.Read<uint8_t>(); // 2 = Advanced elixir
-        uint8_t bindingOptionCount2 = stream.Read<uint8_t>();
-        for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount2; ++bindingOptionIndex) {
-          uint8_t slot = stream.Read<uint8_t>();
-          uint32_t id = stream.Read<uint32_t>();
-          uint32_t optValue = stream.Read<uint32_t>();
-        }        
+        // uint8_t bindingOptionType2 = stream.Read<uint8_t>(); // 2 = Advanced elixir
+        // uint8_t bindingOptionCount2 = stream.Read<uint8_t>();
+        // for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount2; ++bindingOptionIndex) {
+        //   uint8_t slot = stream.Read<uint8_t>();
+        //   uint32_t id = stream.Read<uint32_t>();
+        //   uint32_t optValue = stream.Read<uint32_t>();
+        // }        
       }
     }
   }
@@ -458,8 +699,8 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   }
   std::cout << "]\n";
   
-  uint32_t uinqueId = stream.Read<uint32_t>();
-  std::cout << "uinqueId: " << uinqueId << '\n';
+  entityUniqueId_ = stream.Read<uint32_t>();
+  std::cout << "entityUniqueId_: " << entityUniqueId_ << '\n';
 
   //=====================================================================================
   //===================================== Position ======================================
