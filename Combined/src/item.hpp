@@ -8,16 +8,12 @@
 
 namespace item {
 
-namespace base {
-
 class Item {
 public:
   uint32_t refItemId;
   const pk2::media::Item *itemInfo{nullptr};
-  virtual ~Item() = default; // Make base type polymorphic
+  virtual ~Item() = 0; // Make base type polymorphic and uninstantiable
 };
-
-} // namespace base
 
 struct ItemMagicParam {
 public:
@@ -53,7 +49,7 @@ public:
 };
 
 // CGItemEquip, ITEM_CH, ITEM_EU, AVATAR_
-class ItemEquipment : public base::Item {
+class ItemEquipment : public Item {
 public:
   uint8_t optLevel;
   uint64_t variance;
@@ -64,7 +60,7 @@ public:
 };
 
 // CGItemCOSSummoner, ITEM_COS_P
-class ItemCosGrowthSummoner : public base::Item {
+class ItemCosGrowthSummoner : public Item {
 public:
   CosLifeState lifeState;
   uint32_t refObjID;
@@ -79,19 +75,19 @@ public:
 };
 
 // CGItemMonsterCapsule, ITEM_ETC_TRANS_MONSTER (rogue mask)
-class ItemMonsterCapsule : public base::Item {
+class ItemMonsterCapsule : public Item {
 public:
   uint32_t refObjID;
 };
 
 // CGItemStorage, MAGIC_CUBE
-class ItemStorage : public base::Item {
+class ItemStorage : public Item {
 public:
   uint32_t quantity; // Do not confuse with StackCount, this indicates the amount of elixirs in the cube
 };
 
 // CGItemExpendable, ITEM_ETC
-class ItemExpendable : public base::Item {
+class ItemExpendable : public Item {
 public:
   uint16_t stackCount;
 };
@@ -108,15 +104,7 @@ public:
   std::vector<ItemMagicParam> magicParams;
 };
 
-void print(const ItemEquipment &item);
-void print(const ItemCosGrowthSummoner *item);
-void print(const ItemCosGrowthSummoner &item);
-void print(const ItemCosAbilitySummoner &item);
-void print(const ItemMonsterCapsule &item);
-void print(const ItemStorage &item);
-void print(const ItemExpendable &item);
-void print(const ItemStone &item);
-void print(const ItemMagicPop &item);
+void print(const Item *item);
 
 } // namespace item
 

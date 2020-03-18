@@ -66,6 +66,9 @@
     <ClCompile Include="..\common\itemInfo.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\characterInfo.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\Common.h">
@@ -105,6 +108,9 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\common\itemInfo.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\characterInfo.hpp">
       <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>

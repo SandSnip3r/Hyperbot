@@ -21,12 +21,17 @@ GameData::GameData(const fs::path &kSilkroadPath) : kSilkroadPath_(kSilkroadPath
 
 void GameData::parseMedia(pk2::Pk2ReaderModern &pk2Reader) {
   parseDivisionInfo(pk2Reader);
+  parseCharacterData(pk2Reader);
   parseItemData(pk2Reader);
   parseSkillData(pk2Reader);
 }
 
 const pk2::DivisionInfo& GameData::divisionInfo() const {
   return divisionInfo_;
+}
+
+const CharacterData& GameData::characterData() const {
+  return characterData_;
 }
 
 const ItemData& GameData::itemData() const {
@@ -42,6 +47,34 @@ void GameData::parseDivisionInfo(pk2::Pk2ReaderModern &pk2Reader) {
   PK2Entry divisionInfoEntry = pk2Reader.getEntry(kDivisionInfoEntryName);
   auto divisionInfoData = pk2Reader.getEntryData(divisionInfoEntry);
   divisionInfo_ = pk2::parsing::parseDivisionInfo(divisionInfoData);
+}
+
+void GameData::parseCharacterData(pk2::Pk2ReaderModern &pk2Reader) {
+	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kMasterCharacterdataName = "characterdata.txt";
+  const std::string kMasterCharacterdataPath = kTextdataDirectory + kMasterCharacterdataName;
+  PK2Entry masterCharacterdataEntry = pk2Reader.getEntry(kMasterCharacterdataPath);
+
+  auto masterCharacterdataData = pk2Reader.getEntryData(masterCharacterdataEntry);
+  auto masterCharacterdataStr = pk2::parsing::fileDataToString(masterCharacterdataData);
+  auto characterdataFilenames = pk2::parsing::split(masterCharacterdataStr, "\r\n");
+
+  for (auto characterdataFilename : characterdataFilenames) {
+    std::cout << "Parsing character data file \"" << characterdataFilename << "\"\n";
+    auto characterdataPath = kTextdataDirectory + characterdataFilename;
+    PK2Entry characterdataEntry = pk2Reader.getEntry(characterdataPath);
+    auto characterdataData = pk2Reader.getEntryData(characterdataEntry);
+    auto characterdataStr = pk2::parsing::fileDataToString(characterdataData);
+    auto characterdataLines = pk2::parsing::split(characterdataStr, "\r\n");
+    for (const auto &line : characterdataLines) {
+      try {
+        characterData_.addCharacter(pk2::parsing::parseCharacterdataLine(line));
+      } catch (...) {
+        std::cerr << "Failed to parse character data \"" << line << "\"\n";
+      }
+    }
+  }
+  std::cout << "Cached " << characterData_.size() << " character(s)\n";
 }
 
 void GameData::parseItemData(pk2::Pk2ReaderModern &pk2Reader) {

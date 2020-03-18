@@ -20,7 +20,7 @@ bool EventBroker::publishEvent(std::unique_ptr<Event> event) {
 }
 
 bool EventBroker::publishDelayedEvent(std::unique_ptr<Event> event, std::chrono::milliseconds delay) {
-  timerManager_.registerTimer(delay, std::bind(&EventBroker::timerFinished, *this, event.release()));
+  timerManager_.registerTimer(delay, std::bind(&EventBroker::timerFinished, this, event.release()));
 }
 
 void EventBroker::subscribeToEvent(EventCode eventCode, EventHandleFunction &&handleFunc) {

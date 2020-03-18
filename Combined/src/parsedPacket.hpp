@@ -7,7 +7,6 @@
 
 #include <map>
 #include <string>
-#include <variant>
 
 #ifndef PACKET_PARSING_HPP
 #define PACKET_PARSING_HPP
@@ -59,6 +58,14 @@ private:
 
 //=========================================================================================================================================================
 
+class ParsedServerUseItem : public ParsedPacket {
+public:
+  ParsedServerUseItem(const PacketContainer &packet);
+private:
+};
+
+//=========================================================================================================================================================
+
 class ParsedServerAgentCharacterUpdateStats : public ParsedPacket {
 public:
   ParsedServerAgentCharacterUpdateStats(const PacketContainer &packet);
@@ -73,17 +80,18 @@ private:
 
 class ParsedServerAgentCharacterData : public ParsedPacket {
 public:
-  using ItemVariantType = std::variant<item::ItemEquipment, item::ItemCosGrowthSummoner, item::ItemCosAbilitySummoner, item::ItemMonsterCapsule, item::ItemStorage, item::ItemExpendable, item::ItemStone, item::ItemMagicPop>;
   ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::media::ItemData &itemData);
+  uint32_t refObjId() const;
   uint32_t entityUniqueId() const;
   uint32_t hp() const;
   uint32_t mp() const;
-  const std::map<uint8_t,ItemVariantType>& inventoryItemMap() const;
+  const std::map<uint8_t, item::Item*>& inventoryItemMap() const;
 private:
+  uint32_t refObjId_;
   uint32_t entityUniqueId_;
   uint32_t hp_;
   uint32_t mp_;
-  std::map<uint8_t,ItemVariantType> inventoryItemMap_;
+  std::map<uint8_t, item::Item*> inventoryItemMap_;
 };
   
 //=========================================================================================================================================================

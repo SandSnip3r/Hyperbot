@@ -148,6 +148,159 @@ pk2::media::Skill parseSkilldataLine(const std::string &line) {
 	return skill;
 }
 
+pk2::media::Character parseCharacterdataLine(const std::string &line) {
+	// int32_t service; // 0
+	// int32_t id; // 1
+	// std::string codeName128; // 2
+	// std::string objName128; // 3
+	// std::string orgObjCodeName128; // 4
+	// std::string nameStrID128; // 5
+	// std::string descStrID128; // 6
+	// uint8_t cashItem; // 7
+	// uint8_t bionic; // 8
+	// uint8_t typeId1; // 9
+	// uint8_t typeId2; // 10
+	// uint8_t typeId3; // 11
+	// uint8_t typeId4; // 12
+	// int32_t decayTime; // 13
+	// uint8_t country; // 14
+	// uint8_t rarity; // 15
+	// uint8_t canTrade; // 16
+	// uint8_t canSell; // 17
+	// uint8_t canBuy; // 18
+	// uint8_t canBorrow; // 19
+	// uint8_t canDrop; // 20
+	// uint8_t canPick; // 21
+	// uint8_t canRepair; // 22
+	// uint8_t canRevive; // 23
+	// uint8_t canUse; // 24
+	// uint8_t canThrow; // 25
+	// int32_t price; // 26
+	// int32_t costRepair; // 27
+	// int32_t costRevive; // 28
+	// int32_t costBorrow; // 29
+	// int32_t keepingFee; // 30
+	// int32_t sellPrice; // 31
+	// int32_t reqLevelType1; // 32
+	// uint8_t reqLevel1; // 33
+	// int32_t reqLevelType2; // 34
+	// uint8_t reqLevel2; // 35
+	// int32_t reqLevelType3; // 36
+	// uint8_t reqLevel3; // 37
+	// int32_t reqLevelType4; // 38
+	// uint8_t reqLevel4; // 39
+	// int32_t maxContain; // 40
+	// int16_t regionID; // 41
+	// int16_t dir; // 42
+	// int16_t offsetX; // 43
+	// int16_t offsetY; // 44
+	// int16_t offsetZ; // 45
+	// int16_t speed1; // 46
+	// int16_t speed2; // 47
+	// int32_t scale; // 48
+	// int16_t bCHeight; // 49
+	// int16_t bCRadius; // 50
+	// int32_t eventID; // 51
+	// std::string assocFileObj128; // 52
+	// std::string assocFileDrop128; // 53
+	// std::string assocFileIcon128; // 54
+	// std::string assocFile1_128; // 55
+	// std::string assocFile2_128; // 56
+  // uint8_t lvl; // 57
+  // uint8_t charGender; // 58
+  // int32_t maxHP; // 59
+  // int32_t maxMP; // 60
+  // int32_t resistFrozen; // 61
+  // int32_t resistFrostbite; // 62
+  // int32_t resistBurn; // 63
+  // int32_t resistEShock; // 64
+  // int32_t resistPoison; // 65
+  // int32_t resistZombie; // 66
+  // int32_t resistSleep; // 67
+  // int32_t resistRoot; // 68
+  // int32_t resistSlow; // 69
+  // int32_t resistFear; // 70
+  // int32_t resistMyopia; // 71
+  // int32_t resistBlood; // 72
+  // int32_t resistStone; // 73
+  // int32_t resistDark; // 74
+  // int32_t resistStun; // 75
+  // int32_t resistDisea; // 76
+  // int32_t resistChaos; // 77
+  // int32_t resistCsePD; // 78
+  // int32_t resistCseMD; // 79
+  // int32_t resistCseSTR; // 80
+  // int32_t resistCseINT; // 81
+  // int32_t resistCseHP; // 82
+  // int32_t resistCseMP; // 83
+  // int32_t resist24; // 84
+  // int32_t resistBomb; // 85
+  // int32_t resist26; // 86
+  // int32_t resist27; // 87
+  // int32_t resist28; // 88
+  // int32_t resist29; // 89
+  // int32_t resist30; // 90
+  // int32_t resist31; // 91
+  // int32_t resist32; // 92
+  // uint8_t inventorySize; // 93
+  // uint8_t canStore_TID1; // 94
+  // uint8_t canStore_TID2; // 95
+  // uint8_t canStore_TID3; // 96
+  // uint8_t canStore_TID4; // 97
+  // uint8_t canBeVehicle; // 98
+  // uint8_t canControl; // 99
+  // uint8_t damagePortion; // 100
+  // int16_t maxPassenger; // 101
+  // int32_t assocTactics; // 102
+  // int32_t pD; // 103
+  // int32_t mD; // 104
+  // int32_t pAR; // 105
+  // int32_t mAR; // 106
+  // int32_t eR; // 107
+  // int32_t bR; // 108
+  // int32_t hR; // 109
+  // int32_t cHR; // 110
+  // int32_t expToGive; // 111
+  // int32_t creepType; // 112
+  // uint8_t knockdown; // 113
+  // int32_t kO_RecoverTime; // 114
+  // int32_t defaultSkill_1; // 115
+  // int32_t defaultSkill_2; // 116
+  // int32_t defaultSkill_3; // 117
+  // int32_t defaultSkill_4; // 118
+  // int32_t defaultSkill_5; // 119
+  // int32_t defaultSkill_6; // 120
+  // int32_t defaultSkill_7; // 121
+  // int32_t defaultSkill_8; // 122
+  // int32_t defaultSkill_9; // 123
+  // int32_t defaultSkill_10; // 124
+  // uint8_t textureType; // 125
+  // int32_t except_1; // 126
+  // int32_t except_2; // 127
+  // int32_t except_3; // 128
+  // int32_t except_4; // 129
+  // int32_t except_5; // 130
+  // int32_t except_6; // 131
+  // int32_t except_7; // 132
+  // int32_t except_8; // 133
+  // int32_t except_9; // 134
+  // int32_t except_10; // 135
+  // int32_t link; // 136
+
+	// auto fields = split(line, "\t");
+	const std::vector<int> kDesiredFields = {1,14,58};
+	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
+	if (fields.size() != kDesiredFields.size()) {
+		// TODO: This check for validity of data should be more robust
+		throw std::runtime_error("Parsing character data, but line contains wrong number of fields");
+	}
+	pk2::media::Character character;
+	character.id = std::stoi(fields[0]);
+	character.country = std::stoi(fields[1]);
+	character.charGender = std::stoi(fields[2]);
+	return character;
+}
+
 pk2::media::Item parseItemdataLine(const std::string &line) {
 	// int32_t service; // 0
 	// int32_t id; // 1

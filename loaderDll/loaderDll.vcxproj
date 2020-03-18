@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\common\blowfish.cpp" />
+    <ClCompile Include="..\common\characterInfo.cpp" />
     <ClCompile Include="..\common\Common.cpp" />
     <ClCompile Include="..\common\detours\creatwth.cpp" />
     <ClCompile Include="..\common\detours\detours.cpp" />
@@ -37,6 +38,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\blowfish.h" />
+    <ClInclude Include="..\common\characterInfo.hpp" />
     <ClInclude Include="..\common\Common.h" />
     <ClInclude Include="..\common\detours\detours.h" />
     <ClInclude Include="..\common\division.hpp" />

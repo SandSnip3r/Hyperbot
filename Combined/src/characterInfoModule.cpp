@@ -17,6 +17,7 @@ CharacterInfoModule::CharacterInfoModule(BrokerSystem &brokerSystem,
   broker_.subscribeToServerPacket(Opcode::SERVER_CHARDATA, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_HPMP_UPDATE, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_STATS, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::SERVER_ITEM_USE, packetHandleFunction);
 }
 
 bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
@@ -45,6 +46,12 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
     return true;
   }
 
+  packet::parsing::ParsedServerUseItem *serverUseItemUpdate = dynamic_cast<packet::parsing::ParsedServerUseItem*>(parsedPacket.get());
+  if (serverUseItemUpdate != nullptr) {
+    serverUseItemReceived(*serverUseItemUpdate);
+    return true;
+  }
+
   packet::parsing::ParsedServerAgentCharacterUpdateStats *statUpdate = dynamic_cast<packet::parsing::ParsedServerAgentCharacterUpdateStats*>(parsedPacket.get());
   if (statUpdate != nullptr) {
     statUpdateReceived(*statUpdate);
@@ -62,8 +69,39 @@ void CharacterInfoModule::statUpdateReceived(const packet::parsing::ParsedServer
   checkIfNeedToHeal();
 }
 
+int CharacterInfoModule::getPotionDefaultDelay() {
+  if (race_ == Race::kChinese) {
+    return kChPotionDefaultDelayMs;
+  } else {
+    return kEuPotionDefaultDelayMs;
+  }
+}
+
+void CharacterInfoModule::setRaceAndGender(uint32_t refObjId) {
+  const auto &gameCharacterData = gameData_.characterData();
+  if (!gameCharacterData.haveCharacterWithId(refObjId)) {
+    std::cout << "Unable to determine race or gender. No \"item\" data for id: " << refObjId << '\n';
+    return;
+  }
+  const auto &character = gameCharacterData.getCharacterById(refObjId);
+  if (character.country == 0) {
+    race_ = Race::kChinese;
+  } else {
+    race_ = Race::kEuropean;
+  }
+  hpPotionDelayMs_ = getPotionDefaultDelay();
+  mpPotionDelayMs_ = getPotionDefaultDelay();
+  if (character.charGender == 1) {
+    gender_ = Gender::kMale;
+  } else {
+    gender_ = Gender::kFemale;
+  }
+}
+
 void CharacterInfoModule::characterInfoReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) {
   std::cout << "Character data received\n";
+  auto refObjId = packet.refObjId();
+  setRaceAndGender(refObjId);
   uniqueId_ = packet.entityUniqueId();
   hp_ = packet.hp();
   mp_ = packet.mp();
@@ -85,25 +123,33 @@ void CharacterInfoModule::usePotion(PotionType potionType) {
   // Find potion in inventory
   for (const auto &slotNumItemPair : inventoryItemMap_) {
     const auto &slotNum = slotNumItemPair.first;
-    const auto &item = slotNumItemPair.second;
-    if (std::holds_alternative<item::ItemExpendable>(item)) {
+    const item::Item *itemPtr = slotNumItemPair.second;
+    const item::ItemExpendable *item;
+    if ((item = dynamic_cast<const item::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
-      const auto &specificItem = std::get<item::ItemExpendable>(item);
-      if (specificItem.itemInfo->typeId1 == 3 && specificItem.itemInfo->typeId2 == 3 && specificItem.itemInfo->typeId3 == 1 && specificItem.itemInfo->typeId4 == typeId4) {
-        std::cout << "  We found a potion!!\n";
-        uint16_t itemInfo = 0;
-        itemInfo |= specificItem.itemInfo->cashItem;
-        itemInfo |= (specificItem.itemInfo->bionic << 1);
-        itemInfo |= (specificItem.itemInfo->typeId1 << 2);
-        itemInfo |= (specificItem.itemInfo->typeId2 << 5);
-        itemInfo |= (specificItem.itemInfo->typeId3 << 7);
-        itemInfo |= (specificItem.itemInfo->typeId4 << 11);
-        auto useItemPacket = PacketBuilding::ClientUseItemBuilder(slotNum, itemInfo).packet();
-        broker_.injectPacket(useItemPacket, PacketContainer::Direction::kClientToServer);
+      if (item->itemInfo->typeId1 == 3 && item->itemInfo->typeId2 == 3 && item->itemInfo->typeId3 == 1 && item->itemInfo->typeId4 == typeId4) {
+        std::cout << "  We found a potion!! Trying to use it\n";
+        useItem(slotNum);
+        // Set a timeout for how long we must wait before retrying to use a potion
         break;
       }
     }
   }
+}
+
+void CharacterInfoModule::useItem(uint8_t slotNum) {
+  // Note: We expect that the item is guaranteed to be in the inventory
+  // Note: We expect no thread contention
+  const item::Item *itemPtr = inventoryItemMap_.at(slotNum);
+  uint16_t itemInfo = 0;
+  itemInfo |= itemPtr->itemInfo->cashItem;
+  itemInfo |= (itemPtr->itemInfo->bionic << 1);
+  itemInfo |= (itemPtr->itemInfo->typeId1 << 2);
+  itemInfo |= (itemPtr->itemInfo->typeId2 << 5);
+  itemInfo |= (itemPtr->itemInfo->typeId3 << 7);
+  itemInfo |= (itemPtr->itemInfo->typeId4 << 11);
+  auto useItemPacket = PacketBuilding::ClientUseItemBuilder(slotNum, itemInfo).packet();
+  broker_.injectPacket(useItemPacket, PacketContainer::Direction::kClientToServer);
 }
 
 void CharacterInfoModule::checkIfNeedToHeal() {
@@ -233,6 +279,14 @@ void CharacterInfoModule::entityUpdateReceived(const packet::parsing::ParsedServ
       std::cout << "Weird, says MP changed, but it didn't\n";
     }
   }
+
+  if (packet.vitalBitmask() & static_cast<uint8_t>(packet_enums::VitalInfoFlag::kVitalInfoAbnormal)) {
+    // Our states changed
+    auto stateBitmask = packet.stateBitmask();
+    auto stateLevels = packet.stateLevels();
+    updateStates(stateBitmask, stateLevels);
+  }
+
   checkIfNeedToHeal();
   // uint32_t entityUniqueId() const;
   // packet_enums::UpdateFlag updateFlag() const;
@@ -242,4 +296,140 @@ void CharacterInfoModule::entityUpdateReceived(const packet::parsing::ParsedServ
   // uint16_t newHgpValue() const;
   // uint32_t stateBitmask() const;
   // const std::vector<uint8_t>& stateLevels() const;
+}
+
+std::string toStr(packet_enums::AbnormalStateFlag state) {
+  if (state == packet_enums::AbnormalStateFlag::kNone) {
+    return "none";
+  } else if (state == packet_enums::AbnormalStateFlag::kFrozen) {
+    return "frozen";
+  } else if (state == packet_enums::AbnormalStateFlag::kFrostbitten) {
+    return "frostbitten";
+  } else if (state == packet_enums::AbnormalStateFlag::kShocked) {
+    return "shocked";
+  } else if (state == packet_enums::AbnormalStateFlag::kBurnt) {
+    return "burnt";
+  } else if (state == packet_enums::AbnormalStateFlag::kPoisoned) {
+    return "poisoned";
+  } else if (state == packet_enums::AbnormalStateFlag::kZombie) {
+    return "zombie";
+  } else if (state == packet_enums::AbnormalStateFlag::kSleep) {
+    return "sleep";
+  } else if (state == packet_enums::AbnormalStateFlag::kBind) {
+    return "bind";
+  } else if (state == packet_enums::AbnormalStateFlag::kDull) {
+    return "dull";
+  } else if (state == packet_enums::AbnormalStateFlag::kFear) {
+    return "fear";
+  } else if (state == packet_enums::AbnormalStateFlag::kShortSighted) {
+    return "shortSighted";
+  } else if (state == packet_enums::AbnormalStateFlag::kBleed) {
+    return "bleed";
+  } else if (state == packet_enums::AbnormalStateFlag::kPetrify) {
+    return "petrify";
+  } else if (state == packet_enums::AbnormalStateFlag::kDarkness) {
+    return "darkness";
+  } else if (state == packet_enums::AbnormalStateFlag::kStunned) {
+    return "stunned";
+  } else if (state == packet_enums::AbnormalStateFlag::kDisease) {
+    return "disease";
+  } else if (state == packet_enums::AbnormalStateFlag::kConfusion) {
+    return "confusion";
+  } else if (state == packet_enums::AbnormalStateFlag::kDecay) {
+    return "decay";
+  } else if (state == packet_enums::AbnormalStateFlag::kWeak) {
+    return "weak";
+  } else if (state == packet_enums::AbnormalStateFlag::kImpotent) {
+    return "impotent";
+  } else if (state == packet_enums::AbnormalStateFlag::kDivision) {
+    return "division";
+  } else if (state == packet_enums::AbnormalStateFlag::kPanic) {
+    return "panic";
+  } else if (state == packet_enums::AbnormalStateFlag::kCombustion) {
+    return "combustion";
+  } else if (state == packet_enums::AbnormalStateFlag::kEmptyBit23) {
+    return "emptyBit23";
+  } else if (state == packet_enums::AbnormalStateFlag::kHidden) {
+    return "hidden";
+  } else if (state == packet_enums::AbnormalStateFlag::kEmptyBit25) {
+    return "emptyBit25";
+  } else if (state == packet_enums::AbnormalStateFlag::kEmptyBit26) {
+    return "emptyBit26";
+  } else if (state == packet_enums::AbnormalStateFlag::kEmptyBit27) {
+    return "emptyBit27";
+  } else if (state == packet_enums::AbnormalStateFlag::kEmptyBit28) {
+    return "emptyBit28";
+  } else if (state == packet_enums::AbnormalStateFlag::kEmptyBit29) {
+    return "emptyBit29";
+  } else if (state == packet_enums::AbnormalStateFlag::kEmptyBit30) {
+    return "emptyBit30";
+  } else if (state == packet_enums::AbnormalStateFlag::kEmptyBit31) {
+    return "emptyBit31";
+  }
+}
+
+void CharacterInfoModule::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels) {
+  uint32_t newlyReceivedStates = (prevStateBitmask_ ^ stateBitmask) & stateBitmask;
+  uint32_t expiredStates = (prevStateBitmask_ ^ stateBitmask) & prevStateBitmask_;
+  prevStateBitmask_ = stateBitmask;
+
+  int stateLevelIndex=0;
+  if (newlyReceivedStates != 0) {
+    // We have some new states!
+    for (int bitNum=0; bitNum<32; ++bitNum) {
+      const auto kBit = static_cast<uint32_t>(1) << bitNum;
+      if ((newlyReceivedStates & kBit) != 0) {
+        const auto kState = static_cast<packet_enums::AbnormalStateFlag>(kBit);
+        if (kState <= packet_enums::AbnormalStateFlag::kZombie) {
+          // Legacy state
+          legacyStates[bitNum] = true;
+          std::cout << "We now are " << toStr(kState) << "\n";
+        } else {
+          // Modern state
+          modernStateLevel[bitNum] = stateLevels[stateLevelIndex];
+          ++stateLevelIndex;
+          std::cout << "We now are under " << toStr(kState) << "\n";
+          if (kState == packet_enums::AbnormalStateFlag::kPanic) {
+            // HP Potions have a 4 second longer delay
+            hpPotionDelayMs_ = getPotionDefaultDelay() + 4000;
+            std::cout << "hp potion delay updated to " << hpPotionDelayMs_ << '\n';
+          } else if (kState == packet_enums::AbnormalStateFlag::kCombustion) {
+            // MP Potions have a 4 second longer delay
+            mpPotionDelayMs_ = getPotionDefaultDelay() + 4000;
+            std::cout << "mp potion delay updated to " << mpPotionDelayMs_ << '\n';
+          }
+        }
+      }
+    }
+  }
+  if (expiredStates != 0) {
+    // We have some expired states
+    for (int bitNum=0; bitNum<32; ++bitNum) {
+      const auto kBit = static_cast<uint32_t>(1) << bitNum;
+      if ((expiredStates & kBit) != 0) {
+        const auto kState = static_cast<packet_enums::AbnormalStateFlag>(kBit);
+        if (kState <= packet_enums::AbnormalStateFlag::kZombie) {
+          // Legacy state
+          legacyStates[bitNum] = false;
+          std::cout << "We are no longer " << toStr(kState) << "\n";
+        } else {
+          // Modern state
+          modernStateLevel[bitNum] = 0;
+          std::cout << "We are no longer under " << toStr(kState) << "\n";
+          if (kState == packet_enums::AbnormalStateFlag::kPanic) {
+            // Restore potion delay to normal
+            hpPotionDelayMs_ = getPotionDefaultDelay();
+            std::cout << "hp potion delay updated to " << hpPotionDelayMs_ << '\n';
+          } else if (kState == packet_enums::AbnormalStateFlag::kCombustion) {
+            // Restore potion delay to normal
+            mpPotionDelayMs_ = getPotionDefaultDelay();
+            std::cout << "mp potion delay updated to " << mpPotionDelayMs_ << '\n';
+          }
+        }
+      }
+    }
+  }
+}
+
+void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedServerUseItem &packet) {
 }

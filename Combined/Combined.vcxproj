@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\common\blowfish.cpp" />
+    <ClCompile Include="..\common\characterInfo.cpp" />
     <ClCompile Include="..\common\Common.cpp" />
     <ClCompile Include="..\common\division.cpp" />
     <ClCompile Include="..\common\divisionInfo.cpp" />
@@ -30,6 +31,7 @@
     <ClCompile Include="..\common\shared_io.cpp" />
     <ClCompile Include="src\bot.cpp" />
     <ClCompile Include="src\brokerSystem.cpp" />
+    <ClCompile Include="src\characterData.cpp" />
     <ClCompile Include="src\characterInfoModule.cpp" />
     <ClCompile Include="src\chatEventModule.cpp" />
     <ClCompile Include="src\configData.cpp" />
@@ -54,6 +56,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\blowfish.h" />
+    <ClInclude Include="..\common\characterInfo.hpp" />
     <ClInclude Include="..\common\Common.h" />
     <ClInclude Include="..\common\division.hpp" />
     <ClInclude Include="..\common\divisionInfo.hpp" />
@@ -67,6 +70,7 @@
     <ClInclude Include="src\bot.hpp" />
     <ClInclude Include="src\botConnection.hpp" />
     <ClInclude Include="src\brokerSystem.hpp" />
+    <ClInclude Include="src\characterData.hpp" />
     <ClInclude Include="src\characterInfoModule.hpp" />
     <ClInclude Include="src\characterLoginData.hpp" />
     <ClInclude Include="src\chatEventModule.hpp" />

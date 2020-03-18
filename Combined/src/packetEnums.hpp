@@ -75,7 +75,7 @@ enum class AbnormalStateFlag : uint32_t {
     kBind =         0x80,
     kDull =         0x100,
     kFear =         0x200,
-    kShortSighted = 0x00,
+    kShortSighted = 0x400,
     kBleed =        0x800,
     kPetrify =      0x1000,
     kDarkness =     0x2000,

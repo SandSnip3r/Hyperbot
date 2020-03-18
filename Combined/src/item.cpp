@@ -5,6 +5,10 @@
 
 namespace item {
 
+Item::~Item() {}
+
+namespace {
+
 void print(const ItemEquipment &item) {
   std::cout << "refItemId: " << item.refItemId << '\n';
   std::cout << "optLevel: " << static_cast<int>(item.optLevel) << '\n';
@@ -88,6 +92,36 @@ void print(const ItemMagicPop &item) {
     std::cout << "value: " << i.value << "),";
   }
   std::cout << "]\n";
+}
+
+} // anonymous namespace
+
+void print(const Item *item) {
+  const ItemEquipment *equipment;
+  const ItemCosAbilitySummoner *cosAbilitySummoner;
+  const ItemCosGrowthSummoner *cosGrowthSummoner;
+  const ItemMonsterCapsule *monsterCapsule;
+  const ItemStorage *storage;
+  const ItemStone *stone;
+  const ItemMagicPop *magicPop;
+  const ItemExpendable *expendable;
+  if ((equipment = dynamic_cast<const ItemEquipment*>(item)) != nullptr) {
+    print(*equipment);
+  } else if ((cosAbilitySummoner = dynamic_cast<const ItemCosAbilitySummoner*>(item)) != nullptr) {
+    print(*cosAbilitySummoner);
+  } else if ((cosGrowthSummoner = dynamic_cast<const ItemCosGrowthSummoner*>(item)) != nullptr) {
+    print(*cosGrowthSummoner);
+  } else if ((monsterCapsule = dynamic_cast<const ItemMonsterCapsule*>(item)) != nullptr) {
+    print(*monsterCapsule);
+  } else if ((storage = dynamic_cast<const ItemStorage*>(item)) != nullptr) {
+    print(*storage);
+  } else if ((stone = dynamic_cast<const ItemStone*>(item)) != nullptr) {
+    print(*stone);
+  } else if ((magicPop = dynamic_cast<const ItemMagicPop*>(item)) != nullptr) {
+    print(*magicPop);
+  } else if ((expendable = dynamic_cast<const ItemExpendable*>(item)) != nullptr) {
+    print(*expendable);
+  }
 }
 
 } // namespace item

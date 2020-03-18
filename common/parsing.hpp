@@ -1,6 +1,7 @@
 #ifndef PK2_PARSING_HPP_
 #define PK2_PARSING_HPP_
 
+#include "characterInfo.hpp"
 #include "divisionInfo.hpp"
 #include "itemInfo.hpp"
 #include "skill.hpp"
@@ -22,6 +23,12 @@ std::string fileDataToString(const std::vector<uint8_t> &data);
 // [param] line   A line of text
 // [return]       A populated Skill object
 pk2::media::Skill parseSkilldataLine(const std::string &line);
+
+// Parses string representing a line of text from characterdata_xxxx.txt in the Media.pk2 into an Character object
+//
+// [param] line   A line of text
+// [return]       A populated Character object
+pk2::media::Character parseCharacterdataLine(const std::string &line);
 
 // Parses string representing a line of text from itemdata_xxxx.txt in the Media.pk2 into an Item object
 //
