@@ -7,6 +7,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 
 namespace event {
@@ -16,6 +17,7 @@ private:
   using EventHandleFunction = std::function<void(const std::unique_ptr<Event>&)>;
   using PacketSubscriptionMap = std::unordered_map<EventCode, std::vector<EventHandleFunction>>;
   PacketSubscriptionMap subscriptions_;
+  std::mutex subscriptionMutex_;
 public:
   void run();
   bool publishEvent(std::unique_ptr<Event> event);

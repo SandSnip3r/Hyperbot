@@ -3,13 +3,16 @@
 
 namespace event {
 
-enum class EventCode {};
+enum class EventCode {
+  kTest1,
+  kTest2
+};
 
 class Event {
 public:
   explicit Event(EventCode eventCode);
   EventCode getEventCode() const;
-  virtual ~Event() = 0;
+  virtual ~Event() = default;
 private:
   EventCode eventCode_;
 };

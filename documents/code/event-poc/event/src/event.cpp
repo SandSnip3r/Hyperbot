@@ -8,6 +8,6 @@ EventCode Event::getEventCode() const {
   return eventCode_;
 }
 
-Event::~Event() {}
+// Event::~Event() {}
 
 } // namespace event

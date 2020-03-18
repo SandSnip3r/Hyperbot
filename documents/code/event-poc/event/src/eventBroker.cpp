@@ -10,6 +10,7 @@ void EventBroker::run() {
 
 bool EventBroker::publishEvent(std::unique_ptr<Event> event) {
   // For each subscription pass the event to the EventHandleFunction
+  std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
   auto handlersIt = subscriptions_.find(event->getEventCode());
   if (handlersIt != subscriptions_.end()) {
     auto &handlers = handlersIt->second;
@@ -24,6 +25,7 @@ bool EventBroker::publishDelayedEvent(std::unique_ptr<Event> event, std::chrono:
 }
 
 void EventBroker::subscribeToEvent(EventCode eventCode, EventHandleFunction &&handleFunc) {
+  std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
   auto subscriptionIt = subscriptions_.find(eventCode);
   if (subscriptionIt == subscriptions_.end()) {
     auto itBoolResult = subscriptions_.emplace(eventCode, std::vector<EventHandleFunction>());
