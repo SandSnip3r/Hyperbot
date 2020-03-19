@@ -5,34 +5,37 @@
 #include <condition_variable>
 #include <functional>
 #include <mutex>
-#include <queue>
 #include <thread>
+#include <vector>
 
 namespace event {
 
 class TimerManager {
 public:
+  using TimerId = int;
   void run();
-
-  // TODO: return timer Id
-  void registerTimer(std::chrono::milliseconds timerDuration, std::function<void()> timerCompletedFunction);
+  TimerId registerTimer(std::chrono::milliseconds timerDuration, std::function<void()> timerCompletedFunction);
+  bool cancelTimer(TimerId id);
   ~TimerManager();
 private:
   using TimePoint = std::chrono::high_resolution_clock::time_point;
 
   struct Timer {
+    TimerId id;
     TimePoint endTime;
     std::function<void()> completionFunction;
     Timer() = default;
-    Timer(TimePoint et, std::function<void()> f) : endTime(et), completionFunction(f) {}
+    Timer(TimerId tId, TimePoint et, std::function<void()> f) : id(tId), endTime(et), completionFunction(f) {}
     bool operator<(const Timer &other) const { return endTime < other.endTime; }
     bool operator>(const Timer &other) const { return endTime > other.endTime; }
   };
 
-  std::priority_queue<Timer, std::vector<Timer>, std::greater<Timer>> timerData;
-  std::condition_variable cv;
-  std::mutex timerDataMutex;
-  std::thread thr;
+  bool keepRunning_{true};
+  int timerIdCounter_{0};
+  std::vector<Timer> timerDataHeap_;
+  std::condition_variable cv_;
+  std::mutex timerDataMutex_;
+  std::thread thr_;
   void waitForData();
   void internalRun();
   void pruneTimers();

@@ -8,36 +8,56 @@ void EventBroker::run() {
   timerManager_.run();
 }
 
-bool EventBroker::publishEvent(std::unique_ptr<Event> event) {
+void EventBroker::publishEvent(std::unique_ptr<Event> event) {
   // For each subscription pass the event to the EventHandleFunction
   std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
-  auto handlersIt = subscriptions_.find(event->getEventCode());
-  if (handlersIt != subscriptions_.end()) {
-    auto &handlers = handlersIt->second;
-    for (auto &handler : handlers) {
-      handler(event);
+  auto eventSubscriptionsIt = subscriptions_.find(event->getEventCode());
+  if (eventSubscriptionsIt != subscriptions_.end()) {
+    auto &eventSubscriptions = eventSubscriptionsIt->second;
+    for (auto &eventSubscription : eventSubscriptions) {
+      eventSubscription.handleFunction(event);
     }
   }
 }
 
-bool EventBroker::publishDelayedEvent(std::unique_ptr<Event> event, std::chrono::milliseconds delay) {
-  timerManager_.registerTimer(delay, std::bind(&EventBroker::timerFinished, this, event.release()));
+EventBroker::DelayedEventId EventBroker::publishDelayedEvent(std::unique_ptr<Event> event, std::chrono::milliseconds delay) {
+  return timerManager_.registerTimer(delay, std::bind(&EventBroker::timerFinished, this, event.release()));
 }
 
-void EventBroker::subscribeToEvent(EventCode eventCode, EventHandleFunction &&handleFunc) {
+bool EventBroker::cancelDelayedEvent(DelayedEventId id) {
+  return timerManager_.cancelTimer(id);
+}
+
+EventBroker::SubscriptionId EventBroker::subscribeToEvent(EventCode eventCode, EventHandleFunction &&handleFunc) {
   std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
   auto subscriptionIt = subscriptions_.find(eventCode);
   if (subscriptionIt == subscriptions_.end()) {
-    auto itBoolResult = subscriptions_.emplace(eventCode, std::vector<EventHandleFunction>());
+    auto itBoolResult = subscriptions_.emplace(eventCode, std::vector<EventSubscription>());
     if (!itBoolResult.second) {
-      std::cerr << "Unable to subscribe!\n";
-      // TODO: Handle error better
-      return;
+      throw std::runtime_error("EventBroker::subscribeToEvent: Unable to subscribe to event "+std::to_string(static_cast<int>(eventCode)));
     } else {
       subscriptionIt = itBoolResult.first;
     }
   }
-  subscriptionIt->second.emplace_back(std::move(handleFunc));
+  const auto thisSubscriptionId = subscriptionIdCounter_;
+  subscriptionIt->second.emplace_back(subscriptionIdCounter_, std::move(handleFunc));
+  ++subscriptionIdCounter_;
+  return thisSubscriptionId;
+}
+
+void EventBroker::unsubscribeFromEvent(SubscriptionId id) {
+  std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
+  for (auto &eventSubscriptionPair : subscriptions_) {
+    // For each event code
+    auto &subscriptionList = eventSubscriptionPair.second;
+    for (auto subscriptionIt=subscriptionList.begin(), end=subscriptionList.end(); subscriptionIt!=end; ++subscriptionIt) {
+      if (subscriptionIt->id == id) {
+        // This is the one we want to unsubscribe from
+        subscriptionList.erase(subscriptionIt);
+        return;
+      }
+    }
+  }
 }
 
 void EventBroker::timerFinished(Event *event) {

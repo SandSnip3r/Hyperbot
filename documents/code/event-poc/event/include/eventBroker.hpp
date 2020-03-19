@@ -13,21 +13,28 @@
 namespace event {
 
 class EventBroker {
+public:
+  using DelayedEventId = TimerManager::TimerId;
+  using SubscriptionId = int;
 private:
   using EventHandleFunction = std::function<void(const std::unique_ptr<Event>&)>;
-  using PacketSubscriptionMap = std::unordered_map<EventCode, std::vector<EventHandleFunction>>;
-  PacketSubscriptionMap subscriptions_;
-  std::mutex subscriptionMutex_;
+  struct EventSubscription {
+    EventSubscription(SubscriptionId subId, EventHandleFunction &&func) : id(subId), handleFunction(func) {}
+    SubscriptionId id;
+    EventHandleFunction handleFunction;
+  };
+  using PacketSubscriptionMap = std::unordered_map<EventCode, std::vector<EventSubscription>>;
 public:
   void run();
-  bool publishEvent(std::unique_ptr<Event> event);
-  
-  //TODO: return timer Id
-  bool publishDelayedEvent(std::unique_ptr<Event> event, std::chrono::milliseconds delay);
-
-  //TODO: return subscription Id
-  void subscribeToEvent(EventCode eventCode, EventHandleFunction &&handleFunc);
+  void publishEvent(std::unique_ptr<Event> event);
+  DelayedEventId publishDelayedEvent(std::unique_ptr<Event> event, std::chrono::milliseconds delay);
+  bool cancelDelayedEvent(DelayedEventId id);
+  SubscriptionId subscribeToEvent(EventCode eventCode, EventHandleFunction &&handleFunc);
+  void unsubscribeFromEvent(SubscriptionId id);
 private:
+  int subscriptionIdCounter_{0};
+  PacketSubscriptionMap subscriptions_;
+  std::mutex subscriptionMutex_;
   TimerManager timerManager_;
   void timerFinished(Event *event);
 };

@@ -4,8 +4,8 @@
 namespace event {
 
 enum class EventCode {
-  kTest1,
-  kTest2
+  kTest1 = 1,
+  kTest2 = 2
 };
 
 class Event {
