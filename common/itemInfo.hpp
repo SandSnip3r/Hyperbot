@@ -17,6 +17,9 @@ struct Item {
 	uint8_t typeId2;
 	uint8_t typeId3;
 	uint8_t typeId4;
+	int32_t param1;
+	int32_t param2;
+	int32_t param4;
 };
 
 std::ostream& operator<<(std::ostream &stream, const Item &item);

@@ -99,6 +99,11 @@ enum class AbnormalStateFlag : uint32_t {
     kEmptyBit31 =   0x80000000
 };
 
+enum class InventoryErrorCode : uint16_t {
+  // Still have time to reuse the item.
+  kWaitForReuseDelay = 0x185B
+};
+
 } // namespace packet_enums
 
 #endif // PACKET_ENUMS_HPP

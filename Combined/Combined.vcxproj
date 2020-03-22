@@ -35,6 +35,8 @@
     <ClCompile Include="src\characterInfoModule.cpp" />
     <ClCompile Include="src\chatEventModule.cpp" />
     <ClCompile Include="src\configData.cpp" />
+    <ClCompile Include="src\event.cpp" />
+    <ClCompile Include="src\eventBroker.cpp" />
     <ClCompile Include="src\gameData.cpp" />
     <ClCompile Include="src\iniReader.cpp" />
     <ClCompile Include="src\item.cpp" />
@@ -53,6 +55,7 @@
     <ClCompile Include="src\shared\stream_utility.cpp" />
     <ClCompile Include="src\silkroadConnection.cpp" />
     <ClCompile Include="src\skillData.cpp" />
+    <ClCompile Include="src\timerManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\blowfish.h" />
@@ -75,6 +78,8 @@
     <ClInclude Include="src\characterLoginData.hpp" />
     <ClInclude Include="src\chatEventModule.hpp" />
     <ClInclude Include="src\configData.hpp" />
+    <ClInclude Include="src\event.hpp" />
+    <ClInclude Include="src\eventBroker.hpp" />
     <ClInclude Include="src\gameData.hpp" />
     <ClInclude Include="src\iniReader.hpp" />
     <ClInclude Include="src\item.hpp" />
@@ -92,6 +97,7 @@
     <ClInclude Include="src\shared\stream_utility.h" />
     <ClInclude Include="src\silkroadConnection.hpp" />
     <ClInclude Include="src\skillData.hpp" />
+    <ClInclude Include="src\timerManager.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

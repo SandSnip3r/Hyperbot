@@ -4,6 +4,7 @@
 #include "brokerSystem.hpp"
 #include "characterInfoModule.hpp"
 #include "characterLoginData.hpp"
+#include "eventBroker.hpp"
 #include "gameData.hpp"
 #include "loginModule.hpp"
 #include "packetParser.hpp"
@@ -17,8 +18,9 @@ private:
   const config::CharacterLoginData &loginData_;
   const pk2::media::GameData &gameData_;
   BrokerSystem &broker_;
+  event::EventBroker eventBroker_;
   packet::parsing::PacketParser packetParser_{gameData_};
-  CharacterInfoModule characterInfoModule_{broker_, packetParser_, gameData_};
+  CharacterInfoModule characterInfoModule_{broker_, eventBroker_, packetParser_, gameData_};
   LoginModule loginModule_{broker_, packetParser_, loginData_, gameData_.divisionInfo()};
 };
 

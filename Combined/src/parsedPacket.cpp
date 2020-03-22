@@ -84,25 +84,67 @@ const std::vector<uint8_t>& ParsedServerHpMpUpdate::stateLevels() const {
 
 //=========================================================================================================================================================
 
+uint32_t ParsedServerAbnormalInfo::stateBitmask() const {
+  return stateBitmask_;
+}
+
+const std::array<PacketInnerStructures::vitals::AbnormalState, 32>& ParsedServerAbnormalInfo::states() const {
+  return states_;
+}
+
+ParsedServerAbnormalInfo::ParsedServerAbnormalInfo(const PacketContainer &packet) : ParsedPacket(packet) { 
+  StreamUtility stream = packet.data;
+  stateBitmask_ = stream.Read<uint32_t>();
+  for (uint32_t i=0; i<32; ++i) {
+    const auto bit = (1 << i);
+    if (stateBitmask_ & bit) {
+      auto &state = states_[i];
+      state.totalTime = stream.Read<uint32_t>();
+      state.timeElapsed = stream.Read<uint16_t>();
+      if (bit <= static_cast<uint32_t>(packet_enums::AbnormalStateFlag::kZombie)) {
+        // Legacy states
+        state.effectOrLevel = stream.Read<uint16_t>();
+      } else {
+        // Modern states
+        state.effectOrLevel = stream.Read<uint16_t>();
+      }
+    }
+  }
+ }
+
+//=========================================================================================================================================================
+uint8_t ParsedServerUseItem::result() const {
+  return result_;
+}
+
+uint8_t ParsedServerUseItem::slotNum() const {
+  return slotNum_;
+}
+
+uint16_t ParsedServerUseItem::remainingCount() const {
+  return remainingCount_;
+}
+
+uint16_t ParsedServerUseItem::itemData() const {
+  return itemData_;
+}
+
+packet_enums::InventoryErrorCode ParsedServerUseItem::errorCode() const {
+  return errorCode_;
+}
+
 ParsedServerUseItem::ParsedServerUseItem(const PacketContainer &packet) : ParsedPacket(packet) {
-  std::cout << "ParsedServerUseItem: ";
   StreamUtility stream = packet.data;
 
-  uint8_t result = stream.Read<uint8_t>();
-  std::cout << "Result:" << (int)result;
-  if (result == 1) {
+  result_ = stream.Read<uint8_t>();
+  if (result_ == 1) {
     // Success
-    uint8_t slotNum = stream.Read<uint8_t>();
-    uint16_t remainingCount = stream.Read<uint16_t>();
-    uint16_t itemData = stream.Read<uint16_t>();
-    std::cout << ", slotNum:" << (int)slotNum;
-    std::cout << ", remainingCount:" << remainingCount;
-    std::cout << ", itemData:" << itemData;
+    slotNum_ = stream.Read<uint8_t>();
+    remainingCount_ = stream.Read<uint16_t>();
+    itemData_ = stream.Read<uint16_t>();
   } else {
-    const auto str = DumpToString(stream);
-    std::cout << ", Dump:" << str;
+    errorCode_ = static_cast<packet_enums::InventoryErrorCode>(stream.Read<uint16_t>());
   }
-  std::cout << '\n';
 }
 
 //=========================================================================================================================================================

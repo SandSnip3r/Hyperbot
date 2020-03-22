@@ -463,21 +463,25 @@ pk2::media::Item parseItemdataLine(const std::string &line) {
 	// uint8_t maxMagicOptCount; // 158
 	// uint8_t childItemCount; // 159
 	// auto fields = split(line, "\t");
-	const std::vector<int> kDesiredFields = {1,2,7,8,9,10,11,12};
+	const std::vector<int> kDesiredFields = {1,2,7,8,9,10,11,12,118,120,124};
 	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
 	if (fields.size() != kDesiredFields.size()) {
 		// TODO: This check for validity of data should be more robust
 		throw std::runtime_error("Parsing item data, but line contains wrong number of fields");
 	}
 	pk2::media::Item item;
-	item.id = std::stoi(fields[0]);
-	item.codeName128 = fields[1];
-	item.cashItem = std::stoi(fields[2]);
-	item.bionic = std::stoi(fields[3]);
-	item.typeId1 = std::stoi(fields[4]);
-	item.typeId2 = std::stoi(fields[5]);
-	item.typeId3 = std::stoi(fields[6]);
-	item.typeId4 = std::stoi(fields[7]);
+  int idx=0;
+	item.id =       std::stoi(fields[idx++]);
+	item.codeName128 =        fields[idx++];
+	item.cashItem = std::stoi(fields[idx++]);
+	item.bionic =   std::stoi(fields[idx++]);
+	item.typeId1 =  std::stoi(fields[idx++]);
+	item.typeId2 =  std::stoi(fields[idx++]);
+	item.typeId3 =  std::stoi(fields[idx++]);
+	item.typeId4 =  std::stoi(fields[idx++]);
+	item.param1 =   std::stoi(fields[idx++]);
+	item.param2 =   std::stoi(fields[idx++]);
+	item.param4 =   std::stoi(fields[idx++]);
 	return item;
 }
 

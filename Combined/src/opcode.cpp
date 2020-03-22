@@ -341,8 +341,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_DEAD) {
     return "SERVER_DEAD";
   }
-  if (opcode == Opcode::SERVER_DEAD2) {
-    return "SERVER_DEAD2";
+  if (opcode == Opcode::SERVER_AGENT_ABNORMAL_INFO) {
+    return "SERVER_AGENT_ABNORMAL_INFO";
   }
   if (opcode == Opcode::SERVER_PARTY_FORM) {
     return "SERVER_PARTY_FORM";

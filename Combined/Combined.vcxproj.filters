@@ -123,6 +123,15 @@
     <ClCompile Include="..\common\characterInfo.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="src\event.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\eventBroker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\timerManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\shared\silkroad_security.h">
@@ -235,6 +244,15 @@
     </ClInclude>
     <ClInclude Include="..\common\characterInfo.hpp">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\event.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\eventBroker.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\timerManager.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

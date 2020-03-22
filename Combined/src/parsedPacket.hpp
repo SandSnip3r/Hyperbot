@@ -5,6 +5,7 @@
 #include "packetInnerStructures.hpp"
 #include "shared/silkroad_security.h"
 
+#include <array>
 #include <map>
 #include <string>
 
@@ -58,10 +59,32 @@ private:
 
 //=========================================================================================================================================================
 
+class ParsedServerAbnormalInfo : public ParsedPacket {
+public:
+  ParsedServerAbnormalInfo(const PacketContainer &packet);
+  uint32_t stateBitmask() const;
+  const std::array<PacketInnerStructures::vitals::AbnormalState, 32>& states() const;
+private:
+  uint32_t stateBitmask_;
+  std::array<PacketInnerStructures::vitals::AbnormalState, 32> states_ = {0};
+};
+
+//=========================================================================================================================================================
+
 class ParsedServerUseItem : public ParsedPacket {
 public:
   ParsedServerUseItem(const PacketContainer &packet);
+  uint8_t result() const;
+  uint8_t slotNum() const;
+  uint16_t remainingCount() const;
+  uint16_t itemData() const;
+  packet_enums::InventoryErrorCode errorCode() const;
 private:
+  uint8_t result_;
+  uint8_t slotNum_;
+  uint16_t remainingCount_;
+  uint16_t itemData_;
+  packet_enums::InventoryErrorCode errorCode_;
 };
 
 //=========================================================================================================================================================

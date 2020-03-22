@@ -12,6 +12,7 @@ class Item {
 public:
   uint32_t refItemId;
   const pk2::media::Item *itemInfo{nullptr};
+  uint16_t typeData() const;
   virtual ~Item() = 0; // Make base type polymorphic and uninstantiable
 };
 

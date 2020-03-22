@@ -5,6 +5,19 @@
 
 namespace item {
 
+uint16_t Item::typeData() const {
+  uint16_t itemTypeData = 0;
+  if (itemInfo != nullptr) {
+    itemTypeData |= itemInfo->cashItem;
+    itemTypeData |= (itemInfo->bionic << 1);
+    itemTypeData |= (itemInfo->typeId1 << 2);
+    itemTypeData |= (itemInfo->typeId2 << 5);
+    itemTypeData |= (itemInfo->typeId3 << 7);
+    itemTypeData |= (itemInfo->typeId4 << 11);
+  }
+  return itemTypeData;
+}
+
 Item::~Item() {}
 
 namespace {

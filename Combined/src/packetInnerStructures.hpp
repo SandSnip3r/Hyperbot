@@ -5,6 +5,7 @@
 #include <vector>
 
 namespace PacketInnerStructures {
+
 namespace CharacterSelection {
 
 struct Item {
@@ -44,6 +45,17 @@ public:
 };
 
 } // namespace CharacterSelection
+
+namespace vitals {
+
+struct AbnormalState {
+  uint32_t totalTime;
+  uint16_t timeElapsed;
+  uint16_t effectOrLevel;
+};
+
+} // namespace vitals
+
 } // namespace PacketInnerStructures
 
 #endif // PACKET_INNER_STRUCTURES_HPP
