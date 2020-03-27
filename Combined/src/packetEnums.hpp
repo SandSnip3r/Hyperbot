@@ -104,6 +104,32 @@ enum class InventoryErrorCode : uint16_t {
   kWaitForReuseDelay = 0x185B
 };
 
+enum class ItemMovementType : uint8_t {
+  kWithinInventory =          0x00,
+  kWithinStorage =            0x01,
+  kInventoryToStorage =       0x02,
+  kStorageToInventory =       0x03,
+  kGoldPick =                 0x06,
+  kBuyFromNPC =               0x08,
+  kSellToNPC =                0x09,
+  kGoldDrop =                 0x0A,
+  kGoldStorageWithdraw =      0x0B,
+  kGoldStorageDeposit =       0x0C,
+  kWithinCos =                0x10,
+  // kBuyFromItemMall =          0x18,
+  kCosToInventory =           0x1A,
+  kInventoryToCos =           0x1B,
+  kCosPickGold =              0x1C,
+  kWithinGuildStorage =       0x1D,
+  kInventoryToGuildStorage =  0x1E,
+  kGuildStorageToInventory =  0x1F,
+  kGoldGuildStorageDeposit =  0x20,
+  kGoldGuildStorageWithdraw = 0x21,
+  kBuyback =                  0x22,
+  kAvatarToInventory =        0x23,
+  kInventoryToAvatar =        0x24
+};
+
 } // namespace packet_enums
 
 #endif // PACKET_ENUMS_HPP

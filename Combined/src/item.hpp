@@ -8,12 +8,26 @@
 
 namespace item {
 
+enum class ItemType {
+  kItemEquipment,
+  kItemCosGrowthSummoner,
+  kItemCosAbilitySummoner,
+  kItemMonsterCapsule,
+  kItemStorage,
+  kItemExpendable,
+  kItemStone,
+  kItemMagicPop
+};
+
 class Item {
 public:
   uint32_t refItemId;
+  ItemType type;
   const pk2::media::Item *itemInfo{nullptr};
   uint16_t typeData() const;
   virtual ~Item() = 0; // Make base type polymorphic and uninstantiable
+protected:
+  Item(ItemType t);
 };
 
 struct ItemMagicParam {
@@ -52,6 +66,7 @@ public:
 // CGItemEquip, ITEM_CH, ITEM_EU, AVATAR_
 class ItemEquipment : public Item {
 public:
+  ItemEquipment();
   uint8_t optLevel;
   uint64_t variance;
   uint32_t durability; // "Data" (also can be devil spirit's (nasrun) secondsToRentEndTime)
@@ -63,45 +78,56 @@ public:
 // CGItemCOSSummoner, ITEM_COS_P
 class ItemCosGrowthSummoner : public Item {
 public:
+  ItemCosGrowthSummoner();
   CosLifeState lifeState;
   uint32_t refObjID;
   std::string name;
   std::vector<CosJob> jobs;  
+protected:
+  ItemCosGrowthSummoner(ItemType type);
 };
 
 // CGItemCOSSummoner, ITEM_COS_P
 class ItemCosAbilitySummoner : public ItemCosGrowthSummoner {
 public:
+  ItemCosAbilitySummoner();
   uint32_t secondsToRentEndTime;
 };
 
 // CGItemMonsterCapsule, ITEM_ETC_TRANS_MONSTER (rogue mask)
 class ItemMonsterCapsule : public Item {
 public:
+  ItemMonsterCapsule();
   uint32_t refObjID;
 };
 
 // CGItemStorage, MAGIC_CUBE
 class ItemStorage : public Item {
 public:
+  ItemStorage();
   uint32_t quantity; // Do not confuse with StackCount, this indicates the amount of elixirs in the cube
 };
 
 // CGItemExpendable, ITEM_ETC
 class ItemExpendable : public Item {
 public:
+  ItemExpendable();
   uint16_t stackCount;
+protected:
+  ItemExpendable(ItemType type);
 };
 
 // MAGICSTONE, ATTRSTONE
 class ItemStone : public ItemExpendable {
 public:
+  ItemStone();
   uint8_t attributeAssimilationProbability; // stored in _Items.OptLevel on the server side
 };
 
 // ITEM_MALL_GACHA_CARD_WIN, ITEM_MALL_GACHA_CARD_LOSE
 class ItemMagicPop : public ItemExpendable {
 public:
+  ItemMagicPop();
   std::vector<ItemMagicParam> magicParams;
 };
 

@@ -18,7 +18,18 @@ uint16_t Item::typeData() const {
   return itemTypeData;
 }
 
+Item::Item(ItemType t) : type(t) {}
 Item::~Item() {}
+ItemEquipment::ItemEquipment() : Item(ItemType::kItemEquipment) {}
+ItemCosGrowthSummoner::ItemCosGrowthSummoner() : Item(ItemType::kItemCosGrowthSummoner) {}
+ItemCosGrowthSummoner::ItemCosGrowthSummoner(ItemType type) : Item(type) {}
+ItemCosAbilitySummoner::ItemCosAbilitySummoner() : ItemCosGrowthSummoner(ItemType::kItemCosAbilitySummoner) {}
+ItemMonsterCapsule::ItemMonsterCapsule() : Item(ItemType::kItemMonsterCapsule) {}
+ItemStorage::ItemStorage() : Item(ItemType::kItemStorage) {}
+ItemExpendable::ItemExpendable() : Item(ItemType::kItemExpendable) {}
+ItemExpendable::ItemExpendable(ItemType type) : Item(type) {}
+ItemStone::ItemStone() : ItemExpendable(ItemType::kItemStone) {}
+ItemMagicPop::ItemMagicPop() : ItemExpendable(ItemType::kItemMagicPop) {}
 
 namespace {
 

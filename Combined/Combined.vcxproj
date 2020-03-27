@@ -41,6 +41,7 @@
     <ClCompile Include="src\iniReader.cpp" />
     <ClCompile Include="src\item.cpp" />
     <ClCompile Include="src\itemData.cpp" />
+    <ClCompile Include="src\itemList.cpp" />
     <ClCompile Include="src\loader.cpp" />
     <ClCompile Include="src\loginModule.cpp" />
     <ClCompile Include="src\opcode.cpp" />
@@ -55,6 +56,7 @@
     <ClCompile Include="src\shared\stream_utility.cpp" />
     <ClCompile Include="src\silkroadConnection.cpp" />
     <ClCompile Include="src\skillData.cpp" />
+    <ClCompile Include="src\storage.cpp" />
     <ClCompile Include="src\timerManager.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -84,6 +86,7 @@
     <ClInclude Include="src\iniReader.hpp" />
     <ClInclude Include="src\item.hpp" />
     <ClInclude Include="src\itemData.hpp" />
+    <ClInclude Include="src\itemList.hpp" />
     <ClInclude Include="src\loader.hpp" />
     <ClInclude Include="src\loginModule.hpp" />
     <ClInclude Include="src\packetBuilding.hpp" />
@@ -97,6 +100,7 @@
     <ClInclude Include="src\shared\stream_utility.h" />
     <ClInclude Include="src\silkroadConnection.hpp" />
     <ClInclude Include="src\skillData.hpp" />
+    <ClInclude Include="src\storage.hpp" />
     <ClInclude Include="src\timerManager.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

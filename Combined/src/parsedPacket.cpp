@@ -113,6 +113,7 @@ ParsedServerAbnormalInfo::ParsedServerAbnormalInfo(const PacketContainer &packet
  }
 
 //=========================================================================================================================================================
+
 uint8_t ParsedServerUseItem::result() const {
   return result_;
 }
@@ -146,6 +147,151 @@ ParsedServerUseItem::ParsedServerUseItem(const PacketContainer &packet) : Parsed
     errorCode_ = static_cast<packet_enums::InventoryErrorCode>(stream.Read<uint16_t>());
   }
 }
+
+//=========================================================================================================================================================
+
+RentInfo parseRentInfo(StreamUtility &stream) {
+  RentInfo rentInfo;
+  rentInfo.rentType = stream.Read<uint32_t>();
+  
+  if (rentInfo.rentType == 1) {
+    rentInfo.canDelete = stream.Read<uint16_t>();
+    rentInfo.periodBeginTime = stream.Read<uint32_t>();
+    rentInfo.periodEndTime = stream.Read<uint32_t>();
+  } else if (rentInfo.rentType == 2) {
+    rentInfo.canDelete = stream.Read<uint16_t>();
+    rentInfo.canRecharge = stream.Read<uint16_t>();
+    rentInfo.meterRateTime = stream.Read<uint32_t>();
+  } else if (rentInfo.rentType == 3) {
+    rentInfo.canDelete = stream.Read<uint16_t>();
+    rentInfo.canRecharge = stream.Read<uint16_t>();
+    rentInfo.periodBeginTime = stream.Read<uint32_t>();
+    rentInfo.periodEndTime = stream.Read<uint32_t>();
+    rentInfo.packingTime = stream.Read<uint32_t>();
+  }
+  return rentInfo;
+}
+
+const std::vector<ItemMovement>& ParsedServerItemMove::itemMovements() const {
+  return itemMovements_;
+}
+
+ParsedServerItemMove::ParsedServerItemMove(const PacketContainer &packet) : ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
+  uint8_t result_ = stream.Read<uint8_t>();
+  std::cout << "ParsedServerItemMove " << (int)result_ << '\n';
+  if (result_ == 1) {
+    // Success
+    ItemMovement primaryItemMovement;
+    primaryItemMovement.type = static_cast<packet_enums::ItemMovementType>(stream.Read<uint8_t>());
+    if (primaryItemMovement.type == packet_enums::ItemMovementType::kWithinInventory ||
+        primaryItemMovement.type == packet_enums::ItemMovementType::kAvatarToInventory ||
+        primaryItemMovement.type == packet_enums::ItemMovementType::kInventoryToAvatar) {
+      std::cout << "kWithinInventory\n";
+      primaryItemMovement.srcSlot = stream.Read<uint8_t>();
+      primaryItemMovement.destSlot = stream.Read<uint8_t>();
+      primaryItemMovement.quantity = stream.Read<uint16_t>(); // Seems to be 0 when equiping or unequiping gear/avatars
+
+      uint8_t secondaryMovementCount = stream.Read<uint8_t>();
+      // While moving things around inside our inventory, there's a possibility that more items get moved too
+      //  Like when we remove our dress, the accessory is forcefully removed
+      for (int i=0; i<secondaryMovementCount; ++i) {
+        std::cout << "Secondary!\n";
+        ItemMovement secondaryItemMovement;
+        secondaryItemMovement.type = static_cast<packet_enums::ItemMovementType>(stream.Read<uint8_t>());
+        // TODO: We assume that it will always be an inventory movement. However, it could
+        //  technically be any kind of movement with the same data structure (ex. withinStorage)
+        secondaryItemMovement.srcSlot = stream.Read<uint8_t>();
+        secondaryItemMovement.destSlot = stream.Read<uint8_t>();
+        secondaryItemMovement.quantity = stream.Read<uint16_t>(); // Seems to be 0 when equiping or unequiping gear/avatars
+        itemMovements_.push_back(secondaryItemMovement);
+      }
+    } else if (primaryItemMovement.type == packet_enums::ItemMovementType::kInventoryToStorage ||
+               primaryItemMovement.type == packet_enums::ItemMovementType::kStorageToInventory ||
+               primaryItemMovement.type == packet_enums::ItemMovementType::kInventoryToGuildStorage ||
+               primaryItemMovement.type == packet_enums::ItemMovementType::kGuildStorageToInventory) {
+      std::cout << "kInventoryToStorage, kStorageToInventory, kInventoryToGuildStorage, kGuildStorageToInventory\n";
+      primaryItemMovement.srcSlot = stream.Read<uint8_t>();
+      primaryItemMovement.destSlot = stream.Read<uint8_t>();
+    } else if (primaryItemMovement.type == packet_enums::ItemMovementType::kInventoryToStorage) {
+      std::cout << "kInventoryToStorage\n";
+      primaryItemMovement.srcSlot = stream.Read<uint8_t>();
+      primaryItemMovement.destSlot = stream.Read<uint8_t>();
+      primaryItemMovement.quantity = stream.Read<uint16_t>();
+    } else if (primaryItemMovement.type == packet_enums::ItemMovementType::kGoldDrop ||
+               primaryItemMovement.type == packet_enums::ItemMovementType::kGoldStorageWithdraw ||
+               primaryItemMovement.type == packet_enums::ItemMovementType::kGoldStorageDeposit ||
+               primaryItemMovement.type == packet_enums::ItemMovementType::kGoldGuildStorageDeposit ||
+               primaryItemMovement.type == packet_enums::ItemMovementType::kGoldGuildStorageWithdraw) {
+      std::cout << "kGoldDrop, kGoldStorageWithdraw, kGoldStorageDeposit, kGoldGuildStorageDeposit, kGoldGuildStorageWithdraw\n";
+      primaryItemMovement.goldAmount = stream.Read<uint64_t>();
+    } else if (primaryItemMovement.type == packet_enums::ItemMovementType::kGoldPick) {
+      std::cout << "kGoldPick\n";
+      primaryItemMovement.destSlot = stream.Read<uint8_t>(); // Gold slot, always 0xFE
+      primaryItemMovement.goldPickAmount = stream.Read<uint32_t>();
+    } else if (primaryItemMovement.type == packet_enums::ItemMovementType::kWithinCos) {
+      std::cout << "kWithinCos\n";
+      primaryItemMovement.globalId = stream.Read<uint32_t>(); // COS global ID
+      primaryItemMovement.srcSlot = stream.Read<uint8_t>();
+      primaryItemMovement.destSlot = stream.Read<uint8_t>();
+      primaryItemMovement.quantity = stream.Read<uint16_t>();
+    } else if (primaryItemMovement.type == packet_enums::ItemMovementType::kCosToInventory ||
+               primaryItemMovement.type == packet_enums::ItemMovementType::kInventoryToCos) {
+      std::cout << "kCosToInventory, kInventoryToCos\n";
+      primaryItemMovement.globalId = stream.Read<uint32_t>(); // COS global ID
+      primaryItemMovement.srcSlot = stream.Read<uint8_t>();
+      primaryItemMovement.destSlot = stream.Read<uint8_t>();
+    } else if (primaryItemMovement.type == packet_enums::ItemMovementType::kWithinStorage ||
+               primaryItemMovement.type == packet_enums::ItemMovementType::kWithinGuildStorage) {
+      std::cout << "kWithinStorage, kWithinGuildStorage\n";
+      primaryItemMovement.srcSlot = stream.Read<uint8_t>();
+      primaryItemMovement.destSlot = stream.Read<uint8_t>();
+      primaryItemMovement.quantity = stream.Read<uint16_t>();
+    } else if (primaryItemMovement.type == packet_enums::ItemMovementType::kBuyFromNPC) {
+      std::cout << "kBuyFromNPC\n";
+      primaryItemMovement.storePageNumber = stream.Read<uint8_t>();
+      primaryItemMovement.storeSlotNumber = stream.Read<uint8_t>();
+      uint8_t stackCount = stream.Read<uint8_t>();
+      for (int i=0; i<stackCount; ++i) {
+        // Can only happen multiple times if its an item that wont get stacked. Like equipment
+        uint8_t inventoryDestinationSlot = stream.Read<uint8_t>();
+      }
+      primaryItemMovement.quantity = stream.Read<uint16_t>();
+      for (int i=0; i<stackCount; ++i) {
+        auto rentInfo = parseRentInfo(stream);
+      }
+    } else if (primaryItemMovement.type == packet_enums::ItemMovementType::kCosPickGold) {
+      std::cout << "kCosPickGold\n";
+      primaryItemMovement.globalId = stream.Read<uint32_t>(); // COS global ID
+      primaryItemMovement.destSlot = stream.Read<uint8_t>(); // Gold slot, always 0xFE
+      primaryItemMovement.quantity = stream.Read<uint32_t>();
+    } else if (primaryItemMovement.type == packet_enums::ItemMovementType::kSellToNPC) {
+      std::cout << "kSellToNPC\n";
+      primaryItemMovement.srcSlot = stream.Read<uint8_t>();
+      primaryItemMovement.quantity = stream.Read<uint16_t>();
+      primaryItemMovement.globalId = stream.Read<uint32_t>(); // NPC global ID
+      primaryItemMovement.buybackStackSize = stream.Read<uint8_t>();
+    } else if (primaryItemMovement.type == packet_enums::ItemMovementType::kBuyback) {
+      std::cout << "kBuyback\n";
+      primaryItemMovement.destSlot = stream.Read<uint8_t>();
+      primaryItemMovement.srcSlot = stream.Read<uint8_t>(); // Shop buyback slot, left is max(buybackStackSize-1), right is 0
+      primaryItemMovement.quantity = stream.Read<uint16_t>();
+    } else {
+      std::cout << "Unhandled item movement case! Type: " << static_cast<int>(primaryItemMovement.type) << '\n';
+    }
+    if (!itemMovements_.empty()) {
+      // There were secondary item movements added, place the primary item movement at the beginning of the list
+      itemMovements_.insert(itemMovements_.begin(), primaryItemMovement);
+    } else {
+      itemMovements_.push_back(primaryItemMovement);
+    }
+  } else {
+    std::cout << "Item movement failed! Dumping data\n";
+    std::cout << DumpToString(stream) << '\n';
+  }
+}
+// TODO: Try to inject a buy packet that buys more than 1 stack of a stackable item
+//  Invesitage what it does to the kBuyFromNPC data
 
 //=========================================================================================================================================================
 
@@ -192,7 +338,11 @@ uint32_t ParsedServerAgentCharacterData::mp() const {
   return mp_;
 }
 
-const std::map<uint8_t, item::Item*>& ParsedServerAgentCharacterData::inventoryItemMap() const {
+uint8_t ParsedServerAgentCharacterData::inventorySize() const {
+  return inventorySize_;
+}
+
+const std::map<uint8_t, std::shared_ptr<item::Item>>& ParsedServerAgentCharacterData::inventoryItemMap() const {
   return inventoryItemMap_;
 }
 
@@ -238,9 +388,13 @@ void parseItemCosSummoner(item::ItemCosGrowthSummoner *cosSummoner, StreamUtilit
     cosSummoner->name = stream.Read_Ascii(nameLength);
 
     // Special case for ability pets
-    item::ItemCosAbilitySummoner *cosAbilitySummoner;
-    if (cosAbilitySummoner = dynamic_cast<item::ItemCosAbilitySummoner*>(cosSummoner)) {
-      cosAbilitySummoner->secondsToRentEndTime = stream.Read<uint32_t>();
+    if (cosSummoner->type == item::ItemType::kItemCosAbilitySummoner) {
+      auto *cosAbilitySummoner = dynamic_cast<item::ItemCosAbilitySummoner*>(cosSummoner);
+      if (cosAbilitySummoner != nullptr) {
+        cosAbilitySummoner->secondsToRentEndTime = stream.Read<uint32_t>();
+      } else {
+        throw std::runtime_error("Trying to cast Item to type ItemCosAbilitySummoner failed");
+      }
     }
 
     uint8_t timedJobCount = stream.Read<uint8_t>();
@@ -298,31 +452,62 @@ void parseItem(item::ItemMagicPop &item, StreamUtility &stream) {
 
 void parseItem(item::Item *item, StreamUtility &stream) {
   using namespace item;
-
-  ItemEquipment *equipment;
-  ItemCosAbilitySummoner *cosAbilitySummoner;
-  ItemCosGrowthSummoner *cosGrowthSummoner;
-  ItemMonsterCapsule *monsterCapsule;
-  ItemStorage *storage;
-  ItemStone *stone;
-  ItemMagicPop *magicPop;
-  ItemExpendable *expendable;
-  if ((equipment = dynamic_cast<ItemEquipment*>(item)) != nullptr) {
-    parseItem(*equipment, stream);
-  } else if ((cosAbilitySummoner = dynamic_cast<ItemCosAbilitySummoner*>(item)) != nullptr) {
-    parseItem(*cosAbilitySummoner, stream);
-  } else if ((cosGrowthSummoner = dynamic_cast<ItemCosGrowthSummoner*>(item)) != nullptr) {
-    parseItem(*cosGrowthSummoner, stream);
-  } else if ((monsterCapsule = dynamic_cast<ItemMonsterCapsule*>(item)) != nullptr) {
-    parseItem(*monsterCapsule, stream);
-  } else if ((storage = dynamic_cast<ItemStorage*>(item)) != nullptr) {
-    parseItem(*storage, stream);
-  } else if ((stone = dynamic_cast<ItemStone*>(item)) != nullptr) {
-    parseItem(*stone, stream);
-  } else if ((magicPop = dynamic_cast<ItemMagicPop*>(item)) != nullptr) {
-    parseItem(*magicPop, stream);
-  } else if ((expendable = dynamic_cast<ItemExpendable*>(item)) != nullptr) {
-    parseItem(*expendable, stream);
+  if (item->type == ItemType::kItemEquipment) {
+    auto *equipment = dynamic_cast<ItemEquipment*>(item);
+    if (equipment != nullptr) {
+      parseItem(*equipment, stream);
+    } else {
+      throw std::runtime_error("Trying to cast Item to type ItemEquipment failed");
+    }
+  } else if (item->type == ItemType::kItemCosAbilitySummoner) {
+    auto *cosAbilitySummoner = dynamic_cast<ItemCosAbilitySummoner*>(item);
+    if (cosAbilitySummoner != nullptr) {
+      parseItem(*cosAbilitySummoner, stream);
+    } else {
+      throw std::runtime_error("Trying to cast Item to type ItemCosAbilitySummoner failed");
+    }
+  } else if (item->type == ItemType::kItemCosGrowthSummoner) {
+    auto *cosGrowthSummoner = dynamic_cast<ItemCosGrowthSummoner*>(item);
+    if (cosGrowthSummoner != nullptr) {
+      parseItem(*cosGrowthSummoner, stream);
+    } else {
+      throw std::runtime_error("Trying to cast Item to type ItemCosGrowthSummoner failed");
+    }
+  } else if (item->type == ItemType::kItemMonsterCapsule) {
+    auto *monsterCapsule = dynamic_cast<ItemMonsterCapsule*>(item);
+    if (monsterCapsule != nullptr) {
+      parseItem(*monsterCapsule, stream);
+    } else {
+      throw std::runtime_error("Trying to cast Item to type ItemMonsterCapsule failed");
+    }
+  } else if (item->type == ItemType::kItemStorage) {
+    auto *storage = dynamic_cast<ItemStorage*>(item);
+    if (storage != nullptr) {
+      parseItem(*storage, stream);
+    } else {
+      throw std::runtime_error("Trying to cast Item to type ItemStorage failed");
+    }
+  } else if (item->type == ItemType::kItemStone) {
+    auto *stone = dynamic_cast<ItemStone*>(item);
+    if (stone != nullptr) {
+      parseItem(*stone, stream);
+    } else {
+      throw std::runtime_error("Trying to cast Item to type ItemStone failed");
+    }
+  } else if (item->type == ItemType::kItemMagicPop) {
+    auto *magicPop = dynamic_cast<ItemMagicPop*>(item);
+    if (magicPop != nullptr) {
+      parseItem(*magicPop, stream);
+    } else {
+      throw std::runtime_error("Trying to cast Item to type ItemMagicPop failed");
+    }
+  } else if (item->type == ItemType::kItemExpendable) {
+    auto *expendable = dynamic_cast<ItemExpendable*>(item);
+    if (expendable != nullptr) {
+      parseItem(*expendable, stream);
+    } else {
+      throw std::runtime_error("Trying to cast Item to type ItemExpendable failed");
+    }
   }
 }
 
@@ -413,34 +598,18 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   //===================================== Inventory =====================================
   //=====================================================================================
 
-  uint8_t inventorySize = stream.Read<uint8_t>();
-  std::cout << "inventorySize: " << (int)inventorySize << '\n';
+  inventorySize_ = stream.Read<uint8_t>();
+  std::cout << "inventorySize: " << (int)inventorySize_ << '\n';
+
   uint8_t inventoryItemCount = stream.Read<uint8_t>();
   std::cout << "inventoryItemCount: " << (int)inventoryItemCount << '\n';
 
   for (int itemNum=0; itemNum<inventoryItemCount; ++itemNum) {
     uint8_t slotNum = stream.Read<uint8_t>();
-    uint32_t rentType = stream.Read<uint32_t>(); // TODO: Enum for this
-    
-    if (rentType == 1) {
-      uint16_t canDelete = stream.Read<uint16_t>();
-      uint32_t periodBeginTime = stream.Read<uint32_t>();
-      uint32_t periodEndTime = stream.Read<uint32_t>();
-    } else if (rentType == 2) {
-      uint16_t canDelete = stream.Read<uint16_t>();
-      uint16_t canRecharge = stream.Read<uint16_t>();
-      uint32_t meterRateTime = stream.Read<uint32_t>();
-    } else if (rentType == 3) {
-      uint16_t canDelete = stream.Read<uint16_t>();
-      uint16_t canRecharge = stream.Read<uint16_t>();
-      uint32_t periodBeginTime = stream.Read<uint32_t>();
-      uint32_t periodEndTime = stream.Read<uint32_t>();
-      uint32_t packingTime = stream.Read<uint32_t>();
-    }
-
+    auto rentInfo = parseRentInfo(stream);
 
     uint32_t refItemId = stream.Read<uint32_t>();
-    std::cout << "Item " << refItemId << " in slot " << (int)slotNum << ", with rentType: " << rentType << '\n';
+    std::cout << "Item " << refItemId << " in slot " << (int)slotNum << ", with rentType: " << rentInfo.rentType << '\n';
     if (!itemData.haveItemWithId(refItemId)) {
       throw std::runtime_error("Unable to parse packet. Encountered an item (id:"+std::to_string(refItemId)+") for which we have no data on.");
     }
@@ -553,7 +722,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
       std::cout << '\n';
     } */
 
-    inventoryItemMap_.insert({slotNum, parsedItem});
+    inventoryItemMap_.insert(std::pair<uint8_t, std::shared_ptr<item::Item>>(slotNum, parsedItem));
 
     /*if (item.typeId1 == 3) {
       std::cout << "item.typeId1 == 3\n";
@@ -562,8 +731,8 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
       if (item.typeId2 == 1) {
         std::cout << "item.typeId2 == 1\n";
         // CGItemEquip
-        // ITEM_CH
-        // ITEM_EU
+        // ITEM_C
+H        // ITEM_EU
         // AVATAR_
         uint8_t optLevel = stream.Read<uint8_t>();
         uint64_t variance = stream.Read<uint64_t>();
@@ -1235,6 +1404,106 @@ const std::string& ParsedClientChat::receiverName() const {
 const std::string& ParsedClientChat::message() const {
   return message_;
 }
+
+//=========================================================================================================================================================
+
+// ParsedClientItemMove::ParsedClientItemMove(const PacketContainer &packet) : ParsedPacket(packet) {
+//   std::cout << "ParsedClientItemMove\n";
+//   StreamUtility stream = packet.data;
+//   packet_enums::ItemMovementType itemMovementType = static_cast<packet_enums::ItemMovementType>(stream.Read<uint8_t>());
+//   if (itemMovementType == packet_enums::ItemMovementType::kWithinInventory) {
+//     std::cout << "kWithinInventory\n";
+//     uint8_t sourceSlot = stream.Read<uint8_t>();
+//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+//     uint8_t destSlot = stream.Read<uint8_t>();
+//     std::cout << "destSlot: " << (int)destSlot << '\n';
+//     uint16_t quantity = stream.Read<uint16_t>();
+//     std::cout << "quantity: " << quantity << '\n';
+//   } else if (itemMovementType == packet_enums::ItemMovementType::kWithinStorage ||
+//              itemMovementType == packet_enums::ItemMovementType::kWithinGuildStorage) {
+//     std::cout << "kWithinStorage, kWithinGuildStorage\n";
+//     uint8_t sourceSlot = stream.Read<uint8_t>();
+//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+//     uint8_t destSlot = stream.Read<uint8_t>();
+//     std::cout << "destSlot: " << (int)destSlot << '\n';
+//     uint16_t quantity = stream.Read<uint16_t>();
+//     std::cout << "quantity: " << quantity << '\n';
+//     uint32_t unk0 = stream.Read<uint32_t>();
+//     std::cout << "unk0: " << unk0 << '\n';
+//   } else if (itemMovementType == packet_enums::ItemMovementType::kInventoryToStorage ||
+//              itemMovementType == packet_enums::ItemMovementType::kStorageToInventory ||
+//              itemMovementType == packet_enums::ItemMovementType::kInventoryToGuildStorage ||
+//              itemMovementType == packet_enums::ItemMovementType::kGuildStorageToInventory) {
+//     std::cout << "kInventoryToStorage, kStorageToInventory, kInventoryToGuildStorage, kGuildStorageToInventory\n";
+//     uint8_t sourceSlot = stream.Read<uint8_t>();
+//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+//     uint8_t destSlot = stream.Read<uint8_t>();
+//     std::cout << "destSlot: " << (int)destSlot << '\n';
+//     uint32_t unk0 = stream.Read<uint32_t>();
+//     std::cout << "unk0: " << unk0 << '\n';
+//   } else if (itemMovementType == packet_enums::ItemMovementType::kBuyFromNPC) {
+//     std::cout << "kBuyFromNPC\n";
+//     uint8_t unk2 = stream.Read<uint8_t>();
+//     std::cout << "unk2: " << (int)unk2 << '\n';
+//     uint8_t unk3 = stream.Read<uint8_t>();
+//     std::cout << "unk3: " << (int)unk3 << '\n';
+//     uint16_t quantity = stream.Read<uint16_t>();
+//     std::cout << "quantity: " << quantity << '\n';
+//     uint32_t unk1 = stream.Read<uint32_t>();
+//     std::cout << "unk1: " << unk1 << '\n';
+//   } else if (itemMovementType == packet_enums::ItemMovementType::kSellToNPC) {
+//     std::cout << "kSellToNPC\n";
+//     uint8_t sourceSlot = stream.Read<uint8_t>();
+//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+//     uint16_t quantity = stream.Read<uint16_t>();
+//     std::cout << "quantity: " << quantity << '\n';
+//     uint32_t unk1 = stream.Read<uint32_t>();
+//     std::cout << "unk1: " << unk1 << '\n';
+//   } else if (itemMovementType == packet_enums::ItemMovementType::kGoldDrop ||
+//              itemMovementType == packet_enums::ItemMovementType::kGoldStorageWithdraw ||
+//              itemMovementType == packet_enums::ItemMovementType::kGoldStorageDeposit ||
+//              itemMovementType == packet_enums::ItemMovementType::kGoldGuildStorageDeposit ||
+//              itemMovementType == packet_enums::ItemMovementType::kGoldGuildStorageWithdraw) {
+//     std::cout << "kGoldDrop, kGoldStorageWithdraw, kGoldStorageDeposit, kGoldGuildStorageDeposit, kGoldGuildStorageWithdraw\n";
+//     uint64_t goldAmount = stream.Read<uint64_t>();
+//     std::cout << "goldAmount: " << goldAmount << '\n';
+//   } else if (itemMovementType == packet_enums::ItemMovementType::kCosToInventory ||
+//              itemMovementType == packet_enums::ItemMovementType::kInventoryToCos) {
+//     std::cout << "kCosToInventory,, kInventoryToCos\n";
+//     uint32_t unk4 = stream.Read<uint32_t>();
+//     std::cout << "unk4: " << unk4 << '\n';
+//     uint8_t sourceSlot = stream.Read<uint8_t>();
+//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+//     uint8_t destSlot = stream.Read<uint8_t>();
+//     std::cout << "destSlot: " << (int)destSlot << '\n';
+//   } else if (itemMovementType == packet_enums::ItemMovementType::kWithinCos) {
+//     std::cout << "kWithinCos\n";
+//     uint32_t unk4 = stream.Read<uint32_t>();
+//     std::cout << "unk4: " << unk4 << '\n';
+//     uint8_t sourceSlot = stream.Read<uint8_t>();
+//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+//     uint8_t destSlot = stream.Read<uint8_t>();
+//     std::cout << "destSlot: " << (int)destSlot << '\n';
+//     uint16_t quantity = stream.Read<uint16_t>();
+//     std::cout << "quantity: " << quantity << '\n';
+//   } else if (itemMovementType == packet_enums::ItemMovementType::kAvatarToInventory) {
+//     std::cout << "kAvatarToInventory\n";
+//     uint8_t sourceAvatarInventorySlot = stream.Read<uint8_t>();
+//     std::cout << "sourceAvatarInventorySlot: " << (int)sourceAvatarInventorySlot << '\n';
+//     uint8_t destInventorySlot = stream.Read<uint8_t>();
+//     std::cout << "destInventorySlot: " << (int)destInventorySlot << '\n';
+//   } else if (itemMovementType == packet_enums::ItemMovementType::kInventoryToAvatar) {
+//     std::cout << "kInventoryToAvatar\n";
+//     uint8_t sourceInventorySlot = stream.Read<uint8_t>();
+//     std::cout << "sourceInventorySlot: " << (int)sourceInventorySlot << '\n';
+//     uint8_t destAvatarInventorySlot = stream.Read<uint8_t>();
+//     std::cout << "destAvatarInventorySlot: " << (int)destAvatarInventorySlot << '\n';
+//   } else {
+//     std::cout << "New item movement type! " << static_cast<int>(itemMovementType) << '\n';
+//     std::cout << "Dump: " << DumpToString(stream) << '\n';
+//   }
+
+// }
 
 //=========================================================================================================================================================
 } // namespace packet::parsing

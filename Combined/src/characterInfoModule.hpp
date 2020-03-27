@@ -7,6 +7,7 @@
 #include "packetParser.hpp"
 #include "parsedPacket.hpp"
 #include "shared/silkroad_security.h"
+#include "storage.hpp"
 
 #include <array>
 #include <optional>
@@ -95,7 +96,19 @@ private:
 
   std::deque<UsedItem> usedItemQueue_;
 
-  std::map<uint8_t, item::Item*> inventoryItemMap_;
+  storage::Storage inventory_;
+  storage::Storage storage_;
+
+  // Packet handling functions
+  void abnormalInfoReceived(const packet::parsing::ParsedServerAbnormalInfo &packet);
+  void serverItemMoveReceived(const packet::parsing::ParsedServerItemMove &packet);
+  void characterInfoReceived(const packet::parsing::ParsedServerAgentCharacterData &packet);
+  void entityUpdateReceived(const packet::parsing::ParsedServerHpMpUpdate &packet);
+  void statUpdateReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet);
+  void serverUseItemReceived(const packet::parsing::ParsedServerUseItem &packet);
+
+  void initializeInventory(uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<item::Item>> &inventoryItemMap);
+  void moveItemInInventory(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
   int getHpPotionDelay();
   int getMpPotionDelay();
   int getVigorPotionDelay();
@@ -106,14 +119,9 @@ private:
   bool alreadyUsedUniversalPill();
   bool alreadyUsedPurificationPill();
   bool alreadyUsedPotion(PotionType potionType);
-  void abnormalInfoReceived(const packet::parsing::ParsedServerAbnormalInfo &packet);
   void handlePillCooldownEnded(const std::unique_ptr<event::Event> &event);
   void handlePotionCooldownEnded(const std::unique_ptr<event::Event> &event);
-  void characterInfoReceived(const packet::parsing::ParsedServerAgentCharacterData &packet);
-  void entityUpdateReceived(const packet::parsing::ParsedServerHpMpUpdate &packet);
-  void statUpdateReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet);
   void setRaceAndGender(uint32_t refObjId);
-  void serverUseItemReceived(const packet::parsing::ParsedServerUseItem &packet);
   void checkIfNeedToUsePill();
   void checkIfNeedToHeal();
   void useUniversalPill();

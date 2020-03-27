@@ -9,6 +9,10 @@
 
 namespace PacketBuilding {
 
+namespace client_item_move {
+PacketContainer withinInventory(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
+} // namespace client_item_move
+
 class PacketBuilder {
 protected:
   Opcode opcode_;

@@ -7,6 +7,7 @@
 
 #include <array>
 #include <map>
+#include <memory>
 #include <string>
 
 #ifndef PACKET_PARSING_HPP
@@ -88,6 +89,40 @@ private:
 };
 
 //=========================================================================================================================================================
+struct RentInfo {
+  uint32_t rentType; // TODO: Enum for this
+  uint16_t canDelete;
+  uint32_t periodBeginTime;
+  uint32_t periodEndTime;
+  uint16_t canRecharge;
+  uint32_t meterRateTime;
+  uint32_t packingTime;
+};
+
+struct  ItemMovement {
+  packet_enums::ItemMovementType type;
+  uint8_t srcSlot, destSlot;
+  uint16_t quantity;
+  uint32_t goldPickAmount;
+  uint64_t goldAmount;
+  uint32_t globalId;
+  uint8_t storePageNumber;
+  uint8_t storeSlotNumber;
+  uint8_t stackCount;
+  std::vector<uint8_t> destSlots;
+  std::vector<RentInfo> rentInfos;
+  uint8_t buybackStackSize;
+};
+
+class ParsedServerItemMove : public ParsedPacket {
+public:
+  ParsedServerItemMove(const PacketContainer &packet);
+  const std::vector<ItemMovement>& itemMovements() const;
+private:
+  std::vector<ItemMovement> itemMovements_;
+};
+
+//=========================================================================================================================================================
 
 class ParsedServerAgentCharacterUpdateStats : public ParsedPacket {
 public:
@@ -108,13 +143,15 @@ public:
   uint32_t entityUniqueId() const;
   uint32_t hp() const;
   uint32_t mp() const;
-  const std::map<uint8_t, item::Item*>& inventoryItemMap() const;
+  uint8_t inventorySize() const;
+  const std::map<uint8_t, std::shared_ptr<item::Item>>& inventoryItemMap() const;
 private:
   uint32_t refObjId_;
   uint32_t entityUniqueId_;
   uint32_t hp_;
   uint32_t mp_;
-  std::map<uint8_t, item::Item*> inventoryItemMap_;
+  uint8_t inventorySize_;
+  std::map<uint8_t, std::shared_ptr<item::Item>> inventoryItemMap_;
 };
   
 //=========================================================================================================================================================
@@ -204,6 +241,14 @@ private:
   std::string receiverName_;
   std::string message_;
 };
+
+//=========================================================================================================================================================
+
+// class ParsedClientItemMove : public ParsedPacket {
+// public:
+//   ParsedClientItemMove(const PacketContainer &packet);
+// private:
+// };
 
 //=========================================================================================================================================================
 

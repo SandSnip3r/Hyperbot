@@ -134,6 +134,7 @@ pk2::media::Skill parseSkilldataLine(const std::string &line) {
   // int32_t param48 // 115
   // int32_t param49 // 116
   // int32_t param50 // 117
+
 	const std::vector<int> kDesiredFields = {1,3,4,5};
 	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
 	if (fields.size() != kDesiredFields.size()) {
@@ -287,17 +288,18 @@ pk2::media::Character parseCharacterdataLine(const std::string &line) {
   // int32_t except_10; // 135
   // int32_t link; // 136
 
-	// auto fields = split(line, "\t");
-	const std::vector<int> kDesiredFields = {1,14,58};
+	const std::vector<int> kDesiredFields = {1,2,14,58};
 	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
 	if (fields.size() != kDesiredFields.size()) {
 		// TODO: This check for validity of data should be more robust
 		throw std::runtime_error("Parsing character data, but line contains wrong number of fields");
 	}
+  int idx=0;
 	pk2::media::Character character;
-	character.id = std::stoi(fields[0]);
-	character.country = std::stoi(fields[1]);
-	character.charGender = std::stoi(fields[2]);
+	character.id =          std::stoi(fields[idx++]);
+	character.codeName128 = std::stoi(fields[idx++]);
+	character.country =     std::stoi(fields[idx++]);
+	character.charGender =  std::stoi(fields[idx++]);
 	return character;
 }
 
@@ -462,8 +464,8 @@ pk2::media::Item parseItemdataLine(const std::string &line) {
 	// std::string desc20_128; // 157
 	// uint8_t maxMagicOptCount; // 158
 	// uint8_t childItemCount; // 159
-	// auto fields = split(line, "\t");
-	const std::vector<int> kDesiredFields = {1,2,7,8,9,10,11,12,118,120,124};
+  
+	const std::vector<int> kDesiredFields = {1,2,7,8,9,10,11,12,57,118,120,124};
 	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
 	if (fields.size() != kDesiredFields.size()) {
 		// TODO: This check for validity of data should be more robust
@@ -479,6 +481,7 @@ pk2::media::Item parseItemdataLine(const std::string &line) {
 	item.typeId2 =  std::stoi(fields[idx++]);
 	item.typeId3 =  std::stoi(fields[idx++]);
 	item.typeId4 =  std::stoi(fields[idx++]);
+	item.maxStack = std::stoi(fields[idx++]);
 	item.param1 =   std::stoi(fields[idx++]);
 	item.param2 =   std::stoi(fields[idx++]);
 	item.param4 =   std::stoi(fields[idx++]);

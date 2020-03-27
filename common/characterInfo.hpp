@@ -10,6 +10,7 @@ using CharacterId = uint32_t;
 
 struct Character {
 	CharacterId id;
+  std::string codeName128;
   uint8_t country;
   uint8_t charGender;
 };

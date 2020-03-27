@@ -5,6 +5,23 @@
 
 namespace PacketBuilding {
 
+namespace client_item_move {
+
+PacketContainer base(const StreamUtility &stream) {
+  return PacketContainer(static_cast<uint16_t>(Opcode::CLIENT_ITEM_MOVE), stream, false, false);
+}
+
+PacketContainer withinInventory(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity) {
+  StreamUtility stream;
+  stream.Write<uint8_t>(static_cast<uint8_t>(packet_enums::ItemMovementType::kWithinInventory));
+  stream.Write<uint8_t>(srcSlot);
+  stream.Write<uint8_t>(destSlot);
+  stream.Write<uint16_t>(quantity);
+  return base(stream);
+}
+
+} // namespace client_item_move
+
 PacketBuilder::PacketBuilder(Opcode opcode) : opcode_(opcode) {}
 
 PacketContainer PacketBuilder::packet(const StreamUtility &stream, bool encrypted, bool massive) const {

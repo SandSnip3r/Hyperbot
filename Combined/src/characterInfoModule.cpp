@@ -2,8 +2,10 @@
 #include "opcode.hpp"
 #include "packetBuilding.hpp"
 
+#include <array>
 #include <iostream>
 #include <memory>
+#include <regex>
 
 int bitNum(packet_enums::AbnormalStateFlag flag);
 std::string toStr(packet_enums::AbnormalStateFlag state);
@@ -22,12 +24,15 @@ CharacterInfoModule::CharacterInfoModule(BrokerSystem &brokerSystem,
       gameData_(gameData) {
   auto packetHandleFunction = std::bind(&CharacterInfoModule::handlePacket, this, std::placeholders::_1);
   // Client packets
+  // broker_.subscribeToClientPacket(Opcode::CLIENT_ITEM_MOVE, packetHandleFunction);
+  broker_.subscribeToClientPacket(Opcode::CLIENT_CHAT, packetHandleFunction);
   // Server packets
   broker_.subscribeToServerPacket(Opcode::SERVER_CHARDATA, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_HPMP_UPDATE, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_STATS, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_ITEM_USE, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_AGENT_ABNORMAL_INFO, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::SERVER_ITEM_MOVEMENT, packetHandleFunction);
 
   // TODO: Save subscription ID to possibly unsubscribe in the future
   eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
@@ -80,6 +85,26 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
     return true;
   }
 
+  //======================================================================================================
+  //============================================Client Packets============================================
+  //======================================================================================================
+
+  // auto *clientItemMove = dynamic_cast<packet::parsing::ParsedClientItemMove*>(parsedPacket.get());
+  // if (clientItemMove != nullptr) {
+  //   std::cout << "Not handling client item move\n";
+  //   return true;
+  // }
+
+  auto *clientChat = dynamic_cast<packet::parsing::ParsedClientChat*>(parsedPacket.get());
+  if (clientChat != nullptr) {
+    std::cout << "Not handling client chat move\n";
+  }
+
+
+  //======================================================================================================
+  //============================================Server Packets============================================
+  //======================================================================================================
+
   auto *charData = dynamic_cast<packet::parsing::ParsedServerAgentCharacterData*>(parsedPacket.get());
   if (charData != nullptr) {
     characterInfoReceived(*charData);
@@ -110,8 +135,45 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
     return true;
   }
 
+  auto *serverItemMove = dynamic_cast<packet::parsing::ParsedServerItemMove*>(parsedPacket.get());
+  if (serverItemMove != nullptr) {
+    serverItemMoveReceived(*serverItemMove);
+    return true;
+  }
+  
+  //======================================================================================================
+
   std::cout << "Unhandled packet subscribed to\n";
   return true;
+}
+
+void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedServerItemMove &packet) {
+  const std::vector<packet::parsing::ItemMovement> &itemMovements = packet.itemMovements();
+  std::cout << "serverItemMoveReceived, " << itemMovements.size() << '\n';
+  for (const auto &movement : itemMovements) {
+    if (movement.type == packet_enums::ItemMovementType::kWithinInventory) {
+      std::cout << "moveItemInStorage: inventory_\n";
+      inventory_.moveItemInStorage(movement.srcSlot, movement.destSlot, movement.quantity);
+    } else if (movement.type == packet_enums::ItemMovementType::kWithinStorage) {
+      // std::cout << "moveItemInStorage: storage_\n";
+      // moveItemInStorage(storage_, movement.srcSlot, movement.destSlot, movement.quantity);
+    } else if (movement.type == packet_enums::ItemMovementType::kBuyFromNPC) {
+      
+      // std::cout << "kBuyFromNPC\n";
+      // primaryItemMovement.storePageNumber = stream.Read<uint8_t>();
+      // primaryItemMovement.storeSlotNumber = stream.Read<uint8_t>();
+      // uint8_t stackCount = stream.Read<uint8_t>();
+      // for (int i=0; i<stackCount; ++i) {
+      //   // Can only happen multiple times if its an item that wont get stacked. Like equipment
+      //   uint8_t inventoryDestinationSlot = stream.Read<uint8_t>();
+      // }
+      // primaryItemMovement.quantity = stream.Read<uint16_t>();
+      // for (int i=0; i<stackCount; ++i) {
+      //   auto rentInfo = parseRentInfo(stream);
+      // }
+    
+    }
+  }
 }
 
 void CharacterInfoModule::abnormalInfoReceived(const packet::parsing::ParsedServerAbnormalInfo &packet) {
@@ -162,6 +224,9 @@ void CharacterInfoModule::characterInfoReceived(const packet::parsing::ParsedSer
       return;
     } else {
       std::cout << "Got another character info packet, but we've already \"initialized\"\n";
+      // TODO: I think its normal to receive this many times, on each spawn probably
+      //  Cant handle multiple times yet
+      return;
     }
   }
   auto refObjId = packet.refObjId();
@@ -169,10 +234,31 @@ void CharacterInfoModule::characterInfoReceived(const packet::parsing::ParsedSer
   uniqueId_ = packet.entityUniqueId();
   hp_ = packet.hp();
   mp_ = packet.mp();
-  inventoryItemMap_ = packet.inventoryItemMap();
+  const auto inventorySize = packet.inventorySize();
+  const auto &inventoryItemMap = packet.inventoryItemMap();
+  initializeInventory(inventorySize, inventoryItemMap);
+
   std::cout << "We are #" << uniqueId_ << ", and we have " << hp_ << " hp and " << mp_ << " mp\n";
   initialized_ = true;
   checkIfNeedToHeal();
+}
+
+void CharacterInfoModule::initializeInventory(uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<item::Item>> &inventoryItemMap) {
+  if (inventory_.size() != 0) {
+    // TODO: Make this impossible (by never calling this function if the inventory is already initialized)
+    std::cout << "Initializing inventory, but size isnt 0!!!!!!!\n";
+    return;
+  }
+  inventory_.resize(inventorySize);
+  // Guaranteed to have no items
+  for (const auto &slotItemPtrPair : inventoryItemMap) {
+    std::cout << "Adding item to slot " << (int)slotItemPtrPair.first << '\n';
+    if (slotItemPtrPair.first < 6) {
+      // Equipment piece
+      std::cout << "  TID4: " << (int)slotItemPtrPair.second->itemInfo->typeId4 << '\n';
+    }
+    inventory_.addItem(slotItemPtrPair.first, slotItemPtrPair.second);
+  }
 }
 
 void CharacterInfoModule::useUniversalPill() {
@@ -182,9 +268,11 @@ void CharacterInfoModule::useUniversalPill() {
   uint8_t bestOptionSlotNum;
   uint16_t bestOptionTypeData;
 
-  for (const auto &slotNumItemPair : inventoryItemMap_) {
-    const auto &slotNum = slotNumItemPair.first;
-    const item::Item *itemPtr = slotNumItemPair.second;
+  for (uint8_t slotNum=0; slotNum<inventory_.size(); ++slotNum) {
+    if (!inventory_.hasItem(slotNum)) {
+      continue;
+    }
+    const item::Item *itemPtr = inventory_.getItem(slotNum);
     const item::ItemExpendable *item;
     if ((item = dynamic_cast<const item::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -226,9 +314,11 @@ void CharacterInfoModule::usePurificationPill() {
   uint8_t bestOptionSlotNum;
   uint16_t bestOptionTypeData;
 
-  for (const auto &slotNumItemPair : inventoryItemMap_) {
-    const auto &slotNum = slotNumItemPair.first;
-    const item::Item *itemPtr = slotNumItemPair.second;
+  for (uint8_t slotNum=0; slotNum<inventory_.size(); ++slotNum) {
+    if (!inventory_.hasItem(slotNum)) {
+      continue;
+    }
+    const item::Item *itemPtr = inventory_.getItem(slotNum);
     const item::ItemExpendable *item;
     if ((item = dynamic_cast<const item::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -291,9 +381,11 @@ void CharacterInfoModule::usePotion(PotionType potionType) {
     return;
   }
   // Find potion in inventory
-  for (const auto &slotNumItemPair : inventoryItemMap_) {
-    const auto &slotNum = slotNumItemPair.first;
-    const item::Item *itemPtr = slotNumItemPair.second;
+  for (uint8_t slotNum=0; slotNum<inventory_.size(); ++slotNum) {
+    if (!inventory_.hasItem(slotNum)) {
+      continue;
+    }
+    const item::Item *itemPtr = inventory_.getItem(slotNum);
     const item::ItemExpendable *item;
     if ((item = dynamic_cast<const item::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -578,9 +670,8 @@ bool isVigorPotion(const pk2::media::Item &itemInfo) {
 void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedServerUseItem &packet) {
   if (packet.result() == 1) {
     // Successfully used an item
-    auto inventorySlotIt = inventoryItemMap_.find(packet.slotNum());
-    if (inventorySlotIt != inventoryItemMap_.end()) {
-      auto *itemPtr = inventorySlotIt->second;
+    if (inventory_.hasItem(packet.slotNum())) {
+      auto *itemPtr = inventory_.getItem(packet.slotNum());
       // Lets double check it's type data
       if (packet.itemData() == itemPtr->typeData()) {
         auto *expendableItemPtr = dynamic_cast<item::ItemExpendable*>(itemPtr);
@@ -624,7 +715,8 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
           }
           if (expendableItemPtr->stackCount == 0) {
             std::cout << "Used the last of this item! Delete from inventory\n";
-            inventoryItemMap_.erase(inventorySlotIt);
+            // TODO: Instead, delete the item upon receiving server_item_movement in the case DEL_ITEM_BY_SERVER
+            inventory_.deleteItem(packet.slotNum());
           }
         }
       }
