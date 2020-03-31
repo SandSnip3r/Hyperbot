@@ -138,6 +138,15 @@
     <ClCompile Include="src\itemList.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\skill.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\teleportData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\teleport.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\shared\silkroad_security.h">
@@ -265,6 +274,15 @@
     </ClInclude>
     <ClInclude Include="src\itemList.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\skill.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\teleportData.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\teleport.hpp">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

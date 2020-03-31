@@ -347,7 +347,6 @@ const std::map<uint8_t, std::shared_ptr<item::Item>>& ParsedServerAgentCharacter
 }
 
 void parseItem(item::ItemEquipment &item, StreamUtility &stream) {
-  std::cout << "Parsing Item Equipment\n";
   item.optLevel = stream.Read<uint8_t>();
   item.variance = stream.Read<uint64_t>();
   item.durability = stream.Read<uint32_t>();
@@ -551,73 +550,46 @@ item::Item* newItemByTypeData(const pk2::media::Item &item) {
   return nullptr;
 }
 
-ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::media::ItemData &itemData) : ParsedPacket(packet) {
+ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::media::ItemData &itemData, const pk2::media::SkillData &skillData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   uint32_t serverTime = stream.Read<uint32_t>();
-  std::cout << "serverTime: " << serverTime << '\n';
   refObjId_ = stream.Read<uint32_t>();
-  std::cout << "refObjId: " << refObjId_ << '\n';
   uint8_t scale = stream.Read<uint8_t>();
-  std::cout << "scale: " << (int)scale << '\n';
   uint8_t curLevel = stream.Read<uint8_t>();
-  std::cout << "curLevel: " << (int)curLevel << '\n';
   uint8_t maxLevel = stream.Read<uint8_t>();
-  std::cout << "maxLevel: " << (int)maxLevel << '\n';
   uint64_t expOffset = stream.Read<uint64_t>();
-  std::cout << "expOffset: " << expOffset << '\n';
   uint32_t sExpOffset = stream.Read<uint32_t>();
-  std::cout << "sExpOffset: " << sExpOffset << '\n';
   uint64_t remainGold = stream.Read<uint64_t>();
-  std::cout << "remainGold: " << remainGold << '\n';
   uint32_t remainSkillPoint = stream.Read<uint32_t>();
-  std::cout << "remainSkillPoint: " << remainSkillPoint << '\n';
   uint16_t remainStatPoint = stream.Read<uint16_t>();
-  std::cout << "remainStatPoint: " << remainStatPoint << '\n';
   uint8_t remainHwanCount = stream.Read<uint8_t>();
-  std::cout << "remainHwanCount: " << (int)remainHwanCount << '\n';
   uint32_t gatheredExpPoint = stream.Read<uint32_t>();
-  std::cout << "gatheredExpPoint: " << gatheredExpPoint << '\n';
   hp_ = stream.Read<uint32_t>();
-  std::cout << "hp_: " << hp_ << '\n';
   mp_ = stream.Read<uint32_t>();
-  std::cout << "mp_: " << mp_ << '\n';
   uint8_t autoInverstExp = stream.Read<uint8_t>();
-  std::cout << "autoInverstExp: " << (int)autoInverstExp << '\n';
   uint8_t dailyPK = stream.Read<uint8_t>();
-  std::cout << "dailyPK: " << (int)dailyPK << '\n';
   uint16_t totalPK = stream.Read<uint16_t>();
-  std::cout << "totalPK: " << totalPK << '\n';
   uint32_t pKPenaltyPoint = stream.Read<uint32_t>();
-  std::cout << "pKPenaltyPoint: " << pKPenaltyPoint << '\n';
   uint8_t hwanLevel = stream.Read<uint8_t>();
-  std::cout << "hwanLevel: " << (int)hwanLevel << '\n';
   uint8_t freePVP = stream.Read<uint8_t>(); // 0 = None, 1 = Red, 2 = Gray, 3 = Blue, 4 = White, 5 = Gold
-  std::cout << "freePVP: " << (int)freePVP << '\n';
 
   //=====================================================================================
   //===================================== Inventory =====================================
   //=====================================================================================
 
   inventorySize_ = stream.Read<uint8_t>();
-  std::cout << "inventorySize: " << (int)inventorySize_ << '\n';
 
   uint8_t inventoryItemCount = stream.Read<uint8_t>();
-  std::cout << "inventoryItemCount: " << (int)inventoryItemCount << '\n';
 
   for (int itemNum=0; itemNum<inventoryItemCount; ++itemNum) {
     uint8_t slotNum = stream.Read<uint8_t>();
     auto rentInfo = parseRentInfo(stream);
 
     uint32_t refItemId = stream.Read<uint32_t>();
-    std::cout << "Item " << refItemId << " in slot " << (int)slotNum << ", with rentType: " << rentInfo.rentType << '\n';
     if (!itemData.haveItemWithId(refItemId)) {
       throw std::runtime_error("Unable to parse packet. Encountered an item (id:"+std::to_string(refItemId)+") for which we have no data on.");
     }
     const pk2::media::Item &item = itemData.getItemById(refItemId);
-    std::cout << "typeId1: " << (int)item.typeId1 << ", ";
-    std::cout << "typeId2: " << (int)item.typeId2 << ", ";
-    std::cout << "typeId3: " << (int)item.typeId3 << ", ";
-    std::cout << "typeId4: " << (int)item.typeId4 << '\n';
 
     item::Item *parsedItem = newItemByTypeData(item);
     if (parsedItem == nullptr) {
@@ -629,193 +601,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
 
     parseItem(parsedItem, stream);
 
-    item::print(parsedItem);
-
-    /* if (item.typeId1 == 3) {
-      if (item.typeId2 == 1) {
-        // CGItemEquip
-        parsedItem = parseItemEquipment(stream);
-      } else if (item.typeId2 == 2) {
-        if (item.typeId3 == 1) {                                
-          // CGItemCOSSummoner
-          if (item.typeId4 == 2) {
-            parsedItem = parseItemCosAbilitySummoner(stream);
-          } else {
-            parsedItem = parseItemCosGrowthSummoner(stream);
-          }
-        } else if (item.typeId3 == 2) {
-          // CGItemMonsterCapsule (rogue mask)
-          parsedItem = parseItemMonsterCapsule(stream);
-        } else if (item.typeId3 == 3) {
-          // CGItemStorage
-          parsedItem = parseItemStorage(stream);
-        }
-      } else if (item.typeId2 == 3) {
-        // CGItemExpendable
-        if (item.typeId3 == 11) {
-          if (item.typeId4 == 1 || item.typeId4 == 2) {
-            // MAGICSTONE, ATTRSTONE
-            parsedItem = parseItemStone(stream);
-          } else {
-            // Other expendable
-            parsedItem = parseItemExpendable(stream);
-          }
-        } else if (item.typeId3 == 14 && item.typeId4 == 2) {
-          // Magic pop
-          parsedItem = parseItemMagicPop(stream);
-        } else {
-          // Other expendable
-          parsedItem = parseItemExpendable(stream);
-        }
-      }
-    }
-
-    // Set item's refItemId
-    // TODO: Improve
-    if (std::holds_alternative<item::ItemEquipment>(parsedItem)) {
-      auto &specificItem = std::get<item::ItemEquipment>(parsedItem);
-      specificItem.refItemId = refItemId;
-      specificItem.itemInfo = &item;
-      item::print(specificItem);
-      std::cout << '\n';
-    } else if (std::holds_alternative<item::ItemCosGrowthSummoner>(parsedItem)) {
-      auto &specificItem = std::get<item::ItemCosGrowthSummoner>(parsedItem);
-      specificItem.refItemId = refItemId;
-      specificItem.itemInfo = &item;
-      item::print(specificItem);
-      std::cout << '\n';
-    } else if (std::holds_alternative<item::ItemCosAbilitySummoner>(parsedItem)) {
-      auto &specificItem = std::get<item::ItemCosAbilitySummoner>(parsedItem);
-      specificItem.refItemId = refItemId;
-      specificItem.itemInfo = &item;
-      item::print(specificItem);
-      std::cout << '\n';
-    } else if (std::holds_alternative<item::ItemMonsterCapsule>(parsedItem)) {
-      auto &specificItem = std::get<item::ItemMonsterCapsule>(parsedItem);
-      specificItem.refItemId = refItemId;
-      specificItem.itemInfo = &item;
-      item::print(specificItem);
-      std::cout << '\n';
-    } else if (std::holds_alternative<item::ItemStorage>(parsedItem)) {
-      auto &specificItem = std::get<item::ItemStorage>(parsedItem);
-      specificItem.refItemId = refItemId;
-      specificItem.itemInfo = &item;
-      item::print(specificItem);
-      std::cout << '\n';
-    } else if (std::holds_alternative<item::ItemExpendable>(parsedItem)) {
-      auto &specificItem = std::get<item::ItemExpendable>(parsedItem);
-      specificItem.refItemId = refItemId;
-      specificItem.itemInfo = &item;
-      item::print(specificItem);
-      std::cout << '\n';
-    } else if (std::holds_alternative<item::ItemStone>(parsedItem)) {
-      auto &specificItem = std::get<item::ItemStone>(parsedItem);
-      specificItem.refItemId = refItemId;
-      specificItem.itemInfo = &item;
-      item::print(specificItem);
-      std::cout << '\n';
-    } else if (std::holds_alternative<item::ItemMagicPop>(parsedItem)) {
-      auto &specificItem = std::get<item::ItemMagicPop>(parsedItem);
-      specificItem.refItemId = refItemId;
-      specificItem.itemInfo = &item;
-      item::print(specificItem);
-      std::cout << '\n';
-    } */
-
     inventoryItemMap_.insert(std::pair<uint8_t, std::shared_ptr<item::Item>>(slotNum, parsedItem));
-
-    /*if (item.typeId1 == 3) {
-      std::cout << "item.typeId1 == 3\n";
-      // CGItem
-      // ITEM_
-      if (item.typeId2 == 1) {
-        std::cout << "item.typeId2 == 1\n";
-        // CGItemEquip
-        // ITEM_C
-H        // ITEM_EU
-        // AVATAR_
-        uint8_t optLevel = stream.Read<uint8_t>();
-        uint64_t variance = stream.Read<uint64_t>();
-        uint32_t durability = stream.Read<uint32_t>(); // "Data"
-        uint8_t magParamNum = stream.Read<uint8_t>();
-
-        for (int paramIndex=0; paramIndex<magParamNum; ++paramIndex) {
-          uint32_t type = stream.Read<uint32_t>();
-          uint32_t value = stream.Read<uint32_t>();
-        }
-        
-        uint8_t bindingOptionType1 = stream.Read<uint8_t>(); // 1 = Socket
-        uint8_t bindingOptionCount1 = stream.Read<uint8_t>();
-        for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount1; ++bindingOptionIndex) {
-          uint8_t slot = stream.Read<uint8_t>();
-          uint32_t id = stream.Read<uint32_t>();
-          uint32_t nParam1 = stream.Read<uint32_t>();
-        }
-        
-        uint8_t bindingOptionType2 = stream.Read<uint8_t>(); // 2 = Advanced elixir
-        uint8_t bindingOptionCount2 = stream.Read<uint8_t>();
-        for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount2; ++bindingOptionIndex) {
-          uint8_t slot = stream.Read<uint8_t>();
-          uint32_t id = stream.Read<uint32_t>();
-          uint32_t optValue = stream.Read<uint32_t>();
-        }
-      } else if (item.typeId2 == 2) {
-        // CGItemContainer
-        if (item.typeId3 == 1) {                                
-          // CGItemCOSSummoner
-          // ITEM_COS_P
-          uint8_t lifeState = stream.Read<uint8_t>(); // 1=inactive, 2=summoned, 3=active, 4=dead
-          if (lifeState == 1) { // "Embryo"/inactive
-            // Nothing to read
-          } else {
-            uint32_t refObjID = stream.Read<uint32_t>();
-            uint16_t nameLength = stream.Read<uint16_t>();
-            std::string name = stream.Read_Ascii(nameLength);
-            if (item.typeId4 == 2) {
-              //ITEM_COS_P (Ability)
-              uint32_t secondsToRentEndTime = stream.Read<uint32_t>();
-            }
-            uint8_t timedJobCount = stream.Read<uint8_t>();
-            for (int jobNum=0; jobNum<timedJobCount; ++jobNum) {
-              uint8_t category = stream.Read<uint8_t>();
-              uint32_t jobId = stream.Read<uint32_t>(); // category3 = RefSkillId, category5 = RefItemId
-              uint32_t timeToKeep = stream.Read<uint32_t>();
-              if (category == 5) {
-                uint32_t data1 = stream.Read<uint32_t>();
-                uint8_t data2 = stream.Read<uint8_t>();
-              }
-            }
-          }
-        } else if (item.typeId3 == 2) {
-          // CGItemMonsterCapsule (rogue mask)
-          // ITEM_ETC_TRANS_MONSTER
-          uint32_t refObjID = stream.Read<uint32_t>();
-        } else if (item.typeId3 == 3) {
-          // CGItemStorage
-          // MAGIC_CUBE
-          uint32_t quantity = stream.Read<uint32_t>(); // Do not confuse with StackCount, this indicates the amount of elixirs in the cube
-        }
-      } else if (item.typeId2 == 3) {
-        // CGItemExpendable
-        // ITEM_ETC
-        uint16_t stackCount = stream.Read<uint16_t>();
-        if (item.typeId3 == 11) {
-          if (item.typeId4 == 1 || item.typeId4 == 2) {
-            // MAGICSTONE, ATTRSTONE
-            uint8_t attributeAssimilationProbability = stream.Read<uint8_t>(); // stored in _Items.OptLevel on the server side
-          }
-        } else if (item.typeId3 == 14 && item.typeId4 == 2) {
-          // Magic pop
-          // ITEM_MALL_GACHA_CARD_WIN
-          // ITEM_MALL_GACHA_CARD_LOSE
-          uint8_t magParamCount = stream.Read<uint8_t>();
-          for (int paramIndex=0; paramIndex<magParamCount; ++paramIndex) {
-              uint32_t type = stream.Read<uint32_t>();
-              uint32_t value = stream.Read<uint32_t>();
-          }
-        }
-      }
-    }*/
   }
 
   //=====================================================================================
@@ -824,8 +610,6 @@ H        // ITEM_EU
 
   uint8_t avatarInventorySize = stream.Read<uint8_t>();
   uint8_t avatarItemCount = stream.Read<uint8_t>();
-  std::cout << "avatarInventorySize: " << (int)avatarInventorySize << ", ";
-  std::cout << "avatarItemCount: " << (int)avatarItemCount << '\n';
 
   for (int i=0; i<avatarItemCount; ++i) {
     uint8_t slotNum = stream.Read<uint8_t>();
@@ -849,15 +633,10 @@ H        // ITEM_EU
     }
 
     uint32_t refItemId = stream.Read<uint32_t>();
-    std::cout << "Avatar " << refItemId << " in slot " << (int)slotNum << ", with rentType: " << rentType << '\n';
     if (!itemData.haveItemWithId(refItemId)) {
       throw std::runtime_error("Unable to parse packet. Encountered an item (id:"+std::to_string(refItemId)+") for which we have no data on.");
     }
     const pk2::media::Item &item = itemData.getItemById(refItemId);
-    std::cout << "typeId1: " << (int)item.typeId1 << ", ";
-    std::cout << "typeId2: " << (int)item.typeId2 << ", ";
-    std::cout << "typeId3: " << (int)item.typeId3 << ", ";
-    std::cout << "typeId4: " << (int)item.typeId4 << '\n';
       
     if (item.typeId1 == 3) {
       // ITEM_
@@ -867,32 +646,6 @@ H        // ITEM_EU
         // AVATAR_
         item::ItemEquipment parsedItem;
         parseItem(parsedItem, stream);
-        // item::ItemEquipment avatarItem = parseItemEquipment(stream);
-        // uint8_t optLevel = stream.Read<uint8_t>();
-        // uint64_t variance = stream.Read<uint64_t>();
-        // uint32_t durability = stream.Read<uint32_t>(); //"Data"
-        // uint8_t magParamNum = stream.Read<uint8_t>();
-
-        // for (int paramIndex=0; paramIndex<magParamNum; ++paramIndex) {
-        //   uint32_t type = stream.Read<uint32_t>();
-        //   uint32_t value = stream.Read<uint32_t>();
-        // }
-        
-        // uint8_t bindingOptionType1 = stream.Read<uint8_t>(); // 1 = Socket
-        // uint8_t bindingOptionCount1 = stream.Read<uint8_t>();
-        // for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount1; ++bindingOptionIndex) {
-        //   uint8_t slot = stream.Read<uint8_t>();
-        //   uint32_t id = stream.Read<uint32_t>();
-        //   uint32_t nParam1 = stream.Read<uint32_t>();
-        // }
-        
-        // uint8_t bindingOptionType2 = stream.Read<uint8_t>(); // 2 = Advanced elixir
-        // uint8_t bindingOptionCount2 = stream.Read<uint8_t>();
-        // for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount2; ++bindingOptionIndex) {
-        //   uint8_t slot = stream.Read<uint8_t>();
-        //   uint32_t id = stream.Read<uint32_t>();
-        //   uint32_t optValue = stream.Read<uint32_t>();
-        // }        
       }
     }
   }
@@ -907,7 +660,6 @@ H        // ITEM_EU
   while (hasNextMastery == 1) {
     uint32_t id = stream.Read<uint32_t>();
     uint8_t level = stream.Read<uint8_t>();
-    std::cout << "Mastery (id:" << id << ") is level " << (int)level << '\n';
     hasNextMastery = stream.Read<uint8_t>();
   }
 
@@ -918,51 +670,37 @@ H        // ITEM_EU
   //=====================================================================================
 
   uint8_t hasNextSkill = stream.Read<uint8_t>();
-  std::cout << "Skills: [";
   while (hasNextSkill == 1) {
     uint32_t id = stream.Read<uint32_t>();
     uint8_t enabled = stream.Read<uint8_t>();
-
-    if (enabled != 0) {
-      std::cout << id << ',';
-    }
     hasNextSkill = stream.Read<uint8_t>();
   }
-  std::cout << "]\n";
 
   //=====================================================================================
   //====================================== Quests =======================================
   //=====================================================================================
 
   uint16_t completedQuestCount = stream.Read<uint16_t>();
-  std::cout << completedQuestCount << " completed quest(s): [";
 
   for (int i=0; i<completedQuestCount; ++i) {
     uint32_t quest = stream.Read<uint32_t>();
-    std::cout << quest << ',';
   }
-  std::cout << "]\n";
 
   uint8_t activeQuestCount = stream.Read<uint8_t>();
-  std::cout << (int)activeQuestCount << " active quest(s): [\n";
 
   for (int i=0; i<activeQuestCount; ++i) {
     uint32_t refQuestID = stream.Read<uint32_t>();
     uint8_t achivementCount = stream.Read<uint8_t>();
     uint8_t requiresAutoShareParty = stream.Read<uint8_t>();
     uint8_t type = stream.Read<uint8_t>();
-    std::cout << "  (" << refQuestID << ',' << (int)type << ')';
 
     if (type == 28) {
       uint32_t remainingTime = stream.Read<uint32_t>();
-      std::cout << ", remaining time:" << remainingTime;
     }
     uint8_t questStatus = stream.Read<uint8_t>();
-    std::cout << ", status:" << (int)questStatus;
     
     if (type != 8) {
       uint8_t objectiveCount = stream.Read<uint8_t>();
-      std::cout << ", objective count:" << (int)objectiveCount;
 
       for (int j=0; j<objectiveCount; ++j) {
         uint8_t objectiveId = stream.Read<uint8_t>();
@@ -983,9 +721,7 @@ H        // ITEM_EU
         uint32_t refObjID = stream.Read<uint32_t>();
       }
     }
-    std::cout << '\n';
   }
-  std::cout << "]\n";
 
   uint8_t unknownByte2 = stream.Read<uint8_t>(); // "Structure changes!!!"
 
@@ -994,20 +730,14 @@ H        // ITEM_EU
   //=====================================================================================
 
   uint32_t collectionBookStartedThemeCount = stream.Read<uint32_t>();
-  std::cout << "collectionBookStartedThemeCount: " << collectionBookStartedThemeCount << " [";
 
   for (uint32_t i=0; i<collectionBookStartedThemeCount; ++i) {
     uint32_t themeIndex = stream.Read<uint32_t>();
     uint32_t themeStartedDateTime = stream.Read<uint32_t>(); // SROTimeStamp
     uint32_t themePages = stream.Read<uint32_t>();
-    std::cout << "  themeIndex: " << themeIndex;
-    std::cout << ", themeStartedDateTime: " << themeStartedDateTime;
-    std::cout << ", themePages: " << themePages << '\n';
   }
-  std::cout << "]\n";
   
   entityUniqueId_ = stream.Read<uint32_t>();
-  std::cout << "entityUniqueId_: " << entityUniqueId_ << '\n';
 
   //=====================================================================================
   //===================================== Position ======================================
@@ -1019,11 +749,6 @@ H        // ITEM_EU
   float posY = stream.Read<float>();
   float posZ = stream.Read<float>();
   uint16_t angle = stream.Read<uint16_t>();
-  std::cout << "regionId: " << regionId << '\n';
-  std::cout << "posX: " << posX << '\n';
-  std::cout << "posY: " << posY << '\n';
-  std::cout << "posZ: " << posZ << '\n';
-  std::cout << "angle: " << angle << '\n';
 
   //=====================================================================================
   //===================================== Movement ======================================
@@ -1031,35 +756,24 @@ H        // ITEM_EU
 
   uint8_t hasDestination = stream.Read<uint8_t>();
   uint8_t movementType = stream.Read<uint8_t>();
-  std::cout << "hasDestination: " << (int)hasDestination << '\n';
-  std::cout << "movementType: " << (int)movementType << '\n';
 
   if (hasDestination) {
     uint16_t destinationRegion = stream.Read<uint16_t>();
-    std::cout << "destinationRegion: " << (int)destinationRegion << '\n';
 
     if (regionId < std::numeric_limits<uint16_t>::max()) {
       // World
       uint16_t destinationX = stream.Read<uint16_t>();
-      std::cout << "destinationX: " << (int)destinationX << '\n';
       uint16_t destinationY = stream.Read<uint16_t>();
-      std::cout << "destinationY: " << (int)destinationY << '\n';
       uint16_t destinationZ = stream.Read<uint16_t>();
-      std::cout << "destinationZ: " << (int)destinationZ << '\n';
     } else {
       // Dungeon
       uint32_t destinationOffsetX = stream.Read<uint32_t>();
-      std::cout << "destinationOffsetX: " << (int)destinationOffsetX << '\n';
       uint32_t destinationOffsetY = stream.Read<uint32_t>();
-      std::cout << "destinationOffsetY: " << (int)destinationOffsetY << '\n';
       uint32_t destinationOffsetZ = stream.Read<uint32_t>();
-      std::cout << "destinationOffsetZ: " << (int)destinationOffsetZ << '\n';
     }
   } else {
     uint8_t source = stream.Read<uint8_t>(); // 0 = Spinning, 1 = Sky-/Key-walking
-    std::cout << "source: " << (int)source << '\n';
     uint16_t angle = stream.Read<uint16_t>(); // Represents the new angle, character is looking at
-    std::cout << "angle: " << (int)angle << '\n';
   }
 
   //=====================================================================================
@@ -1067,100 +781,558 @@ H        // ITEM_EU
   //=====================================================================================
 
   uint8_t lifeState = stream.Read<uint8_t>(); // 1 = Alive, 2 = Dead
-  std::cout << "lifeState: " << (int)lifeState << '\n';
   uint8_t unkByte0 = stream.Read<uint8_t>();
-  std::cout << "unkByte0: " << (int)unkByte0 << '\n';
   uint8_t motionState = stream.Read<uint8_t>(); // 0 = None, 2 = Walking, 3 = Running, 4 = Sitting
-  std::cout << "motionState: " << (int)motionState << '\n';
   uint8_t status = stream.Read<uint8_t>(); // 0 = None, 1 = Hwan, 2 = Untouchable, 3 = GameMasterInvincible, 5 = GameMasterInvisible, 5 = ?, 6 = Stealth, 7 = Invisible
-  std::cout << "status: " << (int)status << '\n';
   float walkSpeed = stream.Read<float>();
-  std::cout << "walkSpeed: " << walkSpeed << '\n';
   float runSpeed = stream.Read<float>();
-  std::cout << "runSpeed: " << runSpeed << '\n';
   float hwanSpeed = stream.Read<float>();
-  std::cout << "hwanSpeed: " << hwanSpeed << '\n';
   uint8_t buffCount = stream.Read<uint8_t>();
-  std::cout << "buffCount: " << (int)buffCount << '\n';
   for (int i=0; i<buffCount; ++i) {
     uint32_t refSkillId = stream.Read<uint32_t>();
     uint32_t duration = stream.Read<uint32_t>();
-    std::cout << "Buff #" << i << ", refSkillId: " << refSkillId << ", duration: " << duration << '\n';
-    // TODO
-    // if(skill.Params.Contains(1701213281)) {
-    //   //1701213281 -> atfe -> "auto transfer effect" like Recovery Division
-    //   uint8_t isCreator = stream.Read<uint8_t>();
-    // }
+    if (!skillData.haveSkillWithId(refSkillId)) {
+      throw std::runtime_error("Unable to parse packet. Encountered an buff (id:"+std::to_string(refSkillId)+") for which we have no data on.");
+    }
+    const auto &skill = skillData.getSkillById(refSkillId);
+    if (skill.isEfta()) {
+      uint8_t creatorFlag = stream.Read<uint8_t>(); // 1=Creator, 2=Other
+    }
   }
 
   uint16_t nameLength = stream.Read<uint16_t>();
   std::string name = stream.Read_Ascii(nameLength);
-  std::cout << "name: \"" << name << "\"\n";
   uint16_t jobNameLength = stream.Read<uint16_t>();
   std::string jobName = stream.Read_Ascii(jobNameLength);
-  std::cout << "jobName: \"" << jobName << "\"\n";
   uint8_t jobType = stream.Read<uint8_t>();
-  std::cout << "jobType: " << (int)jobType << '\n';
   uint8_t jobLevel = stream.Read<uint8_t>();
-  std::cout << "jobLevel: " << (int)jobLevel << '\n';
   uint32_t jobExp = stream.Read<uint32_t>();
-  std::cout << "jobExp: " << jobExp << '\n';
   uint32_t jobContribution = stream.Read<uint32_t>();
-  std::cout << "jobContribution: " << jobContribution << '\n';
   uint32_t jobReward = stream.Read<uint32_t>();
-  std::cout << "jobReward: " << jobReward << '\n';
   uint8_t pvpState = stream.Read<uint8_t>(); // 0 = White, 1 = Purple, 2 = Red
-  std::cout << "pvpState: " << (int)pvpState << '\n';
   uint8_t transportFlag = stream.Read<uint8_t>();
-  std::cout << "transportFlag: " << (int)transportFlag << '\n';
   uint8_t inCombat = stream.Read<uint8_t>();
-  std::cout << "inCombat: " << (int)inCombat << '\n';
 
   if (transportFlag == 1) {
     uint32_t transportId = stream.Read<uint32_t>();
   }
 
   uint8_t pvpFlag = stream.Read<uint8_t>(); // 0 = Red Side, 1 = Blue Side, 0xFF = None
-  std::cout << "pvpFlag: " << (int)pvpFlag << '\n';
   uint64_t guideFlag = stream.Read<uint64_t>();
-  std::cout << "guideFlag: " << guideFlag << '\n';
   uint32_t jId = stream.Read<uint32_t>();
-  std::cout << "jId: " << jId << '\n';
   uint8_t gmFlag = stream.Read<uint8_t>();
-  std::cout << "gmFlag: " << (int)gmFlag << '\n';
 
   uint8_t activationFlag = stream.Read<uint8_t>(); // ConfigType:0 --> (0 = Not activated, 7 = activated)
-  std::cout << "activationFlag: " << (int)activationFlag << '\n';
   uint8_t hotkeyCount = stream.Read<uint8_t>(); // ConfigType:1
-  std::cout << "hotkeyCount: " << (int)hotkeyCount << '\n';
   
   for (int i=0; i<hotkeyCount; ++i) {
     uint8_t slotSeq = stream.Read<uint8_t>();
     uint8_t slotContentType = stream.Read<uint8_t>();
     uint32_t slotData = stream.Read<uint32_t>();
-    std::cout << "Hotkey #" << i << ", slotSeq: " << (int)slotSeq << ", slotContentType: " << (int)slotContentType << ", slotData: " << slotData << '\n';
   }
 
   uint16_t autoHPConfig = stream.Read<uint16_t>(); // ConfigType:11
-  std::cout << "autoHPConfig: " << autoHPConfig << '\n';
   uint16_t autoMPConfig = stream.Read<uint16_t>(); // ConfigType:12
-  std::cout << "autoMPConfig: " << autoMPConfig << '\n';
   uint16_t autoUniversalConfig = stream.Read<uint16_t>(); // ConfigType:13
-  std::cout << "autoUniversalConfig: " << autoUniversalConfig << '\n';
   uint8_t autoPotionDelay = stream.Read<uint8_t>(); // ConfigType:14
-  std::cout << "autoPotionDelay: " << (int)autoPotionDelay << '\n';
 
   uint8_t blockedWhisperCount = stream.Read<uint8_t>();
-  std::cout << "blockedWhisperCount: " << (int)blockedWhisperCount << '\n';
 
   for (int i=0; i<blockedWhisperCount; ++i) {
     uint16_t targetLength = stream.Read<uint16_t>();
     std::string target = stream.Read_Ascii(targetLength);
-    std::cout << "Blocked whisper #" << i << "\"" << target << "\"\n";
   }
 
   uint32_t unknownShort0 = stream.Read<uint32_t>(); //Structure changes!!!
   uint8_t unknownByte3 = stream.Read<uint8_t>(); //Structure changes!!!
+}
+
+//=========================================================================================================================================================
+
+std::shared_ptr<Object> newObjectFromId(uint32_t refObjId, const pk2::media::CharacterData &characterData, const pk2::media::ItemData &itemData, const pk2::media::TeleportData &teleportData) {
+  if (characterData.haveCharacterWithId(refObjId) &&
+      characterData.getCharacterById(refObjId).typeId1 == 1) {
+    const auto &character = characterData.getCharacterById(refObjId);
+    if (character.typeId2 == 1) {
+      auto ptr = std::make_shared<PlayerCharacter>();
+      ptr->refObjId = refObjId;
+      ptr->typeId1 = character.typeId1;
+      ptr->typeId2 = character.typeId2;
+      ptr->typeId3 = character.typeId3;
+      ptr->typeId4 = character.typeId4;
+      return ptr;
+    } else if (character.typeId2 == 2 && character.typeId3 == 1) {
+      auto ptr = std::make_shared<Monster>();
+      ptr->refObjId = refObjId;
+      ptr->typeId1 = character.typeId1;
+      ptr->typeId2 = character.typeId2;
+      ptr->typeId3 = character.typeId3;
+      ptr->typeId4 = character.typeId4;
+      return ptr;
+    } else {
+      auto ptr = std::make_shared<NonplayerCharacter>();
+      ptr->refObjId = refObjId;
+      ptr->typeId1 = character.typeId1;
+      ptr->typeId2 = character.typeId2;
+      ptr->typeId3 = character.typeId3;
+      ptr->typeId4 = character.typeId4;
+      return ptr;
+    }
+  } else if (itemData.haveItemWithId(refObjId) && itemData.getItemById(refObjId).typeId1 == 3) {
+    const auto &item = itemData.getItemById(refObjId);
+    auto ptr = std::make_shared<Item>();
+    ptr->refObjId = refObjId;
+    ptr->typeId1 = item.typeId1;
+    ptr->typeId2 = item.typeId2;
+    ptr->typeId3 = item.typeId3;
+    ptr->typeId4 = item.typeId4;
+    return ptr;
+  } else if (teleportData.haveTeleportWithId(refObjId) && teleportData.getTeleportById(refObjId).typeId1 == 4) {
+    const auto &portal = teleportData.getTeleportById(refObjId);
+    auto ptr = std::make_shared<Portal>();
+    ptr->refObjId = refObjId;
+    ptr->typeId1 = portal.typeId1;
+    ptr->typeId2 = portal.typeId2;
+    ptr->typeId3 = portal.typeId3;
+    ptr->typeId4 = portal.typeId4;
+    return ptr;
+  }
+}
+
+std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
+                                   const pk2::media::CharacterData &characterData,
+                                   const pk2::media::ItemData &itemData,
+                                   const pk2::media::SkillData &skillData,
+                                   const pk2::media::TeleportData &teleportData) {
+  const uint32_t refObjId = stream.Read<uint32_t>();
+  std::shared_ptr<Object> obj = newObjectFromId(refObjId, characterData, itemData, teleportData);
+  if (characterData.haveCharacterWithId(obj->refObjId) && characterData.getCharacterById(obj->refObjId).typeId1 == 1) {
+    const auto &character = characterData.getCharacterById(obj->refObjId);
+    Character *characterPtr = dynamic_cast<Character*>(obj.get());
+    if (characterPtr == nullptr) {
+      throw std::runtime_error("parseSpawn, have a character, but the obj pointer cannot be cast to a Character");
+    }
+    bool characterHasJobEquipmentInInventory = false; // TODO: Create better mechanism
+    // BIONIC:
+    //  CHARACTER
+    //  NPC
+    //   NPC_FORTRESS_STRUCT
+    //   NPC_MOB
+    //   NPC_COS
+    //   NPC_FORTRESS_COS   
+    if (character.typeId2 == 1) {
+      // CHARACTER
+      uint8_t scale = stream.Read<uint8_t>();
+      uint8_t hwanLevel = stream.Read<uint8_t>();
+      uint8_t pvpCape = stream.Read<uint8_t>();         //0 = None, 1 = Red, 2 = Gray, 3 = Blue, 4 = White, 5 = Orange
+      uint8_t autoInverstExp = stream.Read<uint8_t>();  //1 = Beginner Icon, 2 = Helpful, 3 = Beginner & Helpful
+      
+      // Inventory
+      uint8_t inventorySize = stream.Read<uint8_t>();
+      uint8_t inventoryItemCount = stream.Read<uint8_t>();
+      for (int i=0; i<inventoryItemCount; ++i) {
+        uint32_t itemRefId = stream.Read<uint32_t>();
+        if (!itemData.haveItemWithId(itemRefId)) {
+          throw std::runtime_error("Parsing ServerAgentGroupSpawn, found item in character's inventory which we have no data on");
+        }
+        const auto &item = itemData.getItemById(itemRefId);
+        if (item.typeId1 == 3 && item.typeId2 == 1) {
+          uint8_t optLevel = stream.Read<uint8_t>();
+        }
+        if (item.typeId1 == 3 && item.typeId2 == 1 && item.typeId3 == 7 && item.typeId4 < 4) {
+          // TypeId4 values:
+          //  1,2,3 are normal job
+          //  3 Santa
+          //  4 Free PVP
+          //  6,7 new job
+          characterHasJobEquipmentInInventory = true;
+        }
+      }
+
+      // AvatarInventory
+      uint8_t avatarInventorySize = stream.Read<uint8_t>();
+      uint8_t avatarInventoryItemCount = stream.Read<uint8_t>();
+      for (int i=0; i<avatarInventoryItemCount; ++i) {
+        uint32_t itemRefId = stream.Read<uint32_t>();
+        if (!itemData.haveItemWithId(itemRefId)) {
+          throw std::runtime_error("Parsing ServerAgentGroupSpawn, found item in character's avatar inventory which we have no data on");
+        }
+        const auto &item = itemData.getItemById(itemRefId);
+        if (item.typeId1 == 3 && item.typeId2 == 1) {
+          uint8_t optLevel = stream.Read<uint8_t>();
+        }
+      }
+
+      // Mask
+      bool hasMask = stream.Read<uint8_t>();
+      if (hasMask) {
+        uint32_t maskRefObjId = stream.Read<uint32_t>();
+        if (!itemData.haveItemWithId(maskRefObjId)) {
+          throw std::runtime_error("Parsing ServerAgentGroupSpawn, found mask on character which we have no data on");
+        }
+        const auto &maskItem = itemData.getItemById(maskRefObjId);
+        if (maskItem.typeId1 == character.typeId1 &&
+            maskItem.typeId2 == character.typeId2) {
+          // Duplicate
+          uint8_t maskScale = stream.Read<uint8_t>();
+          uint8_t maskItemCount = stream.Read<uint8_t>();
+          for (int i=0; i<maskItemCount; ++i) {
+            uint32_t maskItemRefId = stream.Read<uint32_t>();
+          }
+        }
+      }
+    } else if(character.typeId2 == 2 && character.typeId3 == 5) {
+      //NPC_FORTRESS_STRUCT
+      uint32_t structureHp = stream.Read<uint32_t>();
+      uint32_t structureRefEventStructId = stream.Read<uint32_t>();
+      uint16_t structureState = stream.Read<uint16_t>();
+    }
+
+    characterPtr->gId = stream.Read<uint32_t>();
+
+    // Position
+    characterPtr->regionId = stream.Read<uint16_t>();
+    uint32_t x = stream.Read<uint32_t>(); // really a float
+    characterPtr->x = *reinterpret_cast<float*>(&x);
+    uint32_t y = stream.Read<uint32_t>(); // really a float
+    characterPtr->y = *reinterpret_cast<float*>(&y);
+    uint32_t z = stream.Read<uint32_t>(); // really a float
+    characterPtr->z = *reinterpret_cast<float*>(&z);
+    uint16_t angle = stream.Read<uint16_t>();
+
+    bool movementHasDestination = stream.Read<uint8_t>();
+    uint8_t movementType = stream.Read<uint8_t>();
+    if (movementHasDestination) {
+      // Mouse destination
+      uint16_t destinationRegionId = stream.Read<uint16_t>();
+      if (destinationRegionId & 0x8000) {
+        // Dungeon
+        uint32_t destinationOffsetX = stream.Read<uint32_t>();
+        uint32_t destinationOffsetY = stream.Read<uint32_t>();
+        uint32_t destinationOffsetZ = stream.Read<uint32_t>();
+      } else {
+        // World
+        uint16_t destinationOffsetX = stream.Read<uint16_t>();
+        uint16_t destinationOffsetY = stream.Read<uint16_t>();
+        uint16_t destinationOffsetZ = stream.Read<uint16_t>();
+      }
+    } else {
+      uint8_t movementSource = stream.Read<uint8_t>(); // 0=spinning, 1=FC_GO_FORWARD
+      uint16_t movementAngle = stream.Read<uint16_t>(); // Represents the new angle, character is looking at
+    }
+  
+    // State
+    uint8_t lifeState = stream.Read<uint8_t>(); // 1=Alive, 2=Dead
+    uint8_t unkByte0 = stream.Read<uint8_t>(); // Obsolete
+    uint8_t motionState = stream.Read<uint8_t>(); // 0=None, 2=Walking, 3=Running, 4=Sitting
+    uint8_t bodyState = stream.Read<uint8_t>(); // 0=None, 1=Hwan, 2=Untouchable, 3=GameMasterInvincible, 5=GameMasterInvisible, 6=Stealth, 7=Invisible
+    uint32_t walkSpeed = stream.Read<uint32_t>();
+    uint32_t runSpeed = stream.Read<uint32_t>();
+    uint32_t hwanSpeed = stream.Read<uint32_t>();
+
+    // Buffs
+    uint8_t buffCount = stream.Read<uint8_t>();
+    for (int i=0; i<buffCount; ++i) {
+      uint32_t skillRefId = stream.Read<uint32_t>();
+      uint32_t token = stream.Read<uint32_t>();
+      if (!skillData.haveSkillWithId(skillRefId)) {
+        throw std::runtime_error("Parsing ServerAgentGroupSpawn, found buff which we have no data on"); // TODO: Add skill id to error
+        // TODO: Also, I think we need to print this error when we catch the exception
+      }
+      const auto &skill = skillData.getSkillById(skillRefId);
+      if (skill.isEfta()) {
+        uint8_t creatorFlag = stream.Read<uint8_t>(); // 1=Creator, 2=Other
+      }
+    }
+
+    if (character.typeId2 == 1) {
+      // CHARACTER
+      PlayerCharacter *playerCharacterPtr = dynamic_cast<PlayerCharacter*>(obj.get());
+      if (playerCharacterPtr == nullptr) {
+        throw std::runtime_error("parseSpawn, have a player character, but the obj pointer cannot be cast to a PlayerCharacter");
+      }
+      uint16_t nameLength = stream.Read<uint16_t>();
+      playerCharacterPtr->name = stream.Read_Ascii(nameLength);
+      
+      uint8_t jobType = stream.Read<uint8_t>(); // 0=None, 1=Trader, 2=Tief, 3=Hunter
+      uint8_t jobLevel = stream.Read<uint8_t>();
+      uint8_t murderState = stream.Read<uint8_t>(); //0=White (Neutral), 1=Purple (Assaulter), 2=Red (Murder)
+      bool isRiding = stream.Read<uint8_t>();
+      bool inCombat = stream.Read<uint8_t>();
+      if(isRiding) {
+        uint32_t transportUniqueId = stream.Read<uint32_t>();
+      }
+      uint8_t scrollMode = stream.Read<uint8_t>(); // 0=None, 1=Return Scroll, 2=Bandit Return Scroll
+      uint8_t interactMode = stream.Read<uint8_t>(); //0=None 2=P2P, 4=P2N_TALK, 6=OPNMKT_DEAL
+      // exchange, talking to npc, stalling, etc
+      uint8_t unkByte4 = stream.Read<uint8_t>();
+
+      //Guild
+      uint16_t guildNameLength = stream.Read<uint16_t>();
+      std::string guildName = stream.Read_Ascii(guildNameLength);
+      
+      if (!characterHasJobEquipmentInInventory) {
+        uint32_t guildId = stream.Read<uint32_t>();
+        uint16_t guildMemberNicknameLength = stream.Read<uint16_t>();
+        std::string guildMemberNickname = stream.Read_Ascii(guildMemberNicknameLength);
+        uint32_t guildLastCrestRev = stream.Read<uint32_t>();
+        uint32_t unionId = stream.Read<uint32_t>();
+        uint32_t unionLastCrestRev = stream.Read<uint32_t>();
+        uint8_t guildIsFriendly = stream.Read<uint8_t>(); // 0 = Hostile, 1 = Friendly
+        uint8_t guildMemberSiegeAuthority = stream.Read<uint8_t>(); // See SiegeAuthority.cs
+      }
+
+      if (interactMode == 4) {
+        uint16_t stallNameLength = stream.Read<uint16_t>();
+        std::string stallName = stream.Read_Ascii(stallNameLength);
+        uint32_t stallDecorationRefId = stream.Read<uint32_t>();
+      }
+
+      uint8_t equipmentCooldown = stream.Read<uint8_t>(); // Yellow bar when equipping or unequipping
+      uint8_t pkFlag = stream.Read<uint8_t>();
+    } else if (character.typeId2 == 2) {
+      // NPC
+      uint8_t talkFlag = stream.Read<uint8_t>();
+      if (talkFlag == 2) {
+        uint8_t talkOptionCount = stream.Read<uint8_t>();
+        std::vector<uint8_t> talkOptions;
+        for (int i=0; i<talkOptionCount; ++i) {
+          talkOptions.emplace_back(stream.Read<uint8_t>());
+        }
+      }
+      
+      if (character.typeId3 == 1) {
+        // NPC_MOB
+        Monster *monsterPtr = dynamic_cast<Monster*>(obj.get());
+        if (monsterPtr == nullptr) {
+          throw std::runtime_error("parseSpawn, have a monster, but the obj pointer cannot be cast to a Monster");
+        }
+        monsterPtr->monsterRarity = stream.Read<uint8_t>();
+        if (character.typeId4 == 2 || character.typeId4 == 3) {
+          // NPC_MOB_THIEF, NPC_MOB_HUNTER
+          uint8_t appearance = stream.Read<uint8_t>();
+        }
+      } else if (character.typeId3 == 3) {
+        // NPC_COS
+        if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
+            character.typeId4 == 3 || // NPC_COS_P_GROWTH
+            character.typeId4 == 4 || // NPC_COS_P_ABILITY
+            character.typeId4 == 5 || // NPC_COS_GUILD
+            character.typeId4 == 6 || // NPC_COS_CAPTURED
+            character.typeId4 == 7 || // NPC_COS_QUEST
+            character.typeId4 == 8) { // NPC_COS_QUEST
+          if (character.typeId4 == 3 || character.typeId4 == 4) { // NPC_COS_P_GROWTH, NPC_COS_P_ABILITY
+            uint16_t nameLength = stream.Read<uint16_t>();
+            std::string name = stream.Read_Ascii(nameLength);
+          } else if (character.typeId4 == 5) { // NPC_COS_GUILD
+            uint16_t guildNameLength = stream.Read<uint16_t>();
+            std::string guildName = stream.Read_Ascii(guildNameLength);
+          }
+          
+          if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
+              character.typeId4 == 3 || // NPC_COS_P_GROWTH
+              character.typeId4 == 4 || // NPC_COS_P_ABILITY
+              character.typeId4 == 5 || // NPC_COS_GUILD
+              character.typeId4 == 6) { // NPC_COS_CAPTURED
+            uint16_t ownerNameLength = stream.Read<uint16_t>();
+            std::string ownerName = stream.Read_Ascii(ownerNameLength);
+                  
+            if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
+                character.typeId4 == 3 || // NPC_COS_P_GROWTH
+                character.typeId4 == 4 || // NPC_COS_P_ABILITY
+                character.typeId4 == 5) { // NPC_COS_GUILD
+              uint8_t ownerJobType = stream.Read<uint8_t>();
+                          
+              if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
+                  character.typeId4 == 3 || // NPC_COS_P_GROWTH
+                  character.typeId4 == 5) { // NPC_COS_GUILD
+                uint8_t ownerPvpState = stream.Read<uint8_t>();
+                if (character.typeId4 == 5) { //NPC_COS_GUILD
+                  uint32_t ownerRefId = stream.Read<uint32_t>();
+                }
+              }
+            }
+          }
+          uint32_t ownerUniqueId = stream.Read<uint32_t>();
+        }
+      } else if (character.typeId3 == 4) {
+        // GObjSiegeObject
+        // NPC_FORTRESS_COS
+        uint32_t guildId = stream.Read<uint32_t>();
+        uint16_t guildNameLength = stream.Read<uint16_t>();
+        std::string guildName = stream.Read_Ascii(guildNameLength);
+      }
+    }
+  } else if (itemData.haveItemWithId(obj->refObjId) && itemData.getItemById(obj->refObjId).typeId1 == 3) {
+    Item *itemPtr = dynamic_cast<Item*>(obj.get());
+    if (itemPtr == nullptr) {
+      throw std::runtime_error("parseSpawn, have an item, but the obj pointer cannot be cast to a Item");
+    }
+    const auto &item = itemData.getItemById(obj->refObjId);
+    // ITEM
+    //  ITEM_EQUIP
+    //  ITEM_ETC
+    //   ITEM_ETC_MONEY_GOLD
+    //   ITEM_ETC_TRADE
+    //   ITEM_ETC_QUEST
+    if (item.typeId2 == 1) {
+      // ITEM_EQUIP
+      uint8_t optLevel = stream.Read<uint8_t>();
+    } else if (item.typeId2 == 3) {
+      // ITEM_ETC
+      if (item.typeId3 == 5 && item.typeId4 == 0) {
+        // ITEM_ETC_MONEY_GOLD
+        uint32_t goldAmount = stream.Read<uint32_t>();
+      } else if (item.typeId3 == 8 || item.typeId4 == 9) {
+        // ITEM_ETC_TRADE
+        // ITEM_ETC_QUEST
+        uint16_t ownerNameLength = stream.Read<uint16_t>();
+        std::string ownerName = stream.Read_Ascii(ownerNameLength);
+      }
+    }
+    itemPtr->gId = stream.Read<uint32_t>();
+    itemPtr->regionId = stream.Read<uint16_t>();
+    uint32_t x = stream.Read<uint32_t>(); // Actually a float
+    itemPtr->x = *reinterpret_cast<float*>(&x);
+    uint32_t y = stream.Read<uint32_t>(); // Actually a float
+    itemPtr->y = *reinterpret_cast<float*>(&y);
+    uint32_t z = stream.Read<uint32_t>(); // Actually a float
+    itemPtr->z = *reinterpret_cast<float*>(&z);
+    uint16_t angle = stream.Read<uint16_t>();
+    bool hasOwner = stream.Read<uint8_t>();
+    if (hasOwner) {
+      uint32_t ownerJId = stream.Read<uint32_t>();
+    }
+    itemPtr->rarity = stream.Read<uint8_t>(); // Educated guess: 0=white, 1=blue, 2=sox
+  } else if (teleportData.haveTeleportWithId(obj->refObjId) && teleportData.getTeleportById(obj->refObjId).typeId1 == 4) {
+    Portal *portalPtr = dynamic_cast<Portal*>(obj.get());
+    if (portalPtr == nullptr) {
+      throw std::runtime_error("parseSpawn, have a portal, but the obj pointer cannot be cast to a Portal");
+    }
+    // PORTALS
+    //  STORE
+    //  INS_TELEPORTER
+    portalPtr->gId = stream.Read<uint32_t>();
+    portalPtr->regionId = stream.Read<uint16_t>();
+    uint32_t x = stream.Read<uint32_t>(); // Actually a float
+    portalPtr->x = *reinterpret_cast<float*>(&x);
+    uint32_t y = stream.Read<uint32_t>(); // Actually a float
+    portalPtr->y = *reinterpret_cast<float*>(&y);
+    uint32_t z = stream.Read<uint32_t>(); // Actually a float
+    portalPtr->z = *reinterpret_cast<float*>(&z);
+    uint16_t angle = stream.Read<uint16_t>();
+
+    uint8_t unkByte0 = stream.Read<uint8_t>();
+    uint8_t unkByte1 = stream.Read<uint8_t>();
+    uint8_t unkByte2 = stream.Read<uint8_t>();
+    portalPtr->unkByte3 = stream.Read<uint8_t>();
+
+    if (portalPtr->unkByte3 == 1) {
+      // Regular
+      uint32_t unkUInt0 = stream.Read<uint32_t>();
+      uint32_t unkUInt1 = stream.Read<uint32_t>();
+    } else if (portalPtr->unkByte3 == 6) {
+      // Dimension Hole
+      uint16_t ownerNameLength = stream.Read<uint16_t>();
+      std::string ownerName = stream.Read_Ascii(ownerNameLength);
+      uint32_t ownerUId = stream.Read<uint32_t>();
+    }
+
+    if (unkByte1 == 1) {
+      // STORE_EVENTZONE_DEFAULT
+      uint32_t unkUint2 = stream.Read<uint32_t>();
+      uint8_t unkByte4 = stream.Read<uint8_t>();
+    }
+  } else if (obj->refObjId == std::numeric_limits<uint32_t>::max()) {
+    std::cout << "EVENT_ZONE\n";
+    // EVENT_ZONE (Traps, Buffzones, ...)
+    uint16_t eventZoneTypeId = stream.Read<uint16_t>();
+    std::cout << " eventZoneTypeId:" << eventZoneTypeId << '\n';
+    uint32_t eventZoneRefSkillId = stream.Read<uint32_t>();
+    std::cout << " eventZoneRefSkillId:" << eventZoneRefSkillId << '\n';
+    uint32_t uniqueId = stream.Read<uint32_t>();
+    std::cout << " uniqueId:" << uniqueId << '\n';
+    uint16_t regionId = stream.Read<uint16_t>();
+    std::cout << " regionId:" << regionId << '\n';
+    uint32_t x = stream.Read<uint32_t>(); // Actually a float
+    std::cout << " x:" << *reinterpret_cast<float*>(&x) << '\n';
+    uint32_t y = stream.Read<uint32_t>(); // Actually a float
+    std::cout << " y:" << *reinterpret_cast<float*>(&y) << '\n';
+    uint32_t z = stream.Read<uint32_t>(); // Actually a float
+    std::cout << " z:" << *reinterpret_cast<float*>(&z) << '\n';
+    uint16_t angle = stream.Read<uint16_t>();
+    std::cout << " angle:" << angle << '\n';
+  }
+  return obj;
+}
+
+uint32_t parseDespawn(StreamUtility &stream) {
+  return stream.Read<uint32_t>();
+}
+
+ParsedServerAgentGroupSpawn::ParsedServerAgentGroupSpawn(const PacketContainer &packet,
+                                                         const pk2::media::CharacterData &characterData,
+                                                         const pk2::media::ItemData &itemData,
+                                                         const pk2::media::SkillData &skillData,
+                                                         const pk2::media::TeleportData &teleportData) : ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
+  // This data is originally from the begin packet (before the data packet)
+  groupSpawnType_ = static_cast<GroupSpawnType>(stream.Read<uint8_t>());
+  uint16_t groupSpawnAmount = stream.Read<uint16_t>();
+  if (groupSpawnType_ == GroupSpawnType::kSpawn) {
+    for (int spawnNum=0; spawnNum<groupSpawnAmount; ++spawnNum) {
+      objects_.emplace_back(parseSpawn(stream, characterData, itemData, skillData, teleportData));
+    }
+  } else if (groupSpawnType_ == GroupSpawnType::kDespawn) {
+    for (int despawnNum=0; despawnNum<groupSpawnAmount; ++despawnNum) {
+      despawns_.emplace_back(parseDespawn(stream));
+    }
+  }
+}
+
+GroupSpawnType ParsedServerAgentGroupSpawn::groupSpawnType() const {
+  return groupSpawnType_;
+}
+
+const std::vector<std::shared_ptr<Object>>& ParsedServerAgentGroupSpawn::objects() const {
+  return objects_;
+}
+
+const std::vector<uint32_t>& ParsedServerAgentGroupSpawn::despawns() const {
+  return despawns_;
+}
+
+//=========================================================================================================================================================
+
+ParsedServerAgentSpawn::ParsedServerAgentSpawn(const PacketContainer &packet,
+                                               const pk2::media::CharacterData &characterData,
+                                               const pk2::media::ItemData &itemData,
+                                               const pk2::media::SkillData &skillData,
+                                               const pk2::media::TeleportData &teleportData) : ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
+  object_ = parseSpawn(stream, characterData, itemData, skillData, teleportData);
+  if (object_->typeId1 == 1 || object_->typeId1 == 4) {
+    //BIONIC and STORE
+    uint8_t spawnType = stream.Read<uint8_t>(); // 1=COS_SUMMON, 3=SPAWN, 4=SPAWN_WALK
+  } else if (object_->typeId1 == 3) {
+    uint8_t dropSource = stream.Read<uint8_t>();
+    uint32_t dropperUniqueId = stream.Read<uint32_t>();
+  }
+}
+
+std::shared_ptr<Object> ParsedServerAgentSpawn::object() const {
+  return object_;
+}
+                         
+//=========================================================================================================================================================
+
+ParsedServerAgentDespawn::ParsedServerAgentDespawn(const PacketContainer &packet) : ParsedPacket(packet) {
+  StreamUtility stream = packet.data;
+  gId_ = parseDespawn(stream);
+}
+
+uint32_t ParsedServerAgentDespawn::gId() const {
+  return gId_;
 }
 
 //=========================================================================================================================================================
@@ -1407,103 +1579,106 @@ const std::string& ParsedClientChat::message() const {
 
 //=========================================================================================================================================================
 
-// ParsedClientItemMove::ParsedClientItemMove(const PacketContainer &packet) : ParsedPacket(packet) {
-//   std::cout << "ParsedClientItemMove\n";
-//   StreamUtility stream = packet.data;
-//   packet_enums::ItemMovementType itemMovementType = static_cast<packet_enums::ItemMovementType>(stream.Read<uint8_t>());
-//   if (itemMovementType == packet_enums::ItemMovementType::kWithinInventory) {
-//     std::cout << "kWithinInventory\n";
-//     uint8_t sourceSlot = stream.Read<uint8_t>();
-//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
-//     uint8_t destSlot = stream.Read<uint8_t>();
-//     std::cout << "destSlot: " << (int)destSlot << '\n';
-//     uint16_t quantity = stream.Read<uint16_t>();
-//     std::cout << "quantity: " << quantity << '\n';
-//   } else if (itemMovementType == packet_enums::ItemMovementType::kWithinStorage ||
-//              itemMovementType == packet_enums::ItemMovementType::kWithinGuildStorage) {
-//     std::cout << "kWithinStorage, kWithinGuildStorage\n";
-//     uint8_t sourceSlot = stream.Read<uint8_t>();
-//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
-//     uint8_t destSlot = stream.Read<uint8_t>();
-//     std::cout << "destSlot: " << (int)destSlot << '\n';
-//     uint16_t quantity = stream.Read<uint16_t>();
-//     std::cout << "quantity: " << quantity << '\n';
-//     uint32_t unk0 = stream.Read<uint32_t>();
-//     std::cout << "unk0: " << unk0 << '\n';
-//   } else if (itemMovementType == packet_enums::ItemMovementType::kInventoryToStorage ||
-//              itemMovementType == packet_enums::ItemMovementType::kStorageToInventory ||
-//              itemMovementType == packet_enums::ItemMovementType::kInventoryToGuildStorage ||
-//              itemMovementType == packet_enums::ItemMovementType::kGuildStorageToInventory) {
-//     std::cout << "kInventoryToStorage, kStorageToInventory, kInventoryToGuildStorage, kGuildStorageToInventory\n";
-//     uint8_t sourceSlot = stream.Read<uint8_t>();
-//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
-//     uint8_t destSlot = stream.Read<uint8_t>();
-//     std::cout << "destSlot: " << (int)destSlot << '\n';
-//     uint32_t unk0 = stream.Read<uint32_t>();
-//     std::cout << "unk0: " << unk0 << '\n';
-//   } else if (itemMovementType == packet_enums::ItemMovementType::kBuyFromNPC) {
-//     std::cout << "kBuyFromNPC\n";
-//     uint8_t unk2 = stream.Read<uint8_t>();
-//     std::cout << "unk2: " << (int)unk2 << '\n';
-//     uint8_t unk3 = stream.Read<uint8_t>();
-//     std::cout << "unk3: " << (int)unk3 << '\n';
-//     uint16_t quantity = stream.Read<uint16_t>();
-//     std::cout << "quantity: " << quantity << '\n';
-//     uint32_t unk1 = stream.Read<uint32_t>();
-//     std::cout << "unk1: " << unk1 << '\n';
-//   } else if (itemMovementType == packet_enums::ItemMovementType::kSellToNPC) {
-//     std::cout << "kSellToNPC\n";
-//     uint8_t sourceSlot = stream.Read<uint8_t>();
-//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
-//     uint16_t quantity = stream.Read<uint16_t>();
-//     std::cout << "quantity: " << quantity << '\n';
-//     uint32_t unk1 = stream.Read<uint32_t>();
-//     std::cout << "unk1: " << unk1 << '\n';
-//   } else if (itemMovementType == packet_enums::ItemMovementType::kGoldDrop ||
-//              itemMovementType == packet_enums::ItemMovementType::kGoldStorageWithdraw ||
-//              itemMovementType == packet_enums::ItemMovementType::kGoldStorageDeposit ||
-//              itemMovementType == packet_enums::ItemMovementType::kGoldGuildStorageDeposit ||
-//              itemMovementType == packet_enums::ItemMovementType::kGoldGuildStorageWithdraw) {
-//     std::cout << "kGoldDrop, kGoldStorageWithdraw, kGoldStorageDeposit, kGoldGuildStorageDeposit, kGoldGuildStorageWithdraw\n";
-//     uint64_t goldAmount = stream.Read<uint64_t>();
-//     std::cout << "goldAmount: " << goldAmount << '\n';
-//   } else if (itemMovementType == packet_enums::ItemMovementType::kCosToInventory ||
-//              itemMovementType == packet_enums::ItemMovementType::kInventoryToCos) {
-//     std::cout << "kCosToInventory,, kInventoryToCos\n";
-//     uint32_t unk4 = stream.Read<uint32_t>();
-//     std::cout << "unk4: " << unk4 << '\n';
-//     uint8_t sourceSlot = stream.Read<uint8_t>();
-//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
-//     uint8_t destSlot = stream.Read<uint8_t>();
-//     std::cout << "destSlot: " << (int)destSlot << '\n';
-//   } else if (itemMovementType == packet_enums::ItemMovementType::kWithinCos) {
-//     std::cout << "kWithinCos\n";
-//     uint32_t unk4 = stream.Read<uint32_t>();
-//     std::cout << "unk4: " << unk4 << '\n';
-//     uint8_t sourceSlot = stream.Read<uint8_t>();
-//     std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
-//     uint8_t destSlot = stream.Read<uint8_t>();
-//     std::cout << "destSlot: " << (int)destSlot << '\n';
-//     uint16_t quantity = stream.Read<uint16_t>();
-//     std::cout << "quantity: " << quantity << '\n';
-//   } else if (itemMovementType == packet_enums::ItemMovementType::kAvatarToInventory) {
-//     std::cout << "kAvatarToInventory\n";
-//     uint8_t sourceAvatarInventorySlot = stream.Read<uint8_t>();
-//     std::cout << "sourceAvatarInventorySlot: " << (int)sourceAvatarInventorySlot << '\n';
-//     uint8_t destInventorySlot = stream.Read<uint8_t>();
-//     std::cout << "destInventorySlot: " << (int)destInventorySlot << '\n';
-//   } else if (itemMovementType == packet_enums::ItemMovementType::kInventoryToAvatar) {
-//     std::cout << "kInventoryToAvatar\n";
-//     uint8_t sourceInventorySlot = stream.Read<uint8_t>();
-//     std::cout << "sourceInventorySlot: " << (int)sourceInventorySlot << '\n';
-//     uint8_t destAvatarInventorySlot = stream.Read<uint8_t>();
-//     std::cout << "destAvatarInventorySlot: " << (int)destAvatarInventorySlot << '\n';
-//   } else {
-//     std::cout << "New item movement type! " << static_cast<int>(itemMovementType) << '\n';
-//     std::cout << "Dump: " << DumpToString(stream) << '\n';
-//   }
+ParsedClientItemMove::ParsedClientItemMove(const PacketContainer &packet) : ParsedPacket(packet) {
+  std::cout << "ParsedClientItemMove\n";
+  StreamUtility stream = packet.data;
+  movement_.type = static_cast<packet_enums::ItemMovementType>(stream.Read<uint8_t>());
+  if (movement_.type == packet_enums::ItemMovementType::kWithinInventory) {
+    std::cout << "kWithinInventory\n";
+    uint8_t sourceSlot = stream.Read<uint8_t>();
+    std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+    uint8_t destSlot = stream.Read<uint8_t>();
+    std::cout << "destSlot: " << (int)destSlot << '\n';
+    uint16_t quantity = stream.Read<uint16_t>();
+    std::cout << "quantity: " << quantity << '\n';
+  } else if (movement_.type == packet_enums::ItemMovementType::kWithinStorage ||
+             movement_.type == packet_enums::ItemMovementType::kWithinGuildStorage) {
+    std::cout << "kWithinStorage, kWithinGuildStorage\n";
+    uint8_t sourceSlot = stream.Read<uint8_t>();
+    std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+    uint8_t destSlot = stream.Read<uint8_t>();
+    std::cout << "destSlot: " << (int)destSlot << '\n';
+    uint16_t quantity = stream.Read<uint16_t>();
+    std::cout << "quantity: " << quantity << '\n';
+    uint32_t unk0 = stream.Read<uint32_t>();
+    std::cout << "unk0: " << unk0 << '\n';
+  } else if (movement_.type == packet_enums::ItemMovementType::kInventoryToStorage ||
+             movement_.type == packet_enums::ItemMovementType::kStorageToInventory ||
+             movement_.type == packet_enums::ItemMovementType::kInventoryToGuildStorage ||
+             movement_.type == packet_enums::ItemMovementType::kGuildStorageToInventory) {
+    std::cout << "kInventoryToStorage, kStorageToInventory, kInventoryToGuildStorage, kGuildStorageToInventory\n";
+    uint8_t sourceSlot = stream.Read<uint8_t>();
+    std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+    uint8_t destSlot = stream.Read<uint8_t>();
+    std::cout << "destSlot: " << (int)destSlot << '\n';
+    uint32_t unk0 = stream.Read<uint32_t>();
+    std::cout << "unk0: " << unk0 << '\n';
+  } else if (movement_.type == packet_enums::ItemMovementType::kBuyFromNPC) {
+    std::cout << "kBuyFromNPC\n";
+    uint8_t storeTab = stream.Read<uint8_t>();
+    std::cout << "storeTab: " << (int)storeTab << '\n';
+    uint8_t storeSlot = stream.Read<uint8_t>();
+    std::cout << "storeSlot: " << (int)storeSlot << '\n';
+    uint16_t quantity = stream.Read<uint16_t>();
+    std::cout << "quantity: " << quantity << '\n';
+    movement_.globalId = stream.Read<uint32_t>();
+    std::cout << "globalId: " << movement_.globalId << '\n';
+  } else if (movement_.type == packet_enums::ItemMovementType::kSellToNPC) {
+    std::cout << "kSellToNPC\n";
+    uint8_t sourceSlot = stream.Read<uint8_t>();
+    std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+    uint16_t quantity = stream.Read<uint16_t>();
+    std::cout << "quantity: " << quantity << '\n';
+    uint32_t unk1 = stream.Read<uint32_t>();
+    std::cout << "unk1: " << unk1 << '\n';
+  } else if (movement_.type == packet_enums::ItemMovementType::kGoldDrop ||
+             movement_.type == packet_enums::ItemMovementType::kGoldStorageWithdraw ||
+             movement_.type == packet_enums::ItemMovementType::kGoldStorageDeposit ||
+             movement_.type == packet_enums::ItemMovementType::kGoldGuildStorageDeposit ||
+             movement_.type == packet_enums::ItemMovementType::kGoldGuildStorageWithdraw) {
+    std::cout << "kGoldDrop, kGoldStorageWithdraw, kGoldStorageDeposit, kGoldGuildStorageDeposit, kGoldGuildStorageWithdraw\n";
+    uint64_t goldAmount = stream.Read<uint64_t>();
+    std::cout << "goldAmount: " << goldAmount << '\n';
+  } else if (movement_.type == packet_enums::ItemMovementType::kCosToInventory ||
+             movement_.type == packet_enums::ItemMovementType::kInventoryToCos) {
+    std::cout << "kCosToInventory,, kInventoryToCos\n";
+    uint32_t unk4 = stream.Read<uint32_t>();
+    std::cout << "unk4: " << unk4 << '\n';
+    uint8_t sourceSlot = stream.Read<uint8_t>();
+    std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+    uint8_t destSlot = stream.Read<uint8_t>();
+    std::cout << "destSlot: " << (int)destSlot << '\n';
+  } else if (movement_.type == packet_enums::ItemMovementType::kWithinCos) {
+    std::cout << "kWithinCos\n";
+    uint32_t unk4 = stream.Read<uint32_t>();
+    std::cout << "unk4: " << unk4 << '\n';
+    uint8_t sourceSlot = stream.Read<uint8_t>();
+    std::cout << "sourceSlot: " << (int)sourceSlot << '\n';
+    uint8_t destSlot = stream.Read<uint8_t>();
+    std::cout << "destSlot: " << (int)destSlot << '\n';
+    uint16_t quantity = stream.Read<uint16_t>();
+    std::cout << "quantity: " << quantity << '\n';
+  } else if (movement_.type == packet_enums::ItemMovementType::kAvatarToInventory) {
+    std::cout << "kAvatarToInventory\n";
+    uint8_t sourceAvatarInventorySlot = stream.Read<uint8_t>();
+    std::cout << "sourceAvatarInventorySlot: " << (int)sourceAvatarInventorySlot << '\n';
+    uint8_t destInventorySlot = stream.Read<uint8_t>();
+    std::cout << "destInventorySlot: " << (int)destInventorySlot << '\n';
+  } else if (movement_.type == packet_enums::ItemMovementType::kInventoryToAvatar) {
+    std::cout << "kInventoryToAvatar\n";
+    uint8_t sourceInventorySlot = stream.Read<uint8_t>();
+    std::cout << "sourceInventorySlot: " << (int)sourceInventorySlot << '\n';
+    uint8_t destAvatarInventorySlot = stream.Read<uint8_t>();
+    std::cout << "destAvatarInventorySlot: " << (int)destAvatarInventorySlot << '\n';
+  } else {
+    std::cout << "New item movement type! " << static_cast<int>(movement_.type) << '\n';
+    std::cout << "Dump: " << DumpToString(stream) << '\n';
+  }
+}
 
-// }
+ItemMovement ParsedClientItemMove::movement() const {
+  return movement_;
+}
 
 //=========================================================================================================================================================
 } // namespace packet::parsing

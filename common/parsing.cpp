@@ -135,17 +135,21 @@ pk2::media::Skill parseSkilldataLine(const std::string &line) {
   // int32_t param49 // 116
   // int32_t param50 // 117
 
-	const std::vector<int> kDesiredFields = {1,3,4,5};
+	const std::vector<int> kDesiredFields = {1,3,4,5,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117};
 	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
 	if (fields.size() != kDesiredFields.size()) {
 		// TODO: This check for validity of data should be more robust
 		throw std::runtime_error("Parsing item data, but line contains wrong number of fields");
 	}
 	pk2::media::Skill skill;
-  skill.id = std::stoi(fields[0]);
-  skill.basicCode = fields[1];
-  skill.basicName = fields[2];
-  skill.basicGroup = fields[3];
+  int idx=0;
+  skill.id =      std::stoi(fields[idx++]);
+  skill.basicCode =         fields[idx++];
+  skill.basicName =         fields[idx++];
+  skill.basicGroup =        fields[idx++];
+  for (int i=0; i<skill.params.size(); ++i) {
+    skill.params[i] = std::stoi(fields[idx++]);
+  }
 	return skill;
 }
 
@@ -288,7 +292,7 @@ pk2::media::Character parseCharacterdataLine(const std::string &line) {
   // int32_t except_10; // 135
   // int32_t link; // 136
 
-	const std::vector<int> kDesiredFields = {1,2,14,58};
+	const std::vector<int> kDesiredFields = {1,2,9,10,11,12,14,58};
 	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
 	if (fields.size() != kDesiredFields.size()) {
 		// TODO: This check for validity of data should be more robust
@@ -297,7 +301,11 @@ pk2::media::Character parseCharacterdataLine(const std::string &line) {
   int idx=0;
 	pk2::media::Character character;
 	character.id =          std::stoi(fields[idx++]);
-	character.codeName128 = std::stoi(fields[idx++]);
+	character.codeName128 =           fields[idx++];
+	character.typeId1 =     std::stoi(fields[idx++]);
+	character.typeId2 =     std::stoi(fields[idx++]);
+	character.typeId3 =     std::stoi(fields[idx++]);
+	character.typeId4 =     std::stoi(fields[idx++]);
 	character.country =     std::stoi(fields[idx++]);
 	character.charGender =  std::stoi(fields[idx++]);
 	return character;
@@ -486,6 +494,83 @@ pk2::media::Item parseItemdataLine(const std::string &line) {
 	item.param2 =   std::stoi(fields[idx++]);
 	item.param4 =   std::stoi(fields[idx++]);
 	return item;
+}
+
+pk2::media::Teleport parseTeleportbuildingLine(const std::string &line) {
+  // int32_t service // 0
+  // int32_t id // 1
+  // std::string codeName128 // 2
+  // std::string objName128 // 3
+  // std::string orgObjCodeName128 // 4
+  // std::string nameStrID128 // 5
+  // std::string descStrID128 // 6
+  // uint8_t cashItem // 7
+  // uint8_t bionic // 8
+  // uint8_t typeId1 // 9
+  // uint8_t typeId2 // 10
+  // uint8_t typeId3 // 11
+  // uint8_t typeId4 // 12
+  // int32_t decayTime // 13
+  // uint8_t country // 14
+  // uint8_t rarity // 15
+  // uint8_t canTrade // 16
+  // uint8_t canSell // 17
+  // uint8_t canBuy // 18
+  // uint8_t canBorrow // 19
+  // uint8_t canDrop // 20
+  // uint8_t canPick // 21
+  // uint8_t canRepair // 22
+  // uint8_t canRevive // 23
+  // uint8_t canUse // 24
+  // uint8_t canThrow // 25
+  // int32_t price // 26
+  // int32_t costRepair // 27
+  // int32_t costRevive // 28
+  // int32_t costBorrow // 29
+  // int32_t keepingFee // 30
+  // int32_t sellPrice // 31
+  // int32_t reqLevelType1 // 32
+  // uint8_t reqLevel1 // 33
+  // int32_t reqLevelType2 // 34
+  // uint8_t reqLevel2 // 35
+  // int32_t reqLevelType3 // 36
+  // uint8_t reqLevel3 // 37
+  // int32_t reqLevelType4 // 38
+  // uint8_t reqLevel4 // 39
+  // int32_t maxContain // 40
+  // int16_t regionID // 41
+  // int16_t dir // 42
+  // int16_t offsetX // 43
+  // int16_t offsetY // 44
+  // int16_t offsetZ // 45
+  // int16_t speed1 // 46
+  // int16_t speed2 // 47
+  // int32_t scale // 48
+  // int16_t bcHeight // 49
+  // int16_t bcRadius // 50
+  // int32_t eventID // 51
+  // std::string assocFileObj128 // 52
+  // std::string assocFileDrop128 // 53
+  // std::string assocFileIcon128 // 54
+  // std::string assocFile1_128 // 55
+  // std::string assocFile2_128 // 56
+  // int32_t link // 57
+	
+	const std::vector<int> kDesiredFields = {1,2,9,10,11,12};
+	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
+	if (fields.size() != kDesiredFields.size()) {
+		// TODO: This check for validity of data should be more robust
+		throw std::runtime_error("Parsing teleport data, but line contains wrong number of fields");
+	}
+	pk2::media::Teleport teleport;
+  int idx=0;
+	teleport.id =       std::stoi(fields[idx++]);
+	teleport.codeName128 =        fields[idx++];
+	teleport.typeId1 =  std::stoi(fields[idx++]);
+	teleport.typeId2 =  std::stoi(fields[idx++]);
+	teleport.typeId3 =  std::stoi(fields[idx++]);
+	teleport.typeId4 =  std::stoi(fields[idx++]);
+	return teleport;
 }
 
 DivisionInfo parseDivisionInfo(const std::vector<uint8_t> &data) {

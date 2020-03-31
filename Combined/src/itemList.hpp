@@ -26,6 +26,7 @@ public:
   void swapItems(uint8_t srcSlot, uint8_t destSlot);
   void deleteItem(uint8_t slot);
   void resize(uint8_t newSize);
+  void clear();
 private:
   std::vector<std::shared_ptr<item::Item>> items_;
   void boundsCheck(uint8_t slot, const std::string &funcName) const;

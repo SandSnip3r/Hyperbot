@@ -13,6 +13,7 @@
 #include <boost/asio.hpp>
 
 #include <functional>
+#include <optional>
 #include <unordered_map>
 
 //Networking class (handles connections)
@@ -36,6 +37,7 @@ private:
   boost::asio::io_service ioService_;
   const int kPacketProcessDelayMs{10};
 	PacketLogger packetLogger{"C:\\Users\\Victor\\Documents\\Development\\packet-logs\\"};
+  std::optional<PacketContainer> characterInfoPacketContainer_, groupSpawnPacketContainer_;
 
 	//Accepts TCP connections
 	boost::asio::ip::tcp::acceptor acceptor;

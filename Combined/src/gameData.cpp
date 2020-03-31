@@ -4,6 +4,7 @@
 #include "../../common/parsing.hpp"
 
 #include <iostream>
+#include <mutex> // TODO: Remove
 
 namespace pk2::media {
 
@@ -24,6 +25,7 @@ void GameData::parseMedia(pk2::Pk2ReaderModern &pk2Reader) {
   parseCharacterData(pk2Reader);
   parseItemData(pk2Reader);
   parseSkillData(pk2Reader);
+  parseTeleportData(pk2Reader);
 }
 
 const pk2::DivisionInfo& GameData::divisionInfo() const {
@@ -40,6 +42,10 @@ const ItemData& GameData::itemData() const {
 
 const SkillData& GameData::skillData() const {
   return skillData_;
+}
+
+const TeleportData& GameData::teleportData() const {
+  return teleportData_;
 }
 
 void GameData::parseDivisionInfo(pk2::Pk2ReaderModern &pk2Reader) {
@@ -131,6 +137,25 @@ void GameData::parseSkillData(pk2::Pk2ReaderModern &pk2Reader) {
     }
   }
   std::cout << "Cached " << skillData_.size() << " skill(s)\n";
+}
+
+void GameData::parseTeleportData(pk2::Pk2ReaderModern &pk2Reader) {
+	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kTeleportDataFilename = "teleportbuilding.txt";
+  std::cout << "Parsing teleport data file \"" << kTeleportDataFilename << "\"\n";
+  auto teleportDataPath = kTextdataDirectory + kTeleportDataFilename;
+  PK2Entry teleportDataEntry = pk2Reader.getEntry(teleportDataPath);
+  auto teleportDataData = pk2Reader.getEntryData(teleportDataEntry);
+  auto teleportDataStr = pk2::parsing::fileDataToString(teleportDataData);
+  auto teleportDataLines = pk2::parsing::split(teleportDataStr, "\r\n");
+  for (const auto &line : teleportDataLines) {
+    try {
+      teleportData_.addTeleport(pk2::parsing::parseTeleportbuildingLine(line));
+    } catch (...) {
+      std::cerr << "Failed to parse teleport data \"" << line << "\"\n";
+    }
+  }
+  std::cout << "Cached " << teleportData_.size() << " teleport(s)\n";
 }
 
 } // namespace pk2::media

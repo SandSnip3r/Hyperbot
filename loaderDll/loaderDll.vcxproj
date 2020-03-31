@@ -34,6 +34,8 @@
     <ClCompile Include="..\common\PK2Reader.cpp" />
     <ClCompile Include="..\common\pk2ReaderModern.cpp" />
     <ClCompile Include="..\common\shared_io.cpp" />
+    <ClCompile Include="..\common\skill.cpp" />
+    <ClCompile Include="..\common\teleport.cpp" />
     <ClCompile Include="loaderDll.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -51,6 +53,7 @@
     <ClInclude Include="..\common\shared_io.h" />
     <ClInclude Include="..\common\shared_types.h" />
     <ClInclude Include="..\common\skill.hpp" />
+    <ClInclude Include="..\common\teleport.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

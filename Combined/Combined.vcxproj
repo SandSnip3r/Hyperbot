@@ -29,6 +29,8 @@
     <ClCompile Include="..\common\PK2Reader.cpp" />
     <ClCompile Include="..\common\pk2ReaderModern.cpp" />
     <ClCompile Include="..\common\shared_io.cpp" />
+    <ClCompile Include="..\common\skill.cpp" />
+    <ClCompile Include="..\common\teleport.cpp" />
     <ClCompile Include="src\bot.cpp" />
     <ClCompile Include="src\brokerSystem.cpp" />
     <ClCompile Include="src\characterData.cpp" />
@@ -57,6 +59,7 @@
     <ClCompile Include="src\silkroadConnection.cpp" />
     <ClCompile Include="src\skillData.cpp" />
     <ClCompile Include="src\storage.cpp" />
+    <ClCompile Include="src\teleportData.cpp" />
     <ClCompile Include="src\timerManager.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -72,6 +75,8 @@
     <ClInclude Include="..\common\pk2ReaderModern.hpp" />
     <ClInclude Include="..\common\shared_io.h" />
     <ClInclude Include="..\common\shared_types.h" />
+    <ClInclude Include="..\common\skill.hpp" />
+    <ClInclude Include="..\common\teleport.hpp" />
     <ClInclude Include="src\bot.hpp" />
     <ClInclude Include="src\botConnection.hpp" />
     <ClInclude Include="src\brokerSystem.hpp" />
@@ -101,6 +106,7 @@
     <ClInclude Include="src\silkroadConnection.hpp" />
     <ClInclude Include="src\skillData.hpp" />
     <ClInclude Include="src\storage.hpp" />
+    <ClInclude Include="src\teleportData.hpp" />
     <ClInclude Include="src\timerManager.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

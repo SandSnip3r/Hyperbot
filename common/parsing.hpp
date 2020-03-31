@@ -5,6 +5,7 @@
 #include "divisionInfo.hpp"
 #include "itemInfo.hpp"
 #include "skill.hpp"
+#include "teleport.hpp"
 
 #include <filesystem>
 #include <ostream>
@@ -35,6 +36,12 @@ pk2::media::Character parseCharacterdataLine(const std::string &line);
 // [param] line   A line of text
 // [return]       A populated Item object
 pk2::media::Item parseItemdataLine(const std::string &line);
+
+// Parses string representing a line of text from teleportbuilding.txt in the Media.pk2 into a Teleport object
+//
+// [param] line   A line of text
+// [return]       A populated Teleport object
+pk2::media::Teleport parseTeleportbuildingLine(const std::string &line);
 
 // Parses raw pk2 data into DivisionInfo object
 //

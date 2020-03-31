@@ -70,7 +70,7 @@ private:
   bool initialized_ = false;
   
   // Character info
-  uint32_t uniqueId_{0};
+  std::optional<uint32_t> uniqueId_;
   Race race_;
   Gender gender_;
 
@@ -84,8 +84,8 @@ private:
   // Health
   uint32_t hp_{0};
   uint32_t mp_{0};
-  uint32_t maxHp_{1};
-  uint32_t maxMp_{1};
+  std::optional<uint32_t> maxHp_;
+  std::optional<uint32_t> maxMp_;
   
   // States
   // Bitmask of all states (initialized as having no states)
@@ -96,17 +96,30 @@ private:
 
   std::deque<UsedItem> usedItemQueue_;
 
+  // User purchasing tracking
+  std::optional<packet::parsing::ItemMovement> userPurchaseRequest_;
+  std::vector<std::shared_ptr<packet::parsing::Object>> objectsInRange_;
+
   storage::Storage inventory_;
   storage::Storage storage_;
 
   // Packet handling functions
   void abnormalInfoReceived(const packet::parsing::ParsedServerAbnormalInfo &packet);
+  void clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet);
   void serverItemMoveReceived(const packet::parsing::ParsedServerItemMove &packet);
   void characterInfoReceived(const packet::parsing::ParsedServerAgentCharacterData &packet);
   void entityUpdateReceived(const packet::parsing::ParsedServerHpMpUpdate &packet);
   void statUpdateReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet);
   void serverUseItemReceived(const packet::parsing::ParsedServerUseItem &packet);
+  void serverAgentGroupSpawnReceived(const packet::parsing::ParsedServerAgentGroupSpawn &packet);
+  void serverAgentSpawnReceived(packet::parsing::ParsedServerAgentSpawn &packet);
+  void serverAgentDespawnReceived(packet::parsing::ParsedServerAgentDespawn &packet);
 
+
+  void printObj(std::shared_ptr<packet::parsing::Object> obj);
+  void trackObject(std::shared_ptr<packet::parsing::Object> obj);
+  void stopTrackingObject(uint32_t gId);
+  void resetInventory();
   void initializeInventory(uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<item::Item>> &inventoryItemMap);
   void moveItemInInventory(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
   int getHpPotionDelay();

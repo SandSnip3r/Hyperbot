@@ -59,6 +59,10 @@ void ItemList::resize(uint8_t newSize) {
   }
 }
 
+void ItemList::clear() {
+  items_.clear();
+}
+
 void ItemList::boundsCheck(uint8_t slot, const std::string &funcName) const {
   if (slot >= items_.size()) {
     throw std::runtime_error("ItemList::"+funcName+": Out of bounds "+std::to_string(slot)+" >= "+std::to_string(items_.size()));

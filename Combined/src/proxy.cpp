@@ -139,6 +139,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
   if(!error) {
     if(clientConnection.security) {
       while(clientConnection.security->HasPacketToRecv()) {
+        // Client sent a packet
         bool forward = true;
 
         //Retrieve the packet out of the security api
@@ -175,6 +176,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
 
     if(serverConnection.security) {
       while(serverConnection.security->HasPacketToRecv()) {
+        // Server sent a packet
         bool forward = true;
 
         //Retrieve the packet out of the security api
@@ -227,9 +229,57 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           }
         }
 
+        if (static_cast<Opcode>(p.opcode) == Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN) {
+          // Initialize data/container
+          if (characterInfoPacketContainer_) {
+            // What? There's already one?
+            std::cout << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
+          }
+          // Initialize packet data with the "begin" data
+          characterInfoPacketContainer_.emplace(p);
+          // Update opcode to reflect "data"
+          characterInfoPacketContainer_->opcode = static_cast<uint16_t>(Opcode::SERVER_AGENT_CHARACTER_INFO_DATA);
+        } else if (static_cast<Opcode>(p.opcode) == Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_BEGIN) {
+          // Initialize data/container
+          if (groupSpawnPacketContainer_) {
+            // What? There's already one?
+            std::cout << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
+          }
+          // Initialize packet data with the "begin" data
+          groupSpawnPacketContainer_.emplace(p);
+          // Update opcode to reflect "data"
+          groupSpawnPacketContainer_->opcode = static_cast<uint16_t>(Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA);
+        } else if (static_cast<Opcode>(p.opcode) == Opcode::SERVER_AGENT_CHARACTER_INFO_DATA) {
+          // Append all data to container
+          characterInfoPacketContainer_->data.Write(p.data.GetStreamVector());
+        } else if (static_cast<Opcode>(p.opcode) == Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA) {  
+          // Append all data to container
+          groupSpawnPacketContainer_->data.Write(p.data.GetStreamVector());
+        }
+
         //Forward the packet to Silkroad
         if(forward && clientConnection.security) {
-          bool forwardToClient = broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
+          bool forwardToClient = true;
+
+          // Handle "begin", "data", and "end" pieces of split packets
+          if (static_cast<Opcode>(p.opcode) == Opcode::SERVER_AGENT_CHARACTER_INFO_END) {
+            // Send packet to broker
+            forwardToClient = broker_.packetReceived(*characterInfoPacketContainer_, PacketContainer::Direction::kServerToClient);
+            // Reset data
+            characterInfoPacketContainer_.reset();
+          } else if (static_cast<Opcode>(p.opcode) == Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_END) {
+            // Send packet to broker
+            forwardToClient = broker_.packetReceived(*groupSpawnPacketContainer_, PacketContainer::Direction::kServerToClient);
+            // Reset data
+            groupSpawnPacketContainer_.reset();
+          } else if (static_cast<Opcode>(p.opcode) != Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN &&
+                     static_cast<Opcode>(p.opcode) != Opcode::SERVER_AGENT_CHARACTER_INFO_DATA &&
+                     static_cast<Opcode>(p.opcode) != Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_BEGIN &&
+                     static_cast<Opcode>(p.opcode) != Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA) {
+            // In all other cases, if its not "begin" or "data", send it
+            forwardToClient = broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
+          }
+          
           if (forwardToClient) {
             clientConnection.Inject(p);
           }

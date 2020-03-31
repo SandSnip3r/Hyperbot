@@ -200,17 +200,17 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_CHARACTER) {
     return "SERVER_CHARACTER";
   }
-  if (opcode == Opcode::SERVER_CHARDATA) {
-    return "SERVER_CHARDATA";
+  if (opcode == Opcode::SERVER_AGENT_CHARACTER_INFO_DATA) {
+    return "SERVER_AGENT_CHARACTER_INFO_DATA";
   }
   if (opcode == Opcode::SERVER_INGAME_ACCEPT) {
     return "SERVER_INGAME_ACCEPT";
   }
-  if (opcode == Opcode::SERVER_LOADING_START) {
-    return "SERVER_LOADING_START";
+  if (opcode == Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN) {
+    return "SERVER_AGENT_CHARACTER_INFO_BEGIN";
   }
-  if (opcode == Opcode::SERVER_LOADING_END) {
-    return "SERVER_LOADING_END";
+  if (opcode == Opcode::SERVER_AGENT_CHARACTER_INFO_END) {
+    return "SERVER_AGENT_CHARACTER_INFO_END";
   }
   if (opcode == Opcode::SERVER_WORLD_CLOCK) {
     return "SERVER_WORLD_CLOCK";
@@ -221,14 +221,14 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_DESPAWN) {
     return "SERVER_DESPAWN";
   }
-  if (opcode == Opcode::SERVER_GROUPSPAWN_HEAD) {
-    return "SERVER_GROUPSPAWN_HEAD";
+  if (opcode == Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_BEGIN) {
+    return "SERVER_AGENT_ENTITY_GROUPSPAWN_BEGIN";
   }
-  if (opcode == Opcode::SERVER_GROUPSPAWN_BODY) {
-    return "SERVER_GROUPSPAWN_BODY";
+  if (opcode == Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA) {
+    return "SERVER_AGENT_ENTITY_GROUPSPAWN_DATA";
   }
-  if (opcode == Opcode::SERVER_GROUPSPAWN_TAIL) {
-    return "SERVER_GROUPSPAWN_TAIL";
+  if (opcode == Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_END) {
+    return "SERVER_AGENT_ENTITY_GROUPSPAWN_END";
   }
   if (opcode == Opcode::SERVER_ITEM_EQUIP) {
     return "SERVER_ITEM_EQUIP";

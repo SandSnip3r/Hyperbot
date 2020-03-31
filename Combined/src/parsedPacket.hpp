@@ -1,9 +1,12 @@
+#include "characterData.hpp"
 #include "item.hpp"
 #include "itemData.hpp"
 #include "opcode.hpp"
 #include "packetEnums.hpp"
 #include "packetInnerStructures.hpp"
 #include "shared/silkroad_security.h"
+#include "skillData.hpp"
+#include "teleportData.hpp"
 
 #include <array>
 #include <map>
@@ -138,7 +141,7 @@ private:
 
 class ParsedServerAgentCharacterData : public ParsedPacket {
 public:
-  ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::media::ItemData &itemData);
+  ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::media::ItemData &itemData, const pk2::media::SkillData &skillData);
   uint32_t refObjId() const;
   uint32_t entityUniqueId() const;
   uint32_t hp() const;
@@ -152,6 +155,113 @@ private:
   uint32_t mp_;
   uint8_t inventorySize_;
   std::map<uint8_t, std::shared_ptr<item::Item>> inventoryItemMap_;
+};
+
+//=========================================================================================================================================================
+
+enum class GroupSpawnType {
+  kSpawn=1,
+  kDespawn=2
+};
+
+enum class ObjectType {
+  kCharacter,
+  kPlayerCharacter,
+  kNonplayerCharacter,
+  kMonster,
+  kItem,
+  kPortal
+};
+
+class Object {
+public:
+  ObjectType type;
+  uint32_t refObjId;
+  uint8_t typeId1, typeId2, typeId3, typeId4;
+  uint32_t gId;
+  uint16_t regionId;
+  float x, y, z;
+  Object(ObjectType t) : type(t) {}
+  virtual ~Object() = default;
+};
+
+class Character : public Object {
+public:
+  Character() : Object(ObjectType::kCharacter) {}
+  uint8_t lifeState;
+protected:
+  Character(ObjectType t) : Object(t) {}
+};
+
+class PlayerCharacter : public Character {
+public:
+  PlayerCharacter() : Character(ObjectType::kPlayerCharacter) {}
+  std::string name;
+};
+
+class NonplayerCharacter : public Character {
+public:
+  NonplayerCharacter() : Character(ObjectType::kNonplayerCharacter) {}
+protected:
+  NonplayerCharacter(ObjectType t) : Character(t) {}
+};
+
+class Monster : public NonplayerCharacter {
+public:
+  Monster() : NonplayerCharacter(ObjectType::kMonster) {}
+  uint8_t monsterRarity;
+};
+
+class Item : public Object {
+public:
+  Item() : Object(ObjectType::kItem) {}
+  uint8_t rarity;
+};
+
+class Portal : public Object {
+public:
+  Portal() : Object(ObjectType::kPortal) {}
+  uint8_t unkByte3;
+};
+
+class ParsedServerAgentGroupSpawn : public ParsedPacket {
+public:
+  ParsedServerAgentGroupSpawn(const PacketContainer &packet,
+                              const pk2::media::CharacterData &characterData,
+                              const pk2::media::ItemData &itemData,
+                              const pk2::media::SkillData &skillData,
+                              const pk2::media::TeleportData &teleportData);
+  GroupSpawnType groupSpawnType() const;
+  const std::vector<std::shared_ptr<Object>>& objects() const;
+  const std::vector<uint32_t>& despawns() const;
+private:
+  GroupSpawnType groupSpawnType_;
+  std::vector<std::shared_ptr<Object>> objects_;
+  std::vector<uint32_t> despawns_;
+};
+
+//=========================================================================================================================================================
+
+class ParsedServerAgentSpawn : public ParsedPacket {
+public:
+  ParsedServerAgentSpawn(const PacketContainer &packet,
+                         const pk2::media::CharacterData &characterData,
+                         const pk2::media::ItemData &itemData,
+                         const pk2::media::SkillData &skillData,
+                         const pk2::media::TeleportData &teleportData);
+  std::shared_ptr<Object> object() const;
+private:
+  std::shared_ptr<Object> object_;
+};
+
+//=========================================================================================================================================================
+
+class ParsedServerAgentDespawn : public ParsedPacket {
+public:
+  ParsedServerAgentDespawn(const PacketContainer &packet);
+  uint32_t gId() const;
+private:
+  uint32_t gId_;
 };
   
 //=========================================================================================================================================================
@@ -244,11 +354,13 @@ private:
 
 //=========================================================================================================================================================
 
-// class ParsedClientItemMove : public ParsedPacket {
-// public:
-//   ParsedClientItemMove(const PacketContainer &packet);
-// private:
-// };
+class ParsedClientItemMove : public ParsedPacket {
+public:
+  ParsedClientItemMove(const PacketContainer &packet);
+  ItemMovement movement() const;
+private:
+  ItemMovement movement_;
+};
 
 //=========================================================================================================================================================
 

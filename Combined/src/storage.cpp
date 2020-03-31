@@ -43,6 +43,10 @@ uint8_t Storage::size() const {
   return itemList_.size();
 }
 
+void Storage::clear() {
+  itemList_.clear();
+}
+
 void Storage::resize(uint8_t newSize) {
   itemList_.resize(newSize);
 }
@@ -89,7 +93,8 @@ void Storage::moveItemInStorage(uint8_t srcSlot, uint8_t destSlot, uint16_t quan
             }
           }
         } else {
-          std::cout << "Moving item into a slot with an existing item, they should be both expendables, but they're not\n";
+          // Not expendables, just swapping two items of the same type
+          itemList_.swapItems(srcSlot, destSlot);
         }
       } else {
         // Different type, swapping

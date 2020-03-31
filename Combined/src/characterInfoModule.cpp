@@ -24,15 +24,18 @@ CharacterInfoModule::CharacterInfoModule(BrokerSystem &brokerSystem,
       gameData_(gameData) {
   auto packetHandleFunction = std::bind(&CharacterInfoModule::handlePacket, this, std::placeholders::_1);
   // Client packets
-  // broker_.subscribeToClientPacket(Opcode::CLIENT_ITEM_MOVE, packetHandleFunction);
+  broker_.subscribeToClientPacket(Opcode::CLIENT_ITEM_MOVE, packetHandleFunction);
   broker_.subscribeToClientPacket(Opcode::CLIENT_CHAT, packetHandleFunction);
   // Server packets
-  broker_.subscribeToServerPacket(Opcode::SERVER_CHARDATA, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::SERVER_AGENT_CHARACTER_INFO_DATA, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_HPMP_UPDATE, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_STATS, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_ITEM_USE, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_AGENT_ABNORMAL_INFO, packetHandleFunction);
   broker_.subscribeToServerPacket(Opcode::SERVER_ITEM_MOVEMENT, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::SERVER_SPAWN, packetHandleFunction);
+  broker_.subscribeToServerPacket(Opcode::SERVER_DESPAWN, packetHandleFunction);
 
   // TODO: Save subscription ID to possibly unsubscribe in the future
   eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
@@ -89,11 +92,11 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
   //============================================Client Packets============================================
   //======================================================================================================
 
-  // auto *clientItemMove = dynamic_cast<packet::parsing::ParsedClientItemMove*>(parsedPacket.get());
-  // if (clientItemMove != nullptr) {
-  //   std::cout << "Not handling client item move\n";
-  //   return true;
-  // }
+  auto *clientItemMove = dynamic_cast<packet::parsing::ParsedClientItemMove*>(parsedPacket.get());
+  if (clientItemMove != nullptr) {
+    clientItemMoveReceived(*clientItemMove);
+    return true;
+  }
 
   auto *clientChat = dynamic_cast<packet::parsing::ParsedClientChat*>(parsedPacket.get());
   if (clientChat != nullptr) {
@@ -140,11 +143,118 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
     serverItemMoveReceived(*serverItemMove);
     return true;
   }
+
+  auto *groupSpawn = dynamic_cast<packet::parsing::ParsedServerAgentGroupSpawn*>(parsedPacket.get());
+  if (groupSpawn != nullptr) {
+    serverAgentGroupSpawnReceived(*groupSpawn);
+    return true;
+  }
+
+  auto *spawn = dynamic_cast<packet::parsing::ParsedServerAgentSpawn*>(parsedPacket.get());
+  if (spawn != nullptr) {
+    serverAgentSpawnReceived(*spawn);
+    return true;
+  }
+
+  auto *despawn = dynamic_cast<packet::parsing::ParsedServerAgentDespawn*>(parsedPacket.get());
+  if (despawn != nullptr) {
+    serverAgentDespawnReceived(*despawn);
+    return true;
+  }
   
   //======================================================================================================
 
   std::cout << "Unhandled packet subscribed to\n";
   return true;
+}
+
+void CharacterInfoModule::printObj(std::shared_ptr<packet::parsing::Object> obj) {
+  switch (obj->type) {
+    case packet::parsing::ObjectType::kPlayerCharacter:
+      {
+        auto ptr = reinterpret_cast<packet::parsing::PlayerCharacter*>(obj.get());
+        std::cout << "Player character (" << ptr->x << "," << ptr->y << "," << ptr->z << ") Global ID: " << ptr->gId << ", name:\"" << ptr->name << "\"\n";
+      } 
+      break;
+    case packet::parsing::ObjectType::kNonplayerCharacter:
+      {
+        auto ptr = reinterpret_cast<packet::parsing::NonplayerCharacter*>(obj.get());
+        const auto &character = gameData_.characterData().getCharacterById(obj->refObjId);
+        std::cout << "NPC (" << ptr->x << "," << ptr->y << "," << ptr->z << "), \"" << character.codeName128 << "\"\n";
+      } 
+      break;
+    case packet::parsing::ObjectType::kMonster:
+      {
+        auto ptr = reinterpret_cast<packet::parsing::Monster*>(obj.get());
+        const auto &character = gameData_.characterData().getCharacterById(obj->refObjId);
+        std::cout << "Monster (" << ptr->x << "," << ptr->y << "," << ptr->z << ") Rarity:" << (int)ptr->monsterRarity << ", \"" << character.codeName128 << "\"\n";
+      } 
+      break;
+    case packet::parsing::ObjectType::kItem:
+      {
+        auto ptr = reinterpret_cast<packet::parsing::Item*>(obj.get());
+        const auto &item = gameData_.itemData().getItemById(obj->refObjId);
+        std::cout << "Item (" << ptr->x << "," << ptr->y << "," << ptr->z << ") Rarity:" << (int)ptr->rarity << ", \"" << item.codeName128 << "\"\n";
+      } 
+      break;
+    case packet::parsing::ObjectType::kPortal:
+      {
+        auto ptr = reinterpret_cast<packet::parsing::Portal*>(obj.get());
+        const auto &portal = gameData_.teleportData().getTeleportById(obj->refObjId);
+        std::cout << "Portal (" << ptr->x << "," << ptr->y << "," << ptr->z << ") \"" << portal.codeName128 << "\"\n";
+      }
+      break;
+  }
+}
+
+void CharacterInfoModule::trackObject(std::shared_ptr<packet::parsing::Object> obj) {
+  objectsInRange_.emplace_back(obj);
+  printf("[+++] (%5d)  ",objectsInRange_.size());
+  printObj(objectsInRange_.back());
+}
+
+void CharacterInfoModule::stopTrackingObject(uint32_t gId) {
+  auto it = std::find_if(objectsInRange_.begin(), objectsInRange_.end(), [gId](const std::shared_ptr<packet::parsing::Object> &objPtr) {
+    return (objPtr->gId == gId);
+  });
+  if (it != objectsInRange_.end()) {
+    auto tmp = *it;
+    objectsInRange_.erase(it);
+    printf("[---] (%5d)  ",objectsInRange_.size());
+    printObj(tmp);
+  } else {
+    std::cout << "Asked to despawn something that we werent tracking\n";
+  }
+}
+
+void CharacterInfoModule::serverAgentSpawnReceived(packet::parsing::ParsedServerAgentSpawn &packet) {
+  trackObject(packet.object());
+}
+
+void CharacterInfoModule::serverAgentDespawnReceived(packet::parsing::ParsedServerAgentDespawn &packet) {
+  stopTrackingObject(packet.gId());
+}
+
+void CharacterInfoModule::clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) {
+  std::cout << "Handling client item move\n";
+  const auto movement = packet.movement();
+  if (movement.type == packet_enums::ItemMovementType::kBuyFromNPC) {
+    // User is buying something from the store
+    std::cout << "  bought from npc!\n";
+    userPurchaseRequest_ = movement;
+  }
+}
+
+void CharacterInfoModule::serverAgentGroupSpawnReceived(const packet::parsing::ParsedServerAgentGroupSpawn &packet) {
+  if (packet.groupSpawnType() == packet::parsing::GroupSpawnType::kSpawn) {
+    for (auto obj : packet.objects()) {
+      trackObject(obj);
+    }
+  } else {
+    for (auto gId : packet.despawns()) {
+      stopTrackingObject(gId);
+    }
+  }
 }
 
 void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedServerItemMove &packet) {
@@ -158,8 +268,14 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
       // std::cout << "moveItemInStorage: storage_\n";
       // moveItemInStorage(storage_, movement.srcSlot, movement.destSlot, movement.quantity);
     } else if (movement.type == packet_enums::ItemMovementType::kBuyFromNPC) {
+      if (userPurchaseRequest_) {
+        // User purchased something, we saved this so that we can get the NPC's global Id
+        std::cout << "kBuyFromNPC with ID " << userPurchaseRequest_->globalId << "\n";
+        userPurchaseRequest_.reset();
+      } else {
+        std::cout << "kBuyFromNPC but no matching data\n";
+      }
       
-      // std::cout << "kBuyFromNPC\n";
       // primaryItemMovement.storePageNumber = stream.Read<uint8_t>();
       // primaryItemMovement.storeSlotNumber = stream.Read<uint8_t>();
       // uint8_t stackCount = stream.Read<uint8_t>();
@@ -218,45 +334,29 @@ void CharacterInfoModule::setRaceAndGender(uint32_t refObjId) {
 
 void CharacterInfoModule::characterInfoReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) {
   std::cout << "Character data received\n";
-  if (initialized_) {
-    if (uniqueId_ != packet.entityUniqueId()) {
-      std::cout << "Got another character info packet, but for someone else\n";
-      return;
-    } else {
-      std::cout << "Got another character info packet, but we've already \"initialized\"\n";
-      // TODO: I think its normal to receive this many times, on each spawn probably
-      //  Cant handle multiple times yet
-      return;
-    }
-  }
+  uniqueId_ = packet.entityUniqueId();
   auto refObjId = packet.refObjId();
   setRaceAndGender(refObjId);
-  uniqueId_ = packet.entityUniqueId();
   hp_ = packet.hp();
   mp_ = packet.mp();
   const auto inventorySize = packet.inventorySize();
   const auto &inventoryItemMap = packet.inventoryItemMap();
   initializeInventory(inventorySize, inventoryItemMap);
 
-  std::cout << "We are #" << uniqueId_ << ", and we have " << hp_ << " hp and " << mp_ << " mp\n";
+  std::cout << "We are now #" << *uniqueId_ << ", and we have " << hp_ << " hp and " << mp_ << " mp\n";
   initialized_ = true;
   checkIfNeedToHeal();
 }
 
+void CharacterInfoModule::resetInventory() {
+  inventory_.clear();
+}
+
 void CharacterInfoModule::initializeInventory(uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<item::Item>> &inventoryItemMap) {
-  if (inventory_.size() != 0) {
-    // TODO: Make this impossible (by never calling this function if the inventory is already initialized)
-    std::cout << "Initializing inventory, but size isnt 0!!!!!!!\n";
-    return;
-  }
+  resetInventory();
   inventory_.resize(inventorySize);
   // Guaranteed to have no items
   for (const auto &slotItemPtrPair : inventoryItemMap) {
-    std::cout << "Adding item to slot " << (int)slotItemPtrPair.first << '\n';
-    if (slotItemPtrPair.first < 6) {
-      // Equipment piece
-      std::cout << "  TID4: " << (int)slotItemPtrPair.second->itemInfo->typeId4 << '\n';
-    }
     inventory_.addItem(slotItemPtrPair.first, slotItemPtrPair.second);
   }
 }
@@ -365,8 +465,8 @@ void CharacterInfoModule::usePurificationPill() {
 }
 
 void CharacterInfoModule::usePotion(PotionType potionType) {
-  const double hpPercentage = static_cast<double>(hp_)/maxHp_; // TODO: Remove, for print only
-  const double mpPercentage = static_cast<double>(mp_)/maxMp_; // TODO: Remove, for print only
+  const double hpPercentage = static_cast<double>(hp_)/(*maxHp_); // TODO: Remove, for print only
+  const double mpPercentage = static_cast<double>(mp_)/(*maxMp_); // TODO: Remove, for print only
   printf("Healing. Hp: %4.2f%%, Mp: %4.2f%%\n", hpPercentage*100, mpPercentage*100);
 
   uint8_t typeId4;
@@ -492,19 +592,19 @@ void CharacterInfoModule::checkIfNeedToUsePill() {
 }
 
 void CharacterInfoModule::checkIfNeedToHeal() {
-  if (maxHp_ == 1 || maxMp_ == 1) {
+  if (!maxHp_ || !maxMp_) {
     // Dont yet know our max
     std::cout << "checkIfNeedToHeal: dont know max hp or mp\n";
     return;
   }
-  if (maxHp_ == 0) {
+  if (*maxHp_ == 0) {
     // Either uninitialized or dead. Cant heal in either case probably
     std::cout << "checkIfNeedToHeal: Either uninitialized or dead. Cant heal in either case probably\n";
     // TODO: Figure out
     return;
   }
-  const double hpPercentage = static_cast<double>(hp_)/maxHp_;
-  const double mpPercentage = static_cast<double>(mp_)/maxMp_;
+  const double hpPercentage = static_cast<double>(hp_)/(*maxHp_);
+  const double mpPercentage = static_cast<double>(mp_)/(*maxMp_);
 
   const bool haveZombie = (legacyStateEffects_[bitNum(packet_enums::AbnormalStateFlag::kZombie)] > 0);
 
@@ -528,9 +628,8 @@ void CharacterInfoModule::checkIfNeedToHeal() {
 }
 
 void CharacterInfoModule::entityUpdateReceived(const packet::parsing::ParsedServerHpMpUpdate &packet) {
-  if (packet.entityUniqueId() != uniqueId_) {
+  if (uniqueId_ && packet.entityUniqueId() != *uniqueId_) {
     // Not for my character, can ignore
-    std::cout << "Not for me\n";
     return;
   }
   if (packet.vitalBitmask() & static_cast<uint8_t>(packet_enums::VitalInfoFlag::kVitalInfoHp)) {

@@ -17,6 +17,7 @@ public:
   item::Item* getItem(uint8_t slot);
   const item::Item* getItem(uint8_t slot) const;
   uint8_t size() const;
+  void clear();
   void resize(uint8_t newSize);
   void addItem(uint8_t slot, std::shared_ptr<item::Item> item);
   void deleteItem(uint8_t slot);
