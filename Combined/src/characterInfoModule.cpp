@@ -173,35 +173,35 @@ void CharacterInfoModule::printObj(std::shared_ptr<packet::parsing::Object> obj)
     case packet::parsing::ObjectType::kPlayerCharacter:
       {
         auto ptr = reinterpret_cast<packet::parsing::PlayerCharacter*>(obj.get());
-        std::cout << "Player character (" << ptr->x << "," << ptr->y << "," << ptr->z << ") Global ID: " << ptr->gId << ", name:\"" << ptr->name << "\"\n";
+        printf("%7s %5d (%6f,%6f,%6f) GId:%d, name:\"%s\"\n","Player", obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->gId, ptr->name.c_str());
       } 
       break;
     case packet::parsing::ObjectType::kNonplayerCharacter:
       {
         auto ptr = reinterpret_cast<packet::parsing::NonplayerCharacter*>(obj.get());
         const auto &character = gameData_.characterData().getCharacterById(obj->refObjId);
-        std::cout << "NPC (" << ptr->x << "," << ptr->y << "," << ptr->z << "), \"" << character.codeName128 << "\"\n";
+        printf("%7s %5d (%6f,%6f,%6f) \"%s\"\n","NPC", obj->refObjId, ptr->x, ptr->y, ptr->z, character.codeName128.c_str());
       } 
       break;
     case packet::parsing::ObjectType::kMonster:
       {
         auto ptr = reinterpret_cast<packet::parsing::Monster*>(obj.get());
         const auto &character = gameData_.characterData().getCharacterById(obj->refObjId);
-        std::cout << "Monster (" << ptr->x << "," << ptr->y << "," << ptr->z << ") Rarity:" << (int)ptr->monsterRarity << ", \"" << character.codeName128 << "\"\n";
+        printf("%7s %5d (%6f,%6f,%6f) type:%d, \"%s\"\n","Monster", obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->monsterRarity, character.codeName128.c_str());
       } 
       break;
     case packet::parsing::ObjectType::kItem:
       {
         auto ptr = reinterpret_cast<packet::parsing::Item*>(obj.get());
         const auto &item = gameData_.itemData().getItemById(obj->refObjId);
-        std::cout << "Item (" << ptr->x << "," << ptr->y << "," << ptr->z << ") Rarity:" << (int)ptr->rarity << ", \"" << item.codeName128 << "\"\n";
+        printf("%7s %5d (%6f,%6f,%6f) rarity:%d, \"%s\"\n","Item", obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->rarity, item.codeName128.c_str());
       } 
       break;
     case packet::parsing::ObjectType::kPortal:
       {
         auto ptr = reinterpret_cast<packet::parsing::Portal*>(obj.get());
         const auto &portal = gameData_.teleportData().getTeleportById(obj->refObjId);
-        std::cout << "Portal (" << ptr->x << "," << ptr->y << "," << ptr->z << ") \"" << portal.codeName128 << "\"\n";
+        printf("%7s %5d (%6f,%6f,%6f) \"%s\"\n","Portal", obj->refObjId, ptr->x, ptr->y, ptr->z, portal.codeName128.c_str());
       }
       break;
   }
