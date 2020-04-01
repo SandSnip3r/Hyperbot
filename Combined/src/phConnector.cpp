@@ -1,13 +1,13 @@
 /* Shout out to Weeman! */
 
-#include "configData.hpp"
 #include "session.hpp"
-#include "iniReader.hpp"
 #include "silkroadConnection.hpp"
-#include "../../common/divisionInfo.hpp"
-#include "../../common/parsing.hpp"
-#include "../../common/pk2ReaderModern.hpp"
-#include "gameData.hpp"
+#include "config/configData.hpp"
+#include "config/iniReader.hpp"
+#include "pk2/gameData.hpp"
+#include "../../common/pk2/divisionInfo.hpp"
+#include "../../common/pk2/parsing/parsing.hpp"
+#include "../../common/pk2/pk2ReaderModern.hpp"
 
 #include <filesystem>
 #include <iostream>
@@ -25,9 +25,9 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   try {
-    ini::IniReader configReader{kConfigFilePath};
+    config::IniReader configReader{kConfigFilePath};
     config::ConfigData configData(configReader);
-    pk2::media::GameData gameData(configData.silkroadDirectory());
+    pk2::GameData gameData(configData.silkroadDirectory());
 	  Session session{gameData, configData.silkroadDirectory(), configData.characterLoginData()};
 	  session.start();
   } catch (std::exception &ex) {

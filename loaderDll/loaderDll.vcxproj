@@ -20,40 +20,40 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\common\blowfish.cpp" />
-    <ClCompile Include="..\common\characterInfo.cpp" />
     <ClCompile Include="..\common\Common.cpp" />
     <ClCompile Include="..\common\detours\creatwth.cpp" />
     <ClCompile Include="..\common\detours\detours.cpp" />
     <ClCompile Include="..\common\detours\disasm.cpp" />
     <ClCompile Include="..\common\detours\image.cpp" />
     <ClCompile Include="..\common\detours\modules.cpp" />
-    <ClCompile Include="..\common\division.cpp" />
-    <ClCompile Include="..\common\divisionInfo.cpp" />
-    <ClCompile Include="..\common\itemInfo.cpp" />
-    <ClCompile Include="..\common\parsing.cpp" />
-    <ClCompile Include="..\common\PK2Reader.cpp" />
-    <ClCompile Include="..\common\pk2ReaderModern.cpp" />
+    <ClCompile Include="..\common\pk2\division.cpp" />
+    <ClCompile Include="..\common\pk2\divisionInfo.cpp" />
+    <ClCompile Include="..\common\pk2\parsing\parsing.cpp" />
+    <ClCompile Include="..\common\pk2\pk2Reader.cpp" />
+    <ClCompile Include="..\common\pk2\pk2ReaderModern.cpp" />
+    <ClCompile Include="..\common\pk2\ref\character.cpp" />
+    <ClCompile Include="..\common\pk2\ref\item.cpp" />
+    <ClCompile Include="..\common\pk2\ref\skill.cpp" />
+    <ClCompile Include="..\common\pk2\ref\teleport.cpp" />
     <ClCompile Include="..\common\shared_io.cpp" />
-    <ClCompile Include="..\common\skill.cpp" />
-    <ClCompile Include="..\common\teleport.cpp" />
     <ClCompile Include="loaderDll.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\blowfish.h" />
-    <ClInclude Include="..\common\characterInfo.hpp" />
     <ClInclude Include="..\common\Common.h" />
     <ClInclude Include="..\common\detours\detours.h" />
-    <ClInclude Include="..\common\division.hpp" />
-    <ClInclude Include="..\common\divisionInfo.hpp" />
-    <ClInclude Include="..\common\itemInfo.hpp" />
-    <ClInclude Include="..\common\parsing.hpp" />
-    <ClInclude Include="..\common\PK2.h" />
-    <ClInclude Include="..\common\PK2Reader.h" />
-    <ClInclude Include="..\common\pk2ReaderModern.hpp" />
+    <ClInclude Include="..\common\pk2\division.hpp" />
+    <ClInclude Include="..\common\pk2\divisionInfo.hpp" />
+    <ClInclude Include="..\common\pk2\parsing\parsing.hpp" />
+    <ClInclude Include="..\common\pk2\pk2.h" />
+    <ClInclude Include="..\common\pk2\pk2Reader.h" />
+    <ClInclude Include="..\common\pk2\pk2ReaderModern.hpp" />
+    <ClInclude Include="..\common\pk2\ref\character.hpp" />
+    <ClInclude Include="..\common\pk2\ref\item.hpp" />
+    <ClInclude Include="..\common\pk2\ref\skill.hpp" />
+    <ClInclude Include="..\common\pk2\ref\teleport.hpp" />
     <ClInclude Include="..\common\shared_io.h" />
     <ClInclude Include="..\common\shared_types.h" />
-    <ClInclude Include="..\common\skill.hpp" />
-    <ClInclude Include="..\common\teleport.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

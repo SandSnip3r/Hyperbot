@@ -1,27 +1,27 @@
 #ifndef BOT_HPP_
 #define BOT_HPP_
 
-#include "brokerSystem.hpp"
-#include "characterInfoModule.hpp"
-#include "characterLoginData.hpp"
-#include "eventBroker.hpp"
-#include "gameData.hpp"
-#include "loginModule.hpp"
-#include "packetParser.hpp"
+#include "broker/eventBroker.hpp"
+#include "broker/packetBroker.hpp"
+#include "config/characterLoginData.hpp"
+#include "module/characterInfoModule.hpp"
+#include "module/loginModule.hpp"
+#include "packet/parsing/packetParser.hpp"
+#include "pk2/gameData.hpp"
 
 class Bot {
 public:
   Bot(const config::CharacterLoginData &loginData,
-      const pk2::media::GameData &gameData,
-      BrokerSystem &broker);
+      const pk2::GameData &gameData,
+      broker::PacketBroker &broker);
 private:
   const config::CharacterLoginData &loginData_;
-  const pk2::media::GameData &gameData_;
-  BrokerSystem &broker_;
-  event::EventBroker eventBroker_;
+  const pk2::GameData &gameData_;
+  broker::PacketBroker &broker_;
+  broker::EventBroker eventBroker_;
   packet::parsing::PacketParser packetParser_{gameData_};
-  CharacterInfoModule characterInfoModule_{broker_, eventBroker_, packetParser_, gameData_};
-  LoginModule loginModule_{broker_, packetParser_, loginData_, gameData_.divisionInfo()};
+  module::CharacterInfoModule characterInfoModule_{broker_, eventBroker_, packetParser_, gameData_};
+  module::LoginModule loginModule_{broker_, packetParser_, loginData_, gameData_.divisionInfo()};
 };
 
 #endif

@@ -1,12 +1,12 @@
 #ifndef PROXY_HPP_
 #define PROXY_HPP_
 
-#include "brokerSystem.hpp"
-#include "gameData.hpp"
 #include "packetLogger.hpp"
 #include "silkroadConnection.hpp"
+#include "broker/packetBroker.hpp"
+#include "pk2/gameData.hpp"
 #include "shared/silkroad_security.h"
-#include "../../common/divisionInfo.hpp"
+#include "../../common/pk2/divisionInfo.hpp"
 
 #include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
@@ -19,7 +19,7 @@
 //Networking class (handles connections)
 class Proxy {
 public:
-	Proxy(const pk2::media::GameData &gameData, BrokerSystem &broker, uint16_t port);
+	Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port);
 	~Proxy();
 	void inject(const PacketContainer &packet, const PacketContainer::Direction direction);
   void start();
@@ -28,7 +28,7 @@ public:
 	void Stop();
 private:
   const pk2::DivisionInfo divisionInfo_;
-  BrokerSystem &broker_;
+  broker::PacketBroker &broker_;
   std::string gatewayAddress_;
   std::string agentIP_;
   uint16_t agentPort_{0};

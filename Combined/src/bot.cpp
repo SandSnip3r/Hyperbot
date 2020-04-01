@@ -1,8 +1,8 @@
 #include "bot.hpp"
 
 Bot::Bot(const config::CharacterLoginData &loginData,
-         const pk2::media::GameData &gameData,
-         BrokerSystem &broker) :
+         const pk2::GameData &gameData,
+         broker::PacketBroker &broker) :
       loginData_(loginData),
       gameData_(gameData),
       broker_(broker) {
@@ -17,7 +17,7 @@ Bot::Bot(const config::CharacterLoginData &loginData,
 //   }
 
 //   const std::string kChatCommandPrefix{"\\b "};
-//   if (clientChat->chatType() == packet_enums::ChatType::kAll) {
+//   if (clientChat->chatType() == packet::enums::ChatType::kAll) {
 //     // All chat
 //     const std::string &msg = clientChat->message();
 //     std::cout << "all chat msg \"" << msg << "\"\n";
@@ -34,7 +34,7 @@ Bot::Bot(const config::CharacterLoginData &loginData,
 //   std::cout << "Bot::commandHandler Given command \"" << command << "\"\n";
 
 //   const std::string kNoticeMessage = "Command \"" + command + "\" accepted.";
-//   auto noticePacket = PacketBuilding::ServerChatPacketBuilder(packet_enums::ChatType::kNotice, kNoticeMessage).packet();
+//   auto noticePacket = PacketBuilding::ServerChatPacketBuilder(packet::enums::ChatType::kNotice, kNoticeMessage).packet();
 //   broker_.injectPacket(noticePacket, PacketContainer::Direction::kServerToClient);
   
 //   const int kRegionId = 0x60a9;

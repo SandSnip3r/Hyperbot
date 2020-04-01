@@ -13,10 +13,10 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="common">
+    <Filter Include="Common">
       <UniqueIdentifier>{70ce7ce5-216c-4f80-a521-9dd4469638d9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="common\detours">
+    <Filter Include="Common\detours">
       <UniqueIdentifier>{18a779ed-105f-4f4f-b9b0-2e2045dbc2c1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -25,102 +25,102 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\common\Common.cpp">
-      <Filter>common</Filter>
+      <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="..\common\detours\creatwth.cpp">
-      <Filter>common\detours</Filter>
+      <Filter>Common\detours</Filter>
     </ClCompile>
     <ClCompile Include="..\common\detours\detours.cpp">
-      <Filter>common\detours</Filter>
+      <Filter>Common\detours</Filter>
     </ClCompile>
     <ClCompile Include="..\common\detours\disasm.cpp">
-      <Filter>common\detours</Filter>
+      <Filter>Common\detours</Filter>
     </ClCompile>
     <ClCompile Include="..\common\detours\image.cpp">
-      <Filter>common\detours</Filter>
+      <Filter>Common\detours</Filter>
     </ClCompile>
     <ClCompile Include="..\common\detours\modules.cpp">
-      <Filter>common\detours</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\division.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\divisionInfo.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\parsing.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\PK2Reader.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\pk2ReaderModern.cpp">
-      <Filter>common</Filter>
+      <Filter>Common\detours</Filter>
     </ClCompile>
     <ClCompile Include="..\common\shared_io.cpp">
-      <Filter>common</Filter>
+      <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="..\common\blowfish.cpp">
-      <Filter>common</Filter>
+      <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\itemInfo.cpp">
-      <Filter>common</Filter>
+    <ClCompile Include="..\common\pk2\division.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\characterInfo.cpp">
-      <Filter>common</Filter>
+    <ClCompile Include="..\common\pk2\divisionInfo.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\skill.cpp">
-      <Filter>common</Filter>
+    <ClCompile Include="..\common\pk2\pk2ReaderModern.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\teleport.cpp">
-      <Filter>common</Filter>
+    <ClCompile Include="..\common\pk2\parsing\parsing.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\pk2\pk2Reader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\pk2\ref\character.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\pk2\ref\item.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\pk2\ref\skill.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\pk2\ref\teleport.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\Common.h">
-      <Filter>common</Filter>
+      <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="..\common\detours\detours.h">
-      <Filter>common\detours</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\division.hpp">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\divisionInfo.hpp">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\parsing.hpp">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\PK2.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\PK2Reader.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2ReaderModern.hpp">
-      <Filter>common</Filter>
+      <Filter>Common\detours</Filter>
     </ClInclude>
     <ClInclude Include="..\common\shared_io.h">
-      <Filter>common</Filter>
+      <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="..\common\shared_types.h">
-      <Filter>common</Filter>
+      <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="..\common\blowfish.h">
-      <Filter>common</Filter>
+      <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\skill.hpp">
-      <Filter>common</Filter>
+    <ClInclude Include="..\common\pk2\division.hpp">
+      <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\itemInfo.hpp">
-      <Filter>common</Filter>
+    <ClInclude Include="..\common\pk2\divisionInfo.hpp">
+      <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\characterInfo.hpp">
-      <Filter>common</Filter>
+    <ClInclude Include="..\common\pk2\pk2ReaderModern.hpp">
+      <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\teleport.hpp">
-      <Filter>common</Filter>
+    <ClInclude Include="..\common\pk2\parsing\parsing.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\pk2\pk2Reader.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\pk2\pk2.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\pk2\ref\character.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\pk2\ref\item.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\pk2\ref\skill.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\pk2\ref\teleport.hpp">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

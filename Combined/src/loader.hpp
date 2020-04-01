@@ -1,7 +1,7 @@
 #ifndef LOADER_HPP_
 #define LOADER_HPP_
 
-#include "../../common/divisionInfo.hpp"
+#include "../../common/pk2/divisionInfo.hpp"
 
 #include <filesystem>
 #include <string>
