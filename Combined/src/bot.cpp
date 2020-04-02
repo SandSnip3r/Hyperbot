@@ -34,13 +34,15 @@ Bot::Bot(const config::CharacterLoginData &loginData,
 //   std::cout << "Bot::commandHandler Given command \"" << command << "\"\n";
 
 //   const std::string kNoticeMessage = "Command \"" + command + "\" accepted.";
-//   auto noticePacket = PacketBuilding::ServerChatPacketBuilder(packet::enums::ChatType::kNotice, kNoticeMessage).packet();
+
+//   auto noticePacket = packet::building::ServerAgentChatUpdate::notice(kNoticeMessage);
 //   broker_.injectPacket(noticePacket, PacketContainer::Direction::kServerToClient);
   
 //   const int kRegionId = 0x60a9;
 //   const int kXOffset = 0x00e8;
 //   const int kYOffset = 0x0000;
 //   const int kZOffset = 0x0772;
-//   auto movePacket = PacketBuilding::ClientMovementRequestPacketBuilder(kRegionId, kXOffset, kYOffset, kZOffset).packet();
+
+//   auto movePacket = packet::building::ClientAgentCharacterMoveRequest::packet(kRegionId, kXOffset, kYOffset, kZOffset);
 //   broker_.injectPacket(movePacket, PacketContainer::Direction::kClientToServer);
 // }

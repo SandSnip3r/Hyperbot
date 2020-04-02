@@ -154,7 +154,6 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         packetLogger.logPacket(p, !forward, PacketLogger::Direction::kClientToServer);
 
         if(p.opcode == 0x2001) {
-          std::cout << "\"Silkroad\" Connected" << std::endl;
           forward = false;
         }
 
@@ -191,12 +190,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
 
         if(p.opcode == 0xA102) {
           StreamUtility r = p.data;
-          if(r.Read<uint8_t>() == 1) {
-              
-            std::cout << "\"Joymax\" Connected" << std::endl;
-            //Do not forward the packet to Joymax, we need to replace the agent server data
-            forward = false;
-            
+          if(r.Read<uint8_t>() == 1) {            
             //The next connection will go to the agent server
             connectToAgent = true;
 
@@ -225,6 +219,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             //Want to forward this to the bot so it can grab the token
             broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
             //Security pointer is now valid so skip to the end
+            // Skipping to "Post" wont forward this packet to the client
             goto Post;
           }
         }

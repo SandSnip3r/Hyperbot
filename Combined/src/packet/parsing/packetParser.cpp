@@ -45,9 +45,9 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       return std::make_unique<ParsedServerAgentCharacterUpdateStats>(packet);
     case Opcode::SERVER_ITEM_MOVEMENT:
       return std::make_unique<ParsedServerItemMove>(packet);
-    case Opcode::CLIENT_ITEM_MOVE:
+    case Opcode::kClientAgentInventoryOperationRequest:
       return std::make_unique<ParsedClientItemMove>(packet);
-    case Opcode::CLIENT_AUTH:
+    case Opcode::kClientAgentAuthRequest:
     case Opcode::LOGIN_SERVER_CAPTCHA:
     // case static_cast<Opcode>(0x2005):
     // case static_cast<Opcode>(0x6005):

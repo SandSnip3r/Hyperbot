@@ -144,7 +144,9 @@
     <ClCompile Include="src\packet\parsing\parsedPacket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\packet\building\packetBuilding.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\packet\building\clientAgentInventoryItemUseRequest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -284,7 +286,9 @@
     <ClInclude Include="src\packet\enums\packetEnums.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\packet\building\packetBuilding.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\packet\building\clientAgentInventoryItemUseRequest.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

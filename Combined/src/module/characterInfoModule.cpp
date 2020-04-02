@@ -1,6 +1,6 @@
 #include "characterInfoModule.hpp"
 #include "../packet/opcode.hpp"
-#include "../packet/building/packetBuilding.hpp"
+#include "../packet/building/clientAgentInventoryItemUseRequest.hpp"
 
 #include <array>
 #include <iostream>
@@ -26,7 +26,7 @@ CharacterInfoModule::CharacterInfoModule(broker::PacketBroker &brokerSystem,
       gameData_(gameData) {
   auto packetHandleFunction = std::bind(&CharacterInfoModule::handlePacket, this, std::placeholders::_1);
   // Client packets
-  broker_.subscribeToClientPacket(packet::Opcode::CLIENT_ITEM_MOVE, packetHandleFunction);
+  broker_.subscribeToClientPacket(packet::Opcode::kClientAgentInventoryOperationRequest, packetHandleFunction);
   broker_.subscribeToClientPacket(packet::Opcode::CLIENT_CHAT, packetHandleFunction);
   // Server packets
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_AGENT_CHARACTER_INFO_DATA, packetHandleFunction);
@@ -335,7 +335,6 @@ void CharacterInfoModule::setRaceAndGender(uint32_t refObjId) {
 }
 
 void CharacterInfoModule::characterInfoReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) {
-  std::cout << "Character data received\n";
   uniqueId_ = packet.entityUniqueId();
   auto refObjId = packet.refObjId();
   setRaceAndGender(refObjId);
@@ -503,7 +502,7 @@ void CharacterInfoModule::usePotion(PotionType potionType) {
 }
 
 void CharacterInfoModule::useItem(uint8_t slotNum, uint16_t typeData) {
-  auto useItemPacket = packet::building::ClientUseItemBuilder(slotNum, typeData).packet();
+  auto useItemPacket = packet::building::ClientAgentInventoryItemUseRequest::packet(slotNum, typeData);
   broker_.injectPacket(useItemPacket, PacketContainer::Direction::kClientToServer);
   usedItemQueue_.emplace_back(slotNum, typeData);
 }

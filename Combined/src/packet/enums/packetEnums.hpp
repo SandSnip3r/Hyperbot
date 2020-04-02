@@ -1,6 +1,8 @@
 #ifndef PACKET_ENUMS_HPP
 #define PACKET_ENUMS_HPP
 
+#include <cstdint>
+
 namespace packet::enums {
 
 enum class AngleAction { kObsolete=0, kGoForward=1 };

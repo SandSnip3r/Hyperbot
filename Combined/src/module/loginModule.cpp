@@ -1,6 +1,10 @@
 #include "loginModule.hpp"
 #include "../packet/opcode.hpp"
-#include "../packet/building/packetBuilding.hpp"
+#include "../packet/building/clientAgentAuthRequest.hpp"
+#include "../packet/building/clientAgentCharacterSelectionActionRequest.hpp"
+#include "../packet/building/clientAgentCharacterSelectionJoinRequest.hpp"
+#include "../packet/building/clientGatewayLoginIbuvAnswer.hpp"
+#include "../packet/building/clientGatewayLoginRequest.hpp"
 
 #include <iostream>
 #include <memory>
@@ -17,7 +21,7 @@ LoginModule::LoginModule(broker::PacketBroker &brokerSystem,
       divisionInfo_(divisionInfo) {
   auto packetHandleFunction = std::bind(&LoginModule::handlePacket, this, std::placeholders::_1);
   // Client packets
-  broker_.subscribeToClientPacket(packet::Opcode::CLIENT_AUTH, packetHandleFunction);
+  broker_.subscribeToClientPacket(packet::Opcode::kClientAgentAuthRequest, packetHandleFunction);
   // Server packets
   broker_.subscribeToServerPacket(packet::Opcode::LOGIN_SERVER_LIST, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::LOGIN_SERVER_AUTH_INFO, packetHandleFunction);
@@ -30,8 +34,6 @@ LoginModule::LoginModule(broker::PacketBroker &brokerSystem,
 }
 
 bool LoginModule::handlePacket(const PacketContainer &packet) {
-  std::cout << "LoginModule::handlePacket\n";
-
   std::unique_ptr<packet::parsing::ParsedPacket> parsedPacket;
   try {
     parsedPacket = packetParser_.parsePacket(packet);
@@ -92,31 +94,24 @@ bool LoginModule::handlePacket(const PacketContainer &packet) {
 }
 
 void LoginModule::serverListReceived(const packet::parsing::ParsedLoginServerList &packet) {
-  std::cout << "Server List Received\n";
   shardId_ = packet.shardId();
-  std::cout << " Server List packet, shardId:" << shardId_ << ". Injecting loginauth packet\n";
-  auto loginAuthPacket = packet::building::LoginAuthPacketBuilder(divisionInfo_.locale, loginData_.id, loginData_.password, shardId_).packet();
+  auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(divisionInfo_.locale, loginData_.id, loginData_.password, shardId_);
   broker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
 }
 
 void LoginModule::loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) {
-  std::cout << " Login response, result:" << static_cast<int>(packet.result()) << ", token:" << packet.token() << "\n";
   if (packet.result() != packet::enums::LoginResult::kSuccess) {
     std::cout << " Login failed\n";
   } else {
-    std::cout << " Login Success, saving token\n";
     token_ = packet.token();
   }
 }
 
 void LoginModule::loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet) {
-  std::cout << " Login client info, service name:" << packet.serviceName() << "\n";
   if (packet.serviceName() != "AgentServer") {
-    std::cout << "Not agentserver\n";
   } else {
-    std::cout << "Injecting client auth packet to agentserver\n";
     // Connected to agentserver, send client auth packet
-    auto clientAuthPacket = packet::building::ClientAuthPacketBuilder(token_, loginData_.id, loginData_.password, divisionInfo_.locale, kMacAddress_).packet();
+    auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(token_, loginData_.id, loginData_.password, divisionInfo_.locale, kMacAddress_);
     broker_.injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
     loggingIn_ = true;
     // Allow this packet to continue to the client
@@ -125,51 +120,49 @@ void LoginModule::loginClientInfoReceived(const packet::parsing::ParsedLoginClie
 }
 
 bool LoginModule::unknownPacketReceived(const packet::parsing::ParsedUnknown &packet) {
-  std::cout << "Unknown packet\n";
-  if (packet.opcode() == packet::Opcode::CLIENT_AUTH) {
-    std::cout << "Client_auth packet, actually\n";
-    // Client auth packet
+  if (packet.opcode() == packet::Opcode::kClientAgentAuthRequest) {
+    // The client is trying to authenticate
     if (loggingIn_) {
-      std::cout << "client trying to authenticate\n";
-      // Block this from going to the server
+      // Block this from the server
       return false;
     }
   } else if (packet.opcode() == packet::Opcode::LOGIN_SERVER_CAPTCHA) {
+    // Got the captcha, respond with an answer
     std::cout << "Got captcha. Sending answer\n";
-    auto captchaAnswerPacket = packet::building::ClientCaptchaBuilder(kCaptchaAnswer_).packet();
+    auto captchaAnswerPacket = packet::building::ClientGatewayLoginIbuvAnswer::packet(kCaptchaAnswer_);
     broker_.injectPacket(captchaAnswerPacket, PacketContainer::Direction::kClientToServer);
   }
   return true;
 }
 
 void LoginModule::serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet) {
-  std::cout << " Server auth response: " << (int)packet.result() << "\n";
   if (packet.result() == 0x01) {
     loggingIn_ = false;
     // TODO: remove this function and opcode subscription. Client will already take care of this
-    // std::cout << "Successfully logged in! Request character list\n";
-    // auto characterListPacket = packet::building::CharacterSelectionActionPacketBuilder(packet::enums::CharacterSelectionAction::kList).packet();
+    // auto characterListPacket = packet::building::ClientAgentCharacterSelectionActionRequest::packet(packet::enums::CharacterSelectionAction::kList);
     // broker_.injectPacket(characterListPacket, PacketContainer::Direction::kClientToServer);
   }
 }
 
 void LoginModule::charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet) {
-  auto &charList = packet.characters();
-  std::cout << "Char list received, " << charList.size() << " character(s)\n";
+  const auto &charList = packet.characters();
+  std::cout << "Char list received: [ ";
+  for (const auto &i : charList) {
+    std::cout << i.name << ' ';
+  }
+  std::cout << "]\n";
+
   // Search for our character in the character list
   auto it = std::find_if(charList.begin(), charList.end(), [this](const packet::structures::CharacterSelection::Character &character) {
     return character.name == loginData_.name;
   });
   if (it == charList.end()) {
-    std::cout << "Unable to find character \"" << loginData_.name << "\". Options are [";
-    for (const auto &character : charList) {
-      std::cout << character.name << ',';
-    }
-    std::cout << "]\n";
+    std::cout << "Unable to find character \"" << loginData_.name << "\"\n";
     return;
   }
+  
   // Found our character, select it
-  auto charSelectionPacket = packet::building::ClientAgentSelectionJoinPacketBuilder(loginData_.name).packet();
+  auto charSelectionPacket = packet::building::ClientAgentCharacterSelectionJoinRequest::packet(loginData_.name);
   broker_.injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
 }
 

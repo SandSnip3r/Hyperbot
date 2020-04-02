@@ -21,8 +21,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::LOGIN_CLIENT_SERVERLIST_REQUEST) {
     return "LOGIN_CLIENT_SERVERLIST_REQUEST";
   }
-  if (opcode == Opcode::LOGIN_CLIENT_AUTH) {
-    return "LOGIN_CLIENT_AUTH";
+  if (opcode == Opcode::kClientGatewayLoginRequest) {
+    return "kClientGatewayLoginRequest";
   }
   if (opcode == Opcode::LOGIN_CLIENT_ACCEPT_HANDSHAKE) {
     return "LOGIN_CLIENT_ACCEPT_HANDSHAKE";
@@ -60,11 +60,11 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::CLIENT_PATCH_REQUEST) {
     return "CLIENT_PATCH_REQUEST";
   }
-  if (opcode == Opcode::CLIENT_AUTH) {
-    return "CLIENT_AUTH";
+  if (opcode == Opcode::kClientAgentAuthRequest) {
+    return "kClientAgentAuthRequest";
   }
-  if (opcode == Opcode::CLIENT_ITEM_MOVE) {
-    return "CLIENT_ITEM_MOVE";
+  if (opcode == Opcode::kClientAgentInventoryOperationRequest) {
+    return "kClientAgentInventoryOperationRequest";
   }
   if (opcode == Opcode::CLIENT_INGAME_NOTIFY) {
     return "CLIENT_INGAME_NOTIFY";
@@ -75,14 +75,14 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::CLIENT_COUNTDOWN_INTERRUPT) {
     return "CLIENT_COUNTDOWN_INTERRUPT";
   }
-  if (opcode == Opcode::CLIENT_CHARACTER) {
-    return "CLIENT_CHARACTER";
+  if (opcode == Opcode::kClientAgentCharacterSelectionActionRequest) {
+    return "kClientAgentCharacterSelectionActionRequest";
   }
   if (opcode == Opcode::CLIENT_CHAT) {
     return "CLIENT_CHAT";
   }
-  if (opcode == Opcode::CLIENT_INGAME_REQUEST) {
-    return "CLIENT_INGAME_REQUEST";
+  if (opcode == Opcode::kClientAgentCharacterSelectionJoinRequest) {
+    return "kClientAgentCharacterSelectionJoinRequest";
   }
   if (opcode == Opcode::CLIENT_TARGET) {
     return "CLIENT_TARGET";
@@ -90,8 +90,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::CLIENT_GM) {
     return "CLIENT_GM";
   }
-  if (opcode == Opcode::CLIENT_MOVEMENT) {
-    return "CLIENT_MOVEMENT";
+  if (opcode == Opcode::kClientAgentCharacterMoveRequest) {
+    return "kClientAgentCharacterMoveRequest";
   }
   if (opcode == Opcode::CLIENT_TRANSPORT_MOVE) {
     return "CLIENT_TRANSPORT_MOVE";
@@ -105,8 +105,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::CLIENT_INT_UPDATE) {
     return "CLIENT_INT_UPDATE";
   }
-  if (opcode == Opcode::CLIENT_CHARACTER_STATE) {
-    return "CLIENT_CHARACTER_STATE";
+  if (opcode == Opcode::kClientAgentCharacterSelectionActionRequest_STATE) {
+    return "kClientAgentCharacterSelectionActionRequest_STATE";
   }
   if (opcode == Opcode::CLIENT_RESPAWN) {
     return "CLIENT_RESPAWN";
@@ -120,8 +120,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::CLIENT_EMOTION) {
     return "CLIENT_EMOTION";
   }
-  if (opcode == Opcode::CLIENT_ITEM_USE) {
-    return "CLIENT_ITEM_USE";
+  if (opcode == Opcode::kClientAgentInventoryItemUseRequest) {
+    return "kClientAgentInventoryItemUseRequest";
   }
   if (opcode == Opcode::CLIENT_HOTKEY_CHANGE) {
     return "CLIENT_HOTKEY_CHANGE";
@@ -297,8 +297,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_SKILLUPDATE) {
     return "SERVER_SKILLUPDATE";
   }
-  if (opcode == Opcode::SERVER_CHAT) {
-    return "SERVER_CHAT";
+  if (opcode == Opcode::kServerAgentChatUpdate) {
+    return "kServerAgentChatUpdate";
   }
   if (opcode == Opcode::SERVER_CHAT_ACCEPT) {
     return "SERVER_CHAT_ACCEPT";
