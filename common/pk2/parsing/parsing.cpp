@@ -573,6 +573,160 @@ pk2::ref::Teleport parseTeleportbuildingLine(const std::string &line) {
 	return teleport;
 }
 
+pk2::ref::ScrapOfPackageItem parseScrapOfPackageItemLine(const std::string &line) {
+  // uint8_t service // 0
+  // int32_t country // 1
+  // std::string refPackageItemCodeName // 2
+  // std::string refItemCodeName // 3
+  // uint8_t optLevel // 4
+  // int64_t variance // 5
+  // int32_t data // 6
+  // uint8_t magParamNum // 7
+  // int64_t magParam1 // 8
+  // int64_t magParam2 // 9
+  // int64_t magParam3 // 10
+  // int64_t magParam4 // 11
+  // int64_t magParam5 // 12
+  // int64_t magParam6 // 13
+  // int64_t magParam7 // 14
+  // int64_t magParam8 // 15
+  // int64_t magParam9 // 16
+  // int64_t magParam10 // 17
+  // int64_t magParam11 // 18
+  // int64_t magParam12 // 19
+  // int32_t param1 // 20
+  // std::string param1_Desc128 // 21
+  // int32_t param2 // 22
+  // std::string param2_Desc128 // 23
+  // int32_t param3 // 24
+  // std::string param3_Desc128 // 25
+  // int32_t param4 // 26
+  // std::string param4_Desc128 // 27
+  // int32_t index // 28
+	const std::vector<int> kDesiredFields = {2,3};
+	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
+	if (fields.size() != kDesiredFields.size()) {
+		// TODO: This check for validity of data should be more robust
+		throw std::runtime_error("Parsing scrap of package item, but line contains wrong number of fields");
+	}
+	pk2::ref::ScrapOfPackageItem scrap;
+  int idx=0;
+	scrap.refPackageItemCodeName = fields[idx++];
+	scrap.refItemCodeName =        fields[idx++];
+	return scrap;
+}
+
+pk2::ref::ShopTab parseShopTabLine(const std::string &line) {
+  // uint8_t service // 0
+  // int32_t country // 1
+  // int32_t id // 2
+  // std::string codeName128 // 3
+  // std::string refTabGroupCodeName // 4
+  // std::string strID128_Tab // 5
+	const std::vector<int> kDesiredFields = {3,4};
+	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
+	if (fields.size() != kDesiredFields.size()) {
+		// TODO: This check for validity of data should be more robust
+		throw std::runtime_error("Parsing shop tab, but line contains wrong number of fields");
+	}
+	pk2::ref::ShopTab tab;
+  int idx=0;
+	tab.codeName128 =         fields[idx++];
+	tab.refTabGroupCodeName = fields[idx++];
+	return tab;
+}
+
+pk2::ref::ShopGroup parseShopGroupLine(const std::string &line) {
+  // uint8_t service // 0
+  // int32_t country // 1
+  // in16_t id // 2
+  // std::string codeName128 // 3
+  // std::string refNPCCodeName // 4
+  // int32_t param1 // 5
+  // std::string param1_Desc128 // 6
+  // int32_t param2 // 7
+  // std::string param2_Desc128 // 8
+  // int32_t param3 // 9
+  // std::string param3_Desc128 // 10
+  // int32_t param4 // 11
+  // std::string param4_Desc128 // 12
+	const std::vector<int> kDesiredFields = {3,4};
+	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
+	if (fields.size() != kDesiredFields.size()) {
+		// TODO: This check for validity of data should be more robust
+		throw std::runtime_error("Parsing shop group, but line contains wrong number of fields");
+	}
+	pk2::ref::ShopGroup tab;
+  int idx=0;
+	tab.codeName128 =    fields[idx++];
+	tab.refNPCCodeName = fields[idx++];
+	return tab;
+}
+
+pk2::ref::ShopGood parseShopGoodLine(const std::string &line) {
+  // uint8_t service // 0
+  // int32_t country // 1
+  // std::string refTabCodeName // 2
+  // std::string refPackageItemCodeName // 3
+  // uint8_t slotIndex // 4
+  // int32_t param1 // 5
+  // std::string param1_Desc128 // 6
+  // int32_t param2 // 7
+  // std::string param2_Desc128 // 8
+  // int32_t param3 // 9
+  // std::string param3_Desc128 // 10
+  // int32_t param4 // 11
+  // std::string param4_Desc128 // 12
+	const std::vector<int> kDesiredFields = {2,3,4};
+	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
+	if (fields.size() != kDesiredFields.size()) {
+		// TODO: This check for validity of data should be more robust
+		throw std::runtime_error("Parsing shop good, but line contains wrong number of fields");
+	}
+	pk2::ref::ShopGood good;
+  int idx=0;
+	good.refTabCodeName =         fields[idx++];
+	good.refPackageItemCodeName = fields[idx++];
+	good.slotIndex =    std::stoi(fields[idx++]);
+	return good;
+}
+
+pk2::ref::MappingShopGroup parseMappingShopGroupLine(const std::string &line) {
+  // uint8_t service // 0
+  // int32_t country // 1
+  // std::string refShopGroupCodeName // 2
+  // std::string refShopCodeName // 3
+	const std::vector<int> kDesiredFields = {2,3};
+	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
+	if (fields.size() != kDesiredFields.size()) {
+		// TODO: This check for validity of data should be more robust
+		throw std::runtime_error("Parsing mapping shop group, but line contains wrong number of fields");
+	}
+	pk2::ref::MappingShopGroup mapping;
+  int idx=0;
+	mapping.refShopGroupCodeName = fields[idx++];
+	mapping.refShopCodeName =      fields[idx++];
+	return mapping;
+}
+
+pk2::ref::MappingShopWithTab parseMappingShopWithTabLine(const std::string &line) {
+  // uint8_t service // 3
+  // int32_t country // 2
+  // std::string refShopCodeName // 1
+  // std::string refTabGroupCodeName // 0
+	const std::vector<int> kDesiredFields = {2,3};
+	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
+	if (fields.size() != kDesiredFields.size()) {
+		// TODO: This check for validity of data should be more robust
+		throw std::runtime_error("Parsing mapping shop with tab, but line contains wrong number of fields");
+	}
+	pk2::ref::MappingShopWithTab mapping;
+  int idx=0;
+	mapping.refShopCodeName =     fields[idx++];
+	mapping.refTabGroupCodeName = fields[idx++];
+	return mapping;
+}
+
 DivisionInfo parseDivisionInfo(const std::vector<uint8_t> &data) {
 	DivisionInfo divisionInfo;
 	int readIndex=0;

@@ -4,6 +4,12 @@
 #include "../divisionInfo.hpp"
 #include "../ref/character.hpp"
 #include "../ref/item.hpp"
+#include "../ref/mappingShopGroup.hpp"
+#include "../ref/mappingShopWithTab.hpp"
+#include "../ref/scrapOfPackageItem.hpp"
+#include "../ref/shopGood.hpp"
+#include "../ref/shopGroup.hpp"
+#include "../ref/shopTab.hpp"
 #include "../ref/skill.hpp"
 #include "../ref/teleport.hpp"
 
@@ -42,6 +48,42 @@ pk2::ref::Item parseItemdataLine(const std::string &line);
 // [param] line   A line of text
 // [return]       A populated Teleport object
 pk2::ref::Teleport parseTeleportbuildingLine(const std::string &line);
+
+// Parses string representing a line of text from refscrapofpackageitem.txt in the Media.pk2 into a ScrapOfPackageItem object
+//
+// [param] line   A line of text
+// [return]       A populated ScrapOfPackageItem object
+pk2::ref::ScrapOfPackageItem parseScrapOfPackageItemLine(const std::string &line);
+
+// Parses string representing a line of text from refshoptab.txt in the Media.pk2 into a ShopTab object
+//
+// [param] line   A line of text
+// [return]       A populated ShopTab object
+pk2::ref::ShopTab parseShopTabLine(const std::string &line);
+
+// Parses string representing a line of text from refshopgroup.txt in the Media.pk2 into a ShopGroup object
+//
+// [param] line   A line of text
+// [return]       A populated ShopGroup object
+pk2::ref::ShopGroup parseShopGroupLine(const std::string &line);
+
+// Parses string representing a line of text from refshopgoods.txt in the Media.pk2 into a ShopGood object
+//
+// [param] line   A line of text
+// [return]       A populated ShopGood object
+pk2::ref::ShopGood parseShopGoodLine(const std::string &line);
+
+// Parses string representing a line of text from refmappingshopgroup.txt in the Media.pk2 into a MappingShopGroup object
+//
+// [param] line   A line of text
+// [return]       A populated MappingShopGroup object
+pk2::ref::MappingShopGroup parseMappingShopGroupLine(const std::string &line);
+
+// Parses string representing a line of text from refmappingshopwithtab.txt in the Media.pk2 into a MappingShopWithTab object
+//
+// [param] line   A line of text
+// [return]       A populated MappingShopWithTab object
+pk2::ref::MappingShopWithTab parseMappingShopWithTabLine(const std::string &line);
 
 // Parses raw pk2 data into DivisionInfo object
 //

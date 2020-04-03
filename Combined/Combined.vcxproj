@@ -28,6 +28,12 @@
     <ClCompile Include="..\common\pk2\pk2ReaderModern.cpp" />
     <ClCompile Include="..\common\pk2\ref\character.cpp" />
     <ClCompile Include="..\common\pk2\ref\item.cpp" />
+    <ClCompile Include="..\common\pk2\ref\mappingShopGroup.cpp" />
+    <ClCompile Include="..\common\pk2\ref\mappingShopWithTab.cpp" />
+    <ClCompile Include="..\common\pk2\ref\scrapOfPackageItem.cpp" />
+    <ClCompile Include="..\common\pk2\ref\shopGood.cpp" />
+    <ClCompile Include="..\common\pk2\ref\shopGroup.cpp" />
+    <ClCompile Include="..\common\pk2\ref\shopTab.cpp" />
     <ClCompile Include="..\common\pk2\ref\skill.cpp" />
     <ClCompile Include="..\common\pk2\ref\teleport.cpp" />
     <ClCompile Include="..\common\shared_io.cpp" />
@@ -59,6 +65,7 @@
     <ClCompile Include="src\pk2\characterData.cpp" />
     <ClCompile Include="src\pk2\gameData.cpp" />
     <ClCompile Include="src\pk2\itemData.cpp" />
+    <ClCompile Include="src\pk2\shopData.cpp" />
     <ClCompile Include="src\pk2\skillData.cpp" />
     <ClCompile Include="src\pk2\teleportData.cpp" />
     <ClCompile Include="src\proxy.cpp" />
@@ -81,6 +88,12 @@
     <ClInclude Include="..\common\pk2\pk2ReaderModern.hpp" />
     <ClInclude Include="..\common\pk2\ref\character.hpp" />
     <ClInclude Include="..\common\pk2\ref\item.hpp" />
+    <ClInclude Include="..\common\pk2\ref\mappingShopGroup.hpp" />
+    <ClInclude Include="..\common\pk2\ref\mappingShopWithTab.hpp" />
+    <ClInclude Include="..\common\pk2\ref\scrapOfPackageItem.hpp" />
+    <ClInclude Include="..\common\pk2\ref\shopGood.hpp" />
+    <ClInclude Include="..\common\pk2\ref\shopGroup.hpp" />
+    <ClInclude Include="..\common\pk2\ref\shopTab.hpp" />
     <ClInclude Include="..\common\pk2\ref\skill.hpp" />
     <ClInclude Include="..\common\pk2\ref\teleport.hpp" />
     <ClInclude Include="..\common\shared_io.h" />
@@ -115,6 +128,7 @@
     <ClInclude Include="src\pk2\characterData.hpp" />
     <ClInclude Include="src\pk2\gameData.hpp" />
     <ClInclude Include="src\pk2\itemData.hpp" />
+    <ClInclude Include="src\pk2\shopData.hpp" />
     <ClInclude Include="src\pk2\skillData.hpp" />
     <ClInclude Include="src\pk2\teleportData.hpp" />
     <ClInclude Include="src\proxy.hpp" />

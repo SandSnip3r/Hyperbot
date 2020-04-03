@@ -175,35 +175,35 @@ void CharacterInfoModule::printObj(std::shared_ptr<packet::parsing::Object> obj)
     case packet::parsing::ObjectType::kPlayerCharacter:
       {
         auto ptr = reinterpret_cast<packet::parsing::PlayerCharacter*>(obj.get());
-        printf("%7s %5d (%6f,%6f,%6f) GId:%d, name:\"%s\"\n","Player", obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->gId, ptr->name.c_str());
+        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) GId:%d, name:\"%s\"\n","Player", obj->gId, obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->gId, ptr->name.c_str());
       } 
       break;
     case packet::parsing::ObjectType::kNonplayerCharacter:
       {
         auto ptr = reinterpret_cast<packet::parsing::NonplayerCharacter*>(obj.get());
         const auto &character = gameData_.characterData().getCharacterById(obj->refObjId);
-        printf("%7s %5d (%6f,%6f,%6f) \"%s\"\n","NPC", obj->refObjId, ptr->x, ptr->y, ptr->z, character.codeName128.c_str());
+        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) \"%s\"\n","NPC", obj->gId, obj->refObjId, ptr->x, ptr->y, ptr->z, character.codeName128.c_str());
       } 
       break;
     case packet::parsing::ObjectType::kMonster:
       {
         auto ptr = reinterpret_cast<packet::parsing::Monster*>(obj.get());
         const auto &character = gameData_.characterData().getCharacterById(obj->refObjId);
-        printf("%7s %5d (%6f,%6f,%6f) type:%d, \"%s\"\n","Monster", obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->monsterRarity, character.codeName128.c_str());
+        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) type:%d, \"%s\"\n","Monster", obj->gId, obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->monsterRarity, character.codeName128.c_str());
       } 
       break;
     case packet::parsing::ObjectType::kItem:
       {
         auto ptr = reinterpret_cast<packet::parsing::Item*>(obj.get());
         const auto &item = gameData_.itemData().getItemById(obj->refObjId);
-        printf("%7s %5d (%6f,%6f,%6f) rarity:%d, \"%s\"\n","Item", obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->rarity, item.codeName128.c_str());
+        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) rarity:%d, \"%s\"\n","Item", obj->gId, obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->rarity, item.codeName128.c_str());
       } 
       break;
     case packet::parsing::ObjectType::kPortal:
       {
         auto ptr = reinterpret_cast<packet::parsing::Portal*>(obj.get());
         const auto &portal = gameData_.teleportData().getTeleportById(obj->refObjId);
-        printf("%7s %5d (%6f,%6f,%6f) \"%s\"\n","Portal", obj->refObjId, ptr->x, ptr->y, ptr->z, portal.codeName128.c_str());
+        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) \"%s\"\n","Portal", obj->gId, obj->refObjId, ptr->x, ptr->y, ptr->z, portal.codeName128.c_str());
       }
       break;
   }
@@ -238,11 +238,9 @@ void CharacterInfoModule::serverAgentDespawnReceived(packet::parsing::ParsedServ
 }
 
 void CharacterInfoModule::clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) {
-  std::cout << "Handling client item move\n";
   const auto movement = packet.movement();
   if (movement.type == packet::enums::ItemMovementType::kBuyFromNPC) {
     // User is buying something from the store
-    std::cout << "  bought from npc!\n";
     userPurchaseRequest_ = movement;
   }
 }
@@ -261,35 +259,30 @@ void CharacterInfoModule::serverAgentGroupSpawnReceived(const packet::parsing::P
 
 void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedServerItemMove &packet) {
   const std::vector<packet::parsing::ItemMovement> &itemMovements = packet.itemMovements();
-  std::cout << "serverItemMoveReceived, " << itemMovements.size() << '\n';
   for (const auto &movement : itemMovements) {
     if (movement.type == packet::enums::ItemMovementType::kWithinInventory) {
-      std::cout << "moveItemInStorage: inventory_\n";
       inventory_.moveItemInStorage(movement.srcSlot, movement.destSlot, movement.quantity);
     } else if (movement.type == packet::enums::ItemMovementType::kWithinStorage) {
-      // std::cout << "moveItemInStorage: storage_\n";
+      // Not handling because we dont parse the storage init packet
       // moveItemInStorage(storage_, movement.srcSlot, movement.destSlot, movement.quantity);
     } else if (movement.type == packet::enums::ItemMovementType::kBuyFromNPC) {
       if (userPurchaseRequest_) {
         // User purchased something, we saved this so that we can get the NPC's global Id
-        std::cout << "kBuyFromNPC with ID " << userPurchaseRequest_->globalId << "\n";
+        for (auto i : objectsInRange_) {
+          if (i->gId == userPurchaseRequest_->globalId) {
+            // Found the NPC which this purchase was made with
+            if (gameData_.characterData().haveCharacterWithId(i->refObjId)) {
+              auto npcName = gameData_.characterData().getCharacterById(i->refObjId).codeName128;
+              auto itemInfo = gameData_.shopData().getItemFromNpc(npcName, userPurchaseRequest_->storeTabNumber, userPurchaseRequest_->storeSlotNumber);
+              std::cout << "Bought " << movement.quantity << " x \"" << itemInfo.refItemCodeName << "\" from \"" << npcName << "\"\n";
+            }
+            break;
+          }
+        }
         userPurchaseRequest_.reset();
       } else {
         std::cout << "kBuyFromNPC but no matching data\n";
-      }
-      
-      // primaryItemMovement.storePageNumber = stream.Read<uint8_t>();
-      // primaryItemMovement.storeSlotNumber = stream.Read<uint8_t>();
-      // uint8_t stackCount = stream.Read<uint8_t>();
-      // for (int i=0; i<stackCount; ++i) {
-      //   // Can only happen multiple times if its an item that wont get stacked. Like equipment
-      //   uint8_t inventoryDestinationSlot = stream.Read<uint8_t>();
-      // }
-      // primaryItemMovement.quantity = stream.Read<uint16_t>();
-      // for (int i=0; i<stackCount; ++i) {
-      //   auto rentInfo = parseRentInfo(stream);
-      // }
-    
+      }    
     }
   }
 }

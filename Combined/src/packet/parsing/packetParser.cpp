@@ -48,7 +48,7 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
     case Opcode::kClientAgentInventoryOperationRequest:
       return std::make_unique<ParsedClientItemMove>(packet);
     case Opcode::kClientAgentAuthRequest:
-    case Opcode::LOGIN_SERVER_CAPTCHA:
+    case Opcode::kServerGatewayLoginIbuvChallenge:
     // case static_cast<Opcode>(0x2005):
     // case static_cast<Opcode>(0x6005):
       return std::make_unique<ParsedUnknown>(packet);

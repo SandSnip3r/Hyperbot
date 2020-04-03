@@ -109,7 +109,7 @@ struct  ItemMovement {
   uint32_t goldPickAmount;
   uint64_t goldAmount;
   uint32_t globalId;
-  uint8_t storePageNumber;
+  uint8_t storeTabNumber;
   uint8_t storeSlotNumber;
   uint8_t stackCount;
   std::vector<uint8_t> destSlots;

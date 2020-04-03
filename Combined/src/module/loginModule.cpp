@@ -29,7 +29,7 @@ LoginModule::LoginModule(broker::PacketBroker &brokerSystem,
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_LOGIN_RESULT, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_CHARACTER, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_INGAME_ACCEPT, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::LOGIN_SERVER_CAPTCHA, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerGatewayLoginIbuvChallenge, packetHandleFunction);
   // broker_.subscribeToServerPacket(static_cast<packet::Opcode>(0x6005), packetHandleFunction);
 }
 
@@ -126,7 +126,7 @@ bool LoginModule::unknownPacketReceived(const packet::parsing::ParsedUnknown &pa
       // Block this from the server
       return false;
     }
-  } else if (packet.opcode() == packet::Opcode::LOGIN_SERVER_CAPTCHA) {
+  } else if (packet.opcode() == packet::Opcode::kServerGatewayLoginIbuvChallenge) {
     // Got the captcha, respond with an answer
     std::cout << "Got captcha. Sending answer\n";
     auto captchaAnswerPacket = packet::building::ClientGatewayLoginIbuvAnswer::packet(kCaptchaAnswer_);

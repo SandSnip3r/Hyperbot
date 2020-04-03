@@ -3,6 +3,7 @@
 
 #include "characterData.hpp"
 #include "itemData.hpp"
+#include "shopData.hpp"
 #include "skillData.hpp"
 #include "teleportData.hpp"
 #include "../../../common/pk2/divisionInfo.hpp"
@@ -21,6 +22,7 @@ public:
   const DivisionInfo& divisionInfo() const;
   const CharacterData& characterData() const;
   const ItemData& itemData() const;
+  const ShopData& shopData() const;
   const SkillData& skillData() const;
   const TeleportData& teleportData() const;
 private:
@@ -28,6 +30,7 @@ private:
   DivisionInfo divisionInfo_;
   CharacterData characterData_;
   ItemData itemData_;
+  ShopData shopData_;
   SkillData skillData_;
   TeleportData teleportData_;
   void parseMedia(Pk2ReaderModern &pk2Reader);
@@ -36,6 +39,7 @@ private:
   void parseItemData(Pk2ReaderModern &pk2Reader);
   void parseSkillData(Pk2ReaderModern &pk2Reader);
   void parseTeleportData(Pk2ReaderModern &pk2Reader);
+  void parseShopData(Pk2ReaderModern &pk2Reader);
 };
 
 } // namespace pk2

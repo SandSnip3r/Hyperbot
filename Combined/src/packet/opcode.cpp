@@ -105,8 +105,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::CLIENT_INT_UPDATE) {
     return "CLIENT_INT_UPDATE";
   }
-  if (opcode == Opcode::kClientAgentCharacterSelectionActionRequest_STATE) {
-    return "kClientAgentCharacterSelectionActionRequest_STATE";
+  if (opcode == Opcode::CLIENT_CHARACTER_STATE) {
+    return "CLIENT_CHARACTER_STATE";
   }
   if (opcode == Opcode::CLIENT_RESPAWN) {
     return "CLIENT_RESPAWN";
