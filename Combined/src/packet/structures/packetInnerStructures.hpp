@@ -56,6 +56,16 @@ struct AbnormalState {
 
 } // namespace vitals
 
+struct RentInfo {
+  uint32_t rentType; // TODO: Enum for this
+  uint16_t canDelete;
+  uint32_t periodBeginTime;
+  uint32_t periodEndTime;
+  uint16_t canRecharge;
+  uint32_t meterRateTime;
+  uint32_t packingTime;
+};
+
 } // namespace packet::structures
 
 #endif // PACKET_INNER_STRUCTURES_HPP

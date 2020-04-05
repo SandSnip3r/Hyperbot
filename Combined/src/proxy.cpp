@@ -233,7 +233,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           // Initialize packet data with the "begin" data
           characterInfoPacketContainer_.emplace(p);
           // Update opcode to reflect "data"
-          characterInfoPacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::SERVER_AGENT_CHARACTER_INFO_DATA);
+          characterInfoPacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentCharacterData);
         } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_BEGIN) {
           // Initialize data/container
           if (groupSpawnPacketContainer_) {
@@ -244,7 +244,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           groupSpawnPacketContainer_.emplace(p);
           // Update opcode to reflect "data"
           groupSpawnPacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA);
-        } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_DATA) {
+        } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::kServerAgentCharacterData) {
           // Append all data to container
           characterInfoPacketContainer_->data.Write(p.data.GetStreamVector());
         } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA) {  
@@ -268,7 +268,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             // Reset data
             groupSpawnPacketContainer_.reset();
           } else if (static_cast<packet::Opcode>(p.opcode) != packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN &&
-                     static_cast<packet::Opcode>(p.opcode) != packet::Opcode::SERVER_AGENT_CHARACTER_INFO_DATA &&
+                     static_cast<packet::Opcode>(p.opcode) != packet::Opcode::kServerAgentCharacterData &&
                      static_cast<packet::Opcode>(p.opcode) != packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_BEGIN &&
                      static_cast<packet::Opcode>(p.opcode) != packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA) {
             // In all other cases, if its not "begin" or "data", send it

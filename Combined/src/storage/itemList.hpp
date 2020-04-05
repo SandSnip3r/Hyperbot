@@ -22,6 +22,7 @@ public:
 
   // Modifying
   void addItem(uint8_t slot, std::shared_ptr<Item> item);
+  std::shared_ptr<Item> withdrawItem(uint8_t slot);
   void moveItem(uint8_t srcSlot, uint8_t destSlot);
   void swapItems(uint8_t srcSlot, uint8_t destSlot);
   void deleteItem(uint8_t slot);

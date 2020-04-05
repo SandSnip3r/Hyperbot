@@ -21,8 +21,11 @@ public:
   void clear();
   void resize(uint8_t newSize);
   void addItem(uint8_t slot, std::shared_ptr<Item> item);
+  std::shared_ptr<Item> withdrawItem(uint8_t slot);
   void deleteItem(uint8_t slot);
-  void moveItemInStorage(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
+  void moveItem(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
+  void moveItem(uint8_t srcSlot, uint8_t destSlot);
+  void printItem(uint8_t slot);
 private:
   ItemList itemList_;
 };

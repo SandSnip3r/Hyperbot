@@ -48,7 +48,9 @@
     <ClCompile Include="src\module\characterInfoModule.cpp" />
     <ClCompile Include="src\module\chatEventModule.cpp" />
     <ClCompile Include="src\module\loginModule.cpp" />
+    <ClCompile Include="src\module\skillUseModule.cpp" />
     <ClCompile Include="src\packetLogger.cpp" />
+    <ClCompile Include="src\packet\building\clientAgentActionSelectRequest.cpp" />
     <ClCompile Include="src\packet\building\clientAgentAuthRequest.cpp" />
     <ClCompile Include="src\packet\building\clientAgentCharacterMoveRequest.cpp" />
     <ClCompile Include="src\packet\building\clientAgentCharacterSelectionActionRequest.cpp" />
@@ -59,8 +61,11 @@
     <ClCompile Include="src\packet\building\clientGatewayLoginRequest.cpp" />
     <ClCompile Include="src\packet\building\serverAgentChatUpdate.cpp" />
     <ClCompile Include="src\packet\opcode.cpp" />
+    <ClCompile Include="src\packet\parsing\clientAgentChatRequest.cpp" />
+    <ClCompile Include="src\packet\parsing\commonParsing.cpp" />
     <ClCompile Include="src\packet\parsing\packetParser.cpp" />
     <ClCompile Include="src\packet\parsing\parsedPacket.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentCharacterData.cpp" />
     <ClCompile Include="src\phConnector.cpp" />
     <ClCompile Include="src\pk2\characterData.cpp" />
     <ClCompile Include="src\pk2\gameData.cpp" />
@@ -73,6 +78,8 @@
     <ClCompile Include="src\shared\silkroad_security.cpp" />
     <ClCompile Include="src\shared\stream_utility.cpp" />
     <ClCompile Include="src\silkroadConnection.cpp" />
+    <ClCompile Include="src\state\entity.cpp" />
+    <ClCompile Include="src\storage\buybackQueue.cpp" />
     <ClCompile Include="src\storage\item.cpp" />
     <ClCompile Include="src\storage\itemList.cpp" />
     <ClCompile Include="src\storage\storage.cpp" />
@@ -110,7 +117,9 @@
     <ClInclude Include="src\module\characterInfoModule.hpp" />
     <ClInclude Include="src\module\chatEventModule.hpp" />
     <ClInclude Include="src\module\loginModule.hpp" />
+    <ClInclude Include="src\module\skillUseModule.hpp" />
     <ClInclude Include="src\packetLogger.hpp" />
+    <ClInclude Include="src\packet\building\clientAgentActionSelectRequest.hpp" />
     <ClInclude Include="src\packet\building\clientAgentAuthRequest.hpp" />
     <ClInclude Include="src\packet\building\clientAgentCharacterMoveRequest.hpp" />
     <ClInclude Include="src\packet\building\clientAgentCharacterSelectionActionRequest.hpp" />
@@ -122,8 +131,11 @@
     <ClInclude Include="src\packet\building\serverAgentChatUpdate.hpp" />
     <ClInclude Include="src\packet\enums\packetEnums.hpp" />
     <ClInclude Include="src\packet\opcode.hpp" />
+    <ClInclude Include="src\packet\parsing\clientAgentChatRequest.hpp" />
+    <ClInclude Include="src\packet\parsing\commonParsing.hpp" />
     <ClInclude Include="src\packet\parsing\packetParser.hpp" />
     <ClInclude Include="src\packet\parsing\parsedPacket.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentCharacterData.hpp" />
     <ClInclude Include="src\packet\structures\packetInnerStructures.hpp" />
     <ClInclude Include="src\pk2\characterData.hpp" />
     <ClInclude Include="src\pk2\gameData.hpp" />
@@ -136,6 +148,8 @@
     <ClInclude Include="src\shared\silkroad_security.h" />
     <ClInclude Include="src\shared\stream_utility.h" />
     <ClInclude Include="src\silkroadConnection.hpp" />
+    <ClInclude Include="src\state\entity.hpp" />
+    <ClInclude Include="src\storage\buybackQueue.hpp" />
     <ClInclude Include="src\storage\item.hpp" />
     <ClInclude Include="src\storage\itemList.hpp" />
     <ClInclude Include="src\storage\storage.hpp" />

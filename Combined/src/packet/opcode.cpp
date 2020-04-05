@@ -78,14 +78,14 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kClientAgentCharacterSelectionActionRequest) {
     return "kClientAgentCharacterSelectionActionRequest";
   }
-  if (opcode == Opcode::CLIENT_CHAT) {
-    return "CLIENT_CHAT";
+  if (opcode == Opcode::kClientAgentChatRequest) {
+    return "kClientAgentChatRequest";
   }
   if (opcode == Opcode::kClientAgentCharacterSelectionJoinRequest) {
     return "kClientAgentCharacterSelectionJoinRequest";
   }
-  if (opcode == Opcode::CLIENT_TARGET) {
-    return "CLIENT_TARGET";
+  if (opcode == Opcode::kClientAgentActionSelectRequest) {
+    return "kClientAgentActionSelectRequest";
   }
   if (opcode == Opcode::CLIENT_GM) {
     return "CLIENT_GM";
@@ -201,8 +201,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_CHARACTER) {
     return "SERVER_CHARACTER";
   }
-  if (opcode == Opcode::SERVER_AGENT_CHARACTER_INFO_DATA) {
-    return "SERVER_AGENT_CHARACTER_INFO_DATA";
+  if (opcode == Opcode::kServerAgentCharacterData) {
+    return "kServerAgentCharacterData";
   }
   if (opcode == Opcode::SERVER_INGAME_ACCEPT) {
     return "SERVER_INGAME_ACCEPT";

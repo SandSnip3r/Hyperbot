@@ -143,7 +143,7 @@ pk2::ref::Skill parseSkilldataLine(const std::string &line) {
 	}
 	pk2::ref::Skill skill;
   int idx=0;
-  skill.id =      std::stoi(fields[idx++]);
+  skill.id =      std::stol(fields[idx++]);
   skill.basicCode =         fields[idx++];
   skill.basicName =         fields[idx++];
   skill.basicGroup =        fields[idx++];
@@ -300,7 +300,7 @@ pk2::ref::Character parseCharacterdataLine(const std::string &line) {
 	}
   int idx=0;
 	pk2::ref::Character character;
-	character.id =          std::stoi(fields[idx++]);
+	character.id =          std::stol(fields[idx++]);
 	character.codeName128 =           fields[idx++];
 	character.typeId1 =     std::stoi(fields[idx++]);
 	character.typeId2 =     std::stoi(fields[idx++]);
@@ -481,7 +481,7 @@ pk2::ref::Item parseItemdataLine(const std::string &line) {
 	}
 	pk2::ref::Item item;
   int idx=0;
-	item.id =       std::stoi(fields[idx++]);
+	item.id =       std::stol(fields[idx++]);
 	item.codeName128 =        fields[idx++];
 	item.cashItem = std::stoi(fields[idx++]);
 	item.bionic =   std::stoi(fields[idx++]);
@@ -490,9 +490,9 @@ pk2::ref::Item parseItemdataLine(const std::string &line) {
 	item.typeId3 =  std::stoi(fields[idx++]);
 	item.typeId4 =  std::stoi(fields[idx++]);
 	item.maxStack = std::stoi(fields[idx++]);
-	item.param1 =   std::stoi(fields[idx++]);
-	item.param2 =   std::stoi(fields[idx++]);
-	item.param4 =   std::stoi(fields[idx++]);
+	item.param1 =   std::stol(fields[idx++]);
+	item.param2 =   std::stol(fields[idx++]);
+	item.param4 =   std::stol(fields[idx++]);
 	return item;
 }
 
@@ -564,7 +564,7 @@ pk2::ref::Teleport parseTeleportbuildingLine(const std::string &line) {
 	}
 	pk2::ref::Teleport teleport;
   int idx=0;
-	teleport.id =       std::stoi(fields[idx++]);
+	teleport.id =       std::stol(fields[idx++]);
 	teleport.codeName128 =        fields[idx++];
 	teleport.typeId1 =  std::stoi(fields[idx++]);
 	teleport.typeId2 =  std::stoi(fields[idx++]);
@@ -603,7 +603,7 @@ pk2::ref::ScrapOfPackageItem parseScrapOfPackageItemLine(const std::string &line
   // int32_t param4 // 26
   // std::string param4_Desc128 // 27
   // int32_t index // 28
-	const std::vector<int> kDesiredFields = {2,3};
+	const std::vector<int> kDesiredFields = {2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19};
 	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
 	if (fields.size() != kDesiredFields.size()) {
 		// TODO: This check for validity of data should be more robust
@@ -613,6 +613,22 @@ pk2::ref::ScrapOfPackageItem parseScrapOfPackageItemLine(const std::string &line
   int idx=0;
 	scrap.refPackageItemCodeName = fields[idx++];
 	scrap.refItemCodeName =        fields[idx++];
+	scrap.optLevel =     std::stoi(fields[idx++]);
+	scrap.variance =    std::stoll(fields[idx++]);
+	scrap.data =         std::stol(fields[idx++]);
+  scrap.magParamNum =  std::stoi(fields[idx++]);
+  scrap.magParams[0] =   std::stoll(fields[idx++]);
+  scrap.magParams[1] =   std::stoll(fields[idx++]);
+  scrap.magParams[2] =   std::stoll(fields[idx++]);
+  scrap.magParams[3] =   std::stoll(fields[idx++]);
+  scrap.magParams[4] =   std::stoll(fields[idx++]);
+  scrap.magParams[5] =   std::stoll(fields[idx++]);
+  scrap.magParams[6] =   std::stoll(fields[idx++]);
+  scrap.magParams[7] =   std::stoll(fields[idx++]);
+  scrap.magParams[8] =   std::stoll(fields[idx++]);
+  scrap.magParams[9] =  std::stoll(fields[idx++]);
+  scrap.magParams[10] =  std::stoll(fields[idx++]);
+  scrap.magParams[11] =  std::stoll(fields[idx++]);
 	return scrap;
 }
 

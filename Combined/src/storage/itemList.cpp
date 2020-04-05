@@ -8,7 +8,7 @@ ItemList::ItemList(uint8_t size) : items_(static_cast<size_t>(size)) {
 
 bool ItemList::hasItem(uint8_t slot) const {
   boundsCheck(slot, "hasItem");
-  return (items_[slot] != nullptr);
+  return static_cast<bool>(items_[slot]);
 }
 
 Item* ItemList::getItem(uint8_t slot) {
@@ -31,6 +31,16 @@ void ItemList::addItem(uint8_t slot, std::shared_ptr<Item> item) {
     throw std::runtime_error("ItemList::addItem: Item already exists in slot "+std::to_string(slot));
   }
   items_[slot] = item;
+}
+
+std::shared_ptr<Item> ItemList::withdrawItem(uint8_t slot) {
+  boundsCheck(slot, "withdrawItem");
+  if (!hasItem(slot)) {
+    throw std::runtime_error("ItemList::withdrawItem: Item doest not exist in slot "+std::to_string(slot));
+  }
+  auto ptr = items_[slot];
+  items_[slot].reset();
+  return ptr;
 }
 
 void ItemList::moveItem(uint8_t srcSlot, uint8_t destSlot) {

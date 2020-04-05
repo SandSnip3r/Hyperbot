@@ -26,7 +26,7 @@ void ChatEventModule::writeAllChatMessage(const std::string &message) {
   allChatPacketData.Write<uint8_t>(chatIndex);
   allChatPacketData.Write<uint16_t>(message.size());
   allChatPacketData.Write_Ascii(message);
-  PacketContainer allChatPacket(static_cast<uint16_t>(packet::Opcode::CLIENT_CHAT), allChatPacketData, 1, 0);
+  PacketContainer allChatPacket(static_cast<uint16_t>(packet::Opcode::kClientAgentChatRequest), allChatPacketData, 1, 0);
   injectionFunction_(allChatPacket, PacketContainer::Direction::kClientToServer);
 }
 

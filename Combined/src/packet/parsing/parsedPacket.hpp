@@ -2,6 +2,7 @@
 #include "../enums/packetEnums.hpp"
 #include "../structures/packetInnerStructures.hpp"
 #include "../../pk2/characterData.hpp"
+#include "../../pk2/gameData.hpp"
 #include "../../pk2/itemData.hpp"
 #include "../../pk2/skillData.hpp"
 #include "../../pk2/teleportData.hpp"
@@ -92,17 +93,8 @@ private:
 };
 
 //=========================================================================================================================================================
-struct RentInfo {
-  uint32_t rentType; // TODO: Enum for this
-  uint16_t canDelete;
-  uint32_t periodBeginTime;
-  uint32_t periodEndTime;
-  uint16_t canRecharge;
-  uint32_t meterRateTime;
-  uint32_t packingTime;
-};
 
-struct  ItemMovement {
+struct ItemMovement {
   packet::enums::ItemMovementType type;
   uint8_t srcSlot, destSlot;
   uint16_t quantity;
@@ -113,7 +105,7 @@ struct  ItemMovement {
   uint8_t storeSlotNumber;
   uint8_t stackCount;
   std::vector<uint8_t> destSlots;
-  std::vector<RentInfo> rentInfos;
+  std::vector<structures::RentInfo> rentInfos;
   uint8_t buybackStackSize;
 };
 
@@ -135,26 +127,6 @@ public:
 private:
   uint32_t maxHp_;
   uint32_t maxMp_;
-};
-
-//=========================================================================================================================================================
-
-class ParsedServerAgentCharacterData : public ParsedPacket {
-public:
-  ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData);
-  uint32_t refObjId() const;
-  uint32_t entityUniqueId() const;
-  uint32_t hp() const;
-  uint32_t mp() const;
-  uint8_t inventorySize() const;
-  const std::map<uint8_t, std::shared_ptr<storage::Item>>& inventoryItemMap() const;
-private:
-  uint32_t refObjId_;
-  uint32_t entityUniqueId_;
-  uint32_t hp_;
-  uint32_t mp_;
-  uint8_t inventorySize_;
-  std::map<uint8_t, std::shared_ptr<storage::Item>> inventoryItemMap_;
 };
 
 //=========================================================================================================================================================
@@ -223,6 +195,8 @@ public:
   Portal() : Object(ObjectType::kPortal) {}
   uint8_t unkByte3;
 };
+
+void printObj(const packet::parsing::Object *obj, const pk2::GameData &gameData);
 
 class ParsedServerAgentGroupSpawn : public ParsedPacket {
 public:
@@ -334,22 +308,6 @@ public:
   uint16_t shardId() const;
 private:
   uint16_t shardId_;
-};
-
-//=========================================================================================================================================================
-
-class ParsedClientChat : public ParsedPacket {
-public:
-  ParsedClientChat(const PacketContainer &packet);
-  packet::enums::ChatType chatType() const;
-  uint8_t chatIndex() const;
-  const std::string& receiverName() const;
-  const std::string& message() const;
-private:
-  packet::enums::ChatType chatType_;
-  uint8_t chatIndex_;
-  std::string receiverName_;
-  std::string message_;
 };
 
 //=========================================================================================================================================================

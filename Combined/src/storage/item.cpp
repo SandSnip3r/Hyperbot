@@ -31,6 +31,73 @@ ItemExpendable::ItemExpendable(ItemType type) : Item(type) {}
 ItemStone::ItemStone() : ItemExpendable(ItemType::kItemStone) {}
 ItemMagicPop::ItemMagicPop() : ItemExpendable(ItemType::kItemMagicPop) {}
 
+storage::Item* newItemByTypeData(const pk2::ref::Item &item) {
+  storage::Item *storageItemPtr = nullptr;
+  if (item.typeId1 == 3) {
+    if (item.typeId2 == 1) {
+      // CGItemEquip
+      storageItemPtr = new ItemEquipment();
+    } else if (item.typeId2 == 2) {
+      if (item.typeId3 == 1) {                                
+        // CGItemCOSSummoner
+        if (item.typeId4 == 2) {
+          storageItemPtr = new ItemCosAbilitySummoner();
+        } else {
+          storageItemPtr = new ItemCosGrowthSummoner();
+        }
+      } else if (item.typeId3 == 2) {
+        // CGItemMonsterCapsule (rogue mask)
+        storageItemPtr = new ItemMonsterCapsule();
+      } else if (item.typeId3 == 3) {
+        // CGItemStorage
+        storageItemPtr = new ItemStorage();
+      }
+    } else if (item.typeId2 == 3) {
+      // CGItemExpendable
+      if (item.typeId3 == 11) {
+        if (item.typeId4 == 1 || item.typeId4 == 2) {
+          // MAGICSTONE, ATTRSTONE
+          storageItemPtr = new ItemStone();
+        }
+      } else if (item.typeId3 == 14 && item.typeId4 == 2) {
+        // Magic pop
+        storageItemPtr = new ItemMagicPop();
+      }
+      // Other expendable
+      storageItemPtr = new ItemExpendable();
+    }
+  }
+
+  if (storageItemPtr != nullptr) {
+    // Set base info
+    storageItemPtr->refItemId = item.id;
+    storageItemPtr->itemInfo = &item;
+  }
+
+  return storageItemPtr;
+}
+
+Item* cloneItem(Item *item) {
+  switch (item->type) {
+    case ItemType::kItemEquipment:
+      return new ItemEquipment(*dynamic_cast<ItemEquipment*>(item));
+    case ItemType::kItemCosGrowthSummoner:
+      return new ItemCosGrowthSummoner(*dynamic_cast<ItemCosGrowthSummoner*>(item));
+    case ItemType::kItemCosAbilitySummoner:
+      return new ItemCosAbilitySummoner(*dynamic_cast<ItemCosAbilitySummoner*>(item));
+    case ItemType::kItemMonsterCapsule:
+      return new ItemMonsterCapsule(*dynamic_cast<ItemMonsterCapsule*>(item));
+    case ItemType::kItemStorage:
+      return new ItemStorage(*dynamic_cast<ItemStorage*>(item));
+    case ItemType::kItemExpendable:
+      return new ItemExpendable(*dynamic_cast<ItemExpendable*>(item));
+    case ItemType::kItemStone:
+      return new ItemStone(*dynamic_cast<ItemStone*>(item));
+    case ItemType::kItemMagicPop:
+      return new ItemMagicPop(*dynamic_cast<ItemMagicPop*>(item));
+  }
+}
+
 namespace {
 
 void print(const ItemEquipment &item) {
@@ -100,7 +167,7 @@ void print(const ItemStorage &item) {
 
 void print(const ItemExpendable &item) {
   std::cout << "refItemId: " << item.refItemId << '\n';
-  std::cout << "stackCount: " << item.stackCount << '\n';
+  std::cout << "stackCount: " << item.quantity << '\n';
 }
 
 void print(const ItemStone &item) {

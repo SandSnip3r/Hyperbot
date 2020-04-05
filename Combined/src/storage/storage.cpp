@@ -5,24 +5,6 @@
 
 namespace storage {
 
-namespace {
-
-void printInventorySlot(const storage::ItemList &itemList, uint8_t slot) {
-  std::cout << "Slot " << (int)slot << '\n';
-  if (!itemList.hasItem(slot)) {
-    std::cout << "  Does not exist\n";
-    return;
-  }
-  const ItemExpendable *itemExpendable = dynamic_cast<const ItemExpendable*>(itemList.getItem(slot));
-  if (itemExpendable != nullptr) {
-    std::cout << "  x" << itemExpendable->stackCount << '\n';
-  } else {
-    std::cout << "  Exists\n";
-  }
-}
-
-}
-
 Storage::Storage(uint8_t size) : itemList_(size) {
   //
 }
@@ -55,15 +37,16 @@ void Storage::addItem(uint8_t slot, std::shared_ptr<Item> item) {
   itemList_.addItem(slot, item);
 }
 
+std::shared_ptr<Item> Storage::withdrawItem(uint8_t slot) {
+  return itemList_.withdrawItem(slot);
+}
+
 void Storage::deleteItem(uint8_t slot) {
   itemList_.deleteItem(slot);
 }
 
-void Storage::moveItemInStorage(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity) {
-  std::cout << "moveItemInStorage, srcSlot: " << static_cast<int>(srcSlot) << ", destSlot: " << static_cast<int>(destSlot) << ", quantity: " << quantity << '\n';
-  std::cout << "Before:\n";
-  printInventorySlot(itemList_, srcSlot);
-  printInventorySlot(itemList_, destSlot);
+void Storage::moveItem(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity) {
+  std::cout << "moveItem, srcSlot: " << static_cast<int>(srcSlot) << ", destSlot: " << static_cast<int>(destSlot) << ", quantity: " << quantity << '\n';
   if (itemList_.hasItem(srcSlot)) {
     Item *srcItem = itemList_.getItem(srcSlot);
     bool destItemExists = itemList_.hasItem(destSlot);
@@ -76,17 +59,16 @@ void Storage::moveItemInStorage(uint8_t srcSlot, uint8_t destSlot, uint16_t quan
         ItemExpendable *srcItemExpendable = dynamic_cast<ItemExpendable*>(srcItem);
         if (destItemExpendable != nullptr && srcItemExpendable != nullptr) {
           // Src and dest must be expendable
-          // TODO: Check max stack size to see if any are left behind
-          const int spaceLeftInStack = destItemExpendable->itemInfo->maxStack - destItemExpendable->stackCount;
+          const int spaceLeftInStack = destItemExpendable->itemInfo->maxStack - destItemExpendable->quantity;
           if (spaceLeftInStack == 0) {
             // Is a full stack, just swap
             itemList_.swapItems(srcSlot, destSlot);
           } else {
             // Non-full stack. Add to stack as much as we can
             auto moveCount = std::min(spaceLeftInStack, static_cast<int>(quantity));
-            destItemExpendable->stackCount += moveCount;
-            if (srcItemExpendable->stackCount > quantity) {
-              srcItemExpendable->stackCount -= quantity;
+            destItemExpendable->quantity += moveCount;
+            if (srcItemExpendable->quantity > quantity) {
+              srcItemExpendable->quantity -= quantity;
             } else {
               itemList_.deleteItem(srcSlot);
               // srcItem and srcItemExpendable point to garbage now!
@@ -103,25 +85,14 @@ void Storage::moveItemInStorage(uint8_t srcSlot, uint8_t destSlot, uint16_t quan
     } else {
       // Moving into open slot
       ItemExpendable *srcItemExpendable = dynamic_cast<ItemExpendable*>(srcItem);
-      if (srcItemExpendable != nullptr && srcItemExpendable->stackCount > quantity) {
+      if (srcItemExpendable != nullptr && srcItemExpendable->quantity > quantity) {
         // Source is of expendable type and we're splitting
-        ItemStone *srcItemStone = dynamic_cast<ItemStone*>(srcItemExpendable);
-        ItemMagicPop *srcItemMagicPop = dynamic_cast<ItemMagicPop*>(srcItemExpendable);
-        // Copy item into slot
-        if (srcItemStone != nullptr) {
-          // ItemStone
-          itemList_.addItem(destSlot, std::shared_ptr<Item>(new ItemStone(*srcItemStone)));;
-        } else if (srcItemMagicPop != nullptr) {
-          // ItemMagicPop
-          itemList_.addItem(destSlot, std::shared_ptr<Item>(new ItemMagicPop(*srcItemMagicPop)));;
-        } else {
-          // ItemExpendable
-          itemList_.addItem(destSlot, std::shared_ptr<Item>(new ItemExpendable(*srcItemExpendable)));;
-        }
-        // New dest item must be expendable
-        ItemExpendable *destItemExpendable = dynamic_cast<ItemExpendable*>(itemList_.getItem(destSlot));
-        destItemExpendable->stackCount = quantity;
-        srcItemExpendable->stackCount -= quantity;
+        std::shared_ptr<storage::Item> clonedItem(storage::cloneItem(srcItem));
+        // // New dest item must be expendable
+        ItemExpendable *destItemExpendable = dynamic_cast<ItemExpendable*>(clonedItem.get());
+        destItemExpendable->quantity = quantity;
+        srcItemExpendable->quantity -= quantity;
+        itemList_.addItem(destSlot, clonedItem);
       } else {
         // Moving entire stack or non-expendable
         itemList_.moveItem(srcSlot, destSlot);
@@ -130,9 +101,16 @@ void Storage::moveItemInStorage(uint8_t srcSlot, uint8_t destSlot, uint16_t quan
   } else {
     std::cerr << "Moving an item, but it doesnt exist at the source location\n";
   }
-  std::cout << "After:\n";
-  printInventorySlot(itemList_, srcSlot);
-  printInventorySlot(itemList_, destSlot);
+}
+
+void Storage::moveItem(uint8_t srcSlot, uint8_t destSlot) {
+  if (itemList_.hasItem(destSlot)) {
+    throw std::runtime_error("Storage::moveItem Trying to move an item into a non-open slot");
+  }
+  if (!itemList_.hasItem(srcSlot)) {
+    throw std::runtime_error("Storage::moveItem Trying to move non-existent item");
+  }
+  itemList_.moveItem(srcSlot, destSlot);
 }
 
 } // namespace storage

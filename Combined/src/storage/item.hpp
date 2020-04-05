@@ -22,7 +22,7 @@ enum class ItemType {
 class Item {
 public:
   uint32_t refItemId;
-  ItemType type;
+  const ItemType type;
   const pk2::ref::Item *itemInfo{nullptr};
   uint16_t typeData() const;
   virtual ~Item() = 0; // Make base type polymorphic and uninstantiable
@@ -80,7 +80,7 @@ class ItemCosGrowthSummoner : public Item {
 public:
   ItemCosGrowthSummoner();
   CosLifeState lifeState;
-  uint32_t refObjID;
+  uint32_t refObjID; // Wolfs, for example, have an object for each level wolf, so you can know the stats of the wolf
   std::string name;
   std::vector<CosJob> jobs;  
 protected:
@@ -98,21 +98,21 @@ public:
 class ItemMonsterCapsule : public Item {
 public:
   ItemMonsterCapsule();
-  uint32_t refObjID;
+  uint32_t refObjID; // The monster which this mask transforms into
 };
 
 // CGItemStorage, MAGIC_CUBE
 class ItemStorage : public Item {
 public:
   ItemStorage();
-  uint32_t quantity; // Do not confuse with StackCount, this indicates the amount of elixirs in the cube
+  uint32_t quantity; // This indicates the amount of elixirs in the cube
 };
 
 // CGItemExpendable, ITEM_ETC
 class ItemExpendable : public Item {
 public:
   ItemExpendable();
-  uint16_t stackCount;
+  uint16_t quantity;
 protected:
   ItemExpendable(ItemType type);
 };
@@ -130,6 +130,9 @@ public:
   ItemMagicPop();
   std::vector<ItemMagicParam> magicParams;
 };
+
+storage::Item* newItemByTypeData(const pk2::ref::Item &item);
+storage::Item* cloneItem(storage::Item *item);
 
 void print(const Item *item);
 

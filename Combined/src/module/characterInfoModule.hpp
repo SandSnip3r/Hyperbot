@@ -5,8 +5,11 @@
 #include "../broker/packetBroker.hpp"
 #include "../packet/parsing/packetParser.hpp"
 #include "../packet/parsing/parsedPacket.hpp"
+#include "../packet/parsing/serverAgentCharacterData.hpp"
 #include "../pk2/gameData.hpp"
 #include "../shared/silkroad_security.h"
+#include "../state/entity.hpp"
+#include "../storage/buybackQueue.hpp"
 #include "../storage/item.hpp"
 #include "../storage/storage.hpp"
 
@@ -42,7 +45,8 @@ struct UsedItem {
 
 class CharacterInfoModule {
 public:
-  CharacterInfoModule(broker::PacketBroker &brokerSystem,
+  CharacterInfoModule(state::Entity &entityState,
+                      broker::PacketBroker &brokerSystem,
                       broker::EventBroker &eventBroker,
                       const packet::parsing::PacketParser &packetParser,
                       const pk2::GameData &gameData);
@@ -62,14 +66,13 @@ private:
   const double kVigorThreshold_{0.40};
   //******************************************************************************************
 
+  state::Entity &entityState_;
   broker::PacketBroker &broker_;
   broker::EventBroker &eventBroker_;
   const packet::parsing::PacketParser &packetParser_;
   const pk2::GameData &gameData_;
   std::mutex contentionProtectionMutex_;
 
-  bool initialized_ = false;
-  
   // Character info
   std::optional<uint32_t> uniqueId_;
   Race race_;
@@ -101,8 +104,11 @@ private:
   std::optional<packet::parsing::ItemMovement> userPurchaseRequest_;
   std::vector<std::shared_ptr<packet::parsing::Object>> objectsInRange_;
 
+  // Items
   storage::Storage inventory_;
+  uint64_t gold_, storageGold_, guildStorageGold_;
   storage::Storage storage_;
+  storage::BuybackQueue buybackQueue_;
 
   // Packet handling functions
   void abnormalInfoReceived(const packet::parsing::ParsedServerAbnormalInfo &packet);
@@ -116,8 +122,7 @@ private:
   void serverAgentSpawnReceived(packet::parsing::ParsedServerAgentSpawn &packet);
   void serverAgentDespawnReceived(packet::parsing::ParsedServerAgentDespawn &packet);
 
-
-  void printObj(std::shared_ptr<packet::parsing::Object> obj);
+  void printGold();
   void trackObject(std::shared_ptr<packet::parsing::Object> obj);
   void stopTrackingObject(uint32_t gId);
   void resetInventory();

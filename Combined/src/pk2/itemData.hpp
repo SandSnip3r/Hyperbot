@@ -13,6 +13,7 @@ public:
 	void addItem(ref::Item &&item);
 	bool haveItemWithId(ref::ItemId id) const;
 	const ref::Item& getItemById(ref::ItemId id) const;
+	const ref::Item& getItemByCodeName128(const std::string &codeName) const;
 	const ItemMap::size_type size() const;
 private:
 	ItemMap items_;

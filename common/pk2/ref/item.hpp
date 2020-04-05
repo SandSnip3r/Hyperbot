@@ -6,7 +6,7 @@
 
 namespace pk2::ref {
 
-using ItemId = uint32_t;
+using ItemId = int32_t;
 
 struct Item {
 	ItemId id;

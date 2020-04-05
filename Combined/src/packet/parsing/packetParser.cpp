@@ -1,4 +1,6 @@
+#include "clientAgentChatRequest.hpp"
 #include "packetParser.hpp"
+#include "serverAgentCharacterData.hpp"
 #include "../opcode.hpp"
 
 #include <iostream>
@@ -13,8 +15,8 @@ PacketParser::PacketParser(const pk2::GameData &gameData) :
 std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &packet) const {
   // Given a packet's opcode, determine which parsed packet type is appropriate
   switch (static_cast<Opcode>(packet.opcode)) {
-    case Opcode::CLIENT_CHAT:
-      return std::make_unique<ParsedClientChat>(packet);
+    case Opcode::kClientAgentChatRequest:
+      return std::make_unique<ParsedClientAgentChatRequest>(packet);
     case Opcode::LOGIN_SERVER_LIST:
       return std::make_unique<ParsedLoginServerList>(packet);
     case Opcode::LOGIN_SERVER_AUTH_INFO:
@@ -27,7 +29,7 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       return std::make_unique<ParsedServerAgentCharacterSelectionActionResponse>(packet);
     case Opcode::SERVER_INGAME_ACCEPT:
       return std::make_unique<ParsedServerAgentCharacterSelectionJoinResponse>(packet);
-    case Opcode::SERVER_AGENT_CHARACTER_INFO_DATA:
+    case Opcode::kServerAgentCharacterData:
       return std::make_unique<ParsedServerAgentCharacterData>(packet, gameData_.itemData(), gameData_.skillData());
     case Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA:
       return std::make_unique<ParsedServerAgentGroupSpawn>(packet, gameData_.characterData(), gameData_.itemData(), gameData_.skillData(), gameData_.teleportData());
