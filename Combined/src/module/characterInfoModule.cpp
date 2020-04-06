@@ -107,8 +107,8 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
   auto *clientChat = dynamic_cast<packet::parsing::ParsedClientAgentChatRequest*>(parsedPacket.get());
   if (clientChat != nullptr) {
     std::cout << "Not handling client chat move\n";
+    return true;
   }
-
 
   //======================================================================================================
   //============================================Server Packets============================================
@@ -170,7 +170,7 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
   
   //======================================================================================================
 
-  std::cout << "Unhandled packet subscribed to\n";
+  std::cout << "CharacterInfoModule: Unhandled packet subscribed to\n";
   return true;
 }
 

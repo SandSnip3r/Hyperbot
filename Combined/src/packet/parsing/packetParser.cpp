@@ -1,5 +1,6 @@
 #include "clientAgentChatRequest.hpp"
 #include "packetParser.hpp"
+#include "serverAgentActionSelectResponse.hpp"
 #include "serverAgentCharacterData.hpp"
 #include "../opcode.hpp"
 
@@ -49,6 +50,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       return std::make_unique<ParsedServerItemMove>(packet);
     case Opcode::kClientAgentInventoryOperationRequest:
       return std::make_unique<ParsedClientItemMove>(packet);
+    case Opcode::kServerAgentActionSelectResponse:
+      return std::make_unique<ServerAgentActionSelectResponse>(packet);
     case Opcode::kClientAgentAuthRequest:
     case Opcode::kServerGatewayLoginIbuvChallenge:
     // case static_cast<Opcode>(0x2005):

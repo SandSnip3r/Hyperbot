@@ -96,8 +96,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::CLIENT_TRANSPORT_MOVE) {
     return "CLIENT_TRANSPORT_MOVE";
   }
-  if (opcode == Opcode::CLIENT_PLAYER_ACTION) {
-    return "CLIENT_PLAYER_ACTION";
+  if (opcode == Opcode::kClientAgentActionCommandRequest) {
+    return "kClientAgentActionCommandRequest";
   }
   if (opcode == Opcode::CLIENT_STR_UPDATE) {
     return "CLIENT_STR_UPDATE";
@@ -303,8 +303,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_CHAT_ACCEPT) {
     return "SERVER_CHAT_ACCEPT";
   }
-  if (opcode == Opcode::SERVER_TARGET) {
-    return "SERVER_TARGET";
+  if (opcode == Opcode::kServerAgentActionSelectResponse) {
+    return "kServerAgentActionSelectResponse";
   }
   if (opcode == Opcode::SERVER_MOVEMENT) {
     return "SERVER_MOVEMENT";

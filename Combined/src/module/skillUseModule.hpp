@@ -3,9 +3,10 @@
 
 #include "../broker/eventBroker.hpp"
 #include "../broker/packetBroker.hpp"
+#include "../packet/building/clientAgentActionCommandRequest.hpp"
 #include "../packet/parsing/packetParser.hpp"
-// #include "../packet/parsing/parsedPacket.hpp"
 #include "../packet/parsing/clientAgentChatRequest.hpp"
+#include "../packet/parsing/serverAgentActionSelectResponse.hpp"
 #include "../pk2/gameData.hpp"
 #include "../shared/silkroad_security.h"
 #include "../state/entity.hpp"
@@ -32,9 +33,13 @@ private:
 
   // Packet handling functions
   bool clientAgentChatRequestReceived(packet::parsing::ParsedClientAgentChatRequest &packet);
+  void serverAgentActionSelectResponseReceived(packet::parsing::ServerAgentActionSelectResponse &packet);
   
   // General functions
   void selectEntity(state::Entity::EntityId entityId);
+  void commonAttackEntity(state::Entity::EntityId entityId);
+  void traceEntity(state::Entity::EntityId entityId);
+  void pickupEntity(state::Entity::EntityId entityId);
 };
 
 } // namespace module

@@ -22,6 +22,7 @@ SkillUseModule::SkillUseModule(state::Entity &entityState,
   // Client packets
   broker_.subscribeToClientPacket(packet::Opcode::kClientAgentChatRequest, packetHandleFunction);
   // Server packets
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionSelectResponse, packetHandleFunction);
 
   // TODO: Save subscription ID to possibly unsubscribe in the future
   // eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, std::bind(&SkillUseModule::handlePotionCooldownEnded, this, std::placeholders::_1));
@@ -62,7 +63,13 @@ bool SkillUseModule::handlePacket(const PacketContainer &packet) {
     return clientAgentChatRequestReceived(*clientChat);
   }
 
-  std::cout << "Unhandled packet subscribed to\n";
+  auto *actionSelectResponse = dynamic_cast<packet::parsing::ServerAgentActionSelectResponse*>(parsedPacket.get());
+  if (actionSelectResponse != nullptr) {
+    serverAgentActionSelectResponseReceived(*actionSelectResponse);
+    return true;
+  }
+
+  std::cout << "SkillUseModule: Unhandled packet subscribed to\n";
   return true;
 }
 
@@ -76,15 +83,64 @@ void SkillUseModule::selectEntity(state::Entity::EntityId entityId) {
   }
 }
 
+void SkillUseModule::commonAttackEntity(state::Entity::EntityId entityId) {
+  std::cout << "Being asked to common attack " << entityId << '\n';
+  if (entityState_.trackingEntity(entityId)) {
+    auto entity = entityState_.getEntity(entityId);
+    std::cout << "Common attacking ";
+    packet::parsing::printObj(entity, gameData_);
+    broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::attack(entityId), PacketContainer::Direction::kClientToServer);
+  }
+}
+
+void SkillUseModule::traceEntity(state::Entity::EntityId entityId) {
+  std::cout << "Being asked to trace " << entityId << '\n';
+  if (entityState_.trackingEntity(entityId)) {
+    auto entity = entityState_.getEntity(entityId);
+    std::cout << "Tracing ";
+    packet::parsing::printObj(entity, gameData_);
+    broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::trace(entityId), PacketContainer::Direction::kClientToServer);
+  }
+}
+
+void SkillUseModule::pickupEntity(state::Entity::EntityId entityId) {
+  std::cout << "Being asked to pickup " << entityId << '\n';
+  if (entityState_.trackingEntity(entityId)) {
+    auto entity = entityState_.getEntity(entityId);
+    std::cout << "Picking up ";
+    packet::parsing::printObj(entity, gameData_);
+    broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::pickup(entityId), PacketContainer::Direction::kClientToServer);
+  }
+}
+
 bool SkillUseModule::clientAgentChatRequestReceived(packet::parsing::ParsedClientAgentChatRequest &packet) {
-  std::regex selectGidRegex(R"delim(select ([0-9]+))delim");
+  std::regex selectGidRegex(R"delim((attack|trace|pickup|select) ([0-9]+))delim");
   std::smatch regexMatch;
   if (std::regex_match(packet.message(), regexMatch, selectGidRegex)) {
-    state::Entity::EntityId entityId = std::stoi(regexMatch[1].str());
-    selectEntity(entityId);
+    const std::string operation = regexMatch[1].str();
+    state::Entity::EntityId entityId = std::stoi(regexMatch[2].str());
+    if (operation == "select") {
+      selectEntity(entityId);
+    } else if (operation == "attack") {
+      commonAttackEntity(entityId);
+    } else if (operation == "trace") {
+      traceEntity(entityId);
+    } else if (operation == "pickup") {
+      pickupEntity(entityId);
+    }
     return false;
   } else {
     return true;
+  }
+}
+
+void SkillUseModule::serverAgentActionSelectResponseReceived(packet::parsing::ServerAgentActionSelectResponse &packet) {
+  std::cout << "serverAgentActionSelectResponseReceived\n";
+  if (packet.result() == 1) {
+    // Successfully selected
+    std::cout << "Selected successfully\n";
+  } else {
+    std::cout << "Selection unsuccessful! Error code " << (int)packet.errorCode() << '\n';
   }
 }
 

@@ -66,7 +66,7 @@ enum class Opcode {
   CLIENT_GM = 0x7010,
   kClientAgentCharacterMoveRequest = 0x7021,
   CLIENT_TRANSPORT_MOVE = 0x70C5,
-  CLIENT_PLAYER_ACTION = 0x7074,
+  kClientAgentActionCommandRequest = 0x7074,
   CLIENT_STR_UPDATE = 0x7050,
   CLIENT_INT_UPDATE = 0x7051,
   CLIENT_CHARACTER_STATE = 0x704F,
@@ -146,7 +146,7 @@ enum class Opcode {
   kServerAgentChatUpdate = 0x3026,
   SERVER_CHAT_ACCEPT = 0xB025,
 
-  SERVER_TARGET = 0xB045,
+  kServerAgentActionSelectResponse = 0xB045,
   SERVER_MOVEMENT = 0xB021,
   SERVER_UNIQUE = 0x300C,
 

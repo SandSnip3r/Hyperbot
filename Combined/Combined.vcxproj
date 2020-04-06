@@ -50,6 +50,7 @@
     <ClCompile Include="src\module\loginModule.cpp" />
     <ClCompile Include="src\module\skillUseModule.cpp" />
     <ClCompile Include="src\packetLogger.cpp" />
+    <ClCompile Include="src\packet\building\clientAgentActionCommandRequest.cpp" />
     <ClCompile Include="src\packet\building\clientAgentActionSelectRequest.cpp" />
     <ClCompile Include="src\packet\building\clientAgentAuthRequest.cpp" />
     <ClCompile Include="src\packet\building\clientAgentCharacterMoveRequest.cpp" />
@@ -65,6 +66,7 @@
     <ClCompile Include="src\packet\parsing\commonParsing.cpp" />
     <ClCompile Include="src\packet\parsing\packetParser.cpp" />
     <ClCompile Include="src\packet\parsing\parsedPacket.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentActionSelectResponse.cpp" />
     <ClCompile Include="src\packet\parsing\serverAgentCharacterData.cpp" />
     <ClCompile Include="src\phConnector.cpp" />
     <ClCompile Include="src\pk2\characterData.cpp" />
@@ -119,6 +121,7 @@
     <ClInclude Include="src\module\loginModule.hpp" />
     <ClInclude Include="src\module\skillUseModule.hpp" />
     <ClInclude Include="src\packetLogger.hpp" />
+    <ClInclude Include="src\packet\building\clientAgentActionCommandRequest.hpp" />
     <ClInclude Include="src\packet\building\clientAgentActionSelectRequest.hpp" />
     <ClInclude Include="src\packet\building\clientAgentAuthRequest.hpp" />
     <ClInclude Include="src\packet\building\clientAgentCharacterMoveRequest.hpp" />
@@ -135,6 +138,7 @@
     <ClInclude Include="src\packet\parsing\commonParsing.hpp" />
     <ClInclude Include="src\packet\parsing\packetParser.hpp" />
     <ClInclude Include="src\packet\parsing\parsedPacket.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentActionSelectResponse.hpp" />
     <ClInclude Include="src\packet\parsing\serverAgentCharacterData.hpp" />
     <ClInclude Include="src\packet\structures\packetInnerStructures.hpp" />
     <ClInclude Include="src\pk2\characterData.hpp" />
