@@ -50,7 +50,6 @@ public:
                       broker::EventBroker &eventBroker,
                       const packet::parsing::PacketParser &packetParser,
                       const pk2::GameData &gameData);
-  bool handlePacket(const PacketContainer &packet);
 private:
   static const int kEuPotionDefaultDelayMs_{15000};
   static const int kChPotionDefaultDelayMs_{1000};
@@ -111,6 +110,7 @@ private:
   storage::BuybackQueue buybackQueue_;
 
   // Packet handling functions
+  bool handlePacket(const PacketContainer &packet);
   void abnormalInfoReceived(const packet::parsing::ParsedServerAbnormalInfo &packet);
   void clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet);
   void serverItemMoveReceived(const packet::parsing::ParsedServerItemMove &packet);
@@ -123,11 +123,11 @@ private:
   void serverAgentDespawnReceived(packet::parsing::ParsedServerAgentDespawn &packet);
 
   // Event handling functions
-  void handlePillCooldownEnded(const event::Event *event);
-  void handlePotionCooldownEnded(const event::Event *event);
-  void handleHpPercentChanged(const event::Event *event);
-  void handleMpPercentChanged(const event::Event *event);
-  void handleStatesChanged(const event::Event *event);
+  void handleEvent(const event::Event *event);
+  void handlePillCooldownEnded(const event::EventCode eventCode);
+  void handlePotionCooldownEnded(const event::EventCode eventCode);
+  void handleVitalsChanged();
+  void handleStatesChanged();
 
   void printGold();
   void trackObject(std::shared_ptr<packet::parsing::Object> obj);

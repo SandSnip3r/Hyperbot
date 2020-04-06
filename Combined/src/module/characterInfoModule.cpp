@@ -43,20 +43,53 @@ CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_SPAWN, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_DESPAWN, packetHandleFunction);
 
+  auto eventHandleFunction = std::bind(&CharacterInfoModule::handleEvent, this, std::placeholders::_1);
   // TODO: Save subscription ID to possibly unsubscribe in the future
-  eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
-  eventBroker_.subscribeToEvent(event::EventCode::kMpPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
-  eventBroker_.subscribeToEvent(event::EventCode::kVigorPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
-  eventBroker_.subscribeToEvent(event::EventCode::kUniversalPillCooldownEnded, std::bind(&CharacterInfoModule::handlePillCooldownEnded, this, std::placeholders::_1));
-  // eventBroker_.subscribeToEvent(event::EventCode::kPurificationPillCooldownEnded, std::bind(&CharacterInfoModule::handlePillCooldownEnded, this, std::placeholders::_1));
-  eventBroker_.subscribeToEvent(event::EventCode::kHpPercentChanged, std::bind(&CharacterInfoModule::handleHpPercentChanged, this, std::placeholders::_1));
-  eventBroker_.subscribeToEvent(event::EventCode::kMpPercentChanged, std::bind(&CharacterInfoModule::handleMpPercentChanged, this, std::placeholders::_1));
-  eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, std::bind(&CharacterInfoModule::handleStatesChanged, this, std::placeholders::_1));
+  eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kMpPotionCooldownEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kVigorPotionCooldownEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kUniversalPillCooldownEnded, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kPurificationPillCooldownEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kHpPercentChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kMpPercentChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
+  // eventBroker_.subscribeToEvent(event::EventCode::kMpPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
+  // eventBroker_.subscribeToEvent(event::EventCode::kVigorPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
+  // eventBroker_.subscribeToEvent(event::EventCode::kUniversalPillCooldownEnded, std::bind(&CharacterInfoModule::handlePillCooldownEnded, this, std::placeholders::_1));
+  // // eventBroker_.subscribeToEvent(event::EventCode::kPurificationPillCooldownEnded, std::bind(&CharacterInfoModule::handlePillCooldownEnded, this, std::placeholders::_1));
+  // eventBroker_.subscribeToEvent(event::EventCode::kHpPercentChanged, std::bind(&CharacterInfoModule::handleHpPercentChanged, this, std::placeholders::_1));
+  // eventBroker_.subscribeToEvent(event::EventCode::kMpPercentChanged, std::bind(&CharacterInfoModule::handleMpPercentChanged, this, std::placeholders::_1));
+  // eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, std::bind(&CharacterInfoModule::handleStatesChanged, this, std::placeholders::_1));
 }
 
-void CharacterInfoModule::handlePillCooldownEnded(const event::Event *event) {
+void CharacterInfoModule::handleEvent(const event::Event *event) {
   std::unique_lock<std::mutex> contentionProtectionLock(contentionProtectionMutex_);
-  auto eventCode = event->getEventCode();
+  const auto eventCode = event->getEventCode();
+  switch (eventCode) {
+    case event::EventCode::kHpPotionCooldownEnded:
+    case event::EventCode::kMpPotionCooldownEnded:
+    case event::EventCode::kVigorPotionCooldownEnded:
+      handlePotionCooldownEnded(eventCode);
+      break;
+    case event::EventCode::kUniversalPillCooldownEnded:
+    case event::EventCode::kPurificationPillCooldownEnded:
+      handlePillCooldownEnded(eventCode);
+      break;
+    case event::EventCode::kHpPercentChanged:
+    case event::EventCode::kMpPercentChanged:
+      handleVitalsChanged();
+      break;
+    case event::EventCode::kStatesChanged:
+      handleStatesChanged();
+      break;
+    default:
+      std::cout << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
+      break;
+  }
+}
+
+void CharacterInfoModule::handlePillCooldownEnded(const event::EventCode eventCode) {
   if (eventCode == event::EventCode::kUniversalPillCooldownEnded) {
     universalPillEventId_.reset();
     checkIfNeedToUsePill();
@@ -67,9 +100,7 @@ void CharacterInfoModule::handlePillCooldownEnded(const event::Event *event) {
   } */
 }
 
-void CharacterInfoModule::handlePotionCooldownEnded(const event::Event *event) {
-  std::unique_lock<std::mutex> contentionProtectionLock(contentionProtectionMutex_);
-  auto eventCode = event->getEventCode();
+void CharacterInfoModule::handlePotionCooldownEnded(const event::EventCode eventCode) {
   if (eventCode == event::EventCode::kHpPotionCooldownEnded) {
     hpPotionEventId_.reset();
     checkIfNeedToHeal();
@@ -82,20 +113,15 @@ void CharacterInfoModule::handlePotionCooldownEnded(const event::Event *event) {
   }
 }
 
-void CharacterInfoModule::handleHpPercentChanged(const event::Event *event) {
+void CharacterInfoModule::handleVitalsChanged() {
   checkIfNeedToHeal();
 }
 
-void CharacterInfoModule::handleMpPercentChanged(const event::Event *event) {
-  checkIfNeedToHeal();
-}
-
-void CharacterInfoModule::handleStatesChanged(const event::Event *event) {
+void CharacterInfoModule::handleStatesChanged() {
   checkIfNeedToUsePill();
 }
 
 bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
-  std::unique_lock<std::mutex> contentionProtectionLock(contentionProtectionMutex_);
   std::unique_ptr<packet::parsing::ParsedPacket> parsedPacket;
   try {
     parsedPacket = packetParser_.parsePacket(packet);
