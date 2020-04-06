@@ -122,6 +122,13 @@ private:
   void serverAgentSpawnReceived(packet::parsing::ParsedServerAgentSpawn &packet);
   void serverAgentDespawnReceived(packet::parsing::ParsedServerAgentDespawn &packet);
 
+  // Event handling functions
+  void handlePillCooldownEnded(const event::Event *event);
+  void handlePotionCooldownEnded(const event::Event *event);
+  void handleHpPercentChanged(const event::Event *event);
+  void handleMpPercentChanged(const event::Event *event);
+  void handleStatesChanged(const event::Event *event);
+
   void printGold();
   void trackObject(std::shared_ptr<packet::parsing::Object> obj);
   void stopTrackingObject(uint32_t gId);
@@ -138,8 +145,6 @@ private:
   bool alreadyUsedUniversalPill();
   bool alreadyUsedPurificationPill();
   bool alreadyUsedPotion(PotionType potionType);
-  void handlePillCooldownEnded(const std::unique_ptr<event::Event> &event);
-  void handlePotionCooldownEnded(const std::unique_ptr<event::Event> &event);
   void setRaceAndGender(uint32_t refObjId);
   void checkIfNeedToUsePill();
   void checkIfNeedToHeal();

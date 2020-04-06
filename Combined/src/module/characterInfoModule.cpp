@@ -49,9 +49,12 @@ CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
   eventBroker_.subscribeToEvent(event::EventCode::kVigorPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
   eventBroker_.subscribeToEvent(event::EventCode::kUniversalPillCooldownEnded, std::bind(&CharacterInfoModule::handlePillCooldownEnded, this, std::placeholders::_1));
   // eventBroker_.subscribeToEvent(event::EventCode::kPurificationPillCooldownEnded, std::bind(&CharacterInfoModule::handlePillCooldownEnded, this, std::placeholders::_1));
+  eventBroker_.subscribeToEvent(event::EventCode::kHpPercentChanged, std::bind(&CharacterInfoModule::handleHpPercentChanged, this, std::placeholders::_1));
+  eventBroker_.subscribeToEvent(event::EventCode::kMpPercentChanged, std::bind(&CharacterInfoModule::handleMpPercentChanged, this, std::placeholders::_1));
+  eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, std::bind(&CharacterInfoModule::handleStatesChanged, this, std::placeholders::_1));
 }
 
-void CharacterInfoModule::handlePillCooldownEnded(const std::unique_ptr<event::Event> &event) {
+void CharacterInfoModule::handlePillCooldownEnded(const event::Event *event) {
   std::unique_lock<std::mutex> contentionProtectionLock(contentionProtectionMutex_);
   auto eventCode = event->getEventCode();
   if (eventCode == event::EventCode::kUniversalPillCooldownEnded) {
@@ -64,7 +67,7 @@ void CharacterInfoModule::handlePillCooldownEnded(const std::unique_ptr<event::E
   } */
 }
 
-void CharacterInfoModule::handlePotionCooldownEnded(const std::unique_ptr<event::Event> &event) {
+void CharacterInfoModule::handlePotionCooldownEnded(const event::Event *event) {
   std::unique_lock<std::mutex> contentionProtectionLock(contentionProtectionMutex_);
   auto eventCode = event->getEventCode();
   if (eventCode == event::EventCode::kHpPotionCooldownEnded) {
@@ -77,6 +80,18 @@ void CharacterInfoModule::handlePotionCooldownEnded(const std::unique_ptr<event:
     vigorPotionEventId_.reset();
     checkIfNeedToHeal();
   }
+}
+
+void CharacterInfoModule::handleHpPercentChanged(const event::Event *event) {
+  checkIfNeedToHeal();
+}
+
+void CharacterInfoModule::handleMpPercentChanged(const event::Event *event) {
+  checkIfNeedToHeal();
+}
+
+void CharacterInfoModule::handleStatesChanged(const event::Event *event) {
+  checkIfNeedToUsePill();
 }
 
 bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
@@ -439,13 +454,14 @@ void CharacterInfoModule::abnormalInfoReceived(const packet::parsing::ParsedServ
   for (int i=0; i<=bitNum(packet::enums::AbnormalStateFlag::kZombie); ++i) {
     legacyStateEffects_[i] = packet.states()[i].effectOrLevel;
   }
-  checkIfNeedToUsePill();
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStatesChanged));
 }
 
 void CharacterInfoModule::statUpdateReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) {
   maxHp_ = packet.maxHp();
   maxMp_ = packet.maxMp();
-  checkIfNeedToHeal();
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
 }
 
 void CharacterInfoModule::updateRace(Race race) {
@@ -488,7 +504,8 @@ void CharacterInfoModule::characterInfoReceived(const packet::parsing::ParsedSer
   initializeInventory(inventorySize, inventoryItemMap);
 
   std::cout << "We are now #" << *uniqueId_ << ", and we have " << hp_ << " hp and " << mp_ << " mp\n";
-  checkIfNeedToHeal();
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
 }
 
 void CharacterInfoModule::resetInventory() {
@@ -798,10 +815,11 @@ void CharacterInfoModule::entityUpdateReceived(const packet::parsing::ParsedServ
     auto stateBitmask = packet.stateBitmask();
     auto stateLevels = packet.stateLevels();
     updateStates(stateBitmask, stateLevels);
-    checkIfNeedToUsePill();
+    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStatesChanged));
   }
 
-  checkIfNeedToHeal();
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
 }
 
 int CharacterInfoModule::getHpPotionDelay() {

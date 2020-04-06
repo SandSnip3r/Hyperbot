@@ -17,7 +17,7 @@ public:
   using DelayedEventId = TimerManager::TimerId;
   using SubscriptionId = int;
 private:
-  using EventHandleFunction = std::function<void(const std::unique_ptr<event::Event>&)>;
+  using EventHandleFunction = std::function<void(const event::Event*)>;
   struct EventSubscription {
     EventSubscription(SubscriptionId subId, EventHandleFunction &&func) : id(subId), handleFunction(func) {}
     SubscriptionId id;
@@ -36,6 +36,7 @@ private:
   PacketSubscriptionMap subscriptions_;
   std::mutex subscriptionMutex_;
   TimerManager timerManager_;
+  void notifySubscribers(std::unique_ptr<event::Event> event);
   void timerFinished(event::Event *event);
 };
 

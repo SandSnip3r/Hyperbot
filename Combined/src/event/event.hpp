@@ -8,7 +8,10 @@ enum class EventCode {
   kMpPotionCooldownEnded,
   kVigorPotionCooldownEnded,
   kUniversalPillCooldownEnded,
-  kPurificationPillCooldownEnded
+  kPurificationPillCooldownEnded,
+  kHpPercentChanged,
+  kMpPercentChanged,
+  kStatesChanged
 };
 
 class Event {

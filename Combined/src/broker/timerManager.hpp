@@ -15,6 +15,7 @@ public:
   using TimerId = int;
   void run();
   TimerId registerTimer(std::chrono::milliseconds timerDuration, std::function<void()> timerCompletedFunction);
+  void triggerInstantTimer(std::function<void()> callback);
   bool cancelTimer(TimerId id);
   ~TimerManager();
 private:

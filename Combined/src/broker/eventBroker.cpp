@@ -9,15 +9,7 @@ void EventBroker::run() {
 }
 
 void EventBroker::publishEvent(std::unique_ptr<event::Event> event) {
-  // For each subscription pass the event to the EventHandleFunction
-  std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
-  auto eventSubscriptionsIt = subscriptions_.find(event->getEventCode());
-  if (eventSubscriptionsIt != subscriptions_.end()) {
-    auto &eventSubscriptions = eventSubscriptionsIt->second;
-    for (auto &eventSubscription : eventSubscriptions) {
-      eventSubscription.handleFunction(event);
-    }
-  }
+  timerManager_.triggerInstantTimer(std::bind(&EventBroker::timerFinished, this, event.release()));
 }
 
 EventBroker::DelayedEventId EventBroker::publishDelayedEvent(std::unique_ptr<event::Event> event, std::chrono::milliseconds delay) {
@@ -60,9 +52,21 @@ void EventBroker::unsubscribeFromEvent(SubscriptionId id) {
   }
 }
 
+void EventBroker::notifySubscribers(std::unique_ptr<event::Event> event) {
+  // For each subscription pass the event to the EventHandleFunction
+  std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
+  auto eventSubscriptionsIt = subscriptions_.find(event->getEventCode());
+  if (eventSubscriptionsIt != subscriptions_.end()) {
+    auto &eventSubscriptions = eventSubscriptionsIt->second;
+    for (auto &eventSubscription : eventSubscriptions) {
+      eventSubscription.handleFunction(event.get());
+    }
+  }
+}
+
 void EventBroker::timerFinished(event::Event *event) {
   // Take the raw pointer and move it into a unique_pointer
-  publishEvent(std::unique_ptr<event::Event>(event));
+  notifySubscribers(std::unique_ptr<event::Event>(event));
 }
 
 } // namespace broker

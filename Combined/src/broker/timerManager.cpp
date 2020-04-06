@@ -65,6 +65,16 @@ TimerManager::TimerId TimerManager::registerTimer(std::chrono::milliseconds time
   return thisTimerId;
 }
 
+void TimerManager::triggerInstantTimer(std::function<void()> callback){
+  {
+    std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
+      // Add the new "timer" on the "heap"
+    timerDataHeap_.emplace_back(timerIdCounter_, std::chrono::high_resolution_clock::now(), callback);
+    std::push_heap(timerDataHeap_.begin(), timerDataHeap_.end(), std::greater<Timer>());
+  }
+  cv_.notify_one();
+}
+
 void TimerManager::waitForData() {
   std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
   cv_.wait(timerDataLock, [this](){ return !keepRunning_ || !timerDataHeap_.empty(); });
