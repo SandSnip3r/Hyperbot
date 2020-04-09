@@ -5,47 +5,54 @@
 
 namespace storage {
 
-Storage::Storage(uint8_t size) : itemList_(size) {
-  //
-}
-
 bool Storage::hasItem(uint8_t slot) const {
+  std::unique_lock<std::mutex> storageLock(storageMutex_);
   return itemList_.hasItem(slot);
 }
 
 Item* Storage::getItem(uint8_t slot) {
+  std::unique_lock<std::mutex> storageLock(storageMutex_);
+  // TODO: Return optional instead. Returning the pointer is dangerous because the item could be moved while the user is referencing it
   return itemList_.getItem(slot);
 }
 
 const Item* Storage::getItem(uint8_t slot) const {
+  std::unique_lock<std::mutex> storageLock(storageMutex_);
   return itemList_.getItem(slot);
 }
 
 uint8_t Storage::size() const {
+  std::unique_lock<std::mutex> storageLock(storageMutex_);
   return itemList_.size();
 }
 
 void Storage::clear() {
+  std::unique_lock<std::mutex> storageLock(storageMutex_);
   itemList_.clear();
 }
 
 void Storage::resize(uint8_t newSize) {
+  std::unique_lock<std::mutex> storageLock(storageMutex_);
   itemList_.resize(newSize);
 }
 
 void Storage::addItem(uint8_t slot, std::shared_ptr<Item> item) {
+  std::unique_lock<std::mutex> storageLock(storageMutex_);
   itemList_.addItem(slot, item);
 }
 
 std::shared_ptr<Item> Storage::withdrawItem(uint8_t slot) {
+  std::unique_lock<std::mutex> storageLock(storageMutex_);
   return itemList_.withdrawItem(slot);
 }
 
 void Storage::deleteItem(uint8_t slot) {
+  std::unique_lock<std::mutex> storageLock(storageMutex_);
   itemList_.deleteItem(slot);
 }
 
 void Storage::moveItem(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity) {
+  std::unique_lock<std::mutex> storageLock(storageMutex_);
   std::cout << "moveItem, srcSlot: " << static_cast<int>(srcSlot) << ", destSlot: " << static_cast<int>(destSlot) << ", quantity: " << quantity << '\n';
   if (itemList_.hasItem(srcSlot)) {
     Item *srcItem = itemList_.getItem(srcSlot);
@@ -104,6 +111,7 @@ void Storage::moveItem(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity) {
 }
 
 void Storage::moveItem(uint8_t srcSlot, uint8_t destSlot) {
+  std::unique_lock<std::mutex> storageLock(storageMutex_);
   if (itemList_.hasItem(destSlot)) {
     throw std::runtime_error("Storage::moveItem Trying to move an item into a non-open slot");
   }
@@ -111,6 +119,11 @@ void Storage::moveItem(uint8_t srcSlot, uint8_t destSlot) {
     throw std::runtime_error("Storage::moveItem Trying to move non-existent item");
   }
   itemList_.moveItem(srcSlot, destSlot);
+}
+
+std::vector<uint8_t> Storage::findItemsWithTypeId(uint8_t typeId1, uint8_t typeId2, uint8_t typeId3, uint8_t typeId4) const {
+  // TODO: Implement a function just to return the first
+  return itemList_.findItemsWithTypeId(typeId1, typeId2, typeId3, typeId4);
 }
 
 } // namespace storage

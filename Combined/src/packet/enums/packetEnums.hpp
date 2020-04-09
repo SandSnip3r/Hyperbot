@@ -132,6 +132,24 @@ enum class ItemMovementType : uint8_t {
   kInventoryToAvatar =        0x24
 };
 
+enum class LifeState : uint8_t {
+  kEmbryo = 0,
+  kAlive = 1,
+  kDead = 2,
+  kGone = 3
+};
+
+enum class BodyState : uint8_t {
+  kNormal = 0,
+  kHwan = 1,
+  kUntouchable = 2,
+  kInvincibleGm = 3,
+  kInvisibleGm = 4,
+  kBerserker = 5, // Something to do with Roc
+  kStealth = 6,
+  kInvisible = 7
+};
+
 } // namespace packet::enums
 
 #endif // PACKET_ENUMS_HPP

@@ -77,24 +77,27 @@ storage::Item* newItemByTypeData(const pk2::ref::Item &item) {
   return storageItemPtr;
 }
 
-Item* cloneItem(Item *item) {
+std::shared_ptr<Item> cloneItem(const Item *item) {
   switch (item->type) {
     case ItemType::kItemEquipment:
-      return new ItemEquipment(*dynamic_cast<ItemEquipment*>(item));
+      return std::shared_ptr<Item>(new ItemEquipment(*dynamic_cast<const ItemEquipment*>(item)));
     case ItemType::kItemCosGrowthSummoner:
-      return new ItemCosGrowthSummoner(*dynamic_cast<ItemCosGrowthSummoner*>(item));
+      return std::shared_ptr<Item>(new ItemCosGrowthSummoner(*dynamic_cast<const ItemCosGrowthSummoner*>(item)));
     case ItemType::kItemCosAbilitySummoner:
-      return new ItemCosAbilitySummoner(*dynamic_cast<ItemCosAbilitySummoner*>(item));
+      return std::shared_ptr<Item>(new ItemCosAbilitySummoner(*dynamic_cast<const ItemCosAbilitySummoner*>(item)));
     case ItemType::kItemMonsterCapsule:
-      return new ItemMonsterCapsule(*dynamic_cast<ItemMonsterCapsule*>(item));
+      return std::shared_ptr<Item>(new ItemMonsterCapsule(*dynamic_cast<const ItemMonsterCapsule*>(item)));
     case ItemType::kItemStorage:
-      return new ItemStorage(*dynamic_cast<ItemStorage*>(item));
+      return std::shared_ptr<Item>(new ItemStorage(*dynamic_cast<const ItemStorage*>(item)));
     case ItemType::kItemExpendable:
-      return new ItemExpendable(*dynamic_cast<ItemExpendable*>(item));
+      return std::shared_ptr<Item>(new ItemExpendable(*dynamic_cast<const ItemExpendable*>(item)));
     case ItemType::kItemStone:
-      return new ItemStone(*dynamic_cast<ItemStone*>(item));
+      return std::shared_ptr<Item>(new ItemStone(*dynamic_cast<const ItemStone*>(item)));
     case ItemType::kItemMagicPop:
-      return new ItemMagicPop(*dynamic_cast<ItemMagicPop*>(item));
+      return std::shared_ptr<Item>(new ItemMagicPop(*dynamic_cast<const ItemMagicPop*>(item)));
+    default:
+      // nullptr
+      return std::shared_ptr<Item>(nullptr);
   }
 }
 

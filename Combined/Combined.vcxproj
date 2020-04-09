@@ -66,8 +66,12 @@
     <ClCompile Include="src\packet\parsing\commonParsing.cpp" />
     <ClCompile Include="src\packet\parsing\packetParser.cpp" />
     <ClCompile Include="src\packet\parsing\parsedPacket.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentActionCommandResponse.cpp" />
     <ClCompile Include="src\packet\parsing\serverAgentActionSelectResponse.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentBuffAdd.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentBuffRemove.cpp" />
     <ClCompile Include="src\packet\parsing\serverAgentCharacterData.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentEntityUpdateState.cpp" />
     <ClCompile Include="src\phConnector.cpp" />
     <ClCompile Include="src\pk2\characterData.cpp" />
     <ClCompile Include="src\pk2\gameData.cpp" />
@@ -81,6 +85,7 @@
     <ClCompile Include="src\shared\stream_utility.cpp" />
     <ClCompile Include="src\silkroadConnection.cpp" />
     <ClCompile Include="src\state\entity.cpp" />
+    <ClCompile Include="src\state\self.cpp" />
     <ClCompile Include="src\storage\buybackQueue.cpp" />
     <ClCompile Include="src\storage\item.cpp" />
     <ClCompile Include="src\storage\itemList.cpp" />
@@ -138,8 +143,12 @@
     <ClInclude Include="src\packet\parsing\commonParsing.hpp" />
     <ClInclude Include="src\packet\parsing\packetParser.hpp" />
     <ClInclude Include="src\packet\parsing\parsedPacket.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentActionCommandResponse.hpp" />
     <ClInclude Include="src\packet\parsing\serverAgentActionSelectResponse.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentBuffAdd.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentBuffRemove.hpp" />
     <ClInclude Include="src\packet\parsing\serverAgentCharacterData.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentEntityUpdateState.hpp" />
     <ClInclude Include="src\packet\structures\packetInnerStructures.hpp" />
     <ClInclude Include="src\pk2\characterData.hpp" />
     <ClInclude Include="src\pk2\gameData.hpp" />
@@ -153,6 +162,7 @@
     <ClInclude Include="src\shared\stream_utility.h" />
     <ClInclude Include="src\silkroadConnection.hpp" />
     <ClInclude Include="src\state\entity.hpp" />
+    <ClInclude Include="src\state\self.hpp" />
     <ClInclude Include="src\storage\buybackQueue.hpp" />
     <ClInclude Include="src\storage\item.hpp" />
     <ClInclude Include="src\storage\itemList.hpp" />

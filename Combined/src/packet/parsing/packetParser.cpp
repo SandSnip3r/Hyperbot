@@ -1,7 +1,11 @@
 #include "clientAgentChatRequest.hpp"
 #include "packetParser.hpp"
+#include "serverAgentActionCommandResponse.hpp"
 #include "serverAgentActionSelectResponse.hpp"
+#include "serverAgentBuffAdd.hpp"
+#include "serverAgentBuffRemove.hpp"
 #include "serverAgentCharacterData.hpp"
+#include "serverAgentEntityUpdateState.hpp"
 #include "../opcode.hpp"
 
 #include <iostream>
@@ -17,7 +21,7 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
   // Given a packet's opcode, determine which parsed packet type is appropriate
   switch (static_cast<Opcode>(packet.opcode)) {
     case Opcode::kClientAgentChatRequest:
-      return std::make_unique<ParsedClientAgentChatRequest>(packet);
+      return std::make_unique<ClientAgentChatRequest>(packet);
     case Opcode::LOGIN_SERVER_LIST:
       return std::make_unique<ParsedLoginServerList>(packet);
     case Opcode::LOGIN_SERVER_AUTH_INFO:
@@ -50,8 +54,16 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       return std::make_unique<ParsedServerItemMove>(packet);
     case Opcode::kClientAgentInventoryOperationRequest:
       return std::make_unique<ParsedClientItemMove>(packet);
+    case Opcode::kServerAgentActionCommandResponse:
+      return std::make_unique<ServerAgentActionCommandResponse>(packet);
     case Opcode::kServerAgentActionSelectResponse:
       return std::make_unique<ServerAgentActionSelectResponse>(packet);
+    case Opcode::kServerAgentEntityUpdateState:
+      return std::make_unique<ServerAgentEntityUpdateState>(packet);
+    case Opcode::kServerAgentBuffAdd:
+      return std::make_unique<ServerAgentBuffAdd>(packet, gameData_.skillData());
+    case Opcode::kServerAgentBuffRemove:
+      return std::make_unique<ServerAgentBuffRemove>(packet);
     case Opcode::kClientAgentAuthRequest:
     case Opcode::kServerGatewayLoginIbuvChallenge:
     // case static_cast<Opcode>(0x2005):

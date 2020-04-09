@@ -66,6 +66,18 @@ struct RentInfo {
   uint32_t packingTime;
 };
 
+struct Mastery {
+  Mastery(uint32_t i, uint8_t l) : id(i), level(l) {}
+  uint32_t id;
+  uint8_t level;
+};
+
+struct Skill {
+  Skill(uint32_t i, bool e) : id(i), enabled(e) {}
+  uint32_t id;
+  bool enabled;
+};
+
 } // namespace packet::structures
 
 #endif // PACKET_INNER_STRUCTURES_HPP

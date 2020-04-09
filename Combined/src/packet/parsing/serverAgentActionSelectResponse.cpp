@@ -21,9 +21,11 @@ ServerAgentActionSelectResponse::ServerAgentActionSelectResponse(const PacketCon
 uint8_t ServerAgentActionSelectResponse::result() const {
   return result_;
 }
+
 uint32_t ServerAgentActionSelectResponse::gId() const {
   return gId_;
 }
+
 uint16_t ServerAgentActionSelectResponse::errorCode() const {
   return errorCode_;
 }

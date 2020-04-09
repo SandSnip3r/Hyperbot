@@ -2,6 +2,8 @@
 #define PACKET_PARSING_SERVER_AGENT_CHARACTER_DATA_HPP
 
 #include "parsedPacket.hpp"
+#include "../enums./packetEnums.hpp"
+#include "../structures/packetInnerStructures.hpp"
 #include "../../pk2/itemData.hpp"
 #include "../../pk2/skillData.hpp"
 #include "../../shared/silkroad_security.h"
@@ -22,6 +24,10 @@ public:
   uint32_t mp() const;
   uint8_t inventorySize() const;
   const std::map<uint8_t, std::shared_ptr<storage::Item>>& inventoryItemMap() const;
+  const std::vector<structures::Mastery>& masteries() const;
+  const std::vector<structures::Skill>& skills() const;
+  enums::LifeState lifeState() const;
+  enums::BodyState bodyState() const;
 private:
   uint32_t refObjId_;
   uint64_t gold_;
@@ -30,6 +36,10 @@ private:
   uint32_t mp_;
   uint8_t inventorySize_;
   std::map<uint8_t, std::shared_ptr<storage::Item>> inventoryItemMap_;
+  std::vector<structures::Mastery> masteries_;
+  std::vector<structures::Skill> skills_;
+  enums::LifeState lifeState_;
+  enums::BodyState bodyState_;
 };
 
 } // namespace packet::parsing

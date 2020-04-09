@@ -10,6 +10,7 @@
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
 #include "state/entity.hpp"
+#include "state/self.hpp"
 
 class Bot {
 public:
@@ -17,15 +18,17 @@ public:
       const pk2::GameData &gameData,
       broker::PacketBroker &broker);
 private:
-  state::Entity entityState_;
   const config::CharacterLoginData &loginData_;
   const pk2::GameData &gameData_;
+  state::Entity entityState_;
+  state::Self selfState_{gameData_};
+  storage::Storage inventory_;
   broker::PacketBroker &broker_;
   broker::EventBroker eventBroker_;
   packet::parsing::PacketParser packetParser_{gameData_};
-  module::CharacterInfoModule characterInfoModule_{entityState_, broker_, eventBroker_, packetParser_, gameData_};
+  module::CharacterInfoModule characterInfoModule_{entityState_, selfState_, inventory_, broker_, eventBroker_, packetParser_, gameData_};
   module::LoginModule loginModule_{broker_, packetParser_, loginData_, gameData_.divisionInfo()};
-  module::SkillUseModule skillUseModule_{entityState_, broker_, eventBroker_, packetParser_, gameData_};
+  module::SkillUseModule skillUseModule_{entityState_, selfState_, inventory_, broker_, eventBroker_, packetParser_, gameData_};
 };
 
 #endif

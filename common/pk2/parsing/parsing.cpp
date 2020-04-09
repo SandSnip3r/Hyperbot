@@ -135,7 +135,7 @@ pk2::ref::Skill parseSkilldataLine(const std::string &line) {
   // int32_t param49 // 116
   // int32_t param50 // 117
 
-	const std::vector<int> kDesiredFields = {1,3,4,5,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117};
+	const std::vector<int> kDesiredFields = {1,3,4,5,14,22,50,51,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117};
 	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
 	if (fields.size() != kDesiredFields.size()) {
 		// TODO: This check for validity of data should be more robust
@@ -143,12 +143,16 @@ pk2::ref::Skill parseSkilldataLine(const std::string &line) {
 	}
 	pk2::ref::Skill skill;
   int idx=0;
-  skill.id =      std::stol(fields[idx++]);
-  skill.basicCode =         fields[idx++];
-  skill.basicName =         fields[idx++];
-  skill.basicGroup =        fields[idx++];
+  skill.id =               std::stol(fields[idx++]);
+  skill.basicCode =                  fields[idx++];
+  skill.basicName =                  fields[idx++];
+  skill.basicGroup =                 fields[idx++];
+  skill.actionReuseDelay = std::stol(fields[idx++]);
+  skill.targetRequired =   std::stoi(fields[idx++]);
+  skill.reqCastWeapon1 =   std::stoi(fields[idx++]);
+  skill.reqCastWeapon2 =   std::stoi(fields[idx++]);
   for (int i=0; i<skill.params.size(); ++i) {
-    skill.params[i] = std::stoi(fields[idx++]);
+    skill.params[i] =      std::stoi(fields[idx++]);
   }
 	return skill;
 }
@@ -473,7 +477,7 @@ pk2::ref::Item parseItemdataLine(const std::string &line) {
 	// uint8_t maxMagicOptCount; // 158
 	// uint8_t childItemCount; // 159
   
-	const std::vector<int> kDesiredFields = {1,2,7,8,9,10,11,12,57,118,120,124};
+	const std::vector<int> kDesiredFields = {1,2,7,8,9,10,11,12,57,93,118,120,124};
 	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
 	if (fields.size() != kDesiredFields.size()) {
 		// TODO: This check for validity of data should be more robust
@@ -481,18 +485,19 @@ pk2::ref::Item parseItemdataLine(const std::string &line) {
 	}
 	pk2::ref::Item item;
   int idx=0;
-	item.id =       std::stol(fields[idx++]);
-	item.codeName128 =        fields[idx++];
-	item.cashItem = std::stoi(fields[idx++]);
-	item.bionic =   std::stoi(fields[idx++]);
-	item.typeId1 =  std::stoi(fields[idx++]);
-	item.typeId2 =  std::stoi(fields[idx++]);
-	item.typeId3 =  std::stoi(fields[idx++]);
-	item.typeId4 =  std::stoi(fields[idx++]);
-	item.maxStack = std::stoi(fields[idx++]);
-	item.param1 =   std::stol(fields[idx++]);
-	item.param2 =   std::stol(fields[idx++]);
-	item.param4 =   std::stol(fields[idx++]);
+	item.id =        std::stol(fields[idx++]);
+	item.codeName128 =         fields[idx++];
+	item.cashItem =  std::stoi(fields[idx++]);
+	item.bionic =    std::stoi(fields[idx++]);
+	item.typeId1 =   std::stoi(fields[idx++]);
+	item.typeId2 =   std::stoi(fields[idx++]);
+	item.typeId3 =   std::stoi(fields[idx++]);
+	item.typeId4 =   std::stoi(fields[idx++]);
+	item.maxStack =  std::stoi(fields[idx++]);
+  item.twoHanded = std::stoi(fields[idx++]);
+	item.param1 =    std::stol(fields[idx++]);
+	item.param2 =    std::stol(fields[idx++]);
+	item.param4 =    std::stol(fields[idx++]);
 	return item;
 }
 

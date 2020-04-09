@@ -34,6 +34,7 @@ public:
   static PacketContainer attack(uint32_t targetGId);
   static PacketContainer pickup(uint32_t targetGId);
   static PacketContainer trace(uint32_t targetGId);
+  static PacketContainer cast(uint32_t refSkillId);
   static PacketContainer cast(uint32_t refSkillId, uint32_t targetGId);
   static PacketContainer dispel(uint32_t refSkillId, uint32_t targetGId);
 };

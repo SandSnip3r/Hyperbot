@@ -4,6 +4,7 @@
 #include "../../../common/pk2/ref/item.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace storage {
@@ -132,7 +133,7 @@ public:
 };
 
 storage::Item* newItemByTypeData(const pk2::ref::Item &item);
-storage::Item* cloneItem(storage::Item *item);
+std::shared_ptr<storage::Item> cloneItem(const storage::Item *item);
 
 void print(const Item *item);
 
