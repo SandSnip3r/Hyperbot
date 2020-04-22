@@ -3,6 +3,7 @@
 #include "../../../common/pk2/pk2.h"
 #include "../../../common/pk2/parsing/parsing.hpp"
 
+#include <functional>
 #include <iostream>
 #include <map>
 
@@ -21,12 +22,16 @@ GameData::GameData(const fs::path &kSilkroadPath) : kSilkroadPath_(kSilkroadPath
 }
 
 void GameData::parseMedia(Pk2ReaderModern &pk2Reader) {
+  std::vector<std::thread> thrs;
   parseDivisionInfo(pk2Reader);
   parseShopData(pk2Reader);
-  parseCharacterData(pk2Reader);
-  parseItemData(pk2Reader);
-  parseSkillData(pk2Reader);
+  thrs.emplace_back(&GameData::parseCharacterData, this, std::ref(pk2Reader));
+  thrs.emplace_back(&GameData::parseItemData, this, std::ref(pk2Reader));
+  thrs.emplace_back(&GameData::parseSkillData, this, std::ref(pk2Reader));
   parseTeleportData(pk2Reader);
+  for (auto &thr : thrs) {
+    thr.join();
+  }
 }
 
 const DivisionInfo& GameData::divisionInfo() const {
@@ -60,6 +65,32 @@ void GameData::parseDivisionInfo(Pk2ReaderModern &pk2Reader) {
   divisionInfo_ = parsing::parseDivisionInfo(divisionInfoData);
 }
 
+namespace {
+template<typename DataType>
+void parseDataFile(const std::string &data,
+                   std::function<bool(const std::string &)> isValidDataLine,
+                   std::function<DataType(const std::string &)> parseDataLine,
+                   std::function<void(DataType &&)> saveParsedDataObject) {
+    size_t start=0;
+    size_t posOfNewline = data.find('\n');
+    while ((posOfNewline = data.find('\n', start)) != std::string::npos) {
+      const auto line = data.substr(start, posOfNewline-start);
+      if (isValidDataLine(line)) {
+        saveParsedDataObject(parseDataLine(line));
+      }
+      start = posOfNewline+1;
+    }
+    if (start < data.size()-1) {
+      // File doesnt end in newline. One more line to read
+      std::cout << "One more\n";
+      const auto line = data.substr(start);
+      if (isValidDataLine(line)) {
+        saveParsedDataObject(parseDataLine(line));
+      }
+    }
+}
+} // namespace
+
 void GameData::parseCharacterData(Pk2ReaderModern &pk2Reader) {
 	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   const std::string kMasterCharacterdataName = "characterdata.txt";
@@ -70,23 +101,21 @@ void GameData::parseCharacterData(Pk2ReaderModern &pk2Reader) {
   auto masterCharacterdataStr = parsing::fileDataToString(masterCharacterdataData);
   auto characterdataFilenames = parsing::split(masterCharacterdataStr, "\r\n");
 
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "Parsing character data" << std::endl;
+  }
   for (auto characterdataFilename : characterdataFilenames) {
-    std::cout << "Parsing character data file \"" << characterdataFilename << "\"\n";
     auto characterdataPath = kTextdataDirectory + characterdataFilename;
     PK2Entry characterdataEntry = pk2Reader.getEntry(characterdataPath);
     auto characterdataData = pk2Reader.getEntryData(characterdataEntry);
     auto characterdataStr = parsing::fileDataToString(characterdataData);
-    auto characterdataLines = parsing::split(characterdataStr, "\r\n");
-    for (const auto &line : characterdataLines) {
-      try {
-        characterData_.addCharacter(parsing::parseCharacterdataLine(line));
-      } catch (std::runtime_error &err) {
-        std::cerr << "  Failed to parse character data \"" << line << "\"\n";
-        std::cerr << "  " << err.what() << '\n';
-      }
-    }
+    parseDataFile<ref::Character>(characterdataStr, parsing::isValidCharacterdataLine, parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
   }
-  std::cout << "  Cached " << characterData_.size() << " character(s)\n";
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "  Cached " << characterData_.size() << " character(s)" << std::endl;
+  }
 }
 
 void GameData::parseItemData(Pk2ReaderModern &pk2Reader) {
@@ -99,23 +128,21 @@ void GameData::parseItemData(Pk2ReaderModern &pk2Reader) {
   auto masterItemdataStr = parsing::fileDataToString(masterItemdataData);
   auto itemdataFilenames = parsing::split(masterItemdataStr, "\r\n");
 
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "Parsing item data" << std::endl;
+  }
   for (auto itemdataFilename : itemdataFilenames) {
-    std::cout << "Parsing item data file \"" << itemdataFilename << "\"\n";
     auto itemdataPath = kTextdataDirectory + itemdataFilename;
     PK2Entry itemdataEntry = pk2Reader.getEntry(itemdataPath);
     auto itemdataData = pk2Reader.getEntryData(itemdataEntry);
     auto itemdataStr = parsing::fileDataToString(itemdataData);
-    auto itemdataLines = parsing::split(itemdataStr, "\r\n");
-    for (const auto &line : itemdataLines) {
-      try {
-        itemData_.addItem(parsing::parseItemdataLine(line));
-      } catch (std::runtime_error &err) {
-        std::cerr << "  Failed to parse item data \"" << line << "\"\n";
-        std::cerr << "  " << err.what() << '\n';
-      }
-    }
+    parseDataFile<ref::Item>(itemdataStr, parsing::isValidItemdataLine, parsing::parseItemdataLine, std::bind(&ItemData::addItem, &itemData_, std::placeholders::_1));
   }
-  std::cout << "  Cached " << itemData_.size() << " item(s)\n";
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "  Cached " << itemData_.size() << " item(s)" << std::endl;
+  }
 }
 
 void GameData::parseSkillData(Pk2ReaderModern &pk2Reader) {
@@ -128,48 +155,40 @@ void GameData::parseSkillData(Pk2ReaderModern &pk2Reader) {
   auto masterSkilldataStr = parsing::fileDataToString(masterSkilldataData);
   auto skilldataFilenames = parsing::split(masterSkilldataStr, "\r\n");
 
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "Parsing skill data" << std::endl;
+  }
   for (auto skilldataFilename : skilldataFilenames) {
-    std::cout << "Parsing skill data file \"" << skilldataFilename << "\"\n";
     auto skilldataPath = kTextdataDirectory + skilldataFilename;
     PK2Entry skilldataEntry = pk2Reader.getEntry(skilldataPath);
     auto skilldataData = pk2Reader.getEntryData(skilldataEntry);
     auto skilldataStr = parsing::fileDataToString(skilldataData);
-    auto skilldataLines = parsing::split(skilldataStr, "\r\n");
-    for (const auto &line : skilldataLines) {
-      try {
-        skillData_.addSkill(parsing::parseSkilldataLine(line));
-      } catch (std::runtime_error &err) {
-        std::cerr << "  Failed to parse skill data \"" << line << "\"\n";
-        std::cerr << "  " << err.what() << '\n';
-      }
-    }
+    parseDataFile<ref::Skill>(skilldataStr, parsing::isValidSkilldataLine, parsing::parseSkilldataLine, std::bind(&SkillData::addSkill, &skillData_, std::placeholders::_1));
   }
-  std::cout << "  Cached " << skillData_.size() << " skill(s)\n";
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "  Cached " << skillData_.size() << " skill(s)" << std::endl;
+  }
 }
 
 void GameData::parseTeleportData(Pk2ReaderModern &pk2Reader) {
 	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   const std::string kTeleportDataFilename = "teleportbuilding.txt";
-  std::cout << "Parsing teleport data file \"" << kTeleportDataFilename << "\"\n";
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "Parsing teleport data." << std::endl;
+  }
   auto teleportDataPath = kTextdataDirectory + kTeleportDataFilename;
   PK2Entry teleportDataEntry = pk2Reader.getEntry(teleportDataPath);
   auto teleportDataData = pk2Reader.getEntryData(teleportDataEntry);
   auto teleportDataStr = parsing::fileDataToString(teleportDataData);
-  auto teleportDataLines = parsing::split(teleportDataStr, "\r\n");
-  for (const auto &line : teleportDataLines) {
-    try {
-      teleportData_.addTeleport(parsing::parseTeleportbuildingLine(line));
-    } catch (std::runtime_error &err) {
-      std::cerr << "  Failed to parse teleport data \"" << line << "\"\n";
-      std::cerr << "  " << err.what() << '\n';
-    }
+  parseDataFile<ref::Teleport>(teleportDataStr, parsing::isValidTeleportbuildingLine, parsing::parseTeleportbuildingLine, std::bind(&TeleportData::addTeleport, &teleportData_, std::placeholders::_1));
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "  Cached " << teleportData_.size() << " teleport(s)" << std::endl;
   }
-  std::cout << "  Cached " << teleportData_.size() << " teleport(s)\n";
 }
-
-struct Package {
-  // Item data...
-};
 
 void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
   std::map<std::string, ref::ScrapOfPackageItem> scrapOfPackageItemMap;
@@ -185,122 +204,121 @@ void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
   // maps RefPackageItemCodeName="PACKAGE_ITEM_ETC_HP_POTION_01" to item data
   //  1->1 (packages are unique, items might not be)
   const std::string kScrapOfPackageItemFilename = "refscrapofpackageitem.txt";
-  std::cout << "Parsing scrap of package item file \"" << kScrapOfPackageItemFilename << "\"\n";
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "Parsing scrap of package item.";
+  }
   auto scrapOfPackageItemPath = kTextdataDirectory + kScrapOfPackageItemFilename;
   PK2Entry scrapOfPackageItemEntry = pk2Reader.getEntry(scrapOfPackageItemPath);
   auto scrapOfPackageItemData = pk2Reader.getEntryData(scrapOfPackageItemEntry);
   auto scrapOfPackageItemStr = parsing::fileDataToString(scrapOfPackageItemData);
-  auto scrapOfPackageItemLines = parsing::split(scrapOfPackageItemStr, "\r\n");
-  for (const auto &line : scrapOfPackageItemLines) {
-    try {
-      auto package = parsing::parseScrapOfPackageItemLine(line);
-      scrapOfPackageItemMap.emplace(package.refPackageItemCodeName, package);
-    } catch (std::runtime_error &err) {
-      std::cerr << "  Failed to parse scrap of package item \"" << line << "\"\n";
-      std::cerr << "  " << err.what() << '\n';
-    }
+  parseDataFile<ref::ScrapOfPackageItem>(scrapOfPackageItemStr, parsing::isValidScrapOfPackageItemLine, parsing::parseScrapOfPackageItemLine, [&scrapOfPackageItemMap](ref::ScrapOfPackageItem &&package){
+    scrapOfPackageItemMap.emplace(package.refPackageItemCodeName, std::move(package));
+  });
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "  Cached " << scrapOfPackageItemMap.size() << " scrap of package item(s)\n";
   }
-  std::cout << "  Cached " << scrapOfPackageItemMap.size() << " scrap of package item(s)\n";
 
   // refshoptab.txt
   //  multimaps RefTabGroupCodeName="STORE_CA_POTION_GROUP1" to CodeName128="STORE_CA_POTION_TAB1"
   //  n->1 (tabs are unique)
   const std::string kShopTabFilename = "refshoptab.txt";
-  std::cout << "Parsing shop tab file \"" << kShopTabFilename << "\"\n";
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "Parsing shop tab.";
+  }
   auto shopTabPath = kTextdataDirectory + kShopTabFilename;
   PK2Entry shopTabEntry = pk2Reader.getEntry(shopTabPath);
   auto shopTabData = pk2Reader.getEntryData(shopTabEntry);
   auto shopTabStr = parsing::fileDataToString(shopTabData);
-  auto shopTabLines = parsing::split(shopTabStr, "\r\n");
-  for (const auto &line : shopTabLines) {
-    try {
-      shopTabs.emplace_back(parsing::parseShopTabLine(line));
-    } catch (std::runtime_error &err) {
-      std::cerr << "  Failed to parse shop tab \"" << line << "\"\n";
-      std::cerr << "  " << err.what() << '\n';
-    }
+  parseDataFile<ref::ShopTab>(shopTabStr, parsing::isValidShopTabLine, parsing::parseShopTabLine, [&shopTabs](ref::ShopTab &&tab){
+    shopTabs.emplace_back(std::move(tab));
+  });
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "  Cached " << shopTabs.size() << " shop tab(s)\n";
   }
-  std::cout << "  Cached " << shopTabs.size() << " shop tab(s)\n";
 
   // refshopgroup.txt
   //  multimaps RefNPCCodeName="NPC_CA_POTION" to CodeName128="GROUP_STORE_CA_POTION"
   //  n->1 (groups are unique)
   const std::string kShopGroupFilename = "refshopgroup.txt";
-  std::cout << "Parsing shop group file \"" << kShopGroupFilename << "\"\n";
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "Parsing shop group.";
+  }
   auto shopGroupPath = kTextdataDirectory + kShopGroupFilename;
   PK2Entry shopGroupEntry = pk2Reader.getEntry(shopGroupPath);
   auto shopGroupData = pk2Reader.getEntryData(shopGroupEntry);
   auto shopGroupStr = parsing::fileDataToString(shopGroupData);
-  auto shopGroupLines = parsing::split(shopGroupStr, "\r\n");
-  for (const auto &line : shopGroupLines) {
-    try {
-      shopGroups.emplace_back(parsing::parseShopGroupLine(line));
-    } catch (std::runtime_error &err) {
-      std::cerr << "  Failed to parse shop group \"" << line << "\"\n";
-      std::cerr << "  " << err.what() << '\n';
-    }
+  parseDataFile<ref::ShopGroup>(shopGroupStr, parsing::isValidShopGroupLine, parsing::parseShopGroupLine, [&shopGroups](ref::ShopGroup &&group){
+    shopGroups.emplace_back(std::move(group));
+  });
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "  Cached " << shopGroups.size() << " shop group(s)\n";
   }
-  std::cout << "  Cached " << shopGroups.size() << " shop group(s)\n";
 
   // refshopgoods.txt
   //  multimaps RefTabCodeName="STORE_CA_POTION_TAB1" to { RefPackageItemCodeName="PACKAGE_ITEM_ETC_HP_POTION_01", SlotIndex=0 }
   //  n->n
   const std::string kShopGoodsFilename = "refshopgoods.txt";
-  std::cout << "Parsing shop goods file \"" << kShopGoodsFilename << "\"\n";
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "Parsing shop goods.";
+  }
   auto shopGoodsPath = kTextdataDirectory + kShopGoodsFilename;
   PK2Entry shopGoodsEntry = pk2Reader.getEntry(shopGoodsPath);
   auto shopGoodsData = pk2Reader.getEntryData(shopGoodsEntry);
   auto shopGoodsStr = parsing::fileDataToString(shopGoodsData);
-  auto shopGoodsLines = parsing::split(shopGoodsStr, "\r\n");
-  for (const auto &line : shopGoodsLines) {
-    try {
-      shopGoods.emplace_back(parsing::parseShopGoodLine(line));
-    } catch (std::runtime_error &err) {
-      std::cerr << "  Failed to parse shop goods \"" << line << "\"\n";
-      std::cerr << "  " << err.what() << '\n';
-    }
+  parseDataFile<ref::ShopGood>(shopGoodsStr, parsing::isValidShopGoodLine, parsing::parseShopGoodLine, [&shopGoods](ref::ShopGood &&good){
+    shopGoods.emplace_back(std::move(good));
+  });
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "  Cached " << shopGoods.size() << " shop goods\n";
   }
-  std::cout << "  Cached " << shopGoods.size() << " shop goods\n";
 
   // refmappingshopgroup.txt
   //  maps RefShopGroupCodeName="GROUP_STORE_CA_POTION" to RefShopCodeName="STORE_CA_POTION"
   //  n->n
   const std::string kMappingShopGroupFilename = "refmappingshopgroup.txt";
-  std::cout << "Parsing mapping shop group file \"" << kMappingShopGroupFilename << "\"\n";
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "Parsing mapping shop group.";
+  }
   auto mappingShopGroupPath = kTextdataDirectory + kMappingShopGroupFilename;
   PK2Entry mappingShopGroupEntry = pk2Reader.getEntry(mappingShopGroupPath);
   auto mappingShopGroupData = pk2Reader.getEntryData(mappingShopGroupEntry);
   auto mappingShopGroupStr = parsing::fileDataToString(mappingShopGroupData);
-  auto mappingShopGroupLines = parsing::split(mappingShopGroupStr, "\r\n");
-  for (const auto &line : mappingShopGroupLines) {
-    try {
-      mappingShopGroups.emplace_back(parsing::parseMappingShopGroupLine(line));
-    } catch (std::runtime_error &err) {
-      std::cerr << "  Failed to parse mapping shop group \"" << line << "\"\n";
-      std::cerr << "  " << err.what() << '\n';
-    }
+  parseDataFile<ref::MappingShopGroup>(mappingShopGroupStr, parsing::isValidMappingShopGroupLine, parsing::parseMappingShopGroupLine, [&mappingShopGroups](ref::MappingShopGroup &&mapping){
+    mappingShopGroups.emplace_back(std::move(mapping));
+  });
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "  Cached " << mappingShopGroups.size() << " mapping shop group\n";
   }
-  std::cout << "  Cached " << mappingShopGroups.size() << " mapping shop group\n";
 
   // refmappingshopwithtab.txt
   //  multimaps RefShopCodeName="STORE_CA_POTION" to RefTabGroupCodeName="STORE_CA_POTION_GROUP1"
   //  n->n
   const std::string kMappingShopWithTabFilename = "refmappingshopwithtab.txt";
-  std::cout << "Parsing mapping shop with tab file \"" << kMappingShopWithTabFilename << "\"\n";
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "Parsing mapping shop with tab.";
+  }
   auto mappingShopWithTabPath = kTextdataDirectory + kMappingShopWithTabFilename;
   PK2Entry mappingShopWithTabEntry = pk2Reader.getEntry(mappingShopWithTabPath);
   auto mappingShopWithTabData = pk2Reader.getEntryData(mappingShopWithTabEntry);
   auto mappingShopWithTabStr = parsing::fileDataToString(mappingShopWithTabData);
-  auto mappingShopWithTabLines = parsing::split(mappingShopWithTabStr, "\r\n");
-  for (const auto &line : mappingShopWithTabLines) {
-    try {
-      mappingShopWithTabs.emplace_back(parsing::parseMappingShopWithTabLine(line));
-    } catch (std::runtime_error &err) {
-      std::cerr << "  Failed to parse mapping shop with tab \"" << line << "\"\n";
-      std::cerr << "  " << err.what() << '\n';
-    }
+  parseDataFile<ref::MappingShopWithTab>(mappingShopWithTabStr, parsing::isValidMappingShopWithTabLine, parsing::parseMappingShopWithTabLine, [&mappingShopWithTabs](ref::MappingShopWithTab &&mapping){
+    mappingShopWithTabs.emplace_back(std::move(mapping));
+  });
+  {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    std::cout << "  Cached " << mappingShopWithTabs.size() << " mapping shop with tab\n";
   }
-  std::cout << "  Cached " << mappingShopWithTabs.size() << " mapping shop with tab\n";
 
   // Packages have already been created when we parsed everything
   // Create all the tabs (which will each contain packages)
