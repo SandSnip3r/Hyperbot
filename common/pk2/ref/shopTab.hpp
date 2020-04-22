@@ -5,15 +5,13 @@
 
 namespace pk2::ref {
 
-// using ShopTabId = int32_t;
-
 struct ShopTab {
-  // uint8_t service
-  // int32_t country
-	// ShopTabId id;
+  uint8_t service;
+  int32_t country;
+	int32_t id;
   std::string codeName128;
   std::string refTabGroupCodeName;
-  // std::string strID128_Tab
+  std::string strID128Tab;
 };
 
 } // namespace pk2::ref

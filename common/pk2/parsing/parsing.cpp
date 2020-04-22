@@ -3,748 +3,691 @@
 namespace pk2::parsing {
 
 std::string fileDataToString(const std::vector<uint8_t> &data) {
-  // TODO: Looks like the text is utf16. be more precise here
+  // TODO: This is UTF16-LE, Improve this function using a proper conversion
+  //  This function takes roughly twice as long as the parsing function
+  //  PK2Reader::getEntryData took 1ms
+  //  This function took 526ms
+  //  Parsing took 299ms    
+  // const auto size = data.size()-2;
+  // std::u16string u16((size/2)+1, '\0');
+  // std::memcpy(u16.data(), data.data()+2, size);
+  // return std::wstring_convert<
+  //     std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(u16);
+  // // https://stackoverflow.com/a/56723923/1148866
+
 	if (data.size()%2 != 0) {
 		throw std::runtime_error("Data is not evenly sized");
 	}
 	std::string result;
 	result.reserve((data.size()-2)/2);
+  // Skipping first 2 bytes for BOM
 	for (int i=2; i<data.size(); i+=2) {
 		result += (char)data[i];
 	}
 	return result;
 }
 
-pk2::ref::Skill parseSkilldataLine(const std::string &line) {
-  // uint8_t service // 0
-  // int32_t id // 1
-  // int32_t groupID // 2
-  // std::string basic_Code // 3
-  // std::string basic_Name // 4
-  // std::string basic_Group // 5
-  // int32_t basic_Original // 6
-  // uint8_t basic_Level // 7
-  // uint8_t basic_Activity // 8
-  // int32_t basic_ChainCode // 9
-  // int32_t basic_RecycleCost // 10
-  // int32_t action_PreparingTime // 11
-  // int32_t action_CastingTime // 12
-  // int32_t action_ActionDuration // 13
-  // int32_t action_ReuseDelay // 14
-  // int32_t action_CoolTime // 15
-  // int32_t action_FlyingSpeed // 16
-  // uint8_t action_Interruptable // 17
-  // int32_t action_Overlap // 18
-  // uint8_t action_AutoAttackType // 19
-  // uint8_t action_InTown // 20
-  // int16_t action_Range // 21
-  // uint8_t target_Required // 22
-  // uint8_t targetType_Animal // 23
-  // uint8_t targetType_Land // 24
-  // uint8_t targetType_Building // 25
-  // uint8_t targetGroup_Self // 26
-  // uint8_t targetGroup_Ally // 27
-  // uint8_t targetGroup_Party // 28
-  // uint8_t targetGroup_Enemy_M // 29
-  // uint8_t targetGroup_Enemy_P // 30
-  // uint8_t targetGroup_Neutral // 31
-  // uint8_t targetGroup_DontCare // 32
-  // uint8_t targetEtc_SelectDeadBody // 33
-  // int32_t reqCommon_Mastery1 // 34
-  // int32_t reqCommon_Mastery2 // 35
-  // uint8_t reqCommon_MasteryLevel1 // 36
-  // uint8_t reqCommon_MasteryLevel2 // 37
-  // int16_t reqCommon_Str // 38
-  // int16_t reqCommon_Int // 39
-  // int32_t reqLearn_Skill1 // 40
-  // int32_t reqLearn_Skill2 // 41
-  // int32_t reqLearn_Skill3 // 42
-  // uint8_t reqLearn_SkillLevel1 // 43
-  // uint8_t reqLearn_SkillLevel2 // 44
-  // uint8_t reqLearn_SkillLevel3 // 45
-  // int32_t reqLearn_SP // 46
-  // uint8_t reqLearn_Race // 47
-  // uint8_t req_Restriction1 // 48
-  // uint8_t req_Restriction2 // 49
-  // uint8_t reqCast_Weapon1 // 50
-  // uint8_t reqCast_Weapon2 // 51
-  // int16_t consume_HP // 52
-  // int16_t consume_MP // 53
-  // int16_t consume_HPRatio // 54
-  // int16_t consume_MPRatio // 55
-  // uint8_t consume_WHAN // 56
-  // uint8_t uI_SkillTab // 57
-  // uint8_t uI_SkillPage // 58
-  // uint8_t uI_SkillColumn // 59
-  // uint8_t uI_SkillRow // 60
-  // std::string uI_IconFile // 61
-  // std::string uI_SkillName // 62
-  // std::string uI_SkillToolTip // 63
-  // std::string uI_SkillToolTip_Desc // 64
-  // std::string uI_SkillStudy_Desc // 65
-  // int16_t aI_AttackChance // 66
-  // uint8_t aI_SkillType // 67
-  // int32_t param1 // 68
-  // int32_t param2 // 69
-  // int32_t param3 // 70
-  // int32_t param4 // 71
-  // int32_t param5 // 72
-  // int32_t param6 // 73
-  // int32_t param7 // 74
-  // int32_t param8 // 75
-  // int32_t param9 // 76
-  // int32_t param10 // 77
-  // int32_t param11 // 78
-  // int32_t param12 // 79
-  // int32_t param13 // 80
-  // int32_t param14 // 81
-  // int32_t param15 // 82
-  // int32_t param16 // 83
-  // int32_t param17 // 84
-  // int32_t param18 // 85
-  // int32_t param19 // 86
-  // int32_t param20 // 87
-  // int32_t param21 // 88
-  // int32_t param22 // 89
-  // int32_t param23 // 90
-  // int32_t param24 // 91
-  // int32_t param25 // 92
-  // int32_t param26 // 93
-  // int32_t param27 // 94
-  // int32_t param28 // 95
-  // int32_t param29 // 96
-  // int32_t param30 // 97
-  // int32_t param31 // 98
-  // int32_t param32 // 99
-  // int32_t param33 // 100
-  // int32_t param34 // 101
-  // int32_t param35 // 102
-  // int32_t param36 // 103
-  // int32_t param37 // 104
-  // int32_t param38 // 105
-  // int32_t param39 // 106
-  // int32_t param40 // 107
-  // int32_t param41 // 108
-  // int32_t param42 // 109
-  // int32_t param43 // 110
-  // int32_t param44 // 111
-  // int32_t param45 // 112
-  // int32_t param46 // 113
-  // int32_t param47 // 114
-  // int32_t param48 // 115
-  // int32_t param49 // 116
-  // int32_t param50 // 117
-
-	const std::vector<int> kDesiredFields = {1,3,4,5,14,22,50,51,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117};
-	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
-	if (fields.size() != kDesiredFields.size()) {
-		// TODO: This check for validity of data should be more robust
-		throw std::runtime_error("Parsing item data, but line contains wrong number of fields");
-	}
-	pk2::ref::Skill skill;
-  int idx=0;
-  skill.id =               std::stol(fields[idx++]);
-  skill.basicCode =                  fields[idx++];
-  skill.basicName =                  fields[idx++];
-  skill.basicGroup =                 fields[idx++];
-  skill.actionReuseDelay = std::stol(fields[idx++]);
-  skill.targetRequired =   std::stoi(fields[idx++]);
-  skill.reqCastWeapon1 =   std::stoi(fields[idx++]);
-  skill.reqCastWeapon2 =   std::stoi(fields[idx++]);
-  for (int i=0; i<skill.params.size(); ++i) {
-    skill.params[i] =      std::stoi(fields[idx++]);
+namespace {
+bool isValidLine(const int fieldCount, const std::string &line) {
+  // TODO: Evaluate more robust way to validate
+  if (line.size() < fieldCount*2+1) {
+    return false;
   }
-	return skill;
+  if (line[0] == '/' && line[1] == '/') {
+    return false;
+  }
+  return true;
+}
+}
+
+bool isValidCharacterdataLine(const std::string &line) {
+  constexpr int kDataCount = 137;
+  return isValidLine(kDataCount, line);
+}
+
+bool isValidItemdataLine(const std::string &line) {
+  constexpr int kDataCount = 160;
+  return isValidLine(kDataCount, line);
+}
+
+bool isValidSkilldataLine(const std::string &line) {
+  constexpr int kDataCount = 117;
+  return isValidLine(kDataCount, line);
+}
+
+bool isValidTeleportbuildingLine(const std::string &line) {
+  constexpr int kDataCount = 58;
+  return isValidLine(kDataCount, line);
+}
+
+bool isValidScrapOfPackageItemLine(const std::string &line) {
+  constexpr int kDataCount = 29;
+  return isValidLine(kDataCount, line);
+}
+
+bool isValidShopTabLine(const std::string &line) {
+  constexpr int kDataCount = 6;
+  return isValidLine(kDataCount, line);
+}
+
+bool isValidShopGroupLine(const std::string &line) {
+  constexpr int kDataCount = 13;
+  return isValidLine(kDataCount, line);
+}
+
+bool isValidShopGoodLine(const std::string &line) {
+  constexpr int kDataCount = 13;
+  return isValidLine(kDataCount, line);
+}
+bool isValidMappingShopGroupLine(const std::string &line) {
+  constexpr int kDataCount = 4;
+  return isValidLine(kDataCount, line);
+}
+
+bool isValidMappingShopWithTabLine(const std::string &line) {
+  constexpr int kDataCount = 4;
+  return isValidLine(kDataCount, line);
 }
 
 pk2::ref::Character parseCharacterdataLine(const std::string &line) {
-	// int32_t service; // 0
-	// int32_t id; // 1
-	// std::string codeName128; // 2
-	// std::string objName128; // 3
-	// std::string orgObjCodeName128; // 4
-	// std::string nameStrID128; // 5
-	// std::string descStrID128; // 6
-	// uint8_t cashItem; // 7
-	// uint8_t bionic; // 8
-	// uint8_t typeId1; // 9
-	// uint8_t typeId2; // 10
-	// uint8_t typeId3; // 11
-	// uint8_t typeId4; // 12
-	// int32_t decayTime; // 13
-	// uint8_t country; // 14
-	// uint8_t rarity; // 15
-	// uint8_t canTrade; // 16
-	// uint8_t canSell; // 17
-	// uint8_t canBuy; // 18
-	// uint8_t canBorrow; // 19
-	// uint8_t canDrop; // 20
-	// uint8_t canPick; // 21
-	// uint8_t canRepair; // 22
-	// uint8_t canRevive; // 23
-	// uint8_t canUse; // 24
-	// uint8_t canThrow; // 25
-	// int32_t price; // 26
-	// int32_t costRepair; // 27
-	// int32_t costRevive; // 28
-	// int32_t costBorrow; // 29
-	// int32_t keepingFee; // 30
-	// int32_t sellPrice; // 31
-	// int32_t reqLevelType1; // 32
-	// uint8_t reqLevel1; // 33
-	// int32_t reqLevelType2; // 34
-	// uint8_t reqLevel2; // 35
-	// int32_t reqLevelType3; // 36
-	// uint8_t reqLevel3; // 37
-	// int32_t reqLevelType4; // 38
-	// uint8_t reqLevel4; // 39
-	// int32_t maxContain; // 40
-	// int16_t regionID; // 41
-	// int16_t dir; // 42
-	// int16_t offsetX; // 43
-	// int16_t offsetY; // 44
-	// int16_t offsetZ; // 45
-	// int16_t speed1; // 46
-	// int16_t speed2; // 47
-	// int32_t scale; // 48
-	// int16_t bCHeight; // 49
-	// int16_t bCRadius; // 50
-	// int32_t eventID; // 51
-	// std::string assocFileObj128; // 52
-	// std::string assocFileDrop128; // 53
-	// std::string assocFileIcon128; // 54
-	// std::string assocFile1_128; // 55
-	// std::string assocFile2_128; // 56
-  // uint8_t lvl; // 57
-  // uint8_t charGender; // 58
-  // int32_t maxHP; // 59
-  // int32_t maxMP; // 60
-  // int32_t resistFrozen; // 61
-  // int32_t resistFrostbite; // 62
-  // int32_t resistBurn; // 63
-  // int32_t resistEShock; // 64
-  // int32_t resistPoison; // 65
-  // int32_t resistZombie; // 66
-  // int32_t resistSleep; // 67
-  // int32_t resistRoot; // 68
-  // int32_t resistSlow; // 69
-  // int32_t resistFear; // 70
-  // int32_t resistMyopia; // 71
-  // int32_t resistBlood; // 72
-  // int32_t resistStone; // 73
-  // int32_t resistDark; // 74
-  // int32_t resistStun; // 75
-  // int32_t resistDisea; // 76
-  // int32_t resistChaos; // 77
-  // int32_t resistCsePD; // 78
-  // int32_t resistCseMD; // 79
-  // int32_t resistCseSTR; // 80
-  // int32_t resistCseINT; // 81
-  // int32_t resistCseHP; // 82
-  // int32_t resistCseMP; // 83
-  // int32_t resist24; // 84
-  // int32_t resistBomb; // 85
-  // int32_t resist26; // 86
-  // int32_t resist27; // 87
-  // int32_t resist28; // 88
-  // int32_t resist29; // 89
-  // int32_t resist30; // 90
-  // int32_t resist31; // 91
-  // int32_t resist32; // 92
-  // uint8_t inventorySize; // 93
-  // uint8_t canStore_TID1; // 94
-  // uint8_t canStore_TID2; // 95
-  // uint8_t canStore_TID3; // 96
-  // uint8_t canStore_TID4; // 97
-  // uint8_t canBeVehicle; // 98
-  // uint8_t canControl; // 99
-  // uint8_t damagePortion; // 100
-  // int16_t maxPassenger; // 101
-  // int32_t assocTactics; // 102
-  // int32_t pD; // 103
-  // int32_t mD; // 104
-  // int32_t pAR; // 105
-  // int32_t mAR; // 106
-  // int32_t eR; // 107
-  // int32_t bR; // 108
-  // int32_t hR; // 109
-  // int32_t cHR; // 110
-  // int32_t expToGive; // 111
-  // int32_t creepType; // 112
-  // uint8_t knockdown; // 113
-  // int32_t kO_RecoverTime; // 114
-  // int32_t defaultSkill_1; // 115
-  // int32_t defaultSkill_2; // 116
-  // int32_t defaultSkill_3; // 117
-  // int32_t defaultSkill_4; // 118
-  // int32_t defaultSkill_5; // 119
-  // int32_t defaultSkill_6; // 120
-  // int32_t defaultSkill_7; // 121
-  // int32_t defaultSkill_8; // 122
-  // int32_t defaultSkill_9; // 123
-  // int32_t defaultSkill_10; // 124
-  // uint8_t textureType; // 125
-  // int32_t except_1; // 126
-  // int32_t except_2; // 127
-  // int32_t except_3; // 128
-  // int32_t except_4; // 129
-  // int32_t except_5; // 130
-  // int32_t except_6; // 131
-  // int32_t except_7; // 132
-  // int32_t except_8; // 133
-  // int32_t except_9; // 134
-  // int32_t except_10; // 135
-  // int32_t link; // 136
-
-	const std::vector<int> kDesiredFields = {1,2,9,10,11,12,14,58};
-	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
-	if (fields.size() != kDesiredFields.size()) {
-		// TODO: This check for validity of data should be more robust
-		throw std::runtime_error("Parsing character data, but line contains wrong number of fields");
-	}
-  int idx=0;
 	pk2::ref::Character character;
-	character.id =          std::stol(fields[idx++]);
-	character.codeName128 =           fields[idx++];
-	character.typeId1 =     std::stoi(fields[idx++]);
-	character.typeId2 =     std::stoi(fields[idx++]);
-	character.typeId3 =     std::stoi(fields[idx++]);
-	character.typeId4 =     std::stoi(fields[idx++]);
-	character.country =     std::stoi(fields[idx++]);
-	character.charGender =  std::stoi(fields[idx++]);
+  const char *ptr = line.data();
+	ptr = parse(ptr, character.service);
+	ptr = parse(ptr, character.id);
+	ptr = parse(ptr, character.codeName128);
+	ptr = parse(ptr, character.objName128);
+	ptr = parse(ptr, character.orgObjCodeName128);
+	ptr = parse(ptr, character.nameStrID128);
+	ptr = parse(ptr, character.descStrID128);
+	ptr = parse(ptr, character.cashItem);
+	ptr = parse(ptr, character.bionic);
+	ptr = parse(ptr, character.typeId1);
+	ptr = parse(ptr, character.typeId2);
+	ptr = parse(ptr, character.typeId3);
+	ptr = parse(ptr, character.typeId4);
+	ptr = parse(ptr, character.decayTime);
+	ptr = parse(ptr, character.country);
+	ptr = parse(ptr, character.rarity);
+	ptr = parse(ptr, character.canTrade);
+	ptr = parse(ptr, character.canSell);
+	ptr = parse(ptr, character.canBuy);
+	ptr = parse(ptr, character.canBorrow);
+	ptr = parse(ptr, character.canDrop);
+	ptr = parse(ptr, character.canPick);
+	ptr = parse(ptr, character.canRepair);
+	ptr = parse(ptr, character.canRevive);
+	ptr = parse(ptr, character.canUse);
+	ptr = parse(ptr, character.canThrow);
+	ptr = parse(ptr, character.price);
+	ptr = parse(ptr, character.costRepair);
+	ptr = parse(ptr, character.costRevive);
+	ptr = parse(ptr, character.costBorrow);
+	ptr = parse(ptr, character.keepingFee);
+	ptr = parse(ptr, character.sellPrice);
+	ptr = parse(ptr, character.reqLevelType1);
+	ptr = parse(ptr, character.reqLevel1);
+	ptr = parse(ptr, character.reqLevelType2);
+	ptr = parse(ptr, character.reqLevel2);
+	ptr = parse(ptr, character.reqLevelType3);
+	ptr = parse(ptr, character.reqLevel3);
+	ptr = parse(ptr, character.reqLevelType4);
+	ptr = parse(ptr, character.reqLevel4);
+	ptr = parse(ptr, character.maxContain);
+	ptr = parse(ptr, character.regionID);
+	ptr = parse(ptr, character.dir);
+	ptr = parse(ptr, character.offsetX);
+	ptr = parse(ptr, character.offsetY);
+	ptr = parse(ptr, character.offsetZ);
+	ptr = parse(ptr, character.speed1);
+	ptr = parse(ptr, character.speed2);
+	ptr = parse(ptr, character.scale);
+	ptr = parse(ptr, character.bCHeight);
+	ptr = parse(ptr, character.bCRadius);
+	ptr = parse(ptr, character.eventID);
+	ptr = parse(ptr, character.assocFileObj128);
+	ptr = parse(ptr, character.assocFileDrop128);
+	ptr = parse(ptr, character.assocFileIcon128);
+	ptr = parse(ptr, character.assocFile1_128);
+	ptr = parse(ptr, character.assocFile2_128);
+  ptr = parse(ptr, character.lvl);
+  ptr = parse(ptr, character.charGender);
+  ptr = parse(ptr, character.maxHP);
+  ptr = parse(ptr, character.maxMP);
+  ptr = parse(ptr, character.resistFrozen);
+  ptr = parse(ptr, character.resistFrostbite);
+  ptr = parse(ptr, character.resistBurn);
+  ptr = parse(ptr, character.resistEShock);
+  ptr = parse(ptr, character.resistPoison);
+  ptr = parse(ptr, character.resistZombie);
+  ptr = parse(ptr, character.resistSleep);
+  ptr = parse(ptr, character.resistRoot);
+  ptr = parse(ptr, character.resistSlow);
+  ptr = parse(ptr, character.resistFear);
+  ptr = parse(ptr, character.resistMyopia);
+  ptr = parse(ptr, character.resistBlood);
+  ptr = parse(ptr, character.resistStone);
+  ptr = parse(ptr, character.resistDark);
+  ptr = parse(ptr, character.resistStun);
+  ptr = parse(ptr, character.resistDisea);
+  ptr = parse(ptr, character.resistChaos);
+  ptr = parse(ptr, character.resistCsePD);
+  ptr = parse(ptr, character.resistCseMD);
+  ptr = parse(ptr, character.resistCseSTR);
+  ptr = parse(ptr, character.resistCseINT);
+  ptr = parse(ptr, character.resistCseHP);
+  ptr = parse(ptr, character.resistCseMP);
+  ptr = parse(ptr, character.resist24);
+  ptr = parse(ptr, character.resistBomb);
+  ptr = parse(ptr, character.resist26);
+  ptr = parse(ptr, character.resist27);
+  ptr = parse(ptr, character.resist28);
+  ptr = parse(ptr, character.resist29);
+  ptr = parse(ptr, character.resist30);
+  ptr = parse(ptr, character.resist31);
+  ptr = parse(ptr, character.resist32);
+  ptr = parse(ptr, character.inventorySize);
+  ptr = parse(ptr, character.canStore_TID1);
+  ptr = parse(ptr, character.canStore_TID2);
+  ptr = parse(ptr, character.canStore_TID3);
+  ptr = parse(ptr, character.canStore_TID4);
+  ptr = parse(ptr, character.canBeVehicle);
+  ptr = parse(ptr, character.canControl);
+  ptr = parse(ptr, character.damagePortion);
+  ptr = parse(ptr, character.maxPassenger);
+  ptr = parse(ptr, character.assocTactics);
+  ptr = parse(ptr, character.pd);
+  ptr = parse(ptr, character.md);
+  ptr = parse(ptr, character.par);
+  ptr = parse(ptr, character.mar);
+  ptr = parse(ptr, character.er);
+  ptr = parse(ptr, character.br);
+  ptr = parse(ptr, character.hr);
+  ptr = parse(ptr, character.chr);
+  ptr = parse(ptr, character.expToGive);
+  ptr = parse(ptr, character.creepType);
+  ptr = parse(ptr, character.knockdown);
+  ptr = parse(ptr, character.kO_RecoverTime);
+  ptr = parse(ptr, character.defaultSkill_1);
+  ptr = parse(ptr, character.defaultSkill_2);
+  ptr = parse(ptr, character.defaultSkill_3);
+  ptr = parse(ptr, character.defaultSkill_4);
+  ptr = parse(ptr, character.defaultSkill_5);
+  ptr = parse(ptr, character.defaultSkill_6);
+  ptr = parse(ptr, character.defaultSkill_7);
+  ptr = parse(ptr, character.defaultSkill_8);
+  ptr = parse(ptr, character.defaultSkill_9);
+  ptr = parse(ptr, character.defaultSkill_10);
+  ptr = parse(ptr, character.textureType);
+  ptr = parse(ptr, character.except_1);
+  ptr = parse(ptr, character.except_2);
+  ptr = parse(ptr, character.except_3);
+  ptr = parse(ptr, character.except_4);
+  ptr = parse(ptr, character.except_5);
+  ptr = parse(ptr, character.except_6);
+  ptr = parse(ptr, character.except_7);
+  ptr = parse(ptr, character.except_8);
+  ptr = parse(ptr, character.except_9);
+  ptr = parse(ptr, character.except_10);
+  parse(ptr, character.link);
 	return character;
 }
 
 pk2::ref::Item parseItemdataLine(const std::string &line) {
-	// int32_t service; // 0
-	// int32_t id; // 1
-	// std::string codeName128; // 2
-	// std::string objName128; // 3
-	// std::string orgObjCodeName128; // 4
-	// std::string nameStrID128; // 5
-	// std::string descStrID128; // 6
-	// uint8_t cashItem; // 7
-	// uint8_t bionic; // 8
-	// uint8_t typeId1; // 9
-	// uint8_t typeId2; // 10
-	// uint8_t typeId3; // 11
-	// uint8_t typeId4; // 12
-	// int32_t decayTime; // 13
-	// uint8_t country; // 14
-	// uint8_t rarity; // 15
-	// uint8_t canTrade; // 16
-	// uint8_t canSell; // 17
-	// uint8_t canBuy; // 18
-	// uint8_t canBorrow; // 19
-	// uint8_t canDrop; // 20
-	// uint8_t canPick; // 21
-	// uint8_t canRepair; // 22
-	// uint8_t canRevive; // 23
-	// uint8_t canUse; // 24
-	// uint8_t canThrow; // 25
-	// int32_t price; // 26
-	// int32_t costRepair; // 27
-	// int32_t costRevive; // 28
-	// int32_t costBorrow; // 29
-	// int32_t keepingFee; // 30
-	// int32_t sellPrice; // 31
-	// int32_t reqLevelType1; // 32
-	// uint8_t reqLevel1; // 33
-	// int32_t reqLevelType2; // 34
-	// uint8_t reqLevel2; // 35
-	// int32_t reqLevelType3; // 36
-	// uint8_t reqLevel3; // 37
-	// int32_t reqLevelType4; // 38
-	// uint8_t reqLevel4; // 39
-	// int32_t maxContain; // 40
-	// int16_t regionID; // 41
-	// int16_t dir; // 42
-	// int16_t offsetX; // 43
-	// int16_t offsetY; // 44
-	// int16_t offsetZ; // 45
-	// int16_t speed1; // 46
-	// int16_t speed2; // 47
-	// int32_t scale; // 48
-	// int16_t bCHeight; // 49
-	// int16_t bCRadius; // 50
-	// int32_t eventID; // 51
-	// std::string assocFileObj128; // 52
-	// std::string assocFileDrop128; // 53
-	// std::string assocFileIcon128; // 54
-	// std::string assocFile1_128; // 55
-	// std::string assocFile2_128; // 56
-	// int32_t maxStack; // 57
-	// uint8_t reqGender; // 58
-	// int32_t reqStr; // 59
-	// int32_t reqInt; // 60
-	// uint8_t itemClass; // 61
-	// int32_t setID; // 62
-	// float dur_L; // 63
-	// float dur_U; // 64
-	// float pD_L; // 65
-	// float pD_U; // 66
-	// float pDInc; // 67
-	// float eR_L; // 68
-	// float eR_U; // 69
-	// float eRInc; // 70
-	// float pAR_L; // 71
-	// float pAR_U; // 72
-	// float pARInc; // 73
-	// float bR_L; // 74
-	// float bR_U; // 75
-	// float mD_L; // 76
-	// float mD_U; // 77
-	// float mDInc; // 78
-	// float mAR_L; // 79
-	// float mAR_U; // 80
-	// float mARInc; // 81
-	// float pDStr_L; // 82
-	// float pDStr_U; // 83
-	// float mDInt_L; // 84
-	// float mDInt_U; // 85
-	// uint8_t quivered; // 86
-	// uint8_t ammo1_TID4; // 87
-	// uint8_t ammo2_TID4; // 88
-	// uint8_t ammo3_TID4; // 89
-	// uint8_t ammo4_TID4; // 90
-	// uint8_t ammo5_TID4; // 91
-	// uint8_t speedClass; // 92
-	// uint8_t twoHanded; // 93
-	// int16_t range; // 94
-	// float pAttackMin_L; // 95
-	// float pAttackMin_U; // 96
-	// float pAttackMax_L; // 97
-	// float pAttackMax_U; // 98
-	// float pAttackInc; // 99
-	// float mAttackMin_L; // 100
-	// float mAttackMin_U; // 101
-	// float mAttackMax_L; // 102
-	// float mAttackMax_U; // 103
-	// float mAttackInc; // 104
-	// float pAStrMin_L; // 105
-	// float pAStrMin_U; // 106
-	// float pAStrMax_L; // 107
-	// float pAStrMax_U; // 108
-	// float mAInt_Min_L; // 109
-	// float mAInt_Min_U; // 110
-	// float mAInt_Max_L; // 111
-	// float mAInt_Max_U; // 112
-	// float hR_L; // 113
-	// float hR_U; // 114
-	// float hRInc; // 115
-	// float cHR_L; // 116
-	// float cHR_U; // 117
-	// int32_t param1; // 118
-	// std::string desc1_128; // 119
-	// int32_t param2; // 120
-	// char desc2_128; // 121
-	// int32_t param3; // 122
-	// std::string desc3_128; // 123
-	// int32_t param4; // 124
-	// std::string desc4_128; // 125
-	// int32_t param5; // 126
-	// std::string desc5_128; // 127
-	// int32_t param6; // 128
-	// std::string desc6_128; // 129
-	// int32_t param7; // 130
-	// std::string desc7_128; // 131
-	// int32_t param8; // 132
-	// std::string desc8_128; // 133
-	// int32_t param9; // 134
-	// std::string desc9_128; // 135
-	// int32_t param10; // 136
-	// std::string desc10_128; // 137
-	// int32_t param11; // 138
-	// std::string desc11_128; // 139
-	// int32_t param12; // 140
-	// std::string desc12_128; // 141
-	// int32_t param13; // 142
-	// std::string desc13_128; // 143
-	// int32_t param14; // 144
-	// std::string desc14_128; // 145
-	// int32_t param15; // 146
-	// std::string desc15_128; // 147
-	// int32_t param16; // 148
-	// std::string desc16_128; // 149
-	// int32_t param17; // 150
-	// std::string desc17_128; // 151
-	// int32_t param18; // 152
-	// std::string desc18_128; // 153
-	// int32_t param19; // 154
-	// std::string desc19_128; // 155
-	// int32_t param20; // 156
-	// std::string desc20_128; // 157
-	// uint8_t maxMagicOptCount; // 158
-	// uint8_t childItemCount; // 159
-  
-	const std::vector<int> kDesiredFields = {1,2,7,8,9,10,11,12,57,93,118,120,124};
-	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
-	if (fields.size() != kDesiredFields.size()) {
-		// TODO: This check for validity of data should be more robust
-		throw std::runtime_error("Parsing item data, but line contains wrong number of fields");
-	}
 	pk2::ref::Item item;
-  int idx=0;
-	item.id =        std::stol(fields[idx++]);
-	item.codeName128 =         fields[idx++];
-	item.cashItem =  std::stoi(fields[idx++]);
-	item.bionic =    std::stoi(fields[idx++]);
-	item.typeId1 =   std::stoi(fields[idx++]);
-	item.typeId2 =   std::stoi(fields[idx++]);
-	item.typeId3 =   std::stoi(fields[idx++]);
-	item.typeId4 =   std::stoi(fields[idx++]);
-	item.maxStack =  std::stoi(fields[idx++]);
-  item.twoHanded = std::stoi(fields[idx++]);
-	item.param1 =    std::stol(fields[idx++]);
-	item.param2 =    std::stol(fields[idx++]);
-	item.param4 =    std::stol(fields[idx++]);
+  const char *ptr = line.data();
+	ptr = parse(ptr, item.service);
+	ptr = parse(ptr, item.id);
+	ptr = parse(ptr, item.codeName128);
+	ptr = parse(ptr, item.objName128);
+	ptr = parse(ptr, item.orgObjCodeName128);
+	ptr = parse(ptr, item.nameStrID128);
+	ptr = parse(ptr, item.descStrID128);
+	ptr = parse(ptr, item.cashItem);
+	ptr = parse(ptr, item.bionic);
+	ptr = parse(ptr, item.typeId1);
+	ptr = parse(ptr, item.typeId2);
+	ptr = parse(ptr, item.typeId3);
+	ptr = parse(ptr, item.typeId4);
+	ptr = parse(ptr, item.decayTime);
+	ptr = parse(ptr, item.country);
+	ptr = parse(ptr, item.rarity);
+	ptr = parse(ptr, item.canTrade);
+	ptr = parse(ptr, item.canSell);
+	ptr = parse(ptr, item.canBuy);
+	ptr = parse(ptr, item.canBorrow);
+	ptr = parse(ptr, item.canDrop);
+	ptr = parse(ptr, item.canPick);
+	ptr = parse(ptr, item.canRepair);
+	ptr = parse(ptr, item.canRevive);
+	ptr = parse(ptr, item.canUse);
+	ptr = parse(ptr, item.canThrow);
+	ptr = parse(ptr, item.price);
+	ptr = parse(ptr, item.costRepair);
+	ptr = parse(ptr, item.costRevive);
+	ptr = parse(ptr, item.costBorrow);
+	ptr = parse(ptr, item.keepingFee);
+	ptr = parse(ptr, item.sellPrice);
+	ptr = parse(ptr, item.reqLevelType1);
+	ptr = parse(ptr, item.reqLevel1);
+	ptr = parse(ptr, item.reqLevelType2);
+	ptr = parse(ptr, item.reqLevel2);
+	ptr = parse(ptr, item.reqLevelType3);
+	ptr = parse(ptr, item.reqLevel3);
+	ptr = parse(ptr, item.reqLevelType4);
+	ptr = parse(ptr, item.reqLevel4);
+	ptr = parse(ptr, item.maxContain);
+	ptr = parse(ptr, item.regionID);
+	ptr = parse(ptr, item.dir);
+	ptr = parse(ptr, item.offsetX);
+	ptr = parse(ptr, item.offsetY);
+	ptr = parse(ptr, item.offsetZ);
+	ptr = parse(ptr, item.speed1);
+	ptr = parse(ptr, item.speed2);
+	ptr = parse(ptr, item.scale);
+	ptr = parse(ptr, item.bCHeight);
+	ptr = parse(ptr, item.bCRadius);
+	ptr = parse(ptr, item.eventID);
+	ptr = parse(ptr, item.assocFileObj128);
+	ptr = parse(ptr, item.assocFileDrop128);
+	ptr = parse(ptr, item.assocFileIcon128);
+	ptr = parse(ptr, item.assocFile1_128);
+	ptr = parse(ptr, item.assocFile2_128);
+	ptr = parse(ptr, item.maxStack);
+	ptr = parse(ptr, item.reqGender);
+	ptr = parse(ptr, item.reqStr);
+	ptr = parse(ptr, item.reqInt);
+	ptr = parse(ptr, item.itemClass);
+	ptr = parse(ptr, item.setID);
+	ptr = parse(ptr, item.dur_L);
+	ptr = parse(ptr, item.dur_U);
+	ptr = parse(ptr, item.pd_L);
+	ptr = parse(ptr, item.pd_U);
+	ptr = parse(ptr, item.pdInc);
+	ptr = parse(ptr, item.er_L);
+	ptr = parse(ptr, item.er_U);
+	ptr = parse(ptr, item.eRInc);
+	ptr = parse(ptr, item.par_L);
+	ptr = parse(ptr, item.par_U);
+	ptr = parse(ptr, item.parInc);
+	ptr = parse(ptr, item.br_L);
+	ptr = parse(ptr, item.br_U);
+	ptr = parse(ptr, item.md_L);
+	ptr = parse(ptr, item.md_U);
+	ptr = parse(ptr, item.mdInc);
+	ptr = parse(ptr, item.mar_L);
+	ptr = parse(ptr, item.mar_U);
+	ptr = parse(ptr, item.marInc);
+	ptr = parse(ptr, item.pdStr_L);
+	ptr = parse(ptr, item.pdStr_U);
+	ptr = parse(ptr, item.mdInt_L);
+	ptr = parse(ptr, item.mdInt_U);
+	ptr = parse(ptr, item.quivered);
+	ptr = parse(ptr, item.ammo1_TID4);
+	ptr = parse(ptr, item.ammo2_TID4);
+	ptr = parse(ptr, item.ammo3_TID4);
+	ptr = parse(ptr, item.ammo4_TID4);
+	ptr = parse(ptr, item.ammo5_TID4);
+	ptr = parse(ptr, item.speedClass);
+	ptr = parse(ptr, item.twoHanded);
+	ptr = parse(ptr, item.range);
+	ptr = parse(ptr, item.pAttackMin_L);
+	ptr = parse(ptr, item.pAttackMin_U);
+	ptr = parse(ptr, item.pAttackMax_L);
+	ptr = parse(ptr, item.pAttackMax_U);
+	ptr = parse(ptr, item.pAttackInc);
+	ptr = parse(ptr, item.mAttackMin_L);
+	ptr = parse(ptr, item.mAttackMin_U);
+	ptr = parse(ptr, item.mAttackMax_L);
+	ptr = parse(ptr, item.mAttackMax_U);
+	ptr = parse(ptr, item.mAttackInc);
+	ptr = parse(ptr, item.paStrMin_L);
+	ptr = parse(ptr, item.paStrMin_U);
+	ptr = parse(ptr, item.paStrMax_L);
+	ptr = parse(ptr, item.paStrMax_U);
+	ptr = parse(ptr, item.maInt_Min_L);
+	ptr = parse(ptr, item.maInt_Min_U);
+	ptr = parse(ptr, item.maInt_Max_L);
+	ptr = parse(ptr, item.maInt_Max_U);
+	ptr = parse(ptr, item.hr_L);
+	ptr = parse(ptr, item.hr_U);
+	ptr = parse(ptr, item.hRInc);
+	ptr = parse(ptr, item.cHR_L);
+	ptr = parse(ptr, item.cHR_U);
+	ptr = parse(ptr, item.param1);
+	ptr = parse(ptr, item.desc1_128);
+	ptr = parse(ptr, item.param2);
+	ptr = parse(ptr, item.desc2_128);
+	ptr = parse(ptr, item.param3);
+	ptr = parse(ptr, item.desc3_128);
+	ptr = parse(ptr, item.param4);
+	ptr = parse(ptr, item.desc4_128);
+	ptr = parse(ptr, item.param5);
+	ptr = parse(ptr, item.desc5_128);
+	ptr = parse(ptr, item.param6);
+	ptr = parse(ptr, item.desc6_128);
+	ptr = parse(ptr, item.param7);
+	ptr = parse(ptr, item.desc7_128);
+	ptr = parse(ptr, item.param8);
+	ptr = parse(ptr, item.desc8_128);
+	ptr = parse(ptr, item.param9);
+	ptr = parse(ptr, item.desc9_128);
+	ptr = parse(ptr, item.param10);
+	ptr = parse(ptr, item.desc10_128);
+	ptr = parse(ptr, item.param11);
+	ptr = parse(ptr, item.desc11_128);
+	ptr = parse(ptr, item.param12);
+	ptr = parse(ptr, item.desc12_128);
+	ptr = parse(ptr, item.param13);
+	ptr = parse(ptr, item.desc13_128);
+	ptr = parse(ptr, item.param14);
+	ptr = parse(ptr, item.desc14_128);
+	ptr = parse(ptr, item.param15);
+	ptr = parse(ptr, item.desc15_128);
+	ptr = parse(ptr, item.param16);
+	ptr = parse(ptr, item.desc16_128);
+	ptr = parse(ptr, item.param17);
+	ptr = parse(ptr, item.desc17_128);
+	ptr = parse(ptr, item.param18);
+	ptr = parse(ptr, item.desc18_128);
+	ptr = parse(ptr, item.param19);
+	ptr = parse(ptr, item.desc19_128);
+	ptr = parse(ptr, item.param20);
+	ptr = parse(ptr, item.desc20_128);
+	ptr = parse(ptr, item.maxMagicOptCount);
+	parse(ptr, item.childItemCount);
 	return item;
 }
 
+pk2::ref::Skill parseSkilldataLine(const std::string &line) {
+	pk2::ref::Skill skill;
+  const char *ptr = line.data();
+  ptr = parse(ptr, skill.service);
+  ptr = parse(ptr, skill.id);
+  ptr = parse(ptr, skill.groupId);
+  ptr = parse(ptr, skill.basicCode);
+  ptr = parse(ptr, skill.basicName);
+  ptr = parse(ptr, skill.basicGroup);
+  ptr = parse(ptr, skill.basicOriginal);
+  ptr = parse(ptr, skill.basicLevel);
+  ptr = parse(ptr, skill.basicActivity);
+  ptr = parse(ptr, skill.basicChainCode);
+  ptr = parse(ptr, skill.basicRecycleCost);
+  ptr = parse(ptr, skill.actionPreparingTime);
+  ptr = parse(ptr, skill.actionCastingTime);
+  ptr = parse(ptr, skill.actionActionDuration);
+  ptr = parse(ptr, skill.actionReuseDelay);
+  ptr = parse(ptr, skill.actionCoolTime);
+  ptr = parse(ptr, skill.actionFlyingSpeed);
+  ptr = parse(ptr, skill.actionInterruptable);
+  ptr = parse(ptr, skill.actionOverlap);
+  ptr = parse(ptr, skill.actionAutoAttackType);
+  ptr = parse(ptr, skill.actionInTown);
+  ptr = parse(ptr, skill.actionRange);
+  ptr = parse(ptr, skill.targetRequired);
+  ptr = parse(ptr, skill.targetTypeAnimal);
+  ptr = parse(ptr, skill.targetTypeLand);
+  ptr = parse(ptr, skill.targetTypeBuilding);
+  ptr = parse(ptr, skill.targetGroupSelf);
+  ptr = parse(ptr, skill.targetGroupAlly);
+  ptr = parse(ptr, skill.targetGroupParty);
+  ptr = parse(ptr, skill.targetGroupEnemy_M);
+  ptr = parse(ptr, skill.targetGroupEnemy_P);
+  ptr = parse(ptr, skill.targetGroupNeutral);
+  ptr = parse(ptr, skill.targetGroupDontCare);
+  ptr = parse(ptr, skill.targetEtcSelectDeadBody);
+  ptr = parse(ptr, skill.reqCommonMastery1);
+  ptr = parse(ptr, skill.reqCommonMastery2);
+  ptr = parse(ptr, skill.reqCommonMasteryLevel1);
+  ptr = parse(ptr, skill.reqCommonMasteryLevel2);
+  ptr = parse(ptr, skill.reqCommonStr);
+  ptr = parse(ptr, skill.reqCommonInt);
+  ptr = parse(ptr, skill.reqLearnSkill1);
+  ptr = parse(ptr, skill.reqLearnSkill2);
+  ptr = parse(ptr, skill.reqLearnSkill3);
+  ptr = parse(ptr, skill.reqLearnSkillLevel1);
+  ptr = parse(ptr, skill.reqLearnSkillLevel2);
+  ptr = parse(ptr, skill.reqLearnSkillLevel3);
+  ptr = parse(ptr, skill.reqLearnSP);
+  ptr = parse(ptr, skill.reqLearnRace);
+  ptr = parse(ptr, skill.reqRestriction1);
+  ptr = parse(ptr, skill.reqRestriction2);
+  ptr = parse(ptr, skill.reqCastWeapon1);
+  ptr = parse(ptr, skill.reqCastWeapon2);
+  ptr = parse(ptr, skill.consumeHP);
+  ptr = parse(ptr, skill.consumeMP);
+  ptr = parse(ptr, skill.consumeHPRatio);
+  ptr = parse(ptr, skill.consumeMPRatio);
+  ptr = parse(ptr, skill.consumeWHAN);
+  ptr = parse(ptr, skill.uiSkillTab);
+  ptr = parse(ptr, skill.uiSkillPage);
+  ptr = parse(ptr, skill.uiSkillColumn);
+  ptr = parse(ptr, skill.uiSkillRow);
+  ptr = parse(ptr, skill.uiIconFile);
+  ptr = parse(ptr, skill.uiSkillName);
+  ptr = parse(ptr, skill.uiSkillToolTip);
+  ptr = parse(ptr, skill.uiSkillToolTip_Desc);
+  ptr = parse(ptr, skill.uiSkillStudy_Desc);
+  ptr = parse(ptr, skill.aiAttackChance);
+  ptr = parse(ptr, skill.aiSkillType);
+  ptr = parse(ptr, skill.params[0]);
+  ptr = parse(ptr, skill.params[1]);
+  ptr = parse(ptr, skill.params[2]);
+  ptr = parse(ptr, skill.params[3]);
+  ptr = parse(ptr, skill.params[4]);
+  ptr = parse(ptr, skill.params[5]);
+  ptr = parse(ptr, skill.params[6]);
+  ptr = parse(ptr, skill.params[7]);
+  ptr = parse(ptr, skill.params[8]);
+  ptr = parse(ptr, skill.params[9]);
+  ptr = parse(ptr, skill.params[10]);
+  ptr = parse(ptr, skill.params[11]);
+  ptr = parse(ptr, skill.params[12]);
+  ptr = parse(ptr, skill.params[13]);
+  ptr = parse(ptr, skill.params[14]);
+  ptr = parse(ptr, skill.params[15]);
+  ptr = parse(ptr, skill.params[16]);
+  ptr = parse(ptr, skill.params[17]);
+  ptr = parse(ptr, skill.params[18]);
+  ptr = parse(ptr, skill.params[19]);
+  ptr = parse(ptr, skill.params[20]);
+  ptr = parse(ptr, skill.params[21]);
+  ptr = parse(ptr, skill.params[22]);
+  ptr = parse(ptr, skill.params[23]);
+  ptr = parse(ptr, skill.params[24]);
+  ptr = parse(ptr, skill.params[25]);
+  ptr = parse(ptr, skill.params[26]);
+  ptr = parse(ptr, skill.params[27]);
+  ptr = parse(ptr, skill.params[28]);
+  ptr = parse(ptr, skill.params[29]);
+  ptr = parse(ptr, skill.params[30]);
+  ptr = parse(ptr, skill.params[31]);
+  ptr = parse(ptr, skill.params[32]);
+  ptr = parse(ptr, skill.params[33]);
+  ptr = parse(ptr, skill.params[34]);
+  ptr = parse(ptr, skill.params[35]);
+  ptr = parse(ptr, skill.params[36]);
+  ptr = parse(ptr, skill.params[37]);
+  ptr = parse(ptr, skill.params[38]);
+  ptr = parse(ptr, skill.params[39]);
+  ptr = parse(ptr, skill.params[40]);
+  ptr = parse(ptr, skill.params[41]);
+  ptr = parse(ptr, skill.params[42]);
+  ptr = parse(ptr, skill.params[43]);
+  ptr = parse(ptr, skill.params[44]);
+  ptr = parse(ptr, skill.params[45]);
+  ptr = parse(ptr, skill.params[46]);
+  ptr = parse(ptr, skill.params[47]);
+  ptr = parse(ptr, skill.params[48]);
+  parse(ptr, skill.params[49]);
+  return skill;
+}
+
 pk2::ref::Teleport parseTeleportbuildingLine(const std::string &line) {
-  // int32_t service // 0
-  // int32_t id // 1
-  // std::string codeName128 // 2
-  // std::string objName128 // 3
-  // std::string orgObjCodeName128 // 4
-  // std::string nameStrID128 // 5
-  // std::string descStrID128 // 6
-  // uint8_t cashItem // 7
-  // uint8_t bionic // 8
-  // uint8_t typeId1 // 9
-  // uint8_t typeId2 // 10
-  // uint8_t typeId3 // 11
-  // uint8_t typeId4 // 12
-  // int32_t decayTime // 13
-  // uint8_t country // 14
-  // uint8_t rarity // 15
-  // uint8_t canTrade // 16
-  // uint8_t canSell // 17
-  // uint8_t canBuy // 18
-  // uint8_t canBorrow // 19
-  // uint8_t canDrop // 20
-  // uint8_t canPick // 21
-  // uint8_t canRepair // 22
-  // uint8_t canRevive // 23
-  // uint8_t canUse // 24
-  // uint8_t canThrow // 25
-  // int32_t price // 26
-  // int32_t costRepair // 27
-  // int32_t costRevive // 28
-  // int32_t costBorrow // 29
-  // int32_t keepingFee // 30
-  // int32_t sellPrice // 31
-  // int32_t reqLevelType1 // 32
-  // uint8_t reqLevel1 // 33
-  // int32_t reqLevelType2 // 34
-  // uint8_t reqLevel2 // 35
-  // int32_t reqLevelType3 // 36
-  // uint8_t reqLevel3 // 37
-  // int32_t reqLevelType4 // 38
-  // uint8_t reqLevel4 // 39
-  // int32_t maxContain // 40
-  // int16_t regionID // 41
-  // int16_t dir // 42
-  // int16_t offsetX // 43
-  // int16_t offsetY // 44
-  // int16_t offsetZ // 45
-  // int16_t speed1 // 46
-  // int16_t speed2 // 47
-  // int32_t scale // 48
-  // int16_t bcHeight // 49
-  // int16_t bcRadius // 50
-  // int32_t eventID // 51
-  // std::string assocFileObj128 // 52
-  // std::string assocFileDrop128 // 53
-  // std::string assocFileIcon128 // 54
-  // std::string assocFile1_128 // 55
-  // std::string assocFile2_128 // 56
-  // int32_t link // 57
-	
-	const std::vector<int> kDesiredFields = {1,2,9,10,11,12};
-	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
-	if (fields.size() != kDesiredFields.size()) {
-		// TODO: This check for validity of data should be more robust
-		throw std::runtime_error("Parsing teleport data, but line contains wrong number of fields");
-	}
-	pk2::ref::Teleport teleport;
-  int idx=0;
-	teleport.id =       std::stol(fields[idx++]);
-	teleport.codeName128 =        fields[idx++];
-	teleport.typeId1 =  std::stoi(fields[idx++]);
-	teleport.typeId2 =  std::stoi(fields[idx++]);
-	teleport.typeId3 =  std::stoi(fields[idx++]);
-	teleport.typeId4 =  std::stoi(fields[idx++]);
-	return teleport;
+	pk2::ref::Teleport teleportBuilding;
+  const char *ptr = line.data();
+  ptr = parse(ptr, teleportBuilding.service);
+  ptr = parse(ptr, teleportBuilding.id);
+  ptr = parse(ptr, teleportBuilding.codeName128);
+  ptr = parse(ptr, teleportBuilding.objName128);
+  ptr = parse(ptr, teleportBuilding.orgObjCodeName128);
+  ptr = parse(ptr, teleportBuilding.nameStrID128);
+  ptr = parse(ptr, teleportBuilding.descStrID128);
+  ptr = parse(ptr, teleportBuilding.cashItem);
+  ptr = parse(ptr, teleportBuilding.bionic);
+  ptr = parse(ptr, teleportBuilding.typeId1);
+  ptr = parse(ptr, teleportBuilding.typeId2);
+  ptr = parse(ptr, teleportBuilding.typeId3);
+  ptr = parse(ptr, teleportBuilding.typeId4);
+  ptr = parse(ptr, teleportBuilding.decayTime);
+  ptr = parse(ptr, teleportBuilding.country);
+  ptr = parse(ptr, teleportBuilding.rarity);
+  ptr = parse(ptr, teleportBuilding.canTrade);
+  ptr = parse(ptr, teleportBuilding.canSell);
+  ptr = parse(ptr, teleportBuilding.canBuy);
+  ptr = parse(ptr, teleportBuilding.canBorrow);
+  ptr = parse(ptr, teleportBuilding.canDrop);
+  ptr = parse(ptr, teleportBuilding.canPick);
+  ptr = parse(ptr, teleportBuilding.canRepair);
+  ptr = parse(ptr, teleportBuilding.canRevive);
+  ptr = parse(ptr, teleportBuilding.canUse);
+  ptr = parse(ptr, teleportBuilding.canThrow);
+  ptr = parse(ptr, teleportBuilding.price);
+  ptr = parse(ptr, teleportBuilding.costRepair);
+  ptr = parse(ptr, teleportBuilding.costRevive);
+  ptr = parse(ptr, teleportBuilding.costBorrow);
+  ptr = parse(ptr, teleportBuilding.keepingFee);
+  ptr = parse(ptr, teleportBuilding.sellPrice);
+  ptr = parse(ptr, teleportBuilding.reqLevelType1);
+  ptr = parse(ptr, teleportBuilding.reqLevel1);
+  ptr = parse(ptr, teleportBuilding.reqLevelType2);
+  ptr = parse(ptr, teleportBuilding.reqLevel2);
+  ptr = parse(ptr, teleportBuilding.reqLevelType3);
+  ptr = parse(ptr, teleportBuilding.reqLevel3);
+  ptr = parse(ptr, teleportBuilding.reqLevelType4);
+  ptr = parse(ptr, teleportBuilding.reqLevel4);
+  ptr = parse(ptr, teleportBuilding.maxContain);
+  ptr = parse(ptr, teleportBuilding.regionID);
+  ptr = parse(ptr, teleportBuilding.dir);
+  ptr = parse(ptr, teleportBuilding.offsetX);
+  ptr = parse(ptr, teleportBuilding.offsetY);
+  ptr = parse(ptr, teleportBuilding.offsetZ);
+  ptr = parse(ptr, teleportBuilding.speed1);
+  ptr = parse(ptr, teleportBuilding.speed2);
+  ptr = parse(ptr, teleportBuilding.scale);
+  ptr = parse(ptr, teleportBuilding.bcHeight);
+  ptr = parse(ptr, teleportBuilding.bcRadius);
+  ptr = parse(ptr, teleportBuilding.eventID);
+  ptr = parse(ptr, teleportBuilding.assocFileObj128);
+  ptr = parse(ptr, teleportBuilding.assocFileDrop128);
+  ptr = parse(ptr, teleportBuilding.assocFileIcon128);
+  ptr = parse(ptr, teleportBuilding.assocFile1_128);
+  ptr = parse(ptr, teleportBuilding.assocFile2_128);
+  parse(ptr, teleportBuilding.link);
+  return teleportBuilding;
 }
 
 pk2::ref::ScrapOfPackageItem parseScrapOfPackageItemLine(const std::string &line) {
-  // uint8_t service // 0
-  // int32_t country // 1
-  // std::string refPackageItemCodeName // 2
-  // std::string refItemCodeName // 3
-  // uint8_t optLevel // 4
-  // int64_t variance // 5
-  // int32_t data // 6
-  // uint8_t magParamNum // 7
-  // int64_t magParam1 // 8
-  // int64_t magParam2 // 9
-  // int64_t magParam3 // 10
-  // int64_t magParam4 // 11
-  // int64_t magParam5 // 12
-  // int64_t magParam6 // 13
-  // int64_t magParam7 // 14
-  // int64_t magParam8 // 15
-  // int64_t magParam9 // 16
-  // int64_t magParam10 // 17
-  // int64_t magParam11 // 18
-  // int64_t magParam12 // 19
-  // int32_t param1 // 20
-  // std::string param1_Desc128 // 21
-  // int32_t param2 // 22
-  // std::string param2_Desc128 // 23
-  // int32_t param3 // 24
-  // std::string param3_Desc128 // 25
-  // int32_t param4 // 26
-  // std::string param4_Desc128 // 27
-  // int32_t index // 28
-	const std::vector<int> kDesiredFields = {2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19};
-	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
-	if (fields.size() != kDesiredFields.size()) {
-		// TODO: This check for validity of data should be more robust
-		throw std::runtime_error("Parsing scrap of package item, but line contains wrong number of fields");
-	}
 	pk2::ref::ScrapOfPackageItem scrap;
-  int idx=0;
-	scrap.refPackageItemCodeName = fields[idx++];
-	scrap.refItemCodeName =        fields[idx++];
-	scrap.optLevel =     std::stoi(fields[idx++]);
-	scrap.variance =    std::stoll(fields[idx++]);
-	scrap.data =         std::stol(fields[idx++]);
-  scrap.magParamNum =  std::stoi(fields[idx++]);
-  scrap.magParams[0] =   std::stoll(fields[idx++]);
-  scrap.magParams[1] =   std::stoll(fields[idx++]);
-  scrap.magParams[2] =   std::stoll(fields[idx++]);
-  scrap.magParams[3] =   std::stoll(fields[idx++]);
-  scrap.magParams[4] =   std::stoll(fields[idx++]);
-  scrap.magParams[5] =   std::stoll(fields[idx++]);
-  scrap.magParams[6] =   std::stoll(fields[idx++]);
-  scrap.magParams[7] =   std::stoll(fields[idx++]);
-  scrap.magParams[8] =   std::stoll(fields[idx++]);
-  scrap.magParams[9] =  std::stoll(fields[idx++]);
-  scrap.magParams[10] =  std::stoll(fields[idx++]);
-  scrap.magParams[11] =  std::stoll(fields[idx++]);
+  const char *ptr = line.data();
+  ptr = parse(ptr, scrap.service);
+  ptr = parse(ptr, scrap.country);
+  ptr = parse(ptr, scrap.refPackageItemCodeName);
+  ptr = parse(ptr, scrap.refItemCodeName);
+  ptr = parse(ptr, scrap.optLevel);
+  ptr = parse(ptr, scrap.variance);
+  ptr = parse(ptr, scrap.data);
+  ptr = parse(ptr, scrap.magParamNum);
+  ptr = parse(ptr, scrap.magParams[0]);
+  ptr = parse(ptr, scrap.magParams[1]);
+  ptr = parse(ptr, scrap.magParams[2]);
+  ptr = parse(ptr, scrap.magParams[3]);
+  ptr = parse(ptr, scrap.magParams[4]);
+  ptr = parse(ptr, scrap.magParams[5]);
+  ptr = parse(ptr, scrap.magParams[6]);
+  ptr = parse(ptr, scrap.magParams[7]);
+  ptr = parse(ptr, scrap.magParams[8]);
+  ptr = parse(ptr, scrap.magParams[9]);
+  ptr = parse(ptr, scrap.magParams[10]);
+  ptr = parse(ptr, scrap.magParams[11]);
+  ptr = parse(ptr, scrap.param1);
+  ptr = parse(ptr, scrap.param1Desc128);
+  ptr = parse(ptr, scrap.param2);
+  ptr = parse(ptr, scrap.param2Desc128);
+  ptr = parse(ptr, scrap.param3);
+  ptr = parse(ptr, scrap.param3Desc128);
+  ptr = parse(ptr, scrap.param4);
+  ptr = parse(ptr, scrap.param4Desc128);
+  parse(ptr, scrap.index);
 	return scrap;
 }
 
 pk2::ref::ShopTab parseShopTabLine(const std::string &line) {
-  // uint8_t service // 0
-  // int32_t country // 1
-  // int32_t id // 2
-  // std::string codeName128 // 3
-  // std::string refTabGroupCodeName // 4
-  // std::string strID128_Tab // 5
-	const std::vector<int> kDesiredFields = {3,4};
-	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
-	if (fields.size() != kDesiredFields.size()) {
-		// TODO: This check for validity of data should be more robust
-		throw std::runtime_error("Parsing shop tab, but line contains wrong number of fields");
-	}
 	pk2::ref::ShopTab tab;
-  int idx=0;
-	tab.codeName128 =         fields[idx++];
-	tab.refTabGroupCodeName = fields[idx++];
+  const char *ptr = line.data();
+  ptr = parse(ptr, tab.service);
+  ptr = parse(ptr, tab.country);
+	ptr = parse(ptr, tab.id);
+  ptr = parse(ptr, tab.codeName128);
+  ptr = parse(ptr, tab.refTabGroupCodeName);
+  parse(ptr, tab.strID128Tab);
 	return tab;
 }
 
 pk2::ref::ShopGroup parseShopGroupLine(const std::string &line) {
-  // uint8_t service // 0
-  // int32_t country // 1
-  // in16_t id // 2
-  // std::string codeName128 // 3
-  // std::string refNPCCodeName // 4
-  // int32_t param1 // 5
-  // std::string param1_Desc128 // 6
-  // int32_t param2 // 7
-  // std::string param2_Desc128 // 8
-  // int32_t param3 // 9
-  // std::string param3_Desc128 // 10
-  // int32_t param4 // 11
-  // std::string param4_Desc128 // 12
-	const std::vector<int> kDesiredFields = {3,4};
-	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
-	if (fields.size() != kDesiredFields.size()) {
-		// TODO: This check for validity of data should be more robust
-		throw std::runtime_error("Parsing shop group, but line contains wrong number of fields");
-	}
-	pk2::ref::ShopGroup tab;
-  int idx=0;
-	tab.codeName128 =    fields[idx++];
-	tab.refNPCCodeName = fields[idx++];
-	return tab;
+	pk2::ref::ShopGroup group;
+  const char *ptr = line.data();
+  ptr = parse(ptr, group.service);
+  ptr = parse(ptr, group.country);
+  ptr = parse(ptr, group.id);
+  ptr = parse(ptr, group.codeName128);
+  ptr = parse(ptr, group.refNPCCodeName);
+  ptr = parse(ptr, group.param1);
+  ptr = parse(ptr, group.param1Desc128);
+  ptr = parse(ptr, group.param2);
+  ptr = parse(ptr, group.param2Desc128);
+  ptr = parse(ptr, group.param3);
+  ptr = parse(ptr, group.param3Desc128);
+  ptr = parse(ptr, group.param4);
+  parse(ptr, group.param4Desc128);
+  return group;
 }
 
 pk2::ref::ShopGood parseShopGoodLine(const std::string &line) {
-  // uint8_t service // 0
-  // int32_t country // 1
-  // std::string refTabCodeName // 2
-  // std::string refPackageItemCodeName // 3
-  // uint8_t slotIndex // 4
-  // int32_t param1 // 5
-  // std::string param1_Desc128 // 6
-  // int32_t param2 // 7
-  // std::string param2_Desc128 // 8
-  // int32_t param3 // 9
-  // std::string param3_Desc128 // 10
-  // int32_t param4 // 11
-  // std::string param4_Desc128 // 12
-	const std::vector<int> kDesiredFields = {2,3,4};
-	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
-	if (fields.size() != kDesiredFields.size()) {
-		// TODO: This check for validity of data should be more robust
-		throw std::runtime_error("Parsing shop good, but line contains wrong number of fields");
-	}
 	pk2::ref::ShopGood good;
-  int idx=0;
-	good.refTabCodeName =         fields[idx++];
-	good.refPackageItemCodeName = fields[idx++];
-	good.slotIndex =    std::stoi(fields[idx++]);
+  const char *ptr = line.data();
+  ptr = parse(ptr, good.service);
+  ptr = parse(ptr, good.country);
+  ptr = parse(ptr, good.refTabCodeName);
+  ptr = parse(ptr, good.refPackageItemCodeName);
+  ptr = parse(ptr, good.slotIndex);
+  ptr = parse(ptr, good.param1);
+  ptr = parse(ptr, good.param1Desc128);
+  ptr = parse(ptr, good.param2);
+  ptr = parse(ptr, good.param2Desc128);
+  ptr = parse(ptr, good.param3);
+  ptr = parse(ptr, good.param3Desc128);
+  ptr = parse(ptr, good.param4);
+  parse(ptr, good.param4Desc128);
 	return good;
 }
 
 pk2::ref::MappingShopGroup parseMappingShopGroupLine(const std::string &line) {
-  // uint8_t service // 0
-  // int32_t country // 1
-  // std::string refShopGroupCodeName // 2
-  // std::string refShopCodeName // 3
-	const std::vector<int> kDesiredFields = {2,3};
-	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
-	if (fields.size() != kDesiredFields.size()) {
-		// TODO: This check for validity of data should be more robust
-		throw std::runtime_error("Parsing mapping shop group, but line contains wrong number of fields");
-	}
 	pk2::ref::MappingShopGroup mapping;
-  int idx=0;
-	mapping.refShopGroupCodeName = fields[idx++];
-	mapping.refShopCodeName =      fields[idx++];
+  const char *ptr = line.data();
+  ptr = parse(ptr, mapping.service);
+  ptr = parse(ptr, mapping.country);
+  ptr = parse(ptr, mapping.refShopGroupCodeName);
+  parse(ptr, mapping.refShopCodeName);
 	return mapping;
 }
 
 pk2::ref::MappingShopWithTab parseMappingShopWithTabLine(const std::string &line) {
-  // uint8_t service // 3
-  // int32_t country // 2
-  // std::string refShopCodeName // 1
-  // std::string refTabGroupCodeName // 0
-	const std::vector<int> kDesiredFields = {2,3};
-	auto fields = splitAndSelectFields(line, "\t", kDesiredFields);
-	if (fields.size() != kDesiredFields.size()) {
-		// TODO: This check for validity of data should be more robust
-		throw std::runtime_error("Parsing mapping shop with tab, but line contains wrong number of fields");
-	}
 	pk2::ref::MappingShopWithTab mapping;
-  int idx=0;
-	mapping.refShopCodeName =     fields[idx++];
-	mapping.refTabGroupCodeName = fields[idx++];
+  const char *ptr = line.data();
+  ptr = parse(ptr, mapping.service);
+  ptr = parse(ptr, mapping.country);
+  ptr = parse(ptr, mapping.refShopCodeName);
+  parse(ptr, mapping.refTabGroupCodeName);
 	return mapping;
 }
 
@@ -825,6 +768,60 @@ std::vector<std::string> splitAndSelectFields(const std::string &str, const std:
 		}
 	}
 	return result;		
+}
+
+namespace {
+void copySubstring(const char *begin, char **end, std::string &dest) {
+  const char *ptr = begin;
+  while (*ptr != 0 && *ptr != '\t') {
+    ++ptr;
+  }
+  std::string_view sv(begin, ptr-begin);
+  dest = sv;
+  *end = const_cast<char*>(ptr);
+}
+} // namespace
+
+template<>
+const char* parse<std::string>(const char *begin, std::string &result) {
+  char *end;
+  copySubstring(begin, &end, result);
+  return end+1;
+}
+
+template<>
+const char* parse<uint8_t>(const char *begin, uint8_t &result) {
+  char *end;
+  result = strtol(begin, &end, 10);
+  return end+1;
+}
+
+template<>
+const char* parse<int16_t>(const char *begin, int16_t &result) {
+  char *end;
+  result = strtol(begin, &end, 10);
+  return end+1;
+}
+
+template<>
+const char* parse<int32_t>(const char *begin, int32_t &result) {
+  char *end;
+  result = strtol(begin, &end, 10);
+  return end+1;
+}
+
+template<>
+const char* parse<int64_t>(const char *begin, int64_t &result) {
+  char *end;
+  result = strtoll(begin, &end, 10);
+  return end+1;
+}
+
+template<>
+const char* parse<float>(const char *begin, float &result) {
+  char *end;
+  result = strtof(begin, &end);
+  return end+1;
 }
 
 } // namespace pk2::parsing

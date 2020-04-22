@@ -5,6 +5,7 @@
 #include "pk2Reader.h"
 
 #include <filesystem>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,7 @@ public:
 	PK2Entry getEntry(const std::string &entryName);
 	std::vector<uint8_t> getEntryData(PK2Entry &entry);
 private:
+  std::mutex mutex_;
 	fs::path pk2Path_;
 	PK2Reader pk2Reader_;
 };

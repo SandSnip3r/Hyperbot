@@ -10,6 +10,7 @@
 #include "../../../common/pk2/pk2ReaderModern.hpp"
 
 #include <filesystem>
+#include <mutex>
 #include <string>
 
 namespace pk2 {
@@ -26,6 +27,7 @@ public:
   const SkillData& skillData() const;
   const TeleportData& teleportData() const;
 private:
+  std::mutex printMutex_;
   const std::experimental::filesystem::v1::path kSilkroadPath_;
   DivisionInfo divisionInfo_;
   CharacterData characterData_;

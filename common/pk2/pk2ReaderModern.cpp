@@ -20,6 +20,7 @@ Pk2ReaderModern::~Pk2ReaderModern() {
 }
 
 PK2Entry Pk2ReaderModern::getEntry(const std::string &entryName) {
+  std::unique_lock<std::mutex> lock(mutex_);
   PK2Entry entry = {0};
   bool result = pk2Reader_.GetEntry(entryName.c_str(), entry);
   if (!result) {
@@ -29,6 +30,7 @@ PK2Entry Pk2ReaderModern::getEntry(const std::string &entryName) {
 }
 
 std::vector<uint8_t> Pk2ReaderModern::getEntryData(PK2Entry &entry) {
+  std::unique_lock<std::mutex> lock(mutex_);
   std::vector<uint8_t> data;
   data.reserve(entry.size);
   bool result = pk2Reader_.ExtractToMemory(entry, data);

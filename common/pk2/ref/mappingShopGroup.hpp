@@ -6,8 +6,8 @@
 namespace pk2::ref {
 
 struct MappingShopGroup {
-  // uint8_t service
-  // int32_t country
+  uint8_t service;
+  int32_t country;
   std::string refShopGroupCodeName;
   std::string refShopCodeName;
 };
