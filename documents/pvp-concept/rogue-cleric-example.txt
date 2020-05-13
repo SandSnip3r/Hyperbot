@@ -1,0 +1,92 @@
+Rogue/cleric
+
+ - Health change
+ - Mana change
+ - Knocked down
+ - Stood up
+ - Knocked back
+ - Begin curable status
+ - End curable status
+ - Begin stun, petrify, sleep, frozen
+ - End stun, petrify, sleep, frozen
+ - Died
+ - Resurrected
+ - No longer untouchable
+ - In combat
+
+// What if a skill is on cooldown? It might totally change the behavior
+// Skills that consume some HP might throw us off
+// Can you cancel a skill while casting another?
+// Its not always purely state, its sometimes history
+// Maybe these belong to groups of priorities
+//  If in aggressive combat state and we get attacked, return to combat state
+
+====Base state====
+Alive, waiting:
+ 1 - Holy Spell
+ 2 - Holy Recovery Division
+ 2 - Mag def
+ 2 - Phys def
+
+====Combat state====
+In combat, health >= 75%:
+ 1 - Healing Cycle
+ 2 - Holy Spell
+ 3 - Holy Recovery Division
+ 4 - Xbow knockdown attack #1
+ 4 - Xbow knockdown attack #2
+ 5 - Xbow knockback attack #1
+ 5 - Xbow knockback attack #2
+
+====Safe combat state #1====
+In combat, health < 75%:
+ 1 - Healing Cycle
+ 2 - Holy Spell
+ 3 - Holy Recovery Division
+ 3 - Mag def
+ 3 - Phys def
+
+====Safe combat state #2====
+In combat, health < 60%:
+ 1 - Healing Cycle
+ 2 - Self heal (not super fast or super strong)
+ 3 - Holy Spell
+ 4 - Holy Recovery Division
+ 4 - Mag def
+ 4 - Phys def
+
+====Safe combat state #3====
+In combat, health < 45%:
+ 1 - Big fast heal
+ 2 - Healing Cycle
+ 3 - Self heals (not super fast or super strong)
+ 4 - Holy Spell
+ 5 - Holy Recovery Division
+ 5 - Mag def
+ 5 - Phys def
+
+====Aggressive combat state====
+In combat, opponent knocked down:
+ 1 - Dagger Desperate
+ 1 - Prick
+ 2 - Mortal wounds
+ 2 - Butterfly blow
+ 2 - Screw
+// Wont be able to cast some because opponent is knocked down
+// Once opponent stands back up, then these become available
+// If opponent gets stunned, it comes from this state, so these skills remain
+// Need some "attack mode" ignore buffs for a moment?
+//  I guess dagger desperate being #1 buff prevents weapon switch
+
+In combat, opponent casts attack:
+ CANCEL - Dagger Desperate
+
+Stunned:
+ CANCEL - Dagger Desperate
+
+Knocked down:
+ CANCEL - Dagger Desperate
+ Preferred equipment = Cleric rod & Shield
+
+Under curable status:
+ 1 - Integrity

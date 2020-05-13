@@ -8,6 +8,10 @@
 
 namespace pk2::ref {
 
+struct RequiredWeapon {
+  uint8_t typeId3, typeId4;
+};
+
 using SkillId = int32_t;
 
 struct Skill {
@@ -79,66 +83,14 @@ struct Skill {
   std::string uiSkillStudy_Desc;
   int16_t aiAttackChance;
   uint8_t aiSkillType;
-  std::array<int32_t,50> params;
-  // int32_t param1 // 68
-  // int32_t param2 // 69
-  // int32_t param3 // 70
-  // int32_t param4 // 71
-  // int32_t param5 // 72
-  // int32_t param6 // 73
-  // int32_t param7 // 74
-  // int32_t param8 // 75
-  // int32_t param9 // 76
-  // int32_t param10 // 77
-  // int32_t param11 // 78
-  // int32_t param12 // 79
-  // int32_t param13 // 80
-  // int32_t param14 // 81
-  // int32_t param15 // 82
-  // int32_t param16 // 83
-  // int32_t param17 // 84
-  // int32_t param18 // 85
-  // int32_t param19 // 86
-  // int32_t param20 // 87
-  // int32_t param21 // 88
-  // int32_t param22 // 89
-  // int32_t param23 // 90
-  // int32_t param24 // 91
-  // int32_t param25 // 92
-  // int32_t param26 // 93
-  // int32_t param27 // 94
-  // int32_t param28 // 95
-  // int32_t param29 // 96
-  // int32_t param30 // 97
-  // int32_t param31 // 98
-  // int32_t param32 // 99
-  // int32_t param33 // 100
-  // int32_t param34 // 101
-  // int32_t param35 // 102
-  // int32_t param36 // 103
-  // int32_t param37 // 104
-  // int32_t param38 // 105
-  // int32_t param39 // 106
-  // int32_t param40 // 107
-  // int32_t param41 // 108
-  // int32_t param42 // 109
-  // int32_t param43 // 110
-  // int32_t param44 // 111
-  // int32_t param45 // 112
-  // int32_t param46 // 113
-  // int32_t param47 // 114
-  // int32_t param48 // 115
-  // int32_t param49 // 116
-  // int32_t param50 // 117
-	// SkillId id;
-	// std::string basicCode;
-  // std::string basicName;
-  // std::string basicGroup;
-  // std::array<int32_t,50> params;
+  std::array<int32_t,50> params = {0};
   
   // Efta or atfe ("auto transfer effect") like Recovery Division or bard dances
   bool isEfta() const;
-  std::vector<std::pair<uint8_t, uint8_t>> reqi() const;
+  std::vector<RequiredWeapon> reqi() const;
+  bool isInstant() const;
+  bool isTele() const;
+  bool isPseudoinstant() const;
 };
 
 } // namespace pk2::ref

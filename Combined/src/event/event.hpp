@@ -16,7 +16,10 @@ enum class EventCode {
   kMpPercentChanged,
   kStatesChanged,
   kSkillCooldownEnded,
-  kInventorySlotUpdated
+  kInventorySlotUpdated,
+  kSkillCastAboutToEnd,
+  kKnockbackStatusEnded,
+  kTemp
 };
 
 struct Event {

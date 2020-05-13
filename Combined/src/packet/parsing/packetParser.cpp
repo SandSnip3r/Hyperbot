@@ -1,3 +1,4 @@
+#include "clientAgentActionCommandRequest.hpp"
 #include "clientAgentChatRequest.hpp"
 #include "packetParser.hpp"
 #include "serverAgentActionCommandResponse.hpp"
@@ -5,7 +6,10 @@
 #include "serverAgentBuffAdd.hpp"
 #include "serverAgentBuffRemove.hpp"
 #include "serverAgentCharacterData.hpp"
+#include "serverAgentChatUpdate.hpp"
 #include "serverAgentEntityUpdateState.hpp"
+#include "serverAgentSkillBegin.hpp"
+#include "serverAgentSkillEnd.hpp"
 #include "../opcode.hpp"
 
 #include <iostream>
@@ -64,6 +68,14 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       return std::make_unique<ServerAgentBuffAdd>(packet, gameData_.skillData());
     case Opcode::kServerAgentBuffRemove:
       return std::make_unique<ServerAgentBuffRemove>(packet);
+    case Opcode::kClientAgentActionCommandRequest:
+      return std::make_unique<ClientAgentActionCommandRequest>(packet);
+    case Opcode::kServerAgentSkillBegin:
+      return std::make_unique<ServerAgentSkillBegin>(packet);
+    case Opcode::kServerAgentSkillEnd:
+      return std::make_unique<ServerAgentSkillEnd>(packet);
+    case Opcode::kServerAgentChatUpdate:
+      return std::make_unique<ServerAgentChatUpdate>(packet);
     case Opcode::kClientAgentAuthRequest:
     case Opcode::kServerGatewayLoginIbuvChallenge:
     // case static_cast<Opcode>(0x2005):

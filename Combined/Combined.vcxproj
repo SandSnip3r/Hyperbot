@@ -62,6 +62,7 @@
     <ClCompile Include="src\packet\building\clientGatewayLoginRequest.cpp" />
     <ClCompile Include="src\packet\building\serverAgentChatUpdate.cpp" />
     <ClCompile Include="src\packet\opcode.cpp" />
+    <ClCompile Include="src\packet\parsing\clientAgentActionCommandRequest.cpp" />
     <ClCompile Include="src\packet\parsing\clientAgentChatRequest.cpp" />
     <ClCompile Include="src\packet\parsing\commonParsing.cpp" />
     <ClCompile Include="src\packet\parsing\packetParser.cpp" />
@@ -71,7 +72,10 @@
     <ClCompile Include="src\packet\parsing\serverAgentBuffAdd.cpp" />
     <ClCompile Include="src\packet\parsing\serverAgentBuffRemove.cpp" />
     <ClCompile Include="src\packet\parsing\serverAgentCharacterData.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentChatUpdate.cpp" />
     <ClCompile Include="src\packet\parsing\serverAgentEntityUpdateState.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentSkillBegin.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentSkillEnd.cpp" />
     <ClCompile Include="src\phConnector.cpp" />
     <ClCompile Include="src\pk2\characterData.cpp" />
     <ClCompile Include="src\pk2\gameData.cpp" />
@@ -139,6 +143,7 @@
     <ClInclude Include="src\packet\building\serverAgentChatUpdate.hpp" />
     <ClInclude Include="src\packet\enums\packetEnums.hpp" />
     <ClInclude Include="src\packet\opcode.hpp" />
+    <ClInclude Include="src\packet\parsing\clientAgentActionCommandRequest.hpp" />
     <ClInclude Include="src\packet\parsing\clientAgentChatRequest.hpp" />
     <ClInclude Include="src\packet\parsing\commonParsing.hpp" />
     <ClInclude Include="src\packet\parsing\packetParser.hpp" />
@@ -148,7 +153,10 @@
     <ClInclude Include="src\packet\parsing\serverAgentBuffAdd.hpp" />
     <ClInclude Include="src\packet\parsing\serverAgentBuffRemove.hpp" />
     <ClInclude Include="src\packet\parsing\serverAgentCharacterData.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentChatUpdate.hpp" />
     <ClInclude Include="src\packet\parsing\serverAgentEntityUpdateState.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentSkillBegin.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentSkillEnd.hpp" />
     <ClInclude Include="src\packet\structures\packetInnerStructures.hpp" />
     <ClInclude Include="src\pk2\characterData.hpp" />
     <ClInclude Include="src\pk2\gameData.hpp" />

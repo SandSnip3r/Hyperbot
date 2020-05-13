@@ -152,7 +152,6 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
 
   auto *clientChat = dynamic_cast<packet::parsing::ClientAgentChatRequest*>(parsedPacket.get());
   if (clientChat != nullptr) {
-    std::cout << "Not handling client chat move\n";
     return true;
   }
 
@@ -232,6 +231,14 @@ void CharacterInfoModule::serverAgentEntityUpdateStateReceived(packet::parsing::
       selfState_.setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
     } else if (packet.stateType() == packet::parsing::StateType::kLifeState) {
       selfState_.setLifeState(static_cast<packet::enums::LifeState>(packet.state()));
+      if (static_cast<packet::enums::LifeState>(packet.state()) == packet::enums::LifeState::kDead) {
+        std::cout << "CharacterInfoModule: We died, clearing queue (";
+        for (auto i : usedItemQueue_) {
+          std::cout << (int)i.slotNum << ',';
+        }
+        std::cout << ")\n";
+        usedItemQueue_.clear();
+      }
     }
   }
 }
@@ -532,7 +539,7 @@ void CharacterInfoModule::setRaceAndGender(uint32_t refObjId) {
 void CharacterInfoModule::serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) {
   selfState_.initialize(packet.entityUniqueId(), packet.refObjId(), packet.hp(), packet.mp(), packet.masteries(), packet.skills());
   selfState_.setBodyState(packet.bodyState());
-  std::cout << "Setting life state as " << static_cast<int>(packet.lifeState()) << '\n';
+  std::cout << "Our Ref Obj Id " << packet.refObjId() << '\n';
   selfState_.setLifeState(packet.lifeState());
   auto refObjId = packet.refObjId();
   gold_ = packet.gold();
@@ -668,6 +675,9 @@ void CharacterInfoModule::usePurificationPill() {
 }
 
 void CharacterInfoModule::usePotion(PotionType potionType) {
+  // We enter this funciton assuming that:
+  //  1. The potion isnt on cooldown
+  //  2. We have the potion
   const double hpPercentage = static_cast<double>(selfState_.hp())/(*selfState_.maxHp()); // TODO: Remove, for print only
   const double mpPercentage = static_cast<double>(selfState_.mp())/(*selfState_.maxMp()); // TODO: Remove, for print only
   printf("Healing. Hp: %4.2f%%, Mp: %4.2f%%\n", hpPercentage*100, mpPercentage*100);
@@ -683,6 +693,7 @@ void CharacterInfoModule::usePotion(PotionType potionType) {
     std::cout << "CharacterInfoModule::usePotion: Potion type " << static_cast<int>(potionType) << " not supported\n";
     return;
   }
+
   // Find potion in inventory
   for (uint8_t slotNum=0; slotNum<inventory_.size(); ++slotNum) {
     if (!inventory_.hasItem(slotNum)) {
@@ -693,8 +704,8 @@ void CharacterInfoModule::usePotion(PotionType potionType) {
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
       if (item->itemInfo->typeId1 == 3 && item->itemInfo->typeId2 == 3 && item->itemInfo->typeId3 == 1 && item->itemInfo->typeId4 == typeId4) {
-        if (item->itemInfo->param2 == 0 && item->itemInfo->param4 == 0) {
-          // Avoid vigors
+        if (typeId4 == 3 || item->itemInfo->param2 == 0 && item->itemInfo->param4 == 0) {
+          // Avoid hp/mp grains
           useItem(slotNum, itemPtr->typeData());
           break;
         }
@@ -704,8 +715,31 @@ void CharacterInfoModule::usePotion(PotionType potionType) {
 }
 
 void CharacterInfoModule::useItem(uint8_t slotNum, uint16_t typeData) {
-  auto useItemPacket = packet::building::ClientAgentInventoryItemUseRequest::packet(slotNum, typeData);
-  broker_.injectPacket(useItemPacket, PacketContainer::Direction::kClientToServer);
+  uint8_t typeId1 = (typeData >> 2) & 0b111;
+  uint8_t typeId2 = (typeData >> 5) & 0b11;
+  uint8_t typeId3 = (typeData >> 7) & 0b1111;
+  uint8_t typeId4 = (typeData >> 11) & 0b11111;
+  // TODO: Check cooldowns here
+  if (typeId1 == 3 && typeId2 == 3 && typeId3 == 1) {
+    // Potion
+    if (typeId4 == 1) {
+      if (alreadyUsedPotion(PotionType::kHp)) {
+        // Already used an Hp potion, not going to re-queue
+        return;
+      }
+    } else if (typeId4 == 2) {
+      if (alreadyUsedPotion(PotionType::kMp)) {
+        // Already used an Mp potion, not going to re-queue
+        return;
+      }
+    } else if (typeId4 == 3) {
+      if (alreadyUsedPotion(PotionType::kVigor)) {
+        // Already used a Vigor potion, not going to re-queue
+        return;
+      }
+    }
+  }
+  broker_.injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slotNum, typeData), PacketContainer::Direction::kClientToServer);
   usedItemQueue_.emplace_back(slotNum, typeData);
 }
 
@@ -723,13 +757,23 @@ bool CharacterInfoModule::alreadyUsedUniversalPill() {
   return (universalPillEventId_ || used); 
 }
 
+bool compareTypeData(uint16_t typeData, uint8_t typeId1, uint8_t typeId2, uint8_t typeId3, uint8_t typeId4) {
+  if (typeId1 != ((typeData >> 2) & 0b111)) {
+    return false;
+  }
+  if (typeId2 != ((typeData >> 5) & 0b11)) {
+    return false;
+  }
+  if (typeId3 != ((typeData >> 7) & 0b1111)) {
+    return false;
+  }
+  return (typeId4 == ((typeData >> 11) & 0b11111));
+}
+
 bool CharacterInfoModule::alreadyUsedPurificationPill() {
   bool used = false;
   for (const auto &usedItem : usedItemQueue_) {
-    if (usedItem.itemData & (static_cast<uint16_t>(3) << 2) &&
-        usedItem.itemData & (static_cast<uint16_t>(3) << 5) &&
-        usedItem.itemData & (static_cast<uint16_t>(2) << 7) &&
-        usedItem.itemData & (static_cast<uint16_t>(1) << 11)) {
+    if (compareTypeData(usedItem.itemData, 3,3,2,1)) {
       used = true;
       break;
     }
@@ -741,10 +785,7 @@ bool CharacterInfoModule::alreadyUsedPotion(PotionType potionType) {
   if (potionType == PotionType::kHp) {
     bool used = false;
     for (const auto &usedItem : usedItemQueue_) {
-      if (usedItem.itemData & (static_cast<uint16_t>(3) << 2) &&
-          usedItem.itemData & (static_cast<uint16_t>(3) << 5) &&
-          usedItem.itemData & (static_cast<uint16_t>(1) << 7) &&
-          usedItem.itemData & (static_cast<uint16_t>(1) << 11)) {
+      if (compareTypeData(usedItem.itemData, 3,3,1,1)) {
         used = true;
         break;
       }
@@ -753,10 +794,7 @@ bool CharacterInfoModule::alreadyUsedPotion(PotionType potionType) {
   } else if (potionType == PotionType::kMp) {
     bool used = false;
     for (const auto &usedItem : usedItemQueue_) {
-      if (usedItem.itemData & (static_cast<uint16_t>(3) << 2) &&
-          usedItem.itemData & (static_cast<uint16_t>(3) << 5) &&
-          usedItem.itemData & (static_cast<uint16_t>(1) << 7) &&
-          usedItem.itemData & (static_cast<uint16_t>(2) << 11)) {
+      if (compareTypeData(usedItem.itemData, 3,3,1,2)) {
         used = true;
         break;
       }
@@ -765,10 +803,7 @@ bool CharacterInfoModule::alreadyUsedPotion(PotionType potionType) {
   } else if (potionType == PotionType::kVigor) {
     bool used = false;
     for (const auto &usedItem : usedItemQueue_) {
-      if (usedItem.itemData & (static_cast<uint16_t>(3) << 2) &&
-          usedItem.itemData & (static_cast<uint16_t>(3) << 5) &&
-          usedItem.itemData & (static_cast<uint16_t>(1) << 7) &&
-          usedItem.itemData & (static_cast<uint16_t>(3) << 11)) {
+      if (compareTypeData(usedItem.itemData, 3,3,1,3)) {
         used = true;
         break;
       }
@@ -796,6 +831,39 @@ void CharacterInfoModule::checkIfNeedToUsePill() {
   }
 }
 
+bool CharacterInfoModule::havePotion(PotionType potionType) {
+  uint8_t typeId4;
+  if (potionType == PotionType::kHp) {
+    typeId4 = 1;
+  } else if (potionType == PotionType::kMp) {
+    typeId4 = 2;
+  } else if (potionType == PotionType::kVigor) {
+    typeId4 = 3;
+  } else {
+    std::cout << "CharacterInfoModule::havePotion: Potion type " << static_cast<int>(potionType) << " not supported\n";
+    return false;
+  }
+
+  // Find potion in inventory
+  for (uint8_t slotNum=0; slotNum<inventory_.size(); ++slotNum) {
+    if (!inventory_.hasItem(slotNum)) {
+      continue;
+    }
+    const storage::Item *itemPtr = inventory_.getItem(slotNum);
+    const storage::ItemExpendable *item;
+    if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
+      // Expendable item
+      if (item->itemInfo->typeId1 == 3 && item->itemInfo->typeId2 == 3 && item->itemInfo->typeId3 == 1 && item->itemInfo->typeId4 == typeId4) {
+        if (typeId4 == 3 || item->itemInfo->param2 == 0 && item->itemInfo->param4 == 0) {
+          // Avoid hp/mp grains
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 void CharacterInfoModule::checkIfNeedToHeal() {
   if (!selfState_.maxHp() || !selfState_.maxMp()) {
     // Dont yet know our max
@@ -814,21 +882,20 @@ void CharacterInfoModule::checkIfNeedToHeal() {
   const auto legacyStateEffects = selfState_.legacyStateEffects();
   const bool haveZombie = (legacyStateEffects[bitNum(packet::enums::AbnormalStateFlag::kZombie)] > 0);
 
-  if ((!haveZombie && hpPercentage <= kHpThreshold_) && mpPercentage <= kMpThreshold_) {
-    if (!alreadyUsedPotion(PotionType::kVigor)) {
+  // TODO: Investigate if using multiple potions in one go causes issues
+  if (!alreadyUsedPotion(PotionType::kVigor)) {
+    if (!haveZombie && (hpPercentage < kVigorThreshold_ || mpPercentage < kVigorThreshold_)) {
       usePotion(PotionType::kVigor);
     }
-  } else if ((!haveZombie && hpPercentage <= kHpThreshold_)) {
-    if (!alreadyUsedPotion(PotionType::kHp)) {
+  }
+  if (!alreadyUsedPotion(PotionType::kHp)) {
+    if (!haveZombie && hpPercentage < kHpThreshold_) {
       usePotion(PotionType::kHp);
-    } else if (hpPercentage < kVigorThreshold_ && !alreadyUsedPotion(PotionType::kVigor)) {
-      usePotion(PotionType::kVigor);
     }
-  } else if (mpPercentage <= kMpThreshold_) {
-    if (!alreadyUsedPotion(PotionType::kMp)) {
+  }
+  if (!alreadyUsedPotion(PotionType::kMp)) {
+    if (mpPercentage < kMpThreshold_) {
       usePotion(PotionType::kMp);
-    } else if (mpPercentage < kVigorThreshold_ && !alreadyUsedPotion(PotionType::kVigor)) {
-      usePotion(PotionType::kVigor);
     }
   }
 }
@@ -993,6 +1060,7 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
               std::cout << "Uhhhh, supposedly successfully used an hp potion when there's still a cooldown... Cancelling timer\n";
               eventBroker_.cancelDelayedEvent(*hpPotionEventId_);
             }
+            std::cout << "Successfully used a hpPotion\n";
             hpPotionEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kHpPotionCooldownEnded), std::chrono::milliseconds(getHpPotionDelay()));
           } else if (isMpPotion(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a potion
@@ -1000,6 +1068,7 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
               std::cout << "Uhhhh, supposedly successfully used an mp potion when there's still a cooldown... Cancelling timer\n";
               eventBroker_.cancelDelayedEvent(*mpPotionEventId_);
             }
+            std::cout << "Successfully used a mpPotion\n";
             mpPotionEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMpPotionCooldownEnded), std::chrono::milliseconds(getMpPotionDelay()));
           } else if (isVigorPotion(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a potion
@@ -1007,6 +1076,7 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
               std::cout << "Uhhhh, supposedly successfully used a vigor potion when there's still a cooldown... Cancelling timer\n";
               eventBroker_.cancelDelayedEvent(*vigorPotionEventId_);
             }
+            std::cout << "Successfully used a vigorPotion\n";
             vigorPotionEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kVigorPotionCooldownEnded), std::chrono::milliseconds(getVigorPotionDelay()));
           } else if (isUniversalPill(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a pill
@@ -1036,10 +1106,22 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
     if (!usedItemQueue_.empty()) {
       // This was an item that we tried to use
       if (packet.errorCode() == packet::enums::InventoryErrorCode::kWaitForReuseDelay) {
-        std::cout << "Failed to use item because there's still a cooldown, going to retry\n";
         // TODO: When we start tracking items moving in the invetory, we'll need to somehow update usedItemQueue_
+        std::cout << "Failed to use ";
         const auto usedItem = usedItemQueue_.front();
+        if (compareTypeData(usedItem.itemData, 3, 3, 1, 1)) {
+          std::cout << "hp";
+        } else if (compareTypeData(usedItem.itemData, 3, 3, 1, 2)) {
+          std::cout << "mp";
+        } else if (compareTypeData(usedItem.itemData, 3, 3, 1, 3)) {
+          std::cout << "vigor";
+        }
+        std::cout << " potion because there's still a cooldown, going to retry\n";
         useItem(usedItem.slotNum, usedItem.itemData);
+      } else if (packet.errorCode() == packet::enums::InventoryErrorCode::kCharacterDead) {
+        std::cout << "Failed to use item because we're dead\n";
+      } else {
+        std::cout << "Unknown error while trying to use an item: " << static_cast<int>(packet.errorCode()) << '\n';
       }
     }
   }

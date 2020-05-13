@@ -158,9 +158,9 @@ enum class Opcode {
   //Environment
   kServerEnvironmentWeather = 0x3809,
 
-  SERVER_ATTACK = 0xB070,
+  kServerAgentSkillBegin = 0xB070,
+  kServerAgentSkillEnd = 0xB071,
   kServerAgentActionCommandResponse = 0xB074,
-  SERVER_END_SKILL = 0xB071,
 
   kServerAgentBuffAdd = 0xB0BD,
   kServerAgentBuffRemove = 0xB072,

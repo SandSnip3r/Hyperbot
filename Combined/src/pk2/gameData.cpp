@@ -22,16 +22,16 @@ GameData::GameData(const fs::path &kSilkroadPath) : kSilkroadPath_(kSilkroadPath
 }
 
 void GameData::parseMedia(Pk2ReaderModern &pk2Reader) {
-  std::vector<std::thread> thrs;
+  // std::vector<std::thread> thrs;
   parseDivisionInfo(pk2Reader);
   parseShopData(pk2Reader);
-  thrs.emplace_back(&GameData::parseCharacterData, this, std::ref(pk2Reader));
-  thrs.emplace_back(&GameData::parseItemData, this, std::ref(pk2Reader));
-  thrs.emplace_back(&GameData::parseSkillData, this, std::ref(pk2Reader));
   parseTeleportData(pk2Reader);
-  for (auto &thr : thrs) {
-    thr.join();
-  }
+  parseCharacterData(pk2Reader); // thrs.emplace_back(&GameData::parseCharacterData, this, std::ref(pk2Reader));
+  parseItemData(pk2Reader); // thrs.emplace_back(&GameData::parseItemData, this, std::ref(pk2Reader));
+  parseSkillData(pk2Reader); // thrs.emplace_back(&GameData::parseSkillData, this, std::ref(pk2Reader));
+  // for (auto &thr : thrs) {
+  //   thr.join();
+  // }
 }
 
 const DivisionInfo& GameData::divisionInfo() const {

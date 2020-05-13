@@ -64,8 +64,8 @@ private:
   //***************************************Configuration**************************************
   //******************************************************************************************
   // Potion configuration
-  const double kHpThreshold_{0.80};
-  const double kMpThreshold_{0.70};
+  const double kHpThreshold_{0.90};
+  const double kMpThreshold_{0.80};
   const double kVigorThreshold_{0.40};
   //******************************************************************************************
 
@@ -123,6 +123,7 @@ private:
   void handleVitalsChanged();
   void handleStatesChanged();
 
+  bool havePotion(PotionType potionType);
   void printGold();
   void serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet);
   void trackObject(std::shared_ptr<packet::parsing::Object> obj);

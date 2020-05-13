@@ -1,0 +1,71 @@
+Spear nuker
+
+ - Health change
+ - Mana change
+ - Knocked down
+ - Stood up
+ - Knocked back
+ - Begin curable status
+ - End curable status
+ - Begin stun, petrify, sleep, frozen
+ - End stun, petrify, sleep, frozen
+ - Died
+ - Resurrected
+ - No longer untouchable
+ - In combat
+
+// Once Ghost Spear is cast, transition back to Combat state
+// How do we know to use ice or fire wall?
+
+====Base state====
+Alive, waiting:
+ 1 - Phys def (ice)
+ 2 - Parry rate (light)
+ 3 - Speed (light)
+ 4 - Mag dmg (light)
+// Shield in hand?
+
+====Combat state====
+In combat, health >= 60%:
+ 1 - Snow Shield 55%
+ 2 - Phys def (ice)
+ 3 - Parry rate (light)
+ 4 - Speed (light)
+ 5 - Mag dmg (light)
+ 6 - Spear stun skill #1
+ 7 - Spear stun skill #2
+ 8 - Flying Dragon
+ 9 - Nuke
+ 10 - Ghost Spear
+
+In combat, health < 60%:
+ 1 - Spear mag def skill
+
+====Safe combat state====
+In combat, snow shield ended:
+ 1 - Ice wall #1
+ 2 - Ice wall #2
+ 3 - Snow Shield 55%
+ 4 - Phys def (ice)
+ 5 - Parry rate (light)
+ 6 - Spear stun skill #1
+ 7 - Spear stun skill #2
+ 8 - Ghost Spear
+
+
+====Aggressive combat state====
+In combat, opponent stunned:
+ Preferred equipment = Spear
+ 1 - Nuke
+ 2 - Flying Dragon
+ 3 - Ghost Spear
+ 4 - Snow Shield 55%
+ 5 - Phys def (ice)
+ 6 - Parry rate (light)
+ 7 - Speed (light)
+ 8 - Mag dmg (light)
+ 9 - Spear stun skill #1
+ 10 - Spear stun skill #2
+
+Knocked down:
+ Preferred equipment = Shield

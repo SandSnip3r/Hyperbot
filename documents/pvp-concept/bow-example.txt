@@ -1,0 +1,45 @@
+Archer
+
+ - Health change
+ - Mana change
+ - Knocked down
+ - Stood up
+ - Knocked back
+ - Begin curable status
+ - End curable status
+ - Begin stun, petrify, sleep, frozen
+ - End stun, petrify, sleep, frozen
+ - Died
+ - Resurrected
+ - No longer untouchable
+ - In combat
+
+====Base state====
+Alive, waiting:
+1 - 3436 Fire Shield Emporer  SKILL_CH_FIRE_SHIELD_D_06
+2 - 8244 God Fire Protection  SKILL_CH_FIRE_GANGGI_E_06
+3 - 8186 Concentration 5th    SKILL_CH_LIGHTNING_JIPJUNG_E_03
+4 - 8155 Ghost Walk           SKILL_CH_LIGHTNING_GYEONGGONG_E_08
+4 - 7885 Fire Hawk            SKILL_CH_BOW_CALL_F_01
+4 - 8223 Flame Body God       SKILL_CH_FIRE_GONGUP_E_03
+4 - 7910 Ice Hawk Soul Arrow  SKILL_CH_BOW_NORMAL_E_03
+4 - 8135 God Piercing Force   SKILL_CH_LIGHTNING_GWANTONG_E_03
+
+====Combat state====
+In combat, health >= 40% (:base state):
+...base state buffs...
+5 - 8217 God Fire Force             SKILL_CH_FIRE_GIGONGTA_F_01
+6 - 7941 Strong Bow Destruction     SKILL_CH_BOW_POWER_E_01
+7 - 7844 Anti Devil Bow Moon light  SKILL_CH_BOW_CRITICAL_G_01
+7 - 7922 Pitch Black Arrow          SKILL_CH_BOW_AREA_E_03
+8 - 7843 Anti Devil Bow Demolition  SKILL_CH_BOW_CRITICAL_F_05
+
+In combat, health < 40%:
+1 - 7865 7 Arrow Combo              SKILL_CH_BOW_CHAIN_F_03
+1 - 7862 6 Arrow Combo              SKILL_CH_BOW_CHAIN_E_09
+2 - 8217 God Fire Force             SKILL_CH_FIRE_GIGONGTA_F_01
+...base state buffs...
+6 - 7941 Strong Bow Destruction     SKILL_CH_BOW_POWER_E_01
+7 - 7844 Anti Devil Bow Moon light  SKILL_CH_BOW_CRITICAL_G_01
+7 - 7922 Pitch Black Arrow          SKILL_CH_BOW_AREA_E_03
+8 - 7843 Anti Devil Bow Demolition  SKILL_CH_BOW_CRITICAL_F_05

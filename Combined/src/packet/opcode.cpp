@@ -324,14 +324,14 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_COS_DELETE) {
     return "SERVER_COS_DELETE";
   }
-  if (opcode == Opcode::SERVER_ATTACK) {
-    return "SERVER_ATTACK";
+  if (opcode == Opcode::kServerAgentSkillBegin) {
+    return "kServerAgentSkillBegin";
   }
   if (opcode == Opcode::kServerAgentActionCommandResponse) {
     return "kServerAgentActionCommandResponse";
   }
-  if (opcode == Opcode::SERVER_END_SKILL) {
-    return "SERVER_END_SKILL";
+  if (opcode == Opcode::kServerAgentSkillEnd) {
+    return "kServerAgentSkillEnd";
   }
   if (opcode == Opcode::kServerAgentBuffAdd) {
     return "kServerAgentBuffAdd";

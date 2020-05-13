@@ -1,295 +1,155 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
-    <Filter Include="shared">
-      <UniqueIdentifier>{152d534e-a214-4f05-b4be-621d253671da}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Common">
-      <UniqueIdentifier>{6ba22773-b148-4d8f-9ba1-31ea255a51e6}</UniqueIdentifier>
-    </Filter>
+    <ClCompile Include="..\common\blowfish.cpp" />
+    <ClCompile Include="..\common\Common.cpp" />
+    <ClCompile Include="..\common\pk2\division.cpp" />
+    <ClCompile Include="..\common\pk2\divisionInfo.cpp" />
+    <ClCompile Include="..\common\pk2\parsing\parsing.cpp" />
+    <ClCompile Include="..\common\pk2\pk2Reader.cpp" />
+    <ClCompile Include="..\common\pk2\pk2ReaderModern.cpp" />
+    <ClCompile Include="..\common\pk2\ref\character.cpp" />
+    <ClCompile Include="..\common\pk2\ref\item.cpp" />
+    <ClCompile Include="..\common\pk2\ref\mappingShopGroup.cpp" />
+    <ClCompile Include="..\common\pk2\ref\mappingShopWithTab.cpp" />
+    <ClCompile Include="..\common\pk2\ref\scrapOfPackageItem.cpp" />
+    <ClCompile Include="..\common\pk2\ref\shopGood.cpp" />
+    <ClCompile Include="..\common\pk2\ref\shopGroup.cpp" />
+    <ClCompile Include="..\common\pk2\ref\shopTab.cpp" />
+    <ClCompile Include="..\common\pk2\ref\skill.cpp" />
+    <ClCompile Include="..\common\pk2\ref\teleport.cpp" />
+    <ClCompile Include="..\common\shared_io.cpp" />
+    <ClCompile Include="src\bot.cpp" />
+    <ClCompile Include="src\broker\eventBroker.cpp" />
+    <ClCompile Include="src\broker\packetBroker.cpp" />
+    <ClCompile Include="src\broker\timerManager.cpp" />
+    <ClCompile Include="src\config\configData.cpp" />
+    <ClCompile Include="src\config\iniReader.cpp" />
+    <ClCompile Include="src\event\event.cpp" />
+    <ClCompile Include="src\loader.cpp" />
+    <ClCompile Include="src\module\characterInfoModule.cpp" />
+    <ClCompile Include="src\module\chatEventModule.cpp" />
+    <ClCompile Include="src\module\loginModule.cpp" />
+    <ClCompile Include="src\module\skillUseModule.cpp" />
+    <ClCompile Include="src\packetLogger.cpp" />
+    <ClCompile Include="src\packet\building\clientAgentActionCommandRequest.cpp" />
+    <ClCompile Include="src\packet\building\clientAgentActionSelectRequest.cpp" />
+    <ClCompile Include="src\packet\building\clientAgentAuthRequest.cpp" />
+    <ClCompile Include="src\packet\building\clientAgentCharacterMoveRequest.cpp" />
+    <ClCompile Include="src\packet\building\clientAgentCharacterSelectionActionRequest.cpp" />
+    <ClCompile Include="src\packet\building\clientAgentCharacterSelectionJoinRequest.cpp" />
+    <ClCompile Include="src\packet\building\clientAgentInventoryItemUseRequest.cpp" />
+    <ClCompile Include="src\packet\building\clientAgentInventoryOperationRequest.cpp" />
+    <ClCompile Include="src\packet\building\clientGatewayLoginIbuvAnswer.cpp" />
+    <ClCompile Include="src\packet\building\clientGatewayLoginRequest.cpp" />
+    <ClCompile Include="src\packet\building\serverAgentChatUpdate.cpp" />
+    <ClCompile Include="src\packet\opcode.cpp" />
+    <ClCompile Include="src\packet\parsing\clientAgentActionCommandRequest.cpp" />
+    <ClCompile Include="src\packet\parsing\clientAgentChatRequest.cpp" />
+    <ClCompile Include="src\packet\parsing\commonParsing.cpp" />
+    <ClCompile Include="src\packet\parsing\packetParser.cpp" />
+    <ClCompile Include="src\packet\parsing\parsedPacket.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentActionCommandResponse.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentActionSelectResponse.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentBuffAdd.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentBuffRemove.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentCharacterData.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentEntityUpdateState.cpp" />
+    <ClCompile Include="src\phConnector.cpp" />
+    <ClCompile Include="src\pk2\characterData.cpp" />
+    <ClCompile Include="src\pk2\gameData.cpp" />
+    <ClCompile Include="src\pk2\itemData.cpp" />
+    <ClCompile Include="src\pk2\shopData.cpp" />
+    <ClCompile Include="src\pk2\skillData.cpp" />
+    <ClCompile Include="src\pk2\teleportData.cpp" />
+    <ClCompile Include="src\proxy.cpp" />
+    <ClCompile Include="src\session.cpp" />
+    <ClCompile Include="src\shared\silkroad_security.cpp" />
+    <ClCompile Include="src\shared\stream_utility.cpp" />
+    <ClCompile Include="src\silkroadConnection.cpp" />
+    <ClCompile Include="src\state\entity.cpp" />
+    <ClCompile Include="src\state\self.cpp" />
+    <ClCompile Include="src\storage\buybackQueue.cpp" />
+    <ClCompile Include="src\storage\item.cpp" />
+    <ClCompile Include="src\storage\itemList.cpp" />
+    <ClCompile Include="src\storage\storage.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\phConnector.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\shared\silkroad_security.cpp">
-      <Filter>shared</Filter>
-    </ClCompile>
-    <ClCompile Include="src\shared\stream_utility.cpp">
-      <Filter>shared</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\Common.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="src\packetLogger.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\bot.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\loader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\proxy.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\session.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\silkroadConnection.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\shared_io.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\blowfish.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\pk2\division.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\pk2\divisionInfo.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\pk2\pk2Reader.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\pk2\pk2ReaderModern.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\pk2\parsing\parsing.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="src\config\configData.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\config\iniReader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\pk2\ref\character.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\pk2\ref\item.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\pk2\ref\skill.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\pk2\ref\teleport.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="src\broker\packetBroker.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\event\event.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\broker\eventBroker.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\broker\timerManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\storage\itemList.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\storage\storage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\pk2\characterData.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\pk2\gameData.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\pk2\itemData.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\pk2\skillData.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\pk2\teleportData.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\module\characterInfoModule.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\module\chatEventModule.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\module\loginModule.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\storage\item.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\packet\opcode.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\packet\parsing\packetParser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\packet\parsing\parsedPacket.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\packet\building\clientAgentInventoryItemUseRequest.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\shared\silkroad_security.h">
-      <Filter>shared</Filter>
-    </ClInclude>
-    <ClInclude Include="src\shared\stream_utility.h">
-      <Filter>shared</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\Common.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="src\packetLogger.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\bot.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\loader.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\proxy.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\session.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\silkroadConnection.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\shared_io.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\shared_types.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\blowfish.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2\division.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2\divisionInfo.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2\pk2.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2\pk2Reader.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2\pk2ReaderModern.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2\parsing\parsing.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="src\config\characterLoginData.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\config\configData.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\config\iniReader.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2\ref\character.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2\ref\item.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2\ref\skill.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\pk2\ref\teleport.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="src\broker\packetBroker.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\broker\eventBroker.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\broker\timerManager.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\event\event.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\storage\itemList.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\storage\storage.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\pk2\characterData.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\pk2\gameData.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\pk2\itemData.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\pk2\skillData.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\pk2\teleportData.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\module\characterInfoModule.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\module\chatEventModule.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\module\loginModule.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\storage\item.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\packet\opcode.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\packet\structures\packetInnerStructures.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\packet\parsing\packetParser.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\packet\parsing\parsedPacket.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\packet\enums\packetEnums.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\packet\building\clientAgentInventoryItemUseRequest.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <ClInclude Include="..\common\blowfish.h" />
+    <ClInclude Include="..\common\Common.h" />
+    <ClInclude Include="..\common\pk2\division.hpp" />
+    <ClInclude Include="..\common\pk2\divisionInfo.hpp" />
+    <ClInclude Include="..\common\pk2\parsing\parsing.hpp" />
+    <ClInclude Include="..\common\pk2\pk2.h" />
+    <ClInclude Include="..\common\pk2\pk2Reader.h" />
+    <ClInclude Include="..\common\pk2\pk2ReaderModern.hpp" />
+    <ClInclude Include="..\common\pk2\ref\character.hpp" />
+    <ClInclude Include="..\common\pk2\ref\item.hpp" />
+    <ClInclude Include="..\common\pk2\ref\mappingShopGroup.hpp" />
+    <ClInclude Include="..\common\pk2\ref\mappingShopWithTab.hpp" />
+    <ClInclude Include="..\common\pk2\ref\scrapOfPackageItem.hpp" />
+    <ClInclude Include="..\common\pk2\ref\shopGood.hpp" />
+    <ClInclude Include="..\common\pk2\ref\shopGroup.hpp" />
+    <ClInclude Include="..\common\pk2\ref\shopTab.hpp" />
+    <ClInclude Include="..\common\pk2\ref\skill.hpp" />
+    <ClInclude Include="..\common\pk2\ref\teleport.hpp" />
+    <ClInclude Include="..\common\shared_io.h" />
+    <ClInclude Include="..\common\shared_types.h" />
+    <ClInclude Include="src\bot.hpp" />
+    <ClInclude Include="src\broker\eventBroker.hpp" />
+    <ClInclude Include="src\broker\packetBroker.hpp" />
+    <ClInclude Include="src\broker\timerManager.hpp" />
+    <ClInclude Include="src\config\characterLoginData.hpp" />
+    <ClInclude Include="src\config\configData.hpp" />
+    <ClInclude Include="src\config\iniReader.hpp" />
+    <ClInclude Include="src\event\event.hpp" />
+    <ClInclude Include="src\loader.hpp" />
+    <ClInclude Include="src\module\characterInfoModule.hpp" />
+    <ClInclude Include="src\module\chatEventModule.hpp" />
+    <ClInclude Include="src\module\loginModule.hpp" />
+    <ClInclude Include="src\module\skillUseModule.hpp" />
+    <ClInclude Include="src\packetLogger.hpp" />
+    <ClInclude Include="src\packet\building\clientAgentActionCommandRequest.hpp" />
+    <ClInclude Include="src\packet\building\clientAgentActionSelectRequest.hpp" />
+    <ClInclude Include="src\packet\building\clientAgentAuthRequest.hpp" />
+    <ClInclude Include="src\packet\building\clientAgentCharacterMoveRequest.hpp" />
+    <ClInclude Include="src\packet\building\clientAgentCharacterSelectionActionRequest.hpp" />
+    <ClInclude Include="src\packet\building\clientAgentCharacterSelectionJoinRequest.hpp" />
+    <ClInclude Include="src\packet\building\clientAgentInventoryItemUseRequest.hpp" />
+    <ClInclude Include="src\packet\building\clientAgentInventoryOperationRequest.hpp" />
+    <ClInclude Include="src\packet\building\clientGatewayLoginIbuvAnswer.hpp" />
+    <ClInclude Include="src\packet\building\clientGatewayLoginRequest.hpp" />
+    <ClInclude Include="src\packet\building\serverAgentChatUpdate.hpp" />
+    <ClInclude Include="src\packet\enums\packetEnums.hpp" />
+    <ClInclude Include="src\packet\opcode.hpp" />
+    <ClInclude Include="src\packet\parsing\clientAgentActionCommandRequest.hpp" />
+    <ClInclude Include="src\packet\parsing\clientAgentChatRequest.hpp" />
+    <ClInclude Include="src\packet\parsing\commonParsing.hpp" />
+    <ClInclude Include="src\packet\parsing\packetParser.hpp" />
+    <ClInclude Include="src\packet\parsing\parsedPacket.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentActionCommandResponse.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentActionSelectResponse.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentBuffAdd.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentBuffRemove.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentCharacterData.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentEntityUpdateState.hpp" />
+    <ClInclude Include="src\packet\structures\packetInnerStructures.hpp" />
+    <ClInclude Include="src\pk2\characterData.hpp" />
+    <ClInclude Include="src\pk2\gameData.hpp" />
+    <ClInclude Include="src\pk2\itemData.hpp" />
+    <ClInclude Include="src\pk2\shopData.hpp" />
+    <ClInclude Include="src\pk2\skillData.hpp" />
+    <ClInclude Include="src\pk2\teleportData.hpp" />
+    <ClInclude Include="src\proxy.hpp" />
+    <ClInclude Include="src\session.hpp" />
+    <ClInclude Include="src\shared\silkroad_security.h" />
+    <ClInclude Include="src\shared\stream_utility.h" />
+    <ClInclude Include="src\silkroadConnection.hpp" />
+    <ClInclude Include="src\state\entity.hpp" />
+    <ClInclude Include="src\state\self.hpp" />
+    <ClInclude Include="src\storage\buybackQueue.hpp" />
+    <ClInclude Include="src\storage\item.hpp" />
+    <ClInclude Include="src\storage\itemList.hpp" />
+    <ClInclude Include="src\storage\storage.hpp" />
   </ItemGroup>
 </Project>
