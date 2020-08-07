@@ -5,6 +5,7 @@
 
 #include <functional>
 #include <iostream>
+#include <fstream>
 #include <map>
 
 namespace pk2 {
@@ -89,7 +90,7 @@ void parseDataFile(const std::string &data,
       }
     }
 }
-} // namespace
+} // namespace (anonymous)
 
 void GameData::parseCharacterData(Pk2ReaderModern &pk2Reader) {
 	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
@@ -147,7 +148,8 @@ void GameData::parseItemData(Pk2ReaderModern &pk2Reader) {
 
 void GameData::parseSkillData(Pk2ReaderModern &pk2Reader) {
 	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
-  const std::string kMasterSkilldataName = "skilldata.txt";
+  // Prefer the encrypted file, as the client uses this and not the unencrypted version (skilldata.txt)
+  const std::string kMasterSkilldataName = "skilldataenc.txt";
   const std::string kMasterSkilldataPath = kTextdataDirectory + kMasterSkilldataName;
   PK2Entry masterSkilldataEntry = pk2Reader.getEntry(kMasterSkilldataPath);
 
@@ -163,6 +165,8 @@ void GameData::parseSkillData(Pk2ReaderModern &pk2Reader) {
     auto skilldataPath = kTextdataDirectory + skilldataFilename;
     PK2Entry skilldataEntry = pk2Reader.getEntry(skilldataPath);
     auto skilldataData = pk2Reader.getEntryData(skilldataEntry);
+    // Decrypt this skill data
+    parsing::decryptSkillData(skilldataData);
     auto skilldataStr = parsing::fileDataToString(skilldataData);
     parseDataFile<ref::Skill>(skilldataStr, parsing::isValidSkilldataLine, parsing::parseSkilldataLine, std::bind(&SkillData::addSkill, &skillData_, std::placeholders::_1));
   }

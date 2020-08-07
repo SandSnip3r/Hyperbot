@@ -53,18 +53,23 @@ storage::Item* newItemByTypeData(const pk2::ref::Item &item) {
         storageItemPtr = new ItemStorage();
       }
     } else if (item.typeId2 == 3) {
+      bool itemCreated = false;
       // CGItemExpendable
       if (item.typeId3 == 11) {
         if (item.typeId4 == 1 || item.typeId4 == 2) {
           // MAGICSTONE, ATTRSTONE
           storageItemPtr = new ItemStone();
+          itemCreated = true;
         }
       } else if (item.typeId3 == 14 && item.typeId4 == 2) {
         // Magic pop
         storageItemPtr = new ItemMagicPop();
+        itemCreated = true;
       }
-      // Other expendable
-      storageItemPtr = new ItemExpendable();
+      if (!itemCreated) {
+        // Other expendable
+        storageItemPtr = new ItemExpendable();
+      }
     }
   }
 

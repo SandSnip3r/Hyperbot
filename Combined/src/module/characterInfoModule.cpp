@@ -549,7 +549,7 @@ void CharacterInfoModule::serverAgentCharacterDataReceived(const packet::parsing
   const auto &inventoryItemMap = packet.inventoryItemMap();
   initializeInventory(inventorySize, inventoryItemMap);
 
-  std::cout << "We are now #" << selfState_.globalId() << ", and we have " << selfState_.hp() << " hp and " << selfState_.mp() << " mp\n";
+  std::cout << "GID:" << selfState_.globalId() << ", and we have " << selfState_.hp() << " hp and " << selfState_.mp() << " mp\n";
   // eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
   // eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kSpawned));
