@@ -26,6 +26,12 @@ namespace pk2::parsing {
 // [return]       data as an std::string
 std::string fileDataToString(const std::vector<uint8_t> &data);
 
+
+// Decrypts skilldata_<>enc.txt files
+//
+// [param] data   File data to decrypt
+void decryptSkillData(std::vector<uint8_t> &data);
+
 // Validates if the line of skill data is valid
 //
 // [param] line   Line from PK2 file representing skill data

@@ -19,7 +19,7 @@ private:
 	std::string filePath;
 	std::ofstream logfile;
 	bool logToFile{true};
-	bool logToConsole{false};
+	bool logToConsole{true};
 	int64_t getMsSinceEpoch() const;
 	bool isPrintable(uint8_t data) const;
 	void logPacketToFile(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, Direction direction);
