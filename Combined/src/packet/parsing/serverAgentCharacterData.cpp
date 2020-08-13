@@ -46,12 +46,12 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
     }
     const pk2::ref::Item &itemRef = itemData.getItemById(refItemId);
 
-    storage::Item *parsedItem = storage::newItemByTypeData(itemRef);
-    if (parsedItem == nullptr) {
+    std::shared_ptr<storage::Item> parsedItem{storage::newItemByTypeData(itemRef)};
+    if (!parsedItem) {
       throw std::runtime_error("Unable to create an item object for item");
     }
 
-    parseItem(parsedItem, stream);
+    parseItem(parsedItem.get(), stream);
 
     inventoryItemMap_.insert(std::pair<uint8_t, std::shared_ptr<storage::Item>>(slotNum, parsedItem));
   }

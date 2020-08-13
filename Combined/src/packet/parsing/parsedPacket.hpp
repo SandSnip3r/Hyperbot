@@ -95,6 +95,8 @@ private:
 //=========================================================================================================================================================
 
 struct ItemMovement {
+  // TODO: Maybe move into Storage or something
+  static constexpr uint8_t kGoldSlot = 0xFE;
   packet::enums::ItemMovementType type;
   uint8_t srcSlot, destSlot;
   uint16_t quantity;
@@ -107,11 +109,13 @@ struct ItemMovement {
   std::vector<uint8_t> destSlots;
   std::vector<structures::RentInfo> rentInfos;
   uint8_t buybackStackSize;
+  std::shared_ptr<storage::Item> pickedItem;
 };
 
 class ParsedServerItemMove : public ParsedPacket {
 public:
-  ParsedServerItemMove(const PacketContainer &packet);
+  ParsedServerItemMove(const PacketContainer &packet, const pk2::ItemData &itemData);
+  ~ParsedServerItemMove();
   const std::vector<ItemMovement>& itemMovements() const;
 private:
   std::vector<ItemMovement> itemMovements_;

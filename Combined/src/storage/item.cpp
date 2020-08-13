@@ -31,26 +31,26 @@ ItemExpendable::ItemExpendable(ItemType type) : Item(type) {}
 ItemStone::ItemStone() : ItemExpendable(ItemType::kItemStone) {}
 ItemMagicPop::ItemMagicPop() : ItemExpendable(ItemType::kItemMagicPop) {}
 
-storage::Item* newItemByTypeData(const pk2::ref::Item &item) {
-  storage::Item *storageItemPtr = nullptr;
+std::shared_ptr<storage::Item> newItemByTypeData(const pk2::ref::Item &item) {
+  std::shared_ptr<storage::Item> storageItemPtr;
   if (item.typeId1 == 3) {
     if (item.typeId2 == 1) {
       // CGItemEquip
-      storageItemPtr = new ItemEquipment();
+      storageItemPtr.reset(new ItemEquipment());
     } else if (item.typeId2 == 2) {
       if (item.typeId3 == 1) {                                
         // CGItemCOSSummoner
         if (item.typeId4 == 2) {
-          storageItemPtr = new ItemCosAbilitySummoner();
+          storageItemPtr.reset(new ItemCosAbilitySummoner());
         } else {
-          storageItemPtr = new ItemCosGrowthSummoner();
+          storageItemPtr.reset(new ItemCosGrowthSummoner());
         }
       } else if (item.typeId3 == 2) {
         // CGItemMonsterCapsule (rogue mask)
-        storageItemPtr = new ItemMonsterCapsule();
+        storageItemPtr.reset(new ItemMonsterCapsule());
       } else if (item.typeId3 == 3) {
         // CGItemStorage
-        storageItemPtr = new ItemStorage();
+        storageItemPtr.reset(new ItemStorage());
       }
     } else if (item.typeId2 == 3) {
       bool itemCreated = false;
@@ -58,22 +58,22 @@ storage::Item* newItemByTypeData(const pk2::ref::Item &item) {
       if (item.typeId3 == 11) {
         if (item.typeId4 == 1 || item.typeId4 == 2) {
           // MAGICSTONE, ATTRSTONE
-          storageItemPtr = new ItemStone();
+          storageItemPtr.reset(new ItemStone());
           itemCreated = true;
         }
       } else if (item.typeId3 == 14 && item.typeId4 == 2) {
         // Magic pop
-        storageItemPtr = new ItemMagicPop();
+        storageItemPtr.reset(new ItemMagicPop());
         itemCreated = true;
       }
       if (!itemCreated) {
         // Other expendable
-        storageItemPtr = new ItemExpendable();
+        storageItemPtr.reset(new ItemExpendable());
       }
     }
   }
 
-  if (storageItemPtr != nullptr) {
+  if (storageItemPtr) {
     // Set base info
     storageItemPtr->refItemId = item.id;
     storageItemPtr->itemInfo = &item;
@@ -82,25 +82,26 @@ storage::Item* newItemByTypeData(const pk2::ref::Item &item) {
   return storageItemPtr;
 }
 
-Item* cloneItem(Item *item) {
+std::shared_ptr<storage::Item> cloneItem(const storage::Item *item) {
   switch (item->type) {
     case ItemType::kItemEquipment:
-      return new ItemEquipment(*dynamic_cast<ItemEquipment*>(item));
+      return std::shared_ptr<storage::Item>(new ItemEquipment(*dynamic_cast<const ItemEquipment*>(item)));
     case ItemType::kItemCosGrowthSummoner:
-      return new ItemCosGrowthSummoner(*dynamic_cast<ItemCosGrowthSummoner*>(item));
+      return std::shared_ptr<storage::Item>(new ItemCosGrowthSummoner(*dynamic_cast<const ItemCosGrowthSummoner*>(item)));
     case ItemType::kItemCosAbilitySummoner:
-      return new ItemCosAbilitySummoner(*dynamic_cast<ItemCosAbilitySummoner*>(item));
+      return std::shared_ptr<storage::Item>(new ItemCosAbilitySummoner(*dynamic_cast<const ItemCosAbilitySummoner*>(item)));
     case ItemType::kItemMonsterCapsule:
-      return new ItemMonsterCapsule(*dynamic_cast<ItemMonsterCapsule*>(item));
+      return std::shared_ptr<storage::Item>(new ItemMonsterCapsule(*dynamic_cast<const ItemMonsterCapsule*>(item)));
     case ItemType::kItemStorage:
-      return new ItemStorage(*dynamic_cast<ItemStorage*>(item));
+      return std::shared_ptr<storage::Item>(new ItemStorage(*dynamic_cast<const ItemStorage*>(item)));
     case ItemType::kItemExpendable:
-      return new ItemExpendable(*dynamic_cast<ItemExpendable*>(item));
+      return std::shared_ptr<storage::Item>(new ItemExpendable(*dynamic_cast<const ItemExpendable*>(item)));
     case ItemType::kItemStone:
-      return new ItemStone(*dynamic_cast<ItemStone*>(item));
+      return std::shared_ptr<storage::Item>(new ItemStone(*dynamic_cast<const ItemStone*>(item)));
     case ItemType::kItemMagicPop:
-      return new ItemMagicPop(*dynamic_cast<ItemMagicPop*>(item));
+      return std::shared_ptr<storage::Item>(new ItemMagicPop(*dynamic_cast<const ItemMagicPop*>(item)));
   }
+  return {};
 }
 
 namespace {
