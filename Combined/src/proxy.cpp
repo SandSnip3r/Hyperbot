@@ -5,6 +5,16 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
       broker_(broker),
       acceptor(ioService_, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
       timer(boost::make_shared<boost::asio::deadline_timer>(ioService_)) {
+  // Get the port that the OS gave us to listen on
+  if (port == 0) {
+    // Using an OS-assigned port
+    boost::asio::ip::tcp::endpoint localEndpoint = acceptor.local_endpoint();
+    ourListeningPort_ = localEndpoint.port();
+  } else {
+    // Using the given port
+    ourListeningPort_ = port;
+  }
+
   if (divisionInfo_.divisions.empty()) {
     throw std::runtime_error("Proxy given DivisionInfo without any divisions");
   }
@@ -14,7 +24,7 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
   gatewayAddress_ = divisionInfo_.divisions[0].gatewayIpAddresses[0];
 
   broker_.setInjectionFunction(std::bind(&Proxy::inject, this, std::placeholders::_1, std::placeholders::_2));
-  std::cout << "Proxy constructed, listening on port " << port << '\n';
+  std::cout << "Proxy constructed, listening on port " << ourListeningPort_ << '\n';
   //Start accepting connections
   PostAccept();
 
@@ -65,6 +75,10 @@ void Proxy::start() {
       std::cout << "[" << __FUNCTION__ << "]" << "[" << __LINE__ << "] " << e.what() << std::endl;
     }
   }
+}
+
+uint16_t Proxy::getOurListeningPort() const {
+  return ourListeningPort_;
 }
 
 // Stops all networking objects
@@ -203,7 +217,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             w.Write<uint32_t>(LoginID);							//Login ID
             w.Write<uint16_t>(9);								//Length of 127.0.0.1
             w.Write_Ascii("127.0.0.1");							//IP
-            w.Write<uint16_t>(Config::BindPort);				//Port
+            w.Write<uint16_t>(ourListeningPort_);				//Port
 
             //Inject the packet
             clientConnection.Inject(p.opcode, w);

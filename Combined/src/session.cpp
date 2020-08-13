@@ -15,6 +15,7 @@ Session::~Session() {
 }
 
 void Session::start() {
-  loader_.startClient(); //throws if problem starting client & injecting
+  auto port = proxy_.getOurListeningPort();
+  loader_.startClient(port); //throws if problem starting client & injecting
   proxy_.start(); //throws if socket issues, blocks
 }

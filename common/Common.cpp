@@ -9,6 +9,30 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
+std::experimental::filesystem::v1::path getAppDataPath() {
+  std::experimental::filesystem::v1::path path;
+  PWSTR pathTmp;
+
+  /* Attempt to get user's AppData folder
+  *
+  * Microsoft Docs:
+  * https://docs.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetknownfolderpath
+  * https://docs.microsoft.com/en-us/windows/win32/shell/knownfolderid
+  */
+  auto getFolderPathResult = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &pathTmp);
+
+  // Error check
+  if (getFolderPathResult != S_OK) {
+    CoTaskMemFree(pathTmp);
+    return {};
+  }
+  // Convert the Windows path type to a C++ path
+  path = pathTmp;
+  // Free memory
+  CoTaskMemFree(pathTmp);
+  return path;
+}
+
 namespace edxLabs
 {
 	// Injects a DLL into a process at the specified address

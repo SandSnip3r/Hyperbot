@@ -12,6 +12,7 @@
 #include "../common/pk2/divisionInfo.hpp"
 #include "../common/pk2/parsing/parsing.hpp"
 #include "../Common/detours/detours.h"
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -35,8 +36,6 @@ bool bHookInput = true;
 bool bPatchKsroImgCode = false;
 std::string defaultLoginIP = "127.0.0.1";
 std::string defaultWorldIP = "127.0.0.1";
-std::string defaultLoginPort = "15780";
-std::string defaultWorldPort = "15780";
 
 //-------------------------------------------------------------------------
 
@@ -357,18 +356,33 @@ namespace nsEnglishCaptcha
 //-------------------------------------------------------------------------
 
 bool modifyRoutelist() {
+  uint16_t botPort;
+  {
+    const auto appDataDirectoryPath = getAppDataPath();
+    const std::string kAppDataSubdirName = "Hyperbot"; // TODO: Move to a shared location since this is used in the DLL too
+    auto portInfoFilePath = appDataDirectoryPath / kAppDataSubdirName / (std::to_string(GetCurrentProcessId())+".txt");
+    {
+      std::ifstream portInfoFile(portInfoFilePath);
+      if (!portInfoFile) {
+        MessageBox(0, "Unable to determine port of bot!", "Fatal Error", MB_ICONERROR);
+        // TODO: Kill process or something similar?
+        return true;
+      }
+      portInfoFile >> botPort;
+    }
+    bool fileSuccessfullyRemoved = std::experimental::filesystem::v1::remove(portInfoFilePath);
+  }
 	do
 	{
 		//Redirecting login
 		using namespace nsDetourConnect;
 
 		std::string ipaddr = defaultLoginIP;
-		int portaddr = atoi(defaultLoginPort.c_str());
 
 		if (bDoRedirectLogin == false)
 			break;
 
-		printf("Redirecting To: %s:%i\n", ipaddr.c_str(), portaddr);
+		printf("Redirecting To: %s:%i\n", ipaddr.c_str(), botPort);
 
 		std::vector<std::string> tokens = TokenizeString(ipaddr, " .");
 
@@ -384,7 +398,7 @@ bool modifyRoutelist() {
 			routeArray[x].dstB = atoi(tokens[1].c_str());
 			routeArray[x].dstC = atoi(tokens[2].c_str());
 			routeArray[x].dstD = atoi(tokens[3].c_str());
-			routeArray[x].dstPort = portaddr;
+			routeArray[x].dstPort = botPort;
 		}
 
 		WSADATA wsaData = { 0 };
@@ -424,12 +438,11 @@ bool modifyRoutelist() {
 		//Redirecting world
 		using namespace nsDetourConnect;
 		std::string ipaddr = defaultWorldIP;
-		int portaddr = atoi(defaultWorldPort.c_str());
 
 		if (bDoRedirectWorld == false)
 			break;
 
-		printf("Redirecting To: %s:%i\n", ipaddr.c_str(), portaddr);
+		printf("Redirecting To: %s:%i\n", ipaddr.c_str(), botPort);
 
 		std::vector<std::string> tokens = TokenizeString(ipaddr, " .");
 
@@ -443,7 +456,7 @@ bool modifyRoutelist() {
 		routeArray[routeListCount].dstB = atoi(tokens[1].c_str());
 		routeArray[routeListCount].dstC = atoi(tokens[2].c_str());
 		routeArray[routeListCount].dstD = atoi(tokens[3].c_str());
-		routeArray[routeListCount].dstPort = portaddr;
+		routeArray[routeListCount].dstPort = botPort;
 
 		routeArray[routeListCount].srcA = 255;
 		routeArray[routeListCount].srcB = 255;

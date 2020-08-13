@@ -1,8 +1,10 @@
 #pragma once
 
-#include <windows.h>
+#include <filesystem>
 #include <string>
 #include <vector>
+
+std::experimental::filesystem::v1::path getAppDataPath();
 
 namespace edxLabs
 {
