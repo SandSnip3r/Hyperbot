@@ -132,7 +132,7 @@ public:
   std::vector<ItemMagicParam> magicParams;
 };
 
-storage::Item* newItemByTypeData(const pk2::ref::Item &item);
+std::shared_ptr<storage::Item> newItemByTypeData(const pk2::ref::Item &item);
 std::shared_ptr<storage::Item> cloneItem(const storage::Item *item);
 
 void print(const Item *item);

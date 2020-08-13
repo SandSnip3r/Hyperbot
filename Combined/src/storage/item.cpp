@@ -31,26 +31,26 @@ ItemExpendable::ItemExpendable(ItemType type) : Item(type) {}
 ItemStone::ItemStone() : ItemExpendable(ItemType::kItemStone) {}
 ItemMagicPop::ItemMagicPop() : ItemExpendable(ItemType::kItemMagicPop) {}
 
-storage::Item* newItemByTypeData(const pk2::ref::Item &item) {
-  storage::Item *storageItemPtr = nullptr;
+std::shared_ptr<storage::Item> newItemByTypeData(const pk2::ref::Item &item) {
+  std::shared_ptr<storage::Item> storageItemPtr;
   if (item.typeId1 == 3) {
     if (item.typeId2 == 1) {
       // CGItemEquip
-      storageItemPtr = new ItemEquipment();
+      storageItemPtr.reset(new ItemEquipment());
     } else if (item.typeId2 == 2) {
       if (item.typeId3 == 1) {                                
         // CGItemCOSSummoner
         if (item.typeId4 == 2) {
-          storageItemPtr = new ItemCosAbilitySummoner();
+          storageItemPtr.reset(new ItemCosAbilitySummoner());
         } else {
-          storageItemPtr = new ItemCosGrowthSummoner();
+          storageItemPtr.reset(new ItemCosGrowthSummoner());
         }
       } else if (item.typeId3 == 2) {
         // CGItemMonsterCapsule (rogue mask)
-        storageItemPtr = new ItemMonsterCapsule();
+        storageItemPtr.reset(new ItemMonsterCapsule());
       } else if (item.typeId3 == 3) {
         // CGItemStorage
-        storageItemPtr = new ItemStorage();
+        storageItemPtr.reset(new ItemStorage());
       }
     } else if (item.typeId2 == 3) {
       bool itemCreated = false;
@@ -58,22 +58,22 @@ storage::Item* newItemByTypeData(const pk2::ref::Item &item) {
       if (item.typeId3 == 11) {
         if (item.typeId4 == 1 || item.typeId4 == 2) {
           // MAGICSTONE, ATTRSTONE
-          storageItemPtr = new ItemStone();
+          storageItemPtr.reset(new ItemStone());
           itemCreated = true;
         }
       } else if (item.typeId3 == 14 && item.typeId4 == 2) {
         // Magic pop
-        storageItemPtr = new ItemMagicPop();
+        storageItemPtr.reset(new ItemMagicPop());
         itemCreated = true;
       }
       if (!itemCreated) {
         // Other expendable
-        storageItemPtr = new ItemExpendable();
+        storageItemPtr.reset(new ItemExpendable());
       }
     }
   }
 
-  if (storageItemPtr != nullptr) {
+  if (storageItemPtr) {
     // Set base info
     storageItemPtr->refItemId = item.id;
     storageItemPtr->itemInfo = &item;

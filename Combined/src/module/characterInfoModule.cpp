@@ -462,11 +462,56 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
         printItem(slotNum, buybackQueue_.getItem(slotNum), gameData_);
       }
       std::cout << '\n';
-    } else if (movement.type == packet::enums::ItemMovementType::kGoldPick) {
-      gold_ += movement.goldPickAmount;
-      std::cout << "Picked " << movement.goldPickAmount << " gold\n";
-      printGold();
-      std::cout << '\n';
+    } else if (movement.type == packet::enums::ItemMovementType::kPickItem) {
+      if (movement.destSlot == packet::parsing::ItemMovement::kGoldSlot) {
+        std::cout << "Picked " << movement.goldPickAmount << " gold\n";
+        gold_ += movement.goldPickAmount;
+        printGold();
+        std::cout << '\n';
+      } else {
+        if (movement.pickedItem != nullptr) {
+          std::cout << "Picked an item\n";
+          if (inventory_.hasItem(movement.destSlot)) {
+            std::cout << "Already something here\n";
+            auto existingItem = inventory_.getItem(movement.destSlot);
+            bool addedToStack = false;
+            if (existingItem->refItemId == movement.pickedItem->refItemId) {
+              // Both items have the same refId
+              storage::ItemExpendable *newExpendableItem, *existingExpendableItem;
+              if ((newExpendableItem = dynamic_cast<storage::ItemExpendable*>(movement.pickedItem.get())) &&
+                  (existingExpendableItem = dynamic_cast<storage::ItemExpendable*>(existingItem))) {
+                // Both items are expendables, so we can stack them
+                // Picked item's quantity (if an expendable) is the total in the given slot
+                existingExpendableItem->quantity = newExpendableItem->quantity;
+                addedToStack = true;
+              }
+            }
+            if (addedToStack) {
+              std::cout << "Item added to stack\n";
+            } else {
+              std::cout << "Error: Item couldnt be added to the stack\n";
+            }
+          } else {
+            std::cout << "New item!\n";
+            inventory_.addItem(movement.destSlot, movement.pickedItem);
+            std::cout << "Item " << (inventory_.hasItem(movement.destSlot) ? "was " : "was not ") << "successfully added\n";
+          }
+          printItem(movement.destSlot, movement.pickedItem.get(), gameData_);
+        } else {
+          std::cout << "Error: Picked an item, but the pickedItem is a nullptr\n";
+        }
+      }
+      // This would be a good time to try to use a pill, potion, return scroll, etc.
+    } else if (movement.type == packet::enums::ItemMovementType::kDropItem) {
+      std::cout << "Dropped an item\n";
+      if (inventory_.hasItem(movement.srcSlot)) {
+        std::cout << "Dropping ";
+        auto itemPtr = inventory_.withdrawItem(movement.srcSlot);
+        printItem(movement.srcSlot, itemPtr.get(), gameData_);
+        std::cout << "Item " << (!inventory_.hasItem(movement.srcSlot) ? "was " : "was not ") << "successfully dropped\n";
+      } else {
+        std::cout << "Error: But there's no item in this inventory slot\n";
+      }
     } else if (movement.type == packet::enums::ItemMovementType::kGoldDrop) {
       gold_ -= movement.goldAmount;
       std::cout << "Dropped " << movement.goldAmount << " gold\n";

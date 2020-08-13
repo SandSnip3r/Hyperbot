@@ -155,7 +155,7 @@ const std::vector<ItemMovement>& ParsedServerItemMove::itemMovements() const {
   return itemMovements_;
 }
 
-ParsedServerItemMove::ParsedServerItemMove(const PacketContainer &packet) : ParsedPacket(packet) {
+ParsedServerItemMove::ParsedServerItemMove(const PacketContainer &packet, const pk2::ItemData &itemData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   uint8_t result_ = stream.Read<uint8_t>();
   if (result_ == 1) {
@@ -198,9 +198,39 @@ ParsedServerItemMove::ParsedServerItemMove(const PacketContainer &packet) : Pars
                primaryItemMovement.type == packet::enums::ItemMovementType::kGoldGuildStorageDeposit ||
                primaryItemMovement.type == packet::enums::ItemMovementType::kGoldGuildStorageWithdraw) {
       primaryItemMovement.goldAmount = stream.Read<uint64_t>();
-    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kGoldPick) {
-      primaryItemMovement.destSlot = stream.Read<uint8_t>(); // Gold slot, always 0xFE
-      primaryItemMovement.goldPickAmount = stream.Read<uint32_t>();
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickItem) {
+      primaryItemMovement.destSlot = stream.Read<uint8_t>();
+      if (primaryItemMovement.destSlot == ItemMovement::kGoldSlot) {
+        // Picked gold
+        primaryItemMovement.goldPickAmount = stream.Read<uint32_t>();
+      } else {
+        // Picked an item
+        // ====================================================================================
+        // Begin copied region from ParsedServerAgentCharacterData::ParsedServerAgentCharacterData
+        // TODO: Move into a shared function
+        // ====================================================================================
+        auto rentInfo = parseRentInfo(stream);
+
+        uint32_t refItemId = stream.Read<uint32_t>();
+        if (!itemData.haveItemWithId(refItemId)) {
+          throw std::runtime_error("Unable to parse packet. Encountered an item (id:"+std::to_string(refItemId)+") for which we have no data on.");
+        }
+        const pk2::ref::Item &itemRef = itemData.getItemById(refItemId);
+
+        std::shared_ptr<storage::Item> parsedItem{storage::newItemByTypeData(itemRef)};
+        std::cout << "Parsed item (pick) addr: " << parsedItem.get() << '\n';
+        if (!parsedItem) {
+          throw std::runtime_error("Unable to create an item object for item");
+        }
+
+        parseItem(parsedItem.get(), stream);
+        primaryItemMovement.pickedItem = parsedItem;
+        // ====================================================================================
+        // End copied region
+        // ====================================================================================
+      }
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kDropItem) {
+      primaryItemMovement.srcSlot = stream.Read<uint8_t>();
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kWithinCos) {
       primaryItemMovement.globalId = stream.Read<uint32_t>(); // COS global ID
       primaryItemMovement.srcSlot = stream.Read<uint8_t>();
@@ -257,6 +287,8 @@ ParsedServerItemMove::ParsedServerItemMove(const PacketContainer &packet) : Pars
 }
 // TODO: Try to inject a buy packet that buys more than 1 stack of a stackable item
 //  Invesitage what it does to the kBuyFromNPC data
+
+ParsedServerItemMove::~ParsedServerItemMove() {}
 
 //=========================================================================================================================================================
 

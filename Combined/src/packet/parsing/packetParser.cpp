@@ -55,7 +55,7 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
     case Opcode::SERVER_STATS:
       return std::make_unique<ParsedServerAgentCharacterUpdateStats>(packet);
     case Opcode::SERVER_ITEM_MOVEMENT:
-      return std::make_unique<ParsedServerItemMove>(packet);
+      return std::make_unique<ParsedServerItemMove>(packet, gameData_.itemData());
     case Opcode::kClientAgentInventoryOperationRequest:
       return std::make_unique<ParsedClientItemMove>(packet);
     case Opcode::kServerAgentActionCommandResponse:
