@@ -9,7 +9,7 @@
 namespace packet::parsing {
 
 enum ActionState : uint8_t {
-  kBegin = 1,
+  kQueued = 1,
   kEnd = 2,
   kError = 3
 };

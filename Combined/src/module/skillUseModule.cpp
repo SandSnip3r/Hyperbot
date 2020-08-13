@@ -50,7 +50,6 @@ SkillUseModule::SkillUseModule(state::Entity &entityState,
   eventBroker_.subscribeToEvent(event::EventCode::kMpPercentChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kSkillCastAboutToEnd, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kKnockbackStatusEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kTemp, eventHandleFunction);
 }
 
 bool SkillUseModule::handlePacket(const PacketContainer &packet) {
@@ -138,14 +137,12 @@ void SkillUseModule::handleEvent(const event::Event *event) {
     case event::EventCode::kSpawned: {
       // TODO: Move into some global data?
       std::cout << "EVENT: Spawned\n";
-      activeBuffs_.clear();
       break;
     }
     case event::EventCode::kSkillCooldownEnded: {
       const event::SkillCooldownEnded *skillCooldownEndedEvent = dynamic_cast<const event::SkillCooldownEnded*>(event);
       if (skillCooldownEndedEvent != nullptr) {
-        printf("[%13lld] ", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
-        std::cout << "  Skill " << skillCooldownEndedEvent->skillRefId << " cooldown ended\n";
+        LOG(Info) << "  Skill " << skillCooldownEndedEvent->skillRefId << " cooldown ended\n";
         skillsOnCooldown_.erase(skillCooldownEndedEvent->skillRefId);
       }
       break;
@@ -168,23 +165,9 @@ void SkillUseModule::handleEvent(const event::Event *event) {
       }
       break;
     }
-    case event::EventCode::kHpPercentChanged: {
-      float ratio =  selfState_.hp() / static_cast<float>(selfState_.maxHp().value_or(1));
-      if (healthIsSafe_) {
-        if (ratio < kHpSafetyThreshold_) {
-          std::cout << "EVENT: Hp fell below threshold, "<< ratio*100 << "%, " << selfState_.hp() << '/' << selfState_.maxHp().value_or(0) << '\n';
-          healthIsSafe_ = false;
-        }
-      } else {
-        if (ratio >= kHpSafetyThreshold_) {
-          std::cout << "EVENT: Hp is above threshold, "<< ratio*100 << "%, " << selfState_.hp() << '/' << selfState_.maxHp().value_or(0) << '\n';
-          healthIsSafe_ = true;
-        }
-      }
+    case event::EventCode::kHpPercentChanged:
       break;
-    }
     case event::EventCode::kMpPercentChanged:
-      // std::cout << "EVENT: Mp Changed, " << selfState_.mp() << '/' << selfState_.maxMp().value_or(0) << '\n';
       break;
     case event::EventCode::kStatesChanged: {
       if (!(stateBitmask_ & static_cast<uint32_t>(packet::enums::AbnormalStateFlag::kStunned)) &&
@@ -193,7 +176,6 @@ void SkillUseModule::handleEvent(const event::Event *event) {
         std::cout << "Just got stunned!\n";
         // Looks like B074-End comes for us
         // Dont expect B071 for current skill(s)        
-        waitingForCast_ = false;
       } else if ((stateBitmask_ & static_cast<uint32_t>(packet::enums::AbnormalStateFlag::kStunned)) &&
                  !(selfState_.stateBitmask() & static_cast<uint32_t>(packet::enums::AbnormalStateFlag::kStunned))) {
         // Stun just expired
@@ -203,19 +185,13 @@ void SkillUseModule::handleEvent(const event::Event *event) {
       break;
     }
     case event::EventCode::kSkillCastAboutToEnd: {
-      LOG(Info) << "  Waiting for skill cast completed\n";
-      waitingForCast_ = false;
       break;
     }
     case event::EventCode::kKnockbackStatusEnded: {
       printf("[%13lld] ", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
       std::cout << "  Knockback status ended\n";
-      knockedBackCooldownEventId_.reset();
       break;
     }
-    case event::EventCode::kTemp:
-      tryCastNext();
-      break;
   }
 }
 
@@ -226,10 +202,7 @@ void SkillUseModule::serverAgentChatUpdateReceived(packet::parsing::ServerAgentC
   if (std::regex_match(str, regexMatch, startPvpRegex)) {
     if (packet.chatType() == packet::enums::ChatType::kAll ||
         packet.chatType() == packet::enums::ChatType::kAllGm) {
-      std::cout << "Going to try to attack " << packet.senderGlobalId() << '\n';
-      targetGId_ = packet.senderGlobalId();
-      attackMode_ = true;
-      attack();
+      // No action on "go" yet
     } else if (packet.chatType() == packet::enums::ChatType::kPm) {
       // TODO: Search character entities by name, get Global ID
     }
@@ -237,31 +210,32 @@ void SkillUseModule::serverAgentChatUpdateReceived(packet::parsing::ServerAgentC
 }
 
 bool SkillUseModule::skillInQueue(uint32_t skillId) {
-  if (activeAction_) {
-    if (activeAction_->actionType == packet::enums::ActionType::kCast) {
-      if (activeAction_->refSkillId == skillId) {
-        return true;
-      }
-    }
-  }
-  if (queuedAction_) {
-    if (queuedAction_->actionType == packet::enums::ActionType::kCast) {
-      if (queuedAction_->refSkillId == skillId) {
-        return true;
-      }
-    }
-  }
-  if (queuedInstantSkills_.find(skillId) != queuedInstantSkills_.end()) {
-    return true;
-  }
-  return std::find_if(pendingActionQueue_.begin(), pendingActionQueue_.end(), [&skillId](const packet::structures::ActionCommand &action){
-    if (action.actionType == packet::enums::ActionType::kCast) {
-      if (action.refSkillId == skillId) {
-        return true;
-      }
-    }
-    return false;
-  }) != pendingActionQueue_.end();
+  // if (activeAction_) {
+  //   if (activeAction_->actionType == packet::enums::ActionType::kCast) {
+  //     if (activeAction_->refSkillId == skillId) {
+  //       return true;
+  //     }
+  //   }
+  // }
+  // if (queuedAction_) {
+  //   if (queuedAction_->actionType == packet::enums::ActionType::kCast) {
+  //     if (queuedAction_->refSkillId == skillId) {
+  //       return true;
+  //     }
+  //   }
+  // }
+  // if (queuedInstantSkills_.find(skillId) != queuedInstantSkills_.end()) {
+  //   return true;
+  // }
+  // return std::find_if(pendingActionQueue_.begin(), pendingActionQueue_.end(), [&skillId](const packet::structures::ActionCommand &action){
+  //   if (action.actionType == packet::enums::ActionType::kCast) {
+  //     if (action.refSkillId == skillId) {
+  //       return true;
+  //     }
+  //   }
+  //   return false;
+  // }) != pendingActionQueue_.end();
+  return false;
 }
 
 packet::structures::ActionCommand createActionCommandCastSkill(uint32_t skillId, std::optional<int32_t> targetGlobalId = {}) {
@@ -299,70 +273,74 @@ void SkillUseModule::attack() {
     std::cout << "Cant attack because recently knocked back\n";
     return;
   }
-  std::cout << "-> Attack!\n";
-  bool nonInstantSkillAlreadyInQueue = (std::find_if(pendingActionQueue_.begin(), pendingActionQueue_.end(), [this](const packet::structures::ActionCommand &action) {
-    if (action.actionType == packet::enums::ActionType::kCast) {
-      return !gameData_.skillData().getSkillById(action.refSkillId).isInstant();
-    }
-    return false;
-  }) != pendingActionQueue_.end());
-  // Assume skill in prioritized order
-  for (const auto &skillId : skillsToUse_) {
-    const auto &skill = gameData_.skillData().getSkillById(skillId);
-    if ((skill.basicActivity == 1) ||
-        (!waitingForCast_ &&
-         !queuedAction_ &&
-         !nonInstantSkillAlreadyInQueue)) {
-      // TODO: This should better check pendingActions, like pickup, dispel, etc.
-      // Skill can be cast while another is being cast or
-      //  not currently casting another and
-      //  have space in the skill queue and
-      //  there is no non-instant skill in the pending queue   
-      if (skillsOnCooldown_.find(skillId) == skillsOnCooldown_.end()) {
-        // Skill not on cooldown
-        if (!skillInQueue(skillId)) {
-          // Skill not already in queue
-          // If its not a buff that we already have active
-          if (std::find_if(activeBuffs_.begin(), activeBuffs_.end(), [&skillId](const Buff &buff){
-            return buff.skillRefId == skillId;
-          }) == activeBuffs_.end()) {
-            if (skill.actionOverlap == 1) {
-              // Skill is a chinese imbue
-              // TODO: Expand for rogue poison imbue
-              if (activeAction_) {
-                const auto activeSkill = gameData_.skillData().getSkillById(activeAction_->refSkillId);
-                if (activeAction_->actionType == packet::enums::ActionType::kAttack ||
-                    activeSkill.targetRequired && (activeSkill.targetGroupEnemy_M || activeSkill.targetGroupEnemy_P)) {
-                  // Using an attack skill
-                  packet::structures::ActionCommand action;
-                  broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::cast(skillId), PacketContainer::Direction::kClientToServer);
-                  action = createActionCommandCastSkill(skillId);
-                  printf("[%13lld] ", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
-                  std::cout << ">>>>> Using an attack skill, imbuing " << skillId << "\n";
-                  requestedAction(action);
-                  break;
-                }
-              }
-            } else {
-              packet::structures::ActionCommand action;
-              if (skill.targetRequired && (skill.targetGroupEnemy_M || skill.targetGroupEnemy_P)) {
-                // An attack skill
-                broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::cast(skillId, targetGId_), PacketContainer::Direction::kClientToServer);
-                action = createActionCommandCastSkill(skillId, targetGId_);
-              } else {
-                broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::cast(skillId), PacketContainer::Direction::kClientToServer);
-                action = createActionCommandCastSkill(skillId);
-              }
-              printf("[%13lld] ", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
-              std::cout << ">>>>> Trying to use skill " << skillId << "\n";
-              requestedAction(action);
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
+  return;
+  //====================================================================================================================================
+  //====================================================================================================================================
+  //====================================================================================================================================
+  // std::cout << "-> Attack!\n";
+  // bool nonInstantSkillAlreadyInQueue = (std::find_if(pendingActionQueue_.begin(), pendingActionQueue_.end(), [this](const packet::structures::ActionCommand &action) {
+  //   if (action.actionType == packet::enums::ActionType::kCast) {
+  //     return !gameData_.skillData().getSkillById(action.refSkillId).isInstant();
+  //   }
+  //   return false;
+  // }) != pendingActionQueue_.end());
+  // // Assume skill in prioritized order
+  // for (const auto &skillId : skillsToUse_) {
+  //   const auto &skill = gameData_.skillData().getSkillById(skillId);
+  //   if ((skill.basicActivity == 1) ||
+  //       (!waitingForCast_ &&
+  //        !queuedAction_ &&
+  //        !nonInstantSkillAlreadyInQueue)) {
+  //     // TODO: This should better check pendingActions, like pickup, dispel, etc.
+  //     // Skill can be cast while another is being cast or
+  //     //  not currently casting another and
+  //     //  have space in the skill queue and
+  //     //  there is no non-instant skill in the pending queue   
+  //     if (skillsOnCooldown_.find(skillId) == skillsOnCooldown_.end()) {
+  //       // Skill not on cooldown
+  //       if (!skillInQueue(skillId)) {
+  //         // Skill not already in queue
+  //         // If its not a buff that we already have active
+  //         if (std::find_if(activeBuffs_.begin(), activeBuffs_.end(), [&skillId](const Buff &buff){
+  //           return buff.skillRefId == skillId;
+  //         }) == activeBuffs_.end()) {
+  //           if (skill.actionOverlap == 1) {
+  //             // Skill is a chinese imbue
+  //             // TODO: Expand for rogue poison imbue
+  //             if (activeAction_) {
+  //               const auto activeSkill = gameData_.skillData().getSkillById(activeAction_->refSkillId);
+  //               if (activeAction_->actionType == packet::enums::ActionType::kAttack ||
+  //                   activeSkill.targetRequired && (activeSkill.targetGroupEnemy_M || activeSkill.targetGroupEnemy_P)) {
+  //                 // Using an attack skill
+  //                 packet::structures::ActionCommand action;
+  //                 broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::cast(skillId), PacketContainer::Direction::kClientToServer);
+  //                 action = createActionCommandCastSkill(skillId);
+  //                 printf("[%13lld] ", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
+  //                 std::cout << ">>>>> Using an attack skill, imbuing " << skillId << "\n";
+  //                 requestedAction(action);
+  //                 break;
+  //               }
+  //             }
+  //           } else {
+  //             packet::structures::ActionCommand action;
+  //             if (skill.targetRequired && (skill.targetGroupEnemy_M || skill.targetGroupEnemy_P)) {
+  //               // An attack skill
+  //               broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::cast(skillId, targetGId_), PacketContainer::Direction::kClientToServer);
+  //               action = createActionCommandCastSkill(skillId, targetGId_);
+  //             } else {
+  //               broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::cast(skillId), PacketContainer::Direction::kClientToServer);
+  //               action = createActionCommandCastSkill(skillId);
+  //             }
+  //             printf("[%13lld] ", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
+  //             std::cout << ">>>>> Trying to use skill " << skillId << "\n";
+  //             requestedAction(action);
+  //             break;
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
 }
 
 void SkillUseModule::targetDied() {
@@ -370,10 +348,7 @@ void SkillUseModule::targetDied() {
   std::cout << "Target died\n";
   std::cout << "  Deactivating attack mode\n";
   attackMode_ = false;
-  std::cout << "  Clearing next skill queue\n";
-  queuedAction_.reset();
-  pendingActionQueue_.clear();
-  printQueues();
+  // TODO: When attacking multiple targets, it might be possible to instantly attack the next, at this point
 }
 
 void SkillUseModule::died() {
@@ -381,39 +356,37 @@ void SkillUseModule::died() {
   std::cout << "  Deactivating attack mode\n";
   attackMode_ = false;
   std::cout << "  Clearing next skill queue\n";
-  activeAction_.reset();
-  queuedAction_.reset();
-  pendingActionQueue_.clear();
-  waitingForCast_ = false;
   knockedBackCooldownEventId_.reset();
-  printQueues();
 }
 
 void SkillUseModule::knockedBack() {
   std::cout << "We just got knocked back!\n";
-  activeAction_.reset();
-  queuedAction_.reset();
-  pendingActionQueue_.clear();
-  waitingForCast_ = false;
-  printQueues();
   knockedBackCooldownEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kKnockbackStatusEnded), std::chrono::milliseconds(kKnockbackStatusDurationMs));
 }
 
 void SkillUseModule::knockedDown() {
   std::cout << "We just got knocked down!\n";
-  activeAction_.reset();
-  queuedAction_.reset();
-  pendingActionQueue_.clear();
-  waitingForCast_ = false;
-  printQueues();
   // Seems knockdown doesnt have a formal delay
   // knockedBackCooldownEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kKnockbackStatusEnded), std::chrono::milliseconds(kKnockbackStatusDurationMs));
 }
 
+bool strEndsWith(std::string const &str, std::string const &endStr) {
+  if (str.length() >= endStr.length()) {
+    return (0 == str.compare (str.length() - endStr.length(), endStr.length(), endStr));
+  } else {
+    return false;
+  }
+}
+
 bool isCommonAttack(const pk2::ref::Skill &skill) {
-  // TODO: Improve
-  // Punch not included
-  return (skill.id == 70 || skill.id == 40 || skill.id == 2 || skill.id == 8421 || skill.id == 9354 || skill.id == 9355 || skill.id == 11162 || skill.id == 9944 || skill.id == 8419 || skill.id == 8420 || skill.id == 11526 || skill.id == 10625);
+  if (strEndsWith(skill.basicGroup, "_BASE")) {
+    // One of the weapon common attacks
+    return true;
+  } else if (skill.basicGroup == "SKILL_PUNCH") {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void print(const packet::structures::ActionCommand &action) {
@@ -444,161 +417,175 @@ void print(const packet::structures::ActionCommand &action) {
 // =====================================================[%5d] BEGIN=====================================================
 // =====================================================================================================================
 void SkillUseModule::serverAgentSkillBeginReceived(packet::parsing::ServerAgentSkillBegin &packet) {
-  auto saveCastAndPrint = [this](uint32_t castId, uint32_t refSkillId) {
-    this->castSkillMap_.emplace(castId, refSkillId);
-    LOG(Info) << "  Cast skill map [ ";
-    for (const auto castSkill : this->castSkillMap_) {
-      std::cout << '(' << castSkill.first << ',' << castSkill.second << "), ";
-    }
-    std::cout << "]\n";
-  };
-  if (packet.result() == 1) {
-    LOG(Info);
-    printf("[%5d] BEGIN %6d\n", packet.castId(), packet.refSkillId());
-    for (const auto &hitObject : packet.action().hitObjects) {
-      for (const auto &hit : hitObject.hits) {
-        if (hit.hitResult == packet::enums::HitResult::kKill &&
-            hitObject.objGlobalId == targetGId_) {
-          LOG(Info) << "  Target died " << (int)hit.damageFlag << ' ' << hit.damage << "\n";
-          // Our target died
-          targetDied();
-        } else if ((hitObject.objGlobalId == selfState_.globalId()) && hit.hitResult == packet::enums::HitResult::kKnockback) {
-          knockedBack();
-        } else if ((hitObject.objGlobalId == selfState_.globalId()) && hit.hitResult == packet::enums::HitResult::kKnockdown) {
-          // knockedDown();
-        }
+  if (packet.result() != 1) {
+    return;
+  }
+
+  LOG(Info);
+  printf("[%5d] BEGIN %6d\n", packet.castId(), packet.refSkillId());
+  for (const auto &hitObject : packet.action().hitObjects) {
+    for (const auto &hit : hitObject.hits) {
+      if (targetGId_ &&
+          hit.hitResult == packet::enums::HitResult::kKill &&
+          hitObject.objGlobalId == *targetGId_) {
+        LOG(Info) << "  Target died " << (int)hit.damageFlag << ' ' << hit.damage << "\n";
+        // Our target died
+        targetDied();
+      } else if ((hitObject.objGlobalId == selfState_.globalId()) && hit.hitResult == packet::enums::HitResult::kKnockback) {
+        // We were knocked back
+        knockedBack();
+      } else if ((hitObject.objGlobalId == selfState_.globalId()) && hit.hitResult == packet::enums::HitResult::kKnockdown) {
+        // We were knocked down
+        // knockedDown();
       }
     }
-    if (packet.casterGlobalId() == selfState_.globalId()) {
-      const auto skill = gameData_.skillData().getSkillById(packet.refSkillId());
-      if (isCommonAttack(skill)) {
-        // Common attack
-        LOG(Info) << "  Common attack. Target " << packet.targetGlobalId() << '\n';
-        if (queuedCommonAttack_) {
-          if (activeAction_) {
-            if (activeAction_->commandType == packet::enums::CommandType::kExecute &&
-                activeAction_->actionType == packet::enums::ActionType::kAttack) {
-              LOG(Warning) << "  Already common attacking but have a queued common attack?\n";
-            } else {
-              LOG(Warning) << "  Have an active action (";
-              print(*activeAction_);
-              std::cout << ") while transitioning to common attacking\n";
-              // Shouldnt be possible. AC END should have cleared this
-            }
-          } else {
-            LOG(Info) << "  Begin common attacking\n";
-          }
-          if (queuedCommonAttack_->targetGlobalId != packet.targetGlobalId()) {
-            LOG(Error) << "  Queued common attack and our current common attack have different targets\n";
-          }
-          activeAction_ = queuedCommonAttack_;
-          queuedCommonAttack_.reset();
-        } else if (activeAction_->commandType != packet::enums::CommandType::kExecute ||
-                   activeAction_->actionType != packet::enums::ActionType::kAttack) {
-          LOG(Info) << "  Common attack, but no queued common attack and not currently common attacking\n";
-          // Create common attack as active action
-          activeAction_.emplace();
-          activeAction_->commandType = packet::enums::CommandType::kExecute;
-          activeAction_->actionType = packet::enums::ActionType::kAttack;
-          activeAction_->targetType = packet::enums::TargetType::kEntity;
-          activeAction_->targetGlobalId = packet.targetGlobalId();
-          LOG(Info) << "  Creating active action as common attack\n";
-        }
-        if (queuedAction_) {
-          LOG(Info) << "  Destroying queued action\n";
-          queuedAction_.reset();
-        }
+  }
+  
+  // Only care about skills cast by us
+  if (packet.casterGlobalId() != selfState_.globalId()) {
+    return;
+  }
+
+  const auto skill = gameData_.skillData().getSkillById(packet.refSkillId());
+  if (isCommonAttack(skill)) {
+    // Common attack
+    LOG(Info) << "  Common attack. Target " << packet.targetGlobalId() << '\n';
+    // if (queuedCommonAttack_) {
+    //   if (activeAction_) {
+    //     if (activeAction_->commandType == packet::enums::CommandType::kExecute &&
+    //         activeAction_->actionType == packet::enums::ActionType::kAttack) {
+    //       LOG(Warning) << "  Already common attacking but have a queued common attack?\n";
+    //     } else {
+    //       LOG(Warning) << "  Have an active action (";
+    //       print(*activeAction_);
+    //       std::cout << ") while transitioning to common attacking\n";
+    //       // Shouldnt be possible. AC END should have cleared this
+    //     }
+    //   } else {
+    //     LOG(Info) << "  Begin common attacking\n";
+    //   }
+    //   if (queuedCommonAttack_->targetGlobalId != packet.targetGlobalId()) {
+    //     LOG(Error) << "  Queued common attack and our current common attack have different targets\n";
+    //   }
+    //   activeAction_ = queuedCommonAttack_;
+    //   queuedCommonAttack_.reset();
+    // } else if (activeAction_->commandType != packet::enums::CommandType::kExecute ||
+    //             activeAction_->actionType != packet::enums::ActionType::kAttack) {
+    //   LOG(Info) << "  Common attack, but no queued common attack and not currently common attacking\n";
+    //   // Create common attack as active action
+    //   activeAction_.emplace();
+    //   activeAction_->commandType = packet::enums::CommandType::kExecute;
+    //   activeAction_->actionType = packet::enums::ActionType::kAttack;
+    //   activeAction_->targetType = packet::enums::TargetType::kEntity;
+    //   activeAction_->targetGlobalId = packet.targetGlobalId();
+    //   LOG(Info) << "  Creating active action as common attack\n";
+    // }
+    // if (queuedAction_) {
+    //   LOG(Info) << "  Destroying queued action\n";
+    //   queuedAction_.reset();
+    // }
+  } else {
+    // Set skill cooldown
+    bool found = false;
+    while (!queuedActions_.empty()) {
+      LOG(Info) << "  Popping queued action\n";
+      auto action = queuedActions_.front();
+      queuedActions_.pop_front();
+      if (action.commandType == packet::enums::CommandType::kExecute &&
+          action.actionType == packet::enums::ActionType::kCast &&
+          action.refSkillId == packet.refSkillId()) {
+        // This skill that just began refers to the queued skill
+        found = true;
+        break;
       } else {
-        // Set skill cooldown
-        if (!activeChainSkillId_) {
-          LOG(Info) << "  Setting skill " << packet.refSkillId() << " cooldown as " << skill.actionReuseDelay << "ms\n";
-          eventBroker_.publishDelayedEvent(std::make_unique<event::SkillCooldownEnded>(packet.refSkillId()), std::chrono::milliseconds(skill.actionReuseDelay));
-          skillsOnCooldown_.emplace(packet.refSkillId());
-        } else {
-          LOG(Info) << "  Executing step 2 or greater of a chain skill. Not going to set a cooldown\n";
-        }
-        const auto castDuration = skill.actionPreparingTime + skill.actionCastingTime;
-        const auto totalDuration = gameData_.skillData().getSkillTotalDuration(packet.refSkillId());
-        LOG(Info) << "  Cast time " << castDuration << ", total time " << totalDuration << '\n';
-
-        if (activeChainSkillId_) {
-          // Executing step 2 or greater of a chain skill
-          if (activeAction_ &&
-              activeAction_->commandType == packet::enums::CommandType::kExecute &&
-              activeAction_->actionType == packet::enums::ActionType::kCast) {
-            // const auto chainStartSkill = gameData_.skillData().getSkillById(activeAction_->refSkillId);
-            LOG(Info) << "  Started chain with skill " << activeAction_->refSkillId << '\n';
-            // TODO: Verify that we can get to this Id from the beginning skill
-          } else {
-            LOG(Error) << "  Executing step of chain, but the active action doesnt match\n";
-          }
-          const auto activeChainSkill = gameData_.skillData().getSkillById(*activeChainSkillId_);
-          if (activeChainSkill.basicChainCode != packet.refSkillId()) {
-            LOG(Error) << "  Active chain skill says " << activeChainSkill.basicChainCode << " is next, but we're on " << packet.refSkillId() << '\n';
-          }
-          LOG(Info) << "  Next step of chain " << *activeChainSkillId_ << "->" << packet.refSkillId() << '\n';
-          activeChainSkillId_ = packet.refSkillId();
-        } else {
-          // Normal skill, or the first in a chain
-          if (skill.isInstant()) {
-            // This skill can be cast while another is being cast
-            LOG(Info) << "  Instant skill, saving cast " << packet.castId() << ", " << packet.refSkillId() << '\n';
-            saveCastAndPrint(packet.castId(), packet.refSkillId());
-            // Remove from queued instant skill list
-            queuedInstantSkills_.erase(packet.refSkillId());
-          } else {
-            if (queuedAction_) {
-              if (queuedAction_->actionType == packet::enums::ActionType::kCast) {
-                if (queuedAction_->refSkillId == packet.refSkillId()) {
-                  if (skill.isPseudoinstant()) {
-                    // TODO: I dont know if this is better here or in AC END
-                    LOG(Info) << "  Pseudoinstant skill, saving cast " << packet.castId() << "," << packet.refSkillId() << " and discarding queued skill\n";
-                    queuedAction_.reset();
-                  } else {
-                    if (activeAction_) {
-                      LOG(Warning) << "  Overwriting active action\n";
-                    }
-                    LOG(Info) << "  Moving queued action to active\n";
-                    activeAction_ = queuedAction_;
-                    queuedAction_.reset();
-                    if (skill.basicChainCode != 0) {
-                      // Another skill will follow in the chain, set this part as the active chain skill
-                      activeChainSkillId_ = packet.refSkillId();
-                      LOG(Info) << "  First skill of the chain\n";
-                    }
-                  }
-                } else {
-                  LOG(Error) << "  Executing a skill that is not our queued action\n";
-                }
-              } else {
-                LOG(Error) << "  Not a cast action queued?\n";
-              }
-            } else {
-              LOG(Error) << "  No queued action\n";
-              // // Build active action
-              // activeAction_.emplace();
-              // activeAction_->commandType = packet::enums::
-            }
-            if (skill.isTele()) {
-              // Teleport skill. Lightning dash, wizard tele, or warrior sprint
-              // Dont expect an end
-              LOG(Info) << "  Teleport skill, no END coming\n";
-            } else {
-              // TODO: Some skills dont have an end. Which ones?!?
-              //  Sometimes the beginning of the chain doesnt have an end
-              LOG(Info) << "  End coming for this skill\n";
-              saveCastAndPrint(packet.castId(), packet.refSkillId());
-            }
-          }
-        }
-
-        if (queuedCommonAttack_) {
-          LOG(Info) << "  Have a queued common attack. Destroying it\n";
-          queuedCommonAttack_.reset();
-        }
+        LOG(Info) << "    Oh! This queued action isnt the action that we're doing...\n";
       }
-      printQueues();
     }
+    if (!found) {
+      LOG(Warning) << "  A skill began which was not in our queued action list\n";
+    }
+    LOG(Info) << "  Setting skill " << packet.refSkillId() << " cooldown as " << skill.actionReuseDelay << "ms\n";
+    eventBroker_.publishDelayedEvent(std::make_unique<event::SkillCooldownEnded>(packet.refSkillId()), std::chrono::milliseconds(skill.actionReuseDelay));
+    skillsOnCooldown_.emplace(packet.refSkillId());
+    const auto castDuration = skill.actionPreparingTime + skill.actionCastingTime;
+    const auto totalDuration = gameData_.skillData().getSkillTotalDuration(packet.refSkillId());
+    LOG(Info) << "  Cast time " << castDuration << ", total time " << totalDuration << '\n';
+    printQueues();
+    // if (activeChainSkillId_) {
+    //   // Executing step 2 or greater of a chain skill
+    //   if (activeAction_ &&
+    //       activeAction_->commandType == packet::enums::CommandType::kExecute &&
+    //       activeAction_->actionType == packet::enums::ActionType::kCast) {
+    //     // const auto chainStartSkill = gameData_.skillData().getSkillById(activeAction_->refSkillId);
+    //     LOG(Info) << "  Started chain with skill " << activeAction_->refSkillId << '\n';
+    //     // TODO: Verify that we can get to this Id from the beginning skill
+    //   } else {
+    //     LOG(Error) << "  Executing step of chain, but the active action doesnt match\n";
+    //   }
+    //   const auto activeChainSkill = gameData_.skillData().getSkillById(*activeChainSkillId_);
+    //   if (activeChainSkill.basicChainCode != packet.refSkillId()) {
+    //     LOG(Error) << "  Active chain skill says " << activeChainSkill.basicChainCode << " is next, but we're on " << packet.refSkillId() << '\n';
+    //   }
+    //   LOG(Info) << "  Next step of chain " << *activeChainSkillId_ << "->" << packet.refSkillId() << '\n';
+    //   activeChainSkillId_ = packet.refSkillId();
+    // } else {
+    //   // Normal skill, or the first in a chain
+    //   if (skill.isInstant()) {
+    //     // This skill can be cast while another is being cast
+    //     LOG(Info) << "  Instant skill, saving cast " << packet.castId() << ", " << packet.refSkillId() << '\n';
+    //     saveCastAndPrint(packet.castId(), packet.refSkillId());
+    //     // Remove from queued instant skill list
+    //     queuedInstantSkills_.erase(packet.refSkillId());
+    //   } else {
+    //     if (queuedAction_) {
+    //       if (queuedAction_->actionType == packet::enums::ActionType::kCast) {
+    //         if (queuedAction_->refSkillId == packet.refSkillId()) {
+    //           if (skill.isPseudoinstant()) {
+    //             // TODO: I dont know if this is better here or in AC END
+    //             LOG(Info) << "  Pseudoinstant skill, saving cast " << packet.castId() << "," << packet.refSkillId() << " and discarding queued skill\n";
+    //             queuedAction_.reset();
+    //           } else {
+    //             if (activeAction_) {
+    //               LOG(Warning) << "  Overwriting active action\n";
+    //             }
+    //             LOG(Info) << "  Moving queued action to active\n";
+    //             activeAction_ = queuedAction_;
+    //             queuedAction_.reset();
+    //             if (skill.basicChainCode != 0) {
+    //               // Another skill will follow in the chain, set this part as the active chain skill
+    //               activeChainSkillId_ = packet.refSkillId();
+    //               LOG(Info) << "  First skill of the chain\n";
+    //             }
+    //           }
+    //         } else {
+    //           LOG(Error) << "  Executing a skill that is not our queued action\n";
+    //         }
+    //       } else {
+    //         LOG(Error) << "  Not a cast action queued?\n";
+    //       }
+    //     } else {
+    //       LOG(Error) << "  No queued action\n";
+    //       // // Build active action
+    //       // activeAction_.emplace();
+    //       // activeAction_->commandType = packet::enums::
+    //     }
+    //     if (skill.isTele()) {
+    //       // Teleport skill. Lightning dash, wizard tele, or warrior sprint
+    //       // Dont expect an end
+    //       LOG(Info) << "  Teleport skill, no END coming\n";
+    //     } else {
+    //       // TODO: Some skills dont have an end. Which ones?!?
+    //       //  Sometimes the beginning of the chain doesnt have an end
+    //       LOG(Info) << "  End coming for this skill\n";
+    //       saveCastAndPrint(packet.castId(), packet.refSkillId());
+    //     }
+    //   }
+    // }
+
+    // if (queuedCommonAttack_) {
+    //   LOG(Info) << "  Have a queued common attack. Destroying it\n";
+    //   queuedCommonAttack_.reset();
+    // }
   }
 }
 
@@ -606,116 +593,87 @@ void SkillUseModule::serverAgentSkillBeginReceived(packet::parsing::ServerAgentS
 // =====================================================[%5d]   END=====================================================
 // =====================================================================================================================
 void SkillUseModule::serverAgentSkillEndReceived(packet::parsing::ServerAgentSkillEnd &packet) {
-  if (packet.result() == 1) {
-    LOG(Info);
-    printf("[%5d]   END\n", packet.castId());
-    for (const auto &hitObject : packet.action().hitObjects) {
-      for (const auto &hit : hitObject.hits) {
-        if (hit.hitResult == packet::enums::HitResult::kKill &&
-            hitObject.objGlobalId == targetGId_) {
-          std::cout << "Target died " << (int)hit.damageFlag << ' ' << hit.damage << "\n";
-          // Our target died
-          targetDied();
-        } else if ((hitObject.objGlobalId == selfState_.globalId()) && hit.hitResult == packet::enums::HitResult::kKnockdown) {
-          // knockedDown();
-        } else if ((hitObject.objGlobalId == selfState_.globalId()) && hit.hitResult == packet::enums::HitResult::kKnockback) {
-          knockedBack();
-        }
+  if (packet.result() != 1) {
+    return;
+  }
+
+  LOG(Info);
+  printf("[%5d]   END\n", packet.castId());
+  for (const auto &hitObject : packet.action().hitObjects) {
+    for (const auto &hit : hitObject.hits) {
+      if (targetGId_ &&
+          hit.hitResult == packet::enums::HitResult::kKill &&
+          hitObject.objGlobalId == *targetGId_) {
+        std::cout << "Target died " << (int)hit.damageFlag << ' ' << hit.damage << "\n";
+        // Our target died
+        targetDied();
+      } else if ((hitObject.objGlobalId == selfState_.globalId()) && hit.hitResult == packet::enums::HitResult::kKnockdown) {
+        // knockedDown();
+      } else if ((hitObject.objGlobalId == selfState_.globalId()) && hit.hitResult == packet::enums::HitResult::kKnockback) {
+        knockedBack();
       }
-    }
-    auto it = castSkillMap_.find(packet.castId());
-    if (it == castSkillMap_.end()) {
-      // Cast by someone else or we forgot to track it
-    } else {
-      if (activeChainSkillId_) {
-        // Actively executing a chain (this was actually the end of the first part, as subsequent parts dont have an END)
-        LOG(Info) << "  End of first skill in chain. Not doing anything\n";
-      } else {
-        const auto &skill = gameData_.skillData().getSkillById(it->second);
-        if (skill.isInstant()) {
-          LOG(Info) << "  Instant skill, not touching active action\n";
-        } else if (skill.isPseudoinstant()) {
-          LOG(Info) << "  Pseudoinstant skill, not touching active action\n";
-        } else {
-          // if (skill.actionAutoAttackType == 1 &&
-          //     !queuedAction_ &&
-          //     !queuedCommonAttack_) {
-          //   LOG(Info) << "  Skill ended. No queued skill. To be followed by common attack. Queueing\n";
-          //   // Copy active action to get same caster, target, etc.
-          //   if (activeAction_) {
-          //     queuedCommonAttack_ = activeAction_;
-          //   } else {
-          //     LOG(Error) << "  Skill ended but no active action!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
-          //   }
-          //   queuedCommonAttack_->actionType = packet::enums::ActionType::kAttack;
-          // }
-          LOG(Info) << "  Unsetting active action\n";
-          activeAction_.reset();
-        }
-      }
-      castSkillMap_.erase(it);
-      LOG(Info) << "  Cast skill map [ ";
-      for (const auto castSkill : castSkillMap_) {
-        std::cout << '(' << castSkill.first << ',' << castSkill.second << "), ";
-      }
-      std::cout << "]\n";
-  //     const auto skill = gameData_.skillData().getSkillById(skillId);
-  //     if (skill.basicChainCode != 0) {
-  //       // Another skill comes in the chain
-  //       if (!activeServerSkill_) {
-  //         std::cout << "!!!!!!!!!!!!!!!Doing a chain skill, but had no active skill!!!!!!!!!!!!!!!\n";
-  //       }
-  //       activeServerSkill_ = skill.basicChainCode;
-  //     }
-      printQueues();
     }
   }
+  
+  // auto it = castSkillMap_.find(packet.castId());
+  // if (it == castSkillMap_.end()) {
+  //   // Cast by someone else or we forgot to track it
+  // } else {
+  //   if (activeChainSkillId_) {
+  //     // Actively executing a chain (this was actually the end of the first part, as subsequent parts dont have an END)
+  //     LOG(Info) << "  End of first skill in chain. Not doing anything\n";
+  //   } else {
+  //     const auto &skill = gameData_.skillData().getSkillById(it->second);
+  //     if (skill.isInstant()) {
+  //       LOG(Info) << "  Instant skill, not touching active action\n";
+  //     } else if (skill.isPseudoinstant()) {
+  //       LOG(Info) << "  Pseudoinstant skill, not touching active action\n";
+  //     } else {
+  //       // if (skill.actionAutoAttackType == 1 &&
+  //       //     !queuedAction_ &&
+  //       //     !queuedCommonAttack_) {
+  //       //   LOG(Info) << "  Skill ended. No queued skill. To be followed by common attack. Queueing\n";
+  //       //   // Copy active action to get same caster, target, etc.
+  //       //   if (activeAction_) {
+  //       //     queuedCommonAttack_ = activeAction_;
+  //       //   } else {
+  //       //     LOG(Error) << "  Skill ended but no active action!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+  //       //   }
+  //       //   queuedCommonAttack_->actionType = packet::enums::ActionType::kAttack;
+  //       // }
+  //       LOG(Info) << "  Unsetting active action\n";
+  //       activeAction_.reset();
+  //     }
+  //   }
+  //   castSkillMap_.erase(it);
+  //   LOG(Info) << "  Cast skill map [ ";
+  //   for (const auto castSkill : castSkillMap_) {
+  //     std::cout << '(' << castSkill.first << ',' << castSkill.second << "), ";
+  //   }
+  //   std::cout << "]\n";
+  //   const auto skill = gameData_.skillData().getSkillById(skillId);
+  //   if (skill.basicChainCode != 0) {
+  //     // Another skill comes in the chain
+  //     if (!activeServerSkill_) {
+  //       std::cout << "!!!!!!!!!!!!!!!Doing a chain skill, but had no active skill!!!!!!!!!!!!!!!\n";
+  //     }
+  //     activeServerSkill_ = skill.basicChainCode;
+  //   }
+  //   printQueues();
+  // }
 }
 
 void SkillUseModule::printBuffs() {
-  std::cout << "Buffs:\n";
+  LOG(Info) << "  Buffs: [\n";
   for (const auto &buff : activeBuffs_) {
-    printf(" %6d %6d %s\n",buff.skillRefId, buff.token, gameData_.skillData().getSkillById(buff.skillRefId).basicCode.c_str());
+    LOG(Info);
+    printf("    %6d %6d %s\n",buff.skillRefId, buff.token, gameData_.skillData().getSkillById(buff.skillRefId).basicCode.c_str());
   }
-}
-
-void SkillUseModule::printQueues() {
-  LOG(Info) << "  -->Queues<--\n";
-  LOG(Info) << "      Pending: [";
-  for (const auto &action : pendingActionQueue_) {
-    print(action);
-    std::cout << ',';
-  }
-  std::cout << "]\n";
-  LOG(Info) << "      Queued common attack: [";
-  if (queuedCommonAttack_) {
-    print(*queuedCommonAttack_);
-  }
-  std::cout << "]\n";
-  LOG(Info) << "      Instant: [";
-  for (const auto &skillId : queuedInstantSkills_) {
-    std::cout << skillId << ',';
-  }
-  std::cout << "]\n";
-  LOG(Info) << "      Queued: [";
-  if (queuedAction_) {
-    print(*queuedAction_);
-  }
-  std::cout << "]\n";
-  LOG(Info) << "      Active: [";
-  if (activeAction_) {
-    print(*activeAction_);
-  }
-  std::cout << "]\n";
-  LOG(Info) << "      Active chain: [";
-  if (activeChainSkillId_) {
-    std::cout << *activeChainSkillId_;
-  }
-  std::cout << "]\n";
+  LOG(Info) << "  ]\n";
 }
 
 void SkillUseModule::requestedAction(const packet::structures::ActionCommand &actionCommand) {
-  pendingActionQueue_.emplace_back(actionCommand);
+  // pendingActionQueue_.emplace_back(actionCommand);
 }
 
 void SkillUseModule::clientAgentActionCommandRequestReceived(packet::parsing::ClientAgentActionCommandRequest &packet) {
@@ -725,11 +683,11 @@ void SkillUseModule::clientAgentActionCommandRequestReceived(packet::parsing::Cl
   if (packet.commandType() == packet::enums::CommandType::kExecute) {
     if (packet.actionType() == packet::enums::ActionType::kCast) {
       if (packet.targetType() == packet::enums::TargetType::kEntity) {
-        LOG(Info) << "  Cast " << packet.refSkillId() << " on " << packet.targetGlobalId() << "\n";
+        LOG(Info) << "  Cast " << packet.refSkillId() << " on " << packet.targetGlobalId() << ", queueing\n";
       } else {
-        LOG(Info) << "  Cast " << packet.refSkillId() << "\n";
+        LOG(Info) << "  Cast " << packet.refSkillId() << ", queueing\n";
       }
-      requestedAction(packet.actionCommand());
+      actionsRequestedToBeQueued_.emplace_back(packet.actionCommand());
       printQueues();
     } else if (packet.actionType() == packet::enums::ActionType::kDispel) {
       LOG(Info) << "  Dispel " << packet.refSkillId() << '\n';
@@ -737,8 +695,6 @@ void SkillUseModule::clientAgentActionCommandRequestReceived(packet::parsing::Cl
       LOG(Info) << "  Trace\n";
     } else if (packet.actionType() == packet::enums::ActionType::kAttack) {
       LOG(Info) << "  Common attack\n";
-      requestedAction(packet.actionCommand());
-      printQueues();
     } else if (packet.actionType() == packet::enums::ActionType::kPickup) {
       LOG(Info) << "  Pickup\n";
     }
@@ -749,8 +705,7 @@ void SkillUseModule::clientAgentActionCommandRequestReceived(packet::parsing::Cl
 
 void SkillUseModule::serverAgentBuffAddReceived(packet::parsing::ServerAgentBuffAdd &packet) {
   if (packet.globalId() == selfState_.globalId()) {
-    printf("[%13lld] ", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
-    std::cout << "Buff " << packet.skillRefId() << " added to us. Active buff token: " << packet.activeBuffToken() << '\n';
+    LOG(Info) << "  Buff " << packet.skillRefId() << " added to us. Active buff token: " << packet.activeBuffToken() << '\n';
     if (packet.activeBuffToken() != 0) {
       // TODO: Better understand token == 0
       activeBuffs_.emplace_back(packet.skillRefId(), packet.activeBuffToken());
@@ -759,13 +714,11 @@ void SkillUseModule::serverAgentBuffAddReceived(packet::parsing::ServerAgentBuff
   // } else {
   //   std::cout << "Buff " << packet.skillRefId() << " added to " << packet.globalId() << ". Active buff token: " << packet.activeBuffToken() << '\n';
   }
-  const auto skill = gameData_.skillData().getSkillById(packet.skillRefId());
 }
 
 void SkillUseModule::serverAgentBuffRemoveReceived(packet::parsing::ServerAgentBuffRemove &packet) {
   const auto &tokens = packet.tokens();
-  printf("[%13lld] ", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
-  std::cout << "Buffs with tokens [ ";
+  LOG(Info) << "  Buffs with tokens [ ";
   for (auto i : packet.tokens()) {
     std::cout << i << ", ";
   }
@@ -796,61 +749,53 @@ void SkillUseModule::serverAgentEntityUpdateStateReceived(packet::parsing::Serve
   }
 }
 
-void SkillUseModule::tryCastNext() {
-  // if (!tryCastSkills_.empty()) {
-  //   auto skillId = tryCastSkills_.front();
-  //   tryCastSkills_.pop_front();
-  //   printf("[%13lld] ", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
-  //   std::cout << "Trying to cast " << skillId << '\n';
-  //   broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::cast(skillId), PacketContainer::Direction::kClientToServer);
-  //   requestedAction(skillId);
-  //   eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kTemp), std::chrono::milliseconds(15));
-  // }
-}
-
-void SkillUseModule::activeActionStarted() {
-  if (activeAction_) {
-    if (activeAction_->actionType == packet::enums::ActionType::kCast) {
-      // Cant get here with an instant skill
-      // const auto &skill = gameData_.skillData().getSkillById(activeAction_->refSkillId);
-      // eventBroker_.publishDelayedEvent(std::make_unique<event::SkillCooldownEnded>(activeAction_->refSkillId), std::chrono::milliseconds(skill.actionReuseDelay));
-      // skillsOnCooldown_.emplace(activeAction_->refSkillId);
-      // const auto totalDuration = gameData_.skillData().getSkillTotalDuration(activeAction_->refSkillId);
-      // constexpr int kMsBefore = 150;
-      // eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kSkillCastAboutToEnd), std::chrono::milliseconds(std::max(totalDuration-kMsBefore, 0)));
-      // waitingForCast_ = true;
+std::ostream& operator<<(std::ostream &stream, const packet::structures::ActionCommand &action) {
+  using namespace packet::enums;
+  stream << '{';
+  if (action.commandType == CommandType::kExecute) {
+    if (action.actionType == ActionType::kAttack) {
+      stream << "Attack," << action.targetGlobalId;
+    } else if (action.actionType == ActionType::kPickup) {
+      stream << "Pickup";
+    } else if (action.actionType == ActionType::kTrace) {
+      stream << "Trace";
+    } else if (action.actionType == ActionType::kDispel) {
+      stream << "Dispel " << action.refSkillId;
+    } else if (action.actionType == ActionType::kCast) {
+      stream << "Cast " << action.refSkillId;
+      if (action.targetType == packet::enums::TargetType::kEntity) {
+        stream << ',' << action.targetGlobalId;
+      }
     }
+  } else {
+    stream << "Cancel";
   }
+  stream << '}';
+  return stream;
 }
 
-/*
-queue success
-if (is skill or dispel) {
-  put into queue
-} else {
-  // common attack, pick, trace
-  put into active
+void SkillUseModule::printQueues() const {
+  LOG(Info) << "    QUEUES:\n";
+  LOG(Info) << "     - Actions Requested To Queue: [";
+  for (const auto &action : actionsRequestedToBeQueued_) {
+    std::cout << action << ',';
+  }
+  std::cout << "]\n";
+  LOG(Info) << "     - Actions Queued: [";
+  for (const auto &action : queuedActions_) {
+    std::cout << action << ',';
+  }
+  std::cout << "]\n";
 }
-
-skill begin
-if (is skill in queue) {
-  move into active
-}
-
-skill end
-if (is skill in active) {
-  remove from active
-}
-*/
 
 void SkillUseModule::serverAgentActionCommandResponseReceived(packet::parsing::ServerAgentActionCommandResponse &packet) {
   constexpr int kMsBefore = 350;
   // TODO: Subscribe to all skills used so we can track all cooldowns
-  if (packet.actionState() == packet::parsing::ActionState::kBegin) {
+  if (packet.actionState() == packet::parsing::ActionState::kQueued) {
     // =====================================================================================================================
     // ======================================================AC QUEUE=======================================================
     // =====================================================================================================================
-    LOG(Info) << "<<<<< AC QUEUE, repeat: " << packet.repeatAction() << ", queue size:" << pendingActionQueue_.size() << '\n';
+    LOG(Info) << "<<<<< AC QUEUE, repeat: " << packet.repeatAction() << ", requestedToBeQueued size:" << actionsRequestedToBeQueued_.size() << '\n';
     // Cast
     //  Has Begin
     //  Has End, if isnt an instant skill
@@ -870,37 +815,41 @@ void SkillUseModule::serverAgentActionCommandResponseReceived(packet::parsing::S
     // Cancel
     //  Has no Begin
     //  Only receive End if no error
-    if (!pendingActionQueue_.empty()) {
-      const auto &action = pendingActionQueue_.front();
-      pendingActionQueue_.pop_front();
-      if (action.actionType == packet::enums::ActionType::kCast) {
+
+    if (!actionsRequestedToBeQueued_.empty()) {
+      const auto &actionRequestedToBeQueued = actionsRequestedToBeQueued_.front();
+      actionsRequestedToBeQueued_.pop_front();
+      if (actionRequestedToBeQueued.actionType == packet::enums::ActionType::kCast) {
         // Only dealing with skill casting now
-        const auto &skill = gameData_.skillData().getSkillById(action.refSkillId);
-        if (skill.isInstant()) {
-          // Instant skill successfully "queued". It should be cast shortly
-          LOG(Info) << "  Instant skill\n";
-          // Track the skill use so that we dont spam it while waiting for the cast
-          queuedInstantSkills_.emplace(action.refSkillId);
-        } else {
-          // Non instant skill queued
-          if (queuedAction_) {
-            LOG(Info) << "  Overwriting queued action\n";
-          } else {
-            LOG(Info) << "  Queueing action\n";
-          }
-          queuedAction_ = action;
-        }
-      } else if (action.actionType == packet::enums::ActionType::kAttack) {
-        LOG(Info) << "  Queueing common attack\n";
-        if (queuedCommonAttack_) {
-          LOG(Info) << "  Already have a queued common attack, overwriting\n";
-        }
-        queuedCommonAttack_ = action;
+        LOG(Info) << "  Moving action into queued actions\n";
+        queuedActions_.push_back(actionRequestedToBeQueued);
+        // const auto &skill = gameData_.skillData().getSkillById(action.refSkillId);
+        
+    //     if (skill.isInstant()) {
+    //       // Instant skill successfully "queued". It should be cast shortly
+    //       LOG(Info) << "  Instant skill\n";
+    //       // Track the skill use so that we dont spam it while waiting for the cast
+    //       queuedInstantSkills_.emplace(action.refSkillId);
+    //     } else {
+    //       // Non instant skill queued
+    //       if (queuedAction_) {
+    //         LOG(Info) << "  Overwriting queued action\n";
+    //       } else {
+    //         LOG(Info) << "  Queueing action\n";
+    //       }
+    //       queuedAction_ = action;
+    //     }
+    //   } else if (action.actionType == packet::enums::ActionType::kAttack) {
+    //     LOG(Info) << "  Queueing common attack\n";
+    //     if (queuedCommonAttack_) {
+    //       LOG(Info) << "  Already have a queued common attack, overwriting\n";
+    //     }
+    //     queuedCommonAttack_ = action;
       } else {
-        LOG(Warning) << "  Queueing an action that isnt a cast or common attack\n";
+        LOG(Warning) << "  Queueing an action that isnt a cast\n";
       }
     } else {
-      LOG(Warning) << "  Queueing, but no pending cast or common attack\n";
+      LOG(Warning) << "  Queueing, but no pending cast\n";
     }
     printQueues();
   } else if (packet.actionState() == packet::parsing::ActionState::kEnd) {
@@ -909,45 +858,45 @@ void SkillUseModule::serverAgentActionCommandResponseReceived(packet::parsing::S
     // =====================================================================================================================
     // Done using skill
     LOG(Info) << "<<<<< AC   END, repeat: " << (packet.repeatAction() ? "true" : "false") << '\n';
-    if (activeAction_ &&
-        activeAction_->commandType == packet::enums::CommandType::kExecute &&
-        activeAction_->actionType == packet::enums::ActionType::kAttack) {
-      LOG(Info) << "  Was common attacking. Nevermore\n";
-      activeAction_.reset();
-    } else if (activeAction_ &&
-               activeAction_->commandType == packet::enums::CommandType::kExecute &&
-               activeAction_->actionType == packet::enums::ActionType::kCast &&
-               gameData_.skillData().getSkillById(activeAction_->refSkillId).isTele()) {
-      // Teleport skill ended
-      LOG(Info) << "  Teleport skill ended. Clearing active action\n";
-      activeAction_.reset();
-    } else if (activeAction_ &&
-               activeAction_->commandType == packet::enums::CommandType::kExecute &&
-               activeAction_->actionType == packet::enums::ActionType::kCast &&
-               activeChainSkillId_) {
-      LOG(Info) << "  This ends a chain\n";
-      const auto skill = gameData_.skillData().getSkillById(activeAction_->refSkillId);
-      if (skill.actionAutoAttackType == 1 &&
-          !queuedAction_ &&
-          !queuedCommonAttack_) {
-        LOG(Info) << "  Chain ended. No queued skill. To be followed by common attack. Queueing\n";
-        // Copy active action to get same caster, target, etc.
-        queuedCommonAttack_ = activeAction_;
-        queuedCommonAttack_->actionType = packet::enums::ActionType::kAttack;
-        const int32_t kPrickSkillId = 9943;
-        LOG(Info) << "  Also, going to try to cast another skill, " << kPrickSkillId << "\n";
-        packet::structures::ActionCommand action;
-        broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kPrickSkillId, activeAction_->targetGlobalId), PacketContainer::Direction::kClientToServer);
-        action = createActionCommandCastSkill(kPrickSkillId);
-        requestedAction(action);
-      }
-      LOG(Info) << "  Unsetting active action and chain\n";
-      activeAction_.reset();
-      activeChainSkillId_.reset();
-    } else if (activeAction_) {
-      LOG(Warning) << "  Have an active action\n";
-    }
-    printQueues();
+    // if (activeAction_ &&
+    //     activeAction_->commandType == packet::enums::CommandType::kExecute &&
+    //     activeAction_->actionType == packet::enums::ActionType::kAttack) {
+    //   LOG(Info) << "  Was common attacking. Nevermore\n";
+    //   activeAction_.reset();
+    // } else if (activeAction_ &&
+    //            activeAction_->commandType == packet::enums::CommandType::kExecute &&
+    //            activeAction_->actionType == packet::enums::ActionType::kCast &&
+    //            gameData_.skillData().getSkillById(activeAction_->refSkillId).isTele()) {
+    //   // Teleport skill ended
+    //   LOG(Info) << "  Teleport skill ended. Clearing active action\n";
+    //   activeAction_.reset();
+    // } else if (activeAction_ &&
+    //            activeAction_->commandType == packet::enums::CommandType::kExecute &&
+    //            activeAction_->actionType == packet::enums::ActionType::kCast &&
+    //            activeChainSkillId_) {
+    //   LOG(Info) << "  This ends a chain\n";
+    //   const auto skill = gameData_.skillData().getSkillById(activeAction_->refSkillId);
+    //   if (skill.actionAutoAttackType == 1 &&
+    //       !queuedAction_ &&
+    //       !queuedCommonAttack_) {
+    //     LOG(Info) << "  Chain ended. No queued skill. To be followed by common attack. Queueing\n";
+    //     // Copy active action to get same caster, target, etc.
+    //     queuedCommonAttack_ = activeAction_;
+    //     queuedCommonAttack_->actionType = packet::enums::ActionType::kAttack;
+    //     const int32_t kPrickSkillId = 9943;
+    //     LOG(Info) << "  Also, going to try to cast another skill, " << kPrickSkillId << "\n";
+    //     packet::structures::ActionCommand action;
+    //     broker_.injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kPrickSkillId, activeAction_->targetGlobalId), PacketContainer::Direction::kClientToServer);
+    //     action = createActionCommandCastSkill(kPrickSkillId);
+    //     requestedAction(action);
+    //   }
+    //   LOG(Info) << "  Unsetting active action and chain\n";
+    //   activeAction_.reset();
+    //   activeChainSkillId_.reset();
+    // } else if (activeAction_) {
+    //   LOG(Warning) << "  Have an active action\n";
+    // }
+    // printQueues();
     // if (!pendingActionQueue_.empty() && pendingActionQueue_.front().commandType == packet::enums::CommandType::kCancel) {
     //   std::cout << "Pop the cancel action\n";
     //   pendingActionQueue_.pop_front();
@@ -992,18 +941,16 @@ void SkillUseModule::serverAgentActionCommandResponseReceived(packet::parsing::S
     // }
     // printQueues();
   } else if (packet.actionState() == packet::parsing::ActionState::kError) {
-    printf("[%13lld] ", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
+    LOG(Info);
     printf("<<<<< AC ERROR, %6d\n", packet.errorCode());
-    if (!pendingActionQueue_.empty()) {
-      std::cout << "  Popping ";
-      print(pendingActionQueue_.front());
-      std::cout << '\n';
-      pendingActionQueue_.pop_front();
+    if (!actionsRequestedToBeQueued_.empty()) {
+      LOG(Info) << "  Popping " << actionsRequestedToBeQueued_.front() << '\n';
+      actionsRequestedToBeQueued_.pop_front();
     } else {
-      std::cout << "  Cant pop\n";
+      LOG(Error) << "  No action corresponding to this error!!\n";
     }
     if (packet.errorCode() != 16388) {
-      std::cout << "WHOA WHOA WHOA WHOA WHOA WHOA, new error code!!!! " << packet.errorCode() << '\n';
+      LOG(Info) << "  WHOA WHOA WHOA WHOA WHOA WHOA, new error code!!!! " << packet.errorCode() << '\n';
     }
   }
 }
@@ -1050,9 +997,7 @@ void SkillUseModule::pickupEntity(state::Entity::EntityId entityId) {
 
 bool SkillUseModule::clientAgentChatRequestReceived(packet::parsing::ClientAgentChatRequest &packet) {
   std::regex selectGidRegex(R"delim((commonattack|trace|pickup|select) ([0-9]+))delim");
-  std::regex startAttackingRegex(R"delim(attack ([0-9]+))delim");
-  std::regex stopAttackingRegex(R"delim(pause)delim");
-  std::regex castTestRegex(R"delim(try)delim");
+  std::regex dropRegex(R"delim(drop)delim");
   std::smatch regexMatch;
   if (std::regex_match(packet.message(), regexMatch, selectGidRegex)) {
     const std::string operation = regexMatch[1].str();
@@ -1067,27 +1012,7 @@ bool SkillUseModule::clientAgentChatRequestReceived(packet::parsing::ClientAgent
       pickupEntity(entityId);
     }
     return false;
-  } else if (std::regex_match(packet.message(), regexMatch, startAttackingRegex)) {
-    std::cout << "=================================\n";
-    std::cout << "======Chat. Starting attack======\n";
-    std::cout << "=================================\n";
-    targetGId_ = stol(regexMatch[1].str());
-    attackMode_ = true;
-    attack();
-    return false;
-  } else if (std::regex_match(packet.message(), regexMatch, stopAttackingRegex)) {
-    std::cout << "================================\n";
-    std::cout << "======Chat. Pausing attack======\n";
-    std::cout << "================================\n";
-    attackMode_ = false;
-    return false;
-  } else if (std::regex_match(packet.message(), regexMatch, castTestRegex)) {
-    tryCastSkills_.clear();
-    tryCastSkills_.push_back(8244);
-    tryCastSkills_.push_back(7985);
-    tryCastSkills_.push_back(7910);
-    tryCastNext();
-    return false;
+  } else if (std::regex_match(packet.message(), regexMatch, dropRegex)) {
   } else {
     return true;
   }

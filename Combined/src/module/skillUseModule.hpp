@@ -60,21 +60,23 @@ private:
   std::mutex contentionProtectionMutex_;
 
   // State
-  bool healthIsSafe_ = false;
-  const float kHpSafetyThreshold_ = 0.40;
   uint32_t stateBitmask_ = 0;
+  bool attackMode_ = false;
+  std::optional<int32_t> targetGId_;
   // =======Current=======
-  bool cancelledAction_ = false;
-  std::deque<packet::structures::ActionCommand> pendingActionQueue_;
-  std::optional<packet::structures::ActionCommand> activeAction_, queuedAction_;
   static const int kKnockbackStatusDurationMs = 2000;
   std::optional<broker::TimerManager::TimerId> knockedBackCooldownEventId_;
-  std::optional<packet::structures::ActionCommand> pendingCommonAttack_, queuedCommonAttack_;
-  std::optional<int32_t> activeChainSkillId_;
+
+  std::deque<packet::structures::ActionCommand> actionsRequestedToBeQueued_;
+  std::deque<packet::structures::ActionCommand> queuedActions_;
+  std::set<uint32_t> skillsOnCooldown_;
+  // std::optional<packet::structures::ActionCommand> activeAction_, queuedAction_;
+  // std::optional<packet::structures::ActionCommand> pendingCommonAttack_, queuedCommonAttack_;
+  // std::optional<int32_t> activeChainSkillId_;
   // =====================
 
   std::map<uint32_t, uint32_t> castSkillMap_;
-  std::set<uint32_t> queuedInstantSkills_;
+  // std::set<uint32_t> queuedInstantSkills_;
 
   // Skills
   // const uint32_t kSkillPhysicalDefense = 0x2ED1; // Phys def
@@ -91,30 +93,27 @@ private:
   // const uint32_t kSkillGroupHealing = 11702;
 
   // Active buffs
-  bool waitingForCast_ = false;
-  bool attackMode_ = false;
-  int32_t targetGId_;
-  std::vector<uint32_t> skillsToUse_ = {
-                                        //  8097, // Snow Shield Novice
-                                         8244, // Mag def
-                                        //  7985, // Phys def
-                                         8186, // Parry
-                                         8135, // Mag attack
-                                         8223, // Phys attack
-                                         7885, // Fire Hawk
-                                         7910, // Range increase
-                                         8155, // Speed
-                                         8217, // Imbue
-                                        //  7865, // 7 arrow combo
-                                        //  7862, // 6 arrow combo
-                                         7941, // Strong Bow Destruction
-                                         7922, // Pitch Black Arrow
-                                         7844, // Anti Devil Bow - Moon Light
-                                         7843 // Anti Devil Bow - Demolition
-                                       };
-  std::set<uint32_t> skillsOnCooldown_;
+  // bool waitingForCast_ = false;
+  // std::vector<uint32_t> skillsToUse_ = {
+  //                                       //  8097, // Snow Shield Novice
+  //                                        8244, // Mag def
+  //                                       //  7985, // Phys def
+  //                                        8186, // Parry
+  //                                        8135, // Mag attack
+  //                                        8223, // Phys attack
+  //                                        7885, // Fire Hawk
+  //                                        7910, // Range increase
+  //                                        8155, // Speed
+  //                                        8217, // Imbue
+  //                                       //  7865, // 7 arrow combo
+  //                                       //  7862, // 6 arrow combo
+  //                                        7941, // Strong Bow Destruction
+  //                                        7922, // Pitch Black Arrow
+  //                                        7844, // Anti Devil Bow - Moon Light
+  //                                        7843 // Anti Devil Bow - Demolition
+  //                                      };
   std::vector<Buff> activeBuffs_;
-  std::deque<int32_t> tryCastSkills_;
+  // std::deque<int32_t> tryCastSkills_;
   
 
   // Packet handling functions
@@ -136,6 +135,8 @@ private:
   void attack();
   
   // General functions
+  void printQueues() const;
+
   bool skillInQueue(uint32_t skillId);
   void activeActionStarted();
   void targetDied();
@@ -144,7 +145,6 @@ private:
   void knockedDown();
   void tryCastNext();
   void requestedAction(const packet::structures::ActionCommand &actionCommand);
-  void printQueues();
   void printBuffs();
   void useNextSkillInQueue();
   void selectEntity(state::Entity::EntityId entityId);
