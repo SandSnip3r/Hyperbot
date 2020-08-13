@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include <windows.h>
 
 std::experimental::filesystem::v1::path getAppDataPath();
 
