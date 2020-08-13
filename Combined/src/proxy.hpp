@@ -19,14 +19,16 @@
 //Networking class (handles connections)
 class Proxy {
 public:
-	Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port);
+	Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port=0);
 	~Proxy();
 	void inject(const PacketContainer &packet, const PacketContainer::Direction direction);
   void start();
+  uint16_t getOurListeningPort() const;
 
 	//Stops all networking objects
 	void Stop();
 private:
+  uint16_t ourListeningPort_;
   const pk2::DivisionInfo divisionInfo_;
   broker::PacketBroker &broker_;
   std::string gatewayAddress_;

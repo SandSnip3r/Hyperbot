@@ -13,7 +13,7 @@ public:
 	Loader(const std::experimental::filesystem::v1::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo);
 	
 	// Starts the Silkroad client process and injects the DLL
-	void startClient();
+	void startClient(uint16_t proxyListeningPort);
 
 	// TODO
   // void killClient();
