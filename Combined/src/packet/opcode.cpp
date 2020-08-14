@@ -276,8 +276,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_INT_UPDATE) {
     return "SERVER_INT_UPDATE";
   }
-  if (opcode == Opcode::SERVER_CHARACTER_STATE) {
-    return "SERVER_CHARACTER_STATE";
+  if (opcode == Opcode::kServerAgentEntityUpdateState) {
+    return "kServerAgentEntityUpdateState";
   }
   if (opcode == Opcode::SERVER_HPMP_UPDATE) {
     return "SERVER_HPMP_UPDATE";
@@ -324,20 +324,20 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_COS_DELETE) {
     return "SERVER_COS_DELETE";
   }
-  if (opcode == Opcode::SERVER_ATTACK) {
-    return "SERVER_ATTACK";
+  if (opcode == Opcode::kServerAgentSkillBegin) {
+    return "kServerAgentSkillBegin";
   }
-  if (opcode == Opcode::SERVER_SKILL_ATTACK) {
-    return "SERVER_SKILL_ATTACK";
+  if (opcode == Opcode::kServerAgentActionCommandResponse) {
+    return "kServerAgentActionCommandResponse";
   }
-  if (opcode == Opcode::SERVER_END_SKILL) {
-    return "SERVER_END_SKILL";
+  if (opcode == Opcode::kServerAgentSkillEnd) {
+    return "kServerAgentSkillEnd";
   }
-  if (opcode == Opcode::SERVER_BUFF_START) {
-    return "SERVER_BUFF_START";
+  if (opcode == Opcode::kServerAgentBuffAdd) {
+    return "kServerAgentBuffAdd";
   }
-  if (opcode == Opcode::SERVER_BUFF_END) {
-    return "SERVER_BUFF_END";
+  if (opcode == Opcode::kServerAgentBuffRemove) {
+    return "kServerAgentBuffRemove";
   }
   if (opcode == Opcode::SERVER_DEAD) {
     return "SERVER_DEAD";

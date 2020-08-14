@@ -135,7 +135,7 @@ enum class Opcode {
   SERVER_STATS = 0x303D,
   SERVER_STR_UPDATE = 0xB050,
   SERVER_INT_UPDATE = 0xB051,
-  SERVER_CHARACTER_STATE = 0x30BF,
+  kServerAgentEntityUpdateState = 0x30BF,
   SERVER_HPMP_UPDATE = 0x3057,
   SERVER_ANIMATION_LEVEL_UP = 0x3054,
   SERVER_EXP = 0x3056,
@@ -158,12 +158,12 @@ enum class Opcode {
   //Environment
   kServerEnvironmentWeather = 0x3809,
 
-  SERVER_ATTACK = 0xB070,
-  SERVER_SKILL_ATTACK = 0xB074,
-  SERVER_END_SKILL = 0xB071,
+  kServerAgentSkillBegin = 0xB070,
+  kServerAgentSkillEnd = 0xB071,
+  kServerAgentActionCommandResponse = 0xB074,
 
-  SERVER_BUFF_START = 0xB0BD,
-  SERVER_BUFF_END = 0xB072,
+  kServerAgentBuffAdd = 0xB0BD,
+  kServerAgentBuffRemove = 0xB072,
 
   SERVER_DEAD = 0x3011,
   // SERVER_DEAD2 = 0x30D2,

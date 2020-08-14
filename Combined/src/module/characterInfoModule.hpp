@@ -6,9 +6,11 @@
 #include "../packet/parsing/packetParser.hpp"
 #include "../packet/parsing/parsedPacket.hpp"
 #include "../packet/parsing/serverAgentCharacterData.hpp"
+#include "../packet/parsing/serverAgentEntityUpdateState.hpp"
 #include "../pk2/gameData.hpp"
 #include "../shared/silkroad_security.h"
 #include "../state/entity.hpp"
+#include "../state/self.hpp"
 #include "../storage/buybackQueue.hpp"
 #include "../storage/item.hpp"
 #include "../storage/storage.hpp"
@@ -46,6 +48,8 @@ struct UsedItem {
 class CharacterInfoModule {
 public:
   CharacterInfoModule(state::Entity &entityState,
+                      state::Self &selfState,
+                      storage::Storage &inventory,
                       broker::PacketBroker &brokerSystem,
                       broker::EventBroker &eventBroker,
                       const packet::parsing::PacketParser &packetParser,
@@ -60,22 +64,18 @@ private:
   //***************************************Configuration**************************************
   //******************************************************************************************
   // Potion configuration
-  const double kHpThreshold_{0.80};
-  const double kMpThreshold_{0.70};
+  const double kHpThreshold_{0.90};
+  const double kMpThreshold_{0.80};
   const double kVigorThreshold_{0.40};
   //******************************************************************************************
 
   state::Entity &entityState_;
+  state::Self &selfState_;
   broker::PacketBroker &broker_;
   broker::EventBroker &eventBroker_;
   const packet::parsing::PacketParser &packetParser_;
   const pk2::GameData &gameData_;
   std::mutex contentionProtectionMutex_;
-
-  // Character info
-  std::optional<uint32_t> uniqueId_;
-  Race race_;
-  Gender gender_;
 
   // Pills
   std::optional<broker::TimerManager::TimerId> universalPillEventId_, purificationPillEventId_;
@@ -84,17 +84,11 @@ private:
   std::optional<broker::TimerManager::TimerId> hpPotionEventId_, mpPotionEventId_, vigorPotionEventId_;
   int potionDelayMs_{1000};
   
-  // Health
-  uint32_t hp_{0};
-  uint32_t mp_{0};
-  std::optional<uint32_t> maxHp_;
-  std::optional<uint32_t> maxMp_;
-  
   // States
   // Bitmask of all states (initialized as having no states)
-  uint32_t stateBitmask_{0};
+  // uint32_t stateBitmask_{0};
   // Set all states as effect/level 0 (meaning there is no state)
-  std::array<uint16_t,6> legacyStateEffects_ = {0};
+  // std::array<uint16_t,6> legacyStateEffects_ = {0};
   std::array<uint8_t,32> modernStateLevel_ = {0};
 
   std::deque<UsedItem> usedItemQueue_;
@@ -104,9 +98,9 @@ private:
   std::vector<std::shared_ptr<packet::parsing::Object>> objectsInRange_;
 
   // Items
-  storage::Storage inventory_;
+  storage::Storage &inventory_;
   uint64_t gold_, storageGold_, guildStorageGold_;
-  storage::Storage storage_;
+  // storage::Storage storage_;
   storage::BuybackQueue buybackQueue_;
 
   // Packet handling functions
@@ -114,7 +108,7 @@ private:
   void abnormalInfoReceived(const packet::parsing::ParsedServerAbnormalInfo &packet);
   void clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet);
   void serverItemMoveReceived(const packet::parsing::ParsedServerItemMove &packet);
-  void characterInfoReceived(const packet::parsing::ParsedServerAgentCharacterData &packet);
+  void serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet);
   void entityUpdateReceived(const packet::parsing::ParsedServerHpMpUpdate &packet);
   void statUpdateReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet);
   void serverUseItemReceived(const packet::parsing::ParsedServerUseItem &packet);
@@ -129,12 +123,13 @@ private:
   void handleVitalsChanged();
   void handleStatesChanged();
 
+  bool havePotion(PotionType potionType);
   void printGold();
+  void serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet);
   void trackObject(std::shared_ptr<packet::parsing::Object> obj);
   void stopTrackingObject(uint32_t gId);
   void resetInventory();
   void initializeInventory(uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<storage::Item>> &inventoryItemMap);
-  void moveItemInInventory(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
   int getHpPotionDelay();
   int getMpPotionDelay();
   int getVigorPotionDelay();

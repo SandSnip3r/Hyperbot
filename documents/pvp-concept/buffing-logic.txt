@@ -1,0 +1,146 @@
+// Have states
+
+onHealthChanged() {
+  // Prioritize skills set on health thresholds
+}
+
+onManaChanged() {
+  // Prioritize skills set on mana thresholds
+}
+
+onSkillUsed() {
+  if (used by us) {
+    if (begin) {
+      // set timer for skill cooldown
+      usingSkill = true
+    } else if (end) {
+      usingSkill = false
+      evaluateAndAct()
+    } else if (error) {
+      // TODO
+    }
+  }
+}
+
+onMovementStateChanged() {
+  if (for us) {
+    if (knocked down) {
+      // Enter a defensive mode
+      //  Equip shield, cleric rod, cancel DD, etc
+      skillInterrupted()
+    } else if (stood up) {
+      evaluateAndAct()
+    } else if (knocked back) {
+      evaluateAndAct()
+      skillInterrupted()
+    }
+  } else if (for opponent) {
+    // TODO
+    if (knocked down) {
+      // TODO: Prefer certain attacks and buffs? (be aggressive)
+    } else if (stood up) {
+      // TODO: Reduce aggressive behavior? Maybe continue for a few more seconds
+    } else if (knocked back) {
+    }
+  }
+}
+
+onWeaponChanged() {
+  if (uses shield && shield not equipped) {
+    equipShield()
+  } else {
+    evaluateAndAct()
+  }
+}
+
+onShieldEquipped() {
+  evaluateAndAct()
+}
+
+onStatusChanged() {
+  if (ours) {
+    if (begin any curable) {
+      // Prioritize status reduction skills
+    } else if (end any curable) {
+      // Deprioritize status reduction skills
+    }
+
+    if (begin (stun || petrify || sleep)) {
+      skillInterrupted() // Skill interrupted
+      // Set dangerous buffs to be cancelled (ex. dagger desperate)
+      //  TODO: what else can we do?
+    } else if (end (stun || petrify || sleep)) {
+      // Unset cancel buffs
+      evaluateAndAct()
+    }
+  } else if (opponent's) {
+    if (begin (stun || petrify || sleep)) {
+      // TODO: Prefer certain attacks and buffs? (be aggressive)
+    } else if (end (stun || petrify || sleep)) {
+      // TODO: Reduce aggressive behavior? Maybe continue for a few more seconds
+    }
+  }
+}
+
+onBuffAdd() {
+  // TODO?
+}
+
+onBuffRemove() {
+  // remove cancel request for buff
+  evaluateAndAct()
+}
+
+onStateChanged() {
+  if (ours) {
+    if (dead) {
+      // Disengage
+    } else if (alive) {
+      // TODO: Probably enter base state, but evaluateAndAct wont try to cast any skills (resulting in proper weapon equipped)
+      // Equip weapon for first buff/skill
+      evaluateAndAct()
+    } else if (in combat) {
+      // Enter combat state
+      evaluateAndAct()
+    } else if (!in combat || !untouchable) {
+      // Enter base state
+      evaluateAndAct()
+    }
+  } else if (opponent's) {
+    if (dead) {
+      // Disengage
+    }
+  }
+}
+
+evaluateAndAct() {
+  if (stunned or similar) {
+    return;
+  }
+  if (buffsToCancel) {
+    cancelABuff()
+    return;
+  }
+  if (have a preferred weapon and its not equipped) {
+    // equip preferred weapon
+  }
+  if (!using a skill) {
+    // TODO: Sometimes it makes sense to switch a weapon while using a skill, sometimes it does not
+    //  When casting mana cycle, switch back to cleric rod/shield immediately
+    //  When casting nuke, dont switch away from best weapon
+    //  The nuke example is possible because multiple weapons are acceptable for that skill
+
+    // Choose best skill or buff to use (that uses our preferred weapon)
+    if (!proper weapon equipped) {
+      equipWeapon();
+    } else if (shield needed && !shield equipped) {
+      equipShield();
+    } else if (!untouchable) {
+      useChosenSkill();
+    }
+  }
+}
+
+skillInterrupted() {
+  usingSkill = false
+}

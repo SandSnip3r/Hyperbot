@@ -55,7 +55,7 @@ void EventBroker::unsubscribeFromEvent(SubscriptionId id) {
 void EventBroker::notifySubscribers(std::unique_ptr<event::Event> event) {
   // For each subscription pass the event to the EventHandleFunction
   std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
-  auto eventSubscriptionsIt = subscriptions_.find(event->getEventCode());
+  auto eventSubscriptionsIt = subscriptions_.find(event->eventCode);
   if (eventSubscriptionsIt != subscriptions_.end()) {
     auto &eventSubscriptions = eventSubscriptionsIt->second;
     for (auto &eventSubscription : eventSubscriptions) {

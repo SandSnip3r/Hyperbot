@@ -11,14 +11,12 @@ namespace storage {
 
 class ItemList {
 public:
-  ItemList() = default;
-  ItemList(uint8_t size);
-
   // Non-modifying
   bool hasItem(uint8_t slot) const;
   Item* getItem(uint8_t slot);
   const Item* getItem(uint8_t slot) const;
   uint8_t size() const;
+  std::vector<uint8_t> findItemsWithTypeId(uint8_t typeId1, uint8_t typeId2, uint8_t typeId3, uint8_t typeId4) const;
 
   // Modifying
   void addItem(uint8_t slot, std::shared_ptr<Item> item);

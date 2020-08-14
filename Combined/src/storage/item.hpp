@@ -4,6 +4,7 @@
 #include "../../../common/pk2/ref/item.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace storage {

@@ -1,6 +1,8 @@
 #ifndef PACKET_INNER_STRUCTURES_HPP
 #define PACKET_INNER_STRUCTURES_HPP
 
+#include "../enums/packetEnums.hpp"
+
 #include <string>
 #include <vector>
 
@@ -64,6 +66,53 @@ struct RentInfo {
   uint16_t canRecharge;
   uint32_t meterRateTime;
   uint32_t packingTime;
+};
+
+struct Mastery {
+  Mastery(uint32_t i, uint8_t l) : id(i), level(l) {}
+  uint32_t id;
+  uint8_t level;
+};
+
+struct Skill {
+  Skill(uint32_t i, bool e) : id(i), enabled(e) {}
+  uint32_t id;
+  bool enabled;
+};
+
+struct SkillActionHitResult {
+  enums::HitResult hitResult;
+  enums::DamageFlag damageFlag;
+  uint32_t damage;
+  uint32_t effect;
+  uint16_t regionId;
+  float x, y, z;
+};
+
+struct SkillActionHitObject {
+  uint32_t objGlobalId;
+  std::vector<SkillActionHitResult> hits;
+};
+
+struct SkillAction {
+  uint8_t actionFlag;
+  std::vector<SkillActionHitObject> hitObjects;
+  // If teleport or sprint
+  uint16_t regionId;
+  float x, y, z;
+};
+
+struct ActionCommand {
+public:
+  enums::CommandType commandType;
+  enums::ActionType actionType;
+  uint32_t refSkillId;
+  enums::TargetType targetType;
+  uint32_t targetGlobalId;
+  uint16_t regionId;
+  float x;
+  float y;
+  float z;
 };
 
 } // namespace packet::structures

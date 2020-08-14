@@ -19,11 +19,15 @@ std::string toStr(packet::enums::AbnormalStateFlag state);
 //======================================================================================================
 
 CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
+                                         state::Self &selfState,
+                                         storage::Storage &inventory,
                                          broker::PacketBroker &brokerSystem,
                                          broker::EventBroker &eventBroker,
                                          const packet::parsing::PacketParser &packetParser,
                                          const pk2::GameData &gameData) :
       entityState_(entityState),
+      selfState_(selfState),
+      inventory_(inventory),
       broker_(brokerSystem),
       eventBroker_(eventBroker),
       packetParser_(packetParser),
@@ -42,6 +46,7 @@ CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_SPAWN, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_DESPAWN, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateState, packetHandleFunction);
 
   auto eventHandleFunction = std::bind(&CharacterInfoModule::handleEvent, this, std::placeholders::_1);
   // TODO: Save subscription ID to possibly unsubscribe in the future
@@ -65,7 +70,7 @@ CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
 
 void CharacterInfoModule::handleEvent(const event::Event *event) {
   std::unique_lock<std::mutex> contentionProtectionLock(contentionProtectionMutex_);
-  const auto eventCode = event->getEventCode();
+  const auto eventCode = event->eventCode;
   switch (eventCode) {
     case event::EventCode::kHpPotionCooldownEnded:
     case event::EventCode::kMpPotionCooldownEnded:
@@ -145,9 +150,8 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
     return true;
   }
 
-  auto *clientChat = dynamic_cast<packet::parsing::ParsedClientAgentChatRequest*>(parsedPacket.get());
+  auto *clientChat = dynamic_cast<packet::parsing::ClientAgentChatRequest*>(parsedPacket.get());
   if (clientChat != nullptr) {
-    std::cout << "Not handling client chat move\n";
     return true;
   }
 
@@ -157,7 +161,7 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
 
   auto *charData = dynamic_cast<packet::parsing::ParsedServerAgentCharacterData*>(parsedPacket.get());
   if (charData != nullptr) {
-    characterInfoReceived(*charData);
+    serverAgentCharacterDataReceived(*charData);
     return true;
   }
 
@@ -208,11 +212,35 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
     serverAgentDespawnReceived(*despawn);
     return true;
   }
+
+  auto *entityUpdateState = dynamic_cast<packet::parsing::ServerAgentEntityUpdateState*>(parsedPacket.get());
+  if (entityUpdateState != nullptr) {
+    serverAgentEntityUpdateStateReceived(*entityUpdateState);
+    return true;
+  }
   
   //======================================================================================================
 
   std::cout << "CharacterInfoModule: Unhandled packet subscribed to\n";
   return true;
+}
+
+void CharacterInfoModule::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) {
+  if (selfState_.spawned() && packet.gId() == selfState_.globalId()) {
+    if (packet.stateType() == packet::parsing::StateType::kBodyState) {
+      selfState_.setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
+    } else if (packet.stateType() == packet::parsing::StateType::kLifeState) {
+      selfState_.setLifeState(static_cast<packet::enums::LifeState>(packet.state()));
+      if (static_cast<packet::enums::LifeState>(packet.state()) == packet::enums::LifeState::kDead) {
+        std::cout << "CharacterInfoModule: We died, clearing queue (";
+        for (auto i : usedItemQueue_) {
+          std::cout << (int)i.slotNum << ',';
+        }
+        std::cout << ")\n";
+        usedItemQueue_.clear();
+      }
+    }
+  }
 }
 
 void CharacterInfoModule::trackObject(std::shared_ptr<packet::parsing::Object> obj) {
@@ -324,13 +352,10 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
   const std::vector<packet::parsing::ItemMovement> &itemMovements = packet.itemMovements();
   for (const auto &movement : itemMovements) {
     if (movement.type == packet::enums::ItemMovementType::kWithinInventory) {
-      std::cout << "Moving item in inventory, before:\n";
-      printItem(movement.srcSlot, inventory_.getItem(movement.srcSlot), gameData_);
-      printItem(movement.destSlot, inventory_.getItem(movement.destSlot), gameData_);
       inventory_.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
-      std::cout << " after:\n";
-      printItem(movement.srcSlot, inventory_.getItem(movement.srcSlot), gameData_);
-      printItem(movement.destSlot, inventory_.getItem(movement.destSlot), gameData_);
+      //TODO: Add event in other places
+      eventBroker_.publishEvent(std::make_unique<event::InventorySlotUpdated>(movement.srcSlot));
+      eventBroker_.publishEvent(std::make_unique<event::InventorySlotUpdated>(movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kWithinStorage) {
       // Not handling because we dont parse the storage init packet
       // moveItem(storage_, movement.srcSlot, movement.destSlot, movement.quantity);
@@ -381,7 +406,7 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
             std::cout << "Sold only some of this item " << itemExpendable->quantity << " -> " << itemExpendable->quantity-movement.quantity << '\n';
             soldEntireStack = false;
             itemExpendable->quantity -= movement.quantity;
-            std::shared_ptr<storage::Item> clonedItem(storage::cloneItem(item));
+            auto clonedItem = storage::cloneItem(item);
             dynamic_cast<storage::ItemExpendable*>(clonedItem.get())->quantity = movement.quantity;
             buybackQueue_.addItem(clonedItem);
           }
@@ -410,7 +435,7 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
               if (itemExpendable->quantity > movement.quantity) {
                 std::cout << "Only buying back a partial amount from the buyback slot. Didnt know this was possible (" << movement.quantity << '/' << itemExpendable->quantity << ")\n";
                 boughtBackAll = false;
-                std::shared_ptr<storage::Item> clonedItem(storage::cloneItem(itemPtr));
+                auto clonedItem = storage::cloneItem(itemPtr);
                 itemExpendable->quantity -= movement.quantity;
                 dynamic_cast<storage::ItemExpendable*>(clonedItem.get())->quantity = movement.quantity;
                 inventory_.addItem(movement.destSlot, clonedItem);
@@ -523,14 +548,13 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
 
 void CharacterInfoModule::abnormalInfoReceived(const packet::parsing::ParsedServerAbnormalInfo &packet) {
   for (int i=0; i<=bitNum(packet::enums::AbnormalStateFlag::kZombie); ++i) {
-    legacyStateEffects_[i] = packet.states()[i].effectOrLevel;
+    selfState_.setLegacyStateEffect(state::fromBitNum(i), packet.states()[i].effectOrLevel);
   }
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStatesChanged));
 }
 
 void CharacterInfoModule::statUpdateReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) {
-  maxHp_ = packet.maxHp();
-  maxMp_ = packet.maxMp();
+  selfState_.setMaxHpMp(packet.maxHp(), packet.maxMp());
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
 }
@@ -555,28 +579,25 @@ void CharacterInfoModule::setRaceAndGender(uint32_t refObjId) {
   } else {
     updateRace(Race::kEuropean);
   }
-  if (character.charGender == 1) {
-    gender_ = Gender::kMale;
-  } else {
-    gender_ = Gender::kFemale;
-  }
 }
 
-void CharacterInfoModule::characterInfoReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) {
-  uniqueId_ = packet.entityUniqueId();
+void CharacterInfoModule::serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) {
+  selfState_.initialize(packet.entityUniqueId(), packet.refObjId(), packet.hp(), packet.mp(), packet.masteries(), packet.skills());
+  selfState_.setBodyState(packet.bodyState());
+  std::cout << "Our Ref Obj Id " << packet.refObjId() << '\n';
+  selfState_.setLifeState(packet.lifeState());
   auto refObjId = packet.refObjId();
   gold_ = packet.gold();
   printGold();
   setRaceAndGender(refObjId);
-  hp_ = packet.hp();
-  mp_ = packet.mp();
   const auto inventorySize = packet.inventorySize();
   const auto &inventoryItemMap = packet.inventoryItemMap();
   initializeInventory(inventorySize, inventoryItemMap);
 
-  std::cout << "We are now #" << *uniqueId_ << ", and we have " << hp_ << " hp and " << mp_ << " mp\n";
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
+  std::cout << "GID:" << selfState_.globalId() << ", and we have " << selfState_.hp() << " hp and " << selfState_.mp() << " mp\n";
+  // eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
+  // eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kSpawned));
 }
 
 void CharacterInfoModule::resetInventory() {
@@ -595,7 +616,8 @@ void CharacterInfoModule::initializeInventory(uint8_t inventorySize, const std::
 
 void CharacterInfoModule::useUniversalPill() {
   // Figure out our status with the highest effect
-  uint16_t ourWorstStatusEffect = *std::max_element(legacyStateEffects_.begin(), legacyStateEffects_.end());
+  const auto legacyStateEffects = selfState_.legacyStateEffects();
+  uint16_t ourWorstStatusEffect = *std::max_element(legacyStateEffects.begin(), legacyStateEffects.end());
   int32_t bestCure = 0;
   uint8_t bestOptionSlotNum;
   uint16_t bestOptionTypeData;
@@ -642,6 +664,7 @@ void CharacterInfoModule::useUniversalPill() {
 }
 
 void CharacterInfoModule::usePurificationPill() {
+  const auto modernStateLevels = selfState_.modernStateLevels();
   int32_t currentCureLevel = 0;
   uint8_t bestOptionSlotNum;
   uint16_t bestOptionTypeData;
@@ -657,7 +680,7 @@ void CharacterInfoModule::usePurificationPill() {
       if (item->itemInfo->typeId1 == 3 && item->itemInfo->typeId2 == 3 && item->itemInfo->typeId3 == 2 && item->itemInfo->typeId4 == 1) {
         // Purification pill
         const auto pillCureStateBitmask = item->itemInfo->param1;
-        const auto curableStatesWeHave = (pillCureStateBitmask & stateBitmask_);
+        const auto curableStatesWeHave = (pillCureStateBitmask & selfState_.stateBitmask());
         if (curableStatesWeHave > 0) {
           // This pill will cure at least some of the type of state(s) that we have
           const auto pillTreatmentLevel = item->itemInfo->param2;
@@ -666,7 +689,7 @@ void CharacterInfoModule::usePurificationPill() {
             for (uint32_t bitNum=0; bitNum<32; ++bitNum) {
               const auto bit = 1 << bitNum;
               if (curableStatesWeHave & bit) {
-                stateLevels.push_back(modernStateLevel_[bitNum]);
+                stateLevels.push_back(modernStateLevels[bitNum]);
               }
             }
             const bool curesEverything = (*std::max_element(stateLevels.begin(), stateLevels.end()) <= pillTreatmentLevel);
@@ -697,8 +720,11 @@ void CharacterInfoModule::usePurificationPill() {
 }
 
 void CharacterInfoModule::usePotion(PotionType potionType) {
-  const double hpPercentage = static_cast<double>(hp_)/(*maxHp_); // TODO: Remove, for print only
-  const double mpPercentage = static_cast<double>(mp_)/(*maxMp_); // TODO: Remove, for print only
+  // We enter this funciton assuming that:
+  //  1. The potion isnt on cooldown
+  //  2. We have the potion
+  const double hpPercentage = static_cast<double>(selfState_.hp())/(*selfState_.maxHp()); // TODO: Remove, for print only
+  const double mpPercentage = static_cast<double>(selfState_.mp())/(*selfState_.maxMp()); // TODO: Remove, for print only
   printf("Healing. Hp: %4.2f%%, Mp: %4.2f%%\n", hpPercentage*100, mpPercentage*100);
 
   uint8_t typeId4;
@@ -712,6 +738,7 @@ void CharacterInfoModule::usePotion(PotionType potionType) {
     std::cout << "CharacterInfoModule::usePotion: Potion type " << static_cast<int>(potionType) << " not supported\n";
     return;
   }
+
   // Find potion in inventory
   for (uint8_t slotNum=0; slotNum<inventory_.size(); ++slotNum) {
     if (!inventory_.hasItem(slotNum)) {
@@ -722,8 +749,8 @@ void CharacterInfoModule::usePotion(PotionType potionType) {
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
       if (item->itemInfo->typeId1 == 3 && item->itemInfo->typeId2 == 3 && item->itemInfo->typeId3 == 1 && item->itemInfo->typeId4 == typeId4) {
-        if (item->itemInfo->param2 == 0 && item->itemInfo->param4 == 0) {
-          // Avoid vigors
+        if (typeId4 == 3 || item->itemInfo->param2 == 0 && item->itemInfo->param4 == 0) {
+          // Avoid hp/mp grains
           useItem(slotNum, itemPtr->typeData());
           break;
         }
@@ -733,8 +760,31 @@ void CharacterInfoModule::usePotion(PotionType potionType) {
 }
 
 void CharacterInfoModule::useItem(uint8_t slotNum, uint16_t typeData) {
-  auto useItemPacket = packet::building::ClientAgentInventoryItemUseRequest::packet(slotNum, typeData);
-  broker_.injectPacket(useItemPacket, PacketContainer::Direction::kClientToServer);
+  uint8_t typeId1 = (typeData >> 2) & 0b111;
+  uint8_t typeId2 = (typeData >> 5) & 0b11;
+  uint8_t typeId3 = (typeData >> 7) & 0b1111;
+  uint8_t typeId4 = (typeData >> 11) & 0b11111;
+  // TODO: Check cooldowns here
+  if (typeId1 == 3 && typeId2 == 3 && typeId3 == 1) {
+    // Potion
+    if (typeId4 == 1) {
+      if (alreadyUsedPotion(PotionType::kHp)) {
+        // Already used an Hp potion, not going to re-queue
+        return;
+      }
+    } else if (typeId4 == 2) {
+      if (alreadyUsedPotion(PotionType::kMp)) {
+        // Already used an Mp potion, not going to re-queue
+        return;
+      }
+    } else if (typeId4 == 3) {
+      if (alreadyUsedPotion(PotionType::kVigor)) {
+        // Already used a Vigor potion, not going to re-queue
+        return;
+      }
+    }
+  }
+  broker_.injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slotNum, typeData), PacketContainer::Direction::kClientToServer);
   usedItemQueue_.emplace_back(slotNum, typeData);
 }
 
@@ -752,13 +802,23 @@ bool CharacterInfoModule::alreadyUsedUniversalPill() {
   return (universalPillEventId_ || used); 
 }
 
+bool compareTypeData(uint16_t typeData, uint8_t typeId1, uint8_t typeId2, uint8_t typeId3, uint8_t typeId4) {
+  if (typeId1 != ((typeData >> 2) & 0b111)) {
+    return false;
+  }
+  if (typeId2 != ((typeData >> 5) & 0b11)) {
+    return false;
+  }
+  if (typeId3 != ((typeData >> 7) & 0b1111)) {
+    return false;
+  }
+  return (typeId4 == ((typeData >> 11) & 0b11111));
+}
+
 bool CharacterInfoModule::alreadyUsedPurificationPill() {
   bool used = false;
   for (const auto &usedItem : usedItemQueue_) {
-    if (usedItem.itemData & (static_cast<uint16_t>(3) << 2) &&
-        usedItem.itemData & (static_cast<uint16_t>(3) << 5) &&
-        usedItem.itemData & (static_cast<uint16_t>(2) << 7) &&
-        usedItem.itemData & (static_cast<uint16_t>(1) << 11)) {
+    if (compareTypeData(usedItem.itemData, 3,3,2,1)) {
       used = true;
       break;
     }
@@ -770,10 +830,7 @@ bool CharacterInfoModule::alreadyUsedPotion(PotionType potionType) {
   if (potionType == PotionType::kHp) {
     bool used = false;
     for (const auto &usedItem : usedItemQueue_) {
-      if (usedItem.itemData & (static_cast<uint16_t>(3) << 2) &&
-          usedItem.itemData & (static_cast<uint16_t>(3) << 5) &&
-          usedItem.itemData & (static_cast<uint16_t>(1) << 7) &&
-          usedItem.itemData & (static_cast<uint16_t>(1) << 11)) {
+      if (compareTypeData(usedItem.itemData, 3,3,1,1)) {
         used = true;
         break;
       }
@@ -782,10 +839,7 @@ bool CharacterInfoModule::alreadyUsedPotion(PotionType potionType) {
   } else if (potionType == PotionType::kMp) {
     bool used = false;
     for (const auto &usedItem : usedItemQueue_) {
-      if (usedItem.itemData & (static_cast<uint16_t>(3) << 2) &&
-          usedItem.itemData & (static_cast<uint16_t>(3) << 5) &&
-          usedItem.itemData & (static_cast<uint16_t>(1) << 7) &&
-          usedItem.itemData & (static_cast<uint16_t>(2) << 11)) {
+      if (compareTypeData(usedItem.itemData, 3,3,1,2)) {
         used = true;
         break;
       }
@@ -794,10 +848,7 @@ bool CharacterInfoModule::alreadyUsedPotion(PotionType potionType) {
   } else if (potionType == PotionType::kVigor) {
     bool used = false;
     for (const auto &usedItem : usedItemQueue_) {
-      if (usedItem.itemData & (static_cast<uint16_t>(3) << 2) &&
-          usedItem.itemData & (static_cast<uint16_t>(3) << 5) &&
-          usedItem.itemData & (static_cast<uint16_t>(1) << 7) &&
-          usedItem.itemData & (static_cast<uint16_t>(3) << 11)) {
+      if (compareTypeData(usedItem.itemData, 3,3,1,3)) {
         used = true;
         break;
       }
@@ -809,13 +860,15 @@ bool CharacterInfoModule::alreadyUsedPotion(PotionType potionType) {
 }
 
 void CharacterInfoModule::checkIfNeedToUsePill() {
-  if (std::any_of(legacyStateEffects_.begin(), legacyStateEffects_.end(), [](const uint16_t effect){ return effect > 0; })) {
+  const auto legacyStateEffects = selfState_.legacyStateEffects();
+  if (std::any_of(legacyStateEffects.begin(), legacyStateEffects.end(), [](const uint16_t effect){ return effect > 0; })) {
     // Need to use a universal pill
     if (!alreadyUsedUniversalPill()) {
       useUniversalPill();
     }
   }
-  if (std::any_of(modernStateLevel_.begin(), modernStateLevel_.end(), [](const uint8_t level){ return level > 0; })) {
+  const auto modernStateLevels = selfState_.modernStateLevels();
+  if (std::any_of(modernStateLevels.begin(), modernStateLevels.end(), [](const uint8_t level){ return level > 0; })) {
     // Need to use purification pill
     if (!alreadyUsedPurificationPill()) {
       usePurificationPill();
@@ -823,59 +876,92 @@ void CharacterInfoModule::checkIfNeedToUsePill() {
   }
 }
 
+bool CharacterInfoModule::havePotion(PotionType potionType) {
+  uint8_t typeId4;
+  if (potionType == PotionType::kHp) {
+    typeId4 = 1;
+  } else if (potionType == PotionType::kMp) {
+    typeId4 = 2;
+  } else if (potionType == PotionType::kVigor) {
+    typeId4 = 3;
+  } else {
+    std::cout << "CharacterInfoModule::havePotion: Potion type " << static_cast<int>(potionType) << " not supported\n";
+    return false;
+  }
+
+  // Find potion in inventory
+  for (uint8_t slotNum=0; slotNum<inventory_.size(); ++slotNum) {
+    if (!inventory_.hasItem(slotNum)) {
+      continue;
+    }
+    const storage::Item *itemPtr = inventory_.getItem(slotNum);
+    const storage::ItemExpendable *item;
+    if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
+      // Expendable item
+      if (item->itemInfo->typeId1 == 3 && item->itemInfo->typeId2 == 3 && item->itemInfo->typeId3 == 1 && item->itemInfo->typeId4 == typeId4) {
+        if (typeId4 == 3 || item->itemInfo->param2 == 0 && item->itemInfo->param4 == 0) {
+          // Avoid hp/mp grains
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 void CharacterInfoModule::checkIfNeedToHeal() {
-  if (!maxHp_ || !maxMp_) {
+  if (!selfState_.maxHp() || !selfState_.maxMp()) {
     // Dont yet know our max
     std::cout << "checkIfNeedToHeal: dont know max hp or mp\n";
     return;
   }
-  if (*maxHp_ == 0) {
-    // Either uninitialized or dead. Cant heal in either case probably
-    std::cout << "checkIfNeedToHeal: Either uninitialized or dead. Cant heal in either case probably\n";
-    // TODO: Figure out
+  if (*selfState_.maxHp() == 0) {
+    // Dead, cant heal
+    // TODO: Get from state update instead
+    std::cout << "checkIfNeedToHeal: Dead, cant heal\n";
     return;
   }
-  const double hpPercentage = static_cast<double>(hp_)/(*maxHp_);
-  const double mpPercentage = static_cast<double>(mp_)/(*maxMp_);
+  const double hpPercentage = static_cast<double>(selfState_.hp())/(*selfState_.maxHp());
+  const double mpPercentage = static_cast<double>(selfState_.mp())/(*selfState_.maxMp());
 
-  const bool haveZombie = (legacyStateEffects_[bitNum(packet::enums::AbnormalStateFlag::kZombie)] > 0);
+  const auto legacyStateEffects = selfState_.legacyStateEffects();
+  const bool haveZombie = (legacyStateEffects[bitNum(packet::enums::AbnormalStateFlag::kZombie)] > 0);
 
-  if ((!haveZombie && hpPercentage <= kHpThreshold_) && mpPercentage <= kMpThreshold_) {
-    if (!alreadyUsedPotion(PotionType::kVigor)) {
+  // TODO: Investigate if using multiple potions in one go causes issues
+  if (!alreadyUsedPotion(PotionType::kVigor)) {
+    if (!haveZombie && (hpPercentage < kVigorThreshold_ || mpPercentage < kVigorThreshold_)) {
       usePotion(PotionType::kVigor);
     }
-  } else if ((!haveZombie && hpPercentage <= kHpThreshold_)) {
-    if (!alreadyUsedPotion(PotionType::kHp)) {
+  }
+  if (!alreadyUsedPotion(PotionType::kHp)) {
+    if (!haveZombie && hpPercentage < kHpThreshold_) {
       usePotion(PotionType::kHp);
-    } else if (hpPercentage < kVigorThreshold_ && !alreadyUsedPotion(PotionType::kVigor)) {
-      usePotion(PotionType::kVigor);
     }
-  } else if (mpPercentage <= kMpThreshold_) {
-    if (!alreadyUsedPotion(PotionType::kMp)) {
+  }
+  if (!alreadyUsedPotion(PotionType::kMp)) {
+    if (mpPercentage < kMpThreshold_) {
       usePotion(PotionType::kMp);
-    } else if (mpPercentage < kVigorThreshold_ && !alreadyUsedPotion(PotionType::kVigor)) {
-      usePotion(PotionType::kVigor);
     }
   }
 }
 
 void CharacterInfoModule::entityUpdateReceived(const packet::parsing::ParsedServerHpMpUpdate &packet) {
-  if (uniqueId_ && packet.entityUniqueId() != *uniqueId_) {
+  if (packet.entityUniqueId() != selfState_.globalId()) {
     // Not for my character, can ignore
     return;
   }
   if (packet.vitalBitmask() & static_cast<uint8_t>(packet::enums::VitalInfoFlag::kVitalInfoHp)) {
     // Our HP changed
-    if (hp_ != packet.newHpValue()) {
-      hp_ = packet.newHpValue();
+    if (selfState_.hp() != packet.newHpValue()) {
+      selfState_.setHp(packet.newHpValue());
     } else {
       std::cout << "Weird, says HP changed, but it didn't\n";
     }
   }
   if (packet.vitalBitmask() & static_cast<uint8_t>(packet::enums::VitalInfoFlag::kVitalInfoMp)) {
     // Our MP changed
-    if (mp_ != packet.newMpValue()) {
-      mp_ = packet.newMpValue();
+    if (selfState_.mp() != packet.newMpValue()) {
+      selfState_.setMp(packet.newMpValue());
     } else {
       std::cout << "Weird, says MP changed, but it didn't\n";
     }
@@ -894,7 +980,8 @@ void CharacterInfoModule::entityUpdateReceived(const packet::parsing::ParsedServ
 }
 
 int CharacterInfoModule::getHpPotionDelay() {
-  const bool havePanic = (modernStateLevel_[bitNum(packet::enums::AbnormalStateFlag::kPanic)] > 0);
+  const auto modernStateLevels = selfState_.modernStateLevels();
+  const bool havePanic = (modernStateLevels[bitNum(packet::enums::AbnormalStateFlag::kPanic)] > 0);
   int delay = potionDelayMs_ + kPotionDelayBufferMs_;
   if (havePanic) {
     delay += 4000;
@@ -903,7 +990,8 @@ int CharacterInfoModule::getHpPotionDelay() {
 }
 
 int CharacterInfoModule::getMpPotionDelay() {
-  const bool haveCombustion = (modernStateLevel_[bitNum(packet::enums::AbnormalStateFlag::kCombustion)] > 0);
+  const auto modernStateLevels = selfState_.modernStateLevels();
+  const bool haveCombustion = (modernStateLevels[bitNum(packet::enums::AbnormalStateFlag::kCombustion)] > 0);
   int delay = potionDelayMs_ + kPotionDelayBufferMs_;
   if (haveCombustion) {
     delay += 4000;
@@ -929,9 +1017,10 @@ int CharacterInfoModule::getPurificationPillDelay() {
 }
 
 void CharacterInfoModule::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels) {
-  uint32_t newlyReceivedStates = (stateBitmask_ ^ stateBitmask) & stateBitmask;
-  uint32_t expiredStates = (stateBitmask_ ^ stateBitmask) & stateBitmask_;
-  stateBitmask_ = stateBitmask;
+  const auto oldStateBitmask = selfState_.stateBitmask();
+  uint32_t newlyReceivedStates = (oldStateBitmask ^ stateBitmask) & stateBitmask;
+  uint32_t expiredStates = (oldStateBitmask ^ stateBitmask) & oldStateBitmask;
+  selfState_.setStateBitmask(stateBitmask);
 
   int stateLevelIndex=0;
   if (newlyReceivedStates != 0) {
@@ -945,7 +1034,7 @@ void CharacterInfoModule::updateStates(uint32_t stateBitmask, const std::vector<
           std::cout << "We now are " << toStr(kState) << "\n";
         } else {
           // Modern state
-          modernStateLevel_[bitNum] = stateLevels[stateLevelIndex];
+          selfState_.setModernStateLevel(state::fromBitNum(bitNum), stateLevels[stateLevelIndex]);
           ++stateLevelIndex;
           std::cout << "We now are under " << toStr(kState) << "\n";
         }
@@ -963,12 +1052,13 @@ void CharacterInfoModule::updateStates(uint32_t stateBitmask, const std::vector<
           std::cout << "We are no longer " << toStr(kState) << "\n";
         } else {
           // Modern state
-          modernStateLevel_[bitNum] = 0;
+          selfState_.setModernStateLevel(state::fromBitNum(bitNum), 0);
           std::cout << "We are no longer under " << toStr(kState) << "\n";
         }
       }
     }
   }
+  // TODO: entity::Self
 }
 
 bool isPill(const pk2::ref::Item &itemInfo) {
@@ -1015,6 +1105,7 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
               std::cout << "Uhhhh, supposedly successfully used an hp potion when there's still a cooldown... Cancelling timer\n";
               eventBroker_.cancelDelayedEvent(*hpPotionEventId_);
             }
+            std::cout << "Successfully used a hpPotion\n";
             hpPotionEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kHpPotionCooldownEnded), std::chrono::milliseconds(getHpPotionDelay()));
           } else if (isMpPotion(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a potion
@@ -1022,6 +1113,7 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
               std::cout << "Uhhhh, supposedly successfully used an mp potion when there's still a cooldown... Cancelling timer\n";
               eventBroker_.cancelDelayedEvent(*mpPotionEventId_);
             }
+            std::cout << "Successfully used a mpPotion\n";
             mpPotionEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMpPotionCooldownEnded), std::chrono::milliseconds(getMpPotionDelay()));
           } else if (isVigorPotion(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a potion
@@ -1029,6 +1121,7 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
               std::cout << "Uhhhh, supposedly successfully used a vigor potion when there's still a cooldown... Cancelling timer\n";
               eventBroker_.cancelDelayedEvent(*vigorPotionEventId_);
             }
+            std::cout << "Successfully used a vigorPotion\n";
             vigorPotionEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kVigorPotionCooldownEnded), std::chrono::milliseconds(getVigorPotionDelay()));
           } else if (isUniversalPill(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a pill
@@ -1058,10 +1151,22 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
     if (!usedItemQueue_.empty()) {
       // This was an item that we tried to use
       if (packet.errorCode() == packet::enums::InventoryErrorCode::kWaitForReuseDelay) {
-        std::cout << "Failed to use item because there's still a cooldown, going to retry\n";
         // TODO: When we start tracking items moving in the invetory, we'll need to somehow update usedItemQueue_
+        std::cout << "Failed to use ";
         const auto usedItem = usedItemQueue_.front();
+        if (compareTypeData(usedItem.itemData, 3, 3, 1, 1)) {
+          std::cout << "hp";
+        } else if (compareTypeData(usedItem.itemData, 3, 3, 1, 2)) {
+          std::cout << "mp";
+        } else if (compareTypeData(usedItem.itemData, 3, 3, 1, 3)) {
+          std::cout << "vigor";
+        }
+        std::cout << " potion because there's still a cooldown, going to retry\n";
         useItem(usedItem.slotNum, usedItem.itemData);
+      } else if (packet.errorCode() == packet::enums::InventoryErrorCode::kCharacterDead) {
+        std::cout << "Failed to use item because we're dead\n";
+      } else {
+        std::cout << "Unknown error while trying to use an item: " << static_cast<int>(packet.errorCode()) << '\n';
       }
     }
   }

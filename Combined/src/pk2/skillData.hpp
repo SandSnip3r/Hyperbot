@@ -13,6 +13,7 @@ public:
 	void addSkill(ref::Skill &&skill);
 	bool haveSkillWithId(ref::SkillId id) const;
 	const ref::Skill& getSkillById(ref::SkillId id) const;
+  int32_t getSkillTotalDuration(ref::SkillId id) const;
 	const SkillMap::size_type size() const;
 private:
 	SkillMap skills_;

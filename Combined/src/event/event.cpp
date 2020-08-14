@@ -2,10 +2,10 @@
 
 namespace event {
 
-Event::Event(EventCode eventCode) : eventCode_(eventCode) {}
+Event::Event(EventCode event) : eventCode(event) {}
 
-EventCode Event::getEventCode() const {
-  return eventCode_;
-}
+SkillCooldownEnded::SkillCooldownEnded(int32_t skillId) : Event(EventCode::kSkillCooldownEnded), skillRefId(skillId) {}
+
+InventorySlotUpdated::InventorySlotUpdated(int8_t slot) : Event(EventCode::kInventorySlotUpdated), slotNum(slot) {}
 
 } // namespace event

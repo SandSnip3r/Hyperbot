@@ -4,8 +4,7 @@
 #include "parsedPacket.hpp"
 #include "../enums/packetEnums.hpp"
 
-// #include <cstdint>
-// #include <string>
+#include <cstdint>
 
 namespace packet::parsing {
   

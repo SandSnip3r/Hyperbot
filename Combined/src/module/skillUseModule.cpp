@@ -9,11 +9,15 @@
 namespace module {
 
 SkillUseModule::SkillUseModule(state::Entity &entityState,
+                               state::Self &selfState,
+                               storage::Storage &inventory,
                                broker::PacketBroker &brokerSystem,
                                broker::EventBroker &eventBroker,
                                const packet::parsing::PacketParser &packetParser,
                                const pk2::GameData &gameData) :
       entityState_(entityState),
+      selfState_(selfState),
+      inventory_(inventory),
       broker_(brokerSystem),
       eventBroker_(eventBroker),
       packetParser_(packetParser),
@@ -58,7 +62,7 @@ bool SkillUseModule::handlePacket(const PacketContainer &packet) {
     return true;
   }
 
-  auto *clientChat = dynamic_cast<packet::parsing::ParsedClientAgentChatRequest*>(parsedPacket.get());
+  auto *clientChat = dynamic_cast<packet::parsing::ClientAgentChatRequest*>(parsedPacket.get());
   if (clientChat != nullptr) {
     return clientAgentChatRequestReceived(*clientChat);
   }
@@ -113,7 +117,7 @@ void SkillUseModule::pickupEntity(state::Entity::EntityId entityId) {
   }
 }
 
-bool SkillUseModule::clientAgentChatRequestReceived(packet::parsing::ParsedClientAgentChatRequest &packet) {
+bool SkillUseModule::clientAgentChatRequestReceived(packet::parsing::ClientAgentChatRequest &packet) {
   std::regex selectGidRegex(R"delim((attack|trace|pickup|select) ([0-9]+))delim");
   std::smatch regexMatch;
   if (std::regex_match(packet.message(), regexMatch, selectGidRegex)) {

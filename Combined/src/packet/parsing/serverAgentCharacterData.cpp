@@ -112,6 +112,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   while (hasNextMastery == 1) {
     uint32_t id = stream.Read<uint32_t>();
     uint8_t level = stream.Read<uint8_t>();
+    masteries_.emplace_back(id,level);
     hasNextMastery = stream.Read<uint8_t>();
   }
 
@@ -124,7 +125,8 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   uint8_t hasNextSkill = stream.Read<uint8_t>();
   while (hasNextSkill == 1) {
     uint32_t id = stream.Read<uint32_t>();
-    uint8_t enabled = stream.Read<uint8_t>();
+    bool enabled = stream.Read<uint8_t>();
+    skills_.emplace_back(id, enabled);
     hasNextSkill = stream.Read<uint8_t>();
   }
 
@@ -232,10 +234,10 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   //======================================= State =======================================
   //=====================================================================================
 
-  uint8_t lifeState = stream.Read<uint8_t>(); // 1 = Alive, 2 = Dead
+  lifeState_ = static_cast<enums::LifeState>(stream.Read<uint8_t>());
   uint8_t unkByte0 = stream.Read<uint8_t>();
   uint8_t motionState = stream.Read<uint8_t>(); // 0 = None, 2 = Walking, 3 = Running, 4 = Sitting
-  uint8_t status = stream.Read<uint8_t>(); // 0 = None, 1 = Hwan, 2 = Untouchable, 3 = GameMasterInvincible, 5 = GameMasterInvisible, 5 = ?, 6 = Stealth, 7 = Invisible
+  bodyState_ = static_cast<enums::BodyState>(stream.Read<uint8_t>());
   float walkSpeed = stream.Read<float>();
   float runSpeed = stream.Read<float>();
   float hwanSpeed = stream.Read<float>();
@@ -325,6 +327,22 @@ uint8_t ParsedServerAgentCharacterData::inventorySize() const {
 
 const std::map<uint8_t, std::shared_ptr<storage::Item>>& ParsedServerAgentCharacterData::inventoryItemMap() const {
   return inventoryItemMap_;
+}
+
+const std::vector<structures::Mastery>& ParsedServerAgentCharacterData::masteries() const {
+  return masteries_;
+}
+
+const std::vector<structures::Skill>& ParsedServerAgentCharacterData::skills() const {
+  return skills_;
+}
+
+enums::LifeState ParsedServerAgentCharacterData::lifeState() const {
+  return lifeState_;
+}
+
+enums::BodyState ParsedServerAgentCharacterData::bodyState() const {
+  return bodyState_;
 }
 
 } // namespace packet::parsing

@@ -103,7 +103,9 @@ enum class AbnormalStateFlag : uint32_t {
 
 enum class InventoryErrorCode : uint16_t {
   // Still have time to reuse the item.
-  kWaitForReuseDelay = 0x185B
+  kWaitForReuseDelay = 0x185B,
+  // Cannot the use selected item while dead.
+  kCharacterDead = 0x1889
 };
 
 enum class ItemMovementType : uint8_t {
@@ -131,6 +133,65 @@ enum class ItemMovementType : uint8_t {
   kBuyback =                  0x22,
   kAvatarToInventory =        0x23,
   kInventoryToAvatar =        0x24
+};
+
+enum class LifeState : uint8_t {
+  kEmbryo = 0,
+  kAlive = 1,
+  kDead = 2,
+  kGone = 3
+};
+
+enum class BodyState : uint8_t {
+  kNormal = 0,
+  kHwan = 1,
+  kUntouchable = 2,
+  kInvincibleGm = 3,
+  kInvisibleGm = 4,
+  kBerserker = 5, // Something to do with Roc
+  kStealth = 6,
+  kInvisible = 7
+};
+
+enum class CommandType : uint8_t {
+  kExecute = 1,
+  kCancel = 2
+};
+
+enum class ActionType : uint8_t {
+  kAttack = 1,
+  kPickup = 2,
+  kTrace = 3,
+  kCast = 4,
+  kDispel = 5
+};
+
+enum class TargetType : uint8_t {
+  kNone = 0,
+  kEntity = 1,
+  kLand = 2
+};
+
+enum class ActionFlag : uint8_t {
+  kAttack = 1,
+  kTeleport = 2,
+  kSprint = 8
+};
+
+enum class HitResult : uint8_t {
+  kBlocked = 2,
+  kKnockdown = 4,
+  kKnockback = 5,
+  kCopy = 8, // Copies previous hit
+  kKill = 128
+};
+
+enum class DamageFlag : uint8_t {
+  kNormal = 1,
+  kCritical = 2,
+  kHwan = 4,
+  // Missing 8
+  kEffect = 16
 };
 
 } // namespace packet::enums

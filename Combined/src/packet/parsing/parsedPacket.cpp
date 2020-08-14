@@ -216,7 +216,6 @@ ParsedServerItemMove::ParsedServerItemMove(const PacketContainer &packet, const 
           throw std::runtime_error("Unable to parse packet. Encountered an item (id:"+std::to_string(refItemId)+") for which we have no data on.");
         }
         const pk2::ref::Item &itemRef = itemData.getItemById(refItemId);
-
         std::shared_ptr<storage::Item> parsedItem{storage::newItemByTypeData(itemRef)};
         if (!parsedItem) {
           throw std::runtime_error("Unable to create an item object for item");

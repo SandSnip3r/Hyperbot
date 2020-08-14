@@ -1,9 +1,12 @@
 #ifndef EVENT_EVENT_HPP_
 #define EVENT_EVENT_HPP_
 
+#include <cstdint>
+
 namespace event {
 
 enum class EventCode {
+  kSpawned,
   kHpPotionCooldownEnded,
   kMpPotionCooldownEnded,
   kVigorPotionCooldownEnded,
@@ -11,16 +14,33 @@ enum class EventCode {
   kPurificationPillCooldownEnded,
   kHpPercentChanged,
   kMpPercentChanged,
-  kStatesChanged
+  kStatesChanged,
+  kSkillCooldownEnded,
+  kInventorySlotUpdated,
+  kSkillCastAboutToEnd,
+  kKnockbackStatusEnded,
+  kTemp
 };
 
-class Event {
+struct Event {
 public:
-  explicit Event(EventCode eventCode);
-  EventCode getEventCode() const;
+  explicit Event(EventCode code);
+  const EventCode eventCode;
   virtual ~Event() = default;
-private:
-  EventCode eventCode_;
+};
+
+struct SkillCooldownEnded : public Event {
+public:
+  SkillCooldownEnded(int32_t skillId);
+  const int32_t skillRefId;
+  virtual ~SkillCooldownEnded() = default;
+};
+
+struct InventorySlotUpdated : public Event {
+public:
+  InventorySlotUpdated(int8_t slot);
+  const int8_t slotNum;
+  virtual ~InventorySlotUpdated() = default;
 };
 
 } // namespace event

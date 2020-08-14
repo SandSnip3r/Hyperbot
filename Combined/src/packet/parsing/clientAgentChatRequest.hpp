@@ -9,9 +9,9 @@
 
 namespace packet::parsing {
   
-class ParsedClientAgentChatRequest : public ParsedPacket {
+class ClientAgentChatRequest : public ParsedPacket {
 public:
-  ParsedClientAgentChatRequest(const PacketContainer &packet);
+  ClientAgentChatRequest(const PacketContainer &packet);
   packet::enums::ChatType chatType() const;
   uint8_t chatIndex() const;
   const std::string& receiverName() const;

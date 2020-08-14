@@ -4,6 +4,7 @@
 #include "item.hpp"
 #include "itemList.hpp"
 
+#include <mutex>
 #include <memory>
 #include <string>
 #include <vector>
@@ -12,12 +13,11 @@ namespace storage {
 
 class Storage {
 public:
-  Storage() = default;
-  Storage(uint8_t size);
   bool hasItem(uint8_t slot) const;
   Item* getItem(uint8_t slot);
   const Item* getItem(uint8_t slot) const;
   uint8_t size() const;
+  
   void clear();
   void resize(uint8_t newSize);
   void addItem(uint8_t slot, std::shared_ptr<Item> item);
@@ -25,8 +25,10 @@ public:
   void deleteItem(uint8_t slot);
   void moveItem(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
   void moveItem(uint8_t srcSlot, uint8_t destSlot);
-  void printItem(uint8_t slot);
+
+  std::vector<uint8_t> findItemsWithTypeId(uint8_t typeId1, uint8_t typeId2, uint8_t typeId3, uint8_t typeId4) const;
 private:
+  mutable std::mutex storageMutex_;
   ItemList itemList_;
 };
 

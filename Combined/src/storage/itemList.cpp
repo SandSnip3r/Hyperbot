@@ -2,10 +2,6 @@
 
 namespace storage {
 
-ItemList::ItemList(uint8_t size) : items_(static_cast<size_t>(size)) {
-  //
-}
-
 bool ItemList::hasItem(uint8_t slot) const {
   boundsCheck(slot, "hasItem");
   return static_cast<bool>(items_[slot]);
@@ -23,6 +19,23 @@ const Item* ItemList::getItem(uint8_t slot) const {
 
 uint8_t ItemList::size() const {
   return static_cast<uint8_t>(items_.size());
+}
+
+std::vector<uint8_t> ItemList::findItemsWithTypeId(uint8_t typeId1, uint8_t typeId2, uint8_t typeId3, uint8_t typeId4) const {
+  std::vector<uint8_t> slotsWithItem;    
+  for (uint8_t slotNum=0; slotNum<items_.size(); ++slotNum) {
+    const auto itemPtr = items_[slotNum];
+    if (itemPtr) {
+      const auto &itemRefData = *itemPtr->itemInfo;
+      if (itemRefData.typeId1 == typeId1 &&
+          itemRefData.typeId2 == typeId2 &&
+          itemRefData.typeId3 == typeId3 &&
+          itemRefData.typeId4 == typeId4) {
+        slotsWithItem.emplace_back(slotNum);
+      }
+    }
+  }
+  return slotsWithItem;
 }
 
 void ItemList::addItem(uint8_t slot, std::shared_ptr<Item> item) {

@@ -20,6 +20,17 @@ const ref::Skill& SkillData::getSkillById(ref::SkillId id) const {
   return it->second;
 }
 
+int32_t SkillData::getSkillTotalDuration(ref::SkillId id) const {
+  int32_t sum = 0;
+  auto skill = getSkillById(id);
+  sum += skill.actionPreparingTime + skill.actionCastingTime + skill.actionActionDuration;
+  while (skill.basicChainCode != 0) {
+    skill = getSkillById(skill.basicChainCode);
+    sum += skill.actionPreparingTime + skill.actionCastingTime + skill.actionActionDuration;
+  }
+  return sum;
+}
+
 const SkillData::SkillMap::size_type SkillData::size() const {
   return skills_.size();
 }

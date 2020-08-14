@@ -2,7 +2,7 @@
 
 namespace packet::parsing {
 
-ParsedClientAgentChatRequest::ParsedClientAgentChatRequest(const PacketContainer &packet) :
+ClientAgentChatRequest::ClientAgentChatRequest(const PacketContainer &packet) :
       ParsedPacket(packet) {
   // 1   byte    chatType
   // 1   byte    chatIndex
@@ -24,19 +24,19 @@ ParsedClientAgentChatRequest::ParsedClientAgentChatRequest(const PacketContainer
   message_ = stream.Read_Ascii(kMessageLength);
 }
 
-packet::enums::ChatType ParsedClientAgentChatRequest::chatType() const {
+packet::enums::ChatType ClientAgentChatRequest::chatType() const {
   return chatType_;
 }
 
-uint8_t ParsedClientAgentChatRequest::chatIndex() const {
+uint8_t ClientAgentChatRequest::chatIndex() const {
   return chatIndex_;
 }
 
-const std::string& ParsedClientAgentChatRequest::receiverName() const {
+const std::string& ClientAgentChatRequest::receiverName() const {
   return receiverName_;
 }
 
-const std::string& ParsedClientAgentChatRequest::message() const {
+const std::string& ClientAgentChatRequest::message() const {
   return message_;
 }
 
