@@ -13,6 +13,9 @@
 #include "../state/self.hpp"
 #include "../storage/storage.hpp"
 
+#include "../packet/parsing/serverAgentSkillBegin.hpp"
+#include "../packet/parsing/serverAgentSkillEnd.hpp"
+
 #include <mutex>
 
 namespace module {
@@ -46,6 +49,8 @@ private:
   void commonAttackEntity(state::Entity::EntityId entityId);
   void traceEntity(state::Entity::EntityId entityId);
   void pickupEntity(state::Entity::EntityId entityId);
+  void serverAgentSkillBeginReceived(packet::parsing::ServerAgentSkillBegin &packet);
+  void serverAgentSkillEndReceived(packet::parsing::ServerAgentSkillEnd &packet);
 };
 
 } // namespace module

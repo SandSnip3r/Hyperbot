@@ -57,6 +57,7 @@ void PacketBroker::subscribeToPacket(PacketSubscriptionMap &subscriptions, packe
       subscriptionIt = itBoolResult.first;
     }
   }
+  // TODO: Handle accidental duplicate subscriptions
   subscriptionIt->second.emplace_back(std::move(handleFunc));
 }
 

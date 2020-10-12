@@ -7,6 +7,7 @@
 #include "../packet/parsing/parsedPacket.hpp"
 #include "../packet/parsing/serverAgentCharacterData.hpp"
 #include "../packet/parsing/serverAgentEntityUpdateState.hpp"
+#include "../packet/parsing/serverAgentEntityUpdateMoveSpeed.hpp"
 #include "../pk2/gameData.hpp"
 #include "../shared/silkroad_security.h"
 #include "../state/entity.hpp"
@@ -111,6 +112,7 @@ private:
   void serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet);
   void entityUpdateReceived(const packet::parsing::ParsedServerHpMpUpdate &packet);
   void statUpdateReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet);
+  void serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet);
   void serverUseItemReceived(const packet::parsing::ParsedServerUseItem &packet);
   void serverAgentGroupSpawnReceived(const packet::parsing::ParsedServerAgentGroupSpawn &packet);
   void serverAgentSpawnReceived(packet::parsing::ParsedServerAgentSpawn &packet);

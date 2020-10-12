@@ -26,7 +26,12 @@ public:
   const std::map<uint8_t, std::shared_ptr<storage::Item>>& inventoryItemMap() const;
   const std::vector<structures::Mastery>& masteries() const;
   const std::vector<structures::Skill>& skills() const;
+  packet::structures::Position position() const;
+  float walkSpeed() const;
+  float runSpeed() const;
+  float hwanSpeed() const;
   enums::LifeState lifeState() const;
+  enums::MotionState motionState() const;
   enums::BodyState bodyState() const;
 private:
   uint32_t refObjId_;
@@ -38,7 +43,12 @@ private:
   std::map<uint8_t, std::shared_ptr<storage::Item>> inventoryItemMap_;
   std::vector<structures::Mastery> masteries_;
   std::vector<structures::Skill> skills_;
+  packet::structures::Position position_;
+  float walkSpeed_;
+  float runSpeed_;
+  float hwanSpeed_;
   enums::LifeState lifeState_;
+  enums::MotionState motionState_;
   enums::BodyState bodyState_;
 };
 

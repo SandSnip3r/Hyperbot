@@ -7,6 +7,7 @@
 #include "../packet/structures/packetInnerStructures.hpp"
 
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <mutex>
 #include <optional>
@@ -29,9 +30,23 @@ packet::enums::AbnormalStateFlag fromBitNum(int n);
 class Self {
 public:
   Self(const pk2::GameData &gameData);
-  void initialize(uint32_t globalId, uint32_t refObjId, uint32_t hp, uint32_t mp, const std::vector<packet::structures::Mastery> &masteries, const std::vector<packet::structures::Skill> &skills);
+  void initialize(uint32_t globalId,
+                  uint32_t refObjId,
+                  uint32_t hp,
+                  uint32_t mp,
+                  const std::vector<packet::structures::Mastery> &masteries,
+                  const std::vector<packet::structures::Skill> &skills);
+                  
+  // Setters
+  void setSpeed(float walkSpeed, float runSpeed);
+  void setHwanSpeed(float hwanSpeed);
   void setLifeState(packet::enums::LifeState lifeState);
+  void setMotionState(packet::enums::MotionState motionState);
   void setBodyState(packet::enums::BodyState bodyState);
+  void setPosition(const packet::structures::Position &position);
+  void doneMoving();
+  void setMoving(const packet::structures::Position &destination);
+  void setMoving(const uint16_t angle);
   void setHp(uint32_t hp);
   void setMp(uint32_t mp);
   void setMaxHpMp(uint32_t maxHp, uint32_t maxMp);
@@ -39,13 +54,24 @@ public:
   void setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect);
   void setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level);
 
+  // Getters
   bool spawned() const;
   uint32_t globalId() const;
   Race race() const;
   Gender gender() const;
 
+  float walkSpeed() const;
+  float runSpeed() const;
+  float hwanSpeed() const;
+  float currentSpeed() const;
   packet::enums::LifeState lifeState() const;
+  packet::enums::MotionState motionState() const;
   packet::enums::BodyState bodyState() const;
+
+  packet::structures::Position position() const;
+  bool moving() const;
+  bool haveDestination() const;
+  packet::structures::Position destination() const;
   
   uint32_t hp() const;
   uint32_t mp() const;
@@ -68,9 +94,23 @@ private:
   Race race_;
   Gender gender_;
 
+  // Speeds
+  float walkSpeed_;
+  float runSpeed_;
+  float hwanSpeed_;
+
   // Character states
   packet::enums::LifeState lifeState_;
+  packet::enums::MotionState motionState_;
+  std::optional<packet::enums::MotionState> lastMotionState_;
   packet::enums::BodyState bodyState_;
+
+  // Position
+  packet::structures::Position lastKnownPosition_;
+  bool moving_{false};
+  std::chrono::high_resolution_clock::time_point startedMovingTime_;
+  std::optional<packet::structures::Position> destinationPosition_;
+  std::optional<uint16_t> movementAngle_;
 
   // Health
   uint32_t hp_;
@@ -90,6 +130,8 @@ private:
   std::vector<packet::structures::Skill> skills_;
 
   void setRaceAndGender(uint32_t refObjId);
+  packet::structures::Position interpolateCurrentPosition() const;
+  float internal_speed() const;
 };
 
 } // namespace state

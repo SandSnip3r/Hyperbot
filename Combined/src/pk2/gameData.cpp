@@ -75,7 +75,12 @@ void parseDataFile(const std::string &data,
     size_t start=0;
     size_t posOfNewline = data.find('\n');
     while ((posOfNewline = data.find('\n', start)) != std::string::npos) {
-      const auto line = data.substr(start, posOfNewline-start);
+      int carriageReturnOffset = 0;
+      if (data[posOfNewline-1] == '\r') {
+        // Dont add carriage return to the "line"
+        carriageReturnOffset = 1;
+      }
+      const auto line = data.substr(start, posOfNewline-start-carriageReturnOffset);
       if (isValidDataLine(line)) {
         saveParsedDataObject(parseDataLine(line));
       }
@@ -195,11 +200,17 @@ void GameData::parseTeleportData(Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
+  // Maps Package name to item data
   std::map<std::string, ref::ScrapOfPackageItem> scrapOfPackageItemMap;
+  // Maps a ShopTabGroup(I think an option within the NPC's dialog) to N tabs
   std::vector<ref::ShopTab> shopTabs;
+  // List of NPC->ShopGroup
   std::vector<ref::ShopGroup> shopGroups;
+  // List of Tab->Good
   std::vector<ref::ShopGood> shopGoods;
+  // List of ShopGroup->Shop
   std::vector<ref::MappingShopGroup> mappingShopGroups;
+  // List of Shop->ShopTabGroup
   std::vector<ref::MappingShopWithTab> mappingShopWithTabs;
 
 	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";

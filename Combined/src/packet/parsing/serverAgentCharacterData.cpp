@@ -196,12 +196,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   //=====================================================================================
   //===================================== Position ======================================
   //=====================================================================================
-
-  // //Position
-  uint16_t regionId = stream.Read<uint16_t>();
-  float posX = stream.Read<float>();
-  float posY = stream.Read<float>();
-  float posZ = stream.Read<float>();
+  position_ = parsePosition(stream);
   uint16_t angle = stream.Read<uint16_t>();
 
   //=====================================================================================
@@ -210,23 +205,24 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
 
   uint8_t hasDestination = stream.Read<uint8_t>();
   uint8_t movementType = stream.Read<uint8_t>();
+  std::cout << "movementType: " << (int)movementType << '\n';
 
   if (hasDestination) {
     uint16_t destinationRegion = stream.Read<uint16_t>();
 
-    if (regionId < std::numeric_limits<uint16_t>::max()) {
-      // World
-      uint16_t destinationX = stream.Read<uint16_t>();
-      uint16_t destinationY = stream.Read<uint16_t>();
-      uint16_t destinationZ = stream.Read<uint16_t>();
-    } else {
+    if (position_.isDungeon()) {
       // Dungeon
       uint32_t destinationOffsetX = stream.Read<uint32_t>();
       uint32_t destinationOffsetY = stream.Read<uint32_t>();
       uint32_t destinationOffsetZ = stream.Read<uint32_t>();
+    } else {
+      // World
+      uint16_t destinationX = stream.Read<uint16_t>();
+      uint16_t destinationY = stream.Read<uint16_t>();
+      uint16_t destinationZ = stream.Read<uint16_t>();
     }
   } else {
-    uint8_t source = stream.Read<uint8_t>(); // 0 = Spinning, 1 = Sky-/Key-walking
+    packet::enums::AngleAction angleAction_ = static_cast<packet::enums::AngleAction>(stream.Read<uint8_t>());
     uint16_t angle = stream.Read<uint16_t>(); // Represents the new angle, character is looking at
   }
 
@@ -236,11 +232,15 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
 
   lifeState_ = static_cast<enums::LifeState>(stream.Read<uint8_t>());
   uint8_t unkByte0 = stream.Read<uint8_t>();
-  uint8_t motionState = stream.Read<uint8_t>(); // 0 = None, 2 = Walking, 3 = Running, 4 = Sitting
+  motionState_ = static_cast<enums::MotionState>(stream.Read<uint8_t>());
+  std::cout << "Motion state is " << static_cast<int>(motionState_) << '\n';
   bodyState_ = static_cast<enums::BodyState>(stream.Read<uint8_t>());
-  float walkSpeed = stream.Read<float>();
-  float runSpeed = stream.Read<float>();
-  float hwanSpeed = stream.Read<float>();
+  walkSpeed_ = stream.Read<float>();
+  std::cout << "walkSpeed: " << walkSpeed_ << '\n';
+  runSpeed_ = stream.Read<float>();
+  std::cout << "runSpeed: " << runSpeed_ << '\n';
+  hwanSpeed_ = stream.Read<float>();
+  std::cout << "hwanSpeed: " << hwanSpeed_ << '\n';
   uint8_t buffCount = stream.Read<uint8_t>();
   for (int i=0; i<buffCount; ++i) {
     uint32_t refSkillId = stream.Read<uint32_t>();
@@ -337,8 +337,28 @@ const std::vector<structures::Skill>& ParsedServerAgentCharacterData::skills() c
   return skills_;
 }
 
+packet::structures::Position ParsedServerAgentCharacterData::position() const {
+  return position_;
+}
+
+float ParsedServerAgentCharacterData::walkSpeed() const {
+  return walkSpeed_;
+}
+
+float ParsedServerAgentCharacterData::runSpeed() const {
+  return runSpeed_;
+}
+
+float ParsedServerAgentCharacterData::hwanSpeed() const {
+  return hwanSpeed_;
+}
+
 enums::LifeState ParsedServerAgentCharacterData::lifeState() const {
   return lifeState_;
+}
+
+enums::MotionState ParsedServerAgentCharacterData::motionState() const {
+  return motionState_;
 }
 
 enums::BodyState ParsedServerAgentCharacterData::bodyState() const {

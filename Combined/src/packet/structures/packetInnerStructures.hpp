@@ -3,6 +3,7 @@
 
 #include "../enums/packetEnums.hpp"
 
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -114,6 +115,21 @@ public:
   float y;
   float z;
 };
+
+struct Position {
+public:
+  uint16_t regionId;
+  float xOffset, yOffset, zOffset;
+  bool isDungeon() const { return regionId & 0x8000; }
+  uint8_t dungeonId() const { return regionId & 0xFF; }
+  uint8_t xSector() const { return regionId & 0xFF; }
+  uint8_t zSector() const { return (regionId >> 8) & 0x7F; }
+};
+
+inline uint16_t createWorldRegionId(uint16_t xSector, uint16_t zSector) {
+  // TODO: Move to special file
+  return ((zSector & 0xFF) << 8) | (xSector & 0xFF);
+}
 
 } // namespace packet::structures
 

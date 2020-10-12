@@ -2,6 +2,7 @@
 #include "../packet/opcode.hpp"
 #include "../packet/building/clientAgentActionSelectRequest.hpp"
 
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <regex>
@@ -27,6 +28,10 @@ SkillUseModule::SkillUseModule(state::Entity &entityState,
   broker_.subscribeToClientPacket(packet::Opcode::kClientAgentChatRequest, packetHandleFunction);
   // Server packets
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionSelectResponse, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillBegin, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillEnd, packetHandleFunction);
+  
+
 
   // TODO: Save subscription ID to possibly unsubscribe in the future
   // eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, std::bind(&SkillUseModule::handlePotionCooldownEnded, this, std::placeholders::_1));
@@ -73,8 +78,42 @@ bool SkillUseModule::handlePacket(const PacketContainer &packet) {
     return true;
   }
 
+  auto *serverAgentSkillBegin = dynamic_cast<packet::parsing::ServerAgentSkillBegin*>(parsedPacket.get());
+  if (serverAgentSkillBegin != nullptr) {
+    serverAgentSkillBeginReceived(*serverAgentSkillBegin);
+    return true;
+  }
+
+  auto *serverAgentSkillEnd = dynamic_cast<packet::parsing::ServerAgentSkillEnd*>(parsedPacket.get());
+  if (serverAgentSkillEnd != nullptr) {
+    serverAgentSkillEndReceived(*serverAgentSkillEnd);
+    return true;
+  }
+
   std::cout << "SkillUseModule: Unhandled packet subscribed to\n";
   return true;
+}
+
+void SkillUseModule::serverAgentSkillBeginReceived(packet::parsing::ServerAgentSkillBegin &packet) {
+  // std::ofstream damageFile("dmg.txt", std::ios_base::app);
+  // if (!damageFile) {
+  //   std::cout << "Cannot open file!!\n";
+  //   return;
+  // }
+  // if (packet.result() && packet.casterGlobalId() == selfState_.globalId()) {
+  //   for (const auto &hitObject : packet.action().hitObjects) {
+  //     for (const auto &hit : hitObject.hits) {
+  //       if (hit.damageFlag == packet::enums::DamageFlag::kNormal) {
+  //         damageFile << "normal," << hit.damage << '\n';
+  //       } else if (hit.damageFlag == packet::enums::DamageFlag::kCritical) {
+  //         damageFile << "critical," << hit.damage << '\n';
+  //       }
+  //     }
+  //   }
+  // }
+}
+
+void SkillUseModule::serverAgentSkillEndReceived(packet::parsing::ServerAgentSkillEnd &packet) {
 }
 
 void SkillUseModule::selectEntity(state::Entity::EntityId entityId) {

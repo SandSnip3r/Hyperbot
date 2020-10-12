@@ -19,6 +19,7 @@ void parseItem(storage::ItemStone &item, StreamUtility &stream);
 void parseItem(storage::ItemMagicPop &item, StreamUtility &stream);
 void parseItem(storage::Item *item, StreamUtility &stream);
 structures::SkillAction parseSkillAction(StreamUtility &stream);
+structures::Position parsePosition(StreamUtility &stream);
 
 } // namespace packet::parsing
 

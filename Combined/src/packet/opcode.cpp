@@ -306,8 +306,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kServerAgentActionSelectResponse) {
     return "kServerAgentActionSelectResponse";
   }
-  if (opcode == Opcode::SERVER_MOVEMENT) {
-    return "SERVER_MOVEMENT";
+  if (opcode == Opcode::kServerAgentEntityUpdateMovement) {
+    return "kServerAgentEntityUpdateMovement";
   }
   if (opcode == Opcode::SERVER_UNIQUE) {
     return "SERVER_UNIQUE";
@@ -411,7 +411,7 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_ITEM_DURABILITY_CHANGE) {
     return "SERVER_ITEM_DURABILITY_CHANGE";
   }
-  if (opcode == Opcode::SERVER_CHARACTER_STUCK) {
+  if (opcode == Opcode::kServerAgentEntityUpdatePosition) {
     return "SERVER_CHARACTER_STUCK";
   }
   return "UNKNOWN";

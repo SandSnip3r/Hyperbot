@@ -45,9 +45,11 @@
     <ClCompile Include="src\config\iniReader.cpp" />
     <ClCompile Include="src\event\event.cpp" />
     <ClCompile Include="src\loader.cpp" />
+    <ClCompile Include="src\math\position.cpp" />
     <ClCompile Include="src\module\characterInfoModule.cpp" />
     <ClCompile Include="src\module\chatEventModule.cpp" />
     <ClCompile Include="src\module\loginModule.cpp" />
+    <ClCompile Include="src\module\movementModule.cpp" />
     <ClCompile Include="src\module\skillUseModule.cpp" />
     <ClCompile Include="src\packetLogger.cpp" />
     <ClCompile Include="src\packet\building\clientAgentActionCommandRequest.cpp" />
@@ -63,6 +65,7 @@
     <ClCompile Include="src\packet\building\serverAgentChatUpdate.cpp" />
     <ClCompile Include="src\packet\opcode.cpp" />
     <ClCompile Include="src\packet\parsing\clientAgentActionCommandRequest.cpp" />
+    <ClCompile Include="src\packet\parsing\clientAgentCharacterMoveRequest.cpp" />
     <ClCompile Include="src\packet\parsing\clientAgentChatRequest.cpp" />
     <ClCompile Include="src\packet\parsing\commonParsing.cpp" />
     <ClCompile Include="src\packet\parsing\packetParser.cpp" />
@@ -73,6 +76,9 @@
     <ClCompile Include="src\packet\parsing\serverAgentBuffRemove.cpp" />
     <ClCompile Include="src\packet\parsing\serverAgentCharacterData.cpp" />
     <ClCompile Include="src\packet\parsing\serverAgentChatUpdate.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentEntityUpdateMovement.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentEntityUpdateMoveSpeed.cpp" />
+    <ClCompile Include="src\packet\parsing\serverAgentEntityUpdatePosition.cpp" />
     <ClCompile Include="src\packet\parsing\serverAgentEntityUpdateState.cpp" />
     <ClCompile Include="src\packet\parsing\serverAgentSkillBegin.cpp" />
     <ClCompile Include="src\packet\parsing\serverAgentSkillEnd.cpp" />
@@ -125,9 +131,11 @@
     <ClInclude Include="src\config\iniReader.hpp" />
     <ClInclude Include="src\event\event.hpp" />
     <ClInclude Include="src\loader.hpp" />
+    <ClInclude Include="src\math\position.hpp" />
     <ClInclude Include="src\module\characterInfoModule.hpp" />
     <ClInclude Include="src\module\chatEventModule.hpp" />
     <ClInclude Include="src\module\loginModule.hpp" />
+    <ClInclude Include="src\module\movementModule.hpp" />
     <ClInclude Include="src\module\skillUseModule.hpp" />
     <ClInclude Include="src\packetLogger.hpp" />
     <ClInclude Include="src\packet\building\clientAgentActionCommandRequest.hpp" />
@@ -144,6 +152,7 @@
     <ClInclude Include="src\packet\enums\packetEnums.hpp" />
     <ClInclude Include="src\packet\opcode.hpp" />
     <ClInclude Include="src\packet\parsing\clientAgentActionCommandRequest.hpp" />
+    <ClInclude Include="src\packet\parsing\clientAgentCharacterMoveRequest.hpp" />
     <ClInclude Include="src\packet\parsing\clientAgentChatRequest.hpp" />
     <ClInclude Include="src\packet\parsing\commonParsing.hpp" />
     <ClInclude Include="src\packet\parsing\packetParser.hpp" />
@@ -154,6 +163,9 @@
     <ClInclude Include="src\packet\parsing\serverAgentBuffRemove.hpp" />
     <ClInclude Include="src\packet\parsing\serverAgentCharacterData.hpp" />
     <ClInclude Include="src\packet\parsing\serverAgentChatUpdate.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentEntityUpdateMovement.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentEntityUpdateMoveSpeed.hpp" />
+    <ClInclude Include="src\packet\parsing\serverAgentEntityUpdatePosition.hpp" />
     <ClInclude Include="src\packet\parsing\serverAgentEntityUpdateState.hpp" />
     <ClInclude Include="src\packet\parsing\serverAgentSkillBegin.hpp" />
     <ClInclude Include="src\packet\parsing\serverAgentSkillEnd.hpp" />

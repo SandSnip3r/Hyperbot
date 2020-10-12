@@ -6,6 +6,7 @@
 #include "config/characterLoginData.hpp"
 #include "module/characterInfoModule.hpp"
 #include "module/loginModule.hpp"
+#include "module/movementModule.hpp"
 #include "module/skillUseModule.hpp"
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
@@ -28,6 +29,7 @@ private:
   packet::parsing::PacketParser packetParser_{gameData_};
   module::CharacterInfoModule characterInfoModule_{entityState_, selfState_, inventory_, broker_, eventBroker_, packetParser_, gameData_};
   module::LoginModule loginModule_{broker_, packetParser_, loginData_, gameData_.divisionInfo()};
+  module::MovementModule movementModule_{entityState_, selfState_, inventory_, broker_, eventBroker_, packetParser_, gameData_};
   module::SkillUseModule skillUseModule_{entityState_, selfState_, inventory_, broker_, eventBroker_, packetParser_, gameData_};
 };
 

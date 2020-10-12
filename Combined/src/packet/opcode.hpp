@@ -136,6 +136,7 @@ enum class Opcode {
   SERVER_STR_UPDATE = 0xB050,
   SERVER_INT_UPDATE = 0xB051,
   kServerAgentEntityUpdateState = 0x30BF,
+  kServerAgentEntityUpdateMoveSpeed = 0x30D0,
   SERVER_HPMP_UPDATE = 0x3057,
   SERVER_ANIMATION_LEVEL_UP = 0x3054,
   SERVER_EXP = 0x3056,
@@ -147,7 +148,7 @@ enum class Opcode {
   SERVER_CHAT_ACCEPT = 0xB025,
 
   kServerAgentActionSelectResponse = 0xB045,
-  SERVER_MOVEMENT = 0xB021,
+  kServerAgentEntityUpdateMovement = 0xB021,
   SERVER_UNIQUE = 0x300C,
 
   SERVER_ANIMATION_COS_SPAWN = 0x30C8,
@@ -197,7 +198,7 @@ enum class Opcode {
   SERVER_REPAIR = 0xB03E,
   SERVER_ITEM_DURABILITY_CHANGE = 0x3052,
 
-  SERVER_CHARACTER_STUCK = 0xB023,
+  kServerAgentEntityUpdatePosition = 0xB023,
 };
 
 std::string toStr(Opcode opcode);

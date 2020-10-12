@@ -373,7 +373,34 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
                                    const pk2::SkillData &skillData,
                                    const pk2::TeleportData &teleportData) {
   const uint32_t refObjId = stream.Read<uint32_t>();
+  if (refObjId == std::numeric_limits<uint32_t>::max()) {
+    // Special case, refObjId == -1
+    std::cout << "EVENT_ZONE\n";
+    // EVENT_ZONE (Traps, Buffzones, ...)
+    uint16_t eventZoneTypeId = stream.Read<uint16_t>();
+    std::cout << " eventZoneTypeId:" << eventZoneTypeId << '\n';
+    uint32_t eventZoneRefSkillId = stream.Read<uint32_t>();
+    std::cout << " eventZoneRefSkillId:" << eventZoneRefSkillId << '\n';
+    uint32_t uniqueId = stream.Read<uint32_t>();
+    std::cout << " uniqueId:" << uniqueId << '\n';
+    uint16_t regionId = stream.Read<uint16_t>();
+    std::cout << " regionId:" << regionId << '\n';
+    uint32_t x = stream.Read<uint32_t>(); // Actually a float
+    std::cout << " x:" << *reinterpret_cast<float*>(&x) << '\n';
+    uint32_t y = stream.Read<uint32_t>(); // Actually a float
+    std::cout << " y:" << *reinterpret_cast<float*>(&y) << '\n';
+    uint32_t z = stream.Read<uint32_t>(); // Actually a float
+    std::cout << " z:" << *reinterpret_cast<float*>(&z) << '\n';
+    uint16_t angle = stream.Read<uint16_t>();
+    std::cout << " angle:" << angle << '\n';
+    return {};
+  }
+
   std::shared_ptr<Object> obj = newObjectFromId(refObjId, characterData, itemData, teleportData);
+  if (!obj) {
+    throw std::runtime_error("Failed to create object for spawn");
+  }
+
   if (characterData.haveCharacterWithId(obj->refObjId) && characterData.getCharacterById(obj->refObjId).typeId1 == 1) {
     const auto &character = characterData.getCharacterById(obj->refObjId);
     Character *characterPtr = dynamic_cast<Character*>(obj.get());
@@ -449,7 +476,7 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
           }
         }
       }
-    } else if(character.typeId2 == 2 && character.typeId3 == 5) {
+    } else if (character.typeId2 == 2 && character.typeId3 == 5) {
       //NPC_FORTRESS_STRUCT
       uint32_t structureHp = stream.Read<uint32_t>();
       uint32_t structureRefEventStructId = stream.Read<uint32_t>();
@@ -485,8 +512,8 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
         uint16_t destinationOffsetZ = stream.Read<uint16_t>();
       }
     } else {
-      uint8_t movementSource = stream.Read<uint8_t>(); // 0=spinning, 1=FC_GO_FORWARD
-      uint16_t movementAngle = stream.Read<uint16_t>(); // Represents the new angle, character is looking at
+      packet::enums::AngleAction angleAction_ = static_cast<packet::enums::AngleAction>(stream.Read<uint8_t>());
+      uint16_t angle = stream.Read<uint16_t>(); // Represents the new angle, character is looking at
     }
   
     // State
@@ -629,6 +656,20 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
         uint32_t guildId = stream.Read<uint32_t>();
         uint16_t guildNameLength = stream.Read<uint16_t>();
         std::string guildName = stream.Read_Ascii(guildNameLength);
+      // } else if (character.typeId3 == 5) {
+      //   // CGObjSiegeStruct
+      //   uint32_t unk0 = stream.Read<uint32_t>(); // 0xFFFFFFFF
+      //   uint16_t unk1 = stream.Read<uint16_t>(); // 0x0054
+      //   uint32_t unk2 = stream.Read<uint32_t>(); // 0x000052FE
+      //   uint32_t unk3 = stream.Read<uint32_t>(); // 0x0001ACB9
+      //   uint16_t unk4 = stream.Read<uint16_t>(); // 0x4547      (region Id)
+      //   uint32_t xBytes = stream.Read<uint32_t>();
+      //   float x = *reinterpret_cast<float*>(&xBytes);
+      //   uint32_t yBytes = stream.Read<uint32_t>();
+      //   float y = *reinterpret_cast<float*>(&yBytes);
+      //   uint32_t zBytes = stream.Read<uint32_t>();
+      //   float z = *reinterpret_cast<float*>(&zBytes);
+      //   uint16_t angle = stream.Read<uint16_t>();
       }
     }
   } else if (itemData.haveItemWithId(obj->refObjId) && itemData.getItemById(obj->refObjId).typeId1 == 3) {
@@ -637,6 +678,7 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
       throw std::runtime_error("parseSpawn, have an item, but the obj pointer cannot be cast to a Item");
     }
     const auto &item = itemData.getItemById(obj->refObjId);
+    std::cout << "Item with refid " << obj->refObjId << " spawned\n";
     // ITEM
     //  ITEM_EQUIP
     //  ITEM_ETC
@@ -651,14 +693,16 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
       if (item.typeId3 == 5 && item.typeId4 == 0) {
         // ITEM_ETC_MONEY_GOLD
         uint32_t goldAmount = stream.Read<uint32_t>();
-      } else if (item.typeId3 == 8 || item.typeId4 == 9) {
+      } else if (item.typeId3 == 8 || item.typeId3 == 9) {
         // ITEM_ETC_TRADE
         // ITEM_ETC_QUEST
         uint16_t ownerNameLength = stream.Read<uint16_t>();
         std::string ownerName = stream.Read_Ascii(ownerNameLength);
+        std::cout << "Item is a quest item belonging to " << ownerName << '\n';
       }
     }
     itemPtr->gId = stream.Read<uint32_t>();
+    std::cout << "Item's GID is " << itemPtr->gId << '\n';
     itemPtr->regionId = stream.Read<uint16_t>();
     uint32_t x = stream.Read<uint32_t>(); // Actually a float
     itemPtr->x = *reinterpret_cast<float*>(&x);
@@ -711,25 +755,6 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
       uint32_t unkUint2 = stream.Read<uint32_t>();
       uint8_t unkByte4 = stream.Read<uint8_t>();
     }
-  } else if (obj->refObjId == std::numeric_limits<uint32_t>::max()) {
-    std::cout << "EVENT_ZONE\n";
-    // EVENT_ZONE (Traps, Buffzones, ...)
-    uint16_t eventZoneTypeId = stream.Read<uint16_t>();
-    std::cout << " eventZoneTypeId:" << eventZoneTypeId << '\n';
-    uint32_t eventZoneRefSkillId = stream.Read<uint32_t>();
-    std::cout << " eventZoneRefSkillId:" << eventZoneRefSkillId << '\n';
-    uint32_t uniqueId = stream.Read<uint32_t>();
-    std::cout << " uniqueId:" << uniqueId << '\n';
-    uint16_t regionId = stream.Read<uint16_t>();
-    std::cout << " regionId:" << regionId << '\n';
-    uint32_t x = stream.Read<uint32_t>(); // Actually a float
-    std::cout << " x:" << *reinterpret_cast<float*>(&x) << '\n';
-    uint32_t y = stream.Read<uint32_t>(); // Actually a float
-    std::cout << " y:" << *reinterpret_cast<float*>(&y) << '\n';
-    uint32_t z = stream.Read<uint32_t>(); // Actually a float
-    std::cout << " z:" << *reinterpret_cast<float*>(&z) << '\n';
-    uint16_t angle = stream.Read<uint16_t>();
-    std::cout << " angle:" << angle << '\n';
   }
   return obj;
 }
@@ -749,7 +774,11 @@ ParsedServerAgentGroupSpawn::ParsedServerAgentGroupSpawn(const PacketContainer &
   uint16_t groupSpawnAmount = stream.Read<uint16_t>();
   if (groupSpawnType_ == GroupSpawnType::kSpawn) {
     for (int spawnNum=0; spawnNum<groupSpawnAmount; ++spawnNum) {
-      objects_.emplace_back(parseSpawn(stream, characterData, itemData, skillData, teleportData));
+      auto obj = parseSpawn(stream, characterData, itemData, skillData, teleportData);
+      if (obj) {
+        // TODO: Handle "skill objects", like the recovery circle (will be nullptr)
+        objects_.emplace_back(obj);
+      }
     }
   } else if (groupSpawnType_ == GroupSpawnType::kDespawn) {
     for (int despawnNum=0; despawnNum<groupSpawnAmount; ++despawnNum) {
@@ -779,12 +808,15 @@ ParsedServerAgentSpawn::ParsedServerAgentSpawn(const PacketContainer &packet,
                                                const pk2::TeleportData &teleportData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   object_ = parseSpawn(stream, characterData, itemData, skillData, teleportData);
-  if (object_->typeId1 == 1 || object_->typeId1 == 4) {
-    //BIONIC and STORE
-    uint8_t spawnType = stream.Read<uint8_t>(); // 1=COS_SUMMON, 3=SPAWN, 4=SPAWN_WALK
-  } else if (object_->typeId1 == 3) {
-    uint8_t dropSource = stream.Read<uint8_t>();
-    uint32_t dropperUniqueId = stream.Read<uint32_t>();
+  if (object_) {
+    // TODO: Handle "skill objects", like the recovery circle (will be nullptr)
+    if (object_->typeId1 == 1 || object_->typeId1 == 4) {
+      //BIONIC and STORE
+      uint8_t spawnType = stream.Read<uint8_t>(); // 1=COS_SUMMON, 3=SPAWN, 4=SPAWN_WALK
+    } else if (object_->typeId1 == 3) {
+      uint8_t dropSource = stream.Read<uint8_t>();
+      uint32_t dropperUniqueId = stream.Read<uint32_t>();
+    }
   }
 }
 

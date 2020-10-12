@@ -47,6 +47,7 @@ CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_SPAWN, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_DESPAWN, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateState, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMoveSpeed, packetHandleFunction);
 
   auto eventHandleFunction = std::bind(&CharacterInfoModule::handleEvent, this, std::placeholders::_1);
   // TODO: Save subscription ID to possibly unsubscribe in the future
@@ -58,14 +59,6 @@ CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
   eventBroker_.subscribeToEvent(event::EventCode::kHpPercentChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMpPercentChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
-  // eventBroker_.subscribeToEvent(event::EventCode::kMpPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
-  // eventBroker_.subscribeToEvent(event::EventCode::kVigorPotionCooldownEnded, std::bind(&CharacterInfoModule::handlePotionCooldownEnded, this, std::placeholders::_1));
-  // eventBroker_.subscribeToEvent(event::EventCode::kUniversalPillCooldownEnded, std::bind(&CharacterInfoModule::handlePillCooldownEnded, this, std::placeholders::_1));
-  // // eventBroker_.subscribeToEvent(event::EventCode::kPurificationPillCooldownEnded, std::bind(&CharacterInfoModule::handlePillCooldownEnded, this, std::placeholders::_1));
-  // eventBroker_.subscribeToEvent(event::EventCode::kHpPercentChanged, std::bind(&CharacterInfoModule::handleHpPercentChanged, this, std::placeholders::_1));
-  // eventBroker_.subscribeToEvent(event::EventCode::kMpPercentChanged, std::bind(&CharacterInfoModule::handleMpPercentChanged, this, std::placeholders::_1));
-  // eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, std::bind(&CharacterInfoModule::handleStatesChanged, this, std::placeholders::_1));
 }
 
 void CharacterInfoModule::handleEvent(const event::Event *event) {
@@ -218,11 +211,26 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
     serverAgentEntityUpdateStateReceived(*entityUpdateState);
     return true;
   }
+
+  auto *entityUpdateMoveSpeed = dynamic_cast<packet::parsing::ServerAgentEntityUpdateMoveSpeed*>(parsedPacket.get());
+  if (entityUpdateMoveSpeed != nullptr) {
+    serverAgentEntityUpdateMoveSpeedReceived(*entityUpdateMoveSpeed);
+    return true;
+  }
   
   //======================================================================================================
 
   std::cout << "CharacterInfoModule: Unhandled packet subscribed to\n";
   return true;
+}
+
+void CharacterInfoModule::serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) {
+  if (packet.globalId() == selfState_.globalId()) {
+    // Our speed was updated
+    std::cout << "Our speed was updated from " << selfState_.walkSpeed() << ',' << selfState_.runSpeed() << " to " << packet.walkSpeed() << ',' << packet.runSpeed() << '\n';
+    selfState_.setSpeed(packet.walkSpeed(), packet.runSpeed());
+    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kCharacterSpeedUpdated));
+  }
 }
 
 void CharacterInfoModule::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) {
@@ -239,6 +247,17 @@ void CharacterInfoModule::serverAgentEntityUpdateStateReceived(packet::parsing::
         std::cout << ")\n";
         usedItemQueue_.clear();
       }
+    } else if (packet.stateType() == packet::parsing::StateType::kMotionState) {
+      if (static_cast<packet::enums::MotionState>(packet.state()) == packet::enums::MotionState::kWalk) {
+        std::cout << "Motion state update to walk\n";
+      } else if (static_cast<packet::enums::MotionState>(packet.state()) == packet::enums::MotionState::kRun) {
+        std::cout << "Motion state update to run\n";
+      } else if (static_cast<packet::enums::MotionState>(packet.state()) == packet::enums::MotionState::kSit) {
+        std::cout << "Motion state update to sit\n";
+      } else {
+        std::cout << "Motion state update to " << static_cast<int>(packet.state()) << '\n';
+      }
+      selfState_.setMotionState(static_cast<packet::enums::MotionState>(packet.state()));
     }
   }
 }
@@ -261,7 +280,11 @@ void CharacterInfoModule::stopTrackingObject(uint32_t gId) {
 }
 
 void CharacterInfoModule::serverAgentSpawnReceived(packet::parsing::ParsedServerAgentSpawn &packet) {
-  trackObject(packet.object());
+  if (packet.object()) {
+    trackObject(packet.object());
+  } else {
+    std::cout << "Object spawned which we cannot track\n";
+  }
 }
 
 void CharacterInfoModule::serverAgentDespawnReceived(packet::parsing::ParsedServerAgentDespawn &packet) {
@@ -583,9 +606,26 @@ void CharacterInfoModule::setRaceAndGender(uint32_t refObjId) {
 
 void CharacterInfoModule::serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) {
   selfState_.initialize(packet.entityUniqueId(), packet.refObjId(), packet.hp(), packet.mp(), packet.masteries(), packet.skills());
-  selfState_.setBodyState(packet.bodyState());
+
+  // Position
+  selfState_.setPosition(packet.position());
   std::cout << "Our Ref Obj Id " << packet.refObjId() << '\n';
+  std::cout << "Position: " << (packet.position().isDungeon() ? "dungeon " : "world ");
+  if (packet.position().isDungeon()) {
+    std::cout << '#' << (int)packet.position().dungeonId();
+  } else {
+    std::cout << "region (" << (int)packet.position().xSector() << ',' << (int)packet.position().zSector() << ")";
+  }
+  std::cout << " (" << packet.position().xOffset << ',' << packet.position().yOffset << ',' << packet.position().zOffset << ")\n";
+
+  // State
   selfState_.setLifeState(packet.lifeState());
+  selfState_.setMotionState(packet.motionState());
+  selfState_.setBodyState(packet.bodyState());
+
+  // Speed
+  selfState_.setSpeed(packet.walkSpeed(), packet.runSpeed());
+  selfState_.setHwanSpeed(packet.hwanSpeed());
   auto refObjId = packet.refObjId();
   gold_ = packet.gold();
   printGold();

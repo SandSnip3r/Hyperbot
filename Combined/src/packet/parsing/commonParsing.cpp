@@ -239,4 +239,13 @@ structures::SkillAction parseSkillAction(StreamUtility &stream) {
   return result;
 }
 
+structures::Position parsePosition(StreamUtility &stream) {
+  structures::Position position;
+  position.regionId = stream.Read<uint16_t>();
+  position.xOffset = stream.Read<float>();
+  position.yOffset = stream.Read<float>();
+  position.zOffset = stream.Read<float>();
+  return position;
+}
+
 } // namespace packet::parsing
