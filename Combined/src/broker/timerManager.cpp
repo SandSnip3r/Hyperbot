@@ -27,12 +27,14 @@ bool TimerManager::cancelTimer(TimerId id) {
     if (!timerFound) {
       return false;
     }
-    // Reheapify
-    std::make_heap(timerDataHeap_.begin(), timerDataHeap_.end(), std::greater<Timer>());
-    if (timerDataHeap_.front().endTime < prevTime) {
-      // New timer ends sooner than the previous soonest
-      // Wake up the thread to handle this
-      shouldNotify = true;
+    if (!timerDataHeap_.empty()) {
+      // Reheapify if there are any timers remaining
+      std::make_heap(timerDataHeap_.begin(), timerDataHeap_.end(), std::greater<Timer>());
+      if (timerDataHeap_.front().endTime < prevTime) {
+        // New timer ends sooner than the previous soonest
+        // Wake up the thread to handle this
+        shouldNotify = true;
+      }
     }
   }
   if (shouldNotify) {
@@ -80,6 +82,17 @@ void TimerManager::waitForData() {
   cv_.wait(timerDataLock, [this](){ return !keepRunning_ || !timerDataHeap_.empty(); });
 }
 
+bool TimerManager::mostRecentTimerIsFinished() {
+  std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
+  if (!timerDataHeap_.empty()) {
+    if (timerDataHeap_.front().endTime <= std::chrono::high_resolution_clock::now()) {
+      return true;
+    }
+  }
+  // Timer not finished, or no timers
+  return false;
+}
+
 void TimerManager::internalRun() {
   while (keepRunning_) {
     if (timerDataHeap_.empty()) {
@@ -91,19 +104,28 @@ void TimerManager::internalRun() {
       // Wait on shortest timer
       {
         std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
-        const auto soonestTime = timerDataHeap_.front().endTime;
-        // Wait until we've reached our target time or someone has inserted a timer that will expire sooner
-        cv_.wait_until(timerDataLock, soonestTime, [this, &soonestTime](){
-          const auto currentSoonestTime = timerDataHeap_.front().endTime;
-          // Wake up if a sooner timer has been inserted. This needs to be done because
-          //  cv_.wait_until() is now going to awake at the wrong time
-          const bool soonerTimerAdded = currentSoonestTime < soonestTime;
-          // Wake up if our timer has expired
-          const bool timeExpired = std::chrono::high_resolution_clock::now() >= currentSoonestTime;
-          return (soonerTimerAdded || timeExpired);
-        });
+        // Double check that there is data, someone could've cancelled a timer
+        if (!timerDataHeap_.empty()) {
+          const auto soonestTime = timerDataHeap_.front().endTime;
+          // Wait until we've reached our target time, someone has inserted a timer that will expire sooner, or there are no timers
+          cv_.wait_until(timerDataLock, soonestTime, [this, &soonestTime](){
+            // Double check that there is data, someone could've cancelled a timer
+            if (!timerDataHeap_.empty()) {
+              const auto currentSoonestTime = timerDataHeap_.front().endTime;
+              // Wake up if a sooner timer has been inserted. This needs to be done because
+              //  cv_.wait_until() is now going to awake at the wrong time
+              const bool soonerTimerAdded = currentSoonestTime < soonestTime;
+              // Wake up if our timer has expired
+              const bool timeExpired = std::chrono::high_resolution_clock::now() >= currentSoonestTime;
+              return (soonerTimerAdded || timeExpired);
+            } else {
+              // Wake up if no timer exists
+              return true;
+            }
+          });
+        }
       }
-      if (std::chrono::high_resolution_clock::now() >= timerDataHeap_.front().endTime) {
+      if (mostRecentTimerIsFinished()) {
         // Woken up because our timer finished
         pruneTimers();
       }
@@ -112,7 +134,7 @@ void TimerManager::internalRun() {
 }
 
 void TimerManager::pruneTimers() {
-  while (!timerDataHeap_.empty() && timerDataHeap_.front().endTime <= std::chrono::high_resolution_clock::now()) {
+  while (mostRecentTimerIsFinished()) {
     Timer t;
     {
       std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);

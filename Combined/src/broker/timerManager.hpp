@@ -41,6 +41,7 @@ private:
   void internalRun();
   void pruneTimers();
   void timerFinished(const Timer &timer);
+  bool mostRecentTimerIsFinished();
 };
 
 } // namespace broker
