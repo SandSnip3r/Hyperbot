@@ -1,6 +1,8 @@
 #include "loader.hpp"
 #include "../../common/Common.h"
 
+#include <csignal>
+#include <functional>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -28,6 +30,32 @@ Loader::Loader(const std::experimental::filesystem::v1::path &kSilkroadDirectory
   std::cout << " Silkroad client path: \"" << clientPath_ << "\"\n";
   std::cout << " DLL path: \"" << dllPath_ << "\"\n";
 }
+
+class Murderer {
+public:
+  static std::vector<int> processIds_;
+  static void addProcessToKillOnExit(int processId) {
+    processIds_.push_back(processId);
+  }
+  static void signalHandler(int signal) {
+    // https://ladydebug.com/blog/2019/08/29/kill-process-programmatically-by-pid/
+    for (auto pid : processIds_) {
+      HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+      if (handle == NULL) {
+        // Unable to "open" process?
+      } else {
+        if (TerminateProcess(handle, -1)) {
+          // Success!
+        } else {
+          // Failed...?
+        }
+        CloseHandle(handle);
+      }
+    }
+    exit(0);
+  }
+};
+std::vector<int> Murderer::processIds_;
 
 void Loader::startClient(uint16_t proxyListeningPort) {
   WSADATA wsaData = { 0 };
@@ -74,6 +102,10 @@ void Loader::startClient(uint16_t proxyListeningPort) {
   ResumeThread(pi.hThread);
   ResumeThread(pi.hProcess);
   WSACleanup();
+
+  // Kill the process when we exit
+  Murderer::addProcessToKillOnExit(pi.dwProcessId);
+  signal(SIGINT, &Murderer::signalHandler);
 }
 
 // void Loader::killClient() {}
