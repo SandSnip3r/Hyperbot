@@ -1,6 +1,8 @@
 #ifndef MODULE_MOVEMENT_MODULE_HPP_
 #define MODULE_MOVEMENT_MODULE_HPP_
 
+
+#include "sharedMemoryWriter.hpp"
 #include "../broker/eventBroker.hpp"
 #include "../broker/packetBroker.hpp"
 #include "../packet/parsing/clientAgentCharacterMoveRequest.hpp"
@@ -49,6 +51,7 @@ private:
   int maxXOffset_;
   int maxZOffset_;
   bool movingErratically_{false};
+  SharedMemoryWriter sharedMemoryWriter_{"HyperbotSharedMemory", 256};
   //======tmp======
 
   // Packet handling functions

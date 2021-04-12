@@ -122,6 +122,14 @@ void MovementModule::handleEvent(const event::Event *event) {
 }
 
 void MovementModule::handleTempEvent() {
+  auto pos = selfState_.position();
+  // Write pos at beginning of file
+  sharedMemoryWriter_.seek(0);
+  sharedMemoryWriter_.writeData(pos.regionId);
+  sharedMemoryWriter_.writeData(pos.xOffset);
+  sharedMemoryWriter_.writeData(pos.yOffset);
+  sharedMemoryWriter_.writeData(pos.zOffset);
+  eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kTemp), std::chrono::milliseconds(33));
 }
 
 void MovementModule::handleSpeedUpdated() {
@@ -135,6 +143,9 @@ void MovementModule::handleSpeedUpdated() {
 }
 
 void MovementModule::handleMovementEnded() {
+  // TODO: Remove ->
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTemp));
+  // <-
   movingEventId_.reset();
   std::cout << "[TIMER END] Movement ended event\n";
   selfState_.doneMoving();
@@ -293,7 +304,8 @@ bool MovementModule::clientAgentChatRequestReceived(packet::parsing::ClientAgent
       // } 
       // result.regionId
     };
-    // broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(), PacketContainer::Direction::kClientToServer);
+    const auto pos = selfState_.position();
+    broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(pos.regionId, x, 0, y), PacketContainer::Direction::kClientToServer);
     return false;
   } else {
     return true;

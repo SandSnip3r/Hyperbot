@@ -50,6 +50,7 @@
     <ClCompile Include="src\module\chatEventModule.cpp" />
     <ClCompile Include="src\module\loginModule.cpp" />
     <ClCompile Include="src\module\movementModule.cpp" />
+    <ClCompile Include="src\module\sharedMemoryWriter.cpp" />
     <ClCompile Include="src\module\skillUseModule.cpp" />
     <ClCompile Include="src\packetLogger.cpp" />
     <ClCompile Include="src\packet\building\clientAgentActionCommandRequest.cpp" />
@@ -136,6 +137,7 @@
     <ClInclude Include="src\module\chatEventModule.hpp" />
     <ClInclude Include="src\module\loginModule.hpp" />
     <ClInclude Include="src\module\movementModule.hpp" />
+    <ClInclude Include="src\module\sharedMemoryWriter.hpp" />
     <ClInclude Include="src\module\skillUseModule.hpp" />
     <ClInclude Include="src\packetLogger.hpp" />
     <ClInclude Include="src\packet\building\clientAgentActionCommandRequest.hpp" />
