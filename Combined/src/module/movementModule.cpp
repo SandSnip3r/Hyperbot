@@ -9,6 +9,9 @@
 #include <memory>
 #include <regex>
 
+// TODO: Remove
+// #define SHARED_MEM 1
+
 std::ostream& operator<<(std::ostream &stream, const packet::structures::Position &pos) {
   stream << '{';
   if (pos.isDungeon()) {
@@ -54,11 +57,13 @@ MovementModule::MovementModule(state::Entity &entityState,
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePosition, packetHandleFunction);
   // TODO: When teleporting, cancel movement timer!!
 
-  // event::EventCode::kMovementEnded
   auto eventHandleFunction = std::bind(&MovementModule::handleEvent, this, std::placeholders::_1);
   eventBroker_.subscribeToEvent(event::EventCode::kMovementEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCharacterSpeedUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kRepublish, eventHandleFunction);
+#ifdef SHARED_MEM
   eventBroker_.subscribeToEvent(event::EventCode::kTemp, eventHandleFunction);
+#endif
 
   eng_ = createRandomEngine();
 }
@@ -115,6 +120,13 @@ void MovementModule::handleEvent(const event::Event *event) {
     case event::EventCode::kTemp:
       handleTempEvent();
       break;
+    case event::EventCode::kRepublish:
+      republishStepEventId_.reset();
+      if (stepping_ && !selfState_.moving()) {
+        std::cout << "<<<<<<<<<<<<<<<<<<<<<Triggering \"republish\">>>>>>>>>>>>>>>>>>>>>\n";
+        moveByStep();
+      }
+      break;
     default:
       std::cout << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
       break;
@@ -122,6 +134,7 @@ void MovementModule::handleEvent(const event::Event *event) {
 }
 
 void MovementModule::handleTempEvent() {
+#ifdef SHARED_MEM
   auto pos = selfState_.position();
   // Write pos at beginning of file
   sharedMemoryWriter_.seek(0);
@@ -130,6 +143,7 @@ void MovementModule::handleTempEvent() {
   sharedMemoryWriter_.writeData(pos.yOffset);
   sharedMemoryWriter_.writeData(pos.zOffset);
   eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kTemp), std::chrono::milliseconds(33));
+#endif
 }
 
 void MovementModule::handleSpeedUpdated() {
@@ -144,24 +158,24 @@ void MovementModule::handleSpeedUpdated() {
 
 void MovementModule::handleMovementEnded() {
   // TODO: Remove ->
+#ifdef SHARED_MEM
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTemp));
+#endif
   // <-
   movingEventId_.reset();
   std::cout << "[TIMER END] Movement ended event\n";
   selfState_.doneMoving();
-  auto currentPos = selfState_.position();
   std::cout << "[TIMER END] Currently at " << selfState_.position() << '\n';
-  if (movingErratically_) {
-    std::uniform_int_distribution<int> xDist(-maxXOffset_,maxXOffset_);
-    std::uniform_int_distribution<int> zDist(-maxZOffset_,maxZOffset_);
-    auto newPos = math::position::offset(center_, xDist(eng_), zDist(eng_));
-    broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(newPos.regionId, newPos.xOffset, newPos.yOffset, newPos.zOffset), PacketContainer::Direction::kClientToServer);
+  if (stepping_) {
+    std::cout << "Trying to step again\n";
+    moveByStep();
   }
 }
 
 bool MovementModule::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) {
   if (packet.globalId() == selfState_.globalId()) {
     if (selfState_.moving()) {
+      // Note: this also happens when running to pick an item
       std::cout << "[UPDATE POS] We were moving. Must've hit an obstacle\n";
       if (movingEventId_) {
         std::cout << "[UPDATE POS] Cancelling timer\n";
@@ -239,33 +253,52 @@ bool MovementModule::serverAgentEntityUpdateMovementReceived(packet::parsing::Se
   return true;
 }
 
-void MovementModule::startMovingErratically() {
-  movingErratically_ = true;
-  center_ = selfState_.position();
-  std::uniform_int_distribution<int> xDist(-maxXOffset_,maxXOffset_);
-  std::uniform_int_distribution<int> zDist(-maxZOffset_,maxZOffset_);
-  auto newPos = math::position::offset(center_, xDist(eng_), zDist(eng_));
-  broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(newPos.regionId, newPos.xOffset, newPos.yOffset, newPos.zOffset), PacketContainer::Direction::kClientToServer);
+void MovementModule::startStepping() {
+  stepping_ = true;
+  moveByStep();
 }
 
-void MovementModule::stopMovingErratically() {
-  movingErratically_ = false;
+void MovementModule::stopStepping() {
+  stepping_ = false;
+  if (republishStepEventId_) {
+    // Had a backup event, no longer needed, cancel
+    eventBroker_.cancelDelayedEvent(*republishStepEventId_);
+    republishStepEventId_.reset();
+  }
+}
+
+void MovementModule::moveByStep() {
+  if (republishStepEventId_) {
+    std::cout << "killing existing republish timer\n";
+    // Had a backup event, no longer needed, cancel
+    eventBroker_.cancelDelayedEvent(*republishStepEventId_);
+    republishStepEventId_.reset();
+  }
+  auto currentPos = selfState_.position();
+  if (currentPos.xOffset+steppingStepSize_ < 1920) {
+    currentPos.xOffset += steppingStepSize_;
+    std::cout << "Injecting movement packet\n";
+    broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(currentPos.regionId, std::round(currentPos.xOffset), std::round(currentPos.yOffset), std::round(currentPos.zOffset)), PacketContainer::Direction::kClientToServer);
+    std::cout << "Starting republish timer\n";
+    republishStepEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kRepublish), std::chrono::milliseconds(static_cast<uint64_t>(100)));
+  } else {
+    std::cout << "Reached region boundary, stopping\n";
+    stopStepping();
+  }
 }
 
 bool MovementModule::clientAgentChatRequestReceived(packet::parsing::ClientAgentChatRequest &packet) {
   std::regex startRegex(R"delim(start ([0-9]+))delim");
-  // std::regex startRegex(R"delim(start ([0-9]+) (true|false))delim");
   std::regex stopRegex(R"delim(stop)delim");
   std::regex moveRegex(R"delim(move (-?[0-9]+) (-?[0-9]+))delim");
   std::smatch regexMatch;
   if (std::regex_match(packet.message(), regexMatch, startRegex)) {
     //start
-    maxXOffset_ = std::stoi(regexMatch[1].str());
-    maxZOffset_ = std::stoi(regexMatch[1].str());
-    startMovingErratically();
+    steppingStepSize_ = std::stoi(regexMatch[1].str());
+    startStepping();
   } else if (std::regex_match(packet.message(), regexMatch, stopRegex)) {
     //stop
-    stopMovingErratically();
+    stopStepping();
   } else if (std::regex_match(packet.message(), regexMatch, moveRegex)) {
     const int x = std::stoi(regexMatch[1].str());
     const int y = std::stoi(regexMatch[2].str());

@@ -2,6 +2,7 @@
 
 #include "../../../common/pk2/pk2.h"
 #include "../../../common/pk2/parsing/parsing.hpp"
+#include "../navmesh/navmeshParser.hpp" // TODO: Maybe move to the common parsing area?
 
 #include <functional>
 #include <iostream>
@@ -14,12 +15,23 @@ namespace fs = std::experimental::filesystem::v1;
 
 GameData::GameData(const fs::path &kSilkroadPath) : kSilkroadPath_(kSilkroadPath) {
   try {
+    auto kDataPath = kSilkroadPath_ / "Data.pk2";
+    Pk2ReaderModern pk2Reader{kDataPath};
+    parseData(pk2Reader);
+  } catch (std::exception &ex) {
+    throw std::runtime_error(std::string("Failed to parse Data.Pk2 at path \""+kSilkroadPath_.string()+"\". Error: \"")+ex.what()+"\"");
+  }
+  try {
     auto kMediaPath = kSilkroadPath_ / "Media.pk2";
     Pk2ReaderModern pk2Reader{kMediaPath};
     parseMedia(pk2Reader);
   } catch (std::exception &ex) {
     throw std::runtime_error(std::string("Failed to parse Media.Pk2 at path \""+kSilkroadPath_.string()+"\". Error: \"")+ex.what()+"\"");
   }
+}
+
+void GameData::parseData(Pk2ReaderModern &pk2Reader) {
+  parseNavmeshData(pk2Reader);
 }
 
 void GameData::parseMedia(Pk2ReaderModern &pk2Reader) {
@@ -398,6 +410,31 @@ void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
         }
       }
     }
+  }
+}
+
+void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {
+  std::cout << "Parsing navmesh data\n";
+  NavmeshParser navmeshParser(pk2Reader);
+  // std::cout << "Enabled regions: [ ";
+  // for (int regionX=0; regionX<255; ++regionX) {
+  //   for (int regionY=0; regionY<128; ++regionY) {
+  //     const uint16_t regionId = regionX&0xFF | ((regionY&0xFF)<<8);
+  //     if (navmeshParser.regionIsEnabled(regionId)) {
+  //       std::cout << "(" << regionX << ',' << regionY << ") ";
+  //     }
+  //   }
+  // }
+  // std::cout << "]\n";
+  // Load region at East Jangan gate
+  const int kRegionX = 170;
+  const int kRegionY = 97;
+  const uint16_t kRegionId = kRegionX&0xFF | ((kRegionY&0xFF)<<8);
+  if (navmeshParser.regionIsEnabled(kRegionId)) {
+    std::cout << "Parsing region " << kRegionId << '\n';
+    const auto regionNavmesh = navmeshParser.parseRegionNavmesh(kRegionId);
+  } else {
+    std::cout << "Not parsing region because it is disabled\n";
   }
 }
 

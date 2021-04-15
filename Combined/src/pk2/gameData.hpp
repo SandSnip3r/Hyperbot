@@ -35,6 +35,10 @@ private:
   ShopData shopData_;
   SkillData skillData_;
   TeleportData teleportData_;
+
+  void parseData(Pk2ReaderModern &pk2Reader);
+  void parseNavmeshData(Pk2ReaderModern &pk2Reader);
+
   void parseMedia(Pk2ReaderModern &pk2Reader);
   void parseDivisionInfo(Pk2ReaderModern &pk2Reader);
   void parseCharacterData(Pk2ReaderModern &pk2Reader);

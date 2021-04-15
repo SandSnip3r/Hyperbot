@@ -59,7 +59,7 @@ public:
 	bool Open(const char * filename);
 	void Close();
 
-	// Returns true of an entry was found with the 'pathname' using 'entry' as the parent. If
+	// Returns true if an entry was found with the 'pathname' using 'entry' as the parent. If
 	// you want to search from the root, make sure entry is a zero'ed out object.
 	bool GetEntry(const char * pathname, PK2Entry & entry);
 

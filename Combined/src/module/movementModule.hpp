@@ -43,14 +43,14 @@ private:
 
   //======tmp======
   std::optional<broker::TimerManager::TimerId> movingEventId_;
-  void startMovingErratically();
-  void stopMovingErratically();
+  void startStepping();
+  void stopStepping();
+  void moveByStep();
   float secondsToTravel(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition) const;
   std::mt19937 eng_;
-  packet::structures::Position center_;
-  int maxXOffset_;
-  int maxZOffset_;
-  bool movingErratically_{false};
+  int steppingStepSize_;
+  bool stepping_{false};
+  std::optional<broker::TimerManager::TimerId> republishStepEventId_;
   SharedMemoryWriter sharedMemoryWriter_{"HyperbotSharedMemory", 256};
   //======tmp======
 

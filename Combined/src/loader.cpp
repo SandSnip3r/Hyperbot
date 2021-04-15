@@ -19,7 +19,9 @@ void createAppDataDirectoryIfNecessary(const std::experimental::filesystem::v1::
 
 Loader::Loader(const std::experimental::filesystem::v1::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo) : kSilkroadDirectoryPath_(kSilkroadDirectoryPath), kDivisionInfo_(divisionInfo) {
   // TODO: Ensure this dll path is updated for release builds
-  dllPath_ = edxLabs::GetAbsoluteDirectoryPath() + "../Debug/loaderDll.dll";
+  // Note: Assuming that the DLL is in our current directory
+  // TODO: Replace edx directory helper with std::fs
+  dllPath_ = edxLabs::GetAbsoluteDirectoryPath() + "/loaderDll.dll";
   std::stringstream args;
   args << "0 /" << (int)kDivisionInfo_.locale << " " << 0 << " " << 0;
   arguments_ = args.str();
