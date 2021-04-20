@@ -9,8 +9,8 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
-std::experimental::filesystem::v1::path getAppDataPath() {
-  std::experimental::filesystem::v1::path path;
+std::filesystem::path getAppDataPath() {
+  std::filesystem::path path;
   PWSTR pathTmp;
 
   /* Attempt to get user's AppData folder

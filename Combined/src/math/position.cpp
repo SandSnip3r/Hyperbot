@@ -1,5 +1,7 @@
 #include "position.hpp"
 
+#include <stdexcept>
+
 namespace math::position {
 
 float calculateDistance(const packet::structures::Position &srcPos, const packet::structures::Position &destPos) {

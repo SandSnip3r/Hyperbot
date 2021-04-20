@@ -11,7 +11,7 @@
 
 namespace pk2 {
 
-namespace fs = std::experimental::filesystem::v1;
+namespace fs = std::filesystem;
 
 class Pk2ReaderModern {
 public:

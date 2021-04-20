@@ -10,14 +10,14 @@
 // locale
 // Gateway port
 
-void createAppDataDirectoryIfNecessary(const std::experimental::filesystem::v1::path &appDataDirectoryPath) {
+void createAppDataDirectoryIfNecessary(const std::filesystem::path &appDataDirectoryPath) {
   const std::string kAppDataSubdirName = "Hyperbot"; // TODO: Move to a shared location since this is used in the DLL too
-  if (!std::experimental::filesystem::v1::exists(appDataDirectoryPath / kAppDataSubdirName)) {
-    std::experimental::filesystem::v1::create_directory(appDataDirectoryPath / kAppDataSubdirName);
+  if (!std::filesystem::exists(appDataDirectoryPath / kAppDataSubdirName)) {
+    std::filesystem::create_directory(appDataDirectoryPath / kAppDataSubdirName);
   }
 }
 
-Loader::Loader(const std::experimental::filesystem::v1::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo) : kSilkroadDirectoryPath_(kSilkroadDirectoryPath), kDivisionInfo_(divisionInfo) {
+Loader::Loader(const std::filesystem::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo) : kSilkroadDirectoryPath_(kSilkroadDirectoryPath), kDivisionInfo_(divisionInfo) {
   // TODO: Ensure this dll path is updated for release builds
   // Note: Assuming that the DLL is in our current directory
   // TODO: Replace edx directory helper with std::fs
@@ -82,7 +82,7 @@ void Loader::startClient(uint16_t proxyListeningPort) {
     // Make sure the output directory exists
     createAppDataDirectoryIfNecessary(appDataDirectoryPath);
     const std::string kAppDataSubdirName = "Hyperbot"; // TODO: Move to a shared location since this is used in the DLL too
-    const std::experimental::filesystem::v1::path portInfoFilename = appDataDirectoryPath / kAppDataSubdirName / (std::to_string(pi.dwProcessId)+".txt");
+    const std::filesystem::path portInfoFilename = appDataDirectoryPath / kAppDataSubdirName / (std::to_string(pi.dwProcessId)+".txt");
     std::ofstream portInfoFile(portInfoFilename);
     if (portInfoFile) {
       portInfoFile << proxyListeningPort << '\n';

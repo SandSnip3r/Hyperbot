@@ -1,7 +1,7 @@
 #include "session.hpp"
 
 Session::Session(const pk2::GameData &gameData,
-                 const std::experimental::filesystem::v1::path &kSilkroadDirectoryPath,
+                 const std::filesystem::path &kSilkroadDirectoryPath,
                  const config::CharacterLoginData &loginData) :
     gameData_(gameData),
     kSilkroadDirectoryPath_(kSilkroadDirectoryPath),

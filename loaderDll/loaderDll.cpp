@@ -370,7 +370,7 @@ bool modifyRoutelist() {
       }
       portInfoFile >> botPort;
     }
-    bool fileSuccessfullyRemoved = std::experimental::filesystem::v1::remove(portInfoFilePath);
+    bool fileSuccessfullyRemoved = std::filesystem::remove(portInfoFilePath);
   }
 	do
 	{

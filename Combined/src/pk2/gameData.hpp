@@ -18,7 +18,7 @@ namespace pk2 {
 class GameData {
 public:
   // Opens Media.PK2, parses game data into memory, and closes Media.pk2
-  GameData(const std::experimental::filesystem::v1::path &kSilkroadPath);
+  GameData(const std::filesystem::path &kSilkroadPath);
 
   const DivisionInfo& divisionInfo() const;
   const CharacterData& characterData() const;
@@ -28,7 +28,7 @@ public:
   const TeleportData& teleportData() const;
 private:
   std::mutex printMutex_;
-  const std::experimental::filesystem::v1::path kSilkroadPath_;
+  const std::filesystem::path kSilkroadPath_;
   DivisionInfo divisionInfo_;
   CharacterData characterData_;
   ItemData itemData_;

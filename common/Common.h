@@ -5,7 +5,7 @@
 #include <vector>
 #include <windows.h>
 
-std::experimental::filesystem::v1::path getAppDataPath();
+std::filesystem::path getAppDataPath();
 
 namespace edxLabs
 {

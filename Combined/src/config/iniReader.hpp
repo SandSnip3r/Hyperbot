@@ -14,7 +14,7 @@ class IniReader {
 public:
   // Constructed with path to config file.
   // Will parse the config file into memory
-  IniReader(const std::experimental::filesystem::v1::path &kPath);
+  IniReader(const std::filesystem::path &kPath);
 
   // Get all section titles
   std::vector<std::string> getSections() const;
@@ -42,7 +42,7 @@ private:
   SectionDataMap sectionMap_;
   
   // Reads data into the SectionDataMap data structure
-  void parseConfig(const std::experimental::filesystem::v1::path &kPath);
+  void parseConfig(const std::filesystem::path &kPath);
   const std::string& getStr(const std::string &kSectionName, const std::string &kKey) const;
 };
 

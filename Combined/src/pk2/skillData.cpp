@@ -1,5 +1,6 @@
 #include "skillData.hpp"
 
+#include <stdexcept>
 #include <string>
 
 namespace pk2 {

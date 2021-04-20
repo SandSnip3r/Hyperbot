@@ -1,5 +1,6 @@
 #include "teleportData.hpp"
 
+#include <stdexcept>
 #include <string>
 
 namespace pk2 {

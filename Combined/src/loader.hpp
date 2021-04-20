@@ -10,7 +10,7 @@ class Loader {
 public:
 	// Construct a Loader with the given silkroad directory
 	// The Loader is now ready to start a client
-	Loader(const std::experimental::filesystem::v1::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo);
+	Loader(const std::filesystem::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo);
 	
 	// Starts the Silkroad client process and injects the DLL
 	void startClient(uint16_t proxyListeningPort);
@@ -18,7 +18,7 @@ public:
 	// TODO
   // void killClient();
 private:
-	const std::experimental::filesystem::v1::path kSilkroadDirectoryPath_;
+	const std::filesystem::path kSilkroadDirectoryPath_;
   const pk2::DivisionInfo &kDivisionInfo_;
 	std::string dllPath_;
 	std::string arguments_;

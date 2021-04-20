@@ -9,7 +9,7 @@ ConfigData::ConfigData(config::IniReader &configReader) {
   readConfig(configReader);
 }
 
-std::experimental::filesystem::v1::path ConfigData::silkroadDirectory() const {
+std::filesystem::path ConfigData::silkroadDirectory() const {
   return silkroadDirectory_;
 }
 

@@ -19,13 +19,13 @@
 class Session {
 public:
   Session(const pk2::GameData &gameData,
-          const std::experimental::filesystem::v1::path &kSilkroadDirectoryPath,
+          const std::filesystem::path &kSilkroadDirectoryPath,
           const config::CharacterLoginData &loginData);
   ~Session();
   void start();
 private:
   const pk2::GameData &gameData_;
-  const std::experimental::filesystem::v1::path &kSilkroadDirectoryPath_;
+  const std::filesystem::path &kSilkroadDirectoryPath_;
   const config::CharacterLoginData &loginData_;
   Loader loader_{kSilkroadDirectoryPath_, gameData_.divisionInfo()};
   broker::PacketBroker broker_;

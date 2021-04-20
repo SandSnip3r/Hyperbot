@@ -13,7 +13,7 @@
 #include <iostream>
 
 using namespace std;
-namespace fs = std::experimental::filesystem::v1;
+namespace fs = std::filesystem;
 
 void generateBlankConfig(const fs::path &path);
 

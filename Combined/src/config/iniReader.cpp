@@ -25,7 +25,7 @@ const std::string& IniReader::getStr(const std::string &kSectionName, const std:
   return sectionMap_.at(kSectionName).at(kKey);
 }
 
-IniReader::IniReader(const std::experimental::filesystem::v1::path &kPath) {
+IniReader::IniReader(const std::filesystem::path &kPath) {
   parseConfig(kPath);
 }
 
@@ -36,7 +36,7 @@ namespace {
   }
 }
 
-void IniReader::parseConfig(const std::experimental::filesystem::v1::path &kPath) {
+void IniReader::parseConfig(const std::filesystem::path &kPath) {
   std::ifstream inFile(kPath);
   if (!inFile) {
     throw std::runtime_error("Unable to locate config file \""+kPath.string()+"\"");

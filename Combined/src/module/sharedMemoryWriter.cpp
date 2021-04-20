@@ -1,5 +1,7 @@
 #include "sharedMemoryWriter.hpp"
 
+#include <stdexcept>
+
 std::string GetLastErrorAsString() {
   //Get the error message, if any.
   DWORD errorMessageID = ::GetLastError();

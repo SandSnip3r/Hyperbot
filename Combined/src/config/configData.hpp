@@ -12,10 +12,10 @@ namespace config {
 class ConfigData {
 public:
   ConfigData(config::IniReader &configReader);
-  std::experimental::filesystem::v1::path silkroadDirectory() const;
+  std::filesystem::path silkroadDirectory() const;
   const CharacterLoginData& characterLoginData() const;
 private:
-  std::experimental::filesystem::v1::path silkroadDirectory_;
+  std::filesystem::path silkroadDirectory_;
   CharacterLoginData characterLoginData_;
   void readConfig(config::IniReader &configReader);
 };

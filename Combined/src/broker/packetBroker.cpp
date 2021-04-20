@@ -1,5 +1,7 @@
 #include "packetBroker.hpp"
 
+#include <stdexcept>
+
 namespace broker {
 
 void PacketBroker::setInjectionFunction(PacketInjectionFunction &&injectionFunction) {

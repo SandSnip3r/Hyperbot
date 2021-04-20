@@ -5,6 +5,7 @@
 
 #include <windows.h>
 
+#include <stdexcept>
 #include <string>
 
 std::string GetLastErrorAsString();
