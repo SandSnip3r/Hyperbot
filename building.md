@@ -1,0 +1,42 @@
+# How to build
+
+## Prerequisites
+
+- Visual Studio
+  - Only 2019 tested
+- CMake
+- Boost 1.67.0
+
+## Using WSL command line
+
+1. Create a build directory
+   - `mkdir build`
+   - `cd build`
+2. Run the Windows cmake.exe
+   - Example location: `C:\Program Files\CMake\bin\cmake.exe`
+   - Pass a generator
+      - `-G "Visual Studio 16 2019"`
+   - Pass a platform
+      - `-A Win32`
+   - Pass the path to the root `CMakeLists.txt`
+      - `../`
+   - (Optional) Pass a toolset
+      - `-T host=x64`
+   - Final command example: `/mnt/c/Program\ Files/CMake/bin/cmake.exe -G "Visual Studio 16 2019" -A Win32 ../`
+3. Run the MSBuild.exe supplied with Visual Studio
+   - Example location: `C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin`
+   - Pass the path to the Solution file created by CMake
+      - Probably `Combined.sln` in your current directory
+   - Final command example: `/mnt/c/Program\ Files\ \(x86\)/Microsoft\ Visual\ Studio/2019/Community/MSBuild/Current/Bin/MSBuild.exe Combined.sln`
+
+## Using Visual Studio
+
+1. Open Visual Studio
+2. File -> Open -> CMake...
+3. Select root `CMakeLists.txt`
+4. Set configuration x86-Debug
+   - This configuration is defined in `CMakeSettings.json`
+5. Right click the root `CMakeLists.txt` and choose "Generate Cache for Combined"
+   - I think this runs Ninja to generate build files in the output directory defined in `CMakeSettings.json`
+   - If there are files in this output directory already, it could cause issues in Visual Studio
+6. Build -> Build All

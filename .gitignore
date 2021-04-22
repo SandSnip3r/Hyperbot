@@ -17,6 +17,8 @@
 [Rr]eleases/
 x64/
 x86/
+out/
+build/
 bld/
 [Bb]in/
 [Oo]bj/
