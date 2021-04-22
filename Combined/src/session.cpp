@@ -5,7 +5,8 @@ Session::Session(const pk2::GameData &gameData,
                  const config::CharacterLoginData &loginData) :
     gameData_(gameData),
     kSilkroadDirectoryPath_(kSilkroadDirectoryPath),
-    loginData_(loginData) {
+    loginData_(loginData)/* ,
+    pathfinder_() */ {
   //
 }
 

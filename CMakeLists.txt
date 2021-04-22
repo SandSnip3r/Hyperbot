@@ -82,6 +82,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 ################################################################################
 # Sub-projects
 ################################################################################
+add_subdirectory(Pathfinder)
 add_subdirectory(Combined)
 add_subdirectory(loaderDll)
 

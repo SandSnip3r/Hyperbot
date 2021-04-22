@@ -318,4 +318,8 @@ if(MSVC)
     endif()
 endif()
 
-target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}
+  PRIVATE
+    ${Boost_LIBRARIES}
+    Pathfinder
+)
