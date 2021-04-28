@@ -1,13 +1,25 @@
 #include "gameData.hpp"
 
+#include "../math/matrix.hpp"
+
+#include "../../../Pathfinder/vector.h"
+#include "../../../Pathfinder/behaviorBuilder.h"
+#include "../../../Pathfinder/triangle/triangle_api.h"
+
 #include "../../../common/pk2/pk2.h"
 #include "../../../common/pk2/parsing/parsing.hpp"
-#include "../navmesh/navmeshParser.hpp" // TODO: Maybe move to the common parsing area?
 
 #include <functional>
 #include <iostream>
 #include <fstream>
 #include <map>
+
+namespace navmesh_geometry_helpers {
+
+ObjectResource transformObject(const ObjectResource &obj, const MapObjInfo &objInfo);
+bool lineTrim(Vector &p1, Vector &p2);
+
+} // namespace navmesh_geometry_helpers
 
 namespace pk2 {
 
@@ -84,28 +96,40 @@ void parseDataFile(const std::string &data,
                    std::function<bool(const std::string &)> isValidDataLine,
                    std::function<DataType(const std::string &)> parseDataLine,
                    std::function<void(DataType &&)> saveParsedDataObject) {
-    size_t start=0;
-    size_t posOfNewline = data.find('\n');
-    while ((posOfNewline = data.find('\n', start)) != std::string::npos) {
-      int carriageReturnOffset = 0;
-      if (data[posOfNewline-1] == '\r') {
-        // Dont add carriage return to the "line"
-        carriageReturnOffset = 1;
-      }
-      const auto line = data.substr(start, posOfNewline-start-carriageReturnOffset);
-      if (isValidDataLine(line)) {
-        saveParsedDataObject(parseDataLine(line));
-      }
-      start = posOfNewline+1;
+  size_t start=0;
+  size_t posOfNewline = data.find('\n');
+  while ((posOfNewline = data.find('\n', start)) != std::string::npos) {
+    int carriageReturnOffset = 0;
+    if (data[posOfNewline-1] == '\r') {
+      // Dont add carriage return to the "line"
+      carriageReturnOffset = 1;
     }
-    if (start < data.size()-1) {
-      // File doesnt end in newline. One more line to read
-      std::cout << "One more\n";
-      const auto line = data.substr(start);
-      if (isValidDataLine(line)) {
-        saveParsedDataObject(parseDataLine(line));
-      }
+    const auto line = data.substr(start, posOfNewline-start-carriageReturnOffset);
+    if (isValidDataLine(line)) {
+      saveParsedDataObject(parseDataLine(line));
     }
+    start = posOfNewline+1;
+  }
+  if (start < data.size()-1) {
+    // File doesnt end in newline. One more line to read
+    std::cout << "One more\n";
+    const auto line = data.substr(start);
+    if (isValidDataLine(line)) {
+      saveParsedDataObject(parseDataLine(line));
+    }
+  }
+}
+
+template<typename DataType>
+void parseDataFile2(const std::vector<std::string> &lines,
+                   std::function<bool(const std::string &)> isValidDataLine,
+                   std::function<DataType(const std::string &)> parseDataLine,
+                   std::function<void(DataType &&)> saveParsedDataObject) {
+  for (const auto &line : lines) {
+    if (isValidDataLine(line)) {
+      saveParsedDataObject(parseDataLine(line));
+    }
+  }
 }
 } // namespace (anonymous)
 
@@ -116,8 +140,9 @@ void GameData::parseCharacterData(Pk2ReaderModern &pk2Reader) {
   PK2Entry masterCharacterdataEntry = pk2Reader.getEntry(kMasterCharacterdataPath);
 
   auto masterCharacterdataData = pk2Reader.getEntryData(masterCharacterdataEntry);
-  auto masterCharacterdataStr = parsing::fileDataToString(masterCharacterdataData);
-  auto characterdataFilenames = parsing::split(masterCharacterdataStr, "\r\n");
+  // auto masterCharacterdataStr = parsing::fileDataToString(masterCharacterdataData);
+  // auto characterdataFilenames = parsing::split(masterCharacterdataStr, "\r\n");
+  auto characterdataFilenames = parsing::fileDataToStringLines(masterCharacterdataData);
 
   {
     std::unique_lock<std::mutex> lock(printMutex_);
@@ -127,8 +152,15 @@ void GameData::parseCharacterData(Pk2ReaderModern &pk2Reader) {
     auto characterdataPath = kTextdataDirectory + characterdataFilename;
     PK2Entry characterdataEntry = pk2Reader.getEntry(characterdataPath);
     auto characterdataData = pk2Reader.getEntryData(characterdataEntry);
-    auto characterdataStr = parsing::fileDataToString(characterdataData);
-    parseDataFile<ref::Character>(characterdataStr, parsing::isValidCharacterdataLine, parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
+    // auto characterdataStr = parsing::fileDataToString(characterdataData);
+    auto characterdataLines = parsing::fileDataToStringLines(characterdataData);
+    try {
+      parseDataFile2<ref::Character>(characterdataLines, parsing::isValidCharacterdataLine, parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
+      // parseDataFile<ref::Character>(characterdataStr, parsing::isValidCharacterdataLine, parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
+    } catch (std::exception &ex) {
+      std::cout << "Exception while parsing character data\n";
+      std::cout << "  " << ex.what() << '\n';
+    }
   }
   {
     std::unique_lock<std::mutex> lock(printMutex_);
@@ -413,6 +445,241 @@ void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
   }
 }
 
+void GameData::buildTriangleDataForRegion(const RegionNavmesh &regionNavmesh, const NavmeshParser &navmeshParser) {
+  std::cout << "Building triangle data for navmesh region\n";
+
+  // =============================Types=============================
+  using PointListType = std::vector<pathfinder::Vector>;
+  struct EdgeType {
+    EdgeType(int a, int b, int c=2) : vertex0(a), vertex1(b), marker(c) {}
+    int vertex0, vertex1;
+    int marker;
+  };
+  using EdgeListType = std::vector<EdgeType>;
+
+  // ============================Lambdas============================
+  // Now, extract data from the navmesh
+  auto addVertexAndGetIndex = [](const Vector &p, PointListType &points) -> size_t {
+    // TODO: Maybe give a tiny range for precision error
+    auto it = std::find_if(points.begin(), points.end(), [&p](const pathfinder::Vector &otherPoint){
+      return (otherPoint.x() == p.x) && (otherPoint.y() == p.z);
+    });
+    if (it != points.end()) {
+      // Point already exists in list
+      // std::cout << "Vertex already exists! " << p.first << ',' << p.second << " at index " << std::distance(points.begin(), it) << '\n';
+      return std::distance(points.begin(), it);
+    }
+    // std::cout << "Insert vertex " << p.first << ',' << p.second << " at index " << points.size() << '\n';
+    points.emplace_back(p.x, p.z);
+    return points.size()-1;
+  };
+
+  auto addEdge = [&addVertexAndGetIndex](Vector v1, Vector v2, PointListType &points, EdgeListType &edges) {
+    auto v1Index = addVertexAndGetIndex(v1, points);
+    auto v2Index = addVertexAndGetIndex(v2, points);
+    edges.emplace_back(v1Index, v2Index);
+  };
+
+  auto addObjEdgeWithTrim = [&addVertexAndGetIndex](Vector v1, Vector v2, PointListType &points, EdgeListType &edges) {
+    bool res = navmesh_geometry_helpers::lineTrim(v1, v2);
+    if (res) {
+      auto v1Index = addVertexAndGetIndex(v1, points);
+      auto v2Index = addVertexAndGetIndex(v2, points);
+      edges.emplace_back(v1Index, v2Index);
+    }
+  };
+
+  // =============================Data==============================
+  PointListType inVertices;
+  EdgeListType inEdges;
+
+  // enum EdgeFlag : byte
+  // {
+  //     None = 0,
+  //     BlockDst2Src = 1,
+  //     BlockSrc2Dst = 2,
+  //     Blocked = BlockDst2Src | BlockSrc2Dst,
+  //     Internal = 4,
+  //     Global = 8,
+  //     Bridge = 16,
+  //     Entrance = 32,  // Dungeon
+  //     Bit6 = 64,
+  //     Siege = 128,    // Fortress War (projectile passthrough)
+  // }
+
+  // // Lets just statically add the 4 edges of the entire region
+  // // TODO: This doesnt really make sense, it's more useful to add to global edges of the region as they exist (except maybe modified by merging edges of the same type?)
+  // addEdge(pathfinder::Vector{0,0,0}, pathfinder::Vector{1920,0,0}, inVertices, inEdges);
+  // addEdge(pathfinder::Vector{1920,0,0}, pathfinder::Vector{1920,0,1920}, inVertices, inEdges);
+  // addEdge(pathfinder::Vector{1920,0,1920}, pathfinder::Vector{0,0,1920}, inVertices, inEdges);
+  // addEdge(pathfinder::Vector{0,0,1920}, pathfinder::Vector{0,0,0}, inVertices, inEdges);
+
+  // Want all global edges
+  for (const auto &edge : regionNavmesh.globalEdges) {
+    // std::cout << "Global " << edge.min.x << ',' << edge.min.z << " -> " << edge.max.x << ',' << edge.max.z << '\n';
+    std::cout << "Terrain global edge flag " << (int)edge.flag << std::endl;
+    addEdge(edge.min, edge.max, inVertices, inEdges);
+  }
+
+  // Only want constraining edges of interior edges
+  for (const auto &edge : regionNavmesh.internalEdges) {
+    std::cout << "Terrain internal edge flag " << (int)edge.flag;
+    if (((edge.flag & 1) ||
+        (edge.flag & 2) ||
+        (edge.flag & 16) ||
+        (edge.flag & 128))/*  &&
+        (edge.flag & 4) */) {
+      // std::cout << "Internal " << edge.min.x << ',' << edge.min.z << " -> " << edge.max.x << ',' << edge.max.z << '\n';
+      std::cout << " added" << std::endl;
+      addEdge(edge.min, edge.max, inVertices, inEdges);
+    } else {
+      std::cout << " NOT added" << std::endl;
+    //   std::cout << "flag " << (int)edge.flag << '\n';
+    }
+  }
+
+  // Get contstraining edges for object
+  for (const auto &objectInstance : regionNavmesh.mapObjInfos) {
+    auto it = navmeshParser.getObjectResourceMap().find(objectInstance.objectId);
+    if (it == navmeshParser.getObjectResourceMap().end()) {
+      std::cout << "Wait, cant find object " << objectInstance.objectId << '\n';
+      continue;
+    }
+    const auto &objectResource = it->second;
+
+    // Transform object
+    const auto tranformedObjectResource = navmesh_geometry_helpers::transformObject(objectResource, objectInstance);
+
+    for (const auto &cell : tranformedObjectResource.cells) {
+      if (cell.eventZoneData) {
+        // std::cout << "Found a cell with eventZoneData\n";
+        // std::cout << "  " << (int)*(cell.eventZoneData) << '\n';
+        addObjEdgeWithTrim(tranformedObjectResource.vertices.at(cell.vertex0),
+                           tranformedObjectResource.vertices.at(cell.vertex1),
+                           inVertices,
+                           inEdges);
+        addObjEdgeWithTrim(tranformedObjectResource.vertices.at(cell.vertex1),
+                           tranformedObjectResource.vertices.at(cell.vertex2),
+                           inVertices,
+                           inEdges);
+        addObjEdgeWithTrim(tranformedObjectResource.vertices.at(cell.vertex2),
+                           tranformedObjectResource.vertices.at(cell.vertex0),
+                           inVertices,
+                           inEdges);
+      }
+    }
+
+    for (const auto &edge : tranformedObjectResource.outlineEdges) {
+      std::cout << "Cell outline edge flag " << (int)edge.flag << std::endl;
+      // uint16_t srcVertex, destVertex, srcCell, destCell;
+      // if (((edge.flag & 1) ||
+      //     (edge.flag & 2) ||
+      //     (edge.flag & 16) ||
+      //     (edge.flag & 128)) ||
+      //     edge.eventZoneData) {
+        addObjEdgeWithTrim(tranformedObjectResource.vertices.at(edge.srcVertex),
+                           tranformedObjectResource.vertices.at(edge.destVertex),
+                           inVertices,
+                           inEdges);
+      // }
+    }
+
+    for (const auto &edge : tranformedObjectResource.inlineEdges) {
+      std::cout << "Cell inline edge flag " << (int)edge.flag;
+      // uint16_t srcVertex, destVertex, srcCell, destCell;
+      if (((edge.flag & 1) ||
+          (edge.flag & 2) ||
+          (edge.flag & 16) ||
+          (edge.flag & 128)) ||
+          edge.eventZoneData) {
+        std::cout << " added" << std::endl;
+        addObjEdgeWithTrim(tranformedObjectResource.vertices.at(edge.srcVertex),
+                           tranformedObjectResource.vertices.at(edge.destVertex),
+                           inVertices,
+                           inEdges);
+      } else {
+        std::cout << " NOT added" << std::endl;
+      }
+    }
+  }
+
+  // ===============================================================================
+  // =========================Ok, input data is transformed=========================
+  // ===============================================================================
+	triangle::triangle_initialize_triangleio(&savedTriangleData_);
+	triangle::triangle_initialize_triangleio(&savedTriangleVoronoiData_);
+
+  // Some data init
+	triangle::context *ctx;
+	triangle::triangleio inputStruct;
+	triangle::triangle_initialize_triangleio(&inputStruct);
+
+	ctx = triangle::triangle_context_create();
+  *(ctx->b) = pathfinder::BehaviorBuilder{}.getBehavior();
+
+  // fill input structure vertices
+  inputStruct.numberofpoints = inVertices.size();
+  inputStruct.numberofpointattributes = 0;
+	inputStruct.pointlist = (TRIANGLE_MACRO_REAL *) malloc((unsigned int) (2 * inVertices.size() * sizeof(TRIANGLE_MACRO_REAL)));
+  int vertexIndex = 0;
+  for (const auto &vertex : inVertices) {
+    inputStruct.pointlist[2*vertexIndex] = vertex.x();
+    inputStruct.pointlist[2*vertexIndex + 1] = vertex.y();
+    ++vertexIndex;
+  }
+
+  // fill input structure edges
+	inputStruct.numberofsegments = inEdges.size();
+  inputStruct.segmentlist = (int *) malloc((unsigned int) (2 * inEdges.size() * sizeof(int)));
+  inputStruct.segmentmarkerlist = (int *) malloc((unsigned int) (inEdges.size() * sizeof(int)));
+  int edgeIndex = 0;
+  for (const auto &edge : inEdges) {
+    inputStruct.segmentlist[2*edgeIndex] = edge.vertex0;
+    inputStruct.segmentlist[2*edgeIndex + 1] = edge.vertex1;
+    inputStruct.segmentmarkerlist[edgeIndex] = edge.marker;
+    ++edgeIndex;
+  }
+
+  // fill input structure (regions?)
+  inputStruct.numberofregions = 0;
+
+  // generate mesh
+  auto beforeTime = std::chrono::high_resolution_clock::now();
+  int meshCreateResult = triangle_mesh_create(ctx, &inputStruct);
+  if (meshCreateResult < 0) {
+    std::cout << "Error creating mesh!" << std::endl;
+    // TODO: Free memory
+    return;
+  }
+  auto afterTime = std::chrono::high_resolution_clock::now();
+  std::cout << "Triangulating " << inVertices.size() << " vertices took " << std::chrono::duration_cast<std::chrono::microseconds>(afterTime-beforeTime).count() << " microseconds" << std::endl;
+
+  // write_nodes(ctx, "test-out.node");
+  // write_edges(ctx, "test-out.edge");
+
+  // Prepare data structures
+  // Free in case already used
+  triangle::triangle_free_triangleio(&savedTriangleData_);
+  triangle::triangle_free_triangleio(&savedTriangleVoronoiData_);
+	triangle::triangle_initialize_triangleio(&savedTriangleData_);
+	triangle::triangle_initialize_triangleio(&savedTriangleVoronoiData_);
+
+  // Extract data from the context
+  beforeTime = std::chrono::high_resolution_clock::now();
+  int copyResult = triangle_mesh_copy(ctx, &savedTriangleData_, 1, 1, &savedTriangleVoronoiData_);
+  afterTime = std::chrono::high_resolution_clock::now();
+  std::cout << "api triangle_mesh_copy (result=" << copyResult << ") took " << std::chrono::duration_cast<std::chrono::microseconds>(afterTime-beforeTime).count() << " microseconds" << std::endl;
+  if (copyResult < 0) {
+    std::cout << "Error copying data!" << std::endl;
+    // TODO: Free memory
+    return;
+  }
+
+  triangle::triangle_free_triangleio(&inputStruct);
+
+  triangle::triangle_context_destroy(ctx);
+}
+
 void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {
   std::cout << "Parsing navmesh data\n";
   NavmeshParser navmeshParser(pk2Reader);
@@ -427,15 +694,194 @@ void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {
   // }
   // std::cout << "]\n";
   // Load region at East Jangan gate
-  const int kRegionX = 170;
-  const int kRegionY = 97;
+  // const int kRegionX = 170;
+  // const int kRegionY = 97;
+  // Load region at Southeast corner of Jangan
+  // const int kRegionX = 169;
+  // const int kRegionY = 97;
+  // Load region ____
+  const int kRegionX = 72;
+  const int kRegionY = 102;
   const uint16_t kRegionId = kRegionX&0xFF | ((kRegionY&0xFF)<<8);
   if (navmeshParser.regionIsEnabled(kRegionId)) {
     std::cout << "Parsing region " << kRegionId << '\n';
     const auto regionNavmesh = navmeshParser.parseRegionNavmesh(kRegionId);
+    buildTriangleDataForRegion(regionNavmesh, navmeshParser);
   } else {
     std::cout << "Not parsing region because it is disabled\n";
   }
 }
 
+const triangle::triangleio& GameData::getSavedTriangleData() const {
+  return savedTriangleData_;
+}
+
+const triangle::triangleio& GameData::getSavedTriangleVoronoiData() const {
+  return savedTriangleVoronoiData_;
+}
+
 } // namespace pk2
+
+namespace navmesh_geometry_helpers {
+
+bool lineTrim(Vector &p1, Vector &p2) {
+  // std::cout << "Checking {(" << p1.x << ',' << p1.y << "),(" << p2.x << ',' << p2.y << ")}\n";
+  // Compare this line against all boundaries of the region
+  std::vector<std::pair<Vector,Vector>> boundaries = {{Vector(0,0,0), Vector(0,0,1920)},
+                                                      {Vector(0,0,1920), Vector(1920,0,1920)},
+                                                      {Vector(1920,0,1920), Vector(1920,0,0)},
+                                                      {Vector(1920,0,0), Vector(0,0,0)}};
+  for (const auto &boundary : boundaries) {
+    // std::cout << "  against {(" << boundary.first.x << ',' << boundary.first.z << "),(" << boundary.second.x << ',' << boundary.second.z << ")}\n";
+    // Check if lines intersect
+    float &x1 = p1.x;
+    float &y1 = p1.z;
+    float &x2 = p2.x;
+    float &y2 = p2.z;
+    const float &x3 = boundary.first.x;
+    const float &y3 = boundary.first.z;
+    const float &x4 = boundary.second.x;
+    const float &y4 = boundary.second.z;
+
+    auto det = [](float a, float b, float c, float d) {
+      return a*d-b*c;
+    };
+
+    float tNumerator = det(x1-x3, x3-x4, y1-y3, y3-y4);
+    float uNumerator = det(x1-x2, x1-x3, y1-y2, y1-y3);
+    float denom = det(x1-x2, x3-x4, y1-y2, y3-y4);
+
+    if (denom == 0) {
+      continue;
+    }
+
+    float t = tNumerator/denom;
+    float u = -uNumerator/denom;
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+      // Intersection lies on both segments
+      // std::cout << "Line {(" << x1 << ',' << y1 << "),(" << x2 << ',' << y2 << ")} intersects with {(" << x3 << ',' << y3 << "),(" << x4 << ',' << y4 << ")}\n";
+
+      // Trim the line based on the line it intersected with
+      float intersectionX = x1+t*(x2-x1);
+      float intersectionY = y1+t*(y2-y1);
+      // std::cout << "Intersection at (" << intersectionX << ',' << intersectionY << ")\n";
+
+      bool trimTheFirstPoint = false;
+      if (x3 == x4) {
+        // Vertical lines
+        if (y3 == 0) {
+          // Left side
+          // std::cout << "Extends left";
+          if (x1 < 0) {
+            // std::cout << " trimming first point";
+            trimTheFirstPoint = true;
+          } else {
+            // std::cout << " trimming second point";
+            trimTheFirstPoint = false;
+          }
+        } else {
+          // Right side
+          // std::cout << "Extends right";
+          if (x1 > 1920) {
+            // std::cout << " trimming first point";
+            trimTheFirstPoint = true;
+          } else {
+            // std::cout << " trimming second point";
+            trimTheFirstPoint = false;
+          }
+        }
+      } else {
+        if (x3 == 0) {
+          // Top side (y=1920)
+          // std::cout << "Extends up";
+          if (y1 > 1920) {
+            // std::cout << " trimming first point";
+            trimTheFirstPoint = true;
+          } else {
+            // std::cout << " trimming second point";
+            trimTheFirstPoint = false;
+          }
+        } else {
+          // Bottom side
+          // std::cout << "Extends down";
+          if (y1 < 0) {
+            // std::cout << " trimming first point";
+            trimTheFirstPoint = true;
+          } else {
+            // std::cout << " trimming second point";
+            trimTheFirstPoint = false;
+          }
+        }
+      }
+      // std::cout << '\n';
+      if (trimTheFirstPoint) {
+        x1 = intersectionX;
+        y1 = intersectionY;
+        if (fabs(x1) < 1e-5) {
+          x1 = 0;
+        }
+        if (fabs(y1) < 1e-5) {
+          y1 = 0;
+        }
+        if (fabs(x1-1920) < 1e-5) {
+          x1 = 1920;
+        }
+        if (fabs(y1-1920) < 1e-5) {
+          y1 = 1920;
+        }
+      } else {
+        x2 = intersectionX;
+        y2 = intersectionY;
+        if (fabs(x2) < 1e-5) {
+          x2 = 0;
+        }
+        if (fabs(y2) < 1e-5) {
+          y2 = 0;
+        }
+        if (fabs(x2-1920) < 1e-5) {
+          x2 = 1920;
+        }
+        if (fabs(y2-1920) < 1e-5) {
+          y2 = 1920;
+        }
+      }
+      // std::cout << "Updated line to {(" << x1 << ',' << y1 << "),(" << x2 << ',' << y2 << ")}\n";
+
+      // Update line segment to exclude the part that isnt inside the region
+      // std::cout << "t:" << t << ", u:" << u << '\n';
+      // std::cout << std::endl;
+    } else {
+      // std::cout << t << ',' << u << '\n';
+    }
+  }
+
+  // If any point is outside of the region, then the entire line must be outside, return false
+  bool pointOutside = false;
+  pointOutside |= (p1.x < 0 || p1.x > 1920);
+  pointOutside |= (p1.z < 0 || p1.z > 1920);
+  pointOutside |= (p2.x < 0 || p2.x > 1920);
+  pointOutside |= (p2.z < 0 || p2.z > 1920);
+  // if (pointOutside) {
+  //   std::cout << "line discarded " << p1.x << ',' << p1.z << " - " << p2.x << ',' << p2.z << '\n';
+  // }
+  return !pointOutside;
+  // std::cout << "Trimed line {(" << p1.x << ',' << p1.z << "),(" << p2.x << ',' << p2.z << ")}\n";
+}
+
+ObjectResource transformObject(const ObjectResource &obj, const MapObjInfo &objInfo) {
+  ObjectResource transformedObject = obj;
+
+  Matrix4x4 rotationMatrix;
+  rotationMatrix.setRotation(-objInfo.yaw, {0,1,0});
+  Matrix4x4 translationMatrix;
+  translationMatrix.setTranslation(objInfo.center);
+  const Matrix4x4 transformationMatrix = translationMatrix*rotationMatrix;
+
+  for (auto &vertex : transformedObject.vertices) {
+    vertex = transformationMatrix*vertex;
+  }
+
+  return transformedObject;
+}
+
+} // namespace navmesh_geometry_helpers

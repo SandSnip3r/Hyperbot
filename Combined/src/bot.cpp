@@ -2,9 +2,11 @@
 
 Bot::Bot(const config::CharacterLoginData &loginData,
          const pk2::GameData &gameData,
+        pathfinder::Pathfinder &pathfinder,
          broker::PacketBroker &broker) :
       loginData_(loginData),
       gameData_(gameData),
+      pathfinder_(pathfinder),
       broker_(broker) {
   eventBroker_.run();
 }

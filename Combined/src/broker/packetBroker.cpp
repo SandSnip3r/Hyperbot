@@ -32,7 +32,6 @@ bool PacketBroker::packetReceived(const PacketContainer &packet, PacketContainer
       // Send this packet and make note if the packet should be forwarded
       forwardPacket &= handleFunction(packet);
     }
-  } else {
   }
   return forwardPacket;
 }

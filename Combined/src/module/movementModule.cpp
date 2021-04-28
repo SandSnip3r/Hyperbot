@@ -2,6 +2,7 @@
 #include "../math/position.hpp"
 #include "../packet/opcode.hpp"
 #include "../packet/building/clientAgentCharacterMoveRequest.hpp"
+#include "../packet/building/serverAgentChatUpdate.hpp"
 
 #include <array>
 #include <numeric>
@@ -10,7 +11,7 @@
 #include <regex>
 
 // TODO: Remove
-// #define SHARED_MEM 1
+#define SHARED_MEM 1
 
 std::ostream& operator<<(std::ostream &stream, const packet::structures::Position &pos) {
   stream << '{';
@@ -39,14 +40,16 @@ MovementModule::MovementModule(state::Entity &entityState,
                                broker::PacketBroker &brokerSystem,
                                broker::EventBroker &eventBroker,
                                const packet::parsing::PacketParser &packetParser,
-                               const pk2::GameData &gameData) :
+                               const pk2::GameData &gameData,
+                               pathfinder::Pathfinder &pathfinder) :
       entityState_(entityState),
       selfState_(selfState),
       inventory_(inventory),
       broker_(brokerSystem),
       eventBroker_(eventBroker),
       packetParser_(packetParser),
-      gameData_(gameData) {
+      gameData_(gameData),
+      pathfinder_(pathfinder) {
   auto packetHandleFunction = std::bind(&MovementModule::handlePacket, this, std::placeholders::_1);
   // Client packets
   broker_.subscribeToClientPacket(packet::Opcode::kClientAgentChatRequest, packetHandleFunction);
@@ -66,6 +69,12 @@ MovementModule::MovementModule(state::Entity &entityState,
 #endif
 
   eng_ = createRandomEngine();
+
+  pathfinder_.setCharacterRadius(10.0);
+
+#ifdef SHARED_MEM
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTemp));
+#endif
 }
 
 bool MovementModule::handlePacket(const PacketContainer &packet) {
@@ -122,9 +131,9 @@ void MovementModule::handleEvent(const event::Event *event) {
       break;
     case event::EventCode::kRepublish:
       republishStepEventId_.reset();
-      if (stepping_ && !selfState_.moving()) {
+      if (!selfState_.moving()) {
         std::cout << "<<<<<<<<<<<<<<<<<<<<<Triggering \"republish\">>>>>>>>>>>>>>>>>>>>>\n";
-        moveByStep();
+        takeNextStepOnPath();
       }
       break;
     default:
@@ -147,28 +156,35 @@ void MovementModule::handleTempEvent() {
 }
 
 void MovementModule::handleSpeedUpdated() {
-  if (movingEventId_ && selfState_.moving() && selfState_.haveDestination()) {
-    // Need to update timer
-    eventBroker_.cancelDelayedEvent(*movingEventId_);
-    movingEventId_.reset();
-    auto seconds = secondsToTravel(selfState_.position(), selfState_.destination());
-    movingEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+  if (movingEventId_ && selfState_.moving()) {
+    if (selfState_.haveDestination()) {
+      // Need to update timer
+      auto seconds = secondsToTravel(selfState_.position(), selfState_.destination());
+      eventBroker_.cancelDelayedEvent(*movingEventId_);
+      movingEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+    }
   }
 }
 
 void MovementModule::handleMovementEnded() {
-  // TODO: Remove ->
-#ifdef SHARED_MEM
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTemp));
-#endif
-  // <-
   movingEventId_.reset();
   std::cout << "[TIMER END] Movement ended event\n";
   selfState_.doneMoving();
   std::cout << "[TIMER END] Currently at " << selfState_.position() << '\n';
-  if (stepping_) {
-    std::cout << "Trying to step again\n";
-    moveByStep();
+
+  if (testingAutowalk_) {
+    distanceTraveled_ += queuedMovementDistance_;
+    std::cout << "Total distance traveled: " << distanceTraveled_ << '\n';
+  }
+  if (!waypoints_.empty()) {
+    std::cout << "Arrived at waypoint, moving to next one\n";
+    takeNextStepOnPath();
+  } else {
+    // No waypoints left
+    if (testingAutowalk_) {
+      // Path somewhere else now
+      pathToRandomPoint();
+    }
   }
 }
 
@@ -177,21 +193,40 @@ bool MovementModule::serverAgentEntityUpdatePositionReceived(packet::parsing::Se
     if (selfState_.moving()) {
       // Note: this also happens when running to pick an item
       std::cout << "[UPDATE POS] We were moving. Must've hit an obstacle\n";
+      if (republishStepEventId_) {
+        std::cout << "[UPDATE POS] Cancelling republish timer\n";
+        eventBroker_.cancelDelayedEvent(*republishStepEventId_);
+        republishStepEventId_.reset();
+      }
       if (movingEventId_) {
-        std::cout << "[UPDATE POS] Cancelling timer\n";
+        std::cout << "[UPDATE POS] Cancelling movement timer\n";
         eventBroker_.cancelDelayedEvent(*movingEventId_);
         movingEventId_.reset();
       }
       selfState_.setPosition(packet.position());
       std::cout << "[UPDATE POS] Now at " << selfState_.position() << '\n';
+      if (testingAutowalk_) {
+        std::cout << "[UPDATE POS] We were autowalking, this is a problem!!!\n";
+        stopAutowalkTest();
+      }
     } else {
       std::cout << "[UPDATE POS] We werent moving, weird\n";
+      const auto pos = selfState_.position();
+      std::cout << "Expected pos: " << pos.xOffset << ',' << pos.zOffset << '\n';
+      std::cout << "Received pos: " << packet.position().xOffset << ',' << packet.position().zOffset << '\n';
     }
   }
   return true;
 }
 
 bool MovementModule::clientAgentCharacterMoveRequestReceived(packet::parsing::ClientAgentCharacterMoveRequest &packet) {
+  if (testingAutowalk_) {
+    // Discard request, dont want client to interrupt
+    // Tell the user through chat
+    std::cout << "User tried to move\n";
+    broker_.injectPacket(packet::building::ServerAgentChatUpdate::notice("Autowalk Testing in progress. Movement input ignored."), PacketContainer::Direction::kServerToClient);
+    return false;
+  }
   // std::cout << "Character is moving\n";
   // if (packet.hasDestination()) {
   //   std::cout << "  Has destination\n";
@@ -216,7 +251,6 @@ bool MovementModule::clientAgentCharacterMoveRequestReceived(packet::parsing::Cl
 
 float MovementModule::secondsToTravel(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition) const {
   auto distance = math::position::calculateDistance(srcPosition, destPosition);
-  std::cout << "secondsToTravel distance = " << distance << '\n';
   return distance / selfState_.currentSpeed();
 }
 
@@ -239,11 +273,17 @@ bool MovementModule::serverAgentEntityUpdateMovementReceived(packet::parsing::Se
     std::cout << "[UPDATE MOVEMENT] We are moving from " << sourcePosition << ' ';
     if (packet.hasDestination()) {
       auto destPosition = packet.destinationPosition();
+      queuedMovementDistance_ = math::position::calculateDistance(sourcePosition, destPosition);
       auto seconds = secondsToTravel(sourcePosition, destPosition);
       std::cout << "to " << destPosition << '\n';
       std::cout << "[UPDATE MOVEMENT]   Should take " << seconds << "s. Timer set\n";
       movingEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
       selfState_.setMoving(packet.destinationPosition());
+
+      if (!waypoints_.empty()) {
+        waypoints_.erase(waypoints_.begin());
+        std::cout << "We are walking on the path, " << waypoints_.size() << " steps remaining after this\n";
+      }
     } else {
       std::cout << "toward " << packet.angle() << '\n';
       selfState_.setMoving(packet.angle());
@@ -253,96 +293,186 @@ bool MovementModule::serverAgentEntityUpdateMovementReceived(packet::parsing::Se
   return true;
 }
 
-void MovementModule::startStepping() {
-  stepping_ = true;
-  moveByStep();
-}
+void MovementModule::takeNextStepOnPath() {
+  if (waypoints_.empty()) {
+    std::cout << "Trying to take a step but there's no path!\n";
+    if (testingAutowalk_) {
+      pathToRandomPoint();
+    }
+    return;
+  }
+  const auto &currentPos = selfState_.position();
+  auto isSameAsCurrentPosition = [&currentPos](const Vector &waypoint) {
+    if (static_cast<int>(currentPos.xOffset) == static_cast<int>(waypoint.x) && static_cast<int>(currentPos.zOffset) == static_cast<int>(waypoint.z)) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+  std::cout << "takeNextStepOnPath: Current position " << currentPos.xOffset << ',' << currentPos.zOffset << '\n';
+  while (!waypoints_.empty() && isSameAsCurrentPosition(waypoints_.front())) {
+    std::cout << "  pop off " << waypoints_.front().x << ',' << waypoints_.front().z << '\n';
+    waypoints_.erase(waypoints_.begin());
+  }
+  if (waypoints_.empty()) {
+    std::cout << "Looks like we're already at our goal\n";
+    if (testingAutowalk_) {
+      pathToRandomPoint();
+    }
+    return;
+  }
+  std::cout << "Sending movement packet to position " << waypoints_.front().x << ',' << waypoints_.front().z << ", " << waypoints_.size() << " steps left\n";
+  broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(currentPos.regionId, waypoints_.front().x, 0, waypoints_.front().z), PacketContainer::Direction::kClientToServer);
 
-void MovementModule::stopStepping() {
-  stepping_ = false;
   if (republishStepEventId_) {
-    // Had a backup event, no longer needed, cancel
+    // The last step was likely a quick one, cancel the old event
     eventBroker_.cancelDelayedEvent(*republishStepEventId_);
     republishStepEventId_.reset();
   }
+  // TODO: This republish timeout should be proprotional to ping
+  republishStepEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kRepublish), std::chrono::milliseconds(static_cast<uint64_t>(100)));
 }
 
-void MovementModule::moveByStep() {
-  if (republishStepEventId_) {
-    std::cout << "killing existing republish timer\n";
-    // Had a backup event, no longer needed, cancel
-    eventBroker_.cancelDelayedEvent(*republishStepEventId_);
-    republishStepEventId_.reset();
+void MovementModule::executePath(const std::vector<std::unique_ptr<pathfinder::PathSegment>> &segments) {
+  if (!waypoints_.empty()) {
+    std::cout << "WEIRD! Executing a path but there are already waypoints in the queue\n";
   }
-  auto currentPos = selfState_.position();
-  if (currentPos.xOffset+steppingStepSize_ < 1920) {
-    currentPos.xOffset += steppingStepSize_;
-    std::cout << "Injecting movement packet\n";
-    broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(currentPos.regionId, std::round(currentPos.xOffset), std::round(currentPos.yOffset), std::round(currentPos.zOffset)), PacketContainer::Direction::kClientToServer);
-    std::cout << "Starting republish timer\n";
-    republishStepEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kRepublish), std::chrono::milliseconds(static_cast<uint64_t>(100)));
-  } else {
-    std::cout << "Reached region boundary, stopping\n";
-    stopStepping();
+  waypoints_.clear();
+  bool addFirstPoint{false};
+  for (const auto &segment : segments) {
+    pathfinder::StraightPathSegment *straightSegment = dynamic_cast<pathfinder::StraightPathSegment*>(segment.get());
+    if (straightSegment != nullptr) {
+      if (addFirstPoint) {
+        waypoints_.emplace_back(straightSegment->startPoint.x(), 0, straightSegment->startPoint.y());
+      }
+      waypoints_.emplace_back(straightSegment->endPoint.x(), 0, straightSegment->endPoint.y());
+      addFirstPoint = true;
+    }
   }
+  std::cout << "Path: [";
+  for (const auto &i : waypoints_) {
+    std::cout << i.x << ',' << i.z << ' ';
+  }
+  std::cout << "]\n";
+
+  takeNextStepOnPath();
+}
+
+void MovementModule::pathToRandomPoint() {
+  std::uniform_int_distribution<> dist(1,1919);
+  auto createRandomPoint = [this, &dist]() -> pathfinder::Vector {
+    return {static_cast<double>(dist(eng_)), static_cast<double>(dist(eng_))};
+  };
+  bool foundValidPoint{false};
+  const auto currentPos = selfState_.position();
+  do {
+    const auto goalPoint = createRandomPoint();
+    try {
+      auto result = pathfinder_.findShortestPath(pathfinder::Vector{static_cast<double>(currentPos.xOffset), static_cast<double>(currentPos.zOffset)}, goalPoint);
+      if (!result.shortestPath.empty()) {
+        foundValidPoint = true;
+        std::cout << "Pathing from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << goalPoint.x() << ',' << goalPoint.y() << "\n";
+        executePath(result.shortestPath);
+      }
+    } catch (std::exception &ex) {
+      std::cout << "Exception caught while finding path from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << goalPoint.x() << ',' << goalPoint.y() << "\n";
+      std::cout << "  \"" << ex.what() << "\"\n";
+      const std::string exceptionText = ex.what();
+      if (exceptionText.find("No point found!") != std::string::npos) {
+        std::cout << "Cancelling autowalk test\n";
+        stopAutowalkTest();
+        return;
+      }
+    }
+  } while (foundValidPoint == false);
+}
+
+void MovementModule::startAutowalkTest() {
+  std::cout << "Starting autowalk test\n";
+  distanceTraveled_ = 0;
+  testingAutowalk_ = true;
+  pathToRandomPoint();
+}
+
+void MovementModule::stopAutowalkTest() {
+  std::cout << "Stopping autowalk test\n";
+  testingAutowalk_ = false;
+  waypoints_.clear();
+  republishStepEventId_.reset();
 }
 
 bool MovementModule::clientAgentChatRequestReceived(packet::parsing::ClientAgentChatRequest &packet) {
-  std::regex startRegex(R"delim(start ([0-9]+))delim");
-  std::regex stopRegex(R"delim(stop)delim");
   std::regex moveRegex(R"delim(move (-?[0-9]+) (-?[0-9]+))delim");
+  std::regex testRegex(R"delim(test)delim");
+  std::regex stopRegex(R"delim(stop)delim");
   std::smatch regexMatch;
-  if (std::regex_match(packet.message(), regexMatch, startRegex)) {
-    //start
-    steppingStepSize_ = std::stoi(regexMatch[1].str());
-    startStepping();
-  } else if (std::regex_match(packet.message(), regexMatch, stopRegex)) {
-    //stop
-    stopStepping();
-  } else if (std::regex_match(packet.message(), regexMatch, moveRegex)) {
+  if (std::regex_match(packet.message(), regexMatch, moveRegex)) {
     const int x = std::stoi(regexMatch[1].str());
     const int y = std::stoi(regexMatch[2].str());
-    // Move character
-    std::cout << "Moving character to " << x << ',' << y << '\n';
-    // | 15 | 14 | 13 | 12 | 11 | 10 | 09 | 08 | 07 | 06 | 05 | 04 | 03 | 02 | 01 | 00 |
-    // | DF |            ZSector               |                XSector                |
-    // DF = Dungeon flag
-    // 6B 69                                             ki..............
-    // 76 07                                             v...............
-    // B4 00                                             ................
-    // 98 06  
-    // -5186,2664
-    // 0b0 1101001 01101011
-    // No dungeon, 0x69 z sector, 0x6b x sector
-    // X offset 0x767
-    // Y offset 0xB4
-    // Z offset 0x698
-    struct XY {
-      int x,y;
-    };
-    struct RegionXYZ {
-      int regionId;
-      int x,y,z;
-    };
-    auto converterFunc = [](const XY &obj) {
-      RegionXYZ result;
-      // byte ySector = (byte)(Region >> 8);
-      // byte xSector = (byte)(Region & 0xFF);
-
-      // if (Region < short.MaxValue) // At world map? convert it!
-      // {
-      //     // 192px 1:10 scale, center (135,92)
-      //     PosX = (xSector - 135) * 192 + X / 10;
-      //     PosY = (ySector - 92) * 192 + Y / 10;
-      // } 
-      // result.regionId
-    };
     const auto pos = selfState_.position();
-    broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(pos.regionId, x, 0, y), PacketContainer::Direction::kClientToServer);
-    return false;
-  } else {
+    std::cout << "Checking the shortest path from " << pos.xOffset << ',' << pos.zOffset << " to " << x << ',' << y << '\n';
+    try {
+      auto result = pathfinder_.findShortestPath(pathfinder::Vector{static_cast<double>(pos.xOffset), static_cast<double>(pos.zOffset)}, pathfinder::Vector{static_cast<double>(x), static_cast<double>(y)});
+      if (result.shortestPath.empty()) {
+        std::cout << "No path possible\n";
+      } else {
+        std::cout << "Found a path!\n";
+        executePath(result.shortestPath);
+      }
+    } catch (std::exception &ex) {
+      std::cout << "Exception caught! \"" << ex.what() << "\"\n";
+    }
     return true;
+    // const int x = std::stoi(regexMatch[1].str());
+    // const int y = std::stoi(regexMatch[2].str());
+    // // Move character
+    // std::cout << "Moving character to " << x << ',' << y << '\n';
+    // // | 15 | 14 | 13 | 12 | 11 | 10 | 09 | 08 | 07 | 06 | 05 | 04 | 03 | 02 | 01 | 00 |
+    // // | DF |            ZSector               |                XSector                |
+    // // DF = Dungeon flag
+    // // 6B 69                                             ki..............
+    // // 76 07                                             v...............
+    // // B4 00                                             ................
+    // // 98 06
+    // // -5186,2664
+    // // 0b0 1101001 01101011
+    // // No dungeon, 0x69 z sector, 0x6b x sector
+    // // X offset 0x767
+    // // Y offset 0xB4
+    // // Z offset 0x698
+    // struct XY {
+    //   int x,y;
+    // };
+    // struct RegionXYZ {
+    //   int regionId;
+    //   int x,y,z;
+    // };
+    // auto converterFunc = [](const XY &obj) {
+    //   RegionXYZ result;
+    //   // byte ySector = (byte)(Region >> 8);
+    //   // byte xSector = (byte)(Region & 0xFF);
+
+    //   // if (Region < short.MaxValue) // At world map? convert it!
+    //   // {
+    //   //     // 192px 1:10 scale, center (135,92)
+    //   //     PosX = (xSector - 135) * 192 + X / 10;
+    //   //     PosY = (ySector - 92) * 192 + Y / 10;
+    //   // }
+    //   // result.regionId
+    // };
+    // const auto pos = selfState_.position();
+    // broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(pos.regionId, x, 0, y), PacketContainer::Direction::kClientToServer);
+    // return false;
+  } else if (std::regex_match(packet.message(), regexMatch, testRegex)) {
+    if (!testingAutowalk_) {
+      startAutowalkTest();
+    }
+  } else if (std::regex_match(packet.message(), regexMatch, stopRegex)) {
+    if (testingAutowalk_) {
+      stopAutowalkTest();
+    }
   }
+  return true;
 }
 
 // void MovementModule::serverAgentActionSelectResponseReceived(packet::parsing::ServerAgentActionSelectResponse &packet) {}

@@ -320,13 +320,15 @@ packet::structures::Position Self::interpolateCurrentPosition() const {
       throw std::runtime_error("Self: Traveled negative distance");
     } else if (percentTraveled == 0) {
       return lastKnownPosition_;
-    } else if (percentTraveled >= 1) {
-      if (percentTraveled > 1) {
-        std::cout << "Weird,  we're moving, but we've traveled \"past\" our destination (" << percentTraveled*100 << "%)\n";
-      }
+    } else if (percentTraveled == 1) {
       return *destinationPosition_;
     } else {
-      return math::position::interpolateBetweenPoints(lastKnownPosition_, *destinationPosition_, percentTraveled);
+      const auto resultPos = math::position::interpolateBetweenPoints(lastKnownPosition_, *destinationPosition_, percentTraveled);
+      if (percentTraveled > 1) {
+        std::cout << "Weird, we're moving, but we've traveled \"past\" our destination (" << percentTraveled*100 << "%)\n";
+        std::cout << "Returning pos " << resultPos.xOffset << ',' << resultPos.zOffset << '\n';
+      }
+      return resultPos;
     }
   } else if (movementAngle_) {
     float angle = *movementAngle_/static_cast<float>(std::numeric_limits<std::remove_reference_t<decltype(*movementAngle_)>>::max()) * 2*math::kPi;
@@ -353,7 +355,7 @@ float Self::internal_speed() const {
         throw std::runtime_error("Motion state is Stand, last motion state isnt walk or run ("+std::to_string(static_cast<int>(*lastMotionState_))+")");
       }
     } else {
-      std::cout << "Motion state is \"stand\", no previous motion state, assuming run speed\n";
+      // Motion  State: Stand, no previous motion state assuming that we're running
       return runSpeed_;
     }
     return runSpeed_;

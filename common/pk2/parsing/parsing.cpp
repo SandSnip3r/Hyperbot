@@ -1,7 +1,11 @@
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING true
+
 #include "parsing.hpp"
 
 #include <array>
 #include <iostream>
+#include <codecvt>
+#include <sstream>
 
 namespace pk2::parsing {
 
@@ -10,7 +14,7 @@ std::string fileDataToString(const std::vector<uint8_t> &data) {
   //  This function takes roughly twice as long as the parsing function
   //  PK2Reader::getEntryData took 1ms
   //  This function took 526ms
-  //  Parsing took 299ms    
+  //  Parsing took 299ms
   // const auto size = data.size()-2;
   // std::u16string u16((size/2)+1, '\0');
   // std::memcpy(u16.data(), data.data()+2, size);
@@ -28,6 +32,31 @@ std::string fileDataToString(const std::vector<uint8_t> &data) {
 		result += (char)data[i];
 	}
 	return result;
+}
+
+std::vector<std::string> fileDataToStringLines(const std::vector<uint8_t> &data) {
+  std::vector<std::string> lines;
+
+  // Convert data to std::wstring
+  std::wstring wstr;
+  wstr.resize(data.size()/2);
+  std::memcpy(wstr.data(), data.data(), data.size());
+
+  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter;
+
+  std::wistringstream is16(wstr);
+  is16.imbue(std::locale(is16.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>()));
+  is16.seekg(1, std::ios::beg);
+  std::wstring wline;
+  std::string u8line;
+  while (getline(is16, wline)) {
+    u8line = converter.to_bytes(wline);
+    if (u8line.back() == '\r') {
+      u8line.pop_back();
+    }
+    lines.emplace_back(std::move(u8line));
+  }
+  return lines;
 }
 
 namespace {
@@ -123,7 +152,7 @@ bool isValidLine(const int fieldCount, const std::string &line) {
 } // namespace (anonymous)
 
 bool isValidCharacterdataLine(const std::string &line) {
-  constexpr int kDataCount = 137;
+  constexpr int kDataCount = 104;
   return isValidLine(kDataCount, line);
 }
 
@@ -174,99 +203,67 @@ bool isValidMappingShopWithTabLine(const std::string &line) {
 pk2::ref::Character parseCharacterdataLine(const std::string &line) {
 	pk2::ref::Character character;
   const char *ptr = line.data();
-	ptr = parse(ptr, character.service);
-	ptr = parse(ptr, character.id);
-	ptr = parse(ptr, character.codeName128);
-	ptr = parse(ptr, character.objName128);
-	ptr = parse(ptr, character.orgObjCodeName128);
-	ptr = parse(ptr, character.nameStrID128);
-	ptr = parse(ptr, character.descStrID128);
-	ptr = parse(ptr, character.cashItem);
-	ptr = parse(ptr, character.bionic);
-	ptr = parse(ptr, character.typeId1);
-	ptr = parse(ptr, character.typeId2);
-	ptr = parse(ptr, character.typeId3);
-	ptr = parse(ptr, character.typeId4);
-	ptr = parse(ptr, character.decayTime);
-	ptr = parse(ptr, character.country);
-	ptr = parse(ptr, character.rarity);
-	ptr = parse(ptr, character.canTrade);
-	ptr = parse(ptr, character.canSell);
-	ptr = parse(ptr, character.canBuy);
-	ptr = parse(ptr, character.canBorrow);
-	ptr = parse(ptr, character.canDrop);
-	ptr = parse(ptr, character.canPick);
-	ptr = parse(ptr, character.canRepair);
-	ptr = parse(ptr, character.canRevive);
-	ptr = parse(ptr, character.canUse);
-	ptr = parse(ptr, character.canThrow);
-	ptr = parse(ptr, character.price);
-	ptr = parse(ptr, character.costRepair);
-	ptr = parse(ptr, character.costRevive);
-	ptr = parse(ptr, character.costBorrow);
-	ptr = parse(ptr, character.keepingFee);
-	ptr = parse(ptr, character.sellPrice);
-	ptr = parse(ptr, character.reqLevelType1);
-	ptr = parse(ptr, character.reqLevel1);
-	ptr = parse(ptr, character.reqLevelType2);
-	ptr = parse(ptr, character.reqLevel2);
-	ptr = parse(ptr, character.reqLevelType3);
-	ptr = parse(ptr, character.reqLevel3);
-	ptr = parse(ptr, character.reqLevelType4);
-	ptr = parse(ptr, character.reqLevel4);
-	ptr = parse(ptr, character.maxContain);
-	ptr = parse(ptr, character.regionID);
-	ptr = parse(ptr, character.dir);
-	ptr = parse(ptr, character.offsetX);
-	ptr = parse(ptr, character.offsetY);
-	ptr = parse(ptr, character.offsetZ);
-	ptr = parse(ptr, character.speed1);
-	ptr = parse(ptr, character.speed2);
-	ptr = parse(ptr, character.scale);
-	ptr = parse(ptr, character.bCHeight);
-	ptr = parse(ptr, character.bCRadius);
-	ptr = parse(ptr, character.eventID);
-	ptr = parse(ptr, character.assocFileObj128);
-	ptr = parse(ptr, character.assocFileDrop128);
-	ptr = parse(ptr, character.assocFileIcon128);
-	ptr = parse(ptr, character.assocFile1_128);
-	ptr = parse(ptr, character.assocFile2_128);
+  ptr = parse(ptr, character.service);
+  ptr = parse(ptr, character.id);
+  ptr = parse(ptr, character.codeName128);
+  ptr = parse(ptr, character.objName128);
+  ptr = parse(ptr, character.orgObjCodeName128);
+  ptr = parse(ptr, character.nameStrID128);
+  ptr = parse(ptr, character.descStrID128);
+  ptr = parse(ptr, character.cashItem);
+  ptr = parse(ptr, character.bionic);
+  ptr = parse(ptr, character.typeId1);
+  ptr = parse(ptr, character.typeId2);
+  ptr = parse(ptr, character.typeId3);
+  ptr = parse(ptr, character.typeId4);
+  ptr = parse(ptr, character.decayTime);
+  ptr = parse(ptr, character.country);
+  ptr = parse(ptr, character.rarity);
+  ptr = parse(ptr, character.canTrade);
+  ptr = parse(ptr, character.canSell);
+  ptr = parse(ptr, character.canBuy);
+  ptr = parse(ptr, character.canBorrow);
+  ptr = parse(ptr, character.canDrop);
+  ptr = parse(ptr, character.canPick);
+  ptr = parse(ptr, character.canRepair);
+  ptr = parse(ptr, character.canRevive);
+  ptr = parse(ptr, character.canUse);
+  ptr = parse(ptr, character.canThrow);
+  ptr = parse(ptr, character.price);
+  ptr = parse(ptr, character.costRepair);
+  ptr = parse(ptr, character.costRevive);
+  ptr = parse(ptr, character.costBorrow);
+  ptr = parse(ptr, character.keepingFee);
+  ptr = parse(ptr, character.sellPrice);
+  ptr = parse(ptr, character.reqLevelType1);
+  ptr = parse(ptr, character.reqLevel1);
+  ptr = parse(ptr, character.reqLevelType2);
+  ptr = parse(ptr, character.reqLevel2);
+  ptr = parse(ptr, character.reqLevelType3);
+  ptr = parse(ptr, character.reqLevel3);
+  ptr = parse(ptr, character.reqLevelType4);
+  ptr = parse(ptr, character.reqLevel4);
+  ptr = parse(ptr, character.maxContain);
+  ptr = parse(ptr, character.regionID);
+  ptr = parse(ptr, character.dir);
+  ptr = parse(ptr, character.offsetX);
+  ptr = parse(ptr, character.offsetY);
+  ptr = parse(ptr, character.offsetZ);
+  ptr = parse(ptr, character.speed1);
+  ptr = parse(ptr, character.speed2);
+  ptr = parse(ptr, character.scale);
+  ptr = parse(ptr, character.bCHeight);
+  ptr = parse(ptr, character.bCRadius);
+  ptr = parse(ptr, character.eventID);
+  ptr = parse(ptr, character.assocFileObj128);
+  ptr = parse(ptr, character.assocFileDrop128);
+  ptr = parse(ptr, character.assocFileIcon128);
+  ptr = parse(ptr, character.assocFile1_128);
+  ptr = parse(ptr, character.assocFile2_128);
   ptr = parse(ptr, character.lvl);
   ptr = parse(ptr, character.charGender);
   ptr = parse(ptr, character.maxHP);
   ptr = parse(ptr, character.maxMP);
-  ptr = parse(ptr, character.resistFrozen);
-  ptr = parse(ptr, character.resistFrostbite);
-  ptr = parse(ptr, character.resistBurn);
-  ptr = parse(ptr, character.resistEShock);
-  ptr = parse(ptr, character.resistPoison);
-  ptr = parse(ptr, character.resistZombie);
-  ptr = parse(ptr, character.resistSleep);
-  ptr = parse(ptr, character.resistRoot);
-  ptr = parse(ptr, character.resistSlow);
-  ptr = parse(ptr, character.resistFear);
-  ptr = parse(ptr, character.resistMyopia);
-  ptr = parse(ptr, character.resistBlood);
-  ptr = parse(ptr, character.resistStone);
-  ptr = parse(ptr, character.resistDark);
-  ptr = parse(ptr, character.resistStun);
-  ptr = parse(ptr, character.resistDisea);
-  ptr = parse(ptr, character.resistChaos);
-  ptr = parse(ptr, character.resistCsePD);
-  ptr = parse(ptr, character.resistCseMD);
-  ptr = parse(ptr, character.resistCseSTR);
-  ptr = parse(ptr, character.resistCseINT);
-  ptr = parse(ptr, character.resistCseHP);
-  ptr = parse(ptr, character.resistCseMP);
-  ptr = parse(ptr, character.resist24);
-  ptr = parse(ptr, character.resistBomb);
-  ptr = parse(ptr, character.resist26);
-  ptr = parse(ptr, character.resist27);
-  ptr = parse(ptr, character.resist28);
-  ptr = parse(ptr, character.resist29);
-  ptr = parse(ptr, character.resist30);
-  ptr = parse(ptr, character.resist31);
-  ptr = parse(ptr, character.resist32);
   ptr = parse(ptr, character.inventorySize);
   ptr = parse(ptr, character.canStore_TID1);
   ptr = parse(ptr, character.canStore_TID2);
@@ -310,7 +307,6 @@ pk2::ref::Character parseCharacterdataLine(const std::string &line) {
   ptr = parse(ptr, character.except_8);
   ptr = parse(ptr, character.except_9);
   ptr = parse(ptr, character.except_10);
-  parse(ptr, character.link);
 	return character;
 }
 

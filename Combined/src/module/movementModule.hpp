@@ -16,6 +16,8 @@
 #include "../state/self.hpp"
 #include "../storage/storage.hpp"
 
+#include "pathfinder.h"
+
 #include <mutex>
 #include <random>
 
@@ -29,7 +31,8 @@ public:
                  broker::PacketBroker &brokerSystem,
                  broker::EventBroker &eventBroker,
                  const packet::parsing::PacketParser &packetParser,
-                 const pk2::GameData &gameData);
+                 const pk2::GameData &gameData,
+                 pathfinder::Pathfinder &pathfinder);
   bool handlePacket(const PacketContainer &packet);
 private:
   state::Entity &entityState_;
@@ -39,17 +42,25 @@ private:
   broker::EventBroker &eventBroker_;
   const packet::parsing::PacketParser &packetParser_;
   const pk2::GameData &gameData_;
+  pathfinder::Pathfinder &pathfinder_;
   std::mutex contentionProtectionMutex_;
 
   //======tmp======
   std::optional<broker::TimerManager::TimerId> movingEventId_;
-  void startStepping();
-  void stopStepping();
-  void moveByStep();
   float secondsToTravel(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition) const;
+
+  // Autowalk
+  void executePath(const std::vector<std::unique_ptr<pathfinder::PathSegment>> &segments);
+  void takeNextStepOnPath();
+  std::vector<Vector> waypoints_;
+  bool testingAutowalk_{false};
+  double distanceTraveled_{0.0};
+  double queuedMovementDistance_;
+  void pathToRandomPoint();
+  void startAutowalkTest();
+  void stopAutowalkTest();
+
   std::mt19937 eng_;
-  int steppingStepSize_;
-  bool stepping_{false};
   std::optional<broker::TimerManager::TimerId> republishStepEventId_;
   SharedMemoryWriter sharedMemoryWriter_{"HyperbotSharedMemory", 256};
   //======tmp======

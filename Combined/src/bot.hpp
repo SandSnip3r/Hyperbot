@@ -17,10 +17,12 @@ class Bot {
 public:
   Bot(const config::CharacterLoginData &loginData,
       const pk2::GameData &gameData,
+      pathfinder::Pathfinder &pathfinder,
       broker::PacketBroker &broker);
 private:
   const config::CharacterLoginData &loginData_;
   const pk2::GameData &gameData_;
+  pathfinder::Pathfinder &pathfinder_;
   state::Entity entityState_;
   state::Self selfState_{gameData_};
   storage::Storage inventory_;
@@ -29,7 +31,7 @@ private:
   packet::parsing::PacketParser packetParser_{gameData_};
   module::CharacterInfoModule characterInfoModule_{entityState_, selfState_, inventory_, broker_, eventBroker_, packetParser_, gameData_};
   module::LoginModule loginModule_{broker_, packetParser_, loginData_, gameData_.divisionInfo()};
-  module::MovementModule movementModule_{entityState_, selfState_, inventory_, broker_, eventBroker_, packetParser_, gameData_};
+  module::MovementModule movementModule_{entityState_, selfState_, inventory_, broker_, eventBroker_, packetParser_, gameData_, pathfinder_};
   module::SkillUseModule skillUseModule_{entityState_, selfState_, inventory_, broker_, eventBroker_, packetParser_, gameData_};
 };
 

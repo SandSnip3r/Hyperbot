@@ -30,12 +30,11 @@ private:
   const pk2::GameData &gameData_;
   const std::filesystem::path &kSilkroadDirectoryPath_;
   const config::CharacterLoginData &loginData_;
-  const triangleio trash;
-  Pathfinder pathfinder_{trash, trash};
+  pathfinder::Pathfinder pathfinder_{gameData_.getSavedTriangleData(), gameData_.getSavedTriangleVoronoiData()};
   Loader loader_{kSilkroadDirectoryPath_, gameData_.divisionInfo()};
   broker::PacketBroker broker_;
   Proxy proxy_{gameData_, broker_};
-  Bot bot_{loginData_, gameData_, broker_};
+  Bot bot_{loginData_, gameData_, pathfinder_, broker_};
 };
 
 #endif

@@ -59,6 +59,8 @@ set(no_group_source_files
     "src/event/event.hpp"
     "src/loader.cpp"
     "src/loader.hpp"
+    "src/math/matrix.cpp"
+    "src/math/matrix.hpp"
     "src/math/position.cpp"
     "src/math/position.hpp"
     "src/math/vector.cpp"
@@ -191,6 +193,7 @@ set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost 1.67.0 REQUIRED COMPONENTS thread regex)
 include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${Pathfinder_SOURCE_DIR})
 
 ################################################################################
 # Target
