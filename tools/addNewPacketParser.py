@@ -16,15 +16,15 @@ pascalCaseClassName = sys.argv[1]
 camelCaseClassName = pascalCaseClassName[0].lower() + pascalCaseClassName[1:]
 macroCaseClassName = strToMacroCase(camelCaseClassName)
 
-projectFilePath = '../Combined/Combined.vcxproj'
-projectFileSourceLine = '    <ClCompile Include="src\\packet\\parsing\\{}.cpp" />'
-projectFileHeaderLine = '    <ClInclude Include="src\\packet\\parsing\\{}.hpp" />'
+cmakeFilePath = '../Combined/CMakeLists.txt'
+projectFileSourceLine = '    "src/packet/parsing/{}.cpp"'
+projectFileHeaderLine = '    "src/packet/parsing/{}.cpp"'
 
 # Append the file paths to the project file
-with open(projectFilePath, 'a') as projectFile:
+with open(cmakeFilePath, 'a') as projectFile:
   projectFile.write('\n'+projectFileSourceLine.format(camelCaseClassName))
   projectFile.write('\n'+projectFileHeaderLine.format(camelCaseClassName))
-  print("Lines written to {}, please go move them into the proper location".format(projectFilePath))
+  print("Lines written to {}, please go move them into the proper location".format(cmakeFilePath))
 
 packetParserFilePath = '../Combined/src/packet/parsing/packetParser.cpp'
 packetParserHandlerData = '#include "{camelClassName}.hpp"\n'\
@@ -46,7 +46,7 @@ headerTemplate = '#ifndef PACKET_PARSING_{macroClassName}_HPP\n'\
                  '#include <cstdint>\n'\
                  '\n'\
                  'namespace packet::parsing {{\n'\
-                 '  \n'\
+                 '\n'\
                  'class {pascalClassName} : public ParsedPacket {{\n'\
                  'public:\n'\
                  '  {pascalClassName}(const PacketContainer &packet);\n'\

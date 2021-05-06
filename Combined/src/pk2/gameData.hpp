@@ -11,6 +11,7 @@
 #include "../../../common/pk2/pk2ReaderModern.hpp"
 
 #include "triangle/triangle.h"
+#include "vector.h"
 
 #include <filesystem>
 #include <mutex>
@@ -20,7 +21,16 @@ namespace pk2 {
 
 class GameData {
 public:
-  // Opens Media.PK2, parses game data into memory, and closes Media.pk2
+  // =============================Types=============================
+  using PointListType = std::vector<pathfinder::Vector>;
+  struct EdgeType {
+    EdgeType(int a, int b, int c=2) : vertex0(a), vertex1(b), marker(c) {}
+    int vertex0, vertex1;
+    int marker;
+  };
+  using EdgeListType = std::vector<EdgeType>;
+
+  // Opens Media.PK2 and Data.PK2, parses game data into memory, then closes Media.pk2 and Data.PK2
   GameData(const std::filesystem::path &kSilkroadPath);
 
   const DivisionInfo& divisionInfo() const;

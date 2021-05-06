@@ -8,6 +8,7 @@
 #include "../packet/parsing/clientAgentCharacterMoveRequest.hpp"
 #include "../packet/parsing/clientAgentChatRequest.hpp"
 #include "../packet/parsing/packetParser.hpp"
+#include "../packet/parsing/serverAgentEntitySyncPosition.hpp"
 #include "../packet/parsing/serverAgentEntityUpdateMovement.hpp"
 #include "../packet/parsing/serverAgentEntityUpdatePosition.hpp"
 #include "../pk2/gameData.hpp"
@@ -69,6 +70,7 @@ private:
   bool clientAgentChatRequestReceived(packet::parsing::ClientAgentChatRequest &packet);
   bool clientAgentCharacterMoveRequestReceived(packet::parsing::ClientAgentCharacterMoveRequest &packet);
   bool serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet);
+  bool serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet);
   bool serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet);
 
   // Event handling functions

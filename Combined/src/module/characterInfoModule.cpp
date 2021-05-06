@@ -264,15 +264,15 @@ void CharacterInfoModule::serverAgentEntityUpdateStateReceived(packet::parsing::
 
 void CharacterInfoModule::trackObject(std::shared_ptr<packet::parsing::Object> obj) {
   entityState_.trackEntity(obj);
-  printf("[+++] (%5d)  ", entityState_.size());
-  packet::parsing::printObj(obj.get(), gameData_);
+  // printf("[+++] (%5d)  ", entityState_.size());
+  // packet::parsing::printObj(obj.get(), gameData_);
 }
 
 void CharacterInfoModule::stopTrackingObject(uint32_t gId) {
   if (entityState_.trackingEntity(gId)) {
     auto objPtr = entityState_.getEntity(gId);
-    printf("[---] (%5d)  ", entityState_.size()-1);
-    packet::parsing::printObj(objPtr, gameData_);
+    // printf("[---] (%5d)  ", entityState_.size()-1);
+    // packet::parsing::printObj(objPtr, gameData_);
     entityState_.stopTrackingEntity(gId);
   } else {
     std::cout << "Asked to despawn something that we werent tracking\n";

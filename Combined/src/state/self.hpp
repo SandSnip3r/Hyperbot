@@ -44,6 +44,7 @@ public:
   void setMotionState(packet::enums::MotionState motionState);
   void setBodyState(packet::enums::BodyState bodyState);
   void setPosition(const packet::structures::Position &position);
+  void syncPosition(const packet::structures::Position &position);
   void doneMoving();
   void setMoving(const packet::structures::Position &destination);
   void setMoving(const uint16_t angle);

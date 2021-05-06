@@ -8,6 +8,7 @@
 #include "serverAgentBuffRemove.hpp"
 #include "serverAgentCharacterData.hpp"
 #include "serverAgentChatUpdate.hpp"
+#include "serverAgentEntitySyncPosition.hpp"
 #include "serverAgentEntityUpdateMovement.hpp"
 #include "serverAgentEntityUpdateMoveSpeed.hpp"
 #include "serverAgentEntityUpdatePosition.hpp"
@@ -89,6 +90,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ServerAgentChatUpdate>(packet);
       case Opcode::kServerAgentEntityUpdatePosition:
         return std::make_unique<ServerAgentEntityUpdatePosition>(packet);
+      case Opcode::kServerAgentEntitySyncPosition:
+        return std::make_unique<ServerAgentEntitySyncPosition>(packet);
       case Opcode::kClientAgentAuthRequest:
       case Opcode::kServerGatewayLoginIbuvChallenge:
       // case static_cast<Opcode>(0x2005):

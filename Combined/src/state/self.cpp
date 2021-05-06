@@ -91,6 +91,16 @@ void Self::setPosition(const packet::structures::Position &position) {
   movementAngle_.reset();
 }
 
+void Self::syncPosition(const packet::structures::Position &position) {
+  const auto currentTime = std::chrono::high_resolution_clock::now();
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  lastKnownPosition_ = position;
+  // TODO: Need angle?
+  if (moving_) {
+    startedMovingTime_ = currentTime;
+  }
+}
+
 void Self::doneMoving() {
   std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (!moving_) {
@@ -314,6 +324,10 @@ packet::structures::Position Self::interpolateCurrentPosition() const {
   auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-startedMovingTime_).count();
   if (destinationPosition_) {
     auto totalDistance = math::position::calculateDistance(lastKnownPosition_, *destinationPosition_);
+    if (totalDistance < 0.0001 /* TODO: Use a double equal function */) {
+      // We're at our destination
+      return lastKnownPosition_;
+    }
     auto expectedTravelTimeSeconds = totalDistance / internal_speed();
     double percentTraveled = (elapsedTimeMs/1000.0) / expectedTravelTimeSeconds;
     if (percentTraveled < 0) {
@@ -326,15 +340,19 @@ packet::structures::Position Self::interpolateCurrentPosition() const {
       const auto resultPos = math::position::interpolateBetweenPoints(lastKnownPosition_, *destinationPosition_, percentTraveled);
       if (percentTraveled > 1) {
         std::cout << "Weird, we're moving, but we've traveled \"past\" our destination (" << percentTraveled*100 << "%)\n";
-        std::cout << "Returning pos " << resultPos.xOffset << ',' << resultPos.zOffset << '\n';
+        if (percentTraveled == std::numeric_limits<double>::infinity()) {
+          throw std::runtime_error("Nooo");
+        }
+        std::cout << "   Destination: " << destinationPosition_->xOffset << ',' << destinationPosition_->zOffset << "\n";
+        std::cout << "   Returning pos " << resultPos.xOffset << ',' << resultPos.zOffset << '\n';
       }
       return resultPos;
     }
   } else if (movementAngle_) {
     float angle = *movementAngle_/static_cast<float>(std::numeric_limits<std::remove_reference_t<decltype(*movementAngle_)>>::max()) * 2*math::kPi;
     float xOffset = std::cos(angle) * internal_speed() * (elapsedTimeMs/1000.0);
-    float yOffset = std::sin(angle) * internal_speed() * (elapsedTimeMs/1000.0);
-    return math::position::offset(lastKnownPosition_, xOffset, yOffset);
+    float zOffset = std::sin(angle) * internal_speed() * (elapsedTimeMs/1000.0);
+    return math::position::offset(lastKnownPosition_, xOffset, zOffset);
   } else {
     throw std::runtime_error("Moving but no destination position or movement angle");
   }

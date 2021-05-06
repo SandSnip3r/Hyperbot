@@ -135,6 +135,7 @@ enum class Opcode {
   SERVER_STATS = 0x303D,
   SERVER_STR_UPDATE = 0xB050,
   SERVER_INT_UPDATE = 0xB051,
+  kServerAgentEntitySyncPosition = 0x3028,
   kServerAgentEntityUpdateState = 0x30BF,
   kServerAgentEntityUpdateMoveSpeed = 0x30D0,
   SERVER_HPMP_UPDATE = 0x3057,

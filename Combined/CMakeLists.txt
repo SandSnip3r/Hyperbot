@@ -128,6 +128,8 @@ set(no_group_source_files
     "src/packet/parsing/serverAgentCharacterData.hpp"
     "src/packet/parsing/serverAgentChatUpdate.cpp"
     "src/packet/parsing/serverAgentChatUpdate.hpp"
+    "src/packet/parsing/serverAgentEntitySyncPosition.cpp"
+    "src/packet/parsing/serverAgentEntitySyncPosition.cpp"
     "src/packet/parsing/serverAgentEntityUpdateMovement.cpp"
     "src/packet/parsing/serverAgentEntityUpdateMovement.hpp"
     "src/packet/parsing/serverAgentEntityUpdateMoveSpeed.cpp"

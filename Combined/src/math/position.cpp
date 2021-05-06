@@ -78,10 +78,10 @@ packet::structures::Position interpolateBetweenPoints(const packet::structures::
   }
 }
 
-packet::structures::Position offset(const packet::structures::Position &srcPos, float xOffset, float yOffset) {
+packet::structures::Position offset(const packet::structures::Position &srcPos, float xOffset, float zOffset) {
   packet::structures::Position newPosition = srcPos;
   newPosition.xOffset += xOffset;
-  newPosition.zOffset += yOffset;
+  newPosition.zOffset += zOffset;
   normalize(newPosition);
   return newPosition;
 }

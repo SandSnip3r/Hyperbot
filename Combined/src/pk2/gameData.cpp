@@ -1,13 +1,11 @@
 #include "gameData.hpp"
 
 #include "../math/matrix.hpp"
-
-#include "../../../Pathfinder/vector.h"
-#include "../../../Pathfinder/behaviorBuilder.h"
-#include "../../../Pathfinder/triangle/triangle_api.h"
-
 #include "../../../common/pk2/pk2.h"
 #include "../../../common/pk2/parsing/parsing.hpp"
+
+#include "behaviorBuilder.h"
+#include "triangle/triangle_api.h"
 
 #include <functional>
 #include <iostream>
@@ -131,6 +129,33 @@ void parseDataFile2(const std::vector<std::string> &lines,
     }
   }
 }
+
+void dumpPolyFile(const std::string &filename, const GameData::PointListType &inVertices, const GameData::EdgeListType &inEdges) {
+  std::ofstream polyFile(filename);
+  if (!polyFile) {
+    std::cout << "Unable to open polyfile \"" << filename << "\" for writing\n";
+    return;
+  }
+
+  // Vertices
+  polyFile << inVertices.size() << " 2 0 0\n";
+  for (int i=0; i<inVertices.size(); ++i) {
+    const auto &vertex = inVertices.at(i);
+    polyFile << i << ' ' << std::fixed << std::setprecision(9) << vertex.x() << ' ' << std::fixed << std::setprecision(9) << vertex.y() << '\n';
+  }
+
+  // Edges
+  polyFile << inEdges.size() << " 1\n";
+  for (int i=0; i<inEdges.size(); ++i) {
+    const auto &edge = inEdges.at(i);
+    polyFile << i << ' ' << edge.vertex0 << ' ' << edge.vertex1 << ' ' << edge.marker << '\n';
+  }
+
+  // Holes
+  polyFile << "0\n";
+  std::cout << "File \"" << filename << "\" written\n";
+}
+
 } // namespace (anonymous)
 
 void GameData::parseCharacterData(Pk2ReaderModern &pk2Reader) {
@@ -447,16 +472,6 @@ void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
 
 void GameData::buildTriangleDataForRegion(const RegionNavmesh &regionNavmesh, const NavmeshParser &navmeshParser) {
   std::cout << "Building triangle data for navmesh region\n";
-
-  // =============================Types=============================
-  using PointListType = std::vector<pathfinder::Vector>;
-  struct EdgeType {
-    EdgeType(int a, int b, int c=2) : vertex0(a), vertex1(b), marker(c) {}
-    int vertex0, vertex1;
-    int marker;
-  };
-  using EdgeListType = std::vector<EdgeType>;
-
   // ============================Lambdas============================
   // Now, extract data from the navmesh
   auto addVertexAndGetIndex = [](const Vector &p, PointListType &points) -> size_t {
@@ -602,6 +617,9 @@ void GameData::buildTriangleDataForRegion(const RegionNavmesh &regionNavmesh, co
       }
     }
   }
+
+  // TODO: Temporary aid for visualization; remove
+  dumpPolyFile("regionNavmesh.poly", inVertices, inEdges);
 
   // ===============================================================================
   // =========================Ok, input data is transformed=========================

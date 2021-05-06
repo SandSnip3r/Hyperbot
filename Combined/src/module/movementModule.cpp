@@ -10,6 +10,8 @@
 #include <memory>
 #include <regex>
 
+#define LOG(TAG) std::cout << '[' << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() << "] " << (#TAG) << ": "
+
 // TODO: Remove
 #define SHARED_MEM 1
 
@@ -58,6 +60,7 @@ MovementModule::MovementModule(state::Entity &entityState,
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionSelectResponse, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMovement, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePosition, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySyncPosition, packetHandleFunction);
   // TODO: When teleporting, cancel movement timer!!
 
   auto eventHandleFunction = std::bind(&MovementModule::handleEvent, this, std::placeholders::_1);
@@ -112,6 +115,12 @@ bool MovementModule::handlePacket(const PacketContainer &packet) {
     return serverAgentEntityUpdatePositionReceived(*entityUpdatePosition);
   }
 
+  auto *entitySyncPosition = dynamic_cast<packet::parsing::ServerAgentEntitySyncPosition*>(parsedPacket.get());
+  if (entitySyncPosition != nullptr) {
+    return serverAgentEntitySyncPositionReceived(*entitySyncPosition);
+  }
+
+
   std::cout << "MovementModule: Unhandled packet subscribed to\n";
   return true;
 }
@@ -132,7 +141,7 @@ void MovementModule::handleEvent(const event::Event *event) {
     case event::EventCode::kRepublish:
       republishStepEventId_.reset();
       if (!selfState_.moving()) {
-        std::cout << "<<<<<<<<<<<<<<<<<<<<<Triggering \"republish\">>>>>>>>>>>>>>>>>>>>>\n";
+        LOG(handleEvent) << "<<<<<<<<<<<<<<<<<<<<<Triggering \"republish\">>>>>>>>>>>>>>>>>>>>>\n";
         takeNextStepOnPath();
       }
       break;
@@ -151,7 +160,7 @@ void MovementModule::handleTempEvent() {
   sharedMemoryWriter_.writeData(pos.xOffset);
   sharedMemoryWriter_.writeData(pos.yOffset);
   sharedMemoryWriter_.writeData(pos.zOffset);
-  eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kTemp), std::chrono::milliseconds(33));
+  eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kTemp), std::chrono::milliseconds(33)); // 30FPS
 #endif
 }
 
@@ -168,16 +177,32 @@ void MovementModule::handleSpeedUpdated() {
 
 void MovementModule::handleMovementEnded() {
   movingEventId_.reset();
-  std::cout << "[TIMER END] Movement ended event\n";
+  LOG(handleMovementEnded) << "Movement ended event\n";
   selfState_.doneMoving();
-  std::cout << "[TIMER END] Currently at " << selfState_.position() << '\n';
+  LOG(handleMovementEnded) << "Currently at " << selfState_.position() << '\n';
+
+  if (!waypoints_.empty()) {
+    const auto &nextWaypoint = waypoints_.front();
+    const auto &currentPosition = selfState_.position();
+    if (std::round(currentPosition.xOffset) == std::round(nextWaypoint.x) && std::round(currentPosition.zOffset) == std::round(nextWaypoint.z)) {
+      LOG(handleMovementEnded) << "Walking on a path, arrived at the next waypoint" << std::endl;
+      waypoints_.erase(waypoints_.begin());
+    } else {
+      // Didn't arrive at next waypoint. This can happen if we prematurely resend the movement packet
+    }
+  }
 
   if (testingAutowalk_) {
     distanceTraveled_ += queuedMovementDistance_;
-    std::cout << "Total distance traveled: " << distanceTraveled_ << '\n';
+    LOG(handleMovementEnded) << "Total distance traveled: " << distanceTraveled_ << '\n';
   }
   if (!waypoints_.empty()) {
-    std::cout << "Arrived at waypoint, moving to next one\n";
+    LOG(handleMovementEnded) << "Arrived at waypoint, moving to next one\n";
+    LOG(handleMovementEnded) << "  Remaining points: [";
+    for (const auto &i : waypoints_) {
+      std::cout << i.x << ',' << i.z << ' ';
+    }
+    std::cout << ']' << std::endl;
     takeNextStepOnPath();
   } else {
     // No waypoints left
@@ -188,32 +213,54 @@ void MovementModule::handleMovementEnded() {
   }
 }
 
+bool MovementModule::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) {
+  if (packet.globalId() == selfState_.globalId()) {
+    const auto &currentPosition = selfState_.position();
+    selfState_.syncPosition(packet.position());
+  }
+  return false;
+}
+
 bool MovementModule::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) {
   if (packet.globalId() == selfState_.globalId()) {
     if (selfState_.moving()) {
+      LOG(serverAgentEntityUpdatePositionReceived) << "Position update received" << std::endl;
+      // Happens when you collide with something
       // Note: this also happens when running to pick an item
-      std::cout << "[UPDATE POS] We were moving. Must've hit an obstacle\n";
+      // Note: I think this also happens when a speed drug is cancelled
       if (republishStepEventId_) {
-        std::cout << "[UPDATE POS] Cancelling republish timer\n";
+        LOG(serverAgentEntityUpdatePositionReceived) << "Cancelling republish timer\n";
         eventBroker_.cancelDelayedEvent(*republishStepEventId_);
         republishStepEventId_.reset();
       }
       if (movingEventId_) {
-        std::cout << "[UPDATE POS] Cancelling movement timer\n";
+        LOG(serverAgentEntityUpdatePositionReceived) << "Cancelling movement timer\n";
         eventBroker_.cancelDelayedEvent(*movingEventId_);
         movingEventId_.reset();
       }
       selfState_.setPosition(packet.position());
-      std::cout << "[UPDATE POS] Now at " << selfState_.position() << '\n';
+      LOG(serverAgentEntityUpdatePositionReceived) << "Now stationary at " << selfState_.position() << '\n';
       if (testingAutowalk_) {
-        std::cout << "[UPDATE POS] We were autowalking, this is a problem!!!\n";
-        stopAutowalkTest();
+        if (!waypoints_.empty()) {
+          const auto &nextWaypoint = waypoints_.front();
+          if (std::round(packet.position().xOffset) == std::round(nextWaypoint.x) && std::round(packet.position().zOffset) == std::round(nextWaypoint.z)) {
+            // We've essentially arrived at our waypoint. Good
+            LOG(serverAgentEntityUpdatePositionReceived) << "Arrived at waypoint, moving to next one\n";
+            waypoints_.erase(waypoints_.begin());
+            takeNextStepOnPath();
+          } else {
+            LOG(serverAgentEntityUpdatePositionReceived) << "We were autowalking, this is a problem!!!\n";
+            stopAutowalkTest();
+          }
+        } else {
+          LOG(serverAgentEntityUpdatePositionReceived) << "We were autowalking but it seems that we have no current waypoint...\n";
+        }
       }
     } else {
-      std::cout << "[UPDATE POS] We werent moving, weird\n";
+      LOG(serverAgentEntityUpdatePositionReceived) << "We werent moving, weird\n";
       const auto pos = selfState_.position();
-      std::cout << "Expected pos: " << pos.xOffset << ',' << pos.zOffset << '\n';
-      std::cout << "Received pos: " << packet.position().xOffset << ',' << packet.position().zOffset << '\n';
+      LOG(serverAgentEntityUpdatePositionReceived) << "Expected pos: " << pos.xOffset << ',' << pos.zOffset << '\n';
+      LOG(serverAgentEntityUpdatePositionReceived) << "Received pos: " << packet.position().xOffset << ',' << packet.position().zOffset << '\n';
     }
   }
   return true;
@@ -223,7 +270,6 @@ bool MovementModule::clientAgentCharacterMoveRequestReceived(packet::parsing::Cl
   if (testingAutowalk_) {
     // Discard request, dont want client to interrupt
     // Tell the user through chat
-    std::cout << "User tried to move\n";
     broker_.injectPacket(packet::building::ServerAgentChatUpdate::notice("Autowalk Testing in progress. Movement input ignored."), PacketContainer::Direction::kServerToClient);
     return false;
   }
@@ -260,42 +306,51 @@ bool MovementModule::serverAgentEntityUpdateMovementReceived(packet::parsing::Se
     if (packet.hasSource()) {
       // Use given position
       sourcePosition = packet.sourcePosition();
+      selfState_.syncPosition(sourcePosition);
     } else {
       // Use known position
       sourcePosition = selfState_.position();
     }
     if (movingEventId_) {
       // Had a timer already running for movement, cancel it
-      std::cout << "[UPDATE MOVEMENT] Had a running timer, cancelling it\n";
+      LOG(serverAgentEntityUpdateMovementReceived) << "Had a running timer, cancelling it" << std::endl;
       eventBroker_.cancelDelayedEvent(*movingEventId_);
       movingEventId_.reset();
     }
-    std::cout << "[UPDATE MOVEMENT] We are moving from " << sourcePosition << ' ';
+    LOG(serverAgentEntityUpdateMovementReceived) << "We are moving from " << sourcePosition << ' ';
     if (packet.hasDestination()) {
       auto destPosition = packet.destinationPosition();
-      queuedMovementDistance_ = math::position::calculateDistance(sourcePosition, destPosition);
-      auto seconds = secondsToTravel(sourcePosition, destPosition);
       std::cout << "to " << destPosition << '\n';
-      std::cout << "[UPDATE MOVEMENT]   Should take " << seconds << "s. Timer set\n";
-      movingEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
-      selfState_.setMoving(packet.destinationPosition());
-
-      if (!waypoints_.empty()) {
-        waypoints_.erase(waypoints_.begin());
-        std::cout << "We are walking on the path, " << waypoints_.size() << " steps remaining after this\n";
+      if (sourcePosition.xOffset == destPosition.xOffset && sourcePosition.zOffset == destPosition.zOffset) {
+        LOG(serverAgentEntityUpdateMovementReceived) << "Server says we're moving to our current position. wtf?\n";
+        // Ignore this
+        if (!waypoints_.empty()) {
+          const auto &nextWaypoint = waypoints_.front();
+          if (std::round(destPosition.xOffset) == std::round(nextWaypoint.x) && std::round(destPosition.zOffset) == std::round(nextWaypoint.z)) {
+            // This is the next waypoint though, pop it off now and take the next step
+            LOG(serverAgentEntityUpdateMovementReceived) << "This is actually our next waypoint though, pop and move to next one\n";
+            waypoints_.erase(waypoints_.begin());
+            takeNextStepOnPath();
+          }
+        }
+      } else {
+        queuedMovementDistance_ = math::position::calculateDistance(sourcePosition, destPosition);
+        auto seconds = secondsToTravel(sourcePosition, destPosition);
+        LOG(serverAgentEntityUpdateMovementReceived) << "Should take " << seconds << "s. Timer set\n";
+        movingEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+        selfState_.setMoving(packet.destinationPosition());
       }
     } else {
       std::cout << "toward " << packet.angle() << '\n';
       selfState_.setMoving(packet.angle());
     }
-    // TODO: Emit event "character began moving"
   }
   return true;
 }
 
 void MovementModule::takeNextStepOnPath() {
   if (waypoints_.empty()) {
-    std::cout << "Trying to take a step but there's no path!\n";
+    LOG(takeNextStepOnPath) << "Trying to take a step but there's no path!\n";
     if (testingAutowalk_) {
       pathToRandomPoint();
     }
@@ -309,20 +364,21 @@ void MovementModule::takeNextStepOnPath() {
       return false;
     }
   };
-  std::cout << "takeNextStepOnPath: Current position " << currentPos.xOffset << ',' << currentPos.zOffset << '\n';
+  LOG(takeNextStepOnPath) << "takeNextStepOnPath: Current position " << currentPos.xOffset << ',' << currentPos.zOffset << '\n';
   while (!waypoints_.empty() && isSameAsCurrentPosition(waypoints_.front())) {
-    std::cout << "  pop off " << waypoints_.front().x << ',' << waypoints_.front().z << '\n';
+    LOG(takeNextStepOnPath) << "  pop off " << waypoints_.front().x << ',' << waypoints_.front().z << '\n';
     waypoints_.erase(waypoints_.begin());
   }
   if (waypoints_.empty()) {
-    std::cout << "Looks like we're already at our goal\n";
+    LOG(takeNextStepOnPath) << "Looks like we're already at our goal\n";
     if (testingAutowalk_) {
       pathToRandomPoint();
     }
     return;
   }
-  std::cout << "Sending movement packet to position " << waypoints_.front().x << ',' << waypoints_.front().z << ", " << waypoints_.size() << " steps left\n";
-  broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(currentPos.regionId, waypoints_.front().x, 0, waypoints_.front().z), PacketContainer::Direction::kClientToServer);
+  const Vector nextWaypoint{std::round(waypoints_.front().x), 0, std::round(waypoints_.front().z)};
+  LOG(takeNextStepOnPath) << "Sending movement packet to position " << nextWaypoint.x << ',' << nextWaypoint.z << ", " << waypoints_.size() << " steps left\n";
+  broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(currentPos.regionId, nextWaypoint.x, 0, nextWaypoint.z), PacketContainer::Direction::kClientToServer);
 
   if (republishStepEventId_) {
     // The last step was likely a quick one, cancel the old event
@@ -335,7 +391,7 @@ void MovementModule::takeNextStepOnPath() {
 
 void MovementModule::executePath(const std::vector<std::unique_ptr<pathfinder::PathSegment>> &segments) {
   if (!waypoints_.empty()) {
-    std::cout << "WEIRD! Executing a path but there are already waypoints in the queue\n";
+    LOG(executePath) << "WEIRD! Executing a path but there are already waypoints in the queue\n";
   }
   waypoints_.clear();
   bool addFirstPoint{false};
@@ -349,7 +405,7 @@ void MovementModule::executePath(const std::vector<std::unique_ptr<pathfinder::P
       addFirstPoint = true;
     }
   }
-  std::cout << "Path: [";
+  LOG(executePath) << "Path: [";
   for (const auto &i : waypoints_) {
     std::cout << i.x << ',' << i.z << ' ';
   }
@@ -371,31 +427,36 @@ void MovementModule::pathToRandomPoint() {
       auto result = pathfinder_.findShortestPath(pathfinder::Vector{static_cast<double>(currentPos.xOffset), static_cast<double>(currentPos.zOffset)}, goalPoint);
       if (!result.shortestPath.empty()) {
         foundValidPoint = true;
-        std::cout << "Pathing from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << goalPoint.x() << ',' << goalPoint.y() << "\n";
+        LOG(pathToRandomPoint) << "Pathing from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << goalPoint.x() << ',' << goalPoint.y() << "\n";
         executePath(result.shortestPath);
       }
     } catch (std::exception &ex) {
-      std::cout << "Exception caught while finding path from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << goalPoint.x() << ',' << goalPoint.y() << "\n";
-      std::cout << "  \"" << ex.what() << "\"\n";
+      LOG(pathToRandomPoint) << "Exception caught while finding path from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << goalPoint.x() << ',' << goalPoint.y() << "\n";
+      LOG(pathToRandomPoint) << "  \"" << ex.what() << "\"\n";
       const std::string exceptionText = ex.what();
       if (exceptionText.find("No point found!") != std::string::npos) {
-        std::cout << "Cancelling autowalk test\n";
+        LOG(pathToRandomPoint) << "Cancelling autowalk test\n";
+        stopAutowalkTest();
+        return;
+      } else if (exceptionText.find("The chosen start point is overlapping with a constraint") != std::string::npos) {
+        LOG(pathToRandomPoint) << "Cancelling autowalk test\n";
         stopAutowalkTest();
         return;
       }
+
     }
   } while (foundValidPoint == false);
 }
 
 void MovementModule::startAutowalkTest() {
-  std::cout << "Starting autowalk test\n";
+  LOG(startAutowalkTest) << "Starting autowalk test\n";
   distanceTraveled_ = 0;
   testingAutowalk_ = true;
   pathToRandomPoint();
 }
 
 void MovementModule::stopAutowalkTest() {
-  std::cout << "Stopping autowalk test\n";
+  LOG(stopAutowalkTest) << "Stopping autowalk test\n";
   testingAutowalk_ = false;
   waypoints_.clear();
   republishStepEventId_.reset();

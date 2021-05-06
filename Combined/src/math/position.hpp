@@ -14,7 +14,7 @@ namespace math::position {
 float calculateDistance(const packet::structures::Position &srcPos, const packet::structures::Position &destPos);
 void normalize(packet::structures::Position &position);
 packet::structures::Position interpolateBetweenPoints(const packet::structures::Position &srcPos, const packet::structures::Position &destPos, float percent);
-packet::structures::Position offset(const packet::structures::Position &srcPos, float xOffset, float yOffset);
+packet::structures::Position offset(const packet::structures::Position &srcPos, float xOffset, float zOffset);
 
 } // namespace math::position
 
