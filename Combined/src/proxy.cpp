@@ -146,6 +146,8 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
 
     //Post another accept
     PostAccept();
+  } else {
+    std::cout << "Proxy::HandleAccept error" << std::endl;
   }
 }
 

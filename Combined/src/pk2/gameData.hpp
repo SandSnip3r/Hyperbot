@@ -9,11 +9,13 @@
 #include "../navmesh/navmeshParser.hpp" // TODO: Maybe move to the common parsing area?
 #include "../../../common/pk2/divisionInfo.hpp"
 #include "../../../common/pk2/pk2ReaderModern.hpp"
+#include "a_star_navmesh_interface.h"
 
 #include "triangle/triangle.h"
 #include "vector.h"
 
 #include <filesystem>
+#include <memory>
 #include <mutex>
 #include <string>
 
@@ -39,8 +41,7 @@ public:
   const ShopData& shopData() const;
   const SkillData& skillData() const;
   const TeleportData& teleportData() const;
-  const triangle::triangleio& getSavedTriangleData() const;
-  const triangle::triangleio& getSavedTriangleVoronoiData() const;
+  const pathfinder::navmesh::AStarNavmeshInterface& getNavmeshForRegionId(const uint16_t regionId) const;
 private:
   std::mutex printMutex_;
   const std::filesystem::path kSilkroadPath_;
@@ -51,9 +52,7 @@ private:
   SkillData skillData_;
   TeleportData teleportData_;
 
-  // TODO: Remove
-	triangle::triangleio savedTriangleData_;
-	triangle::triangleio savedTriangleVoronoiData_;
+  std::map<uint16_t, std::unique_ptr<pathfinder::navmesh::AStarNavmeshInterface>> regionNavmeshes_;
 
   void parseData(Pk2ReaderModern &pk2Reader);
   void parseNavmeshData(Pk2ReaderModern &pk2Reader);
@@ -66,7 +65,7 @@ private:
   void parseTeleportData(Pk2ReaderModern &pk2Reader);
   void parseShopData(Pk2ReaderModern &pk2Reader);
 
-  void buildTriangleDataForRegion(const RegionNavmesh &regionNavmesh, const NavmeshParser &navmeshParser);
+  std::unique_ptr<pathfinder::navmesh::AStarNavmeshInterface> buildNavmeshForRegion(const RegionNavmesh &regionNavmesh, const NavmeshParser &navmeshParser, const bool createDebugPolyFile=false);
 };
 
 } // namespace pk2

@@ -1,5 +1,7 @@
 #include "silkroadConnection.hpp"
 
+#include <iostream>
+
 std::string Config::GatewayIP{"93.158.239.40"};	//Gateway server IP/hostname to connect to
 uint16_t Config::GatewayPort{15779};											//Gateway server port
 uint16_t Config::BotBind{22580};													//The port the bot will connect to
@@ -10,6 +12,8 @@ void SilkroadConnection::HandleRead(size_t bytes_transferred, const boost::syste
   if(!error && s && security) {
     security->Recv(&data[0], bytes_transferred);
     PostRead();
+  } else if (error) {
+    std::cout << "SilkroadConnection::HandleRead error" << std::endl;
   }
 }
 

@@ -1,11 +1,14 @@
 #include "gameData.hpp"
 
 #include "../math/matrix.hpp"
+#include "../math/position.hpp"
 #include "../../../common/pk2/pk2.h"
 #include "../../../common/pk2/parsing/parsing.hpp"
 
 #include "behaviorBuilder.h"
+#include "math_helpers.h"
 #include "triangle/triangle_api.h"
+#include "triangle_lib_navmesh.h"
 
 #include <functional>
 #include <iostream>
@@ -141,7 +144,7 @@ void dumpPolyFile(const std::string &filename, const GameData::PointListType &in
   polyFile << inVertices.size() << " 2 0 0\n";
   for (int i=0; i<inVertices.size(); ++i) {
     const auto &vertex = inVertices.at(i);
-    polyFile << i << ' ' << std::fixed << std::setprecision(9) << vertex.x() << ' ' << std::fixed << std::setprecision(9) << vertex.y() << '\n';
+    polyFile << i << ' ' << std::fixed << std::setprecision(12) << vertex.x() << ' ' << std::fixed << std::setprecision(12) << vertex.y() << '\n';
   }
 
   // Edges
@@ -470,37 +473,41 @@ void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
   }
 }
 
-void GameData::buildTriangleDataForRegion(const RegionNavmesh &regionNavmesh, const NavmeshParser &navmeshParser) {
-  std::cout << "Building triangle data for navmesh region\n";
+std::unique_ptr<pathfinder::navmesh::AStarNavmeshInterface> GameData::buildNavmeshForRegion(const RegionNavmesh &regionNavmesh, const NavmeshParser &navmeshParser, const bool createDebugPolyFile) {
   // ============================Lambdas============================
   // Now, extract data from the navmesh
   auto addVertexAndGetIndex = [](const Vector &p, PointListType &points) -> size_t {
     // TODO: Maybe give a tiny range for precision error
     auto it = std::find_if(points.begin(), points.end(), [&p](const pathfinder::Vector &otherPoint){
-      return (otherPoint.x() == p.x) && (otherPoint.y() == p.z);
+      return (pathfinder::math::equal(otherPoint.x(), p.x) && pathfinder::math::equal(otherPoint.y(), p.z));
     });
     if (it != points.end()) {
       // Point already exists in list
-      // std::cout << "Vertex already exists! " << p.first << ',' << p.second << " at index " << std::distance(points.begin(), it) << '\n';
+      // std::cout << "Vertex already exists! " << p.x << ',' << p.z << " at index " << std::distance(points.begin(), it) << '\n';
       return std::distance(points.begin(), it);
     }
-    // std::cout << "Insert vertex " << p.first << ',' << p.second << " at index " << points.size() << '\n';
+    // std::cout << "Insert vertex " << p.x << ',' << p.z << " at index " << points.size() << '\n';
     points.emplace_back(p.x, p.z);
     return points.size()-1;
   };
 
   auto addEdge = [&addVertexAndGetIndex](Vector v1, Vector v2, PointListType &points, EdgeListType &edges) {
-    auto v1Index = addVertexAndGetIndex(v1, points);
-    auto v2Index = addVertexAndGetIndex(v2, points);
-    edges.emplace_back(v1Index, v2Index);
+    const auto v1Index = addVertexAndGetIndex(v1, points);
+    const auto v2Index = addVertexAndGetIndex(v2, points);
+    if (std::find_if(edges.begin(), edges.end(), [v1Index, v2Index](const EdgeType &edge) {
+      return (edge.vertex0 == v1Index && edge.vertex1 == v2Index) || (edge.vertex0 == v2Index && edge.vertex1 == v1Index);
+    }) == edges.end()) {
+      // std::cout << "Adding edge " << points.at(v1Index).x() << ',' << points.at(v1Index).y() << " -> " << points.at(v2Index).x() << ',' << points.at(v2Index).y() << std::endl;
+      edges.emplace_back(v1Index, v2Index);
+    } else {
+      // std::cout << "Edge already exists " << points.at(v1Index).x() << ',' << points.at(v1Index).y() << " -> " << points.at(v2Index).x() << ',' << points.at(v2Index).y() << std::endl;
+    }
   };
 
-  auto addObjEdgeWithTrim = [&addVertexAndGetIndex](Vector v1, Vector v2, PointListType &points, EdgeListType &edges) {
+  auto addObjEdgeWithTrim = [&addVertexAndGetIndex, &addEdge](Vector v1, Vector v2, PointListType &points, EdgeListType &edges) {
     bool res = navmesh_geometry_helpers::lineTrim(v1, v2);
     if (res) {
-      auto v1Index = addVertexAndGetIndex(v1, points);
-      auto v2Index = addVertexAndGetIndex(v2, points);
-      edges.emplace_back(v1Index, v2Index);
+      addEdge(v1, v2, points, edges);
     }
   };
 
@@ -529,26 +536,29 @@ void GameData::buildTriangleDataForRegion(const RegionNavmesh &regionNavmesh, co
   // addEdge(pathfinder::Vector{1920,0,1920}, pathfinder::Vector{0,0,1920}, inVertices, inEdges);
   // addEdge(pathfinder::Vector{0,0,1920}, pathfinder::Vector{0,0,0}, inVertices, inEdges);
 
+  // It is possible that a region has no global edges nor instance edges, though it could be a walkable region.
+  // Add the 4 corners as a minimum so there is a walkable space
+  (void)addVertexAndGetIndex(Vector{0,0,0}, inVertices);
+  (void)addVertexAndGetIndex(Vector{1920,0,0}, inVertices);
+  (void)addVertexAndGetIndex(Vector{1920,0,1920}, inVertices);
+  (void)addVertexAndGetIndex(Vector{0,0,1920}, inVertices);
+
   // Want all global edges
   for (const auto &edge : regionNavmesh.globalEdges) {
     // std::cout << "Global " << edge.min.x << ',' << edge.min.z << " -> " << edge.max.x << ',' << edge.max.z << '\n';
-    std::cout << "Terrain global edge flag " << (int)edge.flag << std::endl;
     addEdge(edge.min, edge.max, inVertices, inEdges);
   }
 
   // Only want constraining edges of interior edges
   for (const auto &edge : regionNavmesh.internalEdges) {
-    std::cout << "Terrain internal edge flag " << (int)edge.flag;
     if (((edge.flag & 1) ||
         (edge.flag & 2) ||
         (edge.flag & 16) ||
         (edge.flag & 128))/*  &&
         (edge.flag & 4) */) {
       // std::cout << "Internal " << edge.min.x << ',' << edge.min.z << " -> " << edge.max.x << ',' << edge.max.z << '\n';
-      std::cout << " added" << std::endl;
       addEdge(edge.min, edge.max, inVertices, inEdges);
     } else {
-      std::cout << " NOT added" << std::endl;
     //   std::cout << "flag " << (int)edge.flag << '\n';
     }
   }
@@ -585,7 +595,6 @@ void GameData::buildTriangleDataForRegion(const RegionNavmesh &regionNavmesh, co
     }
 
     for (const auto &edge : tranformedObjectResource.outlineEdges) {
-      std::cout << "Cell outline edge flag " << (int)edge.flag << std::endl;
       // uint16_t srcVertex, destVertex, srcCell, destCell;
       // if (((edge.flag & 1) ||
       //     (edge.flag & 2) ||
@@ -600,32 +609,28 @@ void GameData::buildTriangleDataForRegion(const RegionNavmesh &regionNavmesh, co
     }
 
     for (const auto &edge : tranformedObjectResource.inlineEdges) {
-      std::cout << "Cell inline edge flag " << (int)edge.flag;
       // uint16_t srcVertex, destVertex, srcCell, destCell;
       if (((edge.flag & 1) ||
           (edge.flag & 2) ||
           (edge.flag & 16) ||
           (edge.flag & 128)) ||
           edge.eventZoneData) {
-        std::cout << " added" << std::endl;
         addObjEdgeWithTrim(tranformedObjectResource.vertices.at(edge.srcVertex),
                            tranformedObjectResource.vertices.at(edge.destVertex),
                            inVertices,
                            inEdges);
-      } else {
-        std::cout << " NOT added" << std::endl;
       }
     }
   }
 
   // TODO: Temporary aid for visualization; remove
-  dumpPolyFile("regionNavmesh.poly", inVertices, inEdges);
+  if (createDebugPolyFile) {
+    dumpPolyFile("regionNavmesh.poly", inVertices, inEdges);
+  }
 
   // ===============================================================================
   // =========================Ok, input data is transformed=========================
   // ===============================================================================
-	triangle::triangle_initialize_triangleio(&savedTriangleData_);
-	triangle::triangle_initialize_triangleio(&savedTriangleVoronoiData_);
 
   // Some data init
 	triangle::context *ctx;
@@ -665,52 +670,71 @@ void GameData::buildTriangleDataForRegion(const RegionNavmesh &regionNavmesh, co
   auto beforeTime = std::chrono::high_resolution_clock::now();
   int meshCreateResult = triangle_mesh_create(ctx, &inputStruct);
   if (meshCreateResult < 0) {
-    std::cout << "Error creating mesh!" << std::endl;
-    // TODO: Free memory
-    return;
+    triangle::triangle_free_triangleio(&inputStruct);
+    triangle::triangle_context_destroy(ctx);
+    throw std::runtime_error("Error creating mesh "+std::to_string(meshCreateResult));
   }
   auto afterTime = std::chrono::high_resolution_clock::now();
-  std::cout << "Triangulating " << inVertices.size() << " vertices took " << std::chrono::duration_cast<std::chrono::microseconds>(afterTime-beforeTime).count() << " microseconds" << std::endl;
 
   // write_nodes(ctx, "test-out.node");
   // write_edges(ctx, "test-out.edge");
 
   // Prepare data structures
-  // Free in case already used
-  triangle::triangle_free_triangleio(&savedTriangleData_);
-  triangle::triangle_free_triangleio(&savedTriangleVoronoiData_);
-	triangle::triangle_initialize_triangleio(&savedTriangleData_);
-	triangle::triangle_initialize_triangleio(&savedTriangleVoronoiData_);
+  triangle::triangleio triangleData, triangleVoronoiData;
+	triangle::triangle_initialize_triangleio(&triangleData);
+	triangle::triangle_initialize_triangleio(&triangleVoronoiData);
 
   // Extract data from the context
   beforeTime = std::chrono::high_resolution_clock::now();
-  int copyResult = triangle_mesh_copy(ctx, &savedTriangleData_, 1, 1, &savedTriangleVoronoiData_);
+  int copyResult = triangle_mesh_copy(ctx, &triangleData, 1, 1, &triangleVoronoiData);
   afterTime = std::chrono::high_resolution_clock::now();
-  std::cout << "api triangle_mesh_copy (result=" << copyResult << ") took " << std::chrono::duration_cast<std::chrono::microseconds>(afterTime-beforeTime).count() << " microseconds" << std::endl;
   if (copyResult < 0) {
-    std::cout << "Error copying data!" << std::endl;
-    // TODO: Free memory
-    return;
+    triangle::triangle_free_triangleio(&triangleData);
+    triangle::triangle_free_triangleio(&triangleVoronoiData);
+    triangle::triangle_free_triangleio(&inputStruct);
+    triangle::triangle_context_destroy(ctx);
+    throw std::runtime_error("Error copying data");
   }
 
-  triangle::triangle_free_triangleio(&inputStruct);
+  std::unique_ptr<pathfinder::navmesh::AStarNavmeshInterface> navmesh(new pathfinder::navmesh::TriangleLibNavmesh(triangleData, triangleVoronoiData));
 
+  // Cleanup
+  triangle::triangle_free_triangleio(&triangleData);
+  triangle::triangle_free_triangleio(&triangleVoronoiData);
+  triangle::triangle_free_triangleio(&inputStruct);
   triangle::triangle_context_destroy(ctx);
+
+  return navmesh;
 }
 
 void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {
   std::cout << "Parsing navmesh data\n";
   NavmeshParser navmeshParser(pk2Reader);
-  // std::cout << "Enabled regions: [ ";
-  // for (int regionX=0; regionX<255; ++regionX) {
-  //   for (int regionY=0; regionY<128; ++regionY) {
-  //     const uint16_t regionId = regionX&0xFF | ((regionY&0xFF)<<8);
-  //     if (navmeshParser.regionIsEnabled(regionId)) {
-  //       std::cout << "(" << regionX << ',' << regionY << ") ";
-  //     }
-  //   }
-  // }
-  // std::cout << "]\n";
+  uint64_t parsingTimeTotal{0};
+  uint64_t buildingTimeTotal{0};
+  for (int regionX=0; regionX<255; ++regionX) {
+    for (int regionY=0; regionY<128; ++regionY) {
+      const auto regionId = math::position::worldRegionIdFromXY(regionX, regionY);
+      // const auto regionId = math::position::worldRegionIdFromXY(70, 107);
+      const auto [x,y] = math::position::regionXYFromRegionId(regionId);
+      // std::cout << "Region " << regionId << " is " << x << ',' << y << std::endl;
+      if (navmeshParser.regionIsEnabled(regionId)) {
+        auto startTime = std::chrono::high_resolution_clock::now();
+        const auto regionNavmeshData = navmeshParser.parseRegionNavmesh(regionId);
+        auto endTime = std::chrono::high_resolution_clock::now();
+        // std::cout << "parseRegionNavmesh took " << std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime).count() << " microseconds\n";
+        parsingTimeTotal += std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime).count();
+        startTime = std::chrono::high_resolution_clock::now();
+        auto navmesh = buildNavmeshForRegion(regionNavmeshData, navmeshParser, false);
+        endTime = std::chrono::high_resolution_clock::now();
+        // std::cout << "buildNavmeshForRegion took " << std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime).count() << " microseconds\n";
+        buildingTimeTotal += std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime).count();
+        regionNavmeshes_.emplace(regionId, std::move(navmesh));
+      }
+    }
+  }
+  std::cout << "parsingTimeTotal: " << parsingTimeTotal << std::endl;
+  std::cout << "buildingTimeTotal: " << buildingTimeTotal << std::endl;
   // Load region at East Jangan gate
   // const int kRegionX = 170;
   // const int kRegionY = 97;
@@ -718,24 +742,28 @@ void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {
   // const int kRegionX = 169;
   // const int kRegionY = 97;
   // Load region ____
-  const int kRegionX = 72;
-  const int kRegionY = 102;
-  const uint16_t kRegionId = kRegionX&0xFF | ((kRegionY&0xFF)<<8);
-  if (navmeshParser.regionIsEnabled(kRegionId)) {
-    std::cout << "Parsing region " << kRegionId << '\n';
-    const auto regionNavmesh = navmeshParser.parseRegionNavmesh(kRegionId);
-    buildTriangleDataForRegion(regionNavmesh, navmeshParser);
-  } else {
-    std::cout << "Not parsing region because it is disabled\n";
+  // navmesh_ = std::unique_ptr<pathfinder::navmesh::NavmeshInterface>(new pathfinder::navmesh::TriangleLibNavmesh(triangleData, triangleVoronoiData));
+  // const int kRegionX = 69;
+  // const int kRegionY = 101;
+  // const uint16_t kRegionId = kRegionX&0xFF | ((kRegionY&0xFF)<<8);
+  // if (navmeshParser.regionIsEnabled(kRegionId)) {
+  //   std::cout << "Parsing region " << kRegionId << '\n';
+  //   const auto regionNavmesh = navmeshParser.parseRegionNavmesh(kRegionId);
+  //   const auto navmesh = buildNavmeshForRegion(regionNavmesh, navmeshParser);
+  // } else {
+  //   std::cout << "Not parsing region because it is disabled\n";
+  // }
+}
+
+const pathfinder::navmesh::AStarNavmeshInterface& GameData::getNavmeshForRegionId(const uint16_t regionId) const {
+  const auto it = regionNavmeshes_.find(regionId);
+  if (it == regionNavmeshes_.end()) {
+    throw std::runtime_error("GameData::getNavmeshForRegionId: Asking for a navmesh for a region which does not exist");
   }
-}
-
-const triangle::triangleio& GameData::getSavedTriangleData() const {
-  return savedTriangleData_;
-}
-
-const triangle::triangleio& GameData::getSavedTriangleVoronoiData() const {
-  return savedTriangleVoronoiData_;
+  if (!it->second) {
+    throw std::runtime_error("GameData::getNavmeshForRegionId: Asking for a navmesh that is nullptr");
+  }
+  return *(it->second.get());
 }
 
 } // namespace pk2

@@ -80,6 +80,7 @@ struct PrimMeshNavEdge {
 };
 
 struct ObjectResource {
+  std::string name;
   std::vector<Vector> vertices;
   std::vector<PrimMeshNavCell> cells;
   std::vector<PrimMeshNavEdge> outlineEdges, inlineEdges;

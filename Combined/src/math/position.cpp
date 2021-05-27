@@ -86,4 +86,12 @@ packet::structures::Position offset(const packet::structures::Position &srcPos, 
   return newPosition;
 }
 
+uint16_t worldRegionIdFromXY(const int regionX, const int regionY) {
+  return (regionX & 0xFF | ((regionY & 0xFF) << 8));
+}
+
+std::pair<int,int> regionXYFromRegionId(const uint16_t regionId) {
+  return {(regionId & 0xFF), ((regionId >> 8) & 0xFF)};
+}
+
 } // namespace math::position

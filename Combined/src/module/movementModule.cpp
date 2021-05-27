@@ -4,13 +4,16 @@
 #include "../packet/building/clientAgentCharacterMoveRequest.hpp"
 #include "../packet/building/serverAgentChatUpdate.hpp"
 
+#include "pathfinder.h"
+
 #include <array>
 #include <numeric>
 #include <iostream>
 #include <memory>
 #include <regex>
 
-#define LOG(TAG) std::cout << '[' << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() << "] " << (#TAG) << ": "
+#define LOG_TO_STREAM(OSTREAM, TAG) (OSTREAM) << '[' << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() << "] " << (#TAG) << ": "
+#define LOG(TAG) LOG_TO_STREAM(std::cout, TAG)
 
 // TODO: Remove
 #define SHARED_MEM 1
@@ -42,16 +45,14 @@ MovementModule::MovementModule(state::Entity &entityState,
                                broker::PacketBroker &brokerSystem,
                                broker::EventBroker &eventBroker,
                                const packet::parsing::PacketParser &packetParser,
-                               const pk2::GameData &gameData,
-                               pathfinder::Pathfinder &pathfinder) :
+                               const pk2::GameData &gameData) :
       entityState_(entityState),
       selfState_(selfState),
       inventory_(inventory),
       broker_(brokerSystem),
       eventBroker_(eventBroker),
       packetParser_(packetParser),
-      gameData_(gameData),
-      pathfinder_(pathfinder) {
+      gameData_(gameData) {
   auto packetHandleFunction = std::bind(&MovementModule::handlePacket, this, std::placeholders::_1);
   // Client packets
   broker_.subscribeToClientPacket(packet::Opcode::kClientAgentChatRequest, packetHandleFunction);
@@ -72,8 +73,6 @@ MovementModule::MovementModule(state::Entity &entityState,
 #endif
 
   eng_ = createRandomEngine();
-
-  pathfinder_.setCharacterRadius(10.0);
 
 #ifdef SHARED_MEM
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTemp));
@@ -141,8 +140,14 @@ void MovementModule::handleEvent(const event::Event *event) {
     case event::EventCode::kRepublish:
       republishStepEventId_.reset();
       if (!selfState_.moving()) {
-        LOG(handleEvent) << "<<<<<<<<<<<<<<<<<<<<<Triggering \"republish\">>>>>>>>>>>>>>>>>>>>>\n";
-        takeNextStepOnPath();
+        if (republishCount_ < 50) { //15==1s max
+          LOG(handleEvent) << "<<<<<<<<<<<<<<<<<<<<<Triggering \"republish\">>>>>>>>>>>>>>>>>>>>>\n";
+          ++republishCount_;
+          takeNextStepOnPath();
+        } else {
+          LOG(handleEvent) << "Republishing timed out. Stopping\n";
+          stopAutowalkTest();
+        }
       }
       break;
     default:
@@ -216,6 +221,7 @@ void MovementModule::handleMovementEnded() {
 bool MovementModule::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) {
   if (packet.globalId() == selfState_.globalId()) {
     const auto &currentPosition = selfState_.position();
+    LOG(serverAgentEntitySyncPositionReceived) << "Syncing position: " << currentPosition.xOffset << ',' << currentPosition.zOffset << std::endl;
     selfState_.syncPosition(packet.position());
   }
   return false;
@@ -255,6 +261,9 @@ bool MovementModule::serverAgentEntityUpdatePositionReceived(packet::parsing::Se
         } else {
           LOG(serverAgentEntityUpdatePositionReceived) << "We were autowalking but it seems that we have no current waypoint...\n";
         }
+      } else if (!waypoints_.empty()) {
+        LOG(serverAgentEntityUpdatePositionReceived) << "Have a non-empty waypoint list. Clearing\n";
+        waypoints_.clear();
       }
     } else {
       LOG(serverAgentEntityUpdatePositionReceived) << "We werent moving, weird\n";
@@ -302,13 +311,32 @@ float MovementModule::secondsToTravel(const packet::structures::Position &srcPos
 
 bool MovementModule::serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) {
   if (packet.globalId() == selfState_.globalId()) {
+    // If there's a timer running to republish, cancel because our message was received
+    if (republishStepEventId_) {
+      eventBroker_.cancelDelayedEvent(*republishStepEventId_);
+      republishStepEventId_.reset();
+    }
+    // If we republished, it worked. Reset count
+    republishCount_ = 0;
+    {
+      std::ofstream file("republish_delay.txt", std::ios::app);
+      LOG_TO_STREAM(file, serverAgentEntityUpdateMovementReceived) << "Republishing worked\n" << std::endl;
+    }
+
     packet::structures::Position sourcePosition;
     if (packet.hasSource()) {
-      // Use given position
+      // Server is telling us our source position
       sourcePosition = packet.sourcePosition();
+      const auto currentPosition = selfState_.position();
+      if (std::round(currentPosition.xOffset) != std::round(sourcePosition.xOffset) && std::round(currentPosition.zOffset) != std::round(sourcePosition.zOffset)) {
+        // We arent where we thought we were
+        // We need to cancel this movement. Either move back to the source position or try to stop exactly where we are (by moving to our estimated position)
+        LOG(serverAgentEntityUpdateMovementReceived) << "Whoa, we're a bit off from where we thought we were. Expected: " << currentPosition.xOffset << ',' << currentPosition.zOffset << ", actual: " << sourcePosition.xOffset << ',' << sourcePosition.zOffset << std::endl;
+      }
+      LOG(serverAgentEntityUpdateMovementReceived) << "Syncing src position: " << sourcePosition.xOffset << ',' << sourcePosition.zOffset << std::endl;
       selfState_.syncPosition(sourcePosition);
     } else {
-      // Use known position
+      // Server doesnt tell us where we're coming from, use our internally tracked position
       sourcePosition = selfState_.position();
     }
     if (movingEventId_) {
@@ -330,8 +358,12 @@ bool MovementModule::serverAgentEntityUpdateMovementReceived(packet::parsing::Se
             // This is the next waypoint though, pop it off now and take the next step
             LOG(serverAgentEntityUpdateMovementReceived) << "This is actually our next waypoint though, pop and move to next one\n";
             waypoints_.erase(waypoints_.begin());
-            takeNextStepOnPath();
+          } else {
+            LOG(serverAgentEntityUpdateMovementReceived) << "This is not our next waypoint. I'd guess that this was our previous waypoint that we sent twice. Anyways, continue\n";
           }
+          takeNextStepOnPath();
+        } else {
+          LOG(serverAgentEntityUpdateMovementReceived) << " No waypoints either.\n";
         }
       } else {
         queuedMovementDistance_ = math::position::calculateDistance(sourcePosition, destPosition);
@@ -358,7 +390,7 @@ void MovementModule::takeNextStepOnPath() {
   }
   const auto &currentPos = selfState_.position();
   auto isSameAsCurrentPosition = [&currentPos](const Vector &waypoint) {
-    if (static_cast<int>(currentPos.xOffset) == static_cast<int>(waypoint.x) && static_cast<int>(currentPos.zOffset) == static_cast<int>(waypoint.z)) {
+    if (std::round(currentPos.xOffset) == std::round(waypoint.x) && std::round(currentPos.zOffset) == std::round(waypoint.z)) {
       return true;
     } else {
       return false;
@@ -378,7 +410,14 @@ void MovementModule::takeNextStepOnPath() {
   }
   const Vector nextWaypoint{std::round(waypoints_.front().x), 0, std::round(waypoints_.front().z)};
   LOG(takeNextStepOnPath) << "Sending movement packet to position " << nextWaypoint.x << ',' << nextWaypoint.z << ", " << waypoints_.size() << " steps left\n";
-  broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(currentPos.regionId, nextWaypoint.x, 0, nextWaypoint.z), PacketContainer::Direction::kClientToServer);
+  broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(currentPos.regionId, static_cast<uint32_t>(nextWaypoint.x), 0, static_cast<uint32_t>(nextWaypoint.z)), PacketContainer::Direction::kClientToServer);
+  
+  if (testingAutowalk_ && republishCount_ == 0) {
+    replayPoints_.emplace_back(nextWaypoint.x, nextWaypoint.z);
+    if (replayPoints_.size() > kReplayPointCount_) {
+      replayPoints_.pop_front();
+    }
+  }
 
   if (republishStepEventId_) {
     // The last step was likely a quick one, cancel the old event
@@ -386,7 +425,13 @@ void MovementModule::takeNextStepOnPath() {
     republishStepEventId_.reset();
   }
   // TODO: This republish timeout should be proprotional to ping
-  republishStepEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kRepublish), std::chrono::milliseconds(static_cast<uint64_t>(100)));
+  const double republishTimeout = 100.0 * pow(1.16591440117983, republishCount_);
+  if (republishCount_ > 0) {
+    std::cout << "Seting republish delay with higher value: " << republishTimeout << std::endl;
+    std::ofstream file("republish_delay.txt", std::ios::app);
+    LOG_TO_STREAM(file, takeNextStepOnPath) << "Increasing delay to " << republishTimeout << std::endl;
+  }
+  republishStepEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kRepublish), std::chrono::milliseconds(static_cast<uint64_t>(republishTimeout)));
 }
 
 void MovementModule::executePath(const std::vector<std::unique_ptr<pathfinder::PathSegment>> &segments) {
@@ -414,6 +459,34 @@ void MovementModule::executePath(const std::vector<std::unique_ptr<pathfinder::P
   takeNextStepOnPath();
 }
 
+MovementModule::PathfindingResult MovementModule::pathToPosition(const pathfinder::Vector &position) {
+  const auto currentPos = selfState_.position();
+  try {
+    const auto &navmeshForCurrentRegion = gameData_.getNavmeshForRegionId(currentPos.regionId);
+    pathfinder::Pathfinder pathfinder(navmeshForCurrentRegion, agentRadius_);
+    auto result = pathfinder.findShortestPath(pathfinder::Vector{static_cast<double>(currentPos.xOffset), static_cast<double>(currentPos.zOffset)}, position);
+    if (!result.shortestPath.empty()) {
+      LOG(pathToPosition) << "Pathing from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << position.x() << ',' << position.y() << "\n";
+      executePath(result.shortestPath);
+      return PathfindingResult::kSuccess;
+    } else {
+      LOG(pathToPosition) << "No path exists from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << position.x() << ',' << position.y() << "\n";
+      return PathfindingResult::kPathNotPosible;
+    }
+  } catch (std::exception &ex) {
+    LOG(pathToPosition) << "Exception caught while finding path from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << position.x() << ',' << position.y() << "\n";
+    LOG(pathToPosition) << "  \"" << ex.what() << "\"\n";
+    const std::string exceptionText = ex.what();
+    if (exceptionText.find("No point found!") != std::string::npos) {
+      return PathfindingResult::kExceptionNoPointFound;
+    } else if (exceptionText.find("The chosen start point is overlapping with a constraint") != std::string::npos) {
+      return PathfindingResult::kExceptionStartOverlapsWithConstraint;
+    } else {
+      return PathfindingResult::kException;
+    }
+  }
+}
+
 void MovementModule::pathToRandomPoint() {
   std::uniform_int_distribution<> dist(1,1919);
   auto createRandomPoint = [this, &dist]() -> pathfinder::Vector {
@@ -423,29 +496,19 @@ void MovementModule::pathToRandomPoint() {
   const auto currentPos = selfState_.position();
   do {
     const auto goalPoint = createRandomPoint();
-    try {
-      auto result = pathfinder_.findShortestPath(pathfinder::Vector{static_cast<double>(currentPos.xOffset), static_cast<double>(currentPos.zOffset)}, goalPoint);
-      if (!result.shortestPath.empty()) {
-        foundValidPoint = true;
-        LOG(pathToRandomPoint) << "Pathing from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << goalPoint.x() << ',' << goalPoint.y() << "\n";
-        executePath(result.shortestPath);
-      }
-    } catch (std::exception &ex) {
-      LOG(pathToRandomPoint) << "Exception caught while finding path from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << goalPoint.x() << ',' << goalPoint.y() << "\n";
-      LOG(pathToRandomPoint) << "  \"" << ex.what() << "\"\n";
-      const std::string exceptionText = ex.what();
-      if (exceptionText.find("No point found!") != std::string::npos) {
-        LOG(pathToRandomPoint) << "Cancelling autowalk test\n";
-        stopAutowalkTest();
-        return;
-      } else if (exceptionText.find("The chosen start point is overlapping with a constraint") != std::string::npos) {
-        LOG(pathToRandomPoint) << "Cancelling autowalk test\n";
-        stopAutowalkTest();
-        return;
-      }
-
+    auto result = pathToPosition(goalPoint);
+    if (result == PathfindingResult::kSuccess) {
+      foundValidPoint = true;
+    } else if (result == PathfindingResult::kExceptionNoPointFound) {
+      LOG(pathToRandomPoint) << "Cancelling autowalk test\n";
+      stopAutowalkTest();
+      return;
+    } else if (result == PathfindingResult::kExceptionStartOverlapsWithConstraint) {
+      LOG(pathToRandomPoint) << "Cancelling autowalk test\n";
+      stopAutowalkTest();
+      return;
     }
-  } while (foundValidPoint == false);
+  } while (!foundValidPoint);
 }
 
 void MovementModule::startAutowalkTest() {
@@ -460,28 +523,33 @@ void MovementModule::stopAutowalkTest() {
   testingAutowalk_ = false;
   waypoints_.clear();
   republishStepEventId_.reset();
+  republishCount_ = 0;
 }
 
 bool MovementModule::clientAgentChatRequestReceived(packet::parsing::ClientAgentChatRequest &packet) {
+  std::regex printReplaySequenceRegex(R"delim(prs)delim"); // Print Replay Sequence
+  std::regex replaceSequenceAtIndexRegex(R"delim(replay ([0-9]+))delim"); // Replay sequence starting at given index
   std::regex moveRegex(R"delim(move (-?[0-9]+) (-?[0-9]+))delim");
+  std::regex pathRegex(R"delim(path (-?[0-9]+) (-?[0-9]+))delim");
   std::regex testRegex(R"delim(test)delim");
   std::regex stopRegex(R"delim(stop)delim");
   std::smatch regexMatch;
+
   if (std::regex_match(packet.message(), regexMatch, moveRegex)) {
     const int x = std::stoi(regexMatch[1].str());
     const int y = std::stoi(regexMatch[2].str());
     const auto pos = selfState_.position();
-    std::cout << "Checking the shortest path from " << pos.xOffset << ',' << pos.zOffset << " to " << x << ',' << y << '\n';
-    try {
-      auto result = pathfinder_.findShortestPath(pathfinder::Vector{static_cast<double>(pos.xOffset), static_cast<double>(pos.zOffset)}, pathfinder::Vector{static_cast<double>(x), static_cast<double>(y)});
-      if (result.shortestPath.empty()) {
-        std::cout << "No path possible\n";
-      } else {
-        std::cout << "Found a path!\n";
-        executePath(result.shortestPath);
-      }
-    } catch (std::exception &ex) {
-      std::cout << "Exception caught! \"" << ex.what() << "\"\n";
+    broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(pos.regionId, x, 0, y), PacketContainer::Direction::kClientToServer);
+  } else if (std::regex_match(packet.message(), regexMatch, pathRegex)) {
+    const int x = std::stoi(regexMatch[1].str());
+    const int y = std::stoi(regexMatch[2].str());
+    const auto pos = selfState_.position();
+    std::cout << "Checking the shortest path from " << pos.xOffset << ',' << pos.zOffset << " to " << x << ',' << y << " in region " << pos.regionId << '\n';
+    auto result = pathToPosition(pathfinder::Vector{static_cast<double>(x),static_cast<double>(y)});
+    if (result == PathfindingResult::kSuccess) {
+      LOG(clientAgentChatRequestReceived) << "Found a path!\n";
+    } else {
+      LOG(clientAgentChatRequestReceived) << "No path possible\n";
     }
     return true;
     // const int x = std::stoi(regexMatch[1].str());
@@ -532,6 +600,38 @@ bool MovementModule::clientAgentChatRequestReceived(packet::parsing::ClientAgent
     if (testingAutowalk_) {
       stopAutowalkTest();
     }
+  } else if (std::regex_match(packet.message(), regexMatch, printReplaySequenceRegex)) {
+    // std::regex printReplaySequenceRegex(R"delim(prs)delim"); // Print Replay Sequence
+    broker_.injectPacket(packet::building::ServerAgentChatUpdate::packet(packet::enums::ChatType::kPm, "Hyperbot", "Replay Sequence:"), PacketContainer::Direction::kServerToClient);
+    int index=0;
+    for (const auto &waypoint : replayPoints_) {
+      std::stringstream msgSs;
+      msgSs << "  " << index << ". ";
+      msgSs << std::setw(4) << static_cast<int>(waypoint.x()) << ",";
+      msgSs << std::setw(4) << static_cast<int>(waypoint.y());
+      broker_.injectPacket(packet::building::ServerAgentChatUpdate::packet(packet::enums::ChatType::kPm, "Hyperbot", msgSs.str()), PacketContainer::Direction::kServerToClient);
+      ++index;
+    }
+    return false;
+  } else if (std::regex_match(packet.message(), regexMatch, replaceSequenceAtIndexRegex)) {
+    // std::regex replaceSequenceAtIndexRegex(R"delim(replay ([0-9]+))delim"); // Replay sequence starting at given index
+    const size_t index = std::stoi(regexMatch[1].str());
+    if (index < 0 || index >= replayPoints_.size()) {
+      std::cout << "Asking to replay from an invalid index of the sequence" << std::endl;
+    } else {
+      if (!waypoints_.empty()) {
+        std::cout << "Trying to replay while a sequence of steps is being executed!" << std::endl;
+      } else {
+        auto it = std::next(replayPoints_.begin(), index);
+        while (it != replayPoints_.end()) {
+          waypoints_.emplace_back(it->x(), 0, it->y());
+          it = std::next(it);
+        }
+        std::cout << "Waypoint list for replay built. Executing" << std::endl;
+        takeNextStepOnPath();
+      }
+    }
+    return false;
   }
   return true;
 }

@@ -19,6 +19,7 @@
 
 #include "pathfinder.h"
 
+#include <list>
 #include <mutex>
 #include <random>
 
@@ -32,8 +33,7 @@ public:
                  broker::PacketBroker &brokerSystem,
                  broker::EventBroker &eventBroker,
                  const packet::parsing::PacketParser &packetParser,
-                 const pk2::GameData &gameData,
-                 pathfinder::Pathfinder &pathfinder);
+                 const pk2::GameData &gameData);
   bool handlePacket(const PacketContainer &packet);
 private:
   state::Entity &entityState_;
@@ -43,7 +43,6 @@ private:
   broker::EventBroker &eventBroker_;
   const packet::parsing::PacketParser &packetParser_;
   const pk2::GameData &gameData_;
-  pathfinder::Pathfinder &pathfinder_;
   std::mutex contentionProtectionMutex_;
 
   //======tmp======
@@ -51,6 +50,9 @@ private:
   float secondsToTravel(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition) const;
 
   // Autowalk
+  const double agentRadius_{10.0};
+  enum class PathfindingResult { kSuccess, kPathNotPosible, kException = 0x10, kExceptionNoPointFound, kExceptionStartOverlapsWithConstraint };
+  PathfindingResult pathToPosition(const pathfinder::Vector &position);
   void executePath(const std::vector<std::unique_ptr<pathfinder::PathSegment>> &segments);
   void takeNextStepOnPath();
   std::vector<Vector> waypoints_;
@@ -60,9 +62,13 @@ private:
   void pathToRandomPoint();
   void startAutowalkTest();
   void stopAutowalkTest();
+  // Autowalk debugging
+  static constexpr const int kReplayPointCount_{10};
+  std::list<pathfinder::Vector> replayPoints_;
 
   std::mt19937 eng_;
   std::optional<broker::TimerManager::TimerId> republishStepEventId_;
+  int republishCount_{0};
   SharedMemoryWriter sharedMemoryWriter_{"HyperbotSharedMemory", 256};
   //======tmp======
 

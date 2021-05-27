@@ -539,8 +539,13 @@ ObjectResource NavmeshParser::parseObjectResource(const MapObjInfo &object, cons
 
   uint32_t nameLength;
   parse(bsrFileDataAsStringstream, nameLength);
-  // Ignoring the name
-  bsrFileDataAsStringstream.ignore(nameLength);
+
+  // Name does not always match the filename
+  std::string name;
+  name.resize(nameLength);
+  bsrFileDataAsStringstream.read(&name[0], nameLength);
+  // // Ignoring the name
+  // bsrFileDataAsStringstream.ignore(nameLength);
 
   std::array<uint8_t, 48> unkBuffer;
   bsrFileDataAsStringstream.read(reinterpret_cast<char*>(unkBuffer.data()), unkBuffer.size());
@@ -553,6 +558,7 @@ ObjectResource NavmeshParser::parseObjectResource(const MapObjInfo &object, cons
   bsrFileDataAsStringstream.read(&rootMeshPath[0], rootMeshPathLength);
 
   ObjectResource obj = parseObjectBms(rootMeshPath);
+  obj.name = name;
 
   // More data, dont care at the moment
   return obj;

@@ -629,8 +629,12 @@ std::vector< uint8_t > SilkroadSecurity::GetPacketToSend()
 		throw( std::runtime_error( "[SilkroadSecurity::GetPacketToSend] No packets are avaliable to send.") );
 	}
 
-	PacketContainer packet_container = m_data->m_outgoing_packets.front();
-	m_data->m_outgoing_packets.pop_front();
+  PacketContainer packet_container;
+  {
+    const auto &nextPacket = m_data->m_outgoing_packets.front();
+    packet_container = nextPacket;
+    m_data->m_outgoing_packets.pop_front();
+  }
 
 	if( packet_container.massive )
 	{
