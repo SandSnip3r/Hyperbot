@@ -7,9 +7,10 @@
 #include "pathfinder.h"
 
 #include <array>
-#include <numeric>
+#include <fstream>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <regex>
 
 #define LOG_TO_STREAM(OSTREAM, TAG) (OSTREAM) << '[' << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() << "] " << (#TAG) << ": "

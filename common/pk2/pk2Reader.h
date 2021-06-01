@@ -5,15 +5,15 @@
 
 //-----------------------------------------------------------------------------
 
-#include "../shared_types.h"
 #include "../blowfish.h"
 #include "pk2.h"
 
-#include <vector>
-#include <map>
+#include <cstdint>
 #include <list>
+#include <map>
 #include <sstream>
 #include <string>
+#include <vector>
 
 //-----------------------------------------------------------------------------
 

@@ -6,13 +6,10 @@
 #include "shopData.hpp"
 #include "skillData.hpp"
 #include "teleportData.hpp"
-#include "../navmesh/navmeshParser.hpp" // TODO: Maybe move to the common parsing area?
 #include "../../../common/pk2/divisionInfo.hpp"
 #include "../../../common/pk2/pk2ReaderModern.hpp"
-#include "a_star_navmesh_interface.h"
 
-#include "triangle/triangle.h"
-#include "vector.h"
+#include "a_star_navmesh_interface.h"
 
 #include <filesystem>
 #include <memory>
@@ -23,14 +20,6 @@ namespace pk2 {
 
 class GameData {
 public:
-  // =============================Types=============================
-  using PointListType = std::vector<pathfinder::Vector>;
-  struct EdgeType {
-    EdgeType(int a, int b, int c=2) : vertex0(a), vertex1(b), marker(c) {}
-    int vertex0, vertex1;
-    int marker;
-  };
-  using EdgeListType = std::vector<EdgeType>;
 
   // Opens Media.PK2 and Data.PK2, parses game data into memory, then closes Media.pk2 and Data.PK2
   GameData(const std::filesystem::path &kSilkroadPath);
@@ -64,8 +53,6 @@ private:
   void parseSkillData(Pk2ReaderModern &pk2Reader);
   void parseTeleportData(Pk2ReaderModern &pk2Reader);
   void parseShopData(Pk2ReaderModern &pk2Reader);
-
-  std::unique_ptr<pathfinder::navmesh::AStarNavmeshInterface> buildNavmeshForRegion(const RegionNavmesh &regionNavmesh, const NavmeshParser &navmeshParser, const bool createDebugPolyFile=false);
 };
 
 } // namespace pk2

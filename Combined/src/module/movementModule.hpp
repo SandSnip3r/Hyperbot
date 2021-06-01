@@ -5,6 +5,7 @@
 #include "sharedMemoryWriter.hpp"
 #include "../broker/eventBroker.hpp"
 #include "../broker/packetBroker.hpp"
+#include "../math/vector.hpp"
 #include "../packet/parsing/clientAgentCharacterMoveRequest.hpp"
 #include "../packet/parsing/clientAgentChatRequest.hpp"
 #include "../packet/parsing/packetParser.hpp"

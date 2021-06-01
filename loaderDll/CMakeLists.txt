@@ -29,7 +29,6 @@ set(Common
     "../common/pk2/ref/teleport.hpp"
     "../common/shared_io.cpp"
     "../common/shared_io.h"
-    "../common/shared_types.h"
 )
 source_group("Common" FILES ${Common})
 
