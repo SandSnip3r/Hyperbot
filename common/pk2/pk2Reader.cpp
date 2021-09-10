@@ -552,6 +552,29 @@ bool PK2Reader::ExtractToMemory(PK2Entry & entry, std::vector<uint8_t> & buffer)
 	return true;
 }
 
+bool PK2Reader::ExtractToMemoryChar(PK2Entry & entry, std::vector<char> & buffer)
+{
+	if(entry.type != 2)
+	{
+		m_error.str(""); m_error << "The entry is not a file.";
+		return false;
+	}
+	buffer.resize(entry.size);
+	if(buffer.empty())
+	{
+		return true;
+	}
+	file_seek(m_file, entry.position, SEEK_SET);
+	size_t read_count = fread(&buffer[0], 1, entry.size, m_file);
+	if(read_count != entry.size)
+	{
+		buffer.clear();
+		m_error.str(""); m_error << "Could read all of the file data.";
+		return false;
+	}
+	return true;
+}
+
 //-----------------------------------------------------------------------------
 
 } // namespace pk2

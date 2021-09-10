@@ -9,8 +9,6 @@
 #include "../../../common/pk2/divisionInfo.hpp"
 #include "../../../common/pk2/pk2ReaderModern.hpp"
 
-#include "a_star_navmesh_interface.h"
-
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -30,7 +28,7 @@ public:
   const ShopData& shopData() const;
   const SkillData& skillData() const;
   const TeleportData& teleportData() const;
-  const pathfinder::navmesh::AStarNavmeshInterface& getNavmeshForRegionId(const uint16_t regionId) const;
+  // const pathfinder::navmesh::AStarNavmeshInterface& getNavmeshForRegionId(const uint16_t regionId) const;
 private:
   std::mutex printMutex_;
   const std::filesystem::path kSilkroadPath_;
@@ -41,7 +39,7 @@ private:
   SkillData skillData_;
   TeleportData teleportData_;
 
-  std::map<uint16_t, std::unique_ptr<pathfinder::navmesh::AStarNavmeshInterface>> regionNavmeshes_;
+  // std::map<uint16_t, std::unique_ptr<pathfinder::navmesh::AStarNavmeshInterface>> regionNavmeshes_;
 
   void parseData(Pk2ReaderModern &pk2Reader);
   void parseNavmeshData(Pk2ReaderModern &pk2Reader);

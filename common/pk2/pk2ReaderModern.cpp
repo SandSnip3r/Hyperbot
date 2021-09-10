@@ -32,12 +32,21 @@ PK2Entry Pk2ReaderModern::getEntry(const std::string &entryName) {
 std::vector<uint8_t> Pk2ReaderModern::getEntryData(PK2Entry &entry) {
   std::unique_lock<std::mutex> lock(mutex_);
   std::vector<uint8_t> data;
-  data.reserve(entry.size);
   bool result = pk2Reader_.ExtractToMemory(entry, data);
   if (!result) {
     throw std::runtime_error("PK2Reader failed to extract data from entry \""+std::string(entry.name)+"\" (PK2Reader: \""+pk2Reader_.GetError()+"\")");
   }
   return data; 
+}
+
+std::vector<char> Pk2ReaderModern::getEntryDataChar(PK2Entry &entry) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  std::vector<char> data;
+  bool result = pk2Reader_.ExtractToMemoryChar(entry, data);
+  if (!result) {
+    throw std::runtime_error("PK2Reader failed to extract data from entry \""+std::string(entry.name)+"\" (PK2Reader: \""+pk2Reader_.GetError()+"\")");
+  }
+  return data;
 }
 
 } // namespace pk2

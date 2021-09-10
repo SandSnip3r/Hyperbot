@@ -4,6 +4,8 @@
 #include <array>
 #include <ostream>
 
+namespace math {
+
 struct Vector {
 public:
   float x,y,z;
@@ -17,5 +19,7 @@ public:
 bool operator==(const Vector &v1, const Vector &v2);
 bool operator!=(const Vector &v1, const Vector &v2);
 std::ostream& operator<<(std::ostream &stream, const Vector &v);
+
+} // namespace math
 
 #endif // VECTOR_HPP_

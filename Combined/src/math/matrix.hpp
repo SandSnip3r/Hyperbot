@@ -7,6 +7,8 @@
 #include <iostream>
 #include <ostream>
 
+namespace math {
+
 struct Matrix4x4 {
 public:
   std::array<std::array<float,4>,4> data;
@@ -21,10 +23,14 @@ public:
   void setTranslation(const Vector &v);
   void setRotation(float counterClockwiseAngle, const Vector &axis);
 
+  Matrix4x4 inverse() const;
+
   Matrix4x4 operator*(const Matrix4x4 &m) const;
   Vector operator*(const Vector &v) const;
 };
 
-std::ostream& operator<<(std::ostream &stream, const Matrix4x4 &m);
+} // namespace math
+
+std::ostream& operator<<(std::ostream &stream, const math::Matrix4x4 &m);
 
 #endif // MATRIX_HPP_

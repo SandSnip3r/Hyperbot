@@ -32,10 +32,10 @@ void normalize(packet::structures::Position &position) {
     return;
   }
   constexpr int kRegionSize = 1920; // TODO: Move to a common area
-  uint16_t newXSector = position.xSector() + position.xOffset/kRegionSize;
-  uint16_t newZSector = position.zSector() + position.zOffset/kRegionSize;
-  position.xOffset = std::fmod(position.xOffset, kRegionSize);
-  position.zOffset = std::fmod(position.zOffset, kRegionSize);
+  uint16_t newXSector = position.xSector() + static_cast<uint8_t>(position.xOffset/kRegionSize);
+  uint16_t newZSector = position.zSector() + static_cast<uint8_t>(position.zOffset/kRegionSize);
+  position.xOffset = std::fmod(position.xOffset, static_cast<float>(kRegionSize));
+  position.zOffset = std::fmod(position.zOffset, static_cast<float>(kRegionSize));
   if (position.xOffset < 0) {
     position.xOffset += kRegionSize;
   }
@@ -87,7 +87,7 @@ packet::structures::Position offset(const packet::structures::Position &srcPos, 
 }
 
 uint16_t worldRegionIdFromXY(const int regionX, const int regionY) {
-  return (regionX & 0xFF | ((regionY & 0xFF) << 8));
+  return ((regionX & 0xFF) | ((regionY & 0xFF) << 8));
 }
 
 std::pair<int,int> regionXYFromRegionId(const uint16_t regionId) {

@@ -78,6 +78,7 @@ public:
 	// Users are advised to use on common buffer to reduce the need for frequent memory 
 	// reallocations on the vector side.
 	bool ExtractToMemory(PK2Entry & entry, std::vector<uint8_t> & buffer);
+  bool ExtractToMemoryChar(PK2Entry & entry, std::vector<char> & buffer);
 };
 
 //-----------------------------------------------------------------------------

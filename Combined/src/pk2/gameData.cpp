@@ -1,8 +1,7 @@
 #include "gameData.hpp"
 
 #include "../math/position.hpp"
-#include "../navmesh/navmeshBuilding.hpp"
-#include "../navmesh/navmeshParser.hpp"
+#include "../pk2/parsing/navmeshParser.hpp"
 #include "../../../common/pk2/pk2.h"
 #include "../../../common/pk2/parsing/parsing.hpp"
 
@@ -440,61 +439,33 @@ void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
 
 void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {
   std::cout << "Parsing navmesh data\n";
-  NavmeshParser navmeshParser(pk2Reader);
-  uint64_t parsingTimeTotal{0};
-  uint64_t buildingTimeTotal{0};
-  for (int regionX=0; regionX<255; ++regionX) {
-    for (int regionY=0; regionY<128; ++regionY) {
-      const auto regionId = math::position::worldRegionIdFromXY(regionX, regionY);
-      // const auto regionId = math::position::worldRegionIdFromXY(70, 107);
-      const auto [x,y] = math::position::regionXYFromRegionId(regionId);
-      // std::cout << "Region " << regionId << " is " << x << ',' << y << std::endl;
-      if (navmeshParser.regionIsEnabled(regionId)) {
-        auto startTime = std::chrono::high_resolution_clock::now();
-        const auto regionNavmeshData = navmeshParser.parseRegionNavmesh(regionId);
-        auto endTime = std::chrono::high_resolution_clock::now();
-        // std::cout << "parseRegionNavmesh took " << std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime).count() << " microseconds\n";
-        parsingTimeTotal += std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime).count();
-        startTime = std::chrono::high_resolution_clock::now();
-        auto regionNavmesh = navmesh::buildNavmeshForRegion(regionNavmeshData, navmeshParser, false);
-        endTime = std::chrono::high_resolution_clock::now();
-        // std::cout << "buildNavmeshForRegion took " << std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime).count() << " microseconds\n";
-        buildingTimeTotal += std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime).count();
-        regionNavmeshes_.emplace(regionId, std::move(regionNavmesh));
-      }
-    }
-  }
-  std::cout << "parsingTimeTotal: " << parsingTimeTotal << std::endl;
-  std::cout << "buildingTimeTotal: " << buildingTimeTotal << std::endl;
-  // Load region at East Jangan gate
-  // const int kRegionX = 170;
-  // const int kRegionY = 97;
-  // Load region at Southeast corner of Jangan
-  // const int kRegionX = 169;
-  // const int kRegionY = 97;
-  // Load region ____
-  // navmesh_ = std::unique_ptr<pathfinder::navmesh::NavmeshInterface>(new pathfinder::navmesh::TriangleLibNavmesh(triangleData, triangleVoronoiData));
-  // const int kRegionX = 69;
-  // const int kRegionY = 101;
-  // const uint16_t kRegionId = kRegionX&0xFF | ((kRegionY&0xFF)<<8);
-  // if (navmeshParser.regionIsEnabled(kRegionId)) {
-  //   std::cout << "Parsing region " << kRegionId << '\n';
-  //   const auto regionNavmesh = navmeshParser.parseRegionNavmesh(kRegionId);
-  //   const auto navmesh = buildNavmeshForRegion(regionNavmesh, navmeshParser);
-  // } else {
-  //   std::cout << "Not parsing region because it is disabled\n";
+  pk2::parsing::NavmeshParser navmeshParser(pk2Reader);
+  // navmesh::Navmesh navmesh = navmeshParser.parseNavmesh();
+
+  // for (int regionX=0; regionX<255; ++regionX) {
+  //   for (int regionY=0; regionY<128; ++regionY) {
+  //     const auto regionId = math::position::worldRegionIdFromXY(regionX, regionY);
+  //     // const auto regionId = math::position::worldRegionIdFromXY(70, 107);
+  //     const auto [x,y] = math::position::regionXYFromRegionId(regionId);
+  //     // std::cout << "Region " << regionId << " is " << x << ',' << y << std::endl;
+  //     if (navmeshParser.regionIsEnabled(regionId)) {
+  //       const auto regionNavmeshData = navmeshParser.parseRegionNavmesh(regionId);
+  //       auto regionNavmesh = navmesh::buildNavmeshForRegion(regionNavmeshData, navmeshParser, false);
+  //       regionNavmeshes_.emplace(regionId, std::move(regionNavmesh));
+  //     }
+  //   }
   // }
 }
 
-const pathfinder::navmesh::AStarNavmeshInterface& GameData::getNavmeshForRegionId(const uint16_t regionId) const {
-  const auto it = regionNavmeshes_.find(regionId);
-  if (it == regionNavmeshes_.end()) {
-    throw std::runtime_error("GameData::getNavmeshForRegionId: Asking for a navmesh for a region which does not exist");
-  }
-  if (!it->second) {
-    throw std::runtime_error("GameData::getNavmeshForRegionId: Asking for a navmesh that is nullptr");
-  }
-  return *(it->second.get());
-}
+// const pathfinder::navmesh::AStarNavmeshInterface& GameData::getNavmeshForRegionId(const uint16_t regionId) const {
+//   const auto it = regionNavmeshes_.find(regionId);
+//   if (it == regionNavmeshes_.end()) {
+//     throw std::runtime_error("GameData::getNavmeshForRegionId: Asking for a navmesh for a region which does not exist");
+//   }
+//   if (!it->second) {
+//     throw std::runtime_error("GameData::getNavmeshForRegionId: Asking for a navmesh that is nullptr");
+//   }
+//   return *(it->second.get());
+// }
 
 } // namespace pk2

@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+namespace math {
+
 Vector::Vector(float xParam, float yParam, float zParam) : x(xParam), y(yParam), z(zParam) {
 
 }
@@ -31,3 +33,5 @@ std::ostream& operator<<(std::ostream &stream, const Vector &v) {
   stream << v.x << ',' << v.y << ',' << v.z;
   return stream;
 }
+
+} // namespace math

@@ -76,10 +76,14 @@ set(no_group_source_files
     "src/module/sharedMemoryWriter.hpp"
     "src/module/skillUseModule.cpp"
     "src/module/skillUseModule.hpp"
-    "src/navmesh/navmeshBuilding.cpp"
-    "src/navmesh/navmeshBuilding.hpp"
-    "src/navmesh/navmeshParser.cpp"
-    "src/navmesh/navmeshParser.hpp"
+    "src/navmesh/navmesh.cpp"
+    "src/navmesh/navmesh.hpp"
+    "src/navmesh/triangulation/navmeshTriangulation.cpp"
+    "src/navmesh/triangulation/navmeshTriangulation.hpp"
+    "src/navmesh/triangulation/singleRegionNavmeshTriangulation.cpp"
+    "src/navmesh/triangulation/singleRegionNavmeshTriangulation.hpp"
+    "src/navmesh/triangulation/singleRegionNavmeshTriangulationState.cpp"
+    "src/navmesh/triangulation/singleRegionNavmeshTriangulationState.hpp"
     "src/packet/building/clientAgentActionCommandRequest.cpp"
     "src/packet/building/clientAgentActionCommandRequest.hpp"
     "src/packet/building/clientAgentActionSelectRequest.cpp"
@@ -159,6 +163,8 @@ set(no_group_source_files
     "src/pk2/skillData.hpp"
     "src/pk2/teleportData.cpp"
     "src/pk2/teleportData.hpp"
+    "src/pk2/parsing/navmeshParser.cpp"
+    "src/pk2/parsing/navmeshParser.hpp"
     "src/proxy.cpp"
     "src/proxy.hpp"
     "src/session.cpp"
@@ -196,7 +202,6 @@ set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost 1.67.0 REQUIRED COMPONENTS thread regex)
 include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${Pathfinder_SOURCE_DIR})
 
 ################################################################################
 # Target
@@ -273,6 +278,7 @@ if(MSVC)
             /std:c++17;
             /sdl;
             /W3;
+            /DNOMINMAX;
             ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
             ${DEFAULT_CXX_EXCEPTION_HANDLING}
         )
@@ -291,6 +297,7 @@ if(MSVC)
             /std:c++17;
             /sdl;
             /W3;
+            /DNOMINMAX;
             ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
             ${DEFAULT_CXX_EXCEPTION_HANDLING}
         )
@@ -323,6 +330,11 @@ if(MSVC)
         )
     endif()
 endif()
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/src"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/src"
+)
 
 target_link_libraries(${PROJECT_NAME}
   PRIVATE

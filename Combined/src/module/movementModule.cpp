@@ -390,7 +390,7 @@ void MovementModule::takeNextStepOnPath() {
     return;
   }
   const auto &currentPos = selfState_.position();
-  auto isSameAsCurrentPosition = [&currentPos](const Vector &waypoint) {
+  auto isSameAsCurrentPosition = [&currentPos](const math::Vector &waypoint) {
     if (std::round(currentPos.xOffset) == std::round(waypoint.x) && std::round(currentPos.zOffset) == std::round(waypoint.z)) {
       return true;
     } else {
@@ -409,7 +409,7 @@ void MovementModule::takeNextStepOnPath() {
     }
     return;
   }
-  const Vector nextWaypoint{std::round(waypoints_.front().x), 0, std::round(waypoints_.front().z)};
+  const math::Vector nextWaypoint{std::round(waypoints_.front().x), 0, std::round(waypoints_.front().z)};
   LOG(takeNextStepOnPath) << "Sending movement packet to position " << nextWaypoint.x << ',' << nextWaypoint.z << ", " << waypoints_.size() << " steps left\n";
   broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(currentPos.regionId, static_cast<uint32_t>(nextWaypoint.x), 0, static_cast<uint32_t>(nextWaypoint.z)), PacketContainer::Direction::kClientToServer);
   
@@ -463,17 +463,17 @@ void MovementModule::executePath(const std::vector<std::unique_ptr<pathfinder::P
 MovementModule::PathfindingResult MovementModule::pathToPosition(const pathfinder::Vector &position) {
   const auto currentPos = selfState_.position();
   try {
-    const auto &navmeshForCurrentRegion = gameData_.getNavmeshForRegionId(currentPos.regionId);
-    pathfinder::Pathfinder pathfinder(navmeshForCurrentRegion, agentRadius_);
-    auto result = pathfinder.findShortestPath(pathfinder::Vector{static_cast<double>(currentPos.xOffset), static_cast<double>(currentPos.zOffset)}, position);
-    if (!result.shortestPath.empty()) {
-      LOG(pathToPosition) << "Pathing from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << position.x() << ',' << position.y() << "\n";
-      executePath(result.shortestPath);
-      return PathfindingResult::kSuccess;
-    } else {
-      LOG(pathToPosition) << "No path exists from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << position.x() << ',' << position.y() << "\n";
-      return PathfindingResult::kPathNotPosible;
-    }
+    // const auto &navmeshForCurrentRegion = gameData_.getNavmeshForRegionId(currentPos.regionId);
+    // pathfinder::Pathfinder pathfinder(navmeshForCurrentRegion, agentRadius_);
+    // auto result = pathfinder.findShortestPath(pathfinder::Vector{static_cast<double>(currentPos.xOffset), static_cast<double>(currentPos.zOffset)}, position);
+    // if (!result.shortestPath.empty()) {
+    //   LOG(pathToPosition) << "Pathing from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << position.x() << ',' << position.y() << "\n";
+    //   executePath(result.shortestPath);
+    //   return PathfindingResult::kSuccess;
+    // } else {
+    //   LOG(pathToPosition) << "No path exists from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << position.x() << ',' << position.y() << "\n";
+    //   return PathfindingResult::kPathNotPosible;
+    // }
   } catch (std::exception &ex) {
     LOG(pathToPosition) << "Exception caught while finding path from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << position.x() << ',' << position.y() << "\n";
     LOG(pathToPosition) << "  \"" << ex.what() << "\"\n";
@@ -529,9 +529,10 @@ void MovementModule::stopAutowalkTest() {
 
 bool MovementModule::clientAgentChatRequestReceived(packet::parsing::ClientAgentChatRequest &packet) {
   std::regex printReplaySequenceRegex(R"delim(prs)delim"); // Print Replay Sequence
-  std::regex replaceSequenceAtIndexRegex(R"delim(replay ([0-9]+))delim"); // Replay sequence starting at given index
-  std::regex moveRegex(R"delim(move (-?[0-9]+) (-?[0-9]+))delim");
-  std::regex pathRegex(R"delim(path (-?[0-9]+) (-?[0-9]+))delim");
+  std::regex replaceSequenceAtIndexRegex(R"delim(replay\s+([0-9]+))delim"); // Replay sequence starting at given index
+  std::regex moveRegex(R"delim(move\s+(-?[0-9]+)\s+(-?[0-9]+))delim");
+  std::regex move3Regex(R"delim(move\s+(-?[0-9]+)\s+(-?[0-9]+)\s+(-?[0-9]+))delim");
+  std::regex pathRegex(R"delim(path\s+(-?[0-9]+)\s+(-?[0-9]+))delim");
   std::regex testRegex(R"delim(test)delim");
   std::regex stopRegex(R"delim(stop)delim");
   std::smatch regexMatch;
@@ -541,6 +542,12 @@ bool MovementModule::clientAgentChatRequestReceived(packet::parsing::ClientAgent
     const int y = std::stoi(regexMatch[2].str());
     const auto pos = selfState_.position();
     broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(pos.regionId, x, 0, y), PacketContainer::Direction::kClientToServer);
+  } else if (std::regex_match(packet.message(), regexMatch, move3Regex)) {
+    const int x = std::stoi(regexMatch[1].str());
+    const int y = std::stoi(regexMatch[2].str());
+    const int z = std::stoi(regexMatch[3].str());
+    const auto pos = selfState_.position();
+    broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(pos.regionId, x, y, z), PacketContainer::Direction::kClientToServer);
   } else if (std::regex_match(packet.message(), regexMatch, pathRegex)) {
     const int x = std::stoi(regexMatch[1].str());
     const int y = std::stoi(regexMatch[2].str());
