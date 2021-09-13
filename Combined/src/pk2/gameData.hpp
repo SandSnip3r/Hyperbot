@@ -6,19 +6,21 @@
 #include "shopData.hpp"
 #include "skillData.hpp"
 #include "teleportData.hpp"
+#include "navmesh/navmesh.hpp"
+#include "navmesh/triangulation/navmeshTriangulation.hpp"
 #include "../../../common/pk2/divisionInfo.hpp"
 #include "../../../common/pk2/pk2ReaderModern.hpp"
 
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 
 namespace pk2 {
 
 class GameData {
 public:
-
   // Opens Media.PK2 and Data.PK2, parses game data into memory, then closes Media.pk2 and Data.PK2
   GameData(const std::filesystem::path &kSilkroadPath);
 
@@ -28,7 +30,7 @@ public:
   const ShopData& shopData() const;
   const SkillData& skillData() const;
   const TeleportData& teleportData() const;
-  // const pathfinder::navmesh::AStarNavmeshInterface& getNavmeshForRegionId(const uint16_t regionId) const;
+  const navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
 private:
   std::mutex printMutex_;
   const std::filesystem::path kSilkroadPath_;
@@ -38,8 +40,8 @@ private:
   ShopData shopData_;
   SkillData skillData_;
   TeleportData teleportData_;
-
-  // std::map<uint16_t, std::unique_ptr<pathfinder::navmesh::AStarNavmeshInterface>> regionNavmeshes_;
+  std::optional<navmesh::Navmesh> navmesh_;
+  std::optional<navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
 
   void parseData(Pk2ReaderModern &pk2Reader);
   void parseNavmeshData(Pk2ReaderModern &pk2Reader);

@@ -74,6 +74,13 @@ const TeleportData& GameData::teleportData() const {
   return teleportData_;
 }
 
+const navmesh::triangulation::NavmeshTriangulation& GameData::navmeshTriangulation() const {
+  if (!navmeshTriangulation_.has_value()) {
+    throw std::runtime_error("Asking for navmesh triangulation which does not exist");
+  }
+  return navmeshTriangulation_.value();
+}
+
 void GameData::parseDivisionInfo(Pk2ReaderModern &pk2Reader) {
   const std::string kDivisionInfoEntryName = "DIVISIONINFO.TXT";
   PK2Entry divisionInfoEntry = pk2Reader.getEntry(kDivisionInfoEntryName);
@@ -440,7 +447,8 @@ void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
 void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {
   std::cout << "Parsing navmesh data\n";
   pk2::parsing::NavmeshParser navmeshParser(pk2Reader);
-  // navmesh::Navmesh navmesh = navmeshParser.parseNavmesh();
+  navmesh_ = navmeshParser.parseNavmesh();
+  navmeshTriangulation_ = navmesh::triangulation::NavmeshTriangulation(*navmesh_);
 
   // for (int regionX=0; regionX<255; ++regionX) {
   //   for (int regionY=0; regionY<128; ++regionY) {

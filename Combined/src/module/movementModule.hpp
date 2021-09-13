@@ -56,7 +56,7 @@ private:
   PathfindingResult pathToPosition(const pathfinder::Vector &position);
   void executePath(const std::vector<std::unique_ptr<pathfinder::PathSegment>> &segments);
   void takeNextStepOnPath();
-  std::vector<math::Vector> waypoints_;
+  std::vector<packet::structures::Position> waypoints_;
   bool testingAutowalk_{false};
   double distanceTraveled_{0.0};
   double queuedMovementDistance_;

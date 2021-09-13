@@ -190,7 +190,7 @@ void MovementModule::handleMovementEnded() {
   if (!waypoints_.empty()) {
     const auto &nextWaypoint = waypoints_.front();
     const auto &currentPosition = selfState_.position();
-    if (std::round(currentPosition.xOffset) == std::round(nextWaypoint.x) && std::round(currentPosition.zOffset) == std::round(nextWaypoint.z)) {
+    if (std::round(currentPosition.xOffset) == std::round(nextWaypoint.xOffset) && std::round(currentPosition.zOffset) == std::round(nextWaypoint.zOffset)) {
       LOG(handleMovementEnded) << "Walking on a path, arrived at the next waypoint" << std::endl;
       waypoints_.erase(waypoints_.begin());
     } else {
@@ -206,7 +206,7 @@ void MovementModule::handleMovementEnded() {
     LOG(handleMovementEnded) << "Arrived at waypoint, moving to next one\n";
     LOG(handleMovementEnded) << "  Remaining points: [";
     for (const auto &i : waypoints_) {
-      std::cout << i.x << ',' << i.z << ' ';
+      std::cout << '(' << i.regionId << ',' << i.xOffset << ',' << i.yOffset << ',' << i.zOffset << ") ";
     }
     std::cout << ']' << std::endl;
     takeNextStepOnPath();
@@ -250,7 +250,7 @@ bool MovementModule::serverAgentEntityUpdatePositionReceived(packet::parsing::Se
       if (testingAutowalk_) {
         if (!waypoints_.empty()) {
           const auto &nextWaypoint = waypoints_.front();
-          if (std::round(packet.position().xOffset) == std::round(nextWaypoint.x) && std::round(packet.position().zOffset) == std::round(nextWaypoint.z)) {
+          if (std::round(packet.position().xOffset) == std::round(nextWaypoint.xOffset) && std::round(packet.position().zOffset) == std::round(nextWaypoint.zOffset)) {
             // We've essentially arrived at our waypoint. Good
             LOG(serverAgentEntityUpdatePositionReceived) << "Arrived at waypoint, moving to next one\n";
             waypoints_.erase(waypoints_.begin());
@@ -355,7 +355,7 @@ bool MovementModule::serverAgentEntityUpdateMovementReceived(packet::parsing::Se
         // Ignore this
         if (!waypoints_.empty()) {
           const auto &nextWaypoint = waypoints_.front();
-          if (std::round(destPosition.xOffset) == std::round(nextWaypoint.x) && std::round(destPosition.zOffset) == std::round(nextWaypoint.z)) {
+          if (std::round(destPosition.xOffset) == std::round(nextWaypoint.xOffset) && std::round(destPosition.zOffset) == std::round(nextWaypoint.zOffset)) {
             // This is the next waypoint though, pop it off now and take the next step
             LOG(serverAgentEntityUpdateMovementReceived) << "This is actually our next waypoint though, pop and move to next one\n";
             waypoints_.erase(waypoints_.begin());
@@ -390,8 +390,8 @@ void MovementModule::takeNextStepOnPath() {
     return;
   }
   const auto &currentPos = selfState_.position();
-  auto isSameAsCurrentPosition = [&currentPos](const math::Vector &waypoint) {
-    if (std::round(currentPos.xOffset) == std::round(waypoint.x) && std::round(currentPos.zOffset) == std::round(waypoint.z)) {
+  auto isSameAsCurrentPosition = [&currentPos](const auto &waypoint) {
+    if (std::round(currentPos.xOffset) == std::round(waypoint.xOffset) && std::round(currentPos.zOffset) == std::round(waypoint.zOffset)) {
       return true;
     } else {
       return false;
@@ -399,7 +399,7 @@ void MovementModule::takeNextStepOnPath() {
   };
   LOG(takeNextStepOnPath) << "takeNextStepOnPath: Current position " << currentPos.xOffset << ',' << currentPos.zOffset << '\n';
   while (!waypoints_.empty() && isSameAsCurrentPosition(waypoints_.front())) {
-    LOG(takeNextStepOnPath) << "  pop off " << waypoints_.front().x << ',' << waypoints_.front().z << '\n';
+    LOG(takeNextStepOnPath) << "  pop off " << waypoints_.front().regionId << ',' << waypoints_.front().xOffset << ',' << waypoints_.front().zOffset << '\n';
     waypoints_.erase(waypoints_.begin());
   }
   if (waypoints_.empty()) {
@@ -409,12 +409,12 @@ void MovementModule::takeNextStepOnPath() {
     }
     return;
   }
-  const math::Vector nextWaypoint{std::round(waypoints_.front().x), 0, std::round(waypoints_.front().z)};
-  LOG(takeNextStepOnPath) << "Sending movement packet to position " << nextWaypoint.x << ',' << nextWaypoint.z << ", " << waypoints_.size() << " steps left\n";
-  broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(currentPos.regionId, static_cast<uint32_t>(nextWaypoint.x), 0, static_cast<uint32_t>(nextWaypoint.z)), PacketContainer::Direction::kClientToServer);
+  const auto nextWaypoint = waypoints_.front();
+  LOG(takeNextStepOnPath) << "Sending movement packet to position " << nextWaypoint.regionId << ',' << std::round(nextWaypoint.xOffset) << ',' << std::round(nextWaypoint.zOffset) << ", " << waypoints_.size() << " steps left\n";
+  broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(nextWaypoint.regionId, std::round(nextWaypoint.xOffset), nextWaypoint.yOffset, std::round(nextWaypoint.zOffset)), PacketContainer::Direction::kClientToServer);
   
   if (testingAutowalk_ && republishCount_ == 0) {
-    replayPoints_.emplace_back(nextWaypoint.x, nextWaypoint.z);
+    // replayPoints_.emplace_back(nextWaypoint.x, nextWaypoint.z); // TODO: Replace
     if (replayPoints_.size() > kReplayPointCount_) {
       replayPoints_.pop_front();
     }
@@ -441,19 +441,22 @@ void MovementModule::executePath(const std::vector<std::unique_ptr<pathfinder::P
   }
   waypoints_.clear();
   bool addFirstPoint{false};
+  const auto &navmeshTriangulation = gameData_.navmeshTriangulation();
   for (const auto &segment : segments) {
     pathfinder::StraightPathSegment *straightSegment = dynamic_cast<pathfinder::StraightPathSegment*>(segment.get());
     if (straightSegment != nullptr) {
       if (addFirstPoint) {
-        waypoints_.emplace_back(straightSegment->startPoint.x(), 0, straightSegment->startPoint.y());
+        const auto regionAndPointPair = navmeshTriangulation.transformAbsolutePointIntoRegion({static_cast<float>(straightSegment->startPoint.x()), 0.0f, static_cast<float>(straightSegment->startPoint.y())});
+        waypoints_.push_back({regionAndPointPair.first, regionAndPointPair.second.x, regionAndPointPair.second.y, regionAndPointPair.second.z});
       }
-      waypoints_.emplace_back(straightSegment->endPoint.x(), 0, straightSegment->endPoint.y());
+      const auto regionAndPointPair = navmeshTriangulation.transformAbsolutePointIntoRegion({static_cast<float>(straightSegment->endPoint.x()), 0.0f, static_cast<float>(straightSegment->endPoint.y())});
+      waypoints_.push_back({regionAndPointPair.first, regionAndPointPair.second.x, regionAndPointPair.second.y, regionAndPointPair.second.z});
       addFirstPoint = true;
     }
   }
   LOG(executePath) << "Path: [";
   for (const auto &i : waypoints_) {
-    std::cout << i.x << ',' << i.z << ' ';
+    std::cout << '(' << i.regionId << ',' << i.xOffset << ',' << i.zOffset << ") ";
   }
   std::cout << "]\n";
 
@@ -463,17 +466,19 @@ void MovementModule::executePath(const std::vector<std::unique_ptr<pathfinder::P
 MovementModule::PathfindingResult MovementModule::pathToPosition(const pathfinder::Vector &position) {
   const auto currentPos = selfState_.position();
   try {
-    // const auto &navmeshForCurrentRegion = gameData_.getNavmeshForRegionId(currentPos.regionId);
-    // pathfinder::Pathfinder pathfinder(navmeshForCurrentRegion, agentRadius_);
-    // auto result = pathfinder.findShortestPath(pathfinder::Vector{static_cast<double>(currentPos.xOffset), static_cast<double>(currentPos.zOffset)}, position);
-    // if (!result.shortestPath.empty()) {
-    //   LOG(pathToPosition) << "Pathing from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << position.x() << ',' << position.y() << "\n";
-    //   executePath(result.shortestPath);
-    //   return PathfindingResult::kSuccess;
-    // } else {
-    //   LOG(pathToPosition) << "No path exists from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << position.x() << ',' << position.y() << "\n";
-    //   return PathfindingResult::kPathNotPosible;
-    // }
+    const auto &navmeshTriangulation = gameData_.navmeshTriangulation();
+    pathfinder::Pathfinder<navmesh::triangulation::NavmeshTriangulation> pathfinder(navmeshTriangulation, agentRadius_);
+    const auto start = navmeshTriangulation.transformRegionPointIntoAbsolute({currentPos.xOffset, currentPos.yOffset, currentPos.zOffset}, currentPos.regionId);
+    const auto goal = navmeshTriangulation.transformRegionPointIntoAbsolute({currentPos.xOffset, -1000, currentPos.zOffset}, currentPos.regionId);
+    auto result = pathfinder.findShortestPath(start, goal);
+    if (!result.shortestPath.empty()) {
+      LOG(pathToPosition) << "Pathing from " << start.x << ',' << start.y << ',' << start.z << " to " << goal.x << ',' << goal.y << ',' << goal.z << "\n";
+      executePath(result.shortestPath);
+      return PathfindingResult::kSuccess;
+    } else {
+      LOG(pathToPosition) << "No path exists from " << start.x << ',' << start.y << ',' << start.z << " to " << goal.x << ',' << goal.y << ',' << goal.z << "\n";
+      return PathfindingResult::kPathNotPosible;
+    }
   } catch (std::exception &ex) {
     LOG(pathToPosition) << "Exception caught while finding path from " << currentPos.xOffset << ',' << currentPos.zOffset << " to " << position.x() << ',' << position.y() << "\n";
     LOG(pathToPosition) << "  \"" << ex.what() << "\"\n";
@@ -630,11 +635,11 @@ bool MovementModule::clientAgentChatRequestReceived(packet::parsing::ClientAgent
       if (!waypoints_.empty()) {
         std::cout << "Trying to replay while a sequence of steps is being executed!" << std::endl;
       } else {
-        auto it = std::next(replayPoints_.begin(), index);
-        while (it != replayPoints_.end()) {
-          waypoints_.emplace_back(it->x(), 0, it->y());
-          it = std::next(it);
-        }
+        // auto it = std::next(replayPoints_.begin(), index);
+        // while (it != replayPoints_.end()) {
+        //   waypoints_.emplace_back(it->x(), 0, it->y());
+        //   it = std::next(it);
+        // } // TODO: Fix
         std::cout << "Waypoint list for replay built. Executing" << std::endl;
         takeNextStepOnPath();
       }

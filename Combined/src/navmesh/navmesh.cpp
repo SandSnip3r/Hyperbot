@@ -200,12 +200,17 @@ void Navmesh::sanityCheck() {
     }
     bool matches{false};
     bool flagsMatch = (edge.flag == potentialEdge.flag);
-    if (edge.min == potentialEdge.min && edge.max == potentialEdge.max) {
+    if (edge.min.x == potentialEdge.min.x &&
+        edge.min.z == potentialEdge.min.z &&
+        edge.max.x == potentialEdge.max.x &&
+        edge.max.z == potentialEdge.max.z) {
       // Matching edges
       matches = true;
-    } else if (edge.min == potentialEdge.max && edge.max == potentialEdge.min) {
+    } else if (edge.min.x == potentialEdge.max.x &&
+               edge.min.z == potentialEdge.max.z &&
+               edge.max.x == potentialEdge.min.x &&
+               edge.max.z == potentialEdge.min.z) {
       // Matching edges but flipped
-      std::cout << "Found matching edges but one is flipped" << std::endl;
       matches = true;
     }
     if (matches) {
@@ -238,7 +243,6 @@ void Navmesh::sanityCheck() {
         }
         if (!foundMatch) {
           throw std::runtime_error("Navmesh data does not match our expectations. Global edges do not match in neighboring regions");
-          // std::cout << "Global edge (" << edge.min.x << ',' << edge.min.z << " -> " << edge.max.x << ',' << edge.max.z << ") of our region (" << regionIdRegionPair.first << ") has no matching counterpart in region " << otherRegionId << std::endl;
         }
       }
     }

@@ -493,8 +493,6 @@ navmesh::ObjectResource NavmeshParser::parseObjectResource(const std::string &pa
   std::string name;
   name.resize(nameLength);
   bsrFileDataAsStringstream.read(&name[0], nameLength);
-  std::cout << "Filename: " << path << std::endl;
-  std::cout << "Name: " << name << std::endl << std::endl;
   // // Ignoring the name
   // bsrFileDataAsStringstream.ignore(nameLength);
 
