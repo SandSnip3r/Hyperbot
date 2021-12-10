@@ -150,11 +150,15 @@ void Navmesh::addObjectInstance(const ObjectInstance &instance) {
   // Object instance already exists, update data
   // From what I've seen, only the global edge links are ever "updated"
   ObjectInstance &existingInstance = objectInstanceIt->second;
+  if (instance.globalEdgeLinks.size() != existingInstance.globalEdgeLinks.size()) {
+    throw std::runtime_error("Both object instances should have the same number of global edge links");
+  }
   for (int i=0; i<instance.globalEdgeLinks.size(); ++i) {
     const auto &oLink = instance.globalEdgeLinks[i];
     auto &eoLink = existingInstance.globalEdgeLinks[i];
     if (oLink.linkedObjId != eoLink.linkedObjId && oLink.linkedObjId != -1) { 
       eoLink.linkedObjId = oLink.linkedObjId;
+      eoLink.linkedObjGlobalId = oLink.linkedObjGlobalId;
     }
     if (oLink.linkedObjEdgeId != eoLink.linkedObjEdgeId && oLink.linkedObjEdgeId != -1) { 
       eoLink.linkedObjEdgeId = oLink.linkedObjEdgeId;
@@ -163,7 +167,6 @@ void Navmesh::addObjectInstance(const ObjectInstance &instance) {
       eoLink.edgeId = oLink.edgeId;
     }
   }
-
 }
 
 void Navmesh::addObjectResource(const uint16_t id, const ObjectResource &resource) {
@@ -243,6 +246,37 @@ void Navmesh::sanityCheck() {
         }
         if (!foundMatch) {
           throw std::runtime_error("Navmesh data does not match our expectations. Global edges do not match in neighboring regions");
+        }
+      }
+    }
+  }
+  // ========================================================================================
+
+  // =================================== Sanity check #2 ====================================
+  // We expect that every linked edge is an unblocked global edge of an object
+  //  Note: There are links with bridge edges that exist in the bandit fortress
+  //    and links with siege edges that exist in Jangan fortress
+  for (const auto &regionIdRegionPair : regionMap_) {
+    const auto &region = regionIdRegionPair.second;
+    for (const auto objectInstanceId : region.objectInstanceIds) {
+      const auto &objectInstance = getObjectInstance(objectInstanceId);
+      const auto &objectResource = getObjectResource(objectInstance.objectId);
+      for (const auto &edgeLink : objectInstance.globalEdgeLinks) {
+        if (edgeLink.edgeId == -1) {
+          continue;
+        }
+        const auto &edgeForOurObject = objectResource.outlineEdges.at(edgeLink.edgeId);
+        // if ((edgeForOurObject.flag & static_cast<uint8_t>(EdgeFlag::kBridge)) != 0) {
+        //   // TODO: Handle; this happens in bandit fortress
+        //   std::cout << "Object " << objectInstanceId << " has an edge link on edge " << edgeLink.edgeId << " that is a bridge edge" << std::endl;
+        // }
+        // if ((edgeForOurObject.flag & static_cast<uint8_t>(EdgeFlag::kSiege)) != 0) {
+        //   // TODO: Handle; this happens in jangan fortress
+        //   std::cout << "Object " << objectInstanceId << " has an edge link on edge " << edgeLink.edgeId << " that is a siege edge" << std::endl;
+        // }
+        if (((edgeForOurObject.flag & static_cast<uint8_t>(EdgeFlag::kBlocked)) != 0)) {
+          // Edge flag is blocked!
+          throw std::runtime_error("Edge flag is blocked!");
         }
       }
     }
@@ -332,10 +366,11 @@ void Navmesh::postProcess() {
   auto addObjectInstanceToRegion = [](const auto objectInstanceId, auto &region) {
     if (std::find(region.objectInstanceIds.begin(), region.objectInstanceIds.end(), objectInstanceId) == region.objectInstanceIds.end()) {
       // Object instance was not referenced by this region
-      std::cout << "Region " << region.id << " did not have a reference to object " << objectInstanceId << std::endl;
       region.objectInstanceIds.reserve(region.objectInstanceIds.size()+1);
       region.objectInstanceIds.push_back(objectInstanceId);
+      return true;
     }
+    return false;
   };
   for (const auto &objectIdInstancePair : objectInstanceMap_) {
     // Transform the object instance into the region which it belongs
@@ -361,8 +396,16 @@ void Navmesh::postProcess() {
     for (const auto regionId : calculateOverlappingRegions(objectIdInstancePair.second.regionId, minX, minZ, maxX, maxZ)) {
       const auto it = regionMap_.find(regionId);
       if (it != regionMap_.end()) {
-        // This is an existing, make sure that this object instance is referenced there
+        // This is an existing region, make sure that this object instance is referenced there
         addObjectInstanceToRegion(objectIdInstancePair.first, it->second);
+        // TODO: Is it useful to make sure that the region references objects that are linked to by this object?
+        // // Also, make sure that this region references every object that this object links to
+        // for (const auto &edgeLink : objectIdInstancePair.second.globalEdgeLinks) {
+        //   bool res = addObjectInstanceToRegion(edgeLink.linkedObjGlobalId, it->second);
+        //   if (res) {
+        //     std::cout << "Object " << objectIdInstancePair.first << " links to object " << edgeLink.linkedObjGlobalId << std::endl;
+        //   }
+        // }
       }
     }
   }

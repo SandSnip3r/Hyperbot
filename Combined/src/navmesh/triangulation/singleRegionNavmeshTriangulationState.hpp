@@ -27,12 +27,19 @@ public:
 
   bool isSameTriangleAs(const SingleRegionNavmeshTriangulationState<IndexType> &otherState) const;
 
+  bool isTraversingLink() const;
+  void resetLinkId();
+  void setLinkId(const IndexType id);
+  IndexType getLinkId() const;
+
   friend struct std::hash<SingleRegionNavmeshTriangulationState<IndexType>>;
 private:
   std::optional<ObjectData> objectData_;
+  std::optional<IndexType> linkId_;
 };
 
 bool operator==(const ObjectData &a, const ObjectData &b);
+bool operator!=(const ObjectData &a, const ObjectData &b);
 bool operator<(const ObjectData &a, const ObjectData &b);
 
 #include "singleRegionNavmeshTriangulationState.inl"

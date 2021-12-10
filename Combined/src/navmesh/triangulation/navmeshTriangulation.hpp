@@ -27,8 +27,6 @@ public:
   using MarkerType = int;
 
   NavmeshTriangulation(const Navmesh &navmesh);
-  void postProcess();
-  void fixRegionObjectInstanceAssociations();
   const SingleRegionNavmeshTriangulation& getNavmeshTriangulationForRegion(const uint16_t regionId) const;
 
   using NavmeshTriangulationMapType = std::unordered_map<uint16_t, SingleRegionNavmeshTriangulation>;
@@ -49,6 +47,7 @@ public:
   pathfinder::Vector getVertex(const IndexType vertexIndex) const;
   TriangleVerticesType getTriangleVertices(const IndexType triangleIndex) const;
   std::vector<State> getSuccessors(const State &currentState, const State &goalState, const double agentRadius) const;
+  std::vector<State> getNeighborsInObjectArea(const State &currentState) const;
   EdgeType getSharedEdge(const IndexType triangle1Index, const IndexType triangle2Index) const;
   EdgeType getEdge(const IndexType edgeIndex) const;
   // Debug help (for Pathfinder)
@@ -58,14 +57,20 @@ public:
 private:
   NavmeshTriangulationMapType navmeshTriangulationMap_;
   uint16_t originRegionId_{16512}; // Arbitrarily chose the center region of the entire map
+  std::vector<ObjectLink> linkData_;
+
+  void postProcess(const Navmesh &navmesh);
+  void linkGlobalEdgesBetweenRegions();
+  void markObjectsAndAreasInCells(const Navmesh &navmesh);
+
   struct GlobalEdgeAndTriangleIndices {
     IndexType edgeIndex, triangleIndex;
   };
   std::unordered_map<IndexType, GlobalEdgeAndTriangleIndices> globalEdgeAndTriangleLinkMap_;
   std::optional<GlobalEdgeAndTriangleIndices> getNeighborTriangleAndEdge(const IndexType edgeIndex) const;
   
+  void addObjectDataForTriangle(const IndexType triangleIndex, const ObjectData &objectData);
   void buildGlobalEdgesBasedOnBlockedTerrain(const Navmesh &navmesh, const Region &region, std::vector<navmesh::Edge> &globalEdges);
-  void func(const Navmesh &navmesh, const Region &region);
   void buildNavmeshForRegion(const Navmesh &navmesh, const Region &region);
   void markBlockedTerrainCells(SingleRegionNavmeshTriangulation &navmeshTriangulation, const Region &region) const;
   void markObjectsAndAreasInCells(SingleRegionNavmeshTriangulation &navmeshTriangulation, const Navmesh &navmesh, const Region &region) const;
@@ -79,6 +84,22 @@ private:
   static SingleRegionNavmeshTriangulation::State createRegionState(const State &state);
   static State createGlobalState(const SingleRegionNavmeshTriangulation::State &regionState, const uint16_t regionId);
 };
+
+template<typename T>
+class SortedPair {
+public:
+  SortedPair(const T &v_1, const T &v_2) : first(std::min(v_1,v_2)), second(std::max(v_1,v_2)) {}
+  const T first, second;
+};
+
+template<typename T>
+inline bool operator<(const SortedPair<T> &p1, const SortedPair<T> &p2) {
+  if (p1.first == p2.first) {
+    return p1.second < p2.second;
+  } else {
+    return p1.first < p2.first;
+  }
+}
 
 
 } // namespace triangulation

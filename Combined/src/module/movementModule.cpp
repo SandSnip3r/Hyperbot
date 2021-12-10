@@ -271,6 +271,9 @@ bool MovementModule::serverAgentEntityUpdatePositionReceived(packet::parsing::Se
       const auto pos = selfState_.position();
       LOG(serverAgentEntityUpdatePositionReceived) << "Expected pos: " << pos.xOffset << ',' << pos.zOffset << '\n';
       LOG(serverAgentEntityUpdatePositionReceived) << "Received pos: " << packet.position().xOffset << ',' << packet.position().zOffset << '\n';
+      // TODO: Does it make sense to update our position in this case? Probably
+      //  But it also seems like a problem because we mistakenly thought we were moving
+      selfState_.setPosition(packet.position());
     }
   }
   return true;

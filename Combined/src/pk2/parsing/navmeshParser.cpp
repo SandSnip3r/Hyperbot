@@ -162,15 +162,16 @@ bool NavmeshParser::regionIsEnabled(uint16_t regionId) const {
     }
   };
   static const std::set<InterestingArea, Comp> specialAreas = {
-    // {148,92,1,2},  // Tarim Basin
-    {106,105,4,4},  // Samarkand
-    {133,101,3,3},  // Takla temple & bridges
-    {126,102,5,4},  // Takla Yarkan main spawn
-    {166,96,4,4},   // Jangan
-    {152,102,3,3},  // DW
-    {130,87,10,10}, // Hotan
-    {122,85,10,10},  // Karakoram
-    // {45,84,13,12},  // Alexandria
+    // {76,102,7,7},   // Constantinople (49)
+    // {170,99,5,4},   // Jangan cave entrance (20)
+    // {106,105,4,4},  // Samarkand (16)
+    // {133,101,3,3},  // Takla temple & bridges (9)
+    // {126,102,5,4},  // Takla Yarkan main spawn (20)
+    // {166,96,4,4},   // Jangan (16)
+    // {152,102,3,3},  // DW (9)
+    // {130,87,10,10}, // Hotan (100)
+    // {122,85,10,10},  // Karakoram (100)
+    // {45,84,13,12},  // Alexandria (156)
   };
   const auto [regionX, regionY] = math::position::regionXYFromRegionId(regionId);
   bool matchedOne = specialAreas.empty();
@@ -257,6 +258,8 @@ void NavmeshParser::parseRegionObjectInstances(std::istringstream &navmeshData, 
   uint16_t objectCount;
   parse(navmeshData, objectCount);
   region.objectInstanceIds.reserve(objectCount);
+  std::vector<navmesh::ObjectInstance> objectInstances;
+  objectInstances.reserve(objectCount);
 
   for (int i=0; i<objectCount; ++i) {
     navmesh::ObjectInstance object;
@@ -295,6 +298,22 @@ void NavmeshParser::parseRegionObjectInstances(std::istringstream &navmeshData, 
     }
 
     region.objectInstanceIds.push_back(object.globalId());
+    objectInstances.push_back(object);
+  }
+
+  // Go through all objects and match up edge links with globalIds
+  for (int i=0; i<objectInstances.size(); ++i) {
+    auto &thisObjectInstance = objectInstances.at(i);
+    for (auto &edgeLink : thisObjectInstance.globalEdgeLinks) {
+      if (edgeLink.linkedObjId != -1) {
+        auto &linkedObjectInstance = objectInstances.at(edgeLink.linkedObjId);
+        edgeLink.linkedObjGlobalId = linkedObjectInstance.globalId();
+      }
+    }
+  }
+
+  // Finally, add all object instances to the navmesh
+  for (const auto &object : objectInstances) {
     navmesh.addObjectInstance(object);
   }
 }

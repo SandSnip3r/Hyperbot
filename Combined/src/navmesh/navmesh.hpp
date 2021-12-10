@@ -22,6 +22,7 @@ namespace navmesh {
 
 struct GlobalEdgeLink {
   int16_t linkedObjId, linkedObjEdgeId, edgeId;
+  uint32_t linkedObjGlobalId;
 };
 
 struct ObjectInstance {
@@ -97,6 +98,7 @@ enum class EdgeDirection : int8_t {
 };
 
 struct Edge {
+  // TODO: Use 2d Vector here instead
   math::Vector min, max;
   EdgeFlag flag;
   EdgeDirection assocDirection0, assocDirection1;

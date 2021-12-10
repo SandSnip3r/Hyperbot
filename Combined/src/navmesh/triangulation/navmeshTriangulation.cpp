@@ -7,9 +7,9 @@
 #include "navmeshTriangulation.hpp"
 
 #include <fstream>
-#include <iostream> //TODO:Remove
 #include <set>
 #include <stack>
+#include <unordered_set>
 
 namespace navmesh::triangulation {
 
@@ -18,21 +18,17 @@ NavmeshTriangulation::NavmeshTriangulation(const Navmesh &navmesh) {
   // Triangulate every region in the navmesh
   const auto &regionMap = navmesh.getRegionMap();
   for (const auto &regionIdRegionPair : regionMap) {
-    std::cout << "Building navmesh for region " << regionIdRegionPair.first << std::endl;
     buildNavmeshForRegion(navmesh, regionIdRegionPair.second);
   }
-
-  const auto startTime = std::chrono::high_resolution_clock::now();
-  try {
-    postProcess();
-  } catch (std::exception &ex) {
-    std::cout << "Error while post processing! " << ex.what() << std::endl;
-  }
-  const auto endTime = std::chrono::high_resolution_clock::now();
-  std::cout << "Post processing took " <<  std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime).count()/1000.0 << "ms" << std::endl;
+  postProcess(navmesh);
 }
 
-void NavmeshTriangulation::postProcess() {
+void NavmeshTriangulation::postProcess(const Navmesh &navmesh) {
+  linkGlobalEdgesBetweenRegions();
+  markObjectsAndAreasInCells(navmesh);
+}
+
+void NavmeshTriangulation::linkGlobalEdgesBetweenRegions() {
   enum class Direction {
     kLeft,
     kRight,
@@ -86,21 +82,23 @@ void NavmeshTriangulation::postProcess() {
     for (SingleRegionNavmeshTriangulation::IndexType index=0; index<navmeshTriangulation.getEdgeCount(); ++index) {
       const auto edgeMarker = navmeshTriangulation.getEdgeMarker(index);
       if (edgeMarker >= 2) {
-        const auto edgeConstraintData = navmeshTriangulation.getEdgeConstraintData(edgeMarker);
-        if (edgeConstraintData.forTerrain() && edgeConstraintData.is(EdgeConstraintFlag::kGlobal)) {
-          // This is a global edge of the region
-          const auto edge = navmeshTriangulation.getEdge(index);
-          const auto edgeSide = getEdgeSide(edge);
-          if (edgeSide == Direction::kLeft) {
-            globalEdges.leftGlobalEdges.push_back(index);
-          } else if (edgeSide == Direction::kRight) {
-            globalEdges.rightGlobalEdges.push_back(index);
-          } else if (edgeSide == Direction::kTop) {
-            globalEdges.topGlobalEdges.push_back(index);
-          } else if (edgeSide == Direction::kBottom) {
-            globalEdges.bottomGlobalEdges.push_back(index);
-          } else {
-            throw std::runtime_error("Impossible edge direction");
+        const auto &edgeConstraintData = navmeshTriangulation.getEdgeConstraintData(edgeMarker);
+        for (const auto &constraint : edgeConstraintData) {
+          if (constraint.forTerrain() && constraint.is(EdgeConstraintFlag::kGlobal)) {
+            // This is a global edge of the region
+            const auto edge = navmeshTriangulation.getEdge(index);
+            const auto edgeSide = getEdgeSide(edge);
+            if (edgeSide == Direction::kLeft) {
+              globalEdges.leftGlobalEdges.push_back(index);
+            } else if (edgeSide == Direction::kRight) {
+              globalEdges.rightGlobalEdges.push_back(index);
+            } else if (edgeSide == Direction::kTop) {
+              globalEdges.topGlobalEdges.push_back(index);
+            } else if (edgeSide == Direction::kBottom) {
+              globalEdges.bottomGlobalEdges.push_back(index);
+            } else {
+              throw std::runtime_error("Impossible edge direction");
+            }
           }
         }
       }
@@ -159,38 +157,14 @@ void NavmeshTriangulation::postProcess() {
         return point.x();
       }
     };
-    auto printEdge = [&getVal](auto v1, auto v2) {
-      auto val1 = getVal(v1);
-      auto val2 = getVal(v2);
-      if (val1 > val2) {
-        std::swap(val1,val2);
-      }
-      std::cout << val1 << '-' << val2;
-    };
-    // std::cout << "   Comparing our (" << thisRegionId << ") " << getDirectionString(direction) << " edges: [ ";
-    // for (std::size_t i=0; i<thisRegionEdges.size(); ++i) {
-    //   const auto edge = thisRegionTriangulation.getEdge(thisRegionEdges[i]);
-    //   printEdge(edge.first, edge.second);
-    //   std::cout << ", ";
-    // }
-    // std::cout << "]" << std::endl;
-    // std::cout << "against neighbor (" << otherRegionId << ") " << std::string(getDirectionString(direction).size(), ' ') << " edges: [ ";
-    // for (std::size_t i=0; i<otherRegionEdges.size(); ++i) {
-    //   const auto edge = otherRegionTriangulation.getEdge(otherRegionEdges[i]);
-    //   printEdge(edge.first, edge.second);
-    //   std::cout << ", ";
-    // }
-    // std::cout << "]" << std::endl;
     if (thisRegionEdges.size() != otherRegionEdges.size()) {
       // These two regions have different numbers of edges on their shared boundary
-      // std::cout << "These two regions have different numbers of edges" << std::endl;
       return false;
     }
     for (std::size_t i=0; i<thisRegionEdges.size(); ++i) {
       // These two edges should be the same (but on opposite sides of their region)
       const auto thisRegionEdge = thisRegionTriangulation.getEdge(thisRegionEdges[i]);
       const auto otherRegionEdge = otherRegionTriangulation.getEdge(otherRegionEdges[i]);
-      // std::cout << "Checking if edge " << thisRegionEdge.first.x() << ',' << thisRegionEdge.first.y() << "->" << thisRegionEdge.second.x() << ',' << thisRegionEdge.second.y() << " is the same as " << otherRegionEdge.first.x() << ',' << otherRegionEdge.first.y() << "->" << otherRegionEdge.second.x() << ',' << otherRegionEdge.second.y() << std::endl;
       bool checkY;
       if (direction == Direction::kLeft) {
         if (thisRegionEdge.first.x() != 0.0 ||
@@ -245,29 +219,13 @@ void NavmeshTriangulation::postProcess() {
         }
       };
       if (!(haveSameValue(thisRegionEdge.first, thisRegionEdge.second, otherRegionEdge.first, otherRegionEdge.second) ||
-          haveSameValue(thisRegionEdge.first, thisRegionEdge.second, otherRegionEdge.second, otherRegionEdge.first))) {
+            haveSameValue(thisRegionEdge.first, thisRegionEdge.second, otherRegionEdge.second, otherRegionEdge.first))) {
         // Edges do not match
-        // std::cout << "These two edges do not match" << std::endl;
         return false;
       }
     }
     // Everything matched up
     return true;
-  };
-  class SortedPair {
-  public:
-    SortedPair(const uint16_t v_1, const uint16_t v_2) : first(std::min(v_1,v_2)), second(std::max(v_1,v_2)) {}
-    const uint16_t first, second;
-  };
-  class SortedPairComp {
-  public:
-    bool operator()(const SortedPair &p1, const SortedPair &p2) const {
-      if (p1.first == p2.first) {
-        return p1.second < p2.second;
-      } else {
-        return p1.first < p2.first;
-      }
-    }
   };
   auto getIndexOfTriangleConnectedToEdge = [&](const SingleRegionNavmeshTriangulation::IndexType edgeIndex, const uint16_t regionId) {
     const auto triangulationIt = navmeshTriangulationMap_.find(regionId);
@@ -295,7 +253,7 @@ void NavmeshTriangulation::postProcess() {
     }
     return *result;
   };
-  std::set<SortedPair, SortedPairComp> alreadyCheckedSet;
+  std::set<SortedPair<uint16_t>> alreadyCheckedSet;
   for (const auto &regionIdGlobalEdgesPair : regionGlobalEdgesMap) {
     const auto regionId = regionIdGlobalEdgesPair.first;
     const auto &globalEdges = regionIdGlobalEdgesPair.second;
@@ -307,19 +265,15 @@ void NavmeshTriangulation::postProcess() {
           // Validate that the edges on the shared boundary match up
           const std::vector<SingleRegionNavmeshTriangulation::IndexType> *thisRegionEdges, *otherRegionEdges;
           if (neighboringRegion.direction == Direction::kLeft) {
-            // std::cout << "Checking edges to the Left of our region " << regionId << std::endl;
             thisRegionEdges = &globalEdges.leftGlobalEdges;
             otherRegionEdges = &(it->second.rightGlobalEdges);
           } else if (neighboringRegion.direction == Direction::kRight) {
-            // std::cout << "Checking edges to the Right of our region " << regionId << std::endl;
             thisRegionEdges = &globalEdges.rightGlobalEdges;
             otherRegionEdges = &(it->second.leftGlobalEdges);
           } else if (neighboringRegion.direction == Direction::kTop) {
-            // std::cout << "Checking edges to the Top of our region " << regionId << std::endl;
             thisRegionEdges = &globalEdges.topGlobalEdges;
             otherRegionEdges = &(it->second.bottomGlobalEdges);
           } else if (neighboringRegion.direction == Direction::kBottom) {
-            // std::cout << "Checking edges to the Bottom of our region " << regionId << std::endl;
             thisRegionEdges = &globalEdges.bottomGlobalEdges;
             otherRegionEdges = &(it->second.topGlobalEdges);
           } else {
@@ -337,10 +291,6 @@ void NavmeshTriangulation::postProcess() {
             const auto globalTriangleIndexForOtherEdge = createIndex(triangleIndexForOtherEdge, neighboringRegion.id);
             const auto thisEdgeGlobalIndex = createIndex((*thisRegionEdges)[i], regionId);
             const auto otherEdgeGlobalIndex = createIndex((*otherRegionEdges)[i], neighboringRegion.id);
-            // struct GlobalEdgeAndTriangleIndices {
-            //   IndexType edgeIndex, triangleIndex;
-            // };
-            // std::unordered_map<IndexType, GlobalEdgeAndTriangleIndices> globalEdgeAndTriangleLinkMap_;
             globalEdgeAndTriangleLinkMap_.emplace(thisEdgeGlobalIndex, GlobalEdgeAndTriangleIndices{otherEdgeGlobalIndex, globalTriangleIndexForOtherEdge});
             globalEdgeAndTriangleLinkMap_.emplace(otherEdgeGlobalIndex, GlobalEdgeAndTriangleIndices{thisEdgeGlobalIndex, globalTriangleIndexForThisEdge});
           }
@@ -349,6 +299,115 @@ void NavmeshTriangulation::postProcess() {
       }
     }
   }
+}
+
+void NavmeshTriangulation::markObjectsAndAreasInCells(const Navmesh &navmesh) {
+  std::set<uint32_t> alreadyMarkedObjectInstances;
+  for (const auto &regionIdRegionPair : navmesh.getRegionMap()) {
+    const auto regionId = regionIdRegionPair.first;
+    const auto &region = regionIdRegionPair.second;
+    for (const auto objectInstanceId : region.objectInstanceIds) {
+      if (alreadyMarkedObjectInstances.find(objectInstanceId) != alreadyMarkedObjectInstances.end()) {
+        // Already marked cells for this object
+        continue;
+      } else {
+        alreadyMarkedObjectInstances.insert(objectInstanceId);
+      }
+      const auto &objectInstance = navmesh.getObjectInstance(objectInstanceId);
+      const auto &objectResource = navmesh.getObjectResource(objectInstance.objectId);
+      const auto transformationFromObjectFramToWorld = navmesh.getTransformationFromObjectInstanceToWorld(objectInstanceId, regionId);
+      for (const auto &objectCell : objectResource.cells) {
+        objectResource.vertices.at(objectCell.vertex0);
+      }
+      auto tmpAreaIds = objectResource.cellAreaIds;
+      std::sort(tmpAreaIds.begin(), tmpAreaIds.end());
+      auto newEnd = std::unique(tmpAreaIds.begin(), tmpAreaIds.end());
+      for (auto areaIdIt = tmpAreaIds.begin(); areaIdIt != newEnd; ++areaIdIt) {
+        // For each area in the object
+        // Pick a point that is inside the instance, inside the area, AND within the region
+        const std::optional<math::Vector> point = [this, &regionId, &transformationFromObjectFramToWorld, &objectResource, &areaIdIt]() -> std::optional<math::Vector> {
+          // For each cell in the object, check if the center point is in the navmesh
+          for (std::size_t cellIndex=0; cellIndex<objectResource.cells.size(); ++cellIndex) {
+            if (objectResource.cells[cellIndex].eventZoneData.has_value()) {
+              // TODO: This is an event zone; for now, ignore
+              continue;
+            }
+            if (objectResource.cellAreaIds[cellIndex] == *areaIdIt) {
+              // This cell is for our area
+              const auto &cell = objectResource.cells[cellIndex];
+              const auto centerPoint = [&objectResource, &cell]() -> math::Vector {
+                const double avgX = (objectResource.vertices[cell.vertex0].x + objectResource.vertices[cell.vertex1].x + objectResource.vertices[cell.vertex2].x) / 3.0;
+                const double avgZ = (objectResource.vertices[cell.vertex0].z + objectResource.vertices[cell.vertex1].z + objectResource.vertices[cell.vertex2].z) / 3.0;
+                return {static_cast<float>(avgX), 0, static_cast<float>(avgZ)};
+              }();
+              // Check if this point is inside of an enabled region
+              const auto absoluteCenterPoint = transformRegionPointIntoAbsolute(transformationFromObjectFramToWorld*centerPoint, regionId);
+              const auto regionIdPointPair = transformAbsolutePointIntoRegion(absoluteCenterPoint);
+              if (regionExists(regionIdPointPair.first)) {
+                return centerPoint;
+              }
+            }
+          }
+          // No valid cell found
+          return {};
+        }();
+        if (!point.has_value()) {
+          continue;
+        }
+
+        const auto transformedPoint = transformationFromObjectFramToWorld*(*point);
+        const auto globalPoint = transformRegionPointIntoAbsolute(transformedPoint, regionId);
+        const auto triangleIndex = findTriangleForPoint({globalPoint.x, globalPoint.z});
+        if (!triangleIndex.has_value()) {
+          continue;
+        }
+
+        // BFS outward from this triangle and mark all triangles inside the object
+        State startState(*triangleIndex);
+        startState.setObjectData({objectInstanceId, *areaIdIt});
+        std::stack<State> nextStates;
+        std::set<IndexType> visitedTriangles;
+        nextStates.push(startState);
+
+        while (!nextStates.empty()) {
+          const auto currentState = nextStates.top();
+          nextStates.pop();
+          if (visitedTriangles.find(currentState.getTriangleIndex()) != visitedTriangles.end()) {
+            // Triangle already visited, skip
+            continue;
+          }
+
+          // Mark this current triangle as "visited"
+          visitedTriangles.emplace(currentState.getTriangleIndex());
+
+          if (currentState.isOnObject() && currentState.getObjectData().objectInstanceId == objectInstanceId && currentState.getObjectData().objectAreaId == *areaIdIt) {
+            // This state is for our current object and the area that we're in
+            // Mark this triangle as being associated with a specific object
+            addObjectDataForTriangle(currentState.getTriangleIndex(), currentState.getObjectData());
+          } else {
+            continue;
+          }
+          // Get the neighboring states from here
+          const auto successors = getNeighborsInObjectArea(currentState);
+          for (const auto &successorState : successors) {
+            if (visitedTriangles.find(successorState.getTriangleIndex()) == visitedTriangles.end()) {
+              // This successor triangle has not yet been visited
+              nextStates.push(successorState);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+void NavmeshTriangulation::addObjectDataForTriangle(const IndexType triangleIndex, const ObjectData &objectData) {
+  const auto [regionId, index] = splitRegionAndIndex(triangleIndex);
+  auto it = navmeshTriangulationMap_.find(regionId);
+  if (it == navmeshTriangulationMap_.end()) {
+    throw std::runtime_error("Trying to add object data for triangle which is a non-existent region");
+  }
+  it->second.addObjectDataForTriangle(index, objectData);
 }
 
 const SingleRegionNavmeshTriangulation& NavmeshTriangulation::getNavmeshTriangulationForRegion(const uint16_t regionId) const {
@@ -536,18 +595,18 @@ std::vector<NavmeshTriangulation::State> NavmeshTriangulation::getSuccessors(con
   const auto regionCurrentState = createRegionState(currentState);
   const auto regionGoalState = createRegionState(goalState);
   std::vector<SingleRegionNavmeshTriangulation::State> regionSuccessors;
+  std::optional<SingleRegionNavmeshTriangulation::State> optionalGoal;
   if (goalTriangleRegionId == currentStateRegionId) {
-    // State and goal are in same region
-    regionSuccessors = regionTriangulation.getSuccessors(regionCurrentState, regionGoalState, agentRadius);
-  } else {
-    // State is in a different region than the goal
-    regionSuccessors = regionTriangulation.getSuccessors(regionCurrentState, {}, agentRadius);
+    // State and goal are in same region, we can pass the goal state to getSuccessors
+    optionalGoal = regionGoalState;
   }
+  regionSuccessors = regionTriangulation.getSuccessors(regionCurrentState, optionalGoal, agentRadius);
 
   std::vector<State> globalSuccessors;
   std::transform(regionSuccessors.begin(), regionSuccessors.end(), std::back_inserter(globalSuccessors), [currentStateRegionId = currentStateRegionId](const auto &regionCurrentState) {
     return createGlobalState(regionCurrentState, currentStateRegionId);
   });
+
   // Try to see if there are any additional successors that leave the region from the currentState
   const auto [currentTriangleEdgeIndex0, currentTriangleEdgeIndex1, currentTriangleEdgeIndex2] = regionTriangulation.getTriangleEdgeIndices(currentStateTriangleIndex);
   // ==================================================================
@@ -560,7 +619,7 @@ std::vector<NavmeshTriangulation::State> NavmeshTriangulation::getSuccessors(con
     const auto edgeMarker = regionTriangulation.getEdgeMarker(currentTriangleEdgeIndex);
     if (edgeMarker >= 2) {
       // Edge is some kind of constraint (might not necessarily be blocking)
-      const auto edgeConstraintData = regionTriangulation.getEdgeConstraintData(edgeMarker);
+      const auto edgeConstraintData = regionTriangulation.getEdgeConstraintData(edgeMarker)[0]; //TODO: TODO! TODO! TODO! TODO!
       if (edgeConstraintData.forTerrain() && edgeConstraintData.is(EdgeConstraintFlag::kGlobal)) {
         // This is a global edge (boundary between regions)
         if (!edgeConstraintData.is(EdgeConstraintFlag::kBlocking) || currentState.isOnObject()) {
@@ -575,6 +634,49 @@ std::vector<NavmeshTriangulation::State> NavmeshTriangulation::getSuccessors(con
               // std::cout << "Creating new global successor state! " << stateInNeighboringRegion << std::endl;
               globalSuccessors.push_back(stateInNeighboringRegion);
             }
+          }
+        }
+      }
+    }
+  }
+  return globalSuccessors;
+}
+
+std::vector<NavmeshTriangulation::State> NavmeshTriangulation::getNeighborsInObjectArea(const State &currentState) const {
+  // Get successors from single region
+  const auto [currentStateRegionId, currentStateTriangleIndex] = splitRegionAndIndex(currentState.getTriangleIndex());
+  const auto &regionTriangulation = getNavmeshTriangulationForRegion(currentStateRegionId);
+  const auto regionCurrentState = createRegionState(currentState);
+  std::vector<SingleRegionNavmeshTriangulation::State> regionSuccessors = regionTriangulation.getNeighborsInObjectArea(regionCurrentState);
+
+  std::vector<State> globalSuccessors;
+  std::transform(regionSuccessors.begin(), regionSuccessors.end(), std::back_inserter(globalSuccessors), [currentStateRegionId = currentStateRegionId](const auto &regionCurrentState) {
+    return createGlobalState(regionCurrentState, currentStateRegionId);
+  });
+  // Try to see if there are any additional successors that leave the region from the currentState
+  const auto [currentTriangleEdgeIndex0, currentTriangleEdgeIndex1, currentTriangleEdgeIndex2] = regionTriangulation.getTriangleEdgeIndices(currentStateTriangleIndex);
+  for (const auto currentTriangleEdgeIndex : {currentTriangleEdgeIndex0, currentTriangleEdgeIndex1, currentTriangleEdgeIndex2}) {
+    if (regionCurrentState.hasEntryEdgeIndex() && regionCurrentState.getEntryEdgeIndex() == currentTriangleEdgeIndex) {
+      // Entered through this edge, dont return
+      // Note: This might require that the "entry edge" of a state is always the edge from the same region as the triangle of the state
+      continue;
+    }
+    const auto edgeMarker = regionTriangulation.getEdgeMarker(currentTriangleEdgeIndex);
+    if (edgeMarker >= 2) {
+      // Edge is some kind of constraint (might not necessarily be blocking)
+      const auto edgeConstraintData = regionTriangulation.getEdgeConstraintData(edgeMarker)[0]; //TODO: TODO! TODO! TODO! TODO!
+      if (edgeConstraintData.forTerrain() && edgeConstraintData.is(EdgeConstraintFlag::kGlobal)) {
+        // This is a global edge (boundary between regions)
+        if (!edgeConstraintData.is(EdgeConstraintFlag::kBlocking) || currentState.isOnObject()) {
+          // Only pass through a non-blocking edge if we're not on an object
+          // Try to cross into the next region
+          const auto globalEdgeIndex = createIndex(currentTriangleEdgeIndex, currentStateRegionId);
+          const auto neighboringRegionTriangleAndEdge = getNeighborTriangleAndEdge(globalEdgeIndex);
+          if (neighboringRegionTriangleAndEdge.has_value()) {
+            State stateInNeighboringRegion{currentState};
+            stateInNeighboringRegion.setNewTriangleAndEntryEdge(neighboringRegionTriangleAndEdge->triangleIndex, neighboringRegionTriangleAndEdge->edgeIndex);
+            // std::cout << "Creating new global successor state! " << stateInNeighboringRegion << std::endl;
+            globalSuccessors.push_back(stateInNeighboringRegion);
           }
         }
       }
@@ -673,6 +775,11 @@ SingleRegionNavmeshTriangulation::State NavmeshTriangulation::createRegionState(
   } else {
     regionState.setOnTerrain();
   }
+  if (globalState.isTraversingLink()) {
+    regionState.setLinkId(globalState.getLinkId());
+  } else {
+    regionState.resetLinkId();
+  }
   return regionState;
 }
 
@@ -692,6 +799,11 @@ NavmeshTriangulation::State NavmeshTriangulation::createGlobalState(const Single
     globalState.setObjectData(regionState.getObjectData());
   } else {
     globalState.setOnTerrain();
+  }
+  if (regionState.isTraversingLink()) {
+    globalState.setLinkId(regionState.getLinkId());
+  } else {
+    globalState.resetLinkId();
   }
   return globalState;
 }
@@ -877,12 +989,40 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
 
   using EdgeListType = std::vector<EdgeType>;
 
-  std::vector<ConstraintData> constraintData;
+  std::vector<std::vector<ConstraintData>> constraintData;
   int nextMarker=2;
-  auto addConstraintDataAndGetMarker = [&](const ConstraintData &constraint) {
-    constraintData.emplace_back(constraint);
+  auto addConstraintDataAndGetMarker = [&](const std::vector<ConstraintData> &constraints) {
+    // TODO: We could consolidate markers
+    //  Actually, we are starting to rely on them being unique per edge; maybe not
+    constraintData.push_back(constraints);
     return nextMarker++;
   };
+
+  auto createLinkAndGetId = [this](const auto &link) -> std::pair<uint32_t,bool> {
+    // Does this link already exist?
+    // TODO: Does it make sense to spend this extra time, or are duplicates fine?
+    for (int i=0; i<linkData_.size(); ++i) {
+      const auto &otherLink = linkData_[i];
+      if (otherLink.srcObjectGlobalId == link.srcObjectGlobalId &&
+          otherLink.destObjectGlobalId == link.destObjectGlobalId &&
+          otherLink.srcEdgeIndex == link.srcEdgeIndex &&
+          otherLink.destEdgeIndex == link.destEdgeIndex) {
+        // This link exists and it exactly matches
+        return {i, true};
+      } else if (otherLink.srcObjectGlobalId == link.destObjectGlobalId &&
+          otherLink.destObjectGlobalId == link.srcObjectGlobalId &&
+          otherLink.srcEdgeIndex == link.destEdgeIndex &&
+          otherLink.destEdgeIndex == link.srcEdgeIndex) {
+        // This link exists but is flipped
+        return {i, false};
+      }
+    }
+
+    // This link does not yet exist
+    linkData_.push_back(link);
+    return {linkData_.size()-1, true};
+  };
+
   // ============================Lambdas============================
   // Now, extract data from the navmesh
   auto addVertexAndGetIndex = [](const math::Vector &p, PointListType &points) -> size_t {
@@ -902,24 +1042,196 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
   };
 
   auto addEdge = [&](math::Vector v1, math::Vector v2, const ConstraintData &constraint, PointListType &points, EdgeListType &edges) {
+    if (v1.x == v2.x && v1.z == v2.z) {
+      // There are some edges which are strictly vertical (only differ by y-value/height)
+      // We will ignore those since we are only working in 2d
+      return;
+    }
+
+    // Start by sorting these vertices
+    //  This ordering will be used later when checking for overlaps
+    if (v1.x == v2.x) {
+      if (v1.z > v2.z) {
+        std::swap(v1,v2);
+      }
+    } else if (v1.x > v2.x) {
+      std::swap(v1, v2);
+    }
+
+    // Create vertices for this edge
     const auto v1Index = addVertexAndGetIndex(v1, points);
     const auto v2Index = addVertexAndGetIndex(v2, points);
-    // TODO: Optimize this check if an edge already exists
+
+    // Check if this edge already exists
     auto it = std::find_if(edges.begin(), edges.end(), [v1Index, v2Index](const EdgeType &edge) {
       return (edge.vertex0 == v1Index && edge.vertex1 == v2Index) || (edge.vertex0 == v2Index && edge.vertex1 == v1Index);
     });
+
     if (it == edges.end()) {
-      // std::cout << "Adding edge " << points.at(v1Index).x() << ',' << points.at(v1Index).y() << " -> " << points.at(v2Index).x() << ',' << points.at(v2Index).y() << std::endl;
-      const auto marker = addConstraintDataAndGetMarker(constraint);
-      edges.emplace_back(static_cast<NavmeshIndexType>(v1Index), static_cast<NavmeshIndexType>(v2Index), marker);
+      // Creating an edge which does not exist
+      // Lets check if this edge overlaps with any other edge
+      // In the case when it does overlap with another edge, we need to add a new constraint to a subset of the edge that we overlap with
+
+      auto vectorLess = [](auto &v1, auto &v2) {
+        if (v1.x() == v2.x()) {
+          return v1.y() < v2.y();
+        } else {
+          return v1.x() < v2.x();
+        }
+      };
+
+      pathfinder::Vector edgeVertex0(v1.x, v1.z);
+      pathfinder::Vector edgeVertex1(v2.x, v2.z);
+
+      std::vector<int> indicesOfOverlappingEdges;
+      for (int i=0; i<edges.size(); ++i) {
+        const auto &otherEdge = edges.at(i);
+        const auto otherEdgeVertex0 = points.at(otherEdge.vertex0);
+        const auto otherEdgeVertex1 = points.at(otherEdge.vertex1);
+        const auto res1 = pathfinder::math::crossProductForSign(otherEdgeVertex0, otherEdgeVertex1, otherEdgeVertex0, edgeVertex0);
+        const auto res2 = pathfinder::math::crossProductForSign(otherEdgeVertex0, otherEdgeVertex1, otherEdgeVertex0, edgeVertex1);
+        if (pathfinder::math::equal(res1, 0.0) && pathfinder::math::equal(res2, 0.0)) {
+          // These two line segments are on the same line
+          // There are 6 cases we care about:
+          //  A1. The new edge overlaps and extends beyond our edge
+          //  A2. Our edge is completely within the new edge (not sharing endpoints)
+          //  A3. Our edge is completely within the new edge (sharing one endpoint)
+          //  A4. The new edge is completely within our edge (not sharing endpoints)
+          //  A5. The new edge is completely within our edge (sharing one endpoint)
+          //  A6. The new edge is completely within our edge (sharing both endpoints)
+          //    This is the same as two edges being the same; this has already been handled
+          // There are 2 other cases that are possible, but not an overlap:
+          //  B1. The two edges do not overlap at all
+          //  B2. The two edges share only a single endpoint
+
+          // Check if any vertex is between the two vertices of the other line
+          if ((vectorLess(otherEdgeVertex0, edgeVertex0) && vectorLess(edgeVertex0, otherEdgeVertex1)) ||
+              (vectorLess(otherEdgeVertex0, edgeVertex1) && vectorLess(edgeVertex1, otherEdgeVertex1)) ||
+              (vectorLess(edgeVertex0, otherEdgeVertex0) && vectorLess(otherEdgeVertex0, edgeVertex1)) ||
+              (vectorLess(edgeVertex0, otherEdgeVertex1) && vectorLess(otherEdgeVertex1, edgeVertex1))) {
+            // There is an actual overlap
+            // Note: This trusts that the two endpoints of every edge are sorted
+            const auto &otherEdgeConstraints = constraintData.at(otherEdge.marker-2);
+            if (std::find(otherEdgeConstraints.begin(), otherEdgeConstraints.end(), constraint) == otherEdgeConstraints.end()) {
+              // Different constraints
+              indicesOfOverlappingEdges.push_back(i);
+            } else {
+              // Even though these edges seem to overlap, their constraints are the same, we dont really care in this case
+              // TODO: If we were ambitious, we could consolidate these two lines into one
+              //  i.e. A------->B
+              //            C--------->D
+              //  becomes
+              //       A-------------->D
+            }
+          }
+        }
+      }
+
+      if (indicesOfOverlappingEdges.empty()) {
+        // No overlap, lets just add our edge and be done
+        const auto marker = addConstraintDataAndGetMarker({constraint});
+        edges.emplace_back(static_cast<NavmeshIndexType>(v1Index), static_cast<NavmeshIndexType>(v2Index), marker);
+        return;
+      }
+
+      // Fact: There is overlap between these edges
+      struct EdgeVertex {
+        int vertexIndex;
+        bool isStart;
+        int edgeIndex;
+      };
+      std::vector<EdgeVertex> edgePoints;
+      // Add both points of our edge to the list
+      edgePoints.push_back({static_cast<int>(v1Index), true, -1});
+      edgePoints.push_back({static_cast<int>(v2Index), false, -1});
+
+      // Add both points of all of the other edges to the list
+      for (const auto i : indicesOfOverlappingEdges) {
+        const auto &otherEdge = edges.at(i);
+        edgePoints.push_back({otherEdge.vertex0, true, i});
+        edgePoints.push_back({otherEdge.vertex1, false, i});
+      }
+      // Sort points
+      std::sort(edgePoints.begin(), edgePoints.end(), [&points,&vectorLess](const auto &e1, const auto &e2) {
+        const auto &v1 = points.at(e1.vertexIndex);
+        const auto &v2 = points.at(e2.vertexIndex);
+        return vectorLess(v1, v2);
+      });
+      // Keep constraint data for each edge
+      std::map<int, std::vector<ConstraintData>> constraintDataMap;
+      auto createConstraintDataList = [&constraintDataMap]{
+        std::vector<ConstraintData> data;
+        for (const auto &indexDataPair : constraintDataMap) {
+          data.insert(data.end(), indexDataPair.second.begin(), indexDataPair.second.end());
+        }
+        return data;
+      };
+
+      struct EdgeToCreate {
+        size_t v0Index, v1Index;
+        std::vector<ConstraintData> constraintDatas;
+      };
+      std::vector<EdgeToCreate> edgesToCreate;
+
+      // Add constraint data for first point
+      if (edgePoints[0].edgeIndex == -1) {
+        constraintDataMap[-1] = {constraint};
+      } else {
+        const auto &otherEdge = edges.at(edgePoints[0].edgeIndex);
+        const auto &otherEdgeConstraints = constraintData.at(otherEdge.marker-2);
+        constraintDataMap[edgePoints[0].edgeIndex] = otherEdgeConstraints;
+      }
+      for (int i=1; i<edgePoints.size(); ++i) {
+        if (edgePoints[i].vertexIndex != edgePoints[i-1].vertexIndex) {
+          // Have a non-zero length edge
+          // Create it with the current constraint data
+          edgesToCreate.push_back({static_cast<size_t>(edgePoints[i-1].vertexIndex), static_cast<size_t>(edgePoints[i].vertexIndex), createConstraintDataList()});
+        }
+        if (edgePoints[i].isStart) {
+          // Add constraint data to map
+          if (edgePoints[i].edgeIndex == -1) {
+            constraintDataMap[-1] = {constraint};
+          } else {
+            const auto &otherEdge = edges.at(edgePoints[i].edgeIndex);
+            const auto &otherEdgeConstraints = constraintData.at(otherEdge.marker-2);
+            constraintDataMap[edgePoints[i].edgeIndex] = otherEdgeConstraints;
+          }
+        } else {
+          // Remove constraint data from map
+          constraintDataMap[edgePoints[i].edgeIndex] = {};
+        }
+      }
+
+      if (indicesOfOverlappingEdges.size() > edgesToCreate.size()) {
+        throw std::runtime_error("We are trying to delete more edges than we're creating");
+      }
+      int edgeToCreateIndex=0;
+      while (edgeToCreateIndex<indicesOfOverlappingEdges.size()) {
+        const auto edgeToBeOverwrittenIndex = indicesOfOverlappingEdges[edgeToCreateIndex];
+        auto &edgeToBeOverwritten = edges.at(edgeToBeOverwrittenIndex);
+        const auto &newEdgeData = edgesToCreate[edgeToCreateIndex];
+        // Overwrite edgeToBeOverwritten with newEdgeData
+        edgeToBeOverwritten.vertex0 = newEdgeData.v0Index;
+        edgeToBeOverwritten.vertex1 = newEdgeData.v1Index;
+        // Marker stays the same, update the constraint data pointed to by this marker
+        auto &existingConstraintData = constraintData.at(edgeToBeOverwritten.marker-2);
+        existingConstraintData = newEdgeData.constraintDatas;
+        ++edgeToCreateIndex;
+      }
+      while (edgeToCreateIndex<edgesToCreate.size()) {
+        // Create new edge
+        const auto &newEdgeData = edgesToCreate[edgeToCreateIndex];
+        const auto marker = addConstraintDataAndGetMarker(newEdgeData.constraintDatas);
+        edges.emplace_back(static_cast<NavmeshIndexType>(newEdgeData.v0Index), static_cast<NavmeshIndexType>(newEdgeData.v1Index), marker);
+        ++edgeToCreateIndex;
+      }
     } else {
-      std::cout << "Edge already exists " << points.at(v1Index).x() << ',' << points.at(v1Index).y() << " -> " << points.at(v2Index).x() << ',' << points.at(v2Index).y() << std::endl;
-      std::cout << "Does the constraint data match?\n";
-      const auto existingConstraintData = constraintData[it->marker-2];
-      std::cout << "  forObject: existing " << existingConstraintData.forObject() << ", given " << constraint.forObject() << std::endl;
-      std::cout << "  objectInstanceId: existing " << existingConstraintData.getObjectData().objectInstanceId << ',' << existingConstraintData.getObjectData().objectAreaId << ", given " << constraint.getObjectData().objectInstanceId << ',' << constraint.getObjectData().objectAreaId << std::endl;
-      std::cout << "  forTerrain: existing " << existingConstraintData.forTerrain() << ", given " << constraint.forTerrain() << std::endl;
-      std::cout << "  edgeFlag: existing " << static_cast<int>(existingConstraintData.edgeFlag) << ", given " << static_cast<int>(constraint.edgeFlag) << std::endl;
+      // Edge already exists, try to see if we've already saved this constraint data for this edge
+      auto &constraintDataListForThisEdge = constraintData.at(it->marker-2);
+      if (std::find(constraintDataListForThisEdge.begin(), constraintDataListForThisEdge.end(), constraint) == constraintDataListForThisEdge.end()) {
+        // This is a different constraint than any of the existing constraints for this edge, add it to the list of constraints for this edge
+        constraintDataListForThisEdge.push_back(constraint);
+      }
     }
   };
 
@@ -1002,6 +1314,20 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
     const auto &objectInstance = navmesh.getObjectInstance(objectInstanceId);
     const auto transformedObjectResource = navmesh.getTransformedObjectResourceForRegion(objectInstanceId, objectInstance.regionId);
 
+    // Build a map which holds edge links (to be used in constraints later)
+    struct LinkedObjAndEdge {
+      uint32_t objId;
+      uint16_t edgeId;
+    };
+    std::map<int16_t, LinkedObjAndEdge> edgeLinkMap;
+    for (const auto i : objectInstance.globalEdgeLinks) {
+      if (i.edgeId != -1 && i.linkedObjGlobalId != -1) {
+        // edge i.edgeId links to edge i.linkedObjEdgeId of object i.linkedObjGlobalId
+        edgeLinkMap[i.edgeId].objId = i.linkedObjGlobalId;
+        edgeLinkMap[i.edgeId].edgeId = i.linkedObjEdgeId;
+      }
+    }
+
     // Calculate region offset so we can trim it for our region
     const auto [originRegionX, originRegionY] = math::position::regionXYFromRegionId(objectInstance.regionId);
     const auto [ourRegionX, ourRegionY] = math::position::regionXYFromRegionId(region.id);
@@ -1027,65 +1353,76 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
       }
     }
 
-    int outlineEdgeIndex{0};
-    for (const auto &edge : transformedObjectResource.outlineEdges) {
-      ++outlineEdgeIndex;
+    // Add all outline edges of the object
+    for (int outlineEdgeIndex=0; outlineEdgeIndex<transformedObjectResource.outlineEdges.size(); ++outlineEdgeIndex) {
+      const auto &edge = transformedObjectResource.outlineEdges.at(outlineEdgeIndex);
+
+      // Determine flags for this edge
+      std::vector<EdgeConstraintFlag> edgeFlags;
       if ((edge.flag & 1) || (edge.flag & 2)) {
         // Blocked
         if (edge.destCell != -1) {
           throw std::runtime_error("Expecting that the dest cell is always -1 since this is an outline edge");
         }
-        ConstraintData constraint({objectInstanceId, transformedObjectResource.cellAreaIds[edge.srcCell]});
-        constraint.edgeFlag |= EdgeConstraintFlag::kGlobal;
-        constraint.edgeFlag |= EdgeConstraintFlag::kBlocking;
-        addObjEdgeWithTrim(transformedObjectResource.vertices.at(edge.srcVertex),
-                           transformedObjectResource.vertices.at(edge.destVertex),
-                           regionDx,
-                           regionDy,
-                           constraint,
-                           inVertices,
-                           inEdges);
+        edgeFlags.push_back(EdgeConstraintFlag::kGlobal);
+        edgeFlags.push_back(EdgeConstraintFlag::kBlocking);
       } else if (edge.flag & 16) {
         // Bridge
         if (edge.destCell != -1) {
           throw std::runtime_error("Expecting that the dest cell is always -1 since this is an outline edge");
         }
-        ConstraintData constraint({objectInstanceId, transformedObjectResource.cellAreaIds[edge.srcCell]});
-        constraint.edgeFlag |= EdgeConstraintFlag::kGlobal;
-        constraint.edgeFlag |= EdgeConstraintFlag::kBridge;
-        addObjEdgeWithTrim(transformedObjectResource.vertices.at(edge.srcVertex),
-                           transformedObjectResource.vertices.at(edge.destVertex),
-                           regionDx,
-                           regionDy,
-                           constraint,
-                           inVertices,
-                           inEdges);
+        edgeFlags.push_back(EdgeConstraintFlag::kGlobal);
+        edgeFlags.push_back(EdgeConstraintFlag::kBridge);
       } else if (edge.flag & 128) {
         // Siege
-        // TODO: Not yet handling
+        // TODO: Not yet handling properly, calling it a global blocking edge for now
+        if (edge.destCell != -1) {
+          throw std::runtime_error("Expecting that the dest cell is always -1 since this is an outline edge");
+        }
+        edgeFlags.push_back(EdgeConstraintFlag::kGlobal);
+        edgeFlags.push_back(EdgeConstraintFlag::kBlocking);
       } else if (edge.eventZoneData) {
         // Event zone
         // TODO: Not yet handling
+        continue;
       } else {
         // Non-blocking edges are our way "onto" the object
         if (edge.destCell != -1) {
           throw std::runtime_error("Expecting that the dest cell is always -1 since this is an outline edge");
         }
-        ConstraintData constraint({objectInstanceId, transformedObjectResource.cellAreaIds[edge.srcCell]});
-        constraint.edgeFlag |= EdgeConstraintFlag::kGlobal;
-        addObjEdgeWithTrim(transformedObjectResource.vertices.at(edge.srcVertex),
-                           transformedObjectResource.vertices.at(edge.destVertex),
-                           regionDx,
-                           regionDy,
-                           constraint,
-                           inVertices,
-                           inEdges);
+        edgeFlags.push_back(EdgeConstraintFlag::kGlobal);
       }
+
+      // Create constraint for edge
+      ConstraintData constraint({objectInstanceId, transformedObjectResource.cellAreaIds[edge.srcCell]});
+      for (const auto flag : edgeFlags) {
+        constraint.edgeFlag |= flag;
+      }
+
+      // Check if the edge is part of a link
+      const auto edgeLinkIt = edgeLinkMap.find(outlineEdgeIndex);
+      if (edgeLinkIt != edgeLinkMap.end()) {
+        const auto &linkedObjAndEdge = edgeLinkIt->second;
+        ObjectLink link;
+        link.srcObjectGlobalId = objectInstanceId;
+        link.destObjectGlobalId = linkedObjAndEdge.objId;
+        link.srcEdgeIndex = outlineEdgeIndex;
+        link.destEdgeIndex = linkedObjAndEdge.edgeId;
+        constraint.linkIdAndIsSource_ = createLinkAndGetId(link);
+      }
+
+      // Add the edge with the created constraint
+      addObjEdgeWithTrim(transformedObjectResource.vertices.at(edge.srcVertex),
+                         transformedObjectResource.vertices.at(edge.destVertex),
+                         regionDx,
+                         regionDy,
+                         constraint,
+                         inVertices,
+                         inEdges);
     }
 
-    int inlineEdgeIndex{0};
+    // Add inline edges of the object
     for (const auto &edge : transformedObjectResource.inlineEdges) {
-      ++inlineEdgeIndex;
       if ((edge.flag & 1) || (edge.flag & 2)) {
         // Blocked
         if (edge.srcCell == -1) {
@@ -1182,11 +1519,10 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
     throw std::runtime_error("Error copying data");
   }
 
-  SingleRegionNavmeshTriangulation navmeshTriangulation(navmesh, region, triangleData, triangleVoronoiData, std::move(constraintData));
+  SingleRegionNavmeshTriangulation navmeshTriangulation(navmesh, region, triangleData, triangleVoronoiData, std::move(constraintData), linkData_);
 
   // Post-processing
   markBlockedTerrainCells(navmeshTriangulation, region);
-  markObjectsAndAreasInCells(navmeshTriangulation, navmesh, region);
 
   // Cleanup
   triangle::triangle_free_triangleio(&triangleData);
@@ -1222,97 +1558,6 @@ void NavmeshTriangulation::markBlockedTerrainCells(SingleRegionNavmeshTriangulat
   }
 
   navmeshTriangulation.setBlockedTerrainTriangles(std::move(blockedTerrainTriangles));
-}
-
-void NavmeshTriangulation::markObjectsAndAreasInCells(SingleRegionNavmeshTriangulation &navmeshTriangulation, const Navmesh &navmesh, const Region &region) const {
-  // Add objects for each cell, if the cell is inside an object
-  for (const auto &objectInstanceId : region.objectInstanceIds) {
-    const auto transformedObjectResource = navmesh.getTransformedObjectResourceForRegion(objectInstanceId, region.id);
-    auto tmpAreaIds = transformedObjectResource.cellAreaIds;
-    std::sort(tmpAreaIds.begin(), tmpAreaIds.end());
-    auto newEnd = std::unique(tmpAreaIds.begin(), tmpAreaIds.end());
-    for (auto areaIdIt = tmpAreaIds.begin(); areaIdIt != newEnd; ++areaIdIt) {
-      // std::cout << "Checking area " << *areaIdIt << std::endl;
-      // For each area in the object
-      // Pick a point that is inside the instance, inside the area, AND within the region
-      const std::optional<math::Vector> point = [&transformedObjectResource, &areaIdIt]() -> std::optional<math::Vector> {
-        // For each cell in the object, check if the center point is in the navmesh
-        for (std::size_t cellIndex=0; cellIndex<transformedObjectResource.cells.size(); ++cellIndex) {
-          if (transformedObjectResource.cellAreaIds[cellIndex] == *areaIdIt) {
-            // This cell is for our area
-            const auto &cell = transformedObjectResource.cells[cellIndex];
-            const math::Vector centerPoint = [&transformedObjectResource, &cell]() -> math::Vector {
-              const double avgX = (transformedObjectResource.vertices[cell.vertex0].x + transformedObjectResource.vertices[cell.vertex1].x + transformedObjectResource.vertices[cell.vertex2].x) / 3.0;
-              const double avgZ = (transformedObjectResource.vertices[cell.vertex0].z + transformedObjectResource.vertices[cell.vertex1].z + transformedObjectResource.vertices[cell.vertex2].z) / 3.0;
-              return {static_cast<float>(avgX), 0, static_cast<float>(avgZ)};
-            }();
-            if (centerPoint.x >= 0 && centerPoint.x <= 1920 &&
-                centerPoint.z >= 0 && centerPoint.z <= 1920) {
-              // Point is in region
-              return centerPoint;
-            }
-          }
-        }
-        // None of the triangle centers are within this region
-        return {};
-      }();
-      if (!point) {
-        // TODO: There could be a case when the object is in the region, but this algorithm does not find a point
-        //  I'm pretty sure that I MUST solve this
-        // std::cout << "No center point of area " << *areaIdIt << " of this object is inside the region" << std::endl;
-        continue;
-      }
-
-      // Find the navmesh triangle for this point
-      const auto triangleIndexInObject = navmeshTriangulation.TriangleLibNavmesh::findTriangleForPoint(pathfinder::Vector(point->x, point->z));
-      if (!triangleIndexInObject) {
-        // No triangle exists for this point
-        throw std::runtime_error("Unable to find a navmesh triangle for a point in an object instance");
-      }
-      // std::cout << "Triangle for object with ID " << objectInstanceId << " is " << *triangleIndexInObject << std::endl;
-      // std::cout << "====Begin BFS====" << std::endl;
-      
-      // BFS outward from this triangle and mark all triangles inside the object
-      SingleRegionNavmeshTriangulation::State startState(*triangleIndexInObject);
-      startState.setObjectData({objectInstanceId, *areaIdIt});
-      std::stack<SingleRegionNavmeshTriangulation::State> nextStates;
-      std::set<int> visitedTriangles;
-
-      nextStates.push(startState);
-
-      while (!nextStates.empty()) {
-        const auto currentState = nextStates.top();
-        nextStates.pop();
-        if (visitedTriangles.find(currentState.getTriangleIndex()) != visitedTriangles.end()) {
-          // Triangle already visited, skip
-          continue;
-        }
-
-        // Mark this current triangle as "visited"
-        visitedTriangles.emplace(currentState.getTriangleIndex());
-        
-        // std::cout << " Current state: " << currentState << std::endl;
-        if (currentState.isOnObject() && currentState.getObjectData().objectInstanceId == objectInstanceId && currentState.getObjectData().objectAreaId == *areaIdIt) {
-          // This state is for our current object and the area that we're in
-          // Mark this triangle as being associated with a specific object
-          navmeshTriangulation.addObjectDataForTriangle(currentState.getTriangleIndex(), currentState.getObjectData());
-          // std::cout << "  Is for current object and area" << std::endl;
-        } else {
-          // std::cout << "  Stepped off of our object's area. Not adding successors" << std::endl;
-          continue;
-        }
-        // Get the neighboring states from here
-        const auto successors = navmeshTriangulation.getNeighborsInObjectArea(currentState);
-        for (const auto &successorState : successors) {
-          if (visitedTriangles.find(successorState.getTriangleIndex()) == visitedTriangles.end()) {
-            // This successor triangle has not yet been visited
-            nextStates.push(successorState);
-          }
-        }
-      }
-      // std::cout << "=====End BFS=====" << std::endl;
-    }
-  }
 }
 
 namespace geometry_helpers {

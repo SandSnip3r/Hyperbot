@@ -8,7 +8,7 @@ namespace math {
 
 struct Vector {
 public:
-  float x,y,z;
+  float x, y{0.0f}, z;
   Vector() = default;
   Vector(float xParam, float yParam, float zParam);
   Vector& operator=(const Vector &other);
