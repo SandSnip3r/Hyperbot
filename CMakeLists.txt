@@ -79,6 +79,9 @@ include(CMake/GlobalSettingsInclude.cmake OPTIONAL)
 ################################################################################
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Enable tests
+enable_testing()
+
 ################################################################################
 # Sub-projects
 ################################################################################

@@ -341,3 +341,46 @@ target_link_libraries(${PROJECT_NAME}
     ${Boost_LIBRARIES}
     Pathfinder
 )
+
+# ==============================================================================
+# =================================== Tests ====================================
+# ==============================================================================
+
+find_package(GTest CONFIG)
+
+if (NOT ${GTest_FOUND})
+
+  # GoogleTest is not installed, pull a copy
+  # TODO: Maybe this is a bad idea as it could result in different versions
+  include(FetchContent)
+  FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/703bd9caab50b139428cea1aaff9974ebee5742e.zip
+  )
+
+  # For Windows: Prevent overriding the parent project's compiler/linker settings
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(googletest)
+
+endif()
+
+add_executable(
+  new_test_name_todo_rename
+  test/singleRegionNavmeshTriangulationTest.cpp
+)
+
+target_link_libraries(
+  new_test_name_todo_rename
+  Pathfinder
+  gtest_main
+)
+
+target_include_directories(new_test_name_todo_rename PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/src"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/src"
+)
+
+include(GoogleTest)
+gtest_discover_tests(new_test_name_todo_rename
+# WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)

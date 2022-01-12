@@ -472,7 +472,7 @@ MovementModule::PathfindingResult MovementModule::pathToPosition(const pathfinde
     const auto &navmeshTriangulation = gameData_.navmeshTriangulation();
     pathfinder::Pathfinder<navmesh::triangulation::NavmeshTriangulation> pathfinder(navmeshTriangulation, agentRadius_);
     const auto start = navmeshTriangulation.transformRegionPointIntoAbsolute({currentPos.xOffset, currentPos.yOffset, currentPos.zOffset}, currentPos.regionId);
-    const auto goal = navmeshTriangulation.transformRegionPointIntoAbsolute({currentPos.xOffset, -1000, currentPos.zOffset}, currentPos.regionId);
+    const auto goal = navmeshTriangulation.transformRegionPointIntoAbsolute({static_cast<float>(position.x()), -1000, static_cast<float>(position.y())}, currentPos.regionId);
     auto result = pathfinder.findShortestPath(start, goal);
     if (!result.shortestPath.empty()) {
       LOG(pathToPosition) << "Pathing from " << start.x << ',' << start.y << ',' << start.z << " to " << goal.x << ',' << goal.y << ',' << goal.z << "\n";
