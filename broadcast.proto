@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package broadcast;
+
+message Message1 {
+  string data = 1;
+}
+
+message Message2 {
+  int32 data = 1;
+}
+
+message Message3 {
+  double data = 1;
+}
+
+message BroadcastMessage {
+  oneof body {
+    Message1 message1 = 1;
+    Message2 message2 = 2;
+    Message3 message3 = 3;
+  }
+}
