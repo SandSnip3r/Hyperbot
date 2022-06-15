@@ -16,6 +16,6 @@ TEST(Name, name2) {
   // std::vector<SingleRegionNavmeshTriangulation::State> SingleRegionNavmeshTriangulation::getSuccessors(const State &currentState, const std::optional<State> goalState, const double agentRadius) const {
   // ============================================================================================================================================
   using TestType = navmesh::triangulation::SingleRegionNavmeshTriangulation;
-  TestType t;
+  // TestType t;
   std::cout << "We're in the test now!!" << std::endl;
 }
