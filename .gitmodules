@@ -1,3 +1,6 @@
 [submodule "Pathfinder"]
 	path = Pathfinder
 	url = git@github.com:SandSnip3r/Pathfinder.git
+[submodule "Combined/ui-proto"]
+	path = Combined/ui-proto
+	url = /mnt/c/Users/Victor/Documents/Development/hyperbot-ui-proto
