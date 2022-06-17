@@ -210,6 +210,8 @@ include_directories(
   ${Protobuf_INCLUDE_DIRS}
 )
 
+find_package(cppzmq CONFIG REQUIRED)
+
 ################################################################################
 # Target
 ################################################################################
@@ -349,6 +351,8 @@ target_link_libraries(${PROJECT_NAME}
     Pathfinder
     proto
     ${PROTOBUF_LIBRARIES}
+    cppzmq
+    cppzmq-static
 )
 
 # ==============================================================================
