@@ -1,0 +1,3 @@
+[submodule "proto"]
+	path = proto
+	url = ../hyperbot-ui-proto/
