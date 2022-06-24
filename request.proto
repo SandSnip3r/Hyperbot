@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package request;
+
+message Request1 {
+  string data = 1;
+}
+
+message Request2 {
+  int32 goldAmount = 1;
+  int32 goldDropCount = 2;
+}
+
+message RequestMessage {
+  oneof body {
+    Request1 request1 = 1;
+    Request2 request2 = 2;
+  }
+}

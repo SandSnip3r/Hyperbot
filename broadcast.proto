@@ -14,10 +14,18 @@ message Message3 {
   double data = 1;
 }
 
+message HpMpUpdate {
+  int32 currentHp = 1;
+  int32 maxHp = 2;
+  int32 currentMp = 3;
+  int32 maxMp = 4;
+}
+
 message BroadcastMessage {
   oneof body {
     Message1 message1 = 1;
     Message2 message2 = 2;
     Message3 message3 = 3;
+    HpMpUpdate hpMpUpdate = 4;
   }
 }
