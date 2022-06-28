@@ -66,8 +66,6 @@ set(no_group_source_files
     "src/math/vector.hpp"
     "src/module/characterInfoModule.cpp"
     "src/module/characterInfoModule.hpp"
-    "src/module/chatEventModule.cpp"
-    "src/module/chatEventModule.hpp"
     "src/module/loginModule.cpp"
     "src/module/loginModule.hpp"
     "src/module/movementModule.cpp"
