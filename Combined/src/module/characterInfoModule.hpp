@@ -15,6 +15,7 @@
 #include "../storage/buybackQueue.hpp"
 #include "../storage/item.hpp"
 #include "../storage/storage.hpp"
+#include "../ui/userInterface.hpp"
 
 #include <array>
 #include <optional>
@@ -53,6 +54,7 @@ public:
                       storage::Storage &inventory,
                       broker::PacketBroker &brokerSystem,
                       broker::EventBroker &eventBroker,
+                      ui::UserInterface &userInterface,
                       const packet::parsing::PacketParser &packetParser,
                       const pk2::GameData &gameData);
 private:
@@ -74,9 +76,13 @@ private:
   state::Self &selfState_;
   broker::PacketBroker &broker_;
   broker::EventBroker &eventBroker_;
+  ui::UserInterface &userInterface_;
   const packet::parsing::PacketParser &packetParser_;
   const pk2::GameData &gameData_;
   std::mutex contentionProtectionMutex_;
+
+  int64_t goldDropAmount_;
+  int goldDropRemaining_{0};
 
   // Pills
   std::optional<broker::TimerManager::TimerId> universalPillEventId_, purificationPillEventId_;
@@ -124,6 +130,7 @@ private:
   void handlePotionCooldownEnded(const event::EventCode eventCode);
   void handleVitalsChanged();
   void handleStatesChanged();
+  void handleDropGold(const event::Event *event);
 
   bool havePotion(PotionType potionType);
   void printGold();

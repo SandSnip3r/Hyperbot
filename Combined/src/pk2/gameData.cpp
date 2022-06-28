@@ -446,9 +446,9 @@ void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
 
 void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {
   std::cout << "Parsing navmesh data\n";
-  pk2::parsing::NavmeshParser navmeshParser(pk2Reader);
-  navmesh_ = navmeshParser.parseNavmesh();
-  navmeshTriangulation_ = navmesh::triangulation::NavmeshTriangulation(*navmesh_);
+  // pk2::parsing::NavmeshParser navmeshParser(pk2Reader);
+  // navmesh_ = navmeshParser.parseNavmesh();
+  // navmeshTriangulation_ = navmesh::triangulation::NavmeshTriangulation(*navmesh_);
 
   // for (int regionX=0; regionX<255; ++regionX) {
   //   for (int regionY=0; regionY<128; ++regionY) {

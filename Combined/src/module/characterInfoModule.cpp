@@ -2,6 +2,7 @@
 #include "../packet/opcode.hpp"
 #include "../packet/parsing/clientAgentChatRequest.hpp"
 #include "../packet/building/clientAgentInventoryItemUseRequest.hpp"
+#include "../packet/building/clientAgentInventoryOperationRequest.hpp"
 
 #include <array>
 #include <iostream>
@@ -23,6 +24,7 @@ CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
                                          storage::Storage &inventory,
                                          broker::PacketBroker &brokerSystem,
                                          broker::EventBroker &eventBroker,
+                                         ui::UserInterface &userInterface,
                                          const packet::parsing::PacketParser &packetParser,
                                          const pk2::GameData &gameData) :
       entityState_(entityState),
@@ -30,6 +32,7 @@ CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
       inventory_(inventory),
       broker_(brokerSystem),
       eventBroker_(eventBroker),
+      userInterface_(userInterface),
       packetParser_(packetParser),
       gameData_(gameData) {
   auto packetHandleFunction = std::bind(&CharacterInfoModule::handlePacket, this, std::placeholders::_1);
@@ -59,6 +62,8 @@ CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
   eventBroker_.subscribeToEvent(event::EventCode::kHpPercentChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMpPercentChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
+
+  eventBroker_.subscribeToEvent(event::EventCode::kDropGold, eventHandleFunction);
 }
 
 void CharacterInfoModule::handleEvent(const event::Event *event) {
@@ -81,10 +86,21 @@ void CharacterInfoModule::handleEvent(const event::Event *event) {
     case event::EventCode::kStatesChanged:
       handleStatesChanged();
       break;
+    case event::EventCode::kDropGold:
+      handleDropGold(event);
+      break;
     default:
       std::cout << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
       break;
   }
+}
+
+void CharacterInfoModule::handleDropGold(const event::Event *event) {
+  const event::DropGold &dropGoldEvent = dynamic_cast<const event::DropGold&>(*event);
+  std::cout << "Asked to drop " << dropGoldEvent.goldAmount << " gold" << std::endl;
+  goldDropAmount_ = dropGoldEvent.goldAmount;
+  goldDropRemaining_ = dropGoldEvent.goldDropCount;
+  broker_.injectPacket(packet::building::ClientAgentInventoryOperationRequest::packet(dropGoldEvent.goldAmount), PacketContainer::Direction::kClientToServer);
 }
 
 void CharacterInfoModule::handlePillCooldownEnded(const event::EventCode eventCode) {
@@ -113,6 +129,22 @@ void CharacterInfoModule::handlePotionCooldownEnded(const event::EventCode event
 
 void CharacterInfoModule::handleVitalsChanged() {
   checkIfNeedToHeal();
+
+  // Broadcast message to UI
+  if (!selfState_.maxHp() || !selfState_.maxMp()) {
+    // Dont yet know our max
+    std::cout << "handleVitalsChanged: dont know max hp or mp\n";
+    return;
+  }
+
+  broadcast::HpMpUpdate hpMpUpdate;
+  hpMpUpdate.set_currenthp(selfState_.hp());
+  hpMpUpdate.set_maxhp(*selfState_.maxHp());
+  hpMpUpdate.set_currentmp(selfState_.mp());
+  hpMpUpdate.set_maxmp(*selfState_.maxMp());
+  broadcast::BroadcastMessage broadcastMessage;
+  *broadcastMessage.mutable_hpmpupdate() = hpMpUpdate;
+  userInterface_.broadcast(broadcastMessage);
 }
 
 void CharacterInfoModule::handleStatesChanged() {
@@ -540,6 +572,9 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
       std::cout << "Dropped " << movement.goldAmount << " gold\n";
       printGold();
       std::cout << '\n';
+      if (--goldDropRemaining_ > 0) {
+        eventBroker_.publishEvent(std::make_unique<event::DropGold>(goldDropAmount_, goldDropRemaining_));
+      }
     } else if (movement.type == packet::enums::ItemMovementType::kGoldStorageWithdraw) {
       gold_ += movement.goldAmount;
       std::cout << "Withdrew " << movement.goldAmount << " gold from storage\n";

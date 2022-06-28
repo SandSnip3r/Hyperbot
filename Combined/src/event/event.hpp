@@ -21,6 +21,7 @@ enum class EventCode {
   kKnockbackStatusEnded,
   kMovementEnded,
   kCharacterSpeedUpdated,
+  kDropGold,
   kTemp,
   kRepublish
 };
@@ -44,6 +45,13 @@ public:
   InventorySlotUpdated(int8_t slot);
   const int8_t slotNum;
   virtual ~InventorySlotUpdated() = default;
+};
+
+struct DropGold : public Event {
+public:
+  DropGold(int amount, int count);
+  const int goldAmount, goldDropCount;
+  virtual ~DropGold() = default;
 };
 
 } // namespace event

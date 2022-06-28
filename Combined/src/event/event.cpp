@@ -8,4 +8,6 @@ SkillCooldownEnded::SkillCooldownEnded(int32_t skillId) : Event(EventCode::kSkil
 
 InventorySlotUpdated::InventorySlotUpdated(int8_t slot) : Event(EventCode::kInventorySlotUpdated), slotNum(slot) {}
 
+DropGold::DropGold(int amount, int count) : Event(EventCode::kDropGold), goldAmount(amount), goldDropCount(count) {}
+
 } // namespace event

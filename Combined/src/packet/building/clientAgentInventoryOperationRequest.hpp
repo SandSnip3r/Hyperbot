@@ -13,6 +13,7 @@ private:
   static const bool kMassive_ = false;
 public:
   static PacketContainer packet(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
+  static PacketContainer packet(uint64_t goldDropAmount);
 };
 
 } // namespace packet::building

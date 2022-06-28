@@ -7,6 +7,7 @@ Bot::Bot(const config::CharacterLoginData &loginData,
       gameData_(gameData),
       broker_(broker) {
   eventBroker_.run();
+  userInterface_.run();
 }
 
 // bool Bot::handleClientChat(std::unique_ptr<PacketParsing::PacketParser> &packetParser) {

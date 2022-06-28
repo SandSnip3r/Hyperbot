@@ -187,6 +187,8 @@ set(no_group_source_files
     "src/storage/itemList.hpp"
     "src/storage/storage.cpp"
     "src/storage/storage.hpp"
+    "src/ui/userInterface.cpp"
+    "src/ui/userInterface.hpp"
 )
 source_group("" FILES ${no_group_source_files})
 
