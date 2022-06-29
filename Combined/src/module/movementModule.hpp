@@ -44,30 +44,7 @@ private:
   const pk2::GameData &gameData_;
   std::mutex contentionProtectionMutex_;
 
-  //======tmp======
   float secondsToTravel(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition) const;
-
-  // Autowalk
-  const double agentRadius_{10.0};
-  enum class PathfindingResult { kSuccess, kPathNotPosible, kException = 0x10, kExceptionNoPointFound, kExceptionStartOverlapsWithConstraint };
-  PathfindingResult pathToPosition(const pathfinder::Vector &position);
-  void executePath(const std::vector<std::unique_ptr<pathfinder::PathSegment>> &segments);
-  void takeNextStepOnPath();
-  std::vector<packet::structures::Position> waypoints_;
-  bool testingAutowalk_{false};
-  double distanceTraveled_{0.0};
-  double queuedMovementDistance_;
-  void pathToRandomPoint();
-  void startAutowalkTest();
-  void stopAutowalkTest();
-  // Autowalk debugging
-  static constexpr const int kReplayPointCount_{10};
-  std::list<pathfinder::Vector> replayPoints_;
-
-  std::mt19937 eng_;
-  std::optional<broker::TimerManager::TimerId> republishStepEventId_;
-  int republishCount_{0};
-  //======tmp======
 
   // Packet handling functions
   bool clientAgentChatRequestReceived(packet::parsing::ClientAgentChatRequest &packet);

@@ -21,8 +21,7 @@ enum class EventCode {
   kKnockbackStatusEnded,
   kMovementEnded,
   kCharacterSpeedUpdated,
-  kDropGold,
-  kRepublish
+  kDropGold
 };
 
 struct Event {
