@@ -171,18 +171,19 @@ void MovementModule::handleTempEvent() {
 }
 
 void MovementModule::handleSpeedUpdated() {
-  if (movingEventId_ && selfState_.moving()) {
+  if (selfState_.haveMovingEventId() && selfState_.moving()) {
     if (selfState_.haveDestination()) {
       // Need to update timer
       auto seconds = secondsToTravel(selfState_.position(), selfState_.destination());
-      eventBroker_.cancelDelayedEvent(*movingEventId_);
-      movingEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+      eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
+      const auto movingEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+      selfState_.setMovingEventId(movingEventId);
     }
   }
 }
 
 void MovementModule::handleMovementEnded() {
-  movingEventId_.reset();
+  selfState_.resetMovingEventId();
   LOG(handleMovementEnded) << "Movement ended event\n";
   selfState_.doneMoving();
   LOG(handleMovementEnded) << "Currently at " << selfState_.position() << '\n';
@@ -240,10 +241,10 @@ bool MovementModule::serverAgentEntityUpdatePositionReceived(packet::parsing::Se
         eventBroker_.cancelDelayedEvent(*republishStepEventId_);
         republishStepEventId_.reset();
       }
-      if (movingEventId_) {
+      if (selfState_.haveMovingEventId()) {
         LOG(serverAgentEntityUpdatePositionReceived) << "Cancelling movement timer\n";
-        eventBroker_.cancelDelayedEvent(*movingEventId_);
-        movingEventId_.reset();
+        eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
+        selfState_.resetMovingEventId();
       }
       selfState_.setPosition(packet.position());
       LOG(serverAgentEntityUpdatePositionReceived) << "Now stationary at " << selfState_.position() << '\n';
@@ -343,11 +344,11 @@ bool MovementModule::serverAgentEntityUpdateMovementReceived(packet::parsing::Se
       // Server doesnt tell us where we're coming from, use our internally tracked position
       sourcePosition = selfState_.position();
     }
-    if (movingEventId_) {
+    if (selfState_.haveMovingEventId()) {
       // Had a timer already running for movement, cancel it
       LOG(serverAgentEntityUpdateMovementReceived) << "Had a running timer, cancelling it" << std::endl;
-      eventBroker_.cancelDelayedEvent(*movingEventId_);
-      movingEventId_.reset();
+      eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
+      selfState_.resetMovingEventId();
     }
     LOG(serverAgentEntityUpdateMovementReceived) << "We are moving from " << sourcePosition << ' ';
     if (packet.hasDestination()) {
@@ -373,7 +374,8 @@ bool MovementModule::serverAgentEntityUpdateMovementReceived(packet::parsing::Se
         queuedMovementDistance_ = math::position::calculateDistance(sourcePosition, destPosition);
         auto seconds = secondsToTravel(sourcePosition, destPosition);
         LOG(serverAgentEntityUpdateMovementReceived) << "Should take " << seconds << "s. Timer set\n";
-        movingEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+        const auto movingEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+        selfState_.setMovingEventId(movingEventId);
         selfState_.setMoving(packet.destinationPosition());
       }
     } else {

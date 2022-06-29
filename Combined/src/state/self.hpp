@@ -2,9 +2,10 @@
 #define STATE_SELF_HPP
 
 // #include "../packet/parsing/parsedPacket.hpp" // Object
-#include "../pk2/gameData.hpp"
-#include "../packet/enums/packetEnums.hpp"
-#include "../packet/structures/packetInnerStructures.hpp"
+#include "broker/eventBroker.hpp"
+#include "pk2/gameData.hpp"
+#include "packet/enums/packetEnums.hpp"
+#include "packet/structures/packetInnerStructures.hpp"
 
 #include <array>
 #include <chrono>
@@ -43,11 +44,15 @@ public:
   void setLifeState(packet::enums::LifeState lifeState);
   void setMotionState(packet::enums::MotionState motionState);
   void setBodyState(packet::enums::BodyState bodyState);
+
   void setPosition(const packet::structures::Position &position);
   void syncPosition(const packet::structures::Position &position);
   void doneMoving();
   void setMoving(const packet::structures::Position &destination);
   void setMoving(const uint16_t angle);
+  void setMovingEventId(const broker::TimerManager::TimerId &timerId);
+  void resetMovingEventId();
+
   void setHp(uint32_t hp);
   void setMp(uint32_t mp);
   void setMaxHpMp(uint32_t maxHp, uint32_t maxMp);
@@ -73,6 +78,8 @@ public:
   bool moving() const;
   bool haveDestination() const;
   packet::structures::Position destination() const;
+  bool haveMovingEventId() const;
+  broker::TimerManager::TimerId getMovingEventId() const;
   
   uint32_t hp() const;
   uint32_t mp() const;
@@ -106,12 +113,13 @@ private:
   std::optional<packet::enums::MotionState> lastMotionState_;
   packet::enums::BodyState bodyState_;
 
-  // Position
+  // Movement/position
   packet::structures::Position lastKnownPosition_;
   bool moving_{false};
   std::chrono::high_resolution_clock::time_point startedMovingTime_;
   std::optional<packet::structures::Position> destinationPosition_;
   std::optional<uint16_t> movementAngle_;
+  std::optional<broker::TimerManager::TimerId> movingEventId_;
 
   // Health
   uint32_t hp_;

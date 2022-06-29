@@ -47,7 +47,6 @@ private:
   std::mutex contentionProtectionMutex_;
 
   //======tmp======
-  std::optional<broker::TimerManager::TimerId> movingEventId_;
   float secondsToTravel(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition) const;
 
   // Autowalk

@@ -141,6 +141,29 @@ void Self::setMoving(const uint16_t angle) {
   destinationPosition_.reset();
 }
 
+void Self::setMovingEventId(const broker::TimerManager::TimerId &timerId) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  movingEventId_ = timerId;
+}
+
+void Self::resetMovingEventId() {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  movingEventId_.reset();
+}
+
+bool Self::haveMovingEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  return movingEventId_.has_value();
+}
+
+broker::TimerManager::TimerId Self::getMovingEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  if (!movingEventId_.has_value()) {
+    throw std::runtime_error("Self: Asking for moving event id, but we dont have one");
+  }
+  return movingEventId_.value();
+}
+
 void Self::setHp(uint32_t hp) {
   std::unique_lock<std::mutex> selfLock(selfMutex_);
   hp_ = hp;
