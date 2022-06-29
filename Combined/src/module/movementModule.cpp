@@ -45,7 +45,6 @@ MovementModule::MovementModule(state::Entity &entityState,
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMovement, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePosition, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySyncPosition, packetHandleFunction);
-  // TODO: When teleporting, cancel movement timer!!
 
   auto eventHandleFunction = std::bind(&MovementModule::handleEvent, this, std::placeholders::_1);
   eventBroker_.subscribeToEvent(event::EventCode::kMovementEnded, eventHandleFunction);
