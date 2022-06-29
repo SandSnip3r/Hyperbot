@@ -1,16 +1,11 @@
 #include "movementModule.hpp"
-#include "../math/position.hpp"
-#include "../packet/opcode.hpp"
-#include "../packet/building/clientAgentCharacterMoveRequest.hpp"
-#include "../packet/building/serverAgentChatUpdate.hpp"
 
-#include "pathfinder.h"
+#include "math/position.hpp"
+#include "packet/opcode.hpp"
+#include "packet/building/clientAgentCharacterMoveRequest.hpp"
+#include "packet/building/serverAgentChatUpdate.hpp"
 
-#include <array>
-#include <fstream>
 #include <iostream>
-#include <memory>
-#include <numeric>
 #include <regex>
 
 #define LOG_TO_STREAM(OSTREAM, TAG) (OSTREAM) << '[' << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() << "] " << (#TAG) << ": "
@@ -25,14 +20,6 @@ std::ostream& operator<<(std::ostream &stream, const packet::structures::Positio
   }
   stream << " (" << pos.xOffset << ',' << pos.yOffset << ',' << pos.zOffset << ")}";
   return stream;
-}
-
-std::mt19937 createRandomEngine() {
-  std::random_device rd;
-  std::array<int, std::mt19937::state_size> seed_data;
-  std::generate_n(seed_data.data(), seed_data.size(), std::ref(rd));
-  std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
-  return std::mt19937(seq);
 }
 
 namespace module {
@@ -78,16 +65,6 @@ bool MovementModule::handlePacket(const PacketContainer &packet) {
   if (!parsedPacket) {
     // Not yet parsing this packet
     return true;
-  }
-
-  auto *clientChat = dynamic_cast<packet::parsing::ClientAgentChatRequest*>(parsedPacket.get());
-  if (clientChat != nullptr) {
-    return clientAgentChatRequestReceived(*clientChat);
-  }
-
-  auto *clientMove = dynamic_cast<packet::parsing::ClientAgentCharacterMoveRequest*>(parsedPacket.get());
-  if (clientMove != nullptr) {
-    return clientAgentCharacterMoveRequestReceived(*clientMove);
   }
 
   auto *severMove = dynamic_cast<packet::parsing::ServerAgentEntityUpdateMovement*>(parsedPacket.get());

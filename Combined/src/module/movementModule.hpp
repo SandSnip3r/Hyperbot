@@ -14,11 +14,7 @@
 #include "../state/self.hpp"
 #include "../storage/storage.hpp"
 
-#include "pathfinder.h"
-
-#include <list>
 #include <mutex>
-#include <random>
 
 namespace module {
 
