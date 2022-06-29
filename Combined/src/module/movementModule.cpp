@@ -16,9 +16,6 @@
 #define LOG_TO_STREAM(OSTREAM, TAG) (OSTREAM) << '[' << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() << "] " << (#TAG) << ": "
 #define LOG(TAG) LOG_TO_STREAM(std::cout, TAG)
 
-// TODO: Remove
-#define SHARED_MEM 1
-
 std::ostream& operator<<(std::ostream &stream, const packet::structures::Position &pos) {
   stream << '{';
   if (pos.isDungeon()) {
@@ -69,15 +66,8 @@ MovementModule::MovementModule(state::Entity &entityState,
   eventBroker_.subscribeToEvent(event::EventCode::kMovementEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCharacterSpeedUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRepublish, eventHandleFunction);
-#ifdef SHARED_MEM
-  eventBroker_.subscribeToEvent(event::EventCode::kTemp, eventHandleFunction);
-#endif
 
   eng_ = createRandomEngine();
-
-#ifdef SHARED_MEM
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTemp));
-#endif
 }
 
 bool MovementModule::handlePacket(const PacketContainer &packet) {
@@ -135,9 +125,6 @@ void MovementModule::handleEvent(const event::Event *event) {
     case event::EventCode::kCharacterSpeedUpdated:
       handleSpeedUpdated();
       break;
-    case event::EventCode::kTemp:
-      handleTempEvent();
-      break;
     case event::EventCode::kRepublish:
       republishStepEventId_.reset();
       if (!selfState_.moving()) {
@@ -155,19 +142,6 @@ void MovementModule::handleEvent(const event::Event *event) {
       std::cout << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
       break;
   }
-}
-
-void MovementModule::handleTempEvent() {
-#ifdef SHARED_MEM
-  auto pos = selfState_.position();
-  // Write pos at beginning of file
-  sharedMemoryWriter_.seek(0);
-  sharedMemoryWriter_.writeData(pos.regionId);
-  sharedMemoryWriter_.writeData(pos.xOffset);
-  sharedMemoryWriter_.writeData(pos.yOffset);
-  sharedMemoryWriter_.writeData(pos.zOffset);
-  eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kTemp), std::chrono::milliseconds(33)); // 30FPS
-#endif
 }
 
 void MovementModule::handleSpeedUpdated() {

@@ -1,8 +1,6 @@
 #ifndef MODULE_MOVEMENT_MODULE_HPP_
 #define MODULE_MOVEMENT_MODULE_HPP_
 
-
-#include "sharedMemoryWriter.hpp"
 #include "../broker/eventBroker.hpp"
 #include "../broker/packetBroker.hpp"
 #include "../math/vector.hpp"
@@ -69,7 +67,6 @@ private:
   std::mt19937 eng_;
   std::optional<broker::TimerManager::TimerId> republishStepEventId_;
   int republishCount_{0};
-  SharedMemoryWriter sharedMemoryWriter_{"HyperbotSharedMemory", 256};
   //======tmp======
 
   // Packet handling functions
@@ -83,7 +80,6 @@ private:
   void handleEvent(const event::Event *event);
   void handleMovementEnded();
   void handleSpeedUpdated();
-  void handleTempEvent();
 
   // General functions
 };

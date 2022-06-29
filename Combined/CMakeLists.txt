@@ -70,8 +70,6 @@ set(no_group_source_files
     "src/module/loginModule.hpp"
     "src/module/movementModule.cpp"
     "src/module/movementModule.hpp"
-    "src/module/sharedMemoryWriter.cpp"
-    "src/module/sharedMemoryWriter.hpp"
     "src/module/skillUseModule.cpp"
     "src/module/skillUseModule.hpp"
     "src/navmesh/navmesh.cpp"

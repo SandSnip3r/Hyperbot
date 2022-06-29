@@ -22,7 +22,6 @@ enum class EventCode {
   kMovementEnded,
   kCharacterSpeedUpdated,
   kDropGold,
-  kTemp,
   kRepublish
 };
 
