@@ -4,8 +4,6 @@
 #include "../broker/eventBroker.hpp"
 #include "../broker/packetBroker.hpp"
 #include "../math/vector.hpp"
-#include "../packet/parsing/clientAgentCharacterMoveRequest.hpp"
-#include "../packet/parsing/clientAgentChatRequest.hpp"
 #include "../packet/parsing/packetParser.hpp"
 #include "../packet/parsing/serverAgentEntitySyncPosition.hpp"
 #include "../packet/parsing/serverAgentEntityUpdateMovement.hpp"
@@ -47,8 +45,6 @@ private:
   float secondsToTravel(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition) const;
 
   // Packet handling functions
-  bool clientAgentChatRequestReceived(packet::parsing::ClientAgentChatRequest &packet);
-  bool clientAgentCharacterMoveRequestReceived(packet::parsing::ClientAgentCharacterMoveRequest &packet);
   bool serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet);
   bool serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet);
   bool serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet);

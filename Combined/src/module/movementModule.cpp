@@ -53,8 +53,6 @@ MovementModule::MovementModule(state::Entity &entityState,
       gameData_(gameData) {
   auto packetHandleFunction = std::bind(&MovementModule::handlePacket, this, std::placeholders::_1);
   // Client packets
-  broker_.subscribeToClientPacket(packet::Opcode::kClientAgentChatRequest, packetHandleFunction);
-  broker_.subscribeToClientPacket(packet::Opcode::kClientAgentCharacterMoveRequest, packetHandleFunction);
   // Server packets
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionSelectResponse, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMovement, packetHandleFunction);
@@ -183,11 +181,6 @@ bool MovementModule::serverAgentEntityUpdatePositionReceived(packet::parsing::Se
   return true;
 }
 
-bool MovementModule::clientAgentCharacterMoveRequestReceived(packet::parsing::ClientAgentCharacterMoveRequest &packet) {
-  // Here, if we want to block the human from moving, we can return false
-  return true;
-}
-
 float MovementModule::secondsToTravel(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition) const {
   auto distance = math::position::calculateDistance(srcPosition, destPosition);
   return distance / selfState_.currentSpeed();
@@ -235,26 +228,6 @@ bool MovementModule::serverAgentEntityUpdateMovementReceived(packet::parsing::Se
       std::cout << "toward " << packet.angle() << '\n';
       selfState_.setMoving(packet.angle());
     }
-  }
-  return true;
-}
-
-bool MovementModule::clientAgentChatRequestReceived(packet::parsing::ClientAgentChatRequest &packet) {
-  std::regex moveRegex(R"delim(move\s+(-?[0-9]+)\s+(-?[0-9]+))delim");
-  std::regex move3Regex(R"delim(move\s+(-?[0-9]+)\s+(-?[0-9]+)\s+(-?[0-9]+))delim");
-  std::smatch regexMatch;
-
-  if (std::regex_match(packet.message(), regexMatch, moveRegex)) {
-    const int x = std::stoi(regexMatch[1].str());
-    const int y = std::stoi(regexMatch[2].str());
-    const auto pos = selfState_.position();
-    broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(pos.regionId, x, 0, y), PacketContainer::Direction::kClientToServer);
-  } else if (std::regex_match(packet.message(), regexMatch, move3Regex)) {
-    const int x = std::stoi(regexMatch[1].str());
-    const int y = std::stoi(regexMatch[2].str());
-    const int z = std::stoi(regexMatch[3].str());
-    const auto pos = selfState_.position();
-    broker_.injectPacket(packet::building::ClientAgentCharacterMoveRequest::packet(pos.regionId, x, y, z), PacketContainer::Direction::kClientToServer);
   }
   return true;
 }
