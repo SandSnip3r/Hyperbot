@@ -13,6 +13,8 @@ namespace storage {
 
 class Storage {
 public:
+  Storage(std::mutex &mutex);
+
   bool hasItem(uint8_t slot) const;
   Item* getItem(uint8_t slot);
   const Item* getItem(uint8_t slot) const;
@@ -28,7 +30,7 @@ public:
 
   std::vector<uint8_t> findItemsWithTypeId(uint8_t typeId1, uint8_t typeId2, uint8_t typeId3, uint8_t typeId4) const;
 private:
-  mutable std::mutex storageMutex_;
+  std::mutex &storageMutex_;
   ItemList itemList_;
 };
 

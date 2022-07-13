@@ -11,14 +11,12 @@ namespace module {
 
 SkillUseModule::SkillUseModule(state::Entity &entityState,
                                state::Self &selfState,
-                               storage::Storage &inventory,
                                broker::PacketBroker &brokerSystem,
                                broker::EventBroker &eventBroker,
                                const packet::parsing::PacketParser &packetParser,
                                const pk2::GameData &gameData) :
       entityState_(entityState),
       selfState_(selfState),
-      inventory_(inventory),
       broker_(brokerSystem),
       eventBroker_(eventBroker),
       packetParser_(packetParser),

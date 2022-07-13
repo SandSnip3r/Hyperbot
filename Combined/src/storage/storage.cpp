@@ -5,6 +5,8 @@
 
 namespace storage {
 
+Storage::Storage(std::mutex &mutex) : storageMutex_(mutex) {}
+
 bool Storage::hasItem(uint8_t slot) const {
   std::unique_lock<std::mutex> storageLock(storageMutex_);
   return itemList_.hasItem(slot);

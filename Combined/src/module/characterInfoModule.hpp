@@ -12,14 +12,11 @@
 #include "../shared/silkroad_security.h"
 #include "../state/entity.hpp"
 #include "../state/self.hpp"
-#include "../storage/buybackQueue.hpp"
 #include "../storage/item.hpp"
-#include "../storage/storage.hpp"
 #include "../ui/userInterface.hpp"
 
 #include <array>
 #include <optional>
-#include <deque>
 #include <mutex>
 #include <vector>
 
@@ -31,41 +28,25 @@ enum class PotionType {
   kVigor
 };
 
-enum class Race {
-  kChinese,
-  kEuropean
-};
-
-enum class Gender {
-  kMale,
-  kFemale
-};
-
-struct UsedItem {
-  UsedItem(uint8_t s, uint16_t i) : slotNum(s), itemData(i) {}
-  uint8_t slotNum;
-  uint16_t itemData;
-};
-
 class CharacterInfoModule {
 public:
   CharacterInfoModule(state::Entity &entityState,
                       state::Self &selfState,
-                      storage::Storage &inventory,
                       broker::PacketBroker &brokerSystem,
                       broker::EventBroker &eventBroker,
                       ui::UserInterface &userInterface,
                       const packet::parsing::PacketParser &packetParser,
                       const pk2::GameData &gameData);
 private:
-  static const int kEuPotionDefaultDelayMs_{15000};
-  static const int kChPotionDefaultDelayMs_{1000};
-  // TODO: Maybe we should make this member data and try to improve it based on item use results
+
+  // TODO: We should move this to a more global configuration area for general bot mechanics configuration
+  //       Maybe we could try to improve this value based on item use results
   static const int kPotionDelayBufferMs_ = 225; //200 too fast sometimes, 300 seems always good
 
   //******************************************************************************************
   //***************************************Configuration**************************************
   //******************************************************************************************
+  // TODO: Move to a real config object
   // Potion configuration
   const double kHpThreshold_{0.90};
   const double kMpThreshold_{0.80};
@@ -81,34 +62,9 @@ private:
   const pk2::GameData &gameData_;
   std::mutex contentionProtectionMutex_;
 
+  // Silly temp thing for dropping gold as requested by the UI
   int64_t goldDropAmount_;
   int goldDropRemaining_{0};
-
-  // Pills
-  std::optional<broker::TimerManager::TimerId> universalPillEventId_, purificationPillEventId_;
-
-  // Potions
-  std::optional<broker::TimerManager::TimerId> hpPotionEventId_, mpPotionEventId_, vigorPotionEventId_;
-  int potionDelayMs_{1000};
-  
-  // States
-  // Bitmask of all states (initialized as having no states)
-  // uint32_t stateBitmask_{0};
-  // Set all states as effect/level 0 (meaning there is no state)
-  // std::array<uint16_t,6> legacyStateEffects_ = {0};
-  std::array<uint8_t,32> modernStateLevel_ = {0};
-
-  std::deque<UsedItem> usedItemQueue_;
-
-  // User purchasing tracking
-  std::optional<packet::parsing::ItemMovement> userPurchaseRequest_;
-  std::vector<std::shared_ptr<packet::parsing::Object>> objectsInRange_;
-
-  // Items
-  storage::Storage &inventory_;
-  uint64_t gold_, storageGold_, guildStorageGold_;
-  // storage::Storage storage_;
-  storage::BuybackQueue buybackQueue_;
 
   // Packet handling functions
   bool handlePacket(const PacketContainer &packet);
@@ -139,17 +95,12 @@ private:
   void stopTrackingObject(uint32_t gId);
   void resetInventory();
   void initializeInventory(uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<storage::Item>> &inventoryItemMap);
-  int getHpPotionDelay();
-  int getMpPotionDelay();
-  int getVigorPotionDelay();
   int getGrainDelay();
   int getUniversalPillDelay();
   int getPurificationPillDelay();
-  void updateRace(Race race);
   bool alreadyUsedUniversalPill();
   bool alreadyUsedPurificationPill();
   bool alreadyUsedPotion(PotionType potionType);
-  void setRaceAndGender(uint32_t refObjId);
   void checkIfNeedToUsePill();
   void checkIfNeedToHeal();
   void useUniversalPill();

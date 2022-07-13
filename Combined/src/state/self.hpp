@@ -1,15 +1,18 @@
 #ifndef STATE_SELF_HPP
 #define STATE_SELF_HPP
 
-// #include "../packet/parsing/parsedPacket.hpp" // Object
 #include "broker/eventBroker.hpp"
 #include "pk2/gameData.hpp"
 #include "packet/enums/packetEnums.hpp"
+#include "packet/parsing/parsedPacket.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
+#include "storage/buybackQueue.hpp"
+#include "storage/storage.hpp"
 
 #include <array>
 #include <chrono>
 #include <cstdint>
+#include <deque>
 #include <mutex>
 #include <optional>
 
@@ -27,7 +30,10 @@ enum class Gender {
 
 int toBitNum(packet::enums::AbnormalStateFlag stateFlag);
 packet::enums::AbnormalStateFlag fromBitNum(int n);
-  
+
+// TODO: It will probably make more sense to lock the character state more broadly
+//  For example, when a packet comes in and we're updating the state
+//  Or, when we're doing game logic
 class Self {
 public:
   Self(const pk2::GameData &gameData);
@@ -39,6 +45,19 @@ public:
                   const std::vector<packet::structures::Skill> &skills);
                   
   // Setters
+  void setRaceAndGender(uint32_t refObjId);
+
+  void resetHpPotionEventId();
+  void resetMpPotionEventId();
+  void resetVigorPotionEventId();
+  void resetUniversalPillEventId();
+  void resetPurificationPillEventId();
+  void setHpPotionEventId(const broker::TimerManager::TimerId &timerId);
+  void setMpPotionEventId(const broker::TimerManager::TimerId &timerId);
+  void setVigorPotionEventId(const broker::TimerManager::TimerId &timerId);
+  void setUniversalPillEventId(const broker::TimerManager::TimerId &timerId);
+  void setPurificationPillEventId(const broker::TimerManager::TimerId &timerId);
+
   void setSpeed(float walkSpeed, float runSpeed);
   void setHwanSpeed(float hwanSpeed);
   void setLifeState(packet::enums::LifeState lifeState);
@@ -60,11 +79,31 @@ public:
   void setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect);
   void setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level);
 
+  void setGold(uint64_t gold);
+  void addGold(uint64_t gold);
+  void subtractGold(uint64_t gold);
+  void setStorageGold(uint64_t gold);
+  void setGuildStorageGold(uint64_t gold);
+
   // Getters
   bool spawned() const;
   uint32_t globalId() const;
   Race race() const;
   Gender gender() const;
+
+  bool haveHpPotionEventId() const;
+  bool haveMpPotionEventId() const;
+  bool haveVigorPotionEventId() const;
+  bool haveUniversalPillEventId() const;
+  bool havePurificationPillEventId() const;
+  broker::TimerManager::TimerId getHpPotionEventId() const;
+  broker::TimerManager::TimerId getMpPotionEventId() const;
+  broker::TimerManager::TimerId getVigorPotionEventId() const;
+  broker::TimerManager::TimerId getUniversalPillEventId() const;
+  broker::TimerManager::TimerId getPurificationPillEventId() const;
+  int getHpPotionDelay() const;
+  int getMpPotionDelay() const;
+  int getVigorPotionDelay() const;
 
   float walkSpeed() const;
   float runSpeed() const;
@@ -92,6 +131,36 @@ public:
   
   std::vector<packet::structures::Mastery> masteries() const;
   std::vector<packet::structures::Skill> skills() const;
+
+  storage::Storage& getInventory();
+  storage::BuybackQueue& getBuybackQueue();
+  uint64_t getGold() const;
+  uint64_t getStorageGold() const;
+  uint64_t getGuildStorageGold() const;
+
+  // =================Packets-in-flight state=================
+  struct UsedItem {
+    UsedItem(uint8_t s, uint16_t i) : inventorySlotNum(s), itemTypeId(i) {}
+    uint8_t inventorySlotNum;
+    uint16_t itemTypeId;
+  };
+  // Setters
+  void popItemFromUsedItemQueueIfNotEmpty();
+  void clearUsedItemQueue();
+  void pushItemToUsedItemQueue(uint8_t inventorySlotNum, uint16_t itemTypeId);
+
+  void setUserPurchaseRequest(const packet::parsing::ItemMovement &itemMovement);
+  void resetUserPurchaseRequest();
+  // Getters
+  bool usedItemQueueIsEmpty() const;
+  bool itemIsInUsedItemQueue(uint16_t itemTypeId) const;
+  UsedItem getUsedItemQueueFront() const;
+
+  bool haveUserPurchaseRequest() const;
+  packet::parsing::ItemMovement getUserPurchaseRequest() const;
+  // =========================================================
+
+
 private:
   const pk2::GameData &gameData_;
   mutable std::mutex selfMutex_;
@@ -101,6 +170,12 @@ private:
   uint32_t globalId_{0};
   Race race_;
   Gender gender_;
+
+  // Item use cooldowns
+  std::optional<broker::TimerManager::TimerId> hpPotionEventId_, mpPotionEventId_, vigorPotionEventId_;
+  std::optional<broker::TimerManager::TimerId> universalPillEventId_, purificationPillEventId_;
+  // Known delay for potion cooldown
+  int potionDelayMs_;
 
   // Speeds
   float walkSpeed_;
@@ -138,9 +213,32 @@ private:
   std::vector<packet::structures::Mastery> masteries_;
   std::vector<packet::structures::Skill> skills_;
 
-  void setRaceAndGender(uint32_t refObjId);
+  // Inventory
+  storage::Storage inventory_{selfMutex_};
+  storage::BuybackQueue buybackQueue_{selfMutex_};
+  uint64_t gold_, storageGold_, guildStorageGold_;
+
+  void privateSetRaceAndGender(uint32_t refObjId);
   packet::structures::Position interpolateCurrentPosition() const;
   float internal_speed() const;
+
+  // =================Packets-in-flight state=================
+  //  It is required that we keep state of what actions are currently pending
+  //  TODO: It could be a good idea to separate this out somehow
+
+  // usedItemQueue_ is a list of items that we sent a packet to use but havent yet heard back from the server on their success or failure
+  std::deque<UsedItem> usedItemQueue_;
+
+  // User purchasing tracking
+  // This is for tracking an item that was most recently purchased from an NPC by the human interacting with the client
+  //  Once the BuyFromNpc item movement packet comes in, we match that item movement with this item movement
+  std::optional<packet::parsing::ItemMovement> userPurchaseRequest_;
+  // =========================================================
+
+  // Game knowledge
+  // TODO: This is general game knowledge. Consider moving to GameData.
+  static const int kEuPotionDefaultDelayMs_{15000};
+  static const int kChPotionDefaultDelayMs_{1000};
 };
 
 } // namespace state

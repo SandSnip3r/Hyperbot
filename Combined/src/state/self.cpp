@@ -6,6 +6,7 @@
 
 namespace state {
 
+// TODO: Replace with constexpr version
 int toBitNum(packet::enums::AbnormalStateFlag stateFlag) {
   uint32_t num = static_cast<uint32_t>(stateFlag);
   for (uint32_t i=0; i<32; ++i) {
@@ -32,7 +33,7 @@ void Self::initialize(uint32_t globalId,
   spawned_ = true;
   
   globalId_ = globalId;
-  setRaceAndGender(refObjId);
+  privateSetRaceAndGender(refObjId);
 
   hp_ = hp;
   mp_ = mp;
@@ -41,6 +42,61 @@ void Self::initialize(uint32_t globalId,
 
   masteries_ = masteries;
   skills_ = skills;
+}
+
+void Self::setRaceAndGender(uint32_t refObjId) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  privateSetRaceAndGender(refObjId);
+}
+
+void Self::resetHpPotionEventId() {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  hpPotionEventId_.reset();
+}
+
+void Self::resetMpPotionEventId() {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  mpPotionEventId_.reset();
+}
+
+void Self::resetVigorPotionEventId() {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  vigorPotionEventId_.reset();
+}
+
+void Self::resetUniversalPillEventId() {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  universalPillEventId_.reset();
+}
+
+void Self::resetPurificationPillEventId() {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  purificationPillEventId_.reset();
+}
+
+void Self::setHpPotionEventId(const broker::TimerManager::TimerId &timerId) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  hpPotionEventId_ = timerId;
+}
+
+void Self::setMpPotionEventId(const broker::TimerManager::TimerId &timerId) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  mpPotionEventId_ = timerId;
+}
+
+void Self::setVigorPotionEventId(const broker::TimerManager::TimerId &timerId) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  vigorPotionEventId_ = timerId;
+}
+
+void Self::setUniversalPillEventId(const broker::TimerManager::TimerId &timerId) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  universalPillEventId_ = timerId;
+}
+
+void Self::setPurificationPillEventId(const broker::TimerManager::TimerId &timerId) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  purificationPillEventId_ = timerId;
 }
 
 void Self::setSpeed(float walkSpeed, float runSpeed) {
@@ -197,6 +253,31 @@ void Self::setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t le
   modernStateLevels_[index] = level;
 }
 
+void Self::setGold(uint64_t gold) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  gold_ = gold;
+}
+
+void Self::addGold(uint64_t gold) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  gold_ += gold;
+}
+
+void Self::subtractGold(uint64_t gold) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  gold_ -= gold;
+}
+
+void Self::setStorageGold(uint64_t gold) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  storageGold_ = gold;
+}
+
+void Self::setGuildStorageGold(uint64_t gold) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  guildStorageGold_ = gold;
+}
+
 bool Self::spawned() const {
   std::unique_lock<std::mutex> selfLock(selfMutex_);
   return spawned_;
@@ -215,6 +296,93 @@ Race Self::race() const {
 Gender Self::gender() const {
   std::unique_lock<std::mutex> selfLock(selfMutex_);
   return gender_;
+}
+
+bool Self::haveHpPotionEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  return hpPotionEventId_.has_value();
+}
+
+bool Self::haveMpPotionEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  return mpPotionEventId_.has_value();
+}
+
+bool Self::haveVigorPotionEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  return vigorPotionEventId_.has_value();
+}
+
+bool Self::haveUniversalPillEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  return universalPillEventId_.has_value();
+}
+
+bool Self::havePurificationPillEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  return purificationPillEventId_.has_value();
+}
+
+broker::TimerManager::TimerId Self::getHpPotionEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  if (!hpPotionEventId_.has_value()) {
+    throw std::runtime_error("Self: Asking for hp potion event id, but we dont have one");
+  }
+  return hpPotionEventId_.value();
+}
+
+broker::TimerManager::TimerId Self::getMpPotionEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  if (!mpPotionEventId_.has_value()) {
+    throw std::runtime_error("Self: Asking for mp potion event id, but we dont have one");
+  }
+  return mpPotionEventId_.value();
+}
+
+broker::TimerManager::TimerId Self::getVigorPotionEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  if (!vigorPotionEventId_.has_value()) {
+    throw std::runtime_error("Self: Asking for vigor potion event id, but we dont have one");
+  }
+  return vigorPotionEventId_.value();
+}
+
+broker::TimerManager::TimerId Self::getUniversalPillEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  if (!universalPillEventId_.has_value()) {
+    throw std::runtime_error("Self: Asking for universal pill event id, but we dont have one");
+  }
+  return universalPillEventId_.value();
+}
+
+broker::TimerManager::TimerId Self::getPurificationPillEventId() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  if (!purificationPillEventId_.has_value()) {
+    throw std::runtime_error("Self: Asking for purification pill event id, but we dont have one");
+  }
+  return purificationPillEventId_.value();
+}
+
+int Self::getHpPotionDelay() const {
+  const bool havePanic = (modernStateLevels_[toBitNum(packet::enums::AbnormalStateFlag::kPanic)] > 0);
+  int delay = potionDelayMs_;
+  if (havePanic) {
+    delay += 4000;
+  }
+  return delay;
+}
+
+int Self::getMpPotionDelay() const {
+  const bool haveCombustion = (modernStateLevels_[toBitNum(packet::enums::AbnormalStateFlag::kCombustion)] > 0);
+  int delay = potionDelayMs_;
+  if (haveCombustion) {
+    delay += 4000;
+  }
+  return delay;
+}
+
+int Self::getVigorPotionDelay() const {
+  return potionDelayMs_;
 }
 
 float Self::walkSpeed() const {
@@ -320,7 +488,100 @@ std::vector<packet::structures::Skill> Self::skills() const {
   return skills_;
 }
 
-void Self::setRaceAndGender(uint32_t refObjId) {
+storage::Storage& Self::getInventory() {
+  // The inventory object holds a reference to our mutex, so it is threadsafe
+  return inventory_;
+}
+
+storage::BuybackQueue& Self::getBuybackQueue() {
+  // The BuybackQueue object holds a reference to our mutex, so it is threadsafe
+  return buybackQueue_;
+}
+
+uint64_t Self::getGold() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  return gold_;
+}
+
+uint64_t Self::getStorageGold() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  return storageGold_;
+}
+
+uint64_t Self::getGuildStorageGold() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  return guildStorageGold_;
+}
+
+// =====================================Packets-in-flight state=====================================
+// Setters
+void Self::popItemFromUsedItemQueueIfNotEmpty() {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  if (!usedItemQueue_.empty()) {
+    usedItemQueue_.pop_front();
+  }
+}
+
+void Self::clearUsedItemQueue() {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  usedItemQueue_.clear();
+}
+
+void Self::pushItemToUsedItemQueue(uint8_t inventorySlotNum, uint16_t itemTypeId) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  usedItemQueue_.emplace_back(inventorySlotNum, itemTypeId);
+}
+
+void Self::setUserPurchaseRequest(const packet::parsing::ItemMovement &itemMovement) {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  userPurchaseRequest_ = itemMovement;
+}
+
+void Self::resetUserPurchaseRequest() {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  userPurchaseRequest_.reset();
+}
+
+// Getters
+bool Self::usedItemQueueIsEmpty() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  return usedItemQueue_.empty();
+}
+
+bool Self::itemIsInUsedItemQueue(uint16_t itemTypeId) const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  for (const auto &usedItem : usedItemQueue_) {
+    if (usedItem.itemTypeId == itemTypeId) {
+      return true;
+    }
+  }
+  return false;
+}
+
+Self::UsedItem Self::getUsedItemQueueFront() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  if (usedItemQueue_.empty()) {
+    throw std::runtime_error("Self: Trying to get front of used item queue that is empty");
+  }
+  return usedItemQueue_.front();
+}
+
+bool Self::haveUserPurchaseRequest() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  return userPurchaseRequest_.has_value();
+}
+
+packet::parsing::ItemMovement Self::getUserPurchaseRequest() const {
+  std::unique_lock<std::mutex> selfLock(selfMutex_);
+  if (!userPurchaseRequest_.has_value()) {
+    throw std::runtime_error("Self: Trying to get user purchase request that does not exist");
+  }
+  return userPurchaseRequest_.value();
+}
+
+// =================================================================================================
+
+void Self::privateSetRaceAndGender(uint32_t refObjId) {
   const auto &gameCharacterData = gameData_.characterData();
   if (!gameCharacterData.haveCharacterWithId(refObjId)) {
     std::cout << "Unable to determine race or gender. No \"item\" data for id: " << refObjId << '\n';
@@ -336,6 +597,12 @@ void Self::setRaceAndGender(uint32_t refObjId) {
     gender_ = Gender::kMale;
   } else {
     gender_ = Gender::kFemale;
+  }
+
+  if (race_ == Race::kChinese) {
+    potionDelayMs_ = kChPotionDefaultDelayMs_;
+  } else if (race_ == Race::kEuropean) {
+    potionDelayMs_ = kEuPotionDefaultDelayMs_;
   }
 }
 
@@ -406,6 +673,5 @@ float Self::internal_speed() const {
     throw std::runtime_error("Trying to get speed, but not walking nor running");
   }
 }
-
 
 } // namespace state

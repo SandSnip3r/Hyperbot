@@ -22,7 +22,6 @@ class MovementModule {
 public:
   MovementModule(state::Entity &entityState,
                  state::Self &selfState,
-                 storage::Storage &inventory,
                  broker::PacketBroker &brokerSystem,
                  broker::EventBroker &eventBroker,
                  const packet::parsing::PacketParser &packetParser,
@@ -31,7 +30,6 @@ public:
 private:
   state::Entity &entityState_;
   state::Self &selfState_;
-  storage::Storage &inventory_;
   broker::PacketBroker &broker_;
   broker::EventBroker &eventBroker_;
   const packet::parsing::PacketParser &packetParser_;

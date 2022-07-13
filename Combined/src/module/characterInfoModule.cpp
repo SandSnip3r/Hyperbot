@@ -9,11 +9,13 @@
 #include <memory>
 #include <regex>
 
+// #define ENFORCE_PURIFICATION_PILL_COOLDOWN
 namespace module {
 
 void printItem(uint8_t slot, const storage::Item *item, const pk2::GameData &gameData);
 int bitNum(packet::enums::AbnormalStateFlag flag);
 std::string toStr(packet::enums::AbnormalStateFlag state);
+uint16_t makeTypeId(const uint16_t typeId1, const uint16_t typeId2, const uint16_t typeId3, const uint16_t typeId4);
 
 //======================================================================================================
 //======================================================================================================
@@ -21,7 +23,6 @@ std::string toStr(packet::enums::AbnormalStateFlag state);
 
 CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
                                          state::Self &selfState,
-                                         storage::Storage &inventory,
                                          broker::PacketBroker &brokerSystem,
                                          broker::EventBroker &eventBroker,
                                          ui::UserInterface &userInterface,
@@ -29,7 +30,6 @@ CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
                                          const pk2::GameData &gameData) :
       entityState_(entityState),
       selfState_(selfState),
-      inventory_(inventory),
       broker_(brokerSystem),
       eventBroker_(eventBroker),
       userInterface_(userInterface),
@@ -58,7 +58,9 @@ CharacterInfoModule::CharacterInfoModule(state::Entity &entityState,
   eventBroker_.subscribeToEvent(event::EventCode::kMpPotionCooldownEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kVigorPotionCooldownEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kUniversalPillCooldownEnded, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kPurificationPillCooldownEnded, eventHandleFunction);
+#ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
+  eventBroker_.subscribeToEvent(event::EventCode::kPurificationPillCooldownEnded, eventHandleFunction);
+#endif
   eventBroker_.subscribeToEvent(event::EventCode::kHpPercentChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMpPercentChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
@@ -105,24 +107,26 @@ void CharacterInfoModule::handleDropGold(const event::Event *event) {
 
 void CharacterInfoModule::handlePillCooldownEnded(const event::EventCode eventCode) {
   if (eventCode == event::EventCode::kUniversalPillCooldownEnded) {
-    universalPillEventId_.reset();
+    selfState_.resetUniversalPillEventId();
     checkIfNeedToUsePill();
-  }/*  else if (eventCode == event::EventCode::kPurificationPillCooldownEnded) {
+#ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
+  } else if (eventCode == event::EventCode::kPurificationPillCooldownEnded) {
     std::cout << "kPurificationPillCooldownEnded " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() << "\n";
-    purificationPillEventId_.reset();
+    selfState_.resetPurificationPillEventId();
     checkIfNeedToUsePill();
-  } */
+#endif
+  }
 }
 
 void CharacterInfoModule::handlePotionCooldownEnded(const event::EventCode eventCode) {
   if (eventCode == event::EventCode::kHpPotionCooldownEnded) {
-    hpPotionEventId_.reset();
+    selfState_.resetHpPotionEventId();
     checkIfNeedToHeal();
   } else if (eventCode == event::EventCode::kMpPotionCooldownEnded) {
-    mpPotionEventId_.reset();
+    selfState_.resetMpPotionEventId();
     checkIfNeedToHeal();
   } else if (eventCode == event::EventCode::kVigorPotionCooldownEnded) {
-    vigorPotionEventId_.reset();
+    selfState_.resetVigorPotionEventId();
     checkIfNeedToHeal();
   }
 }
@@ -272,12 +276,8 @@ void CharacterInfoModule::serverAgentEntityUpdateStateReceived(packet::parsing::
     } else if (packet.stateType() == packet::parsing::StateType::kLifeState) {
       selfState_.setLifeState(static_cast<packet::enums::LifeState>(packet.state()));
       if (static_cast<packet::enums::LifeState>(packet.state()) == packet::enums::LifeState::kDead) {
-        std::cout << "CharacterInfoModule: We died, clearing queue (";
-        for (auto i : usedItemQueue_) {
-          std::cout << (int)i.slotNum << ',';
-        }
-        std::cout << ")\n";
-        usedItemQueue_.clear();
+        std::cout << "CharacterInfoModule: We died, clearing used item queue" << std::endl;
+        selfState_.clearUsedItemQueue();
       }
     } else if (packet.stateType() == packet::parsing::StateType::kMotionState) {
       if (static_cast<packet::enums::MotionState>(packet.state()) == packet::enums::MotionState::kWalk) {
@@ -324,10 +324,10 @@ void CharacterInfoModule::serverAgentDespawnReceived(packet::parsing::ParsedServ
 }
 
 void CharacterInfoModule::clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) {
-  const auto movement = packet.movement();
-  if (movement.type == packet::enums::ItemMovementType::kBuyFromNPC) {
+  const auto itemMovement = packet.movement();
+  if (itemMovement.type == packet::enums::ItemMovementType::kBuyFromNPC) {
     // User is buying something from the store
-    userPurchaseRequest_ = movement;
+    selfState_.setUserPurchaseRequest(itemMovement);
   }
 }
 
@@ -399,7 +399,7 @@ std::shared_ptr<storage::Item> createItemFromScrap(const pk2::ref::ScrapOfPackag
 
 void CharacterInfoModule::printGold() {
   printf("$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
-  printf(" $$  Gold: %12llu  $$ \n", gold_);
+  printf(" $$  Gold: %12llu  $$ \n", selfState_.getGold());
   printf("$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
 }
 
@@ -407,7 +407,7 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
   const std::vector<packet::parsing::ItemMovement> &itemMovements = packet.itemMovements();
   for (const auto &movement : itemMovements) {
     if (movement.type == packet::enums::ItemMovementType::kWithinInventory) {
-      inventory_.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
+      selfState_.getInventory().moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
       //TODO: Add event in other places
       eventBroker_.publishEvent(std::make_unique<event::InventorySlotUpdated>(movement.srcSlot));
       eventBroker_.publishEvent(std::make_unique<event::InventorySlotUpdated>(movement.destSlot));
@@ -415,14 +415,15 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
       // Not handling because we dont parse the storage init packet
       // moveItem(storage_, movement.srcSlot, movement.destSlot, movement.quantity);
     } else if (movement.type == packet::enums::ItemMovementType::kBuyFromNPC) {
-      if (userPurchaseRequest_) {
+      if (selfState_.haveUserPurchaseRequest()) {
+        const auto userPurchaseRequest = selfState_.getUserPurchaseRequest();
         // User purchased something, we saved this so that we can get the NPC's global Id
-        if (entityState_.trackingEntity(userPurchaseRequest_->globalId)) {
-          auto object = entityState_.getEntity(userPurchaseRequest_->globalId);
+        if (entityState_.trackingEntity(userPurchaseRequest.globalId)) {
+          auto object = entityState_.getEntity(userPurchaseRequest.globalId);
           // Found the NPC which this purchase was made with
           if (gameData_.characterData().haveCharacterWithId(object->refObjId)) {
             auto npcName = gameData_.characterData().getCharacterById(object->refObjId).codeName128;
-            auto itemInfo = gameData_.shopData().getItemFromNpc(npcName, userPurchaseRequest_->storeTabNumber, userPurchaseRequest_->storeSlotNumber);
+            auto itemInfo = gameData_.shopData().getItemFromNpc(npcName, userPurchaseRequest.storeTabNumber, userPurchaseRequest.storeSlotNumber);
             std::cout << "Bought " << movement.quantity << " x \"" << itemInfo.refItemCodeName << "\" from \"" << npcName << "\"\n";
             const auto &itemRef = gameData_.itemData().getItemByCodeName128(itemInfo.refItemCodeName);
             if (movement.destSlots.size() == 1) {
@@ -432,29 +433,29 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
               if (itemExp != nullptr) {
                 itemExp->quantity = movement.quantity;
               }
-              inventory_.addItem(movement.destSlots[0], item);
+              selfState_.getInventory().addItem(movement.destSlots[0], item);
               printItem(movement.destSlots[0], item.get(), gameData_);
               std::cout << '\n';
             } else {
               // Multiple destination slots, must be unstackable items like equipment
               for (auto destSlot : movement.destSlots) {
                 auto item = createItemFromScrap(itemInfo, itemRef);
-                inventory_.addItem(destSlot, item);
+                selfState_.getInventory().addItem(destSlot, item);
                 printItem(movement.destSlot, item.get(), gameData_);
                 std::cout << '\n';
               }
             }
           }
         }
-        userPurchaseRequest_.reset();
+        selfState_.resetUserPurchaseRequest();
       } else {
         std::cout << "kBuyFromNPC but we dont have the data from the client packet\n";
         // TODO: Introduce unknown item concept?
       }
     } else if (movement.type == packet::enums::ItemMovementType::kSellToNPC) {
-      if (inventory_.hasItem(movement.srcSlot)) {
+      if (selfState_.getInventory().hasItem(movement.srcSlot)) {
         bool soldEntireStack = true;
-        auto item = inventory_.getItem(movement.srcSlot);
+        auto item = selfState_.getInventory().getItem(movement.srcSlot);
         storage::ItemExpendable *itemExpendable;
         if ((itemExpendable = dynamic_cast<storage::ItemExpendable*>(item)) != nullptr) {
           if (itemExpendable->quantity != movement.quantity) {
@@ -463,26 +464,26 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
             itemExpendable->quantity -= movement.quantity;
             auto clonedItem = storage::cloneItem(item);
             dynamic_cast<storage::ItemExpendable*>(clonedItem.get())->quantity = movement.quantity;
-            buybackQueue_.addItem(clonedItem);
+            selfState_.getBuybackQueue().addItem(clonedItem);
           }
         }
         if (soldEntireStack) {
           std::cout << "Sold entire \"stack\"\n";
-          auto item = inventory_.withdrawItem(movement.srcSlot);
-          buybackQueue_.addItem(item);
+          auto item = selfState_.getInventory().withdrawItem(movement.srcSlot);
+          selfState_.getBuybackQueue().addItem(item);
         }
       } else {
         std::cout << "Sold an item from a slot that we didnt have item data for\n";
       }
       std::cout << "Current buyback queue:\n";
-      for (uint8_t slotNum=0; slotNum<buybackQueue_.size(); ++slotNum) {
-        printItem(slotNum, buybackQueue_.getItem(slotNum), gameData_);
+      for (uint8_t slotNum=0; slotNum<selfState_.getBuybackQueue().size(); ++slotNum) {
+        printItem(slotNum, selfState_.getBuybackQueue().getItem(slotNum), gameData_);
       }
       std::cout << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kBuyback) {
-      if (buybackQueue_.hasItem(movement.srcSlot)) {
-        if (!inventory_.hasItem(movement.destSlot)) {
-          const auto itemPtr = buybackQueue_.getItem(movement.srcSlot);
+      if (selfState_.getBuybackQueue().hasItem(movement.srcSlot)) {
+        if (!selfState_.getInventory().hasItem(movement.destSlot)) {
+          const auto itemPtr = selfState_.getBuybackQueue().getItem(movement.srcSlot);
           bool boughtBackAll = true;
           if (movement.quantity > 1) {
             storage::ItemExpendable *itemExpendable = dynamic_cast<storage::ItemExpendable*>(itemPtr);
@@ -493,7 +494,7 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
                 auto clonedItem = storage::cloneItem(itemPtr);
                 itemExpendable->quantity -= movement.quantity;
                 dynamic_cast<storage::ItemExpendable*>(clonedItem.get())->quantity = movement.quantity;
-                inventory_.addItem(movement.destSlot, clonedItem);
+                selfState_.getInventory().addItem(movement.destSlot, clonedItem);
                 std::cout << "Added item to inventory\n";
                 printItem(movement.destSlot, clonedItem.get(), gameData_);
                 std::cout << '\n';
@@ -501,8 +502,8 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
             }
           }
           if (boughtBackAll) {
-            auto item = buybackQueue_.withdrawItem(movement.srcSlot);
-            inventory_.addItem(movement.destSlot, item);
+            auto item = selfState_.getBuybackQueue().withdrawItem(movement.srcSlot);
+            selfState_.getInventory().addItem(movement.destSlot, item);
             std::cout << "Bought back entire stack\n";
             printItem(movement.destSlot, item.get(), gameData_);
           }
@@ -513,22 +514,22 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
         std::cout << "Bought back an item that we werent tracking\n";
       }
       std::cout << "Current buyback queue:\n";
-      for (uint8_t slotNum=0; slotNum<buybackQueue_.size(); ++slotNum) {
-        printItem(slotNum, buybackQueue_.getItem(slotNum), gameData_);
+      for (uint8_t slotNum=0; slotNum<selfState_.getBuybackQueue().size(); ++slotNum) {
+        printItem(slotNum, selfState_.getBuybackQueue().getItem(slotNum), gameData_);
       }
       std::cout << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kPickItem) {
       if (movement.destSlot == packet::parsing::ItemMovement::kGoldSlot) {
         std::cout << "Picked " << movement.goldPickAmount << " gold\n";
-        gold_ += movement.goldPickAmount;
+        selfState_.addGold(movement.goldPickAmount);
         printGold();
         std::cout << '\n';
       } else {
         if (movement.pickedItem != nullptr) {
           std::cout << "Picked an item\n";
-          if (inventory_.hasItem(movement.destSlot)) {
+          if (selfState_.getInventory().hasItem(movement.destSlot)) {
             std::cout << "Already something here\n";
-            auto existingItem = inventory_.getItem(movement.destSlot);
+            auto existingItem = selfState_.getInventory().getItem(movement.destSlot);
             bool addedToStack = false;
             if (existingItem->refItemId == movement.pickedItem->refItemId) {
               // Both items have the same refId
@@ -548,8 +549,8 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
             }
           } else {
             std::cout << "New item!\n";
-            inventory_.addItem(movement.destSlot, movement.pickedItem);
-            std::cout << "Item " << (inventory_.hasItem(movement.destSlot) ? "was " : "was not ") << "successfully added\n";
+            selfState_.getInventory().addItem(movement.destSlot, movement.pickedItem);
+            std::cout << "Item " << (selfState_.getInventory().hasItem(movement.destSlot) ? "was " : "was not ") << "successfully added\n";
           }
           printItem(movement.destSlot, movement.pickedItem.get(), gameData_);
         } else {
@@ -559,16 +560,16 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
       // This would be a good time to try to use a pill, potion, return scroll, etc.
     } else if (movement.type == packet::enums::ItemMovementType::kDropItem) {
       std::cout << "Dropped an item\n";
-      if (inventory_.hasItem(movement.srcSlot)) {
+      if (selfState_.getInventory().hasItem(movement.srcSlot)) {
         std::cout << "Dropping ";
-        auto itemPtr = inventory_.withdrawItem(movement.srcSlot);
+        auto itemPtr = selfState_.getInventory().withdrawItem(movement.srcSlot);
         printItem(movement.srcSlot, itemPtr.get(), gameData_);
-        std::cout << "Item " << (!inventory_.hasItem(movement.srcSlot) ? "was " : "was not ") << "successfully dropped\n";
+        std::cout << "Item " << (!selfState_.getInventory().hasItem(movement.srcSlot) ? "was " : "was not ") << "successfully dropped\n";
       } else {
         std::cout << "Error: But there's no item in this inventory slot\n";
       }
     } else if (movement.type == packet::enums::ItemMovementType::kGoldDrop) {
-      gold_ -= movement.goldAmount;
+      selfState_.subtractGold(movement.goldAmount);
       std::cout << "Dropped " << movement.goldAmount << " gold\n";
       printGold();
       std::cout << '\n';
@@ -576,27 +577,27 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
         eventBroker_.publishEvent(std::make_unique<event::DropGold>(goldDropAmount_, goldDropRemaining_));
       }
     } else if (movement.type == packet::enums::ItemMovementType::kGoldStorageWithdraw) {
-      gold_ += movement.goldAmount;
+      selfState_.addGold(movement.goldAmount);
       std::cout << "Withdrew " << movement.goldAmount << " gold from storage\n";
       printGold();
       std::cout << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kGoldStorageDeposit) {
-      gold_ -= movement.goldAmount;
+      selfState_.subtractGold(movement.goldAmount);
       std::cout << "Deposited " << movement.goldAmount << " gold into storage\n";
       printGold();
       std::cout << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kGoldGuildStorageDeposit) {
-      gold_ -= movement.goldAmount;
+      selfState_.subtractGold(movement.goldAmount);
       std::cout << "Deposited " << movement.goldAmount << " gold into guild storage\n";
       printGold();
       std::cout << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kGoldGuildStorageWithdraw) {
-      gold_ += movement.goldAmount;
+      selfState_.addGold(movement.goldAmount);
       std::cout << "Withdrew " << movement.goldAmount << " gold from guild storage\n";
       printGold();
       std::cout << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kCosPickGold) {
-      gold_ += movement.goldPickAmount;
+      selfState_.addGold(movement.goldPickAmount);
       std::cout << "Pickpet picked " << movement.goldPickAmount << " gold\n";
       printGold();
       std::cout << '\n';
@@ -615,28 +616,6 @@ void CharacterInfoModule::statUpdateReceived(const packet::parsing::ParsedServer
   selfState_.setMaxHpMp(packet.maxHp(), packet.maxMp());
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
-}
-
-void CharacterInfoModule::updateRace(Race race) {
-  if (race == Race::kChinese) {
-    potionDelayMs_ = kChPotionDefaultDelayMs_;
-  } else if (race == Race::kEuropean) {
-    potionDelayMs_ = kEuPotionDefaultDelayMs_;
-  }
-}
-
-void CharacterInfoModule::setRaceAndGender(uint32_t refObjId) {
-  const auto &gameCharacterData = gameData_.characterData();
-  if (!gameCharacterData.haveCharacterWithId(refObjId)) {
-    std::cout << "Unable to determine race or gender. No \"item\" data for id: " << refObjId << '\n';
-    return;
-  }
-  const auto &character = gameCharacterData.getCharacterById(refObjId);
-  if (character.country == 0) {
-    updateRace(Race::kChinese);
-  } else {
-    updateRace(Race::kEuropean);
-  }
 }
 
 void CharacterInfoModule::serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) {
@@ -662,9 +641,9 @@ void CharacterInfoModule::serverAgentCharacterDataReceived(const packet::parsing
   selfState_.setSpeed(packet.walkSpeed(), packet.runSpeed());
   selfState_.setHwanSpeed(packet.hwanSpeed());
   auto refObjId = packet.refObjId();
-  gold_ = packet.gold();
+  selfState_.setGold(packet.gold());
   printGold();
-  setRaceAndGender(refObjId);
+  selfState_.setRaceAndGender(refObjId);
   const auto inventorySize = packet.inventorySize();
   const auto &inventoryItemMap = packet.inventoryItemMap();
   initializeInventory(inventorySize, inventoryItemMap);
@@ -676,15 +655,15 @@ void CharacterInfoModule::serverAgentCharacterDataReceived(const packet::parsing
 }
 
 void CharacterInfoModule::resetInventory() {
-  inventory_.clear();
+  selfState_.getInventory().clear();
 }
 
 void CharacterInfoModule::initializeInventory(uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<storage::Item>> &inventoryItemMap) {
   resetInventory();
-  inventory_.resize(inventorySize);
+  selfState_.getInventory().resize(inventorySize);
   // Guaranteed to have no items
   for (const auto &slotItemPtrPair : inventoryItemMap) {
-    inventory_.addItem(slotItemPtrPair.first, slotItemPtrPair.second);
+    selfState_.getInventory().addItem(slotItemPtrPair.first, slotItemPtrPair.second);
     printItem(slotItemPtrPair.first, slotItemPtrPair.second.get(), gameData_);
   }
 }
@@ -697,11 +676,11 @@ void CharacterInfoModule::useUniversalPill() {
   uint8_t bestOptionSlotNum;
   uint16_t bestOptionTypeData;
 
-  for (uint8_t slotNum=0; slotNum<inventory_.size(); ++slotNum) {
-    if (!inventory_.hasItem(slotNum)) {
+  for (uint8_t slotNum=0; slotNum<selfState_.getInventory().size(); ++slotNum) {
+    if (!selfState_.getInventory().hasItem(slotNum)) {
       continue;
     }
-    const storage::Item *itemPtr = inventory_.getItem(slotNum);
+    const storage::Item *itemPtr = selfState_.getInventory().getItem(slotNum);
     const storage::ItemExpendable *item;
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -744,11 +723,11 @@ void CharacterInfoModule::usePurificationPill() {
   uint8_t bestOptionSlotNum;
   uint16_t bestOptionTypeData;
 
-  for (uint8_t slotNum=0; slotNum<inventory_.size(); ++slotNum) {
-    if (!inventory_.hasItem(slotNum)) {
+  for (uint8_t slotNum=0; slotNum<selfState_.getInventory().size(); ++slotNum) {
+    if (!selfState_.getInventory().hasItem(slotNum)) {
       continue;
     }
-    const storage::Item *itemPtr = inventory_.getItem(slotNum);
+    const storage::Item *itemPtr = selfState_.getInventory().getItem(slotNum);
     const storage::ItemExpendable *item;
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -815,11 +794,11 @@ void CharacterInfoModule::usePotion(PotionType potionType) {
   }
 
   // Find potion in inventory
-  for (uint8_t slotNum=0; slotNum<inventory_.size(); ++slotNum) {
-    if (!inventory_.hasItem(slotNum)) {
+  for (uint8_t slotNum=0; slotNum<selfState_.getInventory().size(); ++slotNum) {
+    if (!selfState_.getInventory().hasItem(slotNum)) {
       continue;
     }
-    const storage::Item *itemPtr = inventory_.getItem(slotNum);
+    const storage::Item *itemPtr = selfState_.getInventory().getItem(slotNum);
     const storage::ItemExpendable *item;
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -860,75 +839,47 @@ void CharacterInfoModule::useItem(uint8_t slotNum, uint16_t typeData) {
     }
   }
   broker_.injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slotNum, typeData), PacketContainer::Direction::kClientToServer);
-  usedItemQueue_.emplace_back(slotNum, typeData);
+  selfState_.pushItemToUsedItemQueue(slotNum, typeData);
 }
 
 bool CharacterInfoModule::alreadyUsedUniversalPill() {
-  bool used = false;
-  for (const auto &usedItem : usedItemQueue_) {
-    if (usedItem.itemData & (static_cast<uint16_t>(3) << 2) &&
-        usedItem.itemData & (static_cast<uint16_t>(3) << 5) &&
-        usedItem.itemData & (static_cast<uint16_t>(2) << 7) &&
-        usedItem.itemData & (static_cast<uint16_t>(6) << 11)) {
-      used = true;
-      break;
-    }
+  if (selfState_.haveUniversalPillEventId()) {
+    return true;
   }
-  return (universalPillEventId_ || used); 
-}
-
-bool compareTypeData(uint16_t typeData, uint8_t typeId1, uint8_t typeId2, uint8_t typeId3, uint8_t typeId4) {
-  if (typeId1 != ((typeData >> 2) & 0b111)) {
-    return false;
-  }
-  if (typeId2 != ((typeData >> 5) & 0b11)) {
-    return false;
-  }
-  if (typeId3 != ((typeData >> 7) & 0b1111)) {
-    return false;
-  }
-  return (typeId4 == ((typeData >> 11) & 0b11111));
+  // Pill isnt on cooldown, but maybe we already queued a use of it
+  const auto itemTypeId = makeTypeId(3, 3, 2, 6);
+  return selfState_.itemIsInUsedItemQueue(itemTypeId);
 }
 
 bool CharacterInfoModule::alreadyUsedPurificationPill() {
-  bool used = false;
-  for (const auto &usedItem : usedItemQueue_) {
-    if (compareTypeData(usedItem.itemData, 3,3,2,1)) {
-      used = true;
-      break;
-    }
+#ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
+  if (selfState_.purificationPillOnCooldown()) {
+    return true;
   }
-  return (/* purificationPillEventId_ || */ used);
+#endif
+  const auto itemTypeId = makeTypeId(3, 3, 2, 1);
+  return selfState_.itemIsInUsedItemQueue(itemTypeId);
 }
 
 bool CharacterInfoModule::alreadyUsedPotion(PotionType potionType) {
   if (potionType == PotionType::kHp) {
-    bool used = false;
-    for (const auto &usedItem : usedItemQueue_) {
-      if (compareTypeData(usedItem.itemData, 3,3,1,1)) {
-        used = true;
-        break;
-      }
+    if (selfState_.haveHpPotionEventId()) {
+      return true;
     }
-    return (hpPotionEventId_ || used);
+    const auto itemTypeId = makeTypeId(3, 3, 1, 1);
+    return selfState_.itemIsInUsedItemQueue(itemTypeId);
   } else if (potionType == PotionType::kMp) {
-    bool used = false;
-    for (const auto &usedItem : usedItemQueue_) {
-      if (compareTypeData(usedItem.itemData, 3,3,1,2)) {
-        used = true;
-        break;
-      }
+    if (selfState_.haveMpPotionEventId()) {
+      return true;
     }
-    return (mpPotionEventId_ || used);
+    const auto itemTypeId = makeTypeId(3, 3, 1, 2);
+    return selfState_.itemIsInUsedItemQueue(itemTypeId);
   } else if (potionType == PotionType::kVigor) {
-    bool used = false;
-    for (const auto &usedItem : usedItemQueue_) {
-      if (compareTypeData(usedItem.itemData, 3,3,1,3)) {
-        used = true;
-        break;
-      }
+    if (selfState_.haveVigorPotionEventId()) {
+      return true;
     }
-    return (vigorPotionEventId_ || used);
+    const auto itemTypeId = makeTypeId(3, 3, 1, 3);
+    return selfState_.itemIsInUsedItemQueue(itemTypeId);
   }
   // TODO: Handle other cases
   return false;
@@ -965,11 +916,11 @@ bool CharacterInfoModule::havePotion(PotionType potionType) {
   }
 
   // Find potion in inventory
-  for (uint8_t slotNum=0; slotNum<inventory_.size(); ++slotNum) {
-    if (!inventory_.hasItem(slotNum)) {
+  for (uint8_t slotNum=0; slotNum<selfState_.getInventory().size(); ++slotNum) {
+    if (!selfState_.getInventory().hasItem(slotNum)) {
       continue;
     }
-    const storage::Item *itemPtr = inventory_.getItem(slotNum);
+    const storage::Item *itemPtr = selfState_.getInventory().getItem(slotNum);
     const storage::ItemExpendable *item;
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -1052,30 +1003,6 @@ void CharacterInfoModule::entityUpdateReceived(const packet::parsing::ParsedServ
 
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
-}
-
-int CharacterInfoModule::getHpPotionDelay() {
-  const auto modernStateLevels = selfState_.modernStateLevels();
-  const bool havePanic = (modernStateLevels[bitNum(packet::enums::AbnormalStateFlag::kPanic)] > 0);
-  int delay = potionDelayMs_ + kPotionDelayBufferMs_;
-  if (havePanic) {
-    delay += 4000;
-  }
-  return delay;
-}
-
-int CharacterInfoModule::getMpPotionDelay() {
-  const auto modernStateLevels = selfState_.modernStateLevels();
-  const bool haveCombustion = (modernStateLevels[bitNum(packet::enums::AbnormalStateFlag::kCombustion)] > 0);
-  int delay = potionDelayMs_ + kPotionDelayBufferMs_;
-  if (haveCombustion) {
-    delay += 4000;
-  }
-  return delay;
-}
-
-int CharacterInfoModule::getVigorPotionDelay() {
-  return potionDelayMs_ + kPotionDelayBufferMs_;
 }
 
 int CharacterInfoModule::getGrainDelay() {
@@ -1167,8 +1094,8 @@ bool isVigorPotion(const pk2::ref::Item &itemInfo) {
 void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedServerUseItem &packet) {
   if (packet.result() == 1) {
     // Successfully used an item
-    if (inventory_.hasItem(packet.slotNum())) {
-      auto *itemPtr = inventory_.getItem(packet.slotNum());
+    if (selfState_.getInventory().hasItem(packet.slotNum())) {
+      auto *itemPtr = selfState_.getInventory().getItem(packet.slotNum());
       // Lets double check it's type data
       if (packet.itemData() == itemPtr->typeData()) {
         auto *expendableItemPtr = dynamic_cast<storage::ItemExpendable*>(itemPtr);
@@ -1176,68 +1103,79 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
           expendableItemPtr->quantity = packet.remainingCount();
           if (isHpPotion(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a potion
-            if (hpPotionEventId_) {
+            if (selfState_.haveHpPotionEventId()) {
               std::cout << "Uhhhh, supposedly successfully used an hp potion when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(*hpPotionEventId_);
+              eventBroker_.cancelDelayedEvent(selfState_.getHpPotionEventId());
             }
             std::cout << "Successfully used a hpPotion\n";
-            hpPotionEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kHpPotionCooldownEnded), std::chrono::milliseconds(getHpPotionDelay()));
+            const auto hpPotionDelay = selfState_.getHpPotionDelay() + kPotionDelayBufferMs_;
+            const auto hpPotionEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kHpPotionCooldownEnded), std::chrono::milliseconds(hpPotionDelay));
+            selfState_.setHpPotionEventId(hpPotionEventId);
           } else if (isMpPotion(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a potion
-            if (mpPotionEventId_) {
+            if (selfState_.haveMpPotionEventId()) {
               std::cout << "Uhhhh, supposedly successfully used an mp potion when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(*mpPotionEventId_);
+              eventBroker_.cancelDelayedEvent(selfState_.getMpPotionEventId());
             }
             std::cout << "Successfully used a mpPotion\n";
-            mpPotionEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMpPotionCooldownEnded), std::chrono::milliseconds(getMpPotionDelay()));
+            const auto mpPotionDelay = selfState_.getMpPotionDelay() + kPotionDelayBufferMs_;
+            const auto mpPotionEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMpPotionCooldownEnded), std::chrono::milliseconds(mpPotionDelay));
+            selfState_.setMpPotionEventId(mpPotionEventId);
           } else if (isVigorPotion(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a potion
-            if (vigorPotionEventId_) {
+            if (selfState_.haveVigorPotionEventId()) {
               std::cout << "Uhhhh, supposedly successfully used a vigor potion when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(*vigorPotionEventId_);
+              eventBroker_.cancelDelayedEvent(selfState_.getVigorPotionEventId());
             }
             std::cout << "Successfully used a vigorPotion\n";
-            vigorPotionEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kVigorPotionCooldownEnded), std::chrono::milliseconds(getVigorPotionDelay()));
+            // TODO: Grains and regular potions have different delays, at least for Eu chars
+            const auto vigorPotionDelay = selfState_.getVigorPotionDelay() + kPotionDelayBufferMs_;
+            const auto vigorPotionEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kVigorPotionCooldownEnded), std::chrono::milliseconds(vigorPotionDelay));
+            selfState_.setVigorPotionEventId(vigorPotionEventId);
           } else if (isUniversalPill(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a pill
-            if (universalPillEventId_) {
+            if (selfState_.haveUniversalPillEventId()) {
               std::cout << "Uhhhh, supposedly successfully used a universal pill when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(*universalPillEventId_);
+              eventBroker_.cancelDelayedEvent(selfState_.getUniversalPillEventId());
             }
-            universalPillEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kUniversalPillCooldownEnded), std::chrono::milliseconds(getUniversalPillDelay()));
+            const auto universalPillEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kUniversalPillCooldownEnded), std::chrono::milliseconds(getUniversalPillDelay()));
+            selfState_.setUniversalPillEventId(universalPillEventId);
           } else if (isPurificationPill(*expendableItemPtr->itemInfo)) {
+#ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
             // Set a timeout for how long we must wait before retrying to use a pill
-            /* if (purificationPillEventId_) {
+            if (selfState_.purificationPillOnCooldown()) {
               std::cout << "Uhhhh, supposedly successfully used a purification pill when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(*purificationPillEventId_);
-            } */
-            // purificationPillEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kPurificationPillCooldownEnded), std::chrono::milliseconds(getPurificationPillDelay()));
+              eventBroker_.cancelDelayedEvent(selfState_.getPurificationPillEventId());
+            }
+            const auto purificationPillEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kPurificationPillCooldownEnded), std::chrono::milliseconds(getPurificationPillDelay()));
+            selfState_.setPurificationPillEventId(purificationPillEventId);
+#endif
           }
           if (expendableItemPtr->quantity == 0) {
             std::cout << "Used the last of this item! Delete from inventory\n";
             // TODO: Instead, delete the item upon receiving server_item_movement in the case DEL_ITEM_BY_SERVER
-            inventory_.deleteItem(packet.slotNum());
+            selfState_.getInventory().deleteItem(packet.slotNum());
           }
         }
       }
     }
   } else {
     // Failed to use item
-    if (!usedItemQueue_.empty()) {
+    if (!selfState_.usedItemQueueIsEmpty()) {
       // This was an item that we tried to use
       if (packet.errorCode() == packet::enums::InventoryErrorCode::kWaitForReuseDelay) {
-        // TODO: When we start tracking items moving in the invetory, we'll need to somehow update usedItemQueue_
+        // TODO: When we start tracking items moving in the invetory, we'll need to somehow update this used item queue
         std::cout << "Failed to use ";
-        const auto usedItem = usedItemQueue_.front();
-        if (compareTypeData(usedItem.itemData, 3, 3, 1, 1)) {
+        const auto usedItem = selfState_.getUsedItemQueueFront();
+        if (usedItem.itemTypeId == makeTypeId(3, 3, 1, 1)) {
           std::cout << "hp";
-        } else if (compareTypeData(usedItem.itemData, 3, 3, 1, 2)) {
+        } else if (usedItem.itemTypeId == makeTypeId(3, 3, 1, 2)) {
           std::cout << "mp";
-        } else if (compareTypeData(usedItem.itemData, 3, 3, 1, 3)) {
+        } else if (usedItem.itemTypeId == makeTypeId(3, 3, 1, 3)) {
           std::cout << "vigor";
         }
         std::cout << " potion because there's still a cooldown, going to retry\n";
-        useItem(usedItem.slotNum, usedItem.itemData);
+        useItem(usedItem.inventorySlotNum, usedItem.itemTypeId);
       } else if (packet.errorCode() == packet::enums::InventoryErrorCode::kCharacterDead) {
         std::cout << "Failed to use item because we're dead\n";
       } else {
@@ -1245,9 +1183,7 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
       }
     }
   }
-  if (!usedItemQueue_.empty()) {
-    usedItemQueue_.pop_front();
-  }
+  selfState_.popItemFromUsedItemQueueIfNotEmpty();
 }
 
 //======================================================================================================
@@ -1345,6 +1281,14 @@ std::string toStr(packet::enums::AbnormalStateFlag state) {
   } else if (state == packet::enums::AbnormalStateFlag::kEmptyBit31) {
     return "emptyBit31";
   }
+}
+
+// TODO: Create a more elegant TypeId system
+uint16_t makeTypeId(const uint16_t typeId1, const uint16_t typeId2, const uint16_t typeId3, const uint16_t typeId4) {
+  return (typeId1 << 2) |
+         (typeId2 << 5) |
+         (typeId3 << 7) |
+         (typeId4 << 11);
 }
 
 } // namespace module
