@@ -15,6 +15,7 @@
 #include <deque>
 #include <mutex>
 #include <optional>
+#include <string>
 
 namespace state {
 
@@ -132,8 +133,6 @@ public:
   std::vector<packet::structures::Mastery> masteries() const;
   std::vector<packet::structures::Skill> skills() const;
 
-  storage::Storage& getInventory();
-  storage::BuybackQueue& getBuybackQueue();
   uint64_t getGold() const;
   uint64_t getStorageGold() const;
   uint64_t getGuildStorageGold() const;
@@ -160,10 +159,18 @@ public:
   packet::parsing::ItemMovement getUserPurchaseRequest() const;
   // =========================================================
 
+  std::mutex selfMutex;
+  // =======================Log in state======================
+  bool loggingIn{false};
+  uint32_t token;
 
-private:
-  const pk2::GameData &gameData_;
-  mutable std::mutex selfMutex_;
+  // TODO: The two things below do not belong here
+  // PC knowledge
+  const std::array<uint8_t,6> kMacAddress = {0,0,0,0,0,0};
+  // Server knowledge
+  const std::string kCaptchaAnswer = "";
+  // =========================================================
+
   bool spawned_{false};
   
   // Character info
@@ -174,8 +181,6 @@ private:
   // Item use cooldowns
   std::optional<broker::TimerManager::TimerId> hpPotionEventId_, mpPotionEventId_, vigorPotionEventId_;
   std::optional<broker::TimerManager::TimerId> universalPillEventId_, purificationPillEventId_;
-  // Known delay for potion cooldown
-  int potionDelayMs_;
 
   // Speeds
   float walkSpeed_;
@@ -214,13 +219,19 @@ private:
   std::vector<packet::structures::Skill> skills_;
 
   // Inventory
-  storage::Storage inventory_{selfMutex_};
-  storage::BuybackQueue buybackQueue_{selfMutex_};
+  storage::Storage inventory;
+  storage::BuybackQueue buybackQueue;
   uint64_t gold_, storageGold_, guildStorageGold_;
+
+private:
+  const pk2::GameData &gameData_;
 
   void privateSetRaceAndGender(uint32_t refObjId);
   packet::structures::Position interpolateCurrentPosition() const;
   float internal_speed() const;
+
+  // Known delay for potion cooldown
+  int potionDelayMs_;
 
   // =================Packets-in-flight state=================
   //  It is required that we keep state of what actions are currently pending

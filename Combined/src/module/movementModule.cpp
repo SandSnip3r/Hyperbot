@@ -120,6 +120,7 @@ void MovementModule::handleMovementEnded() {
 }
 
 bool MovementModule::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (packet.globalId() == selfState_.globalId()) {
     const auto &currentPosition = selfState_.position();
     LOG(serverAgentEntitySyncPositionReceived) << "Syncing position: " << currentPosition.xOffset << ',' << currentPosition.zOffset << std::endl;
@@ -129,6 +130,7 @@ bool MovementModule::serverAgentEntitySyncPositionReceived(packet::parsing::Serv
 }
 
 bool MovementModule::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (packet.globalId() == selfState_.globalId()) {
     if (selfState_.moving()) {
       LOG(serverAgentEntityUpdatePositionReceived) << "Position update received" << std::endl;
@@ -161,6 +163,7 @@ float MovementModule::secondsToTravel(const packet::structures::Position &srcPos
 }
 
 bool MovementModule::serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (packet.globalId() == selfState_.globalId()) {
     packet::structures::Position sourcePosition;
     if (packet.hasSource()) {

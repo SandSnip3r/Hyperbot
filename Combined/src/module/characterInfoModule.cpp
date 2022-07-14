@@ -261,6 +261,7 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
 }
 
 void CharacterInfoModule::serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (packet.globalId() == selfState_.globalId()) {
     // Our speed was updated
     std::cout << "Our speed was updated from " << selfState_.walkSpeed() << ',' << selfState_.runSpeed() << " to " << packet.walkSpeed() << ',' << packet.runSpeed() << '\n';
@@ -270,6 +271,7 @@ void CharacterInfoModule::serverAgentEntityUpdateMoveSpeedReceived(const packet:
 }
 
 void CharacterInfoModule::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (selfState_.spawned() && packet.gId() == selfState_.globalId()) {
     if (packet.stateType() == packet::parsing::StateType::kBodyState) {
       selfState_.setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
@@ -312,6 +314,7 @@ void CharacterInfoModule::stopTrackingObject(uint32_t gId) {
 }
 
 void CharacterInfoModule::serverAgentSpawnReceived(packet::parsing::ParsedServerAgentSpawn &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (packet.object()) {
     trackObject(packet.object());
   } else {
@@ -320,10 +323,12 @@ void CharacterInfoModule::serverAgentSpawnReceived(packet::parsing::ParsedServer
 }
 
 void CharacterInfoModule::serverAgentDespawnReceived(packet::parsing::ParsedServerAgentDespawn &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   stopTrackingObject(packet.gId());
 }
 
 void CharacterInfoModule::clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   const auto itemMovement = packet.movement();
   if (itemMovement.type == packet::enums::ItemMovementType::kBuyFromNPC) {
     // User is buying something from the store
@@ -332,6 +337,7 @@ void CharacterInfoModule::clientItemMoveReceived(const packet::parsing::ParsedCl
 }
 
 void CharacterInfoModule::serverAgentGroupSpawnReceived(const packet::parsing::ParsedServerAgentGroupSpawn &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (packet.groupSpawnType() == packet::parsing::GroupSpawnType::kSpawn) {
     for (auto obj : packet.objects()) {
       trackObject(obj);
@@ -404,10 +410,11 @@ void CharacterInfoModule::printGold() {
 }
 
 void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedServerItemMove &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   const std::vector<packet::parsing::ItemMovement> &itemMovements = packet.itemMovements();
   for (const auto &movement : itemMovements) {
     if (movement.type == packet::enums::ItemMovementType::kWithinInventory) {
-      selfState_.getInventory().moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
+      selfState_.inventory.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
       //TODO: Add event in other places
       eventBroker_.publishEvent(std::make_unique<event::InventorySlotUpdated>(movement.srcSlot));
       eventBroker_.publishEvent(std::make_unique<event::InventorySlotUpdated>(movement.destSlot));
@@ -433,14 +440,14 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
               if (itemExp != nullptr) {
                 itemExp->quantity = movement.quantity;
               }
-              selfState_.getInventory().addItem(movement.destSlots[0], item);
+              selfState_.inventory.addItem(movement.destSlots[0], item);
               printItem(movement.destSlots[0], item.get(), gameData_);
               std::cout << '\n';
             } else {
               // Multiple destination slots, must be unstackable items like equipment
               for (auto destSlot : movement.destSlots) {
                 auto item = createItemFromScrap(itemInfo, itemRef);
-                selfState_.getInventory().addItem(destSlot, item);
+                selfState_.inventory.addItem(destSlot, item);
                 printItem(movement.destSlot, item.get(), gameData_);
                 std::cout << '\n';
               }
@@ -453,9 +460,9 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
         // TODO: Introduce unknown item concept?
       }
     } else if (movement.type == packet::enums::ItemMovementType::kSellToNPC) {
-      if (selfState_.getInventory().hasItem(movement.srcSlot)) {
+      if (selfState_.inventory.hasItem(movement.srcSlot)) {
         bool soldEntireStack = true;
-        auto item = selfState_.getInventory().getItem(movement.srcSlot);
+        auto item = selfState_.inventory.getItem(movement.srcSlot);
         storage::ItemExpendable *itemExpendable;
         if ((itemExpendable = dynamic_cast<storage::ItemExpendable*>(item)) != nullptr) {
           if (itemExpendable->quantity != movement.quantity) {
@@ -464,26 +471,26 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
             itemExpendable->quantity -= movement.quantity;
             auto clonedItem = storage::cloneItem(item);
             dynamic_cast<storage::ItemExpendable*>(clonedItem.get())->quantity = movement.quantity;
-            selfState_.getBuybackQueue().addItem(clonedItem);
+            selfState_.buybackQueue.addItem(clonedItem);
           }
         }
         if (soldEntireStack) {
           std::cout << "Sold entire \"stack\"\n";
-          auto item = selfState_.getInventory().withdrawItem(movement.srcSlot);
-          selfState_.getBuybackQueue().addItem(item);
+          auto item = selfState_.inventory.withdrawItem(movement.srcSlot);
+          selfState_.buybackQueue.addItem(item);
         }
       } else {
         std::cout << "Sold an item from a slot that we didnt have item data for\n";
       }
       std::cout << "Current buyback queue:\n";
-      for (uint8_t slotNum=0; slotNum<selfState_.getBuybackQueue().size(); ++slotNum) {
-        printItem(slotNum, selfState_.getBuybackQueue().getItem(slotNum), gameData_);
+      for (uint8_t slotNum=0; slotNum<selfState_.buybackQueue.size(); ++slotNum) {
+        printItem(slotNum, selfState_.buybackQueue.getItem(slotNum), gameData_);
       }
       std::cout << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kBuyback) {
-      if (selfState_.getBuybackQueue().hasItem(movement.srcSlot)) {
-        if (!selfState_.getInventory().hasItem(movement.destSlot)) {
-          const auto itemPtr = selfState_.getBuybackQueue().getItem(movement.srcSlot);
+      if (selfState_.buybackQueue.hasItem(movement.srcSlot)) {
+        if (!selfState_.inventory.hasItem(movement.destSlot)) {
+          const auto itemPtr = selfState_.buybackQueue.getItem(movement.srcSlot);
           bool boughtBackAll = true;
           if (movement.quantity > 1) {
             storage::ItemExpendable *itemExpendable = dynamic_cast<storage::ItemExpendable*>(itemPtr);
@@ -494,7 +501,7 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
                 auto clonedItem = storage::cloneItem(itemPtr);
                 itemExpendable->quantity -= movement.quantity;
                 dynamic_cast<storage::ItemExpendable*>(clonedItem.get())->quantity = movement.quantity;
-                selfState_.getInventory().addItem(movement.destSlot, clonedItem);
+                selfState_.inventory.addItem(movement.destSlot, clonedItem);
                 std::cout << "Added item to inventory\n";
                 printItem(movement.destSlot, clonedItem.get(), gameData_);
                 std::cout << '\n';
@@ -502,8 +509,8 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
             }
           }
           if (boughtBackAll) {
-            auto item = selfState_.getBuybackQueue().withdrawItem(movement.srcSlot);
-            selfState_.getInventory().addItem(movement.destSlot, item);
+            auto item = selfState_.buybackQueue.withdrawItem(movement.srcSlot);
+            selfState_.inventory.addItem(movement.destSlot, item);
             std::cout << "Bought back entire stack\n";
             printItem(movement.destSlot, item.get(), gameData_);
           }
@@ -514,8 +521,8 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
         std::cout << "Bought back an item that we werent tracking\n";
       }
       std::cout << "Current buyback queue:\n";
-      for (uint8_t slotNum=0; slotNum<selfState_.getBuybackQueue().size(); ++slotNum) {
-        printItem(slotNum, selfState_.getBuybackQueue().getItem(slotNum), gameData_);
+      for (uint8_t slotNum=0; slotNum<selfState_.buybackQueue.size(); ++slotNum) {
+        printItem(slotNum, selfState_.buybackQueue.getItem(slotNum), gameData_);
       }
       std::cout << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kPickItem) {
@@ -527,9 +534,9 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
       } else {
         if (movement.pickedItem != nullptr) {
           std::cout << "Picked an item\n";
-          if (selfState_.getInventory().hasItem(movement.destSlot)) {
+          if (selfState_.inventory.hasItem(movement.destSlot)) {
             std::cout << "Already something here\n";
-            auto existingItem = selfState_.getInventory().getItem(movement.destSlot);
+            auto existingItem = selfState_.inventory.getItem(movement.destSlot);
             bool addedToStack = false;
             if (existingItem->refItemId == movement.pickedItem->refItemId) {
               // Both items have the same refId
@@ -549,8 +556,8 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
             }
           } else {
             std::cout << "New item!\n";
-            selfState_.getInventory().addItem(movement.destSlot, movement.pickedItem);
-            std::cout << "Item " << (selfState_.getInventory().hasItem(movement.destSlot) ? "was " : "was not ") << "successfully added\n";
+            selfState_.inventory.addItem(movement.destSlot, movement.pickedItem);
+            std::cout << "Item " << (selfState_.inventory.hasItem(movement.destSlot) ? "was " : "was not ") << "successfully added\n";
           }
           printItem(movement.destSlot, movement.pickedItem.get(), gameData_);
         } else {
@@ -560,11 +567,11 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
       // This would be a good time to try to use a pill, potion, return scroll, etc.
     } else if (movement.type == packet::enums::ItemMovementType::kDropItem) {
       std::cout << "Dropped an item\n";
-      if (selfState_.getInventory().hasItem(movement.srcSlot)) {
+      if (selfState_.inventory.hasItem(movement.srcSlot)) {
         std::cout << "Dropping ";
-        auto itemPtr = selfState_.getInventory().withdrawItem(movement.srcSlot);
+        auto itemPtr = selfState_.inventory.withdrawItem(movement.srcSlot);
         printItem(movement.srcSlot, itemPtr.get(), gameData_);
-        std::cout << "Item " << (!selfState_.getInventory().hasItem(movement.srcSlot) ? "was " : "was not ") << "successfully dropped\n";
+        std::cout << "Item " << (!selfState_.inventory.hasItem(movement.srcSlot) ? "was " : "was not ") << "successfully dropped\n";
       } else {
         std::cout << "Error: But there's no item in this inventory slot\n";
       }
@@ -606,6 +613,7 @@ void CharacterInfoModule::serverItemMoveReceived(const packet::parsing::ParsedSe
 }
 
 void CharacterInfoModule::abnormalInfoReceived(const packet::parsing::ParsedServerAbnormalInfo &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   for (int i=0; i<=bitNum(packet::enums::AbnormalStateFlag::kZombie); ++i) {
     selfState_.setLegacyStateEffect(state::fromBitNum(i), packet.states()[i].effectOrLevel);
   }
@@ -613,12 +621,14 @@ void CharacterInfoModule::abnormalInfoReceived(const packet::parsing::ParsedServ
 }
 
 void CharacterInfoModule::statUpdateReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   selfState_.setMaxHpMp(packet.maxHp(), packet.maxMp());
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
 }
 
 void CharacterInfoModule::serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   selfState_.initialize(packet.entityUniqueId(), packet.refObjId(), packet.hp(), packet.mp(), packet.masteries(), packet.skills());
 
   // Position
@@ -654,16 +664,12 @@ void CharacterInfoModule::serverAgentCharacterDataReceived(const packet::parsing
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kSpawned));
 }
 
-void CharacterInfoModule::resetInventory() {
-  selfState_.getInventory().clear();
-}
-
 void CharacterInfoModule::initializeInventory(uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<storage::Item>> &inventoryItemMap) {
-  resetInventory();
-  selfState_.getInventory().resize(inventorySize);
+  selfState_.inventory.clear();
+  selfState_.inventory.resize(inventorySize);
   // Guaranteed to have no items
   for (const auto &slotItemPtrPair : inventoryItemMap) {
-    selfState_.getInventory().addItem(slotItemPtrPair.first, slotItemPtrPair.second);
+    selfState_.inventory.addItem(slotItemPtrPair.first, slotItemPtrPair.second);
     printItem(slotItemPtrPair.first, slotItemPtrPair.second.get(), gameData_);
   }
 }
@@ -676,11 +682,11 @@ void CharacterInfoModule::useUniversalPill() {
   uint8_t bestOptionSlotNum;
   uint16_t bestOptionTypeData;
 
-  for (uint8_t slotNum=0; slotNum<selfState_.getInventory().size(); ++slotNum) {
-    if (!selfState_.getInventory().hasItem(slotNum)) {
+  for (uint8_t slotNum=0; slotNum<selfState_.inventory.size(); ++slotNum) {
+    if (!selfState_.inventory.hasItem(slotNum)) {
       continue;
     }
-    const storage::Item *itemPtr = selfState_.getInventory().getItem(slotNum);
+    const storage::Item *itemPtr = selfState_.inventory.getItem(slotNum);
     const storage::ItemExpendable *item;
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -723,11 +729,11 @@ void CharacterInfoModule::usePurificationPill() {
   uint8_t bestOptionSlotNum;
   uint16_t bestOptionTypeData;
 
-  for (uint8_t slotNum=0; slotNum<selfState_.getInventory().size(); ++slotNum) {
-    if (!selfState_.getInventory().hasItem(slotNum)) {
+  for (uint8_t slotNum=0; slotNum<selfState_.inventory.size(); ++slotNum) {
+    if (!selfState_.inventory.hasItem(slotNum)) {
       continue;
     }
-    const storage::Item *itemPtr = selfState_.getInventory().getItem(slotNum);
+    const storage::Item *itemPtr = selfState_.inventory.getItem(slotNum);
     const storage::ItemExpendable *item;
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -794,11 +800,11 @@ void CharacterInfoModule::usePotion(PotionType potionType) {
   }
 
   // Find potion in inventory
-  for (uint8_t slotNum=0; slotNum<selfState_.getInventory().size(); ++slotNum) {
-    if (!selfState_.getInventory().hasItem(slotNum)) {
+  for (uint8_t slotNum=0; slotNum<selfState_.inventory.size(); ++slotNum) {
+    if (!selfState_.inventory.hasItem(slotNum)) {
       continue;
     }
-    const storage::Item *itemPtr = selfState_.getInventory().getItem(slotNum);
+    const storage::Item *itemPtr = selfState_.inventory.getItem(slotNum);
     const storage::ItemExpendable *item;
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -916,11 +922,11 @@ bool CharacterInfoModule::havePotion(PotionType potionType) {
   }
 
   // Find potion in inventory
-  for (uint8_t slotNum=0; slotNum<selfState_.getInventory().size(); ++slotNum) {
-    if (!selfState_.getInventory().hasItem(slotNum)) {
+  for (uint8_t slotNum=0; slotNum<selfState_.inventory.size(); ++slotNum) {
+    if (!selfState_.inventory.hasItem(slotNum)) {
       continue;
     }
-    const storage::Item *itemPtr = selfState_.getInventory().getItem(slotNum);
+    const storage::Item *itemPtr = selfState_.inventory.getItem(slotNum);
     const storage::ItemExpendable *item;
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -972,6 +978,7 @@ void CharacterInfoModule::checkIfNeedToHeal() {
 }
 
 void CharacterInfoModule::entityUpdateReceived(const packet::parsing::ParsedServerHpMpUpdate &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (packet.entityUniqueId() != selfState_.globalId()) {
     // Not for my character, can ignore
     return;
@@ -1092,10 +1099,11 @@ bool isVigorPotion(const pk2::ref::Item &itemInfo) {
 }
 
 void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedServerUseItem &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (packet.result() == 1) {
     // Successfully used an item
-    if (selfState_.getInventory().hasItem(packet.slotNum())) {
-      auto *itemPtr = selfState_.getInventory().getItem(packet.slotNum());
+    if (selfState_.inventory.hasItem(packet.slotNum())) {
+      auto *itemPtr = selfState_.inventory.getItem(packet.slotNum());
       // Lets double check it's type data
       if (packet.itemData() == itemPtr->typeData()) {
         auto *expendableItemPtr = dynamic_cast<storage::ItemExpendable*>(itemPtr);
@@ -1154,7 +1162,7 @@ void CharacterInfoModule::serverUseItemReceived(const packet::parsing::ParsedSer
           if (expendableItemPtr->quantity == 0) {
             std::cout << "Used the last of this item! Delete from inventory\n";
             // TODO: Instead, delete the item upon receiving server_item_movement in the case DEL_ITEM_BY_SERVER
-            selfState_.getInventory().deleteItem(packet.slotNum());
+            selfState_.inventory.deleteItem(packet.slotNum());
           }
         }
       }

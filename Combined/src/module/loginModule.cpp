@@ -11,10 +11,12 @@
 
 namespace module {
 
-LoginModule::LoginModule(broker::PacketBroker &brokerSystem,
+LoginModule::LoginModule(state::Self &selfState,
+                         broker::PacketBroker &brokerSystem,
                          const packet::parsing::PacketParser &packetParser,
                          const config::CharacterLoginData &loginData,
                          const pk2::DivisionInfo &divisionInfo) :
+      selfState_(selfState),
       broker_(brokerSystem),
       packetParser_(packetParser),
       loginData_(loginData),
@@ -94,50 +96,54 @@ bool LoginModule::handlePacket(const PacketContainer &packet) {
 }
 
 void LoginModule::serverListReceived(const packet::parsing::ParsedLoginServerList &packet) {
-  shardId_ = packet.shardId();
-  auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(divisionInfo_.locale, loginData_.id, loginData_.password, shardId_);
+  const auto shardId = packet.shardId();
+  auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(divisionInfo_.locale, loginData_.id, loginData_.password, shardId);
   broker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
 }
 
 void LoginModule::loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) {
-  if (packet.result() != packet::enums::LoginResult::kSuccess) {
-    std::cout << " Login failed\n";
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
+  if (packet.result() == packet::enums::LoginResult::kSuccess) {
+    selfState_.token = packet.token();
   } else {
-    token_ = packet.token();
+    std::cout << " Login failed\n";
   }
 }
 
 void LoginModule::loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (packet.serviceName() != "AgentServer") {
   } else {
     // Connected to agentserver, send client auth packet
-    auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(token_, loginData_.id, loginData_.password, divisionInfo_.locale, kMacAddress_);
+    auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(selfState_.token, loginData_.id, loginData_.password, divisionInfo_.locale, selfState_.kMacAddress);
     broker_.injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
-    loggingIn_ = true;
+    selfState_.loggingIn = true;
     // Allow this packet to continue to the client
     // Warning: The client will send an empty clientAuth packet. block it from the server
   }
 }
 
 bool LoginModule::unknownPacketReceived(const packet::parsing::ParsedUnknown &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (packet.opcode() == packet::Opcode::kClientAgentAuthRequest) {
     // The client is trying to authenticate
-    if (loggingIn_) {
+    if (selfState_.loggingIn) {
       // Block this from the server
       return false;
     }
   } else if (packet.opcode() == packet::Opcode::kServerGatewayLoginIbuvChallenge) {
     // Got the captcha, respond with an answer
     std::cout << "Got captcha. Sending answer\n";
-    auto captchaAnswerPacket = packet::building::ClientGatewayLoginIbuvAnswer::packet(kCaptchaAnswer_);
+    auto captchaAnswerPacket = packet::building::ClientGatewayLoginIbuvAnswer::packet(selfState_.kCaptchaAnswer);
     broker_.injectPacket(captchaAnswerPacket, PacketContainer::Direction::kClientToServer);
   }
   return true;
 }
 
 void LoginModule::serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet) {
+  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
   if (packet.result() == 0x01) {
-    loggingIn_ = false;
+    selfState_.loggingIn = false;
     // TODO: remove this function and opcode subscription. Client will already take care of this
     // auto characterListPacket = packet::building::ClientAgentCharacterSelectionActionRequest::packet(packet::enums::CharacterSelectionAction::kList);
     // broker_.injectPacket(characterListPacket, PacketContainer::Direction::kClientToServer);

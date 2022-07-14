@@ -29,7 +29,7 @@ private:
   ui::UserInterface userInterface_{eventBroker_};
   packet::parsing::PacketParser packetParser_{gameData_};
   module::CharacterInfoModule characterInfoModule_{entityState_, selfState_, broker_, eventBroker_, userInterface_, packetParser_, gameData_};
-  module::LoginModule loginModule_{broker_, packetParser_, loginData_, gameData_.divisionInfo()};
+  module::LoginModule loginModule_{selfState_, broker_, packetParser_, loginData_, gameData_.divisionInfo()};
   module::MovementModule movementModule_{entityState_, selfState_, broker_, eventBroker_, packetParser_, gameData_};
   module::SkillUseModule skillUseModule_{entityState_, selfState_, broker_, eventBroker_, packetParser_, gameData_};
 };

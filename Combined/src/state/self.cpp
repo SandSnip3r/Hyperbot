@@ -29,7 +29,6 @@ void Self::initialize(uint32_t globalId,
                       uint32_t mp,
                       const std::vector<packet::structures::Mastery> &masteries,
                       const std::vector<packet::structures::Skill> &skills) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   spawned_ = true;
   
   globalId_ = globalId;
@@ -45,63 +44,51 @@ void Self::initialize(uint32_t globalId,
 }
 
 void Self::setRaceAndGender(uint32_t refObjId) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   privateSetRaceAndGender(refObjId);
 }
 
 void Self::resetHpPotionEventId() {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   hpPotionEventId_.reset();
 }
 
 void Self::resetMpPotionEventId() {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   mpPotionEventId_.reset();
 }
 
 void Self::resetVigorPotionEventId() {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   vigorPotionEventId_.reset();
 }
 
 void Self::resetUniversalPillEventId() {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   universalPillEventId_.reset();
 }
 
 void Self::resetPurificationPillEventId() {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   purificationPillEventId_.reset();
 }
 
 void Self::setHpPotionEventId(const broker::TimerManager::TimerId &timerId) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   hpPotionEventId_ = timerId;
 }
 
 void Self::setMpPotionEventId(const broker::TimerManager::TimerId &timerId) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   mpPotionEventId_ = timerId;
 }
 
 void Self::setVigorPotionEventId(const broker::TimerManager::TimerId &timerId) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   vigorPotionEventId_ = timerId;
 }
 
 void Self::setUniversalPillEventId(const broker::TimerManager::TimerId &timerId) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   universalPillEventId_ = timerId;
 }
 
 void Self::setPurificationPillEventId(const broker::TimerManager::TimerId &timerId) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   purificationPillEventId_ = timerId;
 }
 
 void Self::setSpeed(float walkSpeed, float runSpeed) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (walkSpeed == walkSpeed_ && runSpeed == runSpeed_) {
     // Didnt actually change
     return;
@@ -116,17 +103,14 @@ void Self::setSpeed(float walkSpeed, float runSpeed) {
 }
 
 void Self::setHwanSpeed(float hwanSpeed) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   hwanSpeed_ = hwanSpeed;
 }
 
 void Self::setLifeState(packet::enums::LifeState lifeState) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   lifeState_ = lifeState;
 }
 
 void Self::setMotionState(packet::enums::MotionState motionState) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   motionState_ = motionState;
   if (motionState_ == packet::enums::MotionState::kRun || motionState_ == packet::enums::MotionState::kWalk) {
     // Save whether we were walking or running last
@@ -135,12 +119,10 @@ void Self::setMotionState(packet::enums::MotionState motionState) {
 }
 
 void Self::setBodyState(packet::enums::BodyState bodyState) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   bodyState_ = bodyState;
 }
 
 void Self::setPosition(const packet::structures::Position &position) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   lastKnownPosition_ = position;
   moving_ = false;
   destinationPosition_.reset();
@@ -149,7 +131,6 @@ void Self::setPosition(const packet::structures::Position &position) {
 
 void Self::syncPosition(const packet::structures::Position &position) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   lastKnownPosition_ = position;
   // TODO: Need angle?
   if (moving_) {
@@ -158,7 +139,6 @@ void Self::syncPosition(const packet::structures::Position &position) {
 }
 
 void Self::doneMoving() {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (!moving_) {
     throw std::runtime_error("Self: Done moving, but we werent moving");
   }
@@ -173,7 +153,6 @@ void Self::doneMoving() {
 
 void Self::setMoving(const packet::structures::Position &destination) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (moving_) {
     // We've pivoted while moving, calculate where we are and save that
     lastKnownPosition_ = interpolateCurrentPosition();
@@ -186,7 +165,6 @@ void Self::setMoving(const packet::structures::Position &destination) {
 
 void Self::setMoving(const uint16_t angle) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (moving_) {
     // We've pivoted while moving, calculate where we are and save that
     lastKnownPosition_ = interpolateCurrentPosition();
@@ -198,22 +176,18 @@ void Self::setMoving(const uint16_t angle) {
 }
 
 void Self::setMovingEventId(const broker::TimerManager::TimerId &timerId) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   movingEventId_ = timerId;
 }
 
 void Self::resetMovingEventId() {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   movingEventId_.reset();
 }
 
 bool Self::haveMovingEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return movingEventId_.has_value();
 }
 
 broker::TimerManager::TimerId Self::getMovingEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (!movingEventId_.has_value()) {
     throw std::runtime_error("Self: Asking for moving event id, but we dont have one");
   }
@@ -221,110 +195,89 @@ broker::TimerManager::TimerId Self::getMovingEventId() const {
 }
 
 void Self::setHp(uint32_t hp) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   hp_ = hp;
 }
 
 void Self::setMp(uint32_t mp) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   mp_ = mp;
 }
 
 void Self::setMaxHpMp(uint32_t maxHp, uint32_t maxMp) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   maxHp_ = maxHp;
   maxMp_ = maxMp;
 }
 
 void Self::setStateBitmask(uint32_t stateBitmask) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   stateBitmask_ = stateBitmask;
 }
 
 void Self::setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect) {
   const auto index = toBitNum(flag);
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   legacyStateEffects_[index] = effect;
 }
 
 void Self::setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level) {
   const auto index = toBitNum(flag);
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   modernStateLevels_[index] = level;
 }
 
 void Self::setGold(uint64_t gold) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   gold_ = gold;
 }
 
 void Self::addGold(uint64_t gold) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   gold_ += gold;
 }
 
 void Self::subtractGold(uint64_t gold) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   gold_ -= gold;
 }
 
 void Self::setStorageGold(uint64_t gold) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   storageGold_ = gold;
 }
 
 void Self::setGuildStorageGold(uint64_t gold) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   guildStorageGold_ = gold;
 }
 
 bool Self::spawned() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return spawned_;
 }
 
 uint32_t Self::globalId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return globalId_;
 }
 
 Race Self::race() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return race_;
 }
 
 Gender Self::gender() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return gender_;
 }
 
 bool Self::haveHpPotionEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return hpPotionEventId_.has_value();
 }
 
 bool Self::haveMpPotionEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return mpPotionEventId_.has_value();
 }
 
 bool Self::haveVigorPotionEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return vigorPotionEventId_.has_value();
 }
 
 bool Self::haveUniversalPillEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return universalPillEventId_.has_value();
 }
 
 bool Self::havePurificationPillEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return purificationPillEventId_.has_value();
 }
 
 broker::TimerManager::TimerId Self::getHpPotionEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (!hpPotionEventId_.has_value()) {
     throw std::runtime_error("Self: Asking for hp potion event id, but we dont have one");
   }
@@ -332,7 +285,6 @@ broker::TimerManager::TimerId Self::getHpPotionEventId() const {
 }
 
 broker::TimerManager::TimerId Self::getMpPotionEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (!mpPotionEventId_.has_value()) {
     throw std::runtime_error("Self: Asking for mp potion event id, but we dont have one");
   }
@@ -340,7 +292,6 @@ broker::TimerManager::TimerId Self::getMpPotionEventId() const {
 }
 
 broker::TimerManager::TimerId Self::getVigorPotionEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (!vigorPotionEventId_.has_value()) {
     throw std::runtime_error("Self: Asking for vigor potion event id, but we dont have one");
   }
@@ -348,7 +299,6 @@ broker::TimerManager::TimerId Self::getVigorPotionEventId() const {
 }
 
 broker::TimerManager::TimerId Self::getUniversalPillEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (!universalPillEventId_.has_value()) {
     throw std::runtime_error("Self: Asking for universal pill event id, but we dont have one");
   }
@@ -356,7 +306,6 @@ broker::TimerManager::TimerId Self::getUniversalPillEventId() const {
 }
 
 broker::TimerManager::TimerId Self::getPurificationPillEventId() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (!purificationPillEventId_.has_value()) {
     throw std::runtime_error("Self: Asking for purification pill event id, but we dont have one");
   }
@@ -386,57 +335,46 @@ int Self::getVigorPotionDelay() const {
 }
 
 float Self::walkSpeed() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return walkSpeed_;
 }
 
 float Self::runSpeed() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return runSpeed_;
 }
 
 float Self::hwanSpeed() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return hwanSpeed_;
 }
 
 float Self::currentSpeed() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return internal_speed();
 }
 
 packet::enums::LifeState Self::lifeState() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return lifeState_;
 }
 
 packet::enums::MotionState Self::motionState() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return motionState_;
 }
 
 packet::enums::BodyState Self::bodyState() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return bodyState_;
 }
 
 packet::structures::Position Self::position() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return interpolateCurrentPosition();
 }
 
 bool Self::moving() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return moving_;
 }
 
 bool Self::haveDestination() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return destinationPosition_.has_value();
 }
 
 packet::structures::Position Self::destination() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (!destinationPosition_) {
     throw std::runtime_error("Self: Trying to get destination that does not exist");
   }
@@ -444,112 +382,83 @@ packet::structures::Position Self::destination() const {
 }
 
 uint32_t Self::hp() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return hp_;
 }
 
 uint32_t Self::mp() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return mp_;
 }
 
 std::optional<uint32_t> Self::maxHp() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return maxHp_;
 }
 
 std::optional<uint32_t> Self::maxMp() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return maxMp_;
 }
 
 uint32_t Self::stateBitmask() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return stateBitmask_;
 }
 
 std::array<uint16_t,6> Self::legacyStateEffects() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return legacyStateEffects_;
 }
 
 std::array<uint8_t,32> Self::modernStateLevels() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return modernStateLevels_;
 }
 
 std::vector<packet::structures::Mastery> Self::masteries() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return masteries_;
 }
 
 std::vector<packet::structures::Skill> Self::skills() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return skills_;
 }
 
-storage::Storage& Self::getInventory() {
-  // The inventory object holds a reference to our mutex, so it is threadsafe
-  return inventory_;
-}
-
-storage::BuybackQueue& Self::getBuybackQueue() {
-  // The BuybackQueue object holds a reference to our mutex, so it is threadsafe
-  return buybackQueue_;
-}
-
 uint64_t Self::getGold() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return gold_;
 }
 
 uint64_t Self::getStorageGold() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return storageGold_;
 }
 
 uint64_t Self::getGuildStorageGold() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return guildStorageGold_;
 }
 
 // =====================================Packets-in-flight state=====================================
 // Setters
 void Self::popItemFromUsedItemQueueIfNotEmpty() {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (!usedItemQueue_.empty()) {
     usedItemQueue_.pop_front();
   }
 }
 
 void Self::clearUsedItemQueue() {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   usedItemQueue_.clear();
 }
 
 void Self::pushItemToUsedItemQueue(uint8_t inventorySlotNum, uint16_t itemTypeId) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   usedItemQueue_.emplace_back(inventorySlotNum, itemTypeId);
 }
 
 void Self::setUserPurchaseRequest(const packet::parsing::ItemMovement &itemMovement) {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   userPurchaseRequest_ = itemMovement;
 }
 
 void Self::resetUserPurchaseRequest() {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   userPurchaseRequest_.reset();
 }
 
 // Getters
 bool Self::usedItemQueueIsEmpty() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return usedItemQueue_.empty();
 }
 
 bool Self::itemIsInUsedItemQueue(uint16_t itemTypeId) const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   for (const auto &usedItem : usedItemQueue_) {
     if (usedItem.itemTypeId == itemTypeId) {
       return true;
@@ -559,7 +468,6 @@ bool Self::itemIsInUsedItemQueue(uint16_t itemTypeId) const {
 }
 
 Self::UsedItem Self::getUsedItemQueueFront() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (usedItemQueue_.empty()) {
     throw std::runtime_error("Self: Trying to get front of used item queue that is empty");
   }
@@ -567,12 +475,10 @@ Self::UsedItem Self::getUsedItemQueueFront() const {
 }
 
 bool Self::haveUserPurchaseRequest() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   return userPurchaseRequest_.has_value();
 }
 
 packet::parsing::ItemMovement Self::getUserPurchaseRequest() const {
-  std::unique_lock<std::mutex> selfLock(selfMutex_);
   if (!userPurchaseRequest_.has_value()) {
     throw std::runtime_error("Self: Trying to get user purchase request that does not exist");
   }

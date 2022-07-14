@@ -5,14 +5,11 @@
 
 #include <array>
 #include <memory>
-#include <mutex>
 
 namespace storage {
 
 class BuybackQueue {
 public:
-  BuybackQueue(std::mutex &mutex);
-
   void addItem(std::shared_ptr<Item> item);
   uint8_t size() const;
   bool hasItem(uint8_t slot) const;
@@ -20,7 +17,6 @@ public:
   const Item* getItem(uint8_t slot) const;
   std::shared_ptr<Item> withdrawItem(uint8_t slot);
 private:
-  std::mutex &buybackQueueMutex_;
   uint8_t size_{0};
   std::array<std::shared_ptr<Item>, 5> items_;
   void boundsCheck(uint8_t slot, const std::string &funcName) const;

@@ -5,21 +5,16 @@
 
 namespace storage {
 
-BuybackQueue::BuybackQueue(std::mutex &mutex) : buybackQueueMutex_(mutex) {}
-
 bool BuybackQueue::hasItem(uint8_t slot) const {
-  std::unique_lock<std::mutex> buybackQueueLock(buybackQueueMutex_);
   boundsCheck(slot, "hasItem");
   return static_cast<bool>(items_[slot]);
 }
 
 uint8_t BuybackQueue::size() const {
-  std::unique_lock<std::mutex> buybackQueueLock(buybackQueueMutex_);
   return size_;
 }
 
 Item* BuybackQueue::getItem(uint8_t slot) {
-  std::unique_lock<std::mutex> buybackQueueLock(buybackQueueMutex_);
   boundsCheck(slot, "getItem");
   if (slot >= size_) {
     throw std::runtime_error("BuybackQueue::getItem Trying to get item "+std::to_string(slot)+" but size is "+std::to_string(size_));
@@ -28,7 +23,6 @@ Item* BuybackQueue::getItem(uint8_t slot) {
 }
 
 const Item* BuybackQueue::getItem(uint8_t slot) const {
-  std::unique_lock<std::mutex> buybackQueueLock(buybackQueueMutex_);
   boundsCheck(slot, "getItem");
   if (slot >= size_) {
     throw std::runtime_error("BuybackQueue::getItem Trying to get item "+std::to_string(slot)+" but size is "+std::to_string(size_));
@@ -37,7 +31,6 @@ const Item* BuybackQueue::getItem(uint8_t slot) const {
 }
 
 void BuybackQueue::addItem(std::shared_ptr<Item> item) {
-  std::unique_lock<std::mutex> buybackQueueLock(buybackQueueMutex_);
   if (size_ == items_.size()) {
     // Queue is full, shift everything over
     destroyItem(0);
@@ -48,7 +41,6 @@ void BuybackQueue::addItem(std::shared_ptr<Item> item) {
 }
 
 std::shared_ptr<Item> BuybackQueue::withdrawItem(uint8_t slot) {
-  std::unique_lock<std::mutex> buybackQueueLock(buybackQueueMutex_);
   boundsCheck(slot, "withdrawItem");
   if (slot >= size_) {
     throw std::runtime_error("BuybackQueue::withdrawItem Trying to withdraw item "+std::to_string(slot)+" but size is "+std::to_string(size_));

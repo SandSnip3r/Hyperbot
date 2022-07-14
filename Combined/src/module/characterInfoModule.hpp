@@ -93,7 +93,6 @@ private:
   void serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet);
   void trackObject(std::shared_ptr<packet::parsing::Object> obj);
   void stopTrackingObject(uint32_t gId);
-  void resetInventory();
   void initializeInventory(uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<storage::Item>> &inventoryItemMap);
   int getGrainDelay();
   int getUniversalPillDelay();
