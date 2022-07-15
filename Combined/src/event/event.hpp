@@ -21,7 +21,16 @@ enum class EventCode {
   kKnockbackStatusEnded,
   kMovementEnded,
   kCharacterSpeedUpdated,
-  kDropGold
+  kDropGold,
+
+  // ===================================State updates===================================
+  kStateUpdated = 0x1000,
+  // Login state updates
+  kStateShardIdUpdated,
+  kStateConnectedToAgentServerUpdated,
+  kStateReceivedCaptchaPromptUpdated,
+  kStateCharacterListUpdated,
+  // ===================================================================================
 };
 
 struct Event {

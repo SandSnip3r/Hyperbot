@@ -161,6 +161,10 @@ public:
 
   std::mutex selfMutex;
   // =======================Log in state======================
+  uint16_t shardId;
+  bool connectedToAgentServer{false};
+  bool receivedCaptchaPrompt{false};
+  std::vector<packet::structures::CharacterSelection::Character> characterList;
   bool loggingIn{false};
   uint32_t token;
 

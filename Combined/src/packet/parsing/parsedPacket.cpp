@@ -841,6 +841,7 @@ ParsedServerAgentCharacterSelectionJoinResponse::ParsedServerAgentCharacterSelec
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   result_ = stream.Read<uint8_t>();
+  // 0x01 = success, 0x02 = error
   if (result_ == 0x02) {
     errorCode_ = stream.Read<uint16_t>();
   }
@@ -931,6 +932,7 @@ ParsedServerAuthResponse::ParsedServerAuthResponse(const PacketContainer &packet
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   result_ = stream.Read<uint8_t>();
+  // 0x01 = success, 0x02 = error
   if (result_ == 0x02) {
     errorCode_ = stream.Read<uint8_t>();
   }
