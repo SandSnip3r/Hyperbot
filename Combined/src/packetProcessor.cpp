@@ -1,3 +1,5 @@
+#include "helpers.hpp"
+#include "logging.hpp"
 #include "packetProcessor.hpp"
 
 PacketProcessor::PacketProcessor(state::Entity &entityState,
@@ -22,7 +24,9 @@ void PacketProcessor::subscribeToPackets() {
 
   // Client packets
   broker_.subscribeToClientPacket(packet::Opcode::kClientAgentAuthRequest, packetHandleFunction);
+
   // Server packets
+  //   Login packets
   broker_.subscribeToServerPacket(packet::Opcode::LOGIN_SERVER_LIST, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::LOGIN_SERVER_AUTH_INFO, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::LOGIN_CLIENT_INFO, packetHandleFunction);
@@ -31,6 +35,10 @@ void PacketProcessor::subscribeToPackets() {
   broker_.subscribeToServerPacket(packet::Opcode::SERVER_INGAME_ACCEPT, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerGatewayLoginIbuvChallenge, packetHandleFunction);
   // broker_.subscribeToServerPacket(static_cast<packet::Opcode>(0x6005), packetHandleFunction);
+  //   Movement packets
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMovement, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePosition, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySyncPosition, packetHandleFunction);
 }
 
 bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
@@ -48,6 +56,7 @@ bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
 
   std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
 
+  // Login packet handlers
   packet::parsing::ParsedLoginServerList *serverList = dynamic_cast<packet::parsing::ParsedLoginServerList*>(parsedPacket.get());
   if (serverList != nullptr) {
     serverListReceived(*serverList);
@@ -91,9 +100,29 @@ bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
     return true;
   }
 
-  std::cout << "Unhandled packet subscribed to\n";
+  // Movement packet handlers
+  auto *severMove = dynamic_cast<packet::parsing::ServerAgentEntityUpdateMovement*>(parsedPacket.get());
+  if (severMove != nullptr) {
+    return serverAgentEntityUpdateMovementReceived(*severMove);
+  }
+
+  auto *entityUpdatePosition = dynamic_cast<packet::parsing::ServerAgentEntityUpdatePosition*>(parsedPacket.get());
+  if (entityUpdatePosition != nullptr) {
+    return serverAgentEntityUpdatePositionReceived(*entityUpdatePosition);
+  }
+
+  auto *entitySyncPosition = dynamic_cast<packet::parsing::ServerAgentEntitySyncPosition*>(parsedPacket.get());
+  if (entitySyncPosition != nullptr) {
+    return serverAgentEntitySyncPositionReceived(*entitySyncPosition);
+  }
+
+  LOG(handlePacket) << "Unhandled packet subscribed to\n";
   return true;
 }
+
+// ============================================================================================================================
+// ===============================================Login process packet handling================================================
+// ============================================================================================================================
 
 void PacketProcessor::serverListReceived(const packet::parsing::ParsedLoginServerList &packet) const {
   selfState_.shardId = packet.shardId();
@@ -104,7 +133,7 @@ void PacketProcessor::loginResponseReceived(const packet::parsing::ParsedLoginRe
   if (packet.result() == packet::enums::LoginResult::kSuccess) {
     selfState_.token = packet.token();
   } else {
-    std::cout << " Login failed\n";
+    LOG(loginResponseReceived) << " Login failed\n";
   }
 }
 
@@ -151,6 +180,92 @@ void PacketProcessor::charSelectionJoinResponseReceived(const packet::parsing::P
   if (packet.result() != 0x01) {
     // Character selection failed
     // TODO: Properly handle error
-    std::cout << "Failed when selecting character\n";
+    LOG(charSelectionJoinResponseReceived) << "Failed when selecting character\n";
   }
+}
+
+// ============================================================================================================================
+// ==================================================Movement packet handling==================================================
+// ============================================================================================================================
+
+bool PacketProcessor::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const {
+  if (packet.globalId() == selfState_.globalId()) {
+    const auto &currentPosition = selfState_.position();
+    LOG(serverAgentEntitySyncPositionReceived) << "Syncing position: " << currentPosition.xOffset << ',' << currentPosition.zOffset << std::endl;
+    selfState_.syncPosition(packet.position());
+  }
+  return false;
+}
+
+bool PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const {
+  if (packet.globalId() == selfState_.globalId()) {
+    if (selfState_.moving()) {
+      LOG(serverAgentEntityUpdatePositionReceived) << "Position update received" << std::endl;
+      // Happens when you collide with something
+      // Note: this also happens when running to pick an item
+      // Note: I think this also happens when a speed drug is cancelled
+      if (selfState_.haveMovingEventId()) {
+        LOG(serverAgentEntityUpdatePositionReceived) << "Cancelling movement timer\n";
+        eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
+        selfState_.resetMovingEventId();
+      }
+      selfState_.setPosition(packet.position());
+      LOG(serverAgentEntityUpdatePositionReceived) << "Now stationary at " << selfState_.position() << '\n';
+    } else {
+      LOG(serverAgentEntityUpdatePositionReceived) << "We werent moving, weird\n";
+      const auto pos = selfState_.position();
+      LOG(serverAgentEntityUpdatePositionReceived) << "Expected pos: " << pos.xOffset << ',' << pos.zOffset << '\n';
+      LOG(serverAgentEntityUpdatePositionReceived) << "Received pos: " << packet.position().xOffset << ',' << packet.position().zOffset << '\n';
+      // TODO: Does it make sense to update our position in this case? Probably
+      //  But it also seems like a problem because we mistakenly thought we were moving
+      selfState_.setPosition(packet.position());
+    }
+  }
+  return true;
+}
+
+bool PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const {
+  if (packet.globalId() == selfState_.globalId()) {
+    packet::structures::Position sourcePosition;
+    if (packet.hasSource()) {
+      // Server is telling us our source position
+      sourcePosition = packet.sourcePosition();
+      const auto currentPosition = selfState_.position();
+      if (std::round(currentPosition.xOffset) != std::round(sourcePosition.xOffset) && std::round(currentPosition.zOffset) != std::round(sourcePosition.zOffset)) {
+        // We arent where we thought we were
+        // We need to cancel this movement. Either move back to the source position or try to stop exactly where we are (by moving to our estimated position)
+        LOG(serverAgentEntityUpdateMovementReceived) << "Whoa, we're a bit off from where we thought we were. Expected: " << currentPosition.xOffset << ',' << currentPosition.zOffset << ", actual: " << sourcePosition.xOffset << ',' << sourcePosition.zOffset << std::endl;
+      }
+      LOG(serverAgentEntityUpdateMovementReceived) << "Syncing src position: " << sourcePosition.xOffset << ',' << sourcePosition.zOffset << std::endl;
+      selfState_.syncPosition(sourcePosition);
+    } else {
+      // Server doesnt tell us where we're coming from, use our internally tracked position
+      sourcePosition = selfState_.position();
+    }
+    if (selfState_.haveMovingEventId()) {
+      // Had a timer already running for movement, cancel it
+      LOG(serverAgentEntityUpdateMovementReceived) << "Had a running timer, cancelling it" << std::endl;
+      eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
+      selfState_.resetMovingEventId();
+    }
+    LOG(serverAgentEntityUpdateMovementReceived) << "We are moving from " << sourcePosition << ' ';
+    if (packet.hasDestination()) {
+      auto destPosition = packet.destinationPosition();
+      std::cout << "to " << destPosition << '\n';
+      if (sourcePosition.xOffset == destPosition.xOffset && sourcePosition.zOffset == destPosition.zOffset) {
+        LOG(serverAgentEntityUpdateMovementReceived) << "Server says we're moving to our current position. wtf?\n";
+        // Ignore this
+      } else {
+        auto seconds = secondsToTravel(sourcePosition, destPosition, selfState_.currentSpeed());
+        LOG(serverAgentEntityUpdateMovementReceived) << "Should take " << seconds << "s. Timer set\n";
+        const auto movingEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+        selfState_.setMovingEventId(movingEventId);
+        selfState_.setMoving(packet.destinationPosition());
+      }
+    } else {
+      std::cout << "toward " << packet.angle() << '\n';
+      selfState_.setMoving(packet.angle());
+    }
+  }
+  return true;
 }

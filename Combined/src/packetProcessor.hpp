@@ -3,6 +3,9 @@
 
 #include "broker/eventBroker.hpp"
 #include "broker/packetBroker.hpp"
+#include "packet/parsing/serverAgentEntitySyncPosition.hpp"
+#include "packet/parsing/serverAgentEntityUpdateMovement.hpp"
+#include "packet/parsing/serverAgentEntityUpdatePosition.hpp"
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
 #include "state/entity.hpp"
@@ -43,6 +46,10 @@ private:
   void serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet) const;
   void charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet) const;
   void charSelectionJoinResponseReceived(const packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse &packet) const;
+  // From MovementModule
+  bool serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const;
+  bool serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const;
+  bool serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const;
 };
 
 #endif // PACKETPROCESSOR_HPP_

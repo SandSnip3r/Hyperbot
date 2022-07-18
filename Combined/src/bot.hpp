@@ -6,7 +6,6 @@
 #include "broker/packetBroker.hpp"
 #include "config/characterLoginData.hpp"
 #include "module/characterInfoModule.hpp"
-#include "module/movementModule.hpp"
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
 #include "state/entity.hpp"
@@ -34,13 +33,16 @@ private:
   packet::parsing::PacketParser packetParser_{gameData_};
   PacketProcessor packetProcessor_{entityState_, selfState_, broker_, eventBroker_, userInterface_, packetParser_, gameData_};
   module::CharacterInfoModule characterInfoModule_{entityState_, selfState_, broker_, eventBroker_, userInterface_, packetParser_, gameData_};
-  module::MovementModule movementModule_{entityState_, selfState_, broker_, eventBroker_, packetParser_, gameData_};
 
   void subscribeToEvents();
+  // Login events
   void handleStateShardIdUpdated() const;
   void handleStateConnectedToAgentServerUpdated();
   void handleStateReceivedCaptchaPromptUpdated() const;
   void handleStateCharacterListUpdated() const;
+  // Movement events
+  void handleMovementEnded();
+  void handleSpeedUpdated();
 };
 
 #endif

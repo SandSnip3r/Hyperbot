@@ -179,11 +179,6 @@ bool CharacterInfoModule::handlePacket(const PacketContainer &packet) {
     return true;
   }
 
-  auto *clientChat = dynamic_cast<packet::parsing::ClientAgentChatRequest*>(parsedPacket.get());
-  if (clientChat != nullptr) {
-    return true;
-  }
-
   //======================================================================================================
   //============================================Server Packets============================================
   //======================================================================================================

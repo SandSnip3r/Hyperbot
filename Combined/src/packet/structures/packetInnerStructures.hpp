@@ -4,6 +4,7 @@
 #include "../enums/packetEnums.hpp"
 
 #include <cmath>
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -125,6 +126,17 @@ public:
   uint8_t xSector() const { return regionId & 0xFF; }
   uint8_t zSector() const { return (regionId >> 8) & 0x7F; }
 };
+
+inline std::ostream& operator<<(std::ostream &stream, const packet::structures::Position &pos) {
+  stream << '{';
+  if (pos.isDungeon()) {
+    stream << (int)pos.dungeonId();
+  } else {
+    stream << (int)pos.xSector() << ',' << (int)pos.zSector();
+  }
+  stream << " (" << pos.xOffset << ',' << pos.yOffset << ',' << pos.zOffset << ")}";
+  return stream;
+}
 
 inline uint16_t createWorldRegionId(uint16_t xSector, uint16_t zSector) {
   // TODO: Move to special file

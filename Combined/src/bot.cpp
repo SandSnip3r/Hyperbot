@@ -1,4 +1,6 @@
 #include "bot.hpp"
+#include "helpers.hpp"
+#include "logging.hpp"
 
 #include "packet/building/clientAgentAuthRequest.hpp"
 #include "packet/building/clientAgentCharacterSelectionJoinRequest.hpp"
@@ -18,10 +20,14 @@ Bot::Bot(const config::CharacterLoginData &loginData,
 
 void Bot::subscribeToEvents() {
   auto eventHandleFunction = std::bind(&Bot::handleEvent, this, std::placeholders::_1);
+  // Login events
   eventBroker_.subscribeToEvent(event::EventCode::kStateShardIdUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStateConnectedToAgentServerUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStateReceivedCaptchaPromptUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStateCharacterListUpdated, eventHandleFunction);
+  // Movement events
+  eventBroker_.subscribeToEvent(event::EventCode::kMovementEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCharacterSpeedUpdated, eventHandleFunction);
 }
 
 void Bot::handleEvent(const event::Event *event) {
@@ -29,6 +35,7 @@ void Bot::handleEvent(const event::Event *event) {
 
   const auto eventCode = event->eventCode;
   switch (eventCode) {
+    // Login events
     case event::EventCode::kStateShardIdUpdated:
       handleStateShardIdUpdated();
       break;
@@ -41,11 +48,22 @@ void Bot::handleEvent(const event::Event *event) {
     case event::EventCode::kStateCharacterListUpdated:
       handleStateCharacterListUpdated();
       break;
+    // Movement events
+    case event::EventCode::kMovementEnded:
+      handleMovementEnded();
+      break;
+    case event::EventCode::kCharacterSpeedUpdated:
+      handleSpeedUpdated();
+      break;
     default:
-      std::cout << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
+      LOG(handleEvent) << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
       break;
   }
 }
+
+// ============================================================================================================================
+// ================================================Login process event handling================================================
+// ============================================================================================================================
 
 void Bot::handleStateShardIdUpdated() const {
   // We received the server list from the server, try to log in
@@ -61,13 +79,13 @@ void Bot::handleStateConnectedToAgentServerUpdated() {
 }
 
 void Bot::handleStateReceivedCaptchaPromptUpdated() const {
-  std::cout << "Got captcha. Sending answer\n";
+  LOG(handleStateReceivedCaptchaPromptUpdated) << "Got captcha. Sending answer\n";
   const auto captchaAnswerPacket = packet::building::ClientGatewayLoginIbuvAnswer::packet(selfState_.kCaptchaAnswer);
   broker_.injectPacket(captchaAnswerPacket, PacketContainer::Direction::kClientToServer);
 }
 
 void Bot::handleStateCharacterListUpdated() const {
-  std::cout << "Char list received: [ ";
+  LOG(handleStateCharacterListUpdated) << "Char list received: [ ";
   for (const auto &i : selfState_.characterList) {
     std::cout << i.name << ' ';
   }
@@ -78,11 +96,34 @@ void Bot::handleStateCharacterListUpdated() const {
     return character.name == loginData_.name;
   });
   if (it == selfState_.characterList.end()) {
-    std::cout << "Unable to find character \"" << loginData_.name << "\"\n";
+    LOG(handleStateCharacterListUpdated) << "Unable to find character \"" << loginData_.name << "\"\n";
     return;
   }
 
   // Found our character, select it
   auto charSelectionPacket = packet::building::ClientAgentCharacterSelectionJoinRequest::packet(loginData_.name);
   broker_.injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
+}
+
+// ============================================================================================================================
+// ==================================================Movement event handling===================================================
+// ============================================================================================================================
+
+void Bot::handleSpeedUpdated() {
+  if (selfState_.haveMovingEventId() && selfState_.moving()) {
+    if (selfState_.haveDestination()) {
+      // Need to update timer
+      auto seconds = secondsToTravel(selfState_.position(), selfState_.destination(), selfState_.currentSpeed());
+      eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
+      const auto movingEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+      selfState_.setMovingEventId(movingEventId);
+    }
+  }
+}
+
+void Bot::handleMovementEnded() {
+  selfState_.resetMovingEventId();
+  LOG(handleMovementEnded) << "Movement ended event\n";
+  selfState_.doneMoving();
+  LOG(handleMovementEnded) << "Currently at " << selfState_.position() << '\n';
 }
