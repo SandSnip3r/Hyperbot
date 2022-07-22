@@ -21,7 +21,7 @@ enum class EventCode {
   kKnockbackStatusEnded,
   kMovementEnded,
   kCharacterSpeedUpdated,
-  kDropGold,
+  kItemWaitForReuseDelay,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -59,6 +59,14 @@ public:
   DropGold(int amount, int count);
   const int goldAmount, goldDropCount;
   virtual ~DropGold() = default;
+};
+
+struct ItemWaitForReuseDelay : public Event {
+public:
+  ItemWaitForReuseDelay(uint8_t slotNum, uint16_t typeId);
+  uint8_t inventorySlotNum;
+  uint16_t itemTypeId;
+  virtual ~ItemWaitForReuseDelay() = default;
 };
 
 } // namespace event

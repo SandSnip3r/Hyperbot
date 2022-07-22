@@ -43,7 +43,6 @@ void Storage::deleteItem(uint8_t slot) {
 }
 
 void Storage::moveItem(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity) {
-  std::cout << "moveItem, srcSlot: " << static_cast<int>(srcSlot) << ", destSlot: " << static_cast<int>(destSlot) << ", quantity: " << quantity << '\n';
   if (itemList_.hasItem(srcSlot)) {
     Item *srcItem = itemList_.getItem(srcSlot);
     bool destItemExists = itemList_.hasItem(destSlot);

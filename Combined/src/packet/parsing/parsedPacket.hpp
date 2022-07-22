@@ -40,9 +40,9 @@ private:
 
 //=========================================================================================================================================================
 
-class ParsedServerHpMpUpdate : public ParsedPacket {
+class ParsedServerAgentEntityUpdateStatus : public ParsedPacket {
 public:
-  ParsedServerHpMpUpdate(const PacketContainer &packet);
+  ParsedServerAgentEntityUpdateStatus(const PacketContainer &packet);
   uint32_t entityUniqueId() const;
   packet::enums::UpdateFlag updateFlag() const;
   uint8_t vitalBitmask() const;
@@ -64,9 +64,9 @@ private:
 
 //=========================================================================================================================================================
 
-class ParsedServerAbnormalInfo : public ParsedPacket {
+class ParsedServerAgentAbnormalInfo : public ParsedPacket {
 public:
-  ParsedServerAbnormalInfo(const PacketContainer &packet);
+  ParsedServerAgentAbnormalInfo(const PacketContainer &packet);
   uint32_t stateBitmask() const;
   const std::array<packet::structures::vitals::AbnormalState, 32>& states() const;
 private:
@@ -76,9 +76,9 @@ private:
 
 //=========================================================================================================================================================
 
-class ParsedServerUseItem : public ParsedPacket {
+class ParsedServerAgentInventoryItemUseResponse : public ParsedPacket {
 public:
-  ParsedServerUseItem(const PacketContainer &packet);
+  ParsedServerAgentInventoryItemUseResponse(const PacketContainer &packet);
   uint8_t result() const;
   uint8_t slotNum() const;
   uint16_t remainingCount() const;
@@ -112,10 +112,10 @@ struct ItemMovement {
   std::shared_ptr<storage::Item> pickedItem;
 };
 
-class ParsedServerItemMove : public ParsedPacket {
+class ParsedServerAgentInventoryOperationResponse : public ParsedPacket {
 public:
-  ParsedServerItemMove(const PacketContainer &packet, const pk2::ItemData &itemData);
-  ~ParsedServerItemMove();
+  ParsedServerAgentInventoryOperationResponse(const PacketContainer &packet, const pk2::ItemData &itemData);
+  ~ParsedServerAgentInventoryOperationResponse();
   const std::vector<ItemMovement>& itemMovements() const;
 private:
   std::vector<ItemMovement> itemMovements_;
@@ -202,9 +202,9 @@ public:
 
 void printObj(const packet::parsing::Object *obj, const pk2::GameData &gameData);
 
-class ParsedServerAgentGroupSpawn : public ParsedPacket {
+class ParsedServerAgentEntityGroupSpawnData : public ParsedPacket {
 public:
-  ParsedServerAgentGroupSpawn(const PacketContainer &packet,
+  ParsedServerAgentEntityGroupSpawnData(const PacketContainer &packet,
                               const pk2::CharacterData &characterData,
                               const pk2::ItemData &itemData,
                               const pk2::SkillData &skillData,

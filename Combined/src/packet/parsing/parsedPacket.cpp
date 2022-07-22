@@ -21,7 +21,7 @@ ParsedUnknown::ParsedUnknown(const PacketContainer &packet) : ParsedPacket(packe
 
 //=========================================================================================================================================================
 
-ParsedServerHpMpUpdate::ParsedServerHpMpUpdate(const PacketContainer &packet) : ParsedPacket(packet) {
+ParsedServerAgentEntityUpdateStatus::ParsedServerAgentEntityUpdateStatus(const PacketContainer &packet) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
 
   entityUniqueId_ = stream.Read<uint32_t>();
@@ -51,49 +51,49 @@ ParsedServerHpMpUpdate::ParsedServerHpMpUpdate(const PacketContainer &packet) : 
   }
 }
 
-uint32_t ParsedServerHpMpUpdate::entityUniqueId() const {
+uint32_t ParsedServerAgentEntityUpdateStatus::entityUniqueId() const {
   return entityUniqueId_;
 }
 
-packet::enums::UpdateFlag ParsedServerHpMpUpdate::updateFlag() const {
+packet::enums::UpdateFlag ParsedServerAgentEntityUpdateStatus::updateFlag() const {
   return updateFlag_;
 }
 
-uint8_t ParsedServerHpMpUpdate::vitalBitmask() const {
+uint8_t ParsedServerAgentEntityUpdateStatus::vitalBitmask() const {
   return vitalBitmask_;
 }
 
-uint32_t ParsedServerHpMpUpdate::newHpValue() const {
+uint32_t ParsedServerAgentEntityUpdateStatus::newHpValue() const {
   return newHpValue_;
 }
 
-uint32_t ParsedServerHpMpUpdate::newMpValue() const {
+uint32_t ParsedServerAgentEntityUpdateStatus::newMpValue() const {
   return newMpValue_;
 }
 
-uint16_t ParsedServerHpMpUpdate::newHgpValue() const {
+uint16_t ParsedServerAgentEntityUpdateStatus::newHgpValue() const {
   return newHgpValue_;
 }
 
-uint32_t ParsedServerHpMpUpdate::stateBitmask() const {
+uint32_t ParsedServerAgentEntityUpdateStatus::stateBitmask() const {
   return stateBitmask_;
 }
 
-const std::vector<uint8_t>& ParsedServerHpMpUpdate::stateLevels() const {
+const std::vector<uint8_t>& ParsedServerAgentEntityUpdateStatus::stateLevels() const {
   return stateLevels_;
 }
 
 //=========================================================================================================================================================
 
-uint32_t ParsedServerAbnormalInfo::stateBitmask() const {
+uint32_t ParsedServerAgentAbnormalInfo::stateBitmask() const {
   return stateBitmask_;
 }
 
-const std::array<packet::structures::vitals::AbnormalState, 32>& ParsedServerAbnormalInfo::states() const {
+const std::array<packet::structures::vitals::AbnormalState, 32>& ParsedServerAgentAbnormalInfo::states() const {
   return states_;
 }
 
-ParsedServerAbnormalInfo::ParsedServerAbnormalInfo(const PacketContainer &packet) : ParsedPacket(packet) { 
+ParsedServerAgentAbnormalInfo::ParsedServerAgentAbnormalInfo(const PacketContainer &packet) : ParsedPacket(packet) { 
   StreamUtility stream = packet.data;
   stateBitmask_ = stream.Read<uint32_t>();
   for (uint32_t i=0; i<32; ++i) {
@@ -115,27 +115,27 @@ ParsedServerAbnormalInfo::ParsedServerAbnormalInfo(const PacketContainer &packet
 
 //=========================================================================================================================================================
 
-uint8_t ParsedServerUseItem::result() const {
+uint8_t ParsedServerAgentInventoryItemUseResponse::result() const {
   return result_;
 }
 
-uint8_t ParsedServerUseItem::slotNum() const {
+uint8_t ParsedServerAgentInventoryItemUseResponse::slotNum() const {
   return slotNum_;
 }
 
-uint16_t ParsedServerUseItem::remainingCount() const {
+uint16_t ParsedServerAgentInventoryItemUseResponse::remainingCount() const {
   return remainingCount_;
 }
 
-uint16_t ParsedServerUseItem::itemData() const {
+uint16_t ParsedServerAgentInventoryItemUseResponse::itemData() const {
   return itemData_;
 }
 
-packet::enums::InventoryErrorCode ParsedServerUseItem::errorCode() const {
+packet::enums::InventoryErrorCode ParsedServerAgentInventoryItemUseResponse::errorCode() const {
   return errorCode_;
 }
 
-ParsedServerUseItem::ParsedServerUseItem(const PacketContainer &packet) : ParsedPacket(packet) {
+ParsedServerAgentInventoryItemUseResponse::ParsedServerAgentInventoryItemUseResponse(const PacketContainer &packet) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
 
   result_ = stream.Read<uint8_t>();
@@ -151,11 +151,11 @@ ParsedServerUseItem::ParsedServerUseItem(const PacketContainer &packet) : Parsed
 
 //=========================================================================================================================================================
 
-const std::vector<ItemMovement>& ParsedServerItemMove::itemMovements() const {
+const std::vector<ItemMovement>& ParsedServerAgentInventoryOperationResponse::itemMovements() const {
   return itemMovements_;
 }
 
-ParsedServerItemMove::ParsedServerItemMove(const PacketContainer &packet, const pk2::ItemData &itemData) : ParsedPacket(packet) {
+ParsedServerAgentInventoryOperationResponse::ParsedServerAgentInventoryOperationResponse(const PacketContainer &packet, const pk2::ItemData &itemData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   uint8_t result_ = stream.Read<uint8_t>();
   if (result_ == 1) {
@@ -286,7 +286,7 @@ ParsedServerItemMove::ParsedServerItemMove(const PacketContainer &packet, const 
 // TODO: Try to inject a buy packet that buys more than 1 stack of a stackable item
 //  Invesitage what it does to the kBuyFromNPC data
 
-ParsedServerItemMove::~ParsedServerItemMove() {}
+ParsedServerAgentInventoryOperationResponse::~ParsedServerAgentInventoryOperationResponse() {}
 
 //=========================================================================================================================================================
 
@@ -763,7 +763,7 @@ uint32_t parseDespawn(StreamUtility &stream) {
   return stream.Read<uint32_t>();
 }
 
-ParsedServerAgentGroupSpawn::ParsedServerAgentGroupSpawn(const PacketContainer &packet,
+ParsedServerAgentEntityGroupSpawnData::ParsedServerAgentEntityGroupSpawnData(const PacketContainer &packet,
                                                          const pk2::CharacterData &characterData,
                                                          const pk2::ItemData &itemData,
                                                          const pk2::SkillData &skillData,
@@ -787,15 +787,15 @@ ParsedServerAgentGroupSpawn::ParsedServerAgentGroupSpawn(const PacketContainer &
   }
 }
 
-GroupSpawnType ParsedServerAgentGroupSpawn::groupSpawnType() const {
+GroupSpawnType ParsedServerAgentEntityGroupSpawnData::groupSpawnType() const {
   return groupSpawnType_;
 }
 
-const std::vector<std::shared_ptr<Object>>& ParsedServerAgentGroupSpawn::objects() const {
+const std::vector<std::shared_ptr<Object>>& ParsedServerAgentEntityGroupSpawnData::objects() const {
   return objects_;
 }
 
-const std::vector<uint32_t>& ParsedServerAgentGroupSpawn::despawns() const {
+const std::vector<uint32_t>& ParsedServerAgentEntityGroupSpawnData::despawns() const {
   return despawns_;
 }
 

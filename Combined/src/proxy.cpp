@@ -250,7 +250,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           characterInfoPacketContainer_.emplace(p);
           // Update opcode to reflect "data"
           characterInfoPacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentCharacterData);
-        } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_BEGIN) {
+        } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::kServerAgentEntityGroupspawnBegin) {
           // Initialize data/container
           if (groupSpawnPacketContainer_) {
             // What? There's already one?
@@ -259,11 +259,11 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           // Initialize packet data with the "begin" data
           groupSpawnPacketContainer_.emplace(p);
           // Update opcode to reflect "data"
-          groupSpawnPacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA);
+          groupSpawnPacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentEntityGroupspawnData);
         } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::kServerAgentCharacterData) {
           // Append all data to container
           characterInfoPacketContainer_->data.Write(p.data.GetStreamVector());
-        } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA) {  
+        } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::kServerAgentEntityGroupspawnData) {
           // Append all data to container
           groupSpawnPacketContainer_->data.Write(p.data.GetStreamVector());
         }
@@ -278,15 +278,15 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             forwardToClient = broker_.packetReceived(*characterInfoPacketContainer_, PacketContainer::Direction::kServerToClient);
             // Reset data
             characterInfoPacketContainer_.reset();
-          } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_END) {
+          } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::kServerAgentEntityGroupspawnEnd) {
             // Send packet to broker
             forwardToClient = broker_.packetReceived(*groupSpawnPacketContainer_, PacketContainer::Direction::kServerToClient);
             // Reset data
             groupSpawnPacketContainer_.reset();
           } else if (static_cast<packet::Opcode>(p.opcode) != packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN &&
                      static_cast<packet::Opcode>(p.opcode) != packet::Opcode::kServerAgentCharacterData &&
-                     static_cast<packet::Opcode>(p.opcode) != packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_BEGIN &&
-                     static_cast<packet::Opcode>(p.opcode) != packet::Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA) {
+                     static_cast<packet::Opcode>(p.opcode) != packet::Opcode::kServerAgentEntityGroupspawnBegin &&
+                     static_cast<packet::Opcode>(p.opcode) != packet::Opcode::kServerAgentEntityGroupspawnData) {
             // In all other cases, if its not "begin" or "data", send it
             forwardToClient = broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
           }

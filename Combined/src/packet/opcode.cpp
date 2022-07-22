@@ -216,20 +216,20 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_WORLD_CLOCK) {
     return "SERVER_WORLD_CLOCK";
   }
-  if (opcode == Opcode::SERVER_SPAWN) {
-    return "SERVER_SPAWN";
+  if (opcode == Opcode::kServerAgentEntitySpawn) {
+    return "kServerAgentEntitySpawn";
   }
-  if (opcode == Opcode::SERVER_DESPAWN) {
-    return "SERVER_DESPAWN";
+  if (opcode == Opcode::kServerAgentEntityDespawn) {
+    return "kServerAgentEntityDespawn";
   }
-  if (opcode == Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_BEGIN) {
-    return "SERVER_AGENT_ENTITY_GROUPSPAWN_BEGIN";
+  if (opcode == Opcode::kServerAgentEntityGroupspawnBegin) {
+    return "kServerAgentEntityGroupspawnBegin";
   }
-  if (opcode == Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_DATA) {
-    return "SERVER_AGENT_ENTITY_GROUPSPAWN_DATA";
+  if (opcode == Opcode::kServerAgentEntityGroupspawnData) {
+    return "kServerAgentEntityGroupspawnData";
   }
-  if (opcode == Opcode::SERVER_AGENT_ENTITY_GROUPSPAWN_END) {
-    return "SERVER_AGENT_ENTITY_GROUPSPAWN_END";
+  if (opcode == Opcode::kServerAgentEntityGroupspawnEnd) {
+    return "kServerAgentEntityGroupspawnEnd";
   }
   if (opcode == Opcode::SERVER_ITEM_EQUIP) {
     return "SERVER_ITEM_EQUIP";
@@ -237,8 +237,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_ITEM_UNEQUIP) {
     return "SERVER_ITEM_UNEQUIP";
   }
-  if (opcode == Opcode::SERVER_ITEM_MOVEMENT) {
-    return "SERVER_ITEM_MOVEMENT";
+  if (opcode == Opcode::kServerAgentInventoryOperationResponse) {
+    return "kServerAgentInventoryOperationResponse";
   }
   if (opcode == Opcode::SERVER_NEW_GOLD_AMOUNT) {
     return "SERVER_NEW_GOLD_AMOUNT";
@@ -246,8 +246,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_ANIMATION_ITEM_PICKUP) {
     return "SERVER_ANIMATION_ITEM_PICKUP";
   }
-  if (opcode == Opcode::SERVER_ITEM_USE) {
-    return "SERVER_ITEM_USE";
+  if (opcode == Opcode::kServerAgentInventoryItemUseResponse) {
+    return "kServerAgentInventoryItemUseResponse";
   }
   if (opcode == Opcode::SERVER_ANIMATION_ITEM_USE) {
     return "SERVER_ANIMATION_ITEM_USE";
@@ -267,8 +267,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_COUNTDOWN_INTERRUPT) {
     return "SERVER_COUNTDOWN_INTERRUPT";
   }
-  if (opcode == Opcode::SERVER_STATS) {
-    return "SERVER_STATS";
+  if (opcode == Opcode::kServerAgentCharacterUpdateStats) {
+    return "kServerAgentCharacterUpdateStats";
   }
   if (opcode == Opcode::SERVER_STR_UPDATE) {
     return "SERVER_STR_UPDATE";
@@ -279,7 +279,7 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kServerAgentEntityUpdateState) {
     return "kServerAgentEntityUpdateState";
   }
-  if (opcode == Opcode::SERVER_HPMP_UPDATE) {
+  if (opcode == Opcode::kServerAgentEntityUpdateStatus) {
     return "SERVER_HPMP_UPDATE";
   }
   if (opcode == Opcode::SERVER_ANIMATION_LEVEL_UP) {
@@ -342,8 +342,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_DEAD) {
     return "SERVER_DEAD";
   }
-  if (opcode == Opcode::SERVER_AGENT_ABNORMAL_INFO) {
-    return "SERVER_AGENT_ABNORMAL_INFO";
+  if (opcode == Opcode::kServerAgentAbnormalInfo) {
+    return "kServerAgentAbnormalInfo";
   }
   if (opcode == Opcode::SERVER_PARTY_FORM) {
     return "SERVER_PARTY_FORM";

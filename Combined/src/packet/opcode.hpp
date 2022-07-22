@@ -111,19 +111,19 @@ enum class Opcode {
   SERVER_AGENT_CHARACTER_INFO_END = 0x34A6,
   SERVER_WORLD_CLOCK = 0x3020,
 
-  SERVER_SPAWN = 0x3015,
-  SERVER_DESPAWN = 0x3016,
+  kServerAgentEntitySpawn = 0x3015,
+  kServerAgentEntityDespawn = 0x3016,
 
-  SERVER_AGENT_ENTITY_GROUPSPAWN_BEGIN = 0x3017,
-  SERVER_AGENT_ENTITY_GROUPSPAWN_DATA = 0x3019,
-  SERVER_AGENT_ENTITY_GROUPSPAWN_END = 0x3018,
+  kServerAgentEntityGroupspawnBegin = 0x3017,
+  kServerAgentEntityGroupspawnData = 0x3019,
+  kServerAgentEntityGroupspawnEnd = 0x3018,
 
   SERVER_ITEM_EQUIP = 0x3038,
   SERVER_ITEM_UNEQUIP = 0x3039,
-  SERVER_ITEM_MOVEMENT = 0xB034,
+  kServerAgentInventoryOperationResponse = 0xB034,
   SERVER_NEW_GOLD_AMOUNT = 0x304E, // SERVER_NEW_GOLD_AMOUNT, SERVER_SKILLPOINTS
   SERVER_ANIMATION_ITEM_PICKUP = 0x3036,
-  SERVER_ITEM_USE = 0xB04C,
+  kServerAgentInventoryItemUseResponse = 0xB04C,
   SERVER_ANIMATION_ITEM_USE = 0x305C,
   SERVER_ANIMATION_CAPE = 0x3041,
   SERVER_ITEM_QUANTITY_UPDATE = 0x3040,
@@ -132,13 +132,13 @@ enum class Opcode {
   SERVER_COUNTDOWN = 0xB005,
   SERVER_COUNTDOWN_INTERRUPT = 0xB006,
 
-  SERVER_STATS = 0x303D,
+  kServerAgentCharacterUpdateStats = 0x303D,
   SERVER_STR_UPDATE = 0xB050,
   SERVER_INT_UPDATE = 0xB051,
   kServerAgentEntitySyncPosition = 0x3028,
   kServerAgentEntityUpdateState = 0x30BF,
   kServerAgentEntityUpdateMoveSpeed = 0x30D0,
-  SERVER_HPMP_UPDATE = 0x3057,
+  kServerAgentEntityUpdateStatus = 0x3057,
   SERVER_ANIMATION_LEVEL_UP = 0x3054,
   SERVER_EXP = 0x3056,
   SERVER_MASTERYUPDATE = 0xB0A2,
@@ -169,7 +169,7 @@ enum class Opcode {
 
   SERVER_DEAD = 0x3011,
   // SERVER_DEAD2 = 0x30D2,
-  SERVER_AGENT_ABNORMAL_INFO = 0x30D2,
+  kServerAgentAbnormalInfo = 0x30D2,
 
   SERVER_PARTY_FORM = 0xB069,
   SERVER_PARTY_EDIT = 0xB06A,

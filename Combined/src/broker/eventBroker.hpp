@@ -1,7 +1,7 @@
 #ifndef EVENT_EVENT_BROKER_HPP_
 #define EVENT_EVENT_BROKER_HPP_
 
-#include "../event/event.hpp"
+#include "event/event.hpp"
 #include "timerManager.hpp"
 
 #include <chrono>
@@ -9,6 +9,15 @@
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+
+template<typename T, typename... U>
+size_t getAddress(std::function<T(U...)> f) {
+  // TODO: This crashes us
+  // It came from here https://stackoverflow.com/questions/18039723/c-trying-to-get-function-address-from-a-stdfunction
+  typedef T(fnType)(U...);
+  fnType ** fnPointer = f.template target<fnType*>();
+  return (size_t) *fnPointer;
+}
 
 namespace broker {
 

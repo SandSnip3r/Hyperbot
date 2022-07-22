@@ -1,25 +1,12 @@
+#include "helpers.hpp"
 #include "self.hpp"
-#include "../math/position.hpp"
+
+#include "math/position.hpp"
 
 #include <cmath>
 #include <iostream>
 
 namespace state {
-
-// TODO: Replace with constexpr version
-int toBitNum(packet::enums::AbnormalStateFlag stateFlag) {
-  uint32_t num = static_cast<uint32_t>(stateFlag);
-  for (uint32_t i=0; i<32; ++i) {
-    if (num & (1<<i)) {
-      return i;
-    }
-  }
-  throw std::runtime_error("Tried to get bit for a state "+static_cast<int>(stateFlag));
-}
-
-packet::enums::AbnormalStateFlag fromBitNum(int n) {
-  return static_cast<packet::enums::AbnormalStateFlag>(uint32_t(1) << n);
-}
 
 Self::Self(const pk2::GameData &gameData) : gameData_(gameData) {}
 
@@ -207,17 +194,61 @@ void Self::setMaxHpMp(uint32_t maxHp, uint32_t maxMp) {
   maxMp_ = maxMp;
 }
 
+void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels) {
+  const auto oldStateBitmask = this->stateBitmask();
+  uint32_t newlyReceivedStates = (oldStateBitmask ^ stateBitmask) & stateBitmask;
+  uint32_t expiredStates = (oldStateBitmask ^ stateBitmask) & oldStateBitmask;
+  this->setStateBitmask(stateBitmask);
+
+  int stateLevelIndex=0;
+  if (newlyReceivedStates != 0) {
+    // We have some new states!
+    for (int bitNum=0; bitNum<32; ++bitNum) {
+      const auto kBit = static_cast<uint32_t>(1) << bitNum;
+      if ((newlyReceivedStates & kBit) != 0) {
+        const auto kState = static_cast<packet::enums::AbnormalStateFlag>(kBit);
+        if (kState <= packet::enums::AbnormalStateFlag::kZombie) {
+          // Legacy state
+          // We now are kState
+        } else {
+          // Modern state
+          // We now are under kState
+          this->setModernStateLevel(helpers::fromBitNum(bitNum), stateLevels[stateLevelIndex]);
+          ++stateLevelIndex;
+        }
+      }
+    }
+  }
+  if (expiredStates != 0) {
+    // We have some expired states
+    for (int bitNum=0; bitNum<32; ++bitNum) {
+      const auto kBit = static_cast<uint32_t>(1) << bitNum;
+      if ((expiredStates & kBit) != 0) {
+        const auto kState = static_cast<packet::enums::AbnormalStateFlag>(kBit);
+        if (kState <= packet::enums::AbnormalStateFlag::kZombie) {
+          // Legacy state
+          // We are no longer kState
+        } else {
+          // Modern state
+          // We are no longer under kState
+          this->setModernStateLevel(helpers::fromBitNum(bitNum), 0);
+        }
+      }
+    }
+  }
+}
+
 void Self::setStateBitmask(uint32_t stateBitmask) {
   stateBitmask_ = stateBitmask;
 }
 
 void Self::setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect) {
-  const auto index = toBitNum(flag);
+  const auto index = helpers::toBitNum(flag);
   legacyStateEffects_[index] = effect;
 }
 
 void Self::setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level) {
-  const auto index = toBitNum(flag);
+  const auto index = helpers::toBitNum(flag);
   modernStateLevels_[index] = level;
 }
 
@@ -313,7 +344,7 @@ broker::TimerManager::TimerId Self::getPurificationPillEventId() const {
 }
 
 int Self::getHpPotionDelay() const {
-  const bool havePanic = (modernStateLevels_[toBitNum(packet::enums::AbnormalStateFlag::kPanic)] > 0);
+  const bool havePanic = (modernStateLevels_[helpers::toBitNum(packet::enums::AbnormalStateFlag::kPanic)] > 0);
   int delay = potionDelayMs_;
   if (havePanic) {
     delay += 4000;
@@ -322,7 +353,7 @@ int Self::getHpPotionDelay() const {
 }
 
 int Self::getMpPotionDelay() const {
-  const bool haveCombustion = (modernStateLevels_[toBitNum(packet::enums::AbnormalStateFlag::kCombustion)] > 0);
+  const bool haveCombustion = (modernStateLevels_[helpers::toBitNum(packet::enums::AbnormalStateFlag::kCombustion)] > 0);
   int delay = potionDelayMs_;
   if (haveCombustion) {
     delay += 4000;
@@ -332,6 +363,19 @@ int Self::getMpPotionDelay() const {
 
 int Self::getVigorPotionDelay() const {
   return potionDelayMs_;
+}
+
+int Self::getGrainDelay() const {
+  return 4000;
+}
+
+int Self::getUniversalPillDelay() const {
+  return 1000;
+}
+
+int Self::getPurificationPillDelay() const {
+  // TODO: This is wrong
+  return 20000;
 }
 
 float Self::walkSpeed() const {

@@ -1,4 +1,5 @@
 #include "eventBroker.hpp"
+#include "logging.hpp"
 
 #include <string>
 
@@ -30,6 +31,16 @@ EventBroker::SubscriptionId EventBroker::subscribeToEvent(event::EventCode event
     } else {
       subscriptionIt = itBoolResult.first;
     }
+  } else {
+    LOG() << "Already subscribed to this event!" << std::endl;
+    // TODO: Check if this handler is one of the ones already subscribed
+    // const auto thisAddr = getAddress(handleFunc);
+    // for (const auto &i : subscriptionIt->second) {
+    //   const auto iAddr = getAddress(i.handleFunction);
+    //   if (thisAddr == iAddr) {
+    //     std::cout << "This exact handler is even subscribed to this event" << std::endl;
+    //   }
+    // }
   }
   const auto thisSubscriptionId = subscriptionIdCounter_;
   subscriptionIt->second.emplace_back(subscriptionIdCounter_, std::move(handleFunc));

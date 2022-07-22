@@ -68,8 +68,6 @@ set(no_group_source_files
     "src/math/position.hpp"
     "src/math/vector.cpp"
     "src/math/vector.hpp"
-    "src/module/characterInfoModule.cpp"
-    "src/module/characterInfoModule.hpp"
     "src/navmesh/navmesh.cpp"
     "src/navmesh/navmesh.hpp"
     "src/navmesh/triangulation/navmeshTriangulation.cpp"

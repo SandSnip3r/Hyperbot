@@ -2,6 +2,7 @@
 #define STATE_SELF_HPP
 
 #include "broker/eventBroker.hpp"
+#include "broker/timerManager.hpp"
 #include "pk2/gameData.hpp"
 #include "packet/enums/packetEnums.hpp"
 #include "packet/parsing/parsedPacket.hpp"
@@ -16,6 +17,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace state {
 
@@ -28,9 +30,6 @@ enum class Gender {
   kMale,
   kFemale
 };
-
-int toBitNum(packet::enums::AbnormalStateFlag stateFlag);
-packet::enums::AbnormalStateFlag fromBitNum(int n);
 
 // TODO: It will probably make more sense to lock the character state more broadly
 //  For example, when a packet comes in and we're updating the state
@@ -76,6 +75,7 @@ public:
   void setHp(uint32_t hp);
   void setMp(uint32_t mp);
   void setMaxHpMp(uint32_t maxHp, uint32_t maxMp);
+  void updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels);
   void setStateBitmask(uint32_t stateBitmask);
   void setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect);
   void setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level);
@@ -105,6 +105,9 @@ public:
   int getHpPotionDelay() const;
   int getMpPotionDelay() const;
   int getVigorPotionDelay() const;
+  int getGrainDelay() const;
+  int getUniversalPillDelay() const;
+  int getPurificationPillDelay() const;
 
   float walkSpeed() const;
   float runSpeed() const;
