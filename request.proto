@@ -12,8 +12,17 @@ message PacketToInject {
   bytes data = 3;
 }
 
+message DoAction {
+  enum Action {
+    kStartTraining = 0;
+    kStopTraining = 1;
+  }
+  Action action = 1;
+};
+
 message RequestMessage {
   oneof body {
     PacketToInject packetData = 1;
+    DoAction doAction = 2;
   }
 }
