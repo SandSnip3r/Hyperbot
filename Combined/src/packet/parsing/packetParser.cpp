@@ -1,9 +1,15 @@
+#include "packetParser.hpp"
+
 #include "clientAgentActionCommandRequest.hpp"
+#include "clientAgentActionDeselectRequest.hpp"
+#include "clientAgentActionSelectRequest.hpp"
+#include "clientAgentActionTalkRequest.hpp"
 #include "clientAgentCharacterMoveRequest.hpp"
 #include "clientAgentChatRequest.hpp"
-#include "packetParser.hpp"
 #include "serverAgentActionCommandResponse.hpp"
+#include "serverAgentActionDeselectResponse.hpp"
 #include "serverAgentActionSelectResponse.hpp"
+#include "serverAgentActionTalkResponse.hpp"
 #include "serverAgentBuffAdd.hpp"
 #include "serverAgentBuffRemove.hpp"
 #include "serverAgentCharacterData.hpp"
@@ -13,9 +19,12 @@
 #include "serverAgentEntityUpdateMoveSpeed.hpp"
 #include "serverAgentEntityUpdatePosition.hpp"
 #include "serverAgentEntityUpdateState.hpp"
+#include "serverAgentInventoryOperationResponse.hpp"
+#include "serverAgentInventoryStorageData.hpp"
 #include "serverAgentSkillBegin.hpp"
 #include "serverAgentSkillEnd.hpp"
-#include "../opcode.hpp"
+
+#include "packet/opcode.hpp"
 
 #include <iostream>
 
@@ -36,6 +45,12 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ClientAgentCharacterMoveRequest>(packet);
       case Opcode::kServerAgentEntityUpdateMovement:
         return std::make_unique<ServerAgentEntityUpdateMovement>(packet);
+      case Opcode::kClientAgentActionDeselectRequest:
+        return std::make_unique<ClientAgentActionDeselectRequest>(packet);
+      case Opcode::kClientAgentActionSelectRequest:
+        return std::make_unique<ClientAgentActionSelectRequest>(packet);
+      case Opcode::kClientAgentActionTalkRequest:
+        return std::make_unique<ClientAgentActionTalkRequest>(packet);
       case Opcode::LOGIN_SERVER_LIST:
         return std::make_unique<ParsedLoginServerList>(packet);
       case Opcode::LOGIN_SERVER_AUTH_INFO:
@@ -52,6 +67,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ParsedServerAgentCharacterData>(packet, gameData_.itemData(), gameData_.skillData());
       case Opcode::kServerAgentEntityGroupspawnData:
         return std::make_unique<ParsedServerAgentEntityGroupSpawnData>(packet, gameData_.characterData(), gameData_.itemData(), gameData_.skillData(), gameData_.teleportData());
+      case Opcode::kServerAgentInventoryStorageData:
+        return std::make_unique<ParsedServerAgentInvetoryStorageData>(packet, gameData_.itemData());
       case Opcode::kServerAgentEntitySpawn:
         return std::make_unique<ParsedServerAgentSpawn>(packet, gameData_.characterData(), gameData_.itemData(), gameData_.skillData(), gameData_.teleportData());
       case Opcode::kServerAgentEntityDespawn:
@@ -65,13 +82,17 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       case Opcode::kServerAgentCharacterUpdateStats:
         return std::make_unique<ParsedServerAgentCharacterUpdateStats>(packet);
       case Opcode::kServerAgentInventoryOperationResponse:
-        return std::make_unique<ParsedServerAgentInventoryOperationResponse>(packet, gameData_.itemData());
+        return std::make_unique<ServerAgentInventoryOperationResponse>(packet, gameData_.itemData());
       case Opcode::kClientAgentInventoryOperationRequest:
         return std::make_unique<ParsedClientItemMove>(packet);
       case Opcode::kServerAgentActionCommandResponse:
         return std::make_unique<ServerAgentActionCommandResponse>(packet);
+      case Opcode::kServerAgentActionDeselectResponse:
+        return std::make_unique<ServerAgentActionDeselectResponse>(packet);
       case Opcode::kServerAgentActionSelectResponse:
         return std::make_unique<ServerAgentActionSelectResponse>(packet);
+      case Opcode::kServerAgentActionTalkResponse:
+        return std::make_unique<ServerAgentActionTalkResponse>(packet);
       case Opcode::kServerAgentEntityUpdateState:
         return std::make_unique<ServerAgentEntityUpdateState>(packet);
       case Opcode::kServerAgentBuffAdd:

@@ -126,11 +126,11 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::CLIENT_HOTKEY_CHANGE) {
     return "CLIENT_HOTKEY_CHANGE";
   }
-  if (opcode == Opcode::CLIENT_OPEN_SHOP) {
-    return "CLIENT_OPEN_SHOP";
+  if (opcode == Opcode::kClientAgentActionTalkRequest) {
+    return "kClientAgentActionTalkRequest";
   }
-  if (opcode == Opcode::CLIENT_CLOSE_SHOP) {
-    return "CLIENT_CLOSE_SHOP";
+  if (opcode == Opcode::kClientAgentActionDeselectRequest) {
+    return "kClientAgentActionDeselectRequest";
   }
   if (opcode == Opcode::CLIENT_TELEPORT) {
     return "CLIENT_TELEPORT";
@@ -177,8 +177,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::CLIENT_TRANSPORT_DELETE) {
     return "CLIENT_TRANSPORT_DELETE";
   }
-  if (opcode == Opcode::CLIENT_OPEN_STORAGE) {
-    return "CLIENT_OPEN_STORAGE";
+  if (opcode == Opcode::kClientAgentInventoryStorageOpenRequest) {
+    return "kClientAgentInventoryStorageOpenRequest";
   }
   if (opcode == Opcode::CLIENT_REPAIR) {
     return "CLIENT_REPAIR";
@@ -303,8 +303,14 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_CHAT_ACCEPT) {
     return "SERVER_CHAT_ACCEPT";
   }
+  if (opcode == Opcode::kServerAgentActionDeselectResponse) {
+    return "kServerAgentActionDeselectResponse";
+  }
   if (opcode == Opcode::kServerAgentActionSelectResponse) {
     return "kServerAgentActionSelectResponse";
+  }
+  if (opcode == Opcode::kServerAgentActionTalkResponse) {
+    return "kServerAgentActionTalkResponse";
   }
   if (opcode == Opcode::kServerAgentEntityUpdateMovement) {
     return "kServerAgentEntityUpdateMovement";
@@ -375,12 +381,6 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_ANIMATION_INVITE) {
     return "SERVER_ANIMATION_INVITE";
   }
-  if (opcode == Opcode::SERVER_OPEN_SHOP) {
-    return "SERVER_OPEN_SHOP";
-  }
-  if (opcode == Opcode::SERVER_CLOSE_SHOP) {
-    return "SERVER_CLOSE_SHOP";
-  }
   if (opcode == Opcode::SERVER_SILK_AMOUNT) {
     return "SERVER_SILK_AMOUNT";
   }
@@ -390,14 +390,14 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_ANIMATION_TELEPORT) {
     return "SERVER_ANIMATION_TELEPORT";
   }
-  if (opcode == Opcode::SERVER_STORAGE_GOLD) {
-    return "SERVER_STORAGE_GOLD";
+  if (opcode == Opcode::kServerAgentInventoryStorageBegin) {
+    return "kServerAgentInventoryStorageBegin";
   }
-  if (opcode == Opcode::SERVER_STORAGE_ITEMS) {
-    return "SERVER_STORAGE_ITEMS";
+  if (opcode == Opcode::kServerAgentInventoryStorageData) {
+    return "kServerAgentInventoryStorageData";
   }
-  if (opcode == Opcode::SERVER_STORAGE_END) {
-    return "SERVER_STORAGE_END";
+  if (opcode == Opcode::kServerAgentInventoryStorageEnd) {
+    return "kServerAgentInventoryStorageEnd";
   }
   if (opcode == Opcode::SERVER_ALCHEMY) {
     return "SERVER_ALCHEMY";

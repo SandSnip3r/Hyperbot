@@ -2,6 +2,8 @@
 #include "logging.hpp"
 #include "packetProcessor.hpp"
 
+#include "packet/opcode.hpp"
+
 #define ENFORCE_PURIFICATION_PILL_COOLDOWN
 
 #define TRY_CAST_AND_HANDLE_PACKET(PACKET_TYPE, HANDLE_FUNCTION_NAME) \
@@ -50,6 +52,7 @@ void PacketProcessor::subscribeToPackets() {
   //   Character info packets
   broker_.subscribeToClientPacket(packet::Opcode::kClientAgentInventoryOperationRequest, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterData, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryStorageData, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateState, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateStatus, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentAbnormalInfo, packetHandleFunction);
@@ -60,6 +63,14 @@ void PacketProcessor::subscribeToPackets() {
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityGroupspawnData, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySpawn, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityDespawn, packetHandleFunction);
+
+  //   Misc. packets
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionDeselectResponse, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionSelectResponse, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionTalkResponse, packetHandleFunction);
+  // broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionDeselectRequest, packetHandleFunction);
+  // broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionSelectRequest, packetHandleFunction);
+  broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionTalkRequest, packetHandleFunction);
 }
 
 bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
@@ -70,6 +81,7 @@ bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
     std::cerr << "[PacketProcessor] Failed to parse packet " << std::hex << packet.opcode << std::dec << "\n  Error: \"" << ex.what() << "\"\n";
     return true;
   }
+
   if (!parsedPacket) {
     // Not yet parsing this packet
     return true;
@@ -77,33 +89,47 @@ bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
 
   std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
 
-  // Login packet handlers
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedLoginServerList, serverListReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedLoginResponse, loginResponseReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedLoginClientInfo, loginClientInfoReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedUnknown, unknownPacketReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAuthResponse, serverAuthReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterSelectionActionResponse, charListReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse, charSelectionJoinResponseReceived);
+  try {
+    // Login packet handlers
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedLoginServerList, serverListReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedLoginResponse, loginResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedLoginClientInfo, loginClientInfoReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedUnknown, unknownPacketReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAuthResponse, serverAuthReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterSelectionActionResponse, charListReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse, charSelectionJoinResponseReceived);
 
-  // Movement packet handlers
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateMovement, serverAgentEntityUpdateMovementReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdatePosition, serverAgentEntityUpdatePositionReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntitySyncPosition, serverAgentEntitySyncPositionReceived);
+    // Movement packet handlers
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateMovement, serverAgentEntityUpdateMovementReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdatePosition, serverAgentEntityUpdatePositionReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntitySyncPosition, serverAgentEntitySyncPositionReceived);
 
-  // Character info packet handlers
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedClientItemMove, clientItemMoveReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterData, serverAgentCharacterDataReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateState, serverAgentEntityUpdateStateReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateMoveSpeed, serverAgentEntityUpdateMoveSpeedReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentEntityUpdateStatus, serverAgentEntityUpdateStatusReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentAbnormalInfo, serverAgentAbnormalInfoReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterUpdateStats, serverAgentCharacterUpdateStatsReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentInventoryItemUseResponse, serverAgentInventoryItemUseResponseReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentInventoryOperationResponse, serverAgentInventoryOperationResponseReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentEntityGroupSpawnData, serverAgentEntityGroupSpawnDataReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentSpawn, serverAgentSpawnReceived);
-  TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentDespawn, serverAgentDespawnReceived);
+    // Character info packet handlers
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedClientItemMove, clientItemMoveReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterData, serverAgentCharacterDataReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentInvetoryStorageData, serverAgentInventoryStorageDataReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateState, serverAgentEntityUpdateStateReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateMoveSpeed, serverAgentEntityUpdateMoveSpeedReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentEntityUpdateStatus, serverAgentEntityUpdateStatusReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentAbnormalInfo, serverAgentAbnormalInfoReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterUpdateStats, serverAgentCharacterUpdateStatsReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentInventoryItemUseResponse, serverAgentInventoryItemUseResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryOperationResponse, serverAgentInventoryOperationResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentEntityGroupSpawnData, serverAgentEntityGroupSpawnDataReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentSpawn, serverAgentSpawnReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentDespawn, serverAgentDespawnReceived);
+
+    // Misc. packets
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionDeselectResponse, serverAgentDeselectResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionSelectResponse, serverAgentSelectResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionTalkResponse, serverAgentTalkResponseReceived);
+    // TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentActionDeselectRequest, clientAgentActionDeselectRequestReceived);
+    // TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentActionSelectRequest, clientAgentActionSelectRequestReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentActionTalkRequest, clientAgentActionTalkRequestReceived);
+
+  } catch (std::exception &ex) {
+    LOG() << "Error while handling packet!\n  " << ex.what() << std::endl;
+  }
 
   LOG() << "Unhandled packet subscribed to\n";
   return true;
@@ -205,8 +231,6 @@ bool PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::S
         eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
         selfState_.resetMovingEventId();
       }
-      selfState_.setPosition(packet.position());
-      LOG() << "Now stationary at " << selfState_.position() << '\n';
     } else {
       LOG() << "We werent moving, weird\n";
       const auto pos = selfState_.position();
@@ -214,8 +238,10 @@ bool PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::S
       LOG() << "Received pos: " << packet.position().xOffset << ',' << packet.position().zOffset << '\n';
       // TODO: Does it make sense to update our position in this case? Probably
       //  But it also seems like a problem because we mistakenly thought we were moving
-      selfState_.setPosition(packet.position());
     }
+    selfState_.setPosition(packet.position());
+    LOG() << "Now stationary at " << selfState_.position() << '\n';
+    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded));
   }
   return true;
 }
@@ -254,7 +280,7 @@ bool PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::S
       } else {
         auto seconds = helpers::secondsToTravel(sourcePosition, destPosition, selfState_.currentSpeed());
         LOG() << "Should take " << seconds << "s. Timer set\n";
-        const auto movingEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+        const auto movingEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementTimerEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
         selfState_.setMovingEventId(movingEventId);
         selfState_.setMoving(packet.destinationPosition());
       }
@@ -292,6 +318,7 @@ bool PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Pa
     std::cout << "region (" << (int)packet.position().xSector() << ',' << (int)packet.position().zSector() << ")";
   }
   std::cout << " (" << packet.position().xOffset << ',' << packet.position().yOffset << ',' << packet.position().zOffset << ")\n";
+  LOG() << "{" << packet.position().regionId << ',' << packet.position().xOffset << "f," << packet.position().yOffset << "f," << packet.position().zOffset << "f}" << std::endl;
 
   // State
   selfState_.setLifeState(packet.lifeState());
@@ -308,10 +335,18 @@ bool PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Pa
   const auto inventorySize = packet.inventorySize();
   const auto &inventoryItemMap = packet.inventoryItemMap();
   helpers::initializeInventory(selfState_.inventory, inventorySize, inventoryItemMap);
-  LOG() << "Storage initialized\n";
+  LOG() << "Inventory initialized\n";
 
   LOG() << "GID:" << selfState_.globalId() << ", and we have " << selfState_.hp() << " hp and " << selfState_.mp() << " mp\n";
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kSpawned));
+  return true;
+}
+
+bool PacketProcessor::serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInvetoryStorageData &packet) const {
+  selfState_.storageGold_ = packet.gold();
+  helpers::initializeInventory(selfState_.storage, packet.storageSize(), packet.storageItemMap());
+  LOG() << "Storage initialized\n";
+  selfState_.haveOpenedStorageSinceTeleport = true;
   return true;
 }
 
@@ -488,18 +523,28 @@ bool PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
   return true;
 }
 
-bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet::parsing::ParsedServerAgentInventoryOperationResponse &packet) const {
+bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet::parsing::ServerAgentInventoryOperationResponse &packet) const {
   // TODO: If we used an item and it moved, we'll need to update the "reference" to this item in the used item queue
-  const std::vector<packet::parsing::ItemMovement> &itemMovements = packet.itemMovements();
+  const std::vector<packet::structures::ItemMovement> &itemMovements = packet.itemMovements();
   for (const auto &movement : itemMovements) {
     if (movement.type == packet::enums::ItemMovementType::kWithinInventory) {
       selfState_.inventory.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
       //TODO: Add event in other places
-      eventBroker_.publishEvent(std::make_unique<event::InventorySlotUpdated>(movement.srcSlot));
-      eventBroker_.publishEvent(std::make_unique<event::InventorySlotUpdated>(movement.destSlot));
+      eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(movement.srcSlot, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kWithinStorage) {
       // Not handling because we dont parse the storage init packet
-      // moveItem(storage_, movement.srcSlot, movement.destSlot, movement.quantity);
+      selfState_.storage.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
+      eventBroker_.publishEvent(std::make_unique<event::StorageUpdated>(movement.srcSlot, movement.destSlot));
+    } else if (movement.type == packet::enums::ItemMovementType::kInventoryToStorage) {
+      auto item = selfState_.inventory.withdrawItem(movement.srcSlot);
+      selfState_.storage.addItem(movement.destSlot, std::move(item));
+      eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(movement.srcSlot, std::nullopt));
+      eventBroker_.publishEvent(std::make_unique<event::StorageUpdated>(std::nullopt, movement.destSlot));
+    } else if (movement.type == packet::enums::ItemMovementType::kStorageToInventory) {
+      auto item = selfState_.storage.withdrawItem(movement.srcSlot);
+      selfState_.inventory.addItem(movement.destSlot, std::move(item));
+      eventBroker_.publishEvent(std::make_unique<event::StorageUpdated>(movement.srcSlot, std::nullopt));
+      eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kBuyFromNPC) {
       if (selfState_.haveUserPurchaseRequest()) {
         const auto userPurchaseRequest = selfState_.getUserPurchaseRequest();
@@ -607,7 +652,7 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
       }
       std::cout << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kPickItem) {
-      if (movement.destSlot == packet::parsing::ItemMovement::kGoldSlot) {
+      if (movement.destSlot == packet::structures::ItemMovement::kGoldSlot) {
         LOG() << "Picked " << movement.goldPickAmount << " gold\n";
         selfState_.addGold(movement.goldPickAmount);
         LOG() << "Gold: " << selfState_.getGold() << std::endl;
@@ -686,6 +731,8 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
       LOG() << "Pickpet picked " << movement.goldPickAmount << " gold\n";
       LOG() << "Gold: " << selfState_.getGold() << std::endl;
       LOG() << '\n';
+    } else {
+      LOG() << "Unknown item movement type: " << static_cast<int>(movement.type) << std::endl;
     }
   }
   return true;
@@ -714,6 +761,103 @@ bool PacketProcessor::serverAgentSpawnReceived(const packet::parsing::ParsedServ
 }
 
 bool PacketProcessor::serverAgentDespawnReceived(const packet::parsing::ParsedServerAgentDespawn &packet) const {
+  LOG() << "Going to stop tracking object with id " << packet.gId() << std::endl;
   helpers::stopTrackingObject(entityState_, packet.gId());
+  return true;
+}
+
+// ============================================================================================================================
+// ============================================================Misc============================================================
+// ============================================================================================================================
+
+// When the client requests to Talk, an Id is sent
+// When the server responds that Talking is successful, no Id is returned
+// To stop Talking, the client must send deselect with the Id
+
+bool PacketProcessor::serverAgentDeselectResponseReceived(const packet::parsing::ServerAgentActionDeselectResponse &packet) const {
+  if (packet.result() == 1) {
+    // Successfully deselected
+    // If there is a talk dialog, and we have an npc selected, it will take 2 deselects to close both dialogs
+    //  First, the talk dialog is closed
+    if (selfState_.talkingGidAndOption) {
+      LOG() << "We're talking to an NPC, this closes the talk dialog" << std::endl;
+      selfState_.talkingGidAndOption.reset();
+      eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kEntityDeselected));
+    } else {
+      LOG() << "We were not talking to an NPC, maybe we have some entity selected" << std::endl;
+      //  The entity is deselected
+      if (selfState_.selectedEntity) {
+        LOG() << "Deselecting " << *selfState_.selectedEntity << std::endl;
+        selfState_.selectedEntity.reset();
+        eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kEntityDeselected));
+      } else {
+        LOG() << "Weird, we didnt have anything selected\n";
+      }
+    }
+  } else {
+    LOG() << "Deselection failed" << std::endl;
+  }
+  return true;
+}
+
+bool PacketProcessor::serverAgentSelectResponseReceived(const packet::parsing::ServerAgentActionSelectResponse &packet) const {
+  if (packet.result() == 1) {
+    // Successfully selected
+    LOG() << "We have successfully selected " << packet.gId() << std::endl;
+    if (selfState_.selectedEntity) {
+      // This happens if something is selected and then we select something else
+      //  i.e. there is no deselect in between selects
+      LOG() << "Weird, we already have something selected\n";
+      // TODO: Maybe this is ok, maybe a deselect isnt required when switching between two entities
+    }
+    selfState_.selectedEntity = packet.gId();
+    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kEntitySelected));
+    // ====================================================================================================
+    // selfState_.selectedEntity = packet.gId();
+  } else {
+    LOG() << "Selection failed" << std::endl;
+  }
+  return true;
+}
+
+bool PacketProcessor::serverAgentTalkResponseReceived(const packet::parsing::ServerAgentActionTalkResponse &packet) const {
+  if (packet.result() == 1) {
+    LOG() << "We are now successfully talking to some npc" << std::endl;
+    if (selfState_.pendingTalkGid) {
+      // We were waiting for this response
+      LOG() << "The npc we are talking to is gid " << *selfState_.pendingTalkGid << std::endl;
+      selfState_.talkingGidAndOption = std::make_pair(*selfState_.pendingTalkGid, packet.talkOption());
+      selfState_.pendingTalkGid.reset();
+      // if (packet.talkOption() == packet::enums::TalkOption::kStorage) {
+      //   // In the weird case of storage, the talk options dialog is automatically closed by the client
+      //   LOG() << "In the weird case of storage, the talk options dialog is automatically closed by the client\n";
+      //   selfState_.selectedEntity.reset();
+      // }
+      eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kNpcTalkStart));
+    } else {
+      LOG() << "Weird, we werent expecting to be talking to anything. As a result, we dont know what we're talking to" << std::endl;
+    }
+  } else {
+    LOG() << "Failed to talk to NPC" << std::endl;
+  }
+  return true;
+}
+
+// bool PacketProcessor::clientAgentActionDeselectRequestReceived(const packet::parsing::ClientAgentActionDeselectRequest &packet) const {
+//   return true;
+// }
+
+// bool PacketProcessor::clientAgentActionSelectRequestReceived(const packet::parsing::ClientAgentActionSelectRequest &packet) const {
+//   return true;
+// }
+
+bool PacketProcessor::clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const {
+  LOG() << "Client is requesting to talk to " << packet.gId() << std::endl;
+  if (selfState_.pendingTalkGid) {
+    LOG() << "Weird, we're already waiting on a response from the server to talk to someone\n";
+  } else {
+    LOG() << "Setting that we're waiting on a response from the server to talk to someone\n";
+    selfState_.pendingTalkGid = packet.gId();
+  }
   return true;
 }

@@ -2,6 +2,8 @@
 #define EVENT_EVENT_HPP_
 
 #include <cstdint>
+#include <optional>
+#include <string>
 
 namespace event {
 
@@ -16,12 +18,19 @@ enum class EventCode {
   kMpPercentChanged,
   kStatesChanged,
   kSkillCooldownEnded,
-  kInventorySlotUpdated,
+  kInventoryUpdated,
+  kStorageUpdated,
   kSkillCastAboutToEnd,
   kKnockbackStatusEnded,
-  kMovementEnded,
   kCharacterSpeedUpdated,
   kItemWaitForReuseDelay,
+  kInjectPacket,
+  kMovementTimerEnded,
+  kStartTraining,
+  kStopTraining,
+  kEntityDeselected,
+  kEntitySelected,
+  kNpcTalkStart,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -30,6 +39,8 @@ enum class EventCode {
   kStateConnectedToAgentServerUpdated,
   kStateReceivedCaptchaPromptUpdated,
   kStateCharacterListUpdated,
+  // Movement state updates
+  kMovementEnded,
   // ===================================================================================
 };
 
@@ -47,18 +58,20 @@ public:
   virtual ~SkillCooldownEnded() = default;
 };
 
-struct InventorySlotUpdated : public Event {
+struct InventoryUpdated : public Event {
 public:
-  InventorySlotUpdated(int8_t slot);
-  const int8_t slotNum;
-  virtual ~InventorySlotUpdated() = default;
+  InventoryUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  const std::optional<int8_t> srcSlotNum;
+  const std::optional<int8_t> destSlotNum;
+  virtual ~InventoryUpdated() = default;
 };
 
-struct DropGold : public Event {
+struct StorageUpdated : public Event {
 public:
-  DropGold(int amount, int count);
-  const int goldAmount, goldDropCount;
-  virtual ~DropGold() = default;
+  StorageUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  const std::optional<int8_t> srcSlotNum;
+  const std::optional<int8_t> destSlotNum;
+  virtual ~StorageUpdated() = default;
 };
 
 struct ItemWaitForReuseDelay : public Event {
@@ -67,6 +80,16 @@ public:
   uint8_t inventorySlotNum;
   uint16_t itemTypeId;
   virtual ~ItemWaitForReuseDelay() = default;
+};
+
+struct InjectPacket : public Event {
+public:
+  enum class Direction { kClientToServer, kServerToClient };
+  InjectPacket(Direction dir, uint16_t op, const std::string &d);
+  Direction direction;
+  uint16_t opcode;
+  std::string data;
+  virtual ~InjectPacket() = default;
 };
 
 } // namespace event

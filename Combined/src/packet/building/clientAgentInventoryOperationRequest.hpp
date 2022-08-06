@@ -14,6 +14,8 @@ private:
 public:
   static PacketContainer packet(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
   static PacketContainer packet(uint64_t goldDropAmount);
+  static PacketContainer inventoryToStoragePacket(uint8_t srcSlot, uint8_t destSlot, uint32_t npcGId);
+  static PacketContainer withinStoragePacket(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity, uint32_t npcGId);
 };
 
 } // namespace packet::building

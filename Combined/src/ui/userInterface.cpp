@@ -55,14 +55,19 @@ void UserInterface::handle(const zmq::message_t &request) {
   request::RequestMessage requestMsg;
   requestMsg.ParseFromArray(request.data(), request.size());
   switch (requestMsg.body_case()) {
-    case request::RequestMessage::BodyCase::kRequest1: {
-        const request::Request1 &request1 = requestMsg.request1();
-        std::cout << "Request1: \"" << request1.data() << "\"" << std::endl;
+    case request::RequestMessage::BodyCase::kPacketData: {
+        const request::PacketToInject &packet = requestMsg.packetdata();
+        const event::InjectPacket::Direction dir = (packet.direction() == request::PacketToInject::kClientToServer) ? event::InjectPacket::Direction::kClientToServer : event::InjectPacket::Direction::kServerToClient;
+        eventBroker_.publishEvent(std::make_unique<event::InjectPacket>(dir, packet.opcode(), packet.data()));
         break;
       }
-    case request::RequestMessage::BodyCase::kRequest2: {
-        const request::Request2 &request2 = requestMsg.request2();
-        eventBroker_.publishEvent(std::make_unique<event::DropGold>(request2.goldamount(), request2.golddropcount()));
+    case request::RequestMessage::BodyCase::kDoAction: {
+        const request::DoAction &doActionMsg = requestMsg.doaction();
+        if (doActionMsg.action() == request::DoAction::kStartTraining) {
+          eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStartTraining));
+        } else if (doActionMsg.action() == request::DoAction::kStopTraining) {
+          eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStopTraining));
+        }
         break;
       }
     default:

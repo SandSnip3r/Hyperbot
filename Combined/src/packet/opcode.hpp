@@ -62,7 +62,9 @@ enum class Opcode {
   kClientAgentCharacterSelectionActionRequest = 0x7007,
   kClientAgentChatRequest = 0x7025,
   kClientAgentCharacterSelectionJoinRequest = 0x7001,
+  kClientAgentActionDeselectRequest = 0x704B,
   kClientAgentActionSelectRequest = 0x7045,
+  kClientAgentActionTalkRequest = 0x7046,
   CLIENT_GM = 0x7010,
   kClientAgentCharacterMoveRequest = 0x7021,
   CLIENT_TRANSPORT_MOVE = 0x70C5,
@@ -76,8 +78,6 @@ enum class Opcode {
   CLIENT_EMOTION = 0x3091,
   kClientAgentInventoryItemUseRequest = 0x704C,
   CLIENT_HOTKEY_CHANGE = 0x7158,
-  CLIENT_OPEN_SHOP = 0x7046,
-  CLIENT_CLOSE_SHOP = 0x704B,
   CLIENT_TELEPORT = 0x705A,
   CLIENT_PARTY_FORM = 0x7069,
   CLIENT_PARTY_EDIT = 0x706A,
@@ -93,7 +93,7 @@ enum class Opcode {
   CLIENT_ALCHEMYSTONE = 0x7151,
   CLIENT_TRANSPORT_HOME = 0x70CB, // CLIENT_TRANSPORT_HOME, CLIENT_TRANSPORT_DELETE
   CLIENT_TRANSPORT_DELETE = 0x70CB, // CLIENT_TRANSPORT_HOME, CLIENT_TRANSPORT_DELETE
-  CLIENT_OPEN_STORAGE = 0x703C,
+  kClientAgentInventoryStorageOpenRequest = 0x703C,
   CLIENT_REPAIR = 0x703E,
   CLIENT_USE_BERSERK = 0x70A7,
 
@@ -148,7 +148,9 @@ enum class Opcode {
   kServerAgentChatUpdate = 0x3026,
   SERVER_CHAT_ACCEPT = 0xB025,
 
+  kServerAgentActionDeselectResponse = 0xB04B,
   kServerAgentActionSelectResponse = 0xB045,
+  kServerAgentActionTalkResponse = 0xB046,
   kServerAgentEntityUpdateMovement = 0xB021,
   SERVER_UNIQUE = 0x300C,
 
@@ -182,16 +184,14 @@ enum class Opcode {
   SERVER_PARTY_INVITE = 0xB060,
   SERVER_ANIMATION_INVITE = 0x3080, // CLIENT_ANIMATION_INVITE, SERVER_ANIMATION_INVITE
 
-  SERVER_OPEN_SHOP = 0xB046,
-  SERVER_CLOSE_SHOP = 0xB04B,
   SERVER_SILK_AMOUNT = 0x3153,
 
   SERVER_TELEPORT = 0xB05A,
   SERVER_ANIMATION_TELEPORT = 0x34B5,
 
-  SERVER_STORAGE_GOLD = 0x3047,
-  SERVER_STORAGE_ITEMS = 0x3049,
-  SERVER_STORAGE_END = 0x3048,
+  kServerAgentInventoryStorageBegin = 0x3047,
+  kServerAgentInventoryStorageData = 0x3049,
+  kServerAgentInventoryStorageEnd = 0x3048,
 
   SERVER_ALCHEMY = 0xB150,
   SERVER_ALCHEMYSTONE = 0xB151,

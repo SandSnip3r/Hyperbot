@@ -13,6 +13,7 @@
 #include <boost/asio.hpp>
 
 #include <functional>
+#include <mutex>
 #include <optional>
 #include <unordered_map>
 
@@ -39,7 +40,7 @@ private:
   boost::asio::io_service ioService_;
   const int kPacketProcessDelayMs{10};
 	PacketLogger packetLogger{"C:\\Users\\Victor\\Documents\\Development\\packet-logs\\"};
-  std::optional<PacketContainer> characterInfoPacketContainer_, groupSpawnPacketContainer_;
+  std::optional<PacketContainer> characterInfoPacketContainer_, groupSpawnPacketContainer_, storagePacketContainer_;
 
 	//Accepts TCP connections
 	boost::asio::ip::tcp::acceptor acceptor;

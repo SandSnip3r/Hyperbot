@@ -8,6 +8,7 @@
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
 #include "state/entity.hpp"
+#include "state/machine/stateMachine.hpp"
 #include "state/self.hpp"
 #include "ui/userInterface.hpp"
 
@@ -28,7 +29,10 @@ protected:
   friend class broker::EventBroker;
   void handleEvent(const event::Event *event);
 
-private:
+  friend class state::machine::Walking;
+  friend class state::machine::TalkingToStorageNpc;
+  friend class state::machine::TalkingToShopNpc;
+  friend class state::machine::Townlooping;
   const config::CharacterLoginData &loginData_; // TODO: Move this into a configuration object
   const pk2::GameData &gameData_;
   state::Entity entityState_;
@@ -39,6 +43,7 @@ private:
   packet::parsing::PacketParser packetParser_{gameData_};
   PacketProcessor packetProcessor_{entityState_, selfState_, broker_, eventBroker_, userInterface_, packetParser_, gameData_};
 
+private:
   //******************************************************************************************
   //***************************************Configuration**************************************
   //******************************************************************************************
@@ -48,22 +53,36 @@ private:
   const double kMpThreshold_{0.80};
   const double kVigorThreshold_{0.40};
   //******************************************************************************************
+  state::machine::Townlooping stateMachine_;
 
   void subscribeToEvents();
+
+  // Main logic
+  void onUpdate(const event::Event *event = nullptr);
+  void handleVitals();
+
+  // Bot actions from UI
+  void handleStartTraining();
+  void handleStopTraining();
+  // Debug help
+  void handleInjectPacket(const event::InjectPacket &castedEvent);
   // Login events
   void handleStateShardIdUpdated() const;
   void handleStateConnectedToAgentServerUpdated();
   void handleStateReceivedCaptchaPromptUpdated() const;
   void handleStateCharacterListUpdated() const;
   // Movement events
-  void handleMovementEnded();
+  void handleMovementTimerEnded();
   void handleSpeedUpdated();
+  void handleMovementEnded();
   // Character info events
   void handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &castedEvent);
   void handlePotionCooldownEnded(const event::EventCode eventCode);
   void handlePillCooldownEnded(const event::EventCode eventCode);
   void handleVitalsChanged();
   void handleStatesChanged();
+
+  // Misc
 
   // Actual action logic
   void checkIfNeedToHeal();

@@ -6,10 +6,12 @@ Event::Event(EventCode event) : eventCode(event) {}
 
 SkillCooldownEnded::SkillCooldownEnded(int32_t skillId) : Event(EventCode::kSkillCooldownEnded), skillRefId(skillId) {}
 
-InventorySlotUpdated::InventorySlotUpdated(int8_t slot) : Event(EventCode::kInventorySlotUpdated), slotNum(slot) {}
+InventoryUpdated::InventoryUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) : Event(EventCode::kInventoryUpdated), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
 
-DropGold::DropGold(int amount, int count) : Event(EventCode::kDropGold), goldAmount(amount), goldDropCount(count) {}
+StorageUpdated::StorageUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) : Event(EventCode::kStorageUpdated), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
 
 ItemWaitForReuseDelay::ItemWaitForReuseDelay(uint8_t slotNum, uint16_t typeId) : Event(EventCode::kItemWaitForReuseDelay), inventorySlotNum(slotNum), itemTypeId(typeId) {}
+
+InjectPacket::InjectPacket(InjectPacket::Direction dir, uint16_t op, const std::string &d) : Event(EventCode::kInjectPacket), direction(dir), opcode(op), data(d) {}
 
 } // namespace event

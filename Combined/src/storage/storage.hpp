@@ -26,7 +26,9 @@ public:
   void moveItem(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
   void moveItem(uint8_t srcSlot, uint8_t destSlot);
 
-  std::vector<uint8_t> findItemsWithTypeId(uint8_t typeId1, uint8_t typeId2, uint8_t typeId3, uint8_t typeId4) const;
+  std::vector<uint8_t> findItemsWithTypeId(uint16_t typeId) const;
+  std::vector<uint8_t> findItemsWithRefId(uint32_t refId) const;
+  std::optional<uint8_t> firstFreeSlot() const;
 private:
   ItemList itemList_;
 };

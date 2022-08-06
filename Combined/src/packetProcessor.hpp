@@ -3,12 +3,20 @@
 
 #include "broker/eventBroker.hpp"
 #include "broker/packetBroker.hpp"
+// #include "packet/parsing/clientAgentActionDeselectRequest.hpp"
+// #include "packet/parsing/clientAgentActionSelectRequest.hpp"
+#include "packet/parsing/clientAgentActionTalkRequest.hpp"
+#include "packet/parsing/serverAgentActionDeselectResponse.hpp"
+#include "packet/parsing/serverAgentActionSelectResponse.hpp"
+#include "packet/parsing/serverAgentActionTalkResponse.hpp"
 #include "packet/parsing/serverAgentCharacterData.hpp"
 #include "packet/parsing/serverAgentEntitySyncPosition.hpp"
 #include "packet/parsing/serverAgentEntityUpdateMovement.hpp"
 #include "packet/parsing/serverAgentEntityUpdateMoveSpeed.hpp"
 #include "packet/parsing/serverAgentEntityUpdatePosition.hpp"
 #include "packet/parsing/serverAgentEntityUpdateState.hpp"
+#include "packet/parsing/serverAgentInventoryOperationResponse.hpp"
+#include "packet/parsing/serverAgentInventoryStorageData.hpp"
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
 #include "state/entity.hpp"
@@ -62,16 +70,25 @@ private:
   // From CharacterInfoModule
   bool clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) const;
   bool serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) const;
+  bool serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInvetoryStorageData &packet) const;
   bool serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const;
   bool serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const;
   bool serverAgentEntityUpdateStatusReceived(const packet::parsing::ParsedServerAgentEntityUpdateStatus &packet) const;
   bool serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const;
   bool serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const;
   bool serverAgentInventoryItemUseResponseReceived(const packet::parsing::ParsedServerAgentInventoryItemUseResponse &packet) const;
-  bool serverAgentInventoryOperationResponseReceived(const packet::parsing::ParsedServerAgentInventoryOperationResponse &packet) const;
+  bool serverAgentInventoryOperationResponseReceived(const packet::parsing::ServerAgentInventoryOperationResponse &packet) const;
   bool serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ParsedServerAgentEntityGroupSpawnData &packet) const;
   bool serverAgentSpawnReceived(const packet::parsing::ParsedServerAgentSpawn &packet) const;
   bool serverAgentDespawnReceived(const packet::parsing::ParsedServerAgentDespawn &packet) const;
+
+  // Misc
+  bool serverAgentDeselectResponseReceived(const packet::parsing::ServerAgentActionDeselectResponse &packet) const;
+  bool serverAgentSelectResponseReceived(const packet::parsing::ServerAgentActionSelectResponse &packet) const;
+  bool serverAgentTalkResponseReceived(const packet::parsing::ServerAgentActionTalkResponse &packet) const;
+  // bool clientAgentActionDeselectRequestReceived(const packet::parsing::ClientAgentActionDeselectRequest &packet) const;
+  // bool clientAgentActionSelectRequestReceived(const packet::parsing::ClientAgentActionSelectRequest &packet) const;
+  bool clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const;
 };
 
 #endif // PACKETPROCESSOR_HPP_

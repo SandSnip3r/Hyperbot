@@ -1,3 +1,4 @@
+#include "logging.hpp"
 #include "proxy.hpp"
 
 Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port) :
@@ -39,14 +40,15 @@ Proxy::~Proxy() {
 }
 
 void Proxy::inject(const PacketContainer &packet, const PacketContainer::Direction direction) {
+  // TODO: Consider what it would mean to broadcast this packet through the bot as if it were actually coming from the client or server
   if (direction == PacketContainer::Direction::kClientToServer) {
     if (serverConnection.security) {
-      packetLogger.logPacket(packet, false, PacketLogger::Direction::BotToServer);
+      packetLogger.logPacket(packet, false, PacketLogger::Direction::kBotToServer);
       serverConnection.Inject(packet);
     }
   } else if (direction == PacketContainer::Direction::kServerToClient) {
     if (clientConnection.security) {
-      packetLogger.logPacket(packet, false, PacketLogger::Direction::BotToClient);
+      packetLogger.logPacket(packet, false, PacketLogger::Direction::kBotToClient);
       clientConnection.Inject(packet);
     }
   }
@@ -87,8 +89,9 @@ void Proxy::Stop() {
   acceptor.close(ec);
   acceptor.cancel(ec);
 
-  if(timer)
+  if (timer) {
     timer->cancel(ec);
+  }
 
   clientConnection.Close();
   serverConnection.Close();
@@ -240,7 +243,8 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           }
         }
 
-        if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN) {
+        const auto opcodeAsEnum = static_cast<packet::Opcode>(p.opcode);
+        if (opcodeAsEnum == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN) {
           // Initialize data/container
           if (characterInfoPacketContainer_) {
             // What? There's already one?
@@ -250,7 +254,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           characterInfoPacketContainer_.emplace(p);
           // Update opcode to reflect "data"
           characterInfoPacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentCharacterData);
-        } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::kServerAgentEntityGroupspawnBegin) {
+        } else if (opcodeAsEnum == packet::Opcode::kServerAgentEntityGroupspawnBegin) {
           // Initialize data/container
           if (groupSpawnPacketContainer_) {
             // What? There's already one?
@@ -260,12 +264,25 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           groupSpawnPacketContainer_.emplace(p);
           // Update opcode to reflect "data"
           groupSpawnPacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentEntityGroupspawnData);
-        } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::kServerAgentCharacterData) {
+        } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageBegin) {
+          // Initialize data/container
+          if (storagePacketContainer_) {
+            // What? There's already one?
+            std::cout << "[@@@] Wait, we got a storage begin packet, but we've already initialized the data\n";
+          }
+          // Initialize packet data with the "begin" data
+          storagePacketContainer_.emplace(p);
+          // Update opcode to reflect "data"
+          storagePacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentInventoryStorageData);
+        } else if (opcodeAsEnum == packet::Opcode::kServerAgentCharacterData) {
           // Append all data to container
           characterInfoPacketContainer_->data.Write(p.data.GetStreamVector());
-        } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::kServerAgentEntityGroupspawnData) {
+        } else if (opcodeAsEnum == packet::Opcode::kServerAgentEntityGroupspawnData) {
           // Append all data to container
           groupSpawnPacketContainer_->data.Write(p.data.GetStreamVector());
+        } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageData) {
+          // Append all data to container
+          storagePacketContainer_->data.Write(p.data.GetStreamVector());
         }
 
         //Forward the packet to Silkroad
@@ -273,20 +290,27 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           bool forwardToClient = true;
 
           // Handle "begin", "data", and "end" pieces of split packets
-          if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_END) {
+          if (opcodeAsEnum == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_END) {
             // Send packet to broker
             forwardToClient = broker_.packetReceived(*characterInfoPacketContainer_, PacketContainer::Direction::kServerToClient);
             // Reset data
             characterInfoPacketContainer_.reset();
-          } else if (static_cast<packet::Opcode>(p.opcode) == packet::Opcode::kServerAgentEntityGroupspawnEnd) {
+          } else if (opcodeAsEnum == packet::Opcode::kServerAgentEntityGroupspawnEnd) {
             // Send packet to broker
             forwardToClient = broker_.packetReceived(*groupSpawnPacketContainer_, PacketContainer::Direction::kServerToClient);
             // Reset data
             groupSpawnPacketContainer_.reset();
-          } else if (static_cast<packet::Opcode>(p.opcode) != packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN &&
-                     static_cast<packet::Opcode>(p.opcode) != packet::Opcode::kServerAgentCharacterData &&
-                     static_cast<packet::Opcode>(p.opcode) != packet::Opcode::kServerAgentEntityGroupspawnBegin &&
-                     static_cast<packet::Opcode>(p.opcode) != packet::Opcode::kServerAgentEntityGroupspawnData) {
+          } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageEnd) {
+            // Send packet to broker
+            forwardToClient = broker_.packetReceived(*storagePacketContainer_, PacketContainer::Direction::kServerToClient);
+            // Reset data
+            storagePacketContainer_.reset();
+          } else if (opcodeAsEnum != packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN &&
+                     opcodeAsEnum != packet::Opcode::kServerAgentCharacterData &&
+                     opcodeAsEnum != packet::Opcode::kServerAgentEntityGroupspawnBegin &&
+                     opcodeAsEnum != packet::Opcode::kServerAgentEntityGroupspawnData &&
+                     opcodeAsEnum != packet::Opcode::kServerAgentInventoryStorageBegin &&
+                     opcodeAsEnum != packet::Opcode::kServerAgentInventoryStorageData) {
             // In all other cases, if its not "begin" or "data", send it
             forwardToClient = broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
           }

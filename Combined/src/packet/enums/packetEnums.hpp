@@ -216,6 +216,99 @@ enum class DamageFlag : uint8_t {
   kEffect = 16
 };
 
+enum class TalkOption : uint8_t {
+  kStore = 1,
+  kQuest = 2,
+  kStorage = 3,
+  kRepair = 4,
+
+  kMonster = 5, // 圭쨍 (Click)
+
+  kUnknown6 = 6, // 캐 (Casserole)
+
+  /// <summary>
+  /// UIIT_CTL_RECALL_POSITION
+  /// <para>Designate as return/recall point</para>
+  /// </summary>
+  kSetReturnPoint = 7,
+
+  /// <summary>
+  /// UIIT_CTL_TELEPORT_TARGET
+  /// <para>Select teleport area</para>
+  /// </summary>
+  kTeleportTarget = 8,
+
+  /// <summary>
+  /// UIIT_CTL_TELEPORT_TO_RESURRECT_POS
+  /// <param>Teleport to return point.</param>
+  /// </summary>
+  kTeleportReturnPoint = 9,
+
+  /// <summary>
+  /// UIIT_MSG_CIRCULATION_WITHDRAW_SKILL
+  /// <para>Withdrawing Skill</para>
+  /// </summary>
+  kWithdrawSkill = 10,
+
+  /// <summary>
+  /// Nothing visual
+  /// </summary>
+  kStable = 11,
+
+  /// <summary>
+  /// Goods & Export Details
+  /// </summary>
+  kTrade = 12,
+
+  kGuild = 15,
+
+  /// <summary>
+  /// SN_TALK_CH_GACHA_MACHINE_2
+  /// <para>Participate in the game.</para>
+  /// </summary>
+  kMagicPopPlay = 17,
+
+  /// <summary>
+  /// SN_TALK_CH_GACHA_OPERATOR_2
+  /// <para>Exchange Item Exchange Coupon to Item</para>
+  /// </summary>
+  kMagicPopExchange = 18,
+
+  /// <summary>
+  /// UIIT_MSG_XMAS_EVENT_CHANGE
+  /// <para>Give the socks and receive a gift.</para>
+  /// </summary>
+  kEventChristmasExchange = 19,
+
+  kTrader = 20,
+  kThief = 21,
+  kHunter = 22,
+
+  kFortressAdministration = 23,
+  kFortressApplication = 24,
+  kFortressStructManagement = 25,
+  kFortressItemProduction = 26,
+  kFortressTraining = 27,
+
+  kTeleportLastLocation = 28,
+
+  kTeleportGuide = 30,
+
+  kFortressPully = 31,
+
+  kGrantMagicOption = 32,
+
+  kArenaManager = 33,
+  kArenaItemManager = 34,
+
+  kConsigment = 35,
+
+  kSummonPartyMember = 39,
+
+  kTeleportExitFortressDungeon = 40,
+  kTeleportExitDungeon = 41,
+};
+
 } // namespace packet::enums
 
 #endif // PACKET_ENUMS_HPP

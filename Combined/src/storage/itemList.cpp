@@ -1,5 +1,8 @@
 #include "itemList.hpp"
 
+#include "helpers.hpp"
+#include "logging.hpp"
+
 namespace storage {
 
 bool ItemList::hasItem(uint8_t slot) const {
@@ -21,8 +24,9 @@ uint8_t ItemList::size() const {
   return static_cast<uint8_t>(items_.size());
 }
 
-std::vector<uint8_t> ItemList::findItemsWithTypeId(uint8_t typeId1, uint8_t typeId2, uint8_t typeId3, uint8_t typeId4) const {
-  std::vector<uint8_t> slotsWithItem;    
+std::vector<uint8_t> ItemList::findItemsWithTypeId(uint16_t typeId) const {
+  const auto [typeId1, typeId2, typeId3, typeId4] = helpers::type_id::splitTypeId(typeId);
+  std::vector<uint8_t> slotsWithItem;
   for (uint8_t slotNum=0; slotNum<items_.size(); ++slotNum) {
     const auto itemPtr = items_[slotNum];
     if (itemPtr) {
@@ -36,6 +40,27 @@ std::vector<uint8_t> ItemList::findItemsWithTypeId(uint8_t typeId1, uint8_t type
     }
   }
   return slotsWithItem;
+}
+
+std::vector<uint8_t> ItemList::findItemsWithRefId(uint32_t refId) const {
+  std::vector<uint8_t> slotsWithItem;
+  for (uint8_t slotNum=0; slotNum<items_.size(); ++slotNum) {
+    const auto itemPtr = items_[slotNum];
+    if (itemPtr && itemPtr->refItemId == refId) {
+      slotsWithItem.emplace_back(slotNum);
+    }
+  }
+  return slotsWithItem;
+}
+
+std::optional<uint8_t> ItemList::firstFreeSlot() const {
+  for (uint8_t slotNum=0; slotNum<items_.size(); ++slotNum) {
+    const auto itemPtr = items_[slotNum];
+    if (itemPtr == nullptr) {
+      return slotNum;
+    }
+  }
+  return {};
 }
 
 void ItemList::addItem(uint8_t slot, std::shared_ptr<Item> item) {

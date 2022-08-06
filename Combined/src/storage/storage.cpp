@@ -109,9 +109,16 @@ void Storage::moveItem(uint8_t srcSlot, uint8_t destSlot) {
   itemList_.moveItem(srcSlot, destSlot);
 }
 
-std::vector<uint8_t> Storage::findItemsWithTypeId(uint8_t typeId1, uint8_t typeId2, uint8_t typeId3, uint8_t typeId4) const {
-  // TODO: Implement a function just to return the first
-  return itemList_.findItemsWithTypeId(typeId1, typeId2, typeId3, typeId4);
+std::vector<uint8_t> Storage::findItemsWithTypeId(uint16_t typeId) const {
+  return itemList_.findItemsWithTypeId(typeId);
+}
+
+std::vector<uint8_t> Storage::findItemsWithRefId(uint32_t refId) const {
+  return itemList_.findItemsWithRefId(refId);
+}
+
+std::optional<uint8_t> Storage::firstFreeSlot() const {
+  return itemList_.firstFreeSlot();
 }
 
 } // namespace storage

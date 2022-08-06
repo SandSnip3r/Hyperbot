@@ -92,37 +92,6 @@ private:
   packet::enums::InventoryErrorCode errorCode_;
 };
 
-//=========================================================================================================================================================
-
-struct ItemMovement {
-  // TODO: Maybe move into Storage or something
-  static constexpr uint8_t kGoldSlot = 0xFE;
-  packet::enums::ItemMovementType type;
-  uint8_t srcSlot, destSlot;
-  uint16_t quantity;
-  uint32_t goldPickAmount;
-  uint64_t goldAmount;
-  uint32_t globalId;
-  uint8_t storeTabNumber;
-  uint8_t storeSlotNumber;
-  uint8_t stackCount;
-  std::vector<uint8_t> destSlots;
-  std::vector<structures::RentInfo> rentInfos;
-  uint8_t buybackStackSize;
-  std::shared_ptr<storage::Item> pickedItem;
-};
-
-class ParsedServerAgentInventoryOperationResponse : public ParsedPacket {
-public:
-  ParsedServerAgentInventoryOperationResponse(const PacketContainer &packet, const pk2::ItemData &itemData);
-  ~ParsedServerAgentInventoryOperationResponse();
-  const std::vector<ItemMovement>& itemMovements() const;
-private:
-  std::vector<ItemMovement> itemMovements_;
-};
-
-//=========================================================================================================================================================
-
 class ParsedServerAgentCharacterUpdateStats : public ParsedPacket {
 public:
   ParsedServerAgentCharacterUpdateStats(const PacketContainer &packet);
@@ -319,9 +288,9 @@ private:
 class ParsedClientItemMove : public ParsedPacket {
 public:
   ParsedClientItemMove(const PacketContainer &packet);
-  ItemMovement movement() const;
+  structures::ItemMovement movement() const;
 private:
-  ItemMovement movement_;
+  structures::ItemMovement movement_;
 };
 
 //=========================================================================================================================================================

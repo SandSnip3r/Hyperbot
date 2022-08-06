@@ -17,6 +17,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace state {
@@ -151,7 +152,7 @@ public:
   void clearUsedItemQueue();
   void pushItemToUsedItemQueue(uint8_t inventorySlotNum, uint16_t itemTypeId);
 
-  void setUserPurchaseRequest(const packet::parsing::ItemMovement &itemMovement);
+  void setUserPurchaseRequest(const packet::structures::ItemMovement &itemMovement);
   void resetUserPurchaseRequest();
   // Getters
   bool usedItemQueueIsEmpty() const;
@@ -159,7 +160,7 @@ public:
   UsedItem getUsedItemQueueFront() const;
 
   bool haveUserPurchaseRequest() const;
-  packet::parsing::ItemMovement getUserPurchaseRequest() const;
+  packet::structures::ItemMovement getUserPurchaseRequest() const;
   // =========================================================
 
   std::mutex selfMutex;
@@ -226,9 +227,20 @@ public:
   std::vector<packet::structures::Skill> skills_;
 
   // Inventory
-  storage::Storage inventory;
+  storage::Storage inventory, storage;
   storage::BuybackQueue buybackQueue;
   uint64_t gold_, storageGold_, guildStorageGold_;
+
+  // ################################################################################
+  // Training state
+  bool trainingIsActive{false};
+
+  std::optional<uint32_t> selectedEntity;
+  std::optional<uint32_t> pendingTalkGid;
+  std::optional<std::pair<uint32_t, packet::enums::TalkOption>> talkingGidAndOption;
+
+  bool haveOpenedStorageSinceTeleport{false};
+  // ################################################################################
 
 private:
   const pk2::GameData &gameData_;
@@ -250,7 +262,7 @@ private:
   // User purchasing tracking
   // This is for tracking an item that was most recently purchased from an NPC by the human interacting with the client
   //  Once the BuyFromNpc item movement packet comes in, we match that item movement with this item movement
-  std::optional<packet::parsing::ItemMovement> userPurchaseRequest_;
+  std::optional<packet::structures::ItemMovement> userPurchaseRequest_;
   // =========================================================
 
   // Game knowledge

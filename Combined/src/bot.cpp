@@ -2,9 +2,16 @@
 #include "helpers.hpp"
 #include "logging.hpp"
 
+#include "math/position.hpp"
+#include "packet/building/clientAgentActionDeselectRequest.hpp"
+#include "packet/building/clientAgentActionSelectRequest.hpp"
+#include "packet/building/clientAgentActionTalkRequest.hpp"
 #include "packet/building/clientAgentAuthRequest.hpp"
+#include "packet/building/clientAgentCharacterMoveRequest.hpp"
 #include "packet/building/clientAgentCharacterSelectionJoinRequest.hpp"
 #include "packet/building/clientAgentInventoryItemUseRequest.hpp"
+#include "packet/building/clientAgentInventoryOperationRequest.hpp"
+#include "packet/building/clientAgentInventoryStorageOpenRequest.hpp"
 #include "packet/building/clientGatewayLoginIbuvAnswer.hpp"
 #include "packet/building/clientGatewayLoginRequest.hpp"
 
@@ -21,14 +28,20 @@ Bot::Bot(const config::CharacterLoginData &loginData,
 
 void Bot::subscribeToEvents() {
   auto eventHandleFunction = std::bind(&Bot::handleEvent, this, std::placeholders::_1);
+  // Bot actions from UI
+  eventBroker_.subscribeToEvent(event::EventCode::kStartTraining, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStopTraining, eventHandleFunction);
+  // Debug help
+  eventBroker_.subscribeToEvent(event::EventCode::kInjectPacket, eventHandleFunction);
   // Login events
   eventBroker_.subscribeToEvent(event::EventCode::kStateShardIdUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStateConnectedToAgentServerUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStateReceivedCaptchaPromptUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStateCharacterListUpdated, eventHandleFunction);
   // Movement events
-  eventBroker_.subscribeToEvent(event::EventCode::kMovementEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kMovementTimerEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCharacterSpeedUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kMovementEnded, eventHandleFunction);
   // Character info events
   eventBroker_.subscribeToEvent(event::EventCode::kItemWaitForReuseDelay, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, eventHandleFunction);
@@ -41,60 +54,178 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kHpPercentChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMpPercentChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
+
+  // Misc
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityDeselected, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntitySelected, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kNpcTalkStart, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
+
 }
 
 void Bot::handleEvent(const event::Event *event) {
   std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
 
-  const auto eventCode = event->eventCode;
-  switch (eventCode) {
-    // Login events
-    case event::EventCode::kStateShardIdUpdated:
-      handleStateShardIdUpdated();
-      break;
-    case event::EventCode::kStateConnectedToAgentServerUpdated:
-      handleStateConnectedToAgentServerUpdated();
-      break;
-    case event::EventCode::kStateReceivedCaptchaPromptUpdated:
-      handleStateReceivedCaptchaPromptUpdated();
-      break;
-    case event::EventCode::kStateCharacterListUpdated:
-      handleStateCharacterListUpdated();
-      break;
-    // Movement events
-    case event::EventCode::kMovementEnded:
-      handleMovementEnded();
-      break;
-    case event::EventCode::kCharacterSpeedUpdated:
-      handleSpeedUpdated();
-      break;
-    // Character info events
-    case event::EventCode::kItemWaitForReuseDelay:
-      {
-        const event::ItemWaitForReuseDelay &castedEvent = dynamic_cast<const event::ItemWaitForReuseDelay&>(*event);
-        handleItemWaitForReuseDelay(castedEvent);
-      }
-      break;
-    case event::EventCode::kHpPotionCooldownEnded:
-    case event::EventCode::kMpPotionCooldownEnded:
-    case event::EventCode::kVigorPotionCooldownEnded:
-      handlePotionCooldownEnded(eventCode);
-      break;
-    case event::EventCode::kUniversalPillCooldownEnded:
-    case event::EventCode::kPurificationPillCooldownEnded:
-      handlePillCooldownEnded(eventCode);
-      break;
-    case event::EventCode::kHpPercentChanged:
-    case event::EventCode::kMpPercentChanged:
-      handleVitalsChanged();
-      break;
-    case event::EventCode::kStatesChanged:
-      handleStatesChanged();
-      break;
-    default:
-      LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
-      break;
+  try {
+    const auto eventCode = event->eventCode;
+    switch (eventCode) {
+      // Bot actions from UI
+      case event::EventCode::kStartTraining:
+        handleStartTraining();
+        break;
+      case event::EventCode::kStopTraining:
+        handleStopTraining();
+        break;
+
+      // Debug help
+      case event::EventCode::kInjectPacket:
+        {
+          const event::InjectPacket &castedEvent = dynamic_cast<const event::InjectPacket&>(*event);
+          handleInjectPacket(castedEvent);
+        }
+        break;
+
+      // Login events
+      case event::EventCode::kStateShardIdUpdated:
+        handleStateShardIdUpdated();
+        break;
+      case event::EventCode::kStateConnectedToAgentServerUpdated:
+        handleStateConnectedToAgentServerUpdated();
+        break;
+      case event::EventCode::kStateReceivedCaptchaPromptUpdated:
+        handleStateReceivedCaptchaPromptUpdated();
+        break;
+      case event::EventCode::kStateCharacterListUpdated:
+        handleStateCharacterListUpdated();
+        break;
+
+      // Movement events
+      case event::EventCode::kMovementTimerEnded:
+        handleMovementTimerEnded();
+        break;
+      case event::EventCode::kCharacterSpeedUpdated:
+        handleSpeedUpdated();
+        break;
+      case event::EventCode::kMovementEnded:
+        handleMovementEnded();
+        break;
+
+      // Character info events
+      case event::EventCode::kItemWaitForReuseDelay:
+        {
+          const event::ItemWaitForReuseDelay &castedEvent = dynamic_cast<const event::ItemWaitForReuseDelay&>(*event);
+          handleItemWaitForReuseDelay(castedEvent);
+        }
+        break;
+      case event::EventCode::kHpPotionCooldownEnded:
+      case event::EventCode::kMpPotionCooldownEnded:
+      case event::EventCode::kVigorPotionCooldownEnded:
+        handlePotionCooldownEnded(eventCode);
+        break;
+      case event::EventCode::kUniversalPillCooldownEnded:
+      case event::EventCode::kPurificationPillCooldownEnded:
+        handlePillCooldownEnded(eventCode);
+        break;
+      case event::EventCode::kHpPercentChanged:
+      case event::EventCode::kMpPercentChanged:
+        handleVitalsChanged();
+        break;
+      case event::EventCode::kStatesChanged:
+        handleStatesChanged();
+        break;
+
+      // Misc
+      case event::EventCode::kEntityDeselected:
+      case event::EventCode::kEntitySelected:
+      case event::EventCode::kNpcTalkStart:
+        onUpdate();
+        break;
+      case event::EventCode::kInventoryUpdated:
+      case event::EventCode::kStorageUpdated:
+        onUpdate(event);
+        break;
+
+      default:
+        LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
+        break;
+    }
+  } catch (std::exception &ex) {
+    LOG() << "Error while handling event!\n  " << ex.what() << std::endl;
   }
+}
+
+// ============================================================================================================================
+// ====================================================Main Logic Game Loop====================================================
+// ============================================================================================================================
+
+void Bot::onUpdate(const event::Event *event) {
+  // Highest priority is our vitals, we will try to heal even if we're not training
+  handleVitals();
+
+  if (!selfState_.trainingIsActive) {
+    // Not training, nothing else to do
+    return;
+  }
+
+  // Note: Assuming we start in the spawnpoint of town
+  // Which is somewhere near position { 25000, 951.0f, -33.0f, 1372.0f }
+
+  stateMachine_.onUpdate(*this, event);
+}
+
+void Bot::handleVitals() {
+  // TODO: Check if we're in a state where using items is possible
+  checkIfNeedToUsePill();
+  checkIfNeedToHeal();
+}
+// ============================================================================================================================
+// =====================================================Bot actions from UI====================================================
+// ============================================================================================================================
+
+void Bot::handleStartTraining() {
+  LOG() << "Received message from UI! Start Training" << std::endl;
+  // Hard coded data (for now)
+  static const std::vector<packet::structures::Position> pathFromSpawnToStorage = {
+    {25000, 981.0f, -32.0f, 1032.0f}
+  };
+
+  if (selfState_.trainingIsActive) {
+    LOG() << "Asked to start training, but we're already training" << std::endl;
+    return;
+  }
+
+  selfState_.trainingIsActive = true;
+  // TODO: Should we stop whatever we're doing?
+  //  For example, if we're running, stop where we are
+
+  // Initialize state machine
+  stateMachine_ = state::machine::Townlooping();
+
+  // Trigger onUpdate
+  onUpdate();
+}
+
+void Bot::handleStopTraining() {
+  LOG() << "Received message from UI! Stop Training" << std::endl;
+  selfState_.trainingIsActive = false;
+}
+
+// ============================================================================================================================
+// =========================================================Debug help=========================================================
+// ============================================================================================================================
+
+void Bot::handleInjectPacket(const event::InjectPacket &castedEvent) {
+  static const bool kEncrypted_ = false;
+  static const bool kMassive_ = false;
+  PacketContainer::Direction direction = (castedEvent.direction == event::InjectPacket::Direction::kClientToServer) ? PacketContainer::Direction::kClientToServer : PacketContainer::Direction::kServerToClient;
+  StreamUtility stream;
+  for (const auto i : castedEvent.data) {
+    stream.Write<uint8_t>(i);
+  }
+  const auto packet = PacketContainer(static_cast<uint16_t>(castedEvent.opcode), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
+  LOG() << "Injecting packet" << std::endl;
+  broker_.injectPacket(packet, direction);
 }
 
 // ============================================================================================================================
@@ -145,23 +276,30 @@ void Bot::handleStateCharacterListUpdated() const {
 // ==================================================Movement event handling===================================================
 // ============================================================================================================================
 
+void Bot::handleMovementTimerEnded() {
+  LOG() << "Movement timer ended" << std::endl;
+  selfState_.resetMovingEventId();
+  selfState_.doneMoving();
+  // LOG() << "Currently at " << selfState_.position() << '\n';
+  LOG() << "Currently at {" << selfState_.position().regionId << ',' << selfState_.position().xOffset << "f," << selfState_.position().yOffset << "f," << selfState_.position().zOffset << "f}" << std::endl;
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded));
+}
+
 void Bot::handleSpeedUpdated() {
   if (selfState_.haveMovingEventId() && selfState_.moving()) {
     if (selfState_.haveDestination()) {
       // Need to update timer
       auto seconds = helpers::secondsToTravel(selfState_.position(), selfState_.destination(), selfState_.currentSpeed());
       eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
-      const auto movingEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+      const auto movingEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementTimerEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
       selfState_.setMovingEventId(movingEventId);
     }
   }
 }
 
 void Bot::handleMovementEnded() {
-  selfState_.resetMovingEventId();
-  LOG() << "Movement ended event\n";
-  selfState_.doneMoving();
-  LOG() << "Currently at " << selfState_.position() << '\n';
+  LOG() << "Movement ended" << std::endl;
+  onUpdate();
 }
 
 // ============================================================================================================================
@@ -185,32 +323,31 @@ void Bot::handlePotionCooldownEnded(const event::EventCode eventCode) {
   LOG() << "Potion cooldown ended" << std::endl;
   if (eventCode == event::EventCode::kHpPotionCooldownEnded) {
     selfState_.resetHpPotionEventId();
-    checkIfNeedToHeal(); // TODO: Instead, retrigger the game loop
   } else if (eventCode == event::EventCode::kMpPotionCooldownEnded) {
     selfState_.resetMpPotionEventId();
-    checkIfNeedToHeal(); // TODO: Instead, retrigger the game loop
   } else if (eventCode == event::EventCode::kVigorPotionCooldownEnded) {
     selfState_.resetVigorPotionEventId();
-    checkIfNeedToHeal(); // TODO: Instead, retrigger the game loop
+  } else {
+    LOG() << "Unhandled potion cooldown ended event\n";
   }
+  onUpdate();
 }
 
 void Bot::handlePillCooldownEnded(const event::EventCode eventCode) {
   LOG() << "Pill cooldown ended" << std::endl;
   if (eventCode == event::EventCode::kUniversalPillCooldownEnded) {
     selfState_.resetUniversalPillEventId();
-    checkIfNeedToUsePill(); // TODO: Instead, retrigger the game loop
 #ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
   } else if (eventCode == event::EventCode::kPurificationPillCooldownEnded) {
     selfState_.resetPurificationPillEventId();
-    checkIfNeedToUsePill(); // TODO: Instead, retrigger the game loop
 #endif
+  } else {
+    LOG() << "Unhandled pill cooldown ended event\n";
   }
+  onUpdate();
 }
 
 void Bot::handleVitalsChanged() {
-  checkIfNeedToHeal();
-
   // Broadcast message to UI
   if (!selfState_.maxHp() || !selfState_.maxMp()) {
     // Dont yet know our max
@@ -226,11 +363,17 @@ void Bot::handleVitalsChanged() {
   broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_hpmpupdate() = hpMpUpdate;
   userInterface_.broadcast(broadcastMessage);
+
+  onUpdate();
 }
 
 void Bot::handleStatesChanged() {
-  checkIfNeedToUsePill();
+  onUpdate();
 }
+
+// ============================================================================================================================
+// ============================================================Misc============================================================
+// ============================================================================================================================
 
 // ============================================================================================================================
 // ====================================================Actual action logic=====================================================

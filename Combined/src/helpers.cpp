@@ -101,7 +101,6 @@ std::shared_ptr<storage::Item> createItemFromScrap(const pk2::ref::ScrapOfPackag
 
 // TODO: Maybe move to the entity state?
 void trackObject(state::Entity &entityState, std::shared_ptr<packet::parsing::Object> obj) {
-  LOG() << "Tracking " << obj->gId << std::endl;
   entityState.trackEntity(obj);
   // printf("[+++] (%5d)  ", entityState.size());
   // packet::parsing::printObj(obj.get(), gameData_);
@@ -109,13 +108,12 @@ void trackObject(state::Entity &entityState, std::shared_ptr<packet::parsing::Ob
 
 void stopTrackingObject(state::Entity &entityState, uint32_t gId) {
   if (entityState.trackingEntity(gId)) {
-    LOG() << "Untracking " << gId << std::endl;
     auto objPtr = entityState.getEntity(gId);
     // printf("[---] (%5d)  ", entityState.size()-1);
     // packet::parsing::printObj(objPtr, gameData_);
     entityState.stopTrackingEntity(gId);
   } else {
-    LOG() << "Asked to despawn something that we werent tracking\n";
+    LOG() << "Asked to despawn something that we werent tracking" << std::endl;
   }
 }
 
@@ -138,6 +136,14 @@ uint16_t makeTypeId(const uint16_t typeId1, const uint16_t typeId2, const uint16
          (typeId2 << 5) |
          (typeId3 << 7) |
          (typeId4 << 11);
+}
+
+std::tuple<uint8_t,uint8_t,uint8_t,uint8_t> splitTypeId(const uint16_t typeId) {
+  const uint8_t typeId1 = (typeId >> 2) & 0b111;
+  const uint8_t typeId2 = (typeId >> 5) & 0b11;
+  const uint8_t typeId3 = (typeId >> 7) & 0b1111;
+  const uint8_t typeId4 = (typeId >> 11);
+  return {typeId1, typeId2, typeId3, typeId4};
 }
 
 bool isUniversalPill(const pk2::ref::Item &itemInfo) {

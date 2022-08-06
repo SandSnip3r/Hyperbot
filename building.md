@@ -18,11 +18,13 @@
       - `-G "Visual Studio 16 2019"`
    - Pass a platform
       - `-A Win32`
+   - Pass the path to your vcpkg toolchain file
+      - `-DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]\scripts\buildsystems\vcpkg.cmake"`
    - Pass the path to the root `CMakeLists.txt`
       - `../`
    - (Optional) Pass a toolset
       - `-T host=x64`
-   - Final command example: `/mnt/c/Program\ Files/CMake/bin/cmake.exe -G "Visual Studio 16 2019" -A Win32 ../`
+   - Final command example: `/mnt/c/Program\ Files/CMake/bin/cmake.exe -G "Visual Studio 16 2019" -A Win32 -DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]\scripts\buildsystems\vcpkg.cmake" ../`
 3. Run the MSBuild.exe supplied with Visual Studio
    - Example location: `C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin`
    - Pass the path to the Solution file created by CMake

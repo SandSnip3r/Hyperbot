@@ -1,7 +1,8 @@
 #ifndef PACKET_INNER_STRUCTURES_HPP
 #define PACKET_INNER_STRUCTURES_HPP
 
-#include "../enums/packetEnums.hpp"
+#include "packet/enums/packetEnums.hpp"
+#include "storage/item.hpp"
 
 #include <cmath>
 #include <ostream>
@@ -115,6 +116,24 @@ public:
   float x;
   float y;
   float z;
+};
+
+struct ItemMovement {
+  // TODO: Maybe move into Storage or something
+  static constexpr uint8_t kGoldSlot = 0xFE;
+  packet::enums::ItemMovementType type;
+  uint8_t srcSlot, destSlot;
+  uint16_t quantity;
+  uint32_t goldPickAmount;
+  uint64_t goldAmount;
+  uint32_t globalId;
+  uint8_t storeTabNumber;
+  uint8_t storeSlotNumber;
+  uint8_t stackCount;
+  std::vector<uint8_t> destSlots;
+  std::vector<structures::RentInfo> rentInfos;
+  uint8_t buybackStackSize;
+  std::shared_ptr<storage::Item> pickedItem;
 };
 
 struct Position {

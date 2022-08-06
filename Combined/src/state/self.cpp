@@ -28,6 +28,8 @@ void Self::initialize(uint32_t globalId,
 
   masteries_ = masteries;
   skills_ = skills;
+
+  haveOpenedStorageSinceTeleport = false;
 }
 
 void Self::setRaceAndGender(uint32_t refObjId) {
@@ -489,7 +491,7 @@ void Self::pushItemToUsedItemQueue(uint8_t inventorySlotNum, uint16_t itemTypeId
   usedItemQueue_.emplace_back(inventorySlotNum, itemTypeId);
 }
 
-void Self::setUserPurchaseRequest(const packet::parsing::ItemMovement &itemMovement) {
+void Self::setUserPurchaseRequest(const packet::structures::ItemMovement &itemMovement) {
   userPurchaseRequest_ = itemMovement;
 }
 
@@ -522,7 +524,7 @@ bool Self::haveUserPurchaseRequest() const {
   return userPurchaseRequest_.has_value();
 }
 
-packet::parsing::ItemMovement Self::getUserPurchaseRequest() const {
+packet::structures::ItemMovement Self::getUserPurchaseRequest() const {
   if (!userPurchaseRequest_.has_value()) {
     throw std::runtime_error("Self: Trying to get user purchase request that does not exist");
   }

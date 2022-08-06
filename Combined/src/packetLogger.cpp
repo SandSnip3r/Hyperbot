@@ -23,9 +23,9 @@ void PacketLogger::logPacketToFile(int64_t msSinceEpoch, const PacketContainer &
     ss << "C,";
   } else if (direction == Direction::kServerToClient) {
     ss << "S,";
-  } else if (direction == Direction::BotToServer) {
+  } else if (direction == Direction::kBotToServer) {
     ss << "B,";
-  } else if (direction == Direction::BotToClient) {
+  } else if (direction == Direction::kBotToClient) {
     ss << "b,";
   }
   ss << (int)packet.opcode;
@@ -47,9 +47,9 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
     ss << " (C->S)";
   } else if (direction == Direction::kServerToClient) {
     ss << " (S->C)";
-  } else if (direction == Direction::BotToServer) {
+  } else if (direction == Direction::kBotToServer) {
     ss << " (B->S)";
-  } else if (direction == Direction::BotToClient) {
+  } else if (direction == Direction::kBotToClient) {
     ss << " (B->C)";
   }
   ss << (int)blocked << ',';
