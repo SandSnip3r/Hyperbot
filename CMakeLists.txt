@@ -22,11 +22,19 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
 set(TS_FILES hyperbot-ui_en_US.ts)
 
 set(PROJECT_SOURCES
-        main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
-        ${TS_FILES}
+  main.cpp
+  eventHandler.cpp
+  eventHandler.hpp
+  mainwindow.cpp
+  mainwindow.h
+  packetListWidgetItem.cpp
+  packetListWidgetItem.hpp
+  reinjectablePacketListWidget.cpp
+  reinjectablePacketListWidget.hpp
+  requester.cpp
+  requester.hpp
+  mainwindow.ui
+  ${TS_FILES}
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -61,6 +69,7 @@ PRIVATE
   Qt${QT_VERSION_MAJOR}::Widgets
   cppzmq
   cppzmq-static
+  proto
   ${PROTOBUF_LIBRARIES}
 )
 
