@@ -1,16 +1,19 @@
 #ifndef BOT_HPP_
 #define BOT_HPP_
 
-#include "packetProcessor.hpp"
 #include "broker/eventBroker.hpp"
 #include "broker/packetBroker.hpp"
 #include "config/characterLoginData.hpp"
 #include "packet/parsing/packetParser.hpp"
+#include "packetProcessor.hpp"
 #include "pk2/gameData.hpp"
+#include "proxy.hpp"
 #include "state/entity.hpp"
 #include "state/machine/stateMachine.hpp"
 #include "state/self.hpp"
 #include "ui/userInterface.hpp"
+
+#include <optional>
 
 // TODO: Move to a better file
 enum class PotionType {
@@ -23,6 +26,7 @@ class Bot {
 public:
   Bot(const config::CharacterLoginData &loginData,
       const pk2::GameData &gameData,
+      Proxy &proxy,
       broker::PacketBroker &broker);
 
 protected:
@@ -37,6 +41,7 @@ protected:
   const pk2::GameData &gameData_;
   state::Entity entityState_;
   state::Self selfState_{gameData_};
+  Proxy &proxy_;
   broker::PacketBroker &broker_;
   broker::EventBroker eventBroker_;
   ui::UserInterface userInterface_{eventBroker_};
@@ -53,7 +58,7 @@ private:
   const double kMpThreshold_{0.80};
   const double kVigorThreshold_{0.40};
   //******************************************************************************************
-  state::machine::Townlooping stateMachine_;
+  std::optional<state::machine::Townlooping> stateMachine_;
 
   void subscribeToEvents();
 

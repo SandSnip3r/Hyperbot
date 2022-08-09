@@ -15,7 +15,7 @@
 #include <functional>
 #include <mutex>
 #include <optional>
-#include <unordered_map>
+#include <set>
 
 //Networking class (handles connections)
 class Proxy {
@@ -25,6 +25,8 @@ public:
 	void inject(const PacketContainer &packet, const PacketContainer::Direction direction);
   void start();
   uint16_t getOurListeningPort() const;
+  void blockOpcode(packet::Opcode opcode);
+  void unblockOpcode(packet::Opcode opcode);
 
 	//Stops all networking objects
 	void Stop();
@@ -35,7 +37,7 @@ private:
   std::string gatewayAddress_;
   std::string agentIP_;
   uint16_t agentPort_{0};
-  std::unordered_map<uint16_t, bool> blockedOpcodes_;
+  std::set<uint16_t> blockedOpcodes_;
   bool connectToAgent{false};
   boost::asio::io_service ioService_;
   const int kPacketProcessDelayMs{10};

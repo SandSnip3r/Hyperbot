@@ -31,7 +31,7 @@ private:
   Loader loader_{kSilkroadDirectoryPath_, gameData_.divisionInfo()};
   broker::PacketBroker broker_;
   Proxy proxy_{gameData_, broker_};
-  Bot bot_{loginData_, gameData_, broker_};
+  Bot bot_{loginData_, gameData_, proxy_, broker_};
 };
 
 #endif

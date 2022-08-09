@@ -97,6 +97,19 @@ void Proxy::Stop() {
   serverConnection.Close();
 }
 
+void Proxy::blockOpcode(packet::Opcode opcode) {
+  LOG() << "blocking opcode " << packet::toStr(opcode) << std::endl;
+  blockedOpcodes_.emplace(static_cast<std::underlying_type_t<packet::Opcode>>(opcode));
+}
+
+void Proxy::unblockOpcode(packet::Opcode opcode) {
+  LOG() << "unblocking opcode " << packet::toStr(opcode) << std::endl;
+  auto it = blockedOpcodes_.find(static_cast<std::underlying_type_t<packet::Opcode>>(opcode));
+  if (it != blockedOpcodes_.end()) {
+    blockedOpcodes_.erase(it);
+  }
+}
+
 // Starts accepting new connections
 void Proxy::PostAccept(uint32_t count) {
   for(uint32_t x = 0; x < count; ++x) {
@@ -201,8 +214,9 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         PacketContainer p = serverConnection.security->GetPacketToRecv();
 
         //Check the blocked list
-        if(blockedOpcodes_.find(p.opcode) != blockedOpcodes_.end())
+        if(blockedOpcodes_.find(p.opcode) != blockedOpcodes_.end()) {
           forward = false;
+        }
 
         //Log packet
         packetLogger.logPacket(p, !forward, PacketLogger::Direction::kServerToClient);

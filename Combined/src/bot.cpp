@@ -17,9 +17,11 @@
 
 Bot::Bot(const config::CharacterLoginData &loginData,
          const pk2::GameData &gameData,
+         Proxy &proxy,
          broker::PacketBroker &broker) :
       loginData_(loginData),
       gameData_(gameData),
+      proxy_(proxy),
       broker_(broker) {
   eventBroker_.run();
   userInterface_.run();
@@ -60,8 +62,8 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kEntitySelected, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kNpcTalkStart, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStorageOpened, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
-
 }
 
 void Bot::handleEvent(const event::Event *event) {
@@ -139,6 +141,7 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kEntityDeselected:
       case event::EventCode::kEntitySelected:
       case event::EventCode::kNpcTalkStart:
+      case event::EventCode::kStorageOpened:
         onUpdate();
         break;
       case event::EventCode::kInventoryUpdated:
@@ -171,7 +174,10 @@ void Bot::onUpdate(const event::Event *event) {
   // Note: Assuming we start in the spawnpoint of town
   // Which is somewhere near position { 25000, 951.0f, -33.0f, 1372.0f }
 
-  stateMachine_.onUpdate(*this, event);
+  if (!stateMachine_) {
+    throw std::runtime_error("We should have a state machine");
+  }
+  stateMachine_->onUpdate(event);
 }
 
 void Bot::handleVitals() {
@@ -200,7 +206,7 @@ void Bot::handleStartTraining() {
   //  For example, if we're running, stop where we are
 
   // Initialize state machine
-  stateMachine_ = state::machine::Townlooping();
+  stateMachine_.emplace(*this);
 
   // Trigger onUpdate
   onUpdate();
@@ -209,6 +215,7 @@ void Bot::handleStartTraining() {
 void Bot::handleStopTraining() {
   LOG() << "Received message from UI! Stop Training" << std::endl;
   selfState_.trainingIsActive = false;
+  stateMachine_.reset();
 }
 
 // ============================================================================================================================

@@ -31,6 +31,7 @@ enum class EventCode {
   kEntityDeselected,
   kEntitySelected,
   kNpcTalkStart,
+  kStorageOpened,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,

@@ -4,6 +4,7 @@
 #include "helpers.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 
+#include <map>
 #include <variant>
 #include <vector>
 
@@ -18,10 +19,11 @@ enum class Npc { kStorage, kPotion, kGrocery, kBlacksmith, kProtector, kStable }
 
 class Walking {
 public:
-  Walking(const std::vector<packet::structures::Position> &waypoints);
-  void onUpdate(Bot &bot, const event::Event *event);
+  Walking(Bot &bot, const std::vector<packet::structures::Position> &waypoints);
+  void onUpdate(const event::Event *event);
   bool done() const;
 private:
+  Bot &bot_;
   std::vector<packet::structures::Position> waypoints_;
   size_t currentWaypointIndex_{0};
   bool requestedMovement_{false};
@@ -29,10 +31,11 @@ private:
 
 class TalkingToStorageNpc {
 public:
-  TalkingToStorageNpc();
-  void onUpdate(Bot &bot, const event::Event *event);
+  TalkingToStorageNpc(Bot &bot);
+  void onUpdate(const event::Event *event);
   bool done() const;
 private:
+  Bot &bot_;
   // Hard coded npc global Id
   static constexpr const uint32_t kStorageNpcGId{0x000000CF};
   // Hard coded items to store
@@ -48,30 +51,37 @@ private:
   bool pendingItemMovementRequest_{false};
   bool done_{false};
 
-  void storeItems(Bot &bot, const event::Event *event);
+  void storeItems(const event::Event *event);
 };
 
 class TalkingToShopNpc {
 public:
-  TalkingToShopNpc(Npc npc);
-  void onUpdate(Bot &bot, const event::Event *event);
+  TalkingToShopNpc(Bot &bot, Npc npc);
+  void onUpdate(const event::Event *event);
   bool done() const;
 private:
+  Bot &bot_;
   Npc npc_;
+  std::map<uint32_t, int> itemsToBuy_;
 };
 
-using TalkingToNpc = std::variant<TalkingToStorageNpc, TalkingToShopNpc>;
+using TalkingToNpc = std::variant<std::monostate, TalkingToStorageNpc, TalkingToShopNpc>;
 
 class Townlooping {
 public:
-  Townlooping();
-  void onUpdate(Bot &bot, const event::Event *event);
+  Townlooping(Bot &bot);
+  ~Townlooping();
+  void onUpdate(const event::Event *event);
   bool done() const;
 private:
+  Bot &bot_;
+  std::vector<packet::Opcode> blockedOpcodes_;
   std::vector<Npc> npcsToVisit_;
   size_t currentNpcIndex_{0};
   std::variant<std::monostate, Walking, TalkingToNpc> childState_;
-  std::vector<packet::structures::Position> pathBetweenNpcs(Bot &bot, Npc npcSrc, Npc npcDest) const;
+
+  void blockOpcode(packet::Opcode opcode);
+  std::vector<packet::structures::Position> pathBetweenNpcs(Npc npcSrc, Npc npcDest) const;
 };
 
 } // namespace state::machine

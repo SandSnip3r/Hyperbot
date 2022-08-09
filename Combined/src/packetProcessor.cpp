@@ -347,6 +347,7 @@ bool PacketProcessor::serverAgentInventoryStorageDataReceived(const packet::pars
   helpers::initializeInventory(selfState_.storage, packet.storageSize(), packet.storageItemMap());
   LOG() << "Storage initialized\n";
   selfState_.haveOpenedStorageSinceTeleport = true;
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStorageOpened));
   return true;
 }
 
