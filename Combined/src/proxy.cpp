@@ -110,6 +110,10 @@ void Proxy::unblockOpcode(packet::Opcode opcode) {
   }
 }
 
+bool Proxy::blockingOpcode(packet::Opcode opcode) const {
+  return (blockedOpcodes_.find(static_cast<std::underlying_type_t<packet::Opcode>>(opcode)) != blockedOpcodes_.end());
+}
+
 // Starts accepting new connections
 void Proxy::PostAccept(uint32_t count) {
   for(uint32_t x = 0; x < count; ++x) {
@@ -189,12 +193,13 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           forward = false;
         }
 
+        // Run packet through bot, regardless if it's blocked
+        const bool botWantsPacketForwarded = broker_.packetReceived(p, PacketContainer::Direction::kClientToServer);
+        forward &= botWantsPacketForwarded;
+
         //Forward the packet to Joymax
         if(forward && serverConnection.security) {
-          bool forwardToServer = broker_.packetReceived(p, PacketContainer::Direction::kClientToServer);
-          if (forwardToServer) {
-            serverConnection.Inject(p);
-          }
+          serverConnection.Inject(p);
         }
       }
 
@@ -214,7 +219,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         PacketContainer p = serverConnection.security->GetPacketToRecv();
 
         //Check the blocked list
-        if(blockedOpcodes_.find(p.opcode) != blockedOpcodes_.end()) {
+        if (blockedOpcodes_.find(p.opcode) != blockedOpcodes_.end()) {
           forward = false;
         }
 
@@ -299,39 +304,38 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           storagePacketContainer_->data.Write(p.data.GetStreamVector());
         }
 
-        //Forward the packet to Silkroad
-        if(forward && clientConnection.security) {
-          bool forwardToClient = true;
+        // Run packet through bot, regardless if it's blocked
+        bool botWantsPacketForwarded = true;
+        // Handle "begin", "data", and "end" pieces of split packets
+        if (opcodeAsEnum == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_END) {
+          // Send packet to broker
+          botWantsPacketForwarded = broker_.packetReceived(*characterInfoPacketContainer_, PacketContainer::Direction::kServerToClient);
+          // Reset data
+          characterInfoPacketContainer_.reset();
+        } else if (opcodeAsEnum == packet::Opcode::kServerAgentEntityGroupspawnEnd) {
+          // Send packet to broker
+          botWantsPacketForwarded = broker_.packetReceived(*groupSpawnPacketContainer_, PacketContainer::Direction::kServerToClient);
+          // Reset data
+          groupSpawnPacketContainer_.reset();
+        } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageEnd) {
+          // Send packet to broker
+          botWantsPacketForwarded = broker_.packetReceived(*storagePacketContainer_, PacketContainer::Direction::kServerToClient);
+          // Reset data
+          storagePacketContainer_.reset();
+        } else if (opcodeAsEnum != packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN &&
+                    opcodeAsEnum != packet::Opcode::kServerAgentCharacterData &&
+                    opcodeAsEnum != packet::Opcode::kServerAgentEntityGroupspawnBegin &&
+                    opcodeAsEnum != packet::Opcode::kServerAgentEntityGroupspawnData &&
+                    opcodeAsEnum != packet::Opcode::kServerAgentInventoryStorageBegin &&
+                    opcodeAsEnum != packet::Opcode::kServerAgentInventoryStorageData) {
+          // In all other cases, if its not "begin" or "data", send it
+          botWantsPacketForwarded = broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
+        }
+        forward &= botWantsPacketForwarded;
 
-          // Handle "begin", "data", and "end" pieces of split packets
-          if (opcodeAsEnum == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_END) {
-            // Send packet to broker
-            forwardToClient = broker_.packetReceived(*characterInfoPacketContainer_, PacketContainer::Direction::kServerToClient);
-            // Reset data
-            characterInfoPacketContainer_.reset();
-          } else if (opcodeAsEnum == packet::Opcode::kServerAgentEntityGroupspawnEnd) {
-            // Send packet to broker
-            forwardToClient = broker_.packetReceived(*groupSpawnPacketContainer_, PacketContainer::Direction::kServerToClient);
-            // Reset data
-            groupSpawnPacketContainer_.reset();
-          } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageEnd) {
-            // Send packet to broker
-            forwardToClient = broker_.packetReceived(*storagePacketContainer_, PacketContainer::Direction::kServerToClient);
-            // Reset data
-            storagePacketContainer_.reset();
-          } else if (opcodeAsEnum != packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN &&
-                     opcodeAsEnum != packet::Opcode::kServerAgentCharacterData &&
-                     opcodeAsEnum != packet::Opcode::kServerAgentEntityGroupspawnBegin &&
-                     opcodeAsEnum != packet::Opcode::kServerAgentEntityGroupspawnData &&
-                     opcodeAsEnum != packet::Opcode::kServerAgentInventoryStorageBegin &&
-                     opcodeAsEnum != packet::Opcode::kServerAgentInventoryStorageData) {
-            // In all other cases, if its not "begin" or "data", send it
-            forwardToClient = broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
-          }
-          
-          if (forwardToClient) {
-            clientConnection.Inject(p);
-          }
+        //Forward the packet to the Silkroad server
+        if (forward && clientConnection.security) {
+          clientConnection.Inject(p);
         }
       }
 

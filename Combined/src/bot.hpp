@@ -33,6 +33,7 @@ protected:
   friend class broker::EventBroker;
   void handleEvent(const event::Event *event);
 
+  friend class state::machine::CommonStateMachine;
   friend class state::machine::Walking;
   friend class state::machine::TalkingToStorageNpc;
   friend class state::machine::TalkingToShopNpc;

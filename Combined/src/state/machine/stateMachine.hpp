@@ -17,6 +17,17 @@ namespace state::machine {
 
 enum class Npc { kStorage, kPotion, kGrocery, kBlacksmith, kProtector, kStable };
 
+class CommonStateMachine {
+public:
+  CommonStateMachine(Bot &bot);
+  ~CommonStateMachine();
+protected:
+  Bot &bot_;
+  void blockOpcode(packet::Opcode opcode);
+private:
+  std::vector<packet::Opcode> blockedOpcodes_;
+};
+
 class Walking {
 public:
   Walking(Bot &bot, const std::vector<packet::structures::Position> &waypoints);
@@ -54,33 +65,38 @@ private:
   void storeItems(const event::Event *event);
 };
 
-class TalkingToShopNpc {
+class TalkingToShopNpc : public CommonStateMachine {
 public:
   TalkingToShopNpc(Bot &bot, Npc npc);
   void onUpdate(const event::Event *event);
   bool done() const;
 private:
-  Bot &bot_;
   Npc npc_;
+  uint32_t npcGid_;
   std::map<uint32_t, int> itemsToBuy_;
+  bool doneBuyingItems_{false};
+  bool waitingForSelectionResponse_{false};
+  bool waitingForTalkResponse_{false};
+  bool waitingOnBuyResponse_{false};
+  bool waitingOnStopTalkResponse_{false};
+  bool waitingOnDeselectionResponse_{false};
+  bool done_{false};
+
+  void buyItems(const event::Event *event);
 };
 
 using TalkingToNpc = std::variant<std::monostate, TalkingToStorageNpc, TalkingToShopNpc>;
 
-class Townlooping {
+class Townlooping : public CommonStateMachine {
 public:
   Townlooping(Bot &bot);
-  ~Townlooping();
   void onUpdate(const event::Event *event);
   bool done() const;
 private:
-  Bot &bot_;
-  std::vector<packet::Opcode> blockedOpcodes_;
   std::vector<Npc> npcsToVisit_;
   size_t currentNpcIndex_{0};
   std::variant<std::monostate, Walking, TalkingToNpc> childState_;
 
-  void blockOpcode(packet::Opcode opcode);
   std::vector<packet::structures::Position> pathBetweenNpcs(Npc npcSrc, Npc npcDest) const;
 };
 

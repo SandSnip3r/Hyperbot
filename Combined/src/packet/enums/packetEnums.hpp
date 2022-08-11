@@ -121,6 +121,7 @@ enum class ItemMovementType : uint8_t {
   kGoldStorageWithdraw =      0x0B,
   kGoldStorageDeposit =       0x0C,
   kWithinCos =                0x10,
+  kAddItemByServer =          0x0E,
   // kBuyFromItemMall =          0x18,
   kCosToInventory =           0x1A,
   kInventoryToCos =           0x1B,

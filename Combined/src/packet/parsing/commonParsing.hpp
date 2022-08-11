@@ -1,12 +1,16 @@
 #ifndef PACKET_PARSING_COMMON_HPP
 #define PACKET_PARSING_COMMON_HPP
 
-#include "../structures/packetInnerStructures.hpp"
-#include "../../storage/item.hpp"
+#include "packet/structures/packetInnerStructures.hpp"
+#include "pk2/itemData.hpp"
+#include "storage/item.hpp"
 #include "../../shared/stream_utility.h"
+
+#include <memory>
 
 namespace packet::parsing {
 
+std::shared_ptr<storage::Item> parseGenericItem(StreamUtility &stream, const pk2::ItemData &itemData);
 structures::RentInfo parseRentInfo(StreamUtility &stream);
 void parseItemCosSummoner(storage::ItemCosGrowthSummoner *cosSummoner, StreamUtility &stream);
 void parseItem(storage::ItemEquipment &item, StreamUtility &stream);

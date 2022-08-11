@@ -568,6 +568,7 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
               selfState_.inventory.addItem(movement.destSlots[0], item);
               helpers::printItem(movement.destSlots[0], item.get(), gameData_);
               std::cout << '\n';
+              eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlots[0]));
             } else {
               // Multiple destination slots, must be unstackable items like equipment
               for (auto destSlot : movement.destSlots) {
@@ -575,6 +576,7 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
                 selfState_.inventory.addItem(destSlot, item);
                 helpers::printItem(movement.destSlot, item.get(), gameData_);
                 std::cout << '\n';
+                eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlot));
               }
             }
           }
@@ -600,18 +602,12 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
           }
         }
         if (soldEntireStack) {
-          LOG() << "Sold entire \"stack\"\n";
           auto item = selfState_.inventory.withdrawItem(movement.srcSlot);
           selfState_.buybackQueue.addItem(item);
         }
       } else {
         LOG() << "Sold an item from a slot that we didnt have item data for\n";
       }
-      LOG() << "Current buyback queue:\n";
-      for (uint8_t slotNum=0; slotNum<selfState_.buybackQueue.size(); ++slotNum) {
-        helpers::printItem(slotNum, selfState_.buybackQueue.getItem(slotNum), gameData_);
-      }
-      std::cout << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kBuyback) {
       if (selfState_.buybackQueue.hasItem(movement.srcSlot)) {
         if (!selfState_.inventory.hasItem(movement.destSlot)) {

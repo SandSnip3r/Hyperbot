@@ -59,27 +59,7 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
         primaryItemMovement.goldPickAmount = stream.Read<uint32_t>();
       } else {
         // Picked an item
-        // ====================================================================================
-        // Begin copied region from ParsedServerAgentCharacterData::ParsedServerAgentCharacterData
-        // TODO: Move into a shared function
-        // ====================================================================================
-        auto rentInfo = parseRentInfo(stream);
-
-        uint32_t refItemId = stream.Read<uint32_t>();
-        if (!itemData.haveItemWithId(refItemId)) {
-          throw std::runtime_error("Unable to parse packet. Encountered an item (id:"+std::to_string(refItemId)+") for which we have no data on.");
-        }
-        const pk2::ref::Item &itemRef = itemData.getItemById(refItemId);
-        std::shared_ptr<storage::Item> parsedItem{storage::newItemByTypeData(itemRef)};
-        if (!parsedItem) {
-          throw std::runtime_error("Unable to create an item object for item");
-        }
-
-        parseItem(parsedItem.get(), stream);
-        primaryItemMovement.pickedItem = parsedItem;
-        // ====================================================================================
-        // End copied region
-        // ====================================================================================
+        primaryItemMovement.pickedItem = parseGenericItem(stream, itemData);
       }
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kDropItem) {
       primaryItemMovement.srcSlot = stream.Read<uint8_t>();

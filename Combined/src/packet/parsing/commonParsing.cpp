@@ -4,6 +4,23 @@
 
 namespace packet::parsing {
 
+std::shared_ptr<storage::Item> parseGenericItem(StreamUtility &stream, const pk2::ItemData &itemData) {
+  auto rentInfo = parseRentInfo(stream);
+
+  uint32_t refItemId = stream.Read<uint32_t>();
+  if (!itemData.haveItemWithId(refItemId)) {
+    throw std::runtime_error("Unable to parse packet. Encountered an item (id:"+std::to_string(refItemId)+") for which we have no data on.");
+  }
+  const pk2::ref::Item &itemRef = itemData.getItemById(refItemId);
+  std::shared_ptr<storage::Item> parsedItem{storage::newItemByTypeData(itemRef)};
+  if (!parsedItem) {
+    throw std::runtime_error("Unable to create an item object for item");
+  }
+
+  parseItem(parsedItem.get(), stream);
+  return parsedItem;
+}
+
 structures::RentInfo parseRentInfo(StreamUtility &stream) {
   structures::RentInfo rentInfo;
   rentInfo.rentType = stream.Read<uint32_t>();

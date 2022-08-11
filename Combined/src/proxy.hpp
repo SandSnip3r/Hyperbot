@@ -27,6 +27,7 @@ public:
   uint16_t getOurListeningPort() const;
   void blockOpcode(packet::Opcode opcode);
   void unblockOpcode(packet::Opcode opcode);
+  bool blockingOpcode(packet::Opcode opcode) const;
 
 	//Stops all networking objects
 	void Stop();

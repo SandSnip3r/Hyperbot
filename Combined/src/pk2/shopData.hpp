@@ -17,6 +17,7 @@ public:
   void addPackageAtSlot(ref::ScrapOfPackageItem package, uint8_t slotNum);
   bool havePackage(uint8_t slotNum) const;
   const ref::ScrapOfPackageItem& getPackage(uint8_t slotNum) const;
+  const std::map<uint8_t, pk2::ref::ScrapOfPackageItem>& getPackageMap() const;
   const std::string& getName() const;
 private:
   std::string name_;
@@ -28,6 +29,7 @@ class ShopData {
 public:
   void addTabToNpc(const std::string &npcCodeName, uint8_t tabNum, Tab tab);
   ref::ScrapOfPackageItem getItemFromNpc(const std::string &npcCodeName, uint8_t tabNum, uint8_t slotNum) const;
+  const std::vector<Tab>& getNpcTabs(const std::string &npcCodeName) const;
 private:
   std::map<std::string, std::vector<Tab>> npcTabs_;
 };

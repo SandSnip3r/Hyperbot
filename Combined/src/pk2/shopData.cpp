@@ -19,6 +19,10 @@ const ref::ScrapOfPackageItem& Tab::getPackage(uint8_t slotNum) const {
   return packageMap_.at(slotNum);
 }
 
+const std::map<uint8_t, pk2::ref::ScrapOfPackageItem>& Tab::getPackageMap() const {
+  return packageMap_;
+}
+
 const std::string& Tab::getName() const {
   return name_;
 }
@@ -60,6 +64,15 @@ ref::ScrapOfPackageItem ShopData::getItemFromNpc(const std::string &npcCodeName,
     throw std::runtime_error("ShopData::getItemFromNpc Slot ("+std::to_string(slotNum)+")  in tab "+std::to_string(tabNum)+" out of range for NPC shop ("+npcCodeName+")");
   }
   return tab.getPackage(slotNum);
+}
+
+const std::vector<Tab>& ShopData::getNpcTabs(const std::string &npcCodeName) const {
+  const auto it = npcTabs_.find(npcCodeName);
+  if (it == npcTabs_.end()) {
+    // TODO: Better error handling strategy
+    throw std::runtime_error("ShopData::getNpcTabs Trying to get tabs for an npc ("+npcCodeName+") which we have no data on");
+  }
+  return it->second;
 }
 
 } // namespace pk2

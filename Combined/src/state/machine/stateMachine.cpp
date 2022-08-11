@@ -3,14 +3,36 @@
 #include "bot.hpp"
 #include "logging.hpp"
 #include "math/position.hpp"
-#include "packet/building/clientAgentActionDeselectRequest.hpp";
+#include "packet/building/clientAgentActionDeselectRequest.hpp"
 #include "packet/building/clientAgentActionSelectRequest.hpp"
 #include "packet/building/clientAgentActionTalkRequest.hpp"
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 #include "packet/building/clientAgentInventoryOperationRequest.hpp"
 #include "packet/building/clientAgentInventoryStorageOpenRequest.hpp"
+#include "packet/building/serverAgentInventoryOperationResponse.hpp"
 
 namespace state::machine {
+
+CommonStateMachine::CommonStateMachine(Bot &bot) : bot_(bot) {
+}
+
+void CommonStateMachine::blockOpcode(packet::Opcode opcode) {
+  if (bot_.proxy_.blockingOpcode(opcode)) {
+    LOG() << "Someone is already blocking opcode " << packet::toStr(opcode) << ". Not going to block" << std::endl;
+  } else {
+    LOG() << "Blocking opcode " << packet::toStr(opcode) << std::endl;
+    bot_.proxy_.blockOpcode(opcode);
+    blockedOpcodes_.push_back(opcode);
+  }
+}
+
+CommonStateMachine::~CommonStateMachine() {
+  // Undo all blocked opcodes
+  for (const auto opcode : blockedOpcodes_) {
+    LOG() << "Unblocking opcode " << packet::toStr(opcode) << std::endl;
+    bot_.proxy_.unblockOpcode(opcode);
+  }
+}
 
 // =====================================================================================================================================
 // ===============================================================Walking===============================================================
@@ -276,52 +298,256 @@ void TalkingToStorageNpc::storeItems(const event::Event *event) {
 // =============================================================Townlooping=============================================================
 // =====================================================================================================================================
 
-TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc) : bot_(bot), npc_(npc) {
+TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc) : CommonStateMachine(bot), npc_(npc) {
   LOG() << "Initialized TalkingToShopNpc with npc " << npc_ << std::endl;
   if (npc_ == Npc::kPotion) {
+    npcGid_ = 0x0111;
     // Figure out what items to items to buy
     constexpr const uint32_t kXLargeHpPotionRefId{8};
-    constexpr const int kXLargeHpPotionBuyCount{100};
+    constexpr const int kXLargeHpPotionBuyCount{1};
     itemsToBuy_[kXLargeHpPotionRefId] = kXLargeHpPotionBuyCount;
+
+    blockOpcode(packet::Opcode::kServerAgentActionSelectResponse);
+    blockOpcode(packet::Opcode::kServerAgentActionTalkResponse);
+    blockOpcode(packet::Opcode::kServerAgentInventoryOperationResponse);
   }
 }
 
 void TalkingToShopNpc::onUpdate(const event::Event *event) {
   LOG() << "TalkingToShopNpc::onUpdate with npc " << npc_ << std::endl;
+  if (npc_ == Npc::kPotion) {
+    if (bot_.selfState_.talkingGidAndOption) {
+      // We are talking to an Npc
+      if (bot_.selfState_.talkingGidAndOption->first != npcGid_) {
+        throw std::runtime_error("We're not talking to the potion Npc that we thought we were");
+      }
+      if (bot_.selfState_.talkingGidAndOption->second != packet::enums::TalkOption::kStore) {
+        throw std::runtime_error("We're not in the talk option that we thought we were");
+      }
+      if (waitingForTalkResponse_) {
+        // Successfully began talking to Npc
+        waitingForTalkResponse_ = false;
+      }
+      LOG() << "We are talking to the potion Npc. Ready to buy items" << std::endl;
+      buyItems(event);
+
+      if (!doneBuyingItems_) {
+        // Still buying items, do not continue
+        LOG() << "Still buying items, do not continue" << std::endl;
+        return;
+      }
+
+      if (waitingOnStopTalkResponse_) {
+        // Already deselected to close the shop, nothing else to do
+        LOG() << "Already deselected to close the shop, nothing else to do" << std::endl;
+        return;
+      }
+
+      LOG() << "Must be done buying items, probably time to close the shop" << std::endl;
+      const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(bot_.selfState_.talkingGidAndOption->first);
+      bot_.broker_.injectPacket(packet, PacketContainer::Direction::kClientToServer);
+      waitingOnStopTalkResponse_ = true;
+      return;
+    } else {
+      // We are not talking to an npc
+      if (bot_.selfState_.selectedEntity) {
+        // We have something selected
+        if (*bot_.selfState_.selectedEntity != npcGid_) {
+          throw std::runtime_error("We have something selected, but it's not the potion Npc");
+        }
+        if (waitingForSelectionResponse_) {
+          LOG() << "Successfully selected potion Npc" << std::endl;
+          waitingForSelectionResponse_ = false;
+        }
+        // We're either about to buy items, or just finished
+        if (doneBuyingItems_) {
+          // We must deselect the npc
+          if (waitingOnDeselectionResponse_) {
+            // Already deselected, nothing to do
+            LOG() << "Already deselected, nothing to do" << std::endl;
+            return;
+          }
+
+          LOG() << "We must deselect the npc" << std::endl;
+          const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(*bot_.selfState_.selectedEntity);
+          bot_.broker_.injectPacket(packet, PacketContainer::Direction::kClientToServer);
+          waitingOnDeselectionResponse_ = true;
+          return;
+        } else {
+          // We must talk to the npc
+          LOG() << "We must talk to the npc" << std::endl;
+          if (waitingForTalkResponse_) {
+            // Already requested talk, nothing to do
+            return;
+          }
+          const auto openStorage = packet::building::ClientAgentActionTalkRequest::packet(*bot_.selfState_.selectedEntity, packet::enums::TalkOption::kStore);
+          bot_.broker_.injectPacket(openStorage, PacketContainer::Direction::kClientToServer);
+          waitingForTalkResponse_ = true;
+
+          // TODO: We wouldn't have to do this if we could subscribe to our injected packets (via the PacketBroker)
+          bot_.selfState_.pendingTalkGid = *bot_.selfState_.selectedEntity;
+        }
+      } else {
+        // No Npc is selected
+        if (doneBuyingItems_) {
+          done_ = true;
+          return;
+        }
+        if (waitingForSelectionResponse_) {
+          // Already requested selection, nothing to do
+          return;
+        }
+        LOG() << "No Npc is selected, selecting" << std::endl;
+        const auto selectNpc = packet::building::ClientAgentActionSelectRequest::packet(npcGid_);
+        bot_.broker_.injectPacket(selectNpc, PacketContainer::Direction::kClientToServer);
+        waitingForSelectionResponse_ = true;
+      }
+    }
+  }
 }
 
 bool TalkingToShopNpc::done() const {
+  if (npc_ == Npc::kPotion) {
+    if (done_) {
+      LOG() << "Done with potion npc!" << std::endl;
+    }
+    return done_;
+  }
+
   LOG() << "TalkingToShopNpc::done with npc " << npc_ << std::endl;
   return true;
+}
+
+void TalkingToShopNpc::buyItems(const event::Event *event) {
+  LOG() << "Buying items" << std::endl;
+
+  if (event) {
+    if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
+      if (inventoryUpdatedEvent->destSlotNum) {
+        // TODO: We dont actually know if this was our purchase, for now, we assume it was
+        if (inventoryUpdatedEvent->srcSlotNum) {
+          // This was a stacking, or item movement. This packet should actually be forwarded to the client, but we block it
+          // TODO: Handle. Ideally fix the packet forwarding mechanism. A temporary fix would be to just rebuild the packet and inject it (that might not be possible since we dont know how many items were in each stack before the stacking)
+          throw std::runtime_error("Not currently handling stacking of items while buying from an Npc");
+        }
+        LOG() << "Inventory slot " << static_cast<int>(*inventoryUpdatedEvent->destSlotNum) << " has received an item" << std::endl;
+        const auto *itemAtInventorySlot = bot_.selfState_.inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
+        if (itemAtInventorySlot == nullptr) {
+          throw std::runtime_error("Got an item from our inventory, but there's nothing here");
+        }
+        auto it = itemsToBuy_.find(itemAtInventorySlot->refItemId);
+        if (it == itemsToBuy_.end()) {
+          throw std::runtime_error("Thought we bought an item, but its not in our to-buy list");
+        }
+        const auto beforeCount = it->second;
+        if (const auto *itemExp = dynamic_cast<const storage::ItemExpendable*>(itemAtInventorySlot)) {
+          it->second -= itemExp->quantity;
+        } else {
+          --(it->second);
+        }
+        LOG() << "Reducing remaining buy count from " << beforeCount << " to " << it->second << std::endl;
+        if (it->second < 0) {
+          throw std::runtime_error("Somehow bought more than we wanted");
+        } else if (it->second == 0) {
+          // No more of these to buy, delete from shopping list
+          itemsToBuy_.erase(it);
+        }
+        waitingOnBuyResponse_ = false;
+
+        // The packet which tells the client about this purchase has been blocked. We need to spoof an item spawning in the character's inventory
+        const auto itemBuySpoofPacket = packet::building::ServerAgentInventoryOperationResponse::addItemByServerPacket(*inventoryUpdatedEvent->destSlotNum, *itemAtInventorySlot);
+        bot_.broker_.injectPacket(itemBuySpoofPacket, PacketContainer::Direction::kServerToClient);
+      }
+    }
+  }
+
+  if (waitingOnBuyResponse_) {
+    // Waiting on an item we bought, nothing to do
+    return;
+  }
+
+  if (itemsToBuy_.empty()) {
+    // Nothing else to buy
+    LOG() << "Nothing else to buy" << std::endl;
+    doneBuyingItems_ = true;
+    return;
+  }
+
+  struct PurchaseRequest {
+    uint8_t tabIndex;
+    uint8_t itemIndex;
+    uint16_t quantity;
+  };
+  const auto nextPurchaseRequest = [&]() -> PurchaseRequest {
+    auto nextItemToBuyIt = itemsToBuy_.begin();
+    if (nextItemToBuyIt->second <= 0) {
+      throw std::runtime_error("Non-positive number of items to buy");
+    }
+    // Get name of item
+    if (!bot_.gameData_.itemData().haveItemWithId(nextItemToBuyIt->first)) {
+      throw std::runtime_error("Want to buy an item for which we have no data");
+    }
+    const auto &item = bot_.gameData_.itemData().getItemById(nextItemToBuyIt->first);
+    const auto &nameOfItemToBuy = item.codeName128;
+    // Try to find item in shop
+
+    const auto *object = bot_.entityState_.getEntity(*bot_.selfState_.selectedEntity);
+    const auto *npc = dynamic_cast<const packet::parsing::NonplayerCharacter*>(object);
+    if (npc == nullptr) {
+      throw std::runtime_error("Npc is not a NonplayerCharacter");
+    }
+
+    LOG() << " Npc's ref id is " << npc->refObjId << std::endl;
+    if (!bot_.gameData_.characterData().haveCharacterWithId(npc->refObjId)) {
+      throw std::runtime_error("Dont have character data");
+    }
+    const auto &character = bot_.gameData_.characterData().getCharacterById(npc->refObjId);
+    LOG() << " This npc's name is " << character.codeName128 << std::endl;
+    auto &shopTabs = bot_.gameData_.shopData().getNpcTabs(character.codeName128);
+    LOG() << " This npc has " << shopTabs.size() << " tabs" << std::endl;
+    for (int tabIndex=0; tabIndex<shopTabs.size(); ++tabIndex) {
+      const auto &tab = shopTabs[tabIndex];
+      const auto &packageMap = tab.getPackageMap();
+      LOG() << "  Tab name \"" << tab.getName() << "\" has " << packageMap.size() << " item(s)" << std::endl;
+      for (const auto &itemIndexAndScrapPair : packageMap) {
+        LOG() << "   Slot " << static_cast<int>(itemIndexAndScrapPair.first) << " has item " << itemIndexAndScrapPair.second.refItemCodeName << std::endl;
+        if (itemIndexAndScrapPair.second.refItemCodeName == nameOfItemToBuy) {
+          LOG() << "    This is the item we want to buy!" << std::endl;
+          return { static_cast<uint8_t>(tabIndex), itemIndexAndScrapPair.first, static_cast<uint16_t>(std::min(item.maxStack, nextItemToBuyIt->second)) };
+        }
+      }
+    }
+  }();
+  LOG() << "We want to purchase item on tab " << static_cast<int>(nextPurchaseRequest.tabIndex) << ", with item index " << static_cast<int>(nextPurchaseRequest.itemIndex) << " and quantity " << nextPurchaseRequest.quantity << std::endl;
+  const auto buyItemPacket = packet::building::ClientAgentInventoryOperationRequest::buyPacket(nextPurchaseRequest.tabIndex, nextPurchaseRequest.itemIndex, nextPurchaseRequest.quantity, bot_.selfState_.talkingGidAndOption->first);
+  bot_.broker_.injectPacket(buyItemPacket, PacketContainer::Direction::kClientToServer);
+  {
+    // TODO: We wouldn't have to do this if we could subscribe to our injected packets (via the PacketBroker)
+    packet::structures::ItemMovement itemMovement;
+    itemMovement.type = packet::enums::ItemMovementType::kBuyFromNPC;
+    itemMovement.globalId = bot_.selfState_.talkingGidAndOption->first;
+    itemMovement.storeTabNumber = nextPurchaseRequest.tabIndex;
+    itemMovement.storeSlotNumber = nextPurchaseRequest.itemIndex;
+    bot_.selfState_.setUserPurchaseRequest(itemMovement);
+  }
+  waitingOnBuyResponse_ = true;
 }
 
 // =====================================================================================================================================
 // =============================================================Townlooping=============================================================
 // =====================================================================================================================================
 
-Townlooping::Townlooping(Bot &bot) : bot_(bot) {
+Townlooping::Townlooping(Bot &bot) : CommonStateMachine(bot) {
   // Block packets while we're in the townlooping state
 
   // Figure out which npcs we want to visit and in what order
-  npcsToVisit_ = { Npc::kStorage, Npc::kPotion, Npc::kGrocery, Npc::kBlacksmith, Npc::kProtector, Npc::kStable };
+  npcsToVisit_ = { Npc::kStorage, Npc::kPotion/* , Npc::kGrocery, Npc::kBlacksmith, Npc::kProtector, Npc::kStable */ };
   // Calculate the path to the first Npc
   std::vector<packet::structures::Position> pathToFirstNpc = {
     {25000, 981.0f, -32.0f, 1032.0f}
   };
   // Initialize state as walking
   childState_.emplace<Walking>(bot_, pathToFirstNpc);
-}
-
-void Townlooping::blockOpcode(packet::Opcode opcode) {
-  blockedOpcodes_.push_back(opcode);
-  bot_.proxy_.blockOpcode(opcode);
-}
-
-Townlooping::~Townlooping() {
-  // Undo all blocked opcodes
-  for (const auto opcode : blockedOpcodes_) {
-    bot_.proxy_.unblockOpcode(opcode);
-  }
 }
 
 void Townlooping::onUpdate(const event::Event *event) {
@@ -335,12 +561,15 @@ TODO_REMOVE_THIS_LABEL:
 
     if (walkingState->done()) {
       // Done walking, advance state
+      childState_.emplace<TalkingToNpc>();
+      auto &talkingToNpcState = std::get<TalkingToNpc>(childState_);
       if (npcsToVisit_[currentNpcIndex_] == Npc::kStorage) {
         LOG() << "Done walking, talking to storage next" << std::endl;
-        childState_.emplace<TalkingToNpc>(TalkingToStorageNpc(bot_));
+        talkingToNpcState.emplace<TalkingToStorageNpc>(bot_);
       } else {
         LOG() << "Done walking, talking to some other npc next" << std::endl;
-        childState_.emplace<TalkingToNpc>(TalkingToShopNpc(bot_, npcsToVisit_[currentNpcIndex_]));
+        talkingToNpcState.emplace<TalkingToShopNpc>(bot_, npcsToVisit_[currentNpcIndex_]);
+        LOG() << "Done constructing" << std::endl;
       }
       // TODO: Go back to the top of this function
       goto TODO_REMOVE_THIS_LABEL;

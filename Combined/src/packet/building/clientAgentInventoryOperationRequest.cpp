@@ -1,5 +1,6 @@
 #include "clientAgentInventoryOperationRequest.hpp"
-#include "../enums/packetEnums.hpp"
+
+#include "packet/enums/packetEnums.hpp"
 
 namespace packet::building {
 
@@ -33,6 +34,16 @@ PacketContainer ClientAgentInventoryOperationRequest::withinStoragePacket(uint8_
   stream.Write<>(static_cast<uint8_t>(packet::enums::ItemMovementType::kWithinStorage));
   stream.Write<>(srcSlot);
   stream.Write<>(destSlot);
+  stream.Write<>(quantity);
+  stream.Write<>(npcGId);
+  return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
+}
+
+PacketContainer ClientAgentInventoryOperationRequest::buyPacket(uint8_t tabIndex, uint8_t itemIndex, uint16_t quantity, uint32_t npcGId) {
+  StreamUtility stream;
+  stream.Write<>(static_cast<uint8_t>(packet::enums::ItemMovementType::kBuyFromNPC));
+  stream.Write<>(tabIndex);
+  stream.Write<>(itemIndex);
   stream.Write<>(quantity);
   stream.Write<>(npcGId);
   return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));

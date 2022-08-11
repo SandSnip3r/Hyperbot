@@ -38,22 +38,8 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
 
   for (int itemNum=0; itemNum<inventoryItemCount; ++itemNum) {
     uint8_t slotNum = stream.Read<uint8_t>();
-    auto rentInfo = parseRentInfo(stream);
-
-    uint32_t refItemId = stream.Read<uint32_t>();
-    if (!itemData.haveItemWithId(refItemId)) {
-      throw std::runtime_error("Unable to parse packet. Encountered an item (id:"+std::to_string(refItemId)+") for which we have no data on.");
-    }
-    const pk2::ref::Item &itemRef = itemData.getItemById(refItemId);
-
-    std::shared_ptr<storage::Item> parsedItem{storage::newItemByTypeData(itemRef)};
-    if (!parsedItem) {
-      throw std::runtime_error("Unable to create an item object for item");
-    }
-
-    parseItem(parsedItem.get(), stream);
-
-    inventoryItemMap_.insert(std::pair<uint8_t, std::shared_ptr<storage::Item>>(slotNum, parsedItem));
+    const auto item = parseGenericItem(stream, itemData);
+    inventoryItemMap_.insert(std::pair<uint8_t, std::shared_ptr<storage::Item>>(slotNum, std::move(item)));
   }
 
   //=====================================================================================
