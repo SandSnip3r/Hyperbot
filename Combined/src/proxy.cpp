@@ -98,12 +98,10 @@ void Proxy::Stop() {
 }
 
 void Proxy::blockOpcode(packet::Opcode opcode) {
-  LOG() << "blocking opcode " << packet::toStr(opcode) << std::endl;
   blockedOpcodes_.emplace(static_cast<std::underlying_type_t<packet::Opcode>>(opcode));
 }
 
 void Proxy::unblockOpcode(packet::Opcode opcode) {
-  LOG() << "unblocking opcode " << packet::toStr(opcode) << std::endl;
   auto it = blockedOpcodes_.find(static_cast<std::underlying_type_t<packet::Opcode>>(opcode));
   if (it != blockedOpcodes_.end()) {
     blockedOpcodes_.erase(it);

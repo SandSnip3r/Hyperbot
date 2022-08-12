@@ -556,8 +556,8 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
           if (gameData_.characterData().haveCharacterWithId(object->refObjId)) {
             auto npcName = gameData_.characterData().getCharacterById(object->refObjId).codeName128;
             auto itemInfo = gameData_.shopData().getItemFromNpc(npcName, userPurchaseRequest.storeTabNumber, userPurchaseRequest.storeSlotNumber);
-            LOG() << "Bought " << movement.quantity << " x \"" << itemInfo.refItemCodeName << "\" from \"" << npcName << "\"\n";
             const auto &itemRef = gameData_.itemData().getItemByCodeName128(itemInfo.refItemCodeName);
+            LOG() << "Bought " << movement.quantity << " x \"" << itemInfo.refItemCodeName << "\"(refId=" << itemRef.id << ") from \"" << npcName << "\"\n";
             if (movement.destSlots.size() == 1) {
               // Just a single item or single stack
               auto item = helpers::createItemFromScrap(itemInfo, itemRef);

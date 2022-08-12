@@ -23,7 +23,7 @@ public:
   ~CommonStateMachine();
 protected:
   Bot &bot_;
-  void blockOpcode(packet::Opcode opcode);
+  void pushBlockedOpcode(packet::Opcode opcode);
 private:
   std::vector<packet::Opcode> blockedOpcodes_;
 };
@@ -40,6 +40,23 @@ private:
   bool requestedMovement_{false};
 };
 
+class BuyingItems : public CommonStateMachine {
+public:
+  struct PurchaseRequest {
+    uint8_t tabIndex;
+    uint8_t itemIndex;
+    uint16_t quantity;
+    int32_t maxStackSize;
+  };
+  BuyingItems(Bot &bot, const std::map<uint32_t, PurchaseRequest> &itemsToBuy);
+  void onUpdate(const event::Event *event);
+  bool done() const;
+private:
+  std::map<uint32_t, PurchaseRequest> itemsToBuy_;
+  bool waitingOnBuyResponse_{false};
+  bool done_{false};
+};
+
 class TalkingToStorageNpc {
 public:
   TalkingToStorageNpc(Bot &bot);
@@ -49,9 +66,7 @@ private:
   Bot &bot_;
   // Hard coded npc global Id
   static constexpr const uint32_t kStorageNpcGId{0x000000CF};
-  // Hard coded items to store
-  static const uint16_t kArrowTypeId;
-  static const uint16_t kHpPotionTypeId;
+  std::set<uint16_t> itemTypesToStore_;
 
   enum class NpcInteractionState { kStart, kSelectionRequestPending, kNpcSelected, kStorageOpenRequestPending, kStorageOpened, kShopOpenRequestPending, kShopOpened, kDoneStoring };
   NpcInteractionState npcInteractionState_{NpcInteractionState::kStart};
@@ -67,22 +82,23 @@ private:
 
 class TalkingToShopNpc : public CommonStateMachine {
 public:
-  TalkingToShopNpc(Bot &bot, Npc npc);
+  TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList);
   void onUpdate(const event::Event *event);
   bool done() const;
 private:
   Npc npc_;
+  const std::map<uint32_t, int> &shoppingList_;
   uint32_t npcGid_;
-  std::map<uint32_t, int> itemsToBuy_;
-  bool doneBuyingItems_{false};
+  std::map<uint32_t, BuyingItems::PurchaseRequest> itemsToBuy_;
+  std::variant<std::monostate, BuyingItems> childState_;
   bool waitingForSelectionResponse_{false};
   bool waitingForTalkResponse_{false};
-  bool waitingOnBuyResponse_{false};
   bool waitingOnStopTalkResponse_{false};
   bool waitingOnDeselectionResponse_{false};
   bool done_{false};
 
-  void buyItems(const event::Event *event);
+  void figureOutWhatToBuy();
+  bool doneBuyingItems() const;
 };
 
 using TalkingToNpc = std::variant<std::monostate, TalkingToStorageNpc, TalkingToShopNpc>;
@@ -93,6 +109,7 @@ public:
   void onUpdate(const event::Event *event);
   bool done() const;
 private:
+  std::map<uint32_t, int> shoppingList_;
   std::vector<Npc> npcsToVisit_;
   size_t currentNpcIndex_{0};
   std::variant<std::monostate, Walking, TalkingToNpc> childState_;

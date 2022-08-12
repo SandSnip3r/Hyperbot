@@ -28,6 +28,18 @@ Bot::Bot(const config::CharacterLoginData &loginData,
   subscribeToEvents();
 }
 
+state::Self& Bot::selfState() {
+  return selfState_;
+}
+
+Proxy& Bot::proxy() const {
+  return proxy_;
+}
+
+broker::PacketBroker& Bot::packetBroker() const {
+  return broker_;
+}
+
 void Bot::subscribeToEvents() {
   auto eventHandleFunction = std::bind(&Bot::handleEvent, this, std::placeholders::_1);
   // Bot actions from UI

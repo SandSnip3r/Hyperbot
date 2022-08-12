@@ -29,6 +29,9 @@ public:
       Proxy &proxy,
       broker::PacketBroker &broker);
 
+  state::Self& selfState();
+  Proxy& proxy() const;
+  broker::PacketBroker& packetBroker() const;
 protected:
   friend class broker::EventBroker;
   void handleEvent(const event::Event *event);

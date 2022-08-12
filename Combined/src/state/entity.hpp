@@ -18,6 +18,7 @@ public:
   packet::parsing::Object* getEntity(EntityId gId);
   const packet::parsing::Object* getEntity(EntityId gId) const;
   size_t size() const;
+  const std::map<EntityId, std::shared_ptr<packet::parsing::Object>>& getEntityMap() const;
 private:
   mutable std::mutex entityMutex_;
   std::map<EntityId, std::shared_ptr<packet::parsing::Object>> entityMap_;

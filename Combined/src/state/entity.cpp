@@ -47,4 +47,8 @@ size_t Entity::size() const {
   return entityMap_.size();
 }
 
+const std::map<Entity::EntityId, std::shared_ptr<packet::parsing::Object>>& Entity::getEntityMap() const {
+  return entityMap_;
+}
+
 } // namespace state

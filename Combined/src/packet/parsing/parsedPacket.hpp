@@ -124,6 +124,7 @@ public:
   uint32_t refObjId;
   uint8_t typeId1, typeId2, typeId3, typeId4;
   uint32_t gId;
+  // TODO: Replace the position data with the packet::structures::Position object
   uint16_t regionId;
   float x, y, z;
   Object(ObjectType t) : type(t) {}
