@@ -9,7 +9,7 @@ namespace pk2 {
 
 class ItemData {
 public:
-	using ItemMap = std::unordered_map<ref::ItemId,ref::Item>;
+	using ItemMap = std::unordered_map<ref::ItemId, ref::Item>;
 	void addItem(ref::Item &&item);
 	bool haveItemWithId(ref::ItemId id) const;
 	const ref::Item& getItemById(ref::ItemId id) const;

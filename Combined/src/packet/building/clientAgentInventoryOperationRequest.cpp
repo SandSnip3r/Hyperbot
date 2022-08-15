@@ -29,6 +29,15 @@ PacketContainer ClientAgentInventoryOperationRequest::inventoryToStoragePacket(u
   return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
 }
 
+PacketContainer ClientAgentInventoryOperationRequest::withinInventoryPacket(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity) {
+  StreamUtility stream;
+  stream.Write<>(static_cast<uint8_t>(packet::enums::ItemMovementType::kWithinInventory));
+  stream.Write<>(srcSlot);
+  stream.Write<>(destSlot);
+  stream.Write<>(quantity);
+  return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
+}
+
 PacketContainer ClientAgentInventoryOperationRequest::withinStoragePacket(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity, uint32_t npcGId) {
   StreamUtility stream;
   stream.Write<>(static_cast<uint8_t>(packet::enums::ItemMovementType::kWithinStorage));

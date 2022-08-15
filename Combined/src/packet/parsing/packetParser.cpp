@@ -20,7 +20,9 @@
 #include "serverAgentEntityUpdatePosition.hpp"
 #include "serverAgentEntityUpdateState.hpp"
 #include "serverAgentInventoryOperationResponse.hpp"
+#include "serverAgentInventoryRepairResponse.hpp"
 #include "serverAgentInventoryStorageData.hpp"
+#include "serverAgentInventoryUpdateDurability.hpp"
 #include "serverAgentSkillBegin.hpp"
 #include "serverAgentSkillEnd.hpp"
 
@@ -83,6 +85,10 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ParsedServerAgentCharacterUpdateStats>(packet);
       case Opcode::kServerAgentInventoryOperationResponse:
         return std::make_unique<ServerAgentInventoryOperationResponse>(packet, gameData_.itemData());
+      case Opcode::kServerAgentInventoryRepairResponse:
+        return std::make_unique<ServerAgentInventoryRepairResponse>(packet);
+      case Opcode::kServerAgentInventoryUpdateDurability:
+        return std::make_unique<ServerAgentInventoryUpdateDurability>(packet);
       case Opcode::kClientAgentInventoryOperationRequest:
         return std::make_unique<ParsedClientItemMove>(packet);
       case Opcode::kServerAgentActionCommandResponse:

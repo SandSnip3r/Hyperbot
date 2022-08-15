@@ -54,6 +54,7 @@ public:
 private:
   std::map<uint32_t, PurchaseRequest> itemsToBuy_;
   bool waitingOnBuyResponse_{false};
+  bool waitingOnItemMovementResponse_{false};
   bool done_{false};
 };
 
@@ -93,12 +94,15 @@ private:
   std::variant<std::monostate, BuyingItems> childState_;
   bool waitingForSelectionResponse_{false};
   bool waitingForTalkResponse_{false};
+  bool waitingForRepairResponse_{false};
   bool waitingOnStopTalkResponse_{false};
   bool waitingOnDeselectionResponse_{false};
   bool done_{false};
 
   void figureOutWhatToBuy();
+  bool needToRepair() const;
   bool doneBuyingItems() const;
+  bool doneWithNpc() const;
 };
 
 using TalkingToNpc = std::variant<std::monostate, TalkingToStorageNpc, TalkingToShopNpc>;

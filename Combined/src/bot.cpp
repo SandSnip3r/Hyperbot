@@ -76,6 +76,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStorageOpened, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kRepairSuccessful, eventHandleFunction);
 }
 
 void Bot::handleEvent(const event::Event *event) {
@@ -154,6 +155,7 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kEntitySelected:
       case event::EventCode::kNpcTalkStart:
       case event::EventCode::kStorageOpened:
+      case event::EventCode::kRepairSuccessful:
         onUpdate();
         break;
       case event::EventCode::kInventoryUpdated:
@@ -296,11 +298,8 @@ void Bot::handleStateCharacterListUpdated() const {
 // ============================================================================================================================
 
 void Bot::handleMovementTimerEnded() {
-  LOG() << "Movement timer ended" << std::endl;
   selfState_.resetMovingEventId();
   selfState_.doneMoving();
-  // LOG() << "Currently at " << selfState_.position() << '\n';
-  LOG() << "Currently at {" << selfState_.position().regionId << ',' << selfState_.position().xOffset << "f," << selfState_.position().yOffset << "f," << selfState_.position().zOffset << "f}" << std::endl;
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded));
 }
 
@@ -317,7 +316,6 @@ void Bot::handleSpeedUpdated() {
 }
 
 void Bot::handleMovementEnded() {
-  LOG() << "Movement ended" << std::endl;
   onUpdate();
 }
 
@@ -462,9 +460,6 @@ void Bot::usePotion(PotionType potionType) {
   // We enter this funciton assuming that:
   //  1. The potion isnt on cooldown
   //  2. We have the potion
-  const double hpPercentage = static_cast<double>(selfState_.hp())/(*selfState_.maxHp()); // TODO: Remove, for print only
-  const double mpPercentage = static_cast<double>(selfState_.mp())/(*selfState_.maxMp()); // TODO: Remove, for print only
-  printf("Healing. Hp: %4.2f%%, Mp: %4.2f%%\n", hpPercentage*100, mpPercentage*100); std::cout.flush();
 
   uint8_t typeId4;
   if (potionType == PotionType::kHp) {

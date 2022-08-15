@@ -94,7 +94,7 @@ enum class Opcode {
   CLIENT_TRANSPORT_HOME = 0x70CB, // CLIENT_TRANSPORT_HOME, CLIENT_TRANSPORT_DELETE
   CLIENT_TRANSPORT_DELETE = 0x70CB, // CLIENT_TRANSPORT_HOME, CLIENT_TRANSPORT_DELETE
   kClientAgentInventoryStorageOpenRequest = 0x703C,
-  CLIENT_REPAIR = 0x703E,
+  kClientAgentInventoryRepairRequest = 0x703E,
   CLIENT_USE_BERSERK = 0x70A7,
 
   
@@ -196,8 +196,8 @@ enum class Opcode {
   SERVER_ALCHEMY = 0xB150,
   SERVER_ALCHEMYSTONE = 0xB151,
 
-  SERVER_REPAIR = 0xB03E,
-  SERVER_ITEM_DURABILITY_CHANGE = 0x3052,
+  kServerAgentInventoryRepairResponse = 0xB03E,
+  kServerAgentInventoryUpdateDurability = 0x3052,
 
   kServerAgentEntityUpdatePosition = 0xB023,
 };

@@ -1,6 +1,7 @@
 #ifndef ITEM_HPP__
 #define ITEM_HPP__
 
+#include "pk2/gameData.hpp"
 #include "../../../common/pk2/ref/item.hpp"
 
 #include <cstdint>
@@ -74,6 +75,8 @@ public:
   std::vector<ItemMagicParam> magicParams;
   std::vector<SocketOptionData> socketOptions;
   std::vector<AdvancedElixirOptionData> advancedElixirOptions;
+  bool repairInvalid(const pk2::GameData &gameData) const;
+  uint32_t maxDurability(const pk2::GameData &gameData) const;
 };
 
 // CGItemCOSSummoner, ITEM_COS_P

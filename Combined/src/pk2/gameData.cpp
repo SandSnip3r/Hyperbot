@@ -1,7 +1,8 @@
 #include "gameData.hpp"
 
-#include "../math/position.hpp"
-#include "../pk2/parsing/navmeshParser.hpp"
+#include "logging.hpp"
+#include "math/position.hpp"
+#include "pk2/parsing/navmeshParser.hpp"
 #include "../../../common/pk2/pk2.h"
 #include "../../../common/pk2/parsing/parsing.hpp"
 
@@ -41,6 +42,7 @@ void GameData::parseMedia(Pk2ReaderModern &pk2Reader) {
   std::vector<std::thread> thrs;
   parseDivisionInfo(pk2Reader);
   parseShopData(pk2Reader);
+  parseMagicOptionData(pk2Reader);
   thrs.emplace_back(&GameData::parseCharacterData, this, std::ref(pk2Reader));
   thrs.emplace_back(&GameData::parseItemData, this, std::ref(pk2Reader));
   thrs.emplace_back(&GameData::parseSkillData, this, std::ref(pk2Reader));
@@ -68,6 +70,10 @@ const ShopData& GameData::shopData() const {
 
 const SkillData& GameData::skillData() const {
   return skillData_;
+}
+
+const MagicOptionData& GameData::magicOptionData() const {
+  return magicOptionData_;
 }
 
 const TeleportData& GameData::teleportData() const {
@@ -444,12 +450,23 @@ void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
   }
 }
 
+void GameData::parseMagicOptionData(Pk2ReaderModern &pk2Reader) {
+	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kMagicOptionDataFilename = "magicoption.txt";
+  const std::string kMagicOptionDataPath = kTextdataDirectory + kMagicOptionDataFilename;
+  PK2Entry magicOptionDataEntry = pk2Reader.getEntry(kMagicOptionDataPath);
+  auto magicOptionData = pk2Reader.getEntryData(magicOptionDataEntry);
+  auto magicOptionStr = parsing::fileDataToString(magicOptionData);
+  parseDataFile<ref::MagicOption>(magicOptionStr, parsing::isValidMagicOptionDataLine, parsing::parseMagicOptionDataLine, std::bind(&MagicOptionData::addItem, &magicOptionData_, std::placeholders::_1));
+}
+
 void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {
   std::cout << "Parsing navmesh data\n";
   // pk2::parsing::NavmeshParser navmeshParser(pk2Reader);
   // navmesh_ = navmeshParser.parseNavmesh();
   // navmeshTriangulation_ = navmesh::triangulation::NavmeshTriangulation(*navmesh_);
 
+  // ==============OLD Below?==============
   // for (int regionX=0; regionX<255; ++regionX) {
   //   for (int regionY=0; regionY<128; ++regionY) {
   //     const auto regionId = math::position::worldRegionIdFromXY(regionX, regionY);

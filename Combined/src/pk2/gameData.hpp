@@ -3,6 +3,7 @@
 
 #include "characterData.hpp"
 #include "itemData.hpp"
+#include "magicOptionData.hpp"
 #include "shopData.hpp"
 #include "skillData.hpp"
 #include "teleportData.hpp"
@@ -29,6 +30,7 @@ public:
   const ItemData& itemData() const;
   const ShopData& shopData() const;
   const SkillData& skillData() const;
+  const MagicOptionData& magicOptionData() const;
   const TeleportData& teleportData() const;
   const navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
 private:
@@ -39,6 +41,7 @@ private:
   ItemData itemData_;
   ShopData shopData_;
   SkillData skillData_;
+  MagicOptionData magicOptionData_;
   TeleportData teleportData_;
   std::optional<navmesh::Navmesh> navmesh_;
   std::optional<navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
@@ -53,6 +56,7 @@ private:
   void parseSkillData(Pk2ReaderModern &pk2Reader);
   void parseTeleportData(Pk2ReaderModern &pk2Reader);
   void parseShopData(Pk2ReaderModern &pk2Reader);
+  void parseMagicOptionData(Pk2ReaderModern &pk2Reader);
 };
 
 } // namespace pk2

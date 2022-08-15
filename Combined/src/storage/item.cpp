@@ -1,4 +1,5 @@
 #include "item.hpp"
+#include "logging.hpp"
 
 #include <iostream>
 #include <iomanip>
@@ -20,7 +21,50 @@ uint16_t Item::typeData() const {
 
 Item::Item(ItemType t) : type(t) {}
 Item::~Item() {}
+
 ItemEquipment::ItemEquipment() : Item(ItemType::kItemEquipment) {}
+
+bool ItemEquipment::repairInvalid(const pk2::GameData &gameData) const {
+  for (const auto &blue : magicParams) {
+    const auto &magicOption = gameData.magicOptionData().getMagicOptionById(blue.type);
+    // Rather than string comparisons, we could use the 2-4 character string from Param1, but string comparison is actually what the client uses.
+    if (magicOption.mOptName128 == "MATTR_NOT_REPARABLE") {
+      return true;
+    }
+  }
+  return false;
+}
+
+uint32_t ItemEquipment::maxDurability(const pk2::GameData &gameData) const {
+  // The durability is the first 5 bits within the variance
+  // TODO: Extracting this from the variance should be done in a more general way
+  const uint64_t kDurabilityMask{0b11111};
+  const auto durabilityRange = itemInfo->dur_U - itemInfo->dur_L;
+  const auto currentDurabilityWhiteVarianceValue = variance & kDurabilityMask;
+  // Intentionally truncate and cast to an int
+  uint32_t currentDurabilityWhiteValue = itemInfo->dur_L + (durabilityRange * currentDurabilityWhiteVarianceValue) / static_cast<double>(kDurabilityMask);
+
+  // Does this item have a blue/red durability magic option?
+  int percentDurabilityPercentIncrease = 0;
+  for (const auto &blue : magicParams) {
+    const auto &magicOption = gameData.magicOptionData().getMagicOptionById(blue.type);
+    // Rather than string comparisons, we could use the 2-4 character string from Param1, but string comparison is actually what the client uses.
+    if (magicOption.mOptName128 == "MATTR_DUR") {
+      percentDurabilityPercentIncrease += blue.value;
+    } else if (magicOption.mOptName128 == "MATTR_DEC_MAXDUR") {
+      percentDurabilityPercentIncrease -= blue.value;
+    } else if (magicOption.mOptName128 == "MATTR_NOT_REPARABLE") {
+      percentDurabilityPercentIncrease += magicOption.param3;
+    }
+  }
+  if (percentDurabilityPercentIncrease != 0) {
+    currentDurabilityWhiteValue = currentDurabilityWhiteValue * (100 + percentDurabilityPercentIncrease) / 100.0;
+  }
+
+  // TODO: This calculation isn't perfect. Sometimes it's off by 1. Might be a rounding error?
+  return currentDurabilityWhiteValue;
+}
+
 ItemCosGrowthSummoner::ItemCosGrowthSummoner() : Item(ItemType::kItemCosGrowthSummoner) {}
 ItemCosGrowthSummoner::ItemCosGrowthSummoner(ItemType type) : Item(type) {}
 ItemCosAbilitySummoner::ItemCosAbilitySummoner() : ItemCosGrowthSummoner(ItemType::kItemCosAbilitySummoner) {}

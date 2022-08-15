@@ -161,6 +161,11 @@ bool isValidItemdataLine(const std::string &line) {
   return isValidLine(kDataCount, line);
 }
 
+bool isValidMagicOptionDataLine(const std::string &line) {
+  constexpr int kDataCount = 49;
+  return isValidLine(kDataCount, line);
+}
+
 bool isValidSkilldataLine(const std::string &line) {
   constexpr int kDataCount = 117;
   return isValidLine(kDataCount, line);
@@ -474,6 +479,61 @@ pk2::ref::Item parseItemdataLine(const std::string &line) {
 	ptr = parse(ptr, item.maxMagicOptCount);
 	parse(ptr, item.childItemCount);
 	return item;
+}
+
+pk2::ref::MagicOption parseMagicOptionDataLine(const std::string &line) {
+	pk2::ref::MagicOption magOpt;
+  const char *ptr = line.data();
+  ptr = parse(ptr, magOpt.service);
+  ptr = parse(ptr, magOpt.id);
+  ptr = parse(ptr, magOpt.mOptName128);
+  ptr = parse(ptr, magOpt.attrType);
+  ptr = parse(ptr, magOpt.mLevel);
+  ptr = parse(ptr, magOpt.prob);
+  ptr = parse(ptr, magOpt.weight);
+  ptr = parse(ptr, magOpt.param1);
+  ptr = parse(ptr, magOpt.param2);
+  ptr = parse(ptr, magOpt.param3);
+  ptr = parse(ptr, magOpt.param4);
+  ptr = parse(ptr, magOpt.param5);
+  ptr = parse(ptr, magOpt.param6);
+  ptr = parse(ptr, magOpt.param7);
+  ptr = parse(ptr, magOpt.param8);
+  ptr = parse(ptr, magOpt.param9);
+  ptr = parse(ptr, magOpt.param10);
+  ptr = parse(ptr, magOpt.param11);
+  ptr = parse(ptr, magOpt.param12);
+  ptr = parse(ptr, magOpt.param13);
+  ptr = parse(ptr, magOpt.param14);
+  ptr = parse(ptr, magOpt.param15);
+  ptr = parse(ptr, magOpt.param16);
+  ptr = parse(ptr, magOpt.excFunc1);
+  ptr = parse(ptr, magOpt.excFunc2);
+  ptr = parse(ptr, magOpt.excFunc3);
+  ptr = parse(ptr, magOpt.excFunc4);
+  ptr = parse(ptr, magOpt.excFunc5);
+  ptr = parse(ptr, magOpt.excFunc6);
+  ptr = parse(ptr, magOpt.availItemGroup1);
+  ptr = parse(ptr, magOpt.reqClass1);
+  ptr = parse(ptr, magOpt.availItemGroup2);
+  ptr = parse(ptr, magOpt.reqClass2);
+  ptr = parse(ptr, magOpt.availItemGroup3);
+  ptr = parse(ptr, magOpt.reqClass3);
+  ptr = parse(ptr, magOpt.availItemGroup4);
+  ptr = parse(ptr, magOpt.reqClass4);
+  ptr = parse(ptr, magOpt.availItemGroup5);
+  ptr = parse(ptr, magOpt.reqClass5);
+  ptr = parse(ptr, magOpt.availItemGroup6);
+  ptr = parse(ptr, magOpt.reqClass6);
+  ptr = parse(ptr, magOpt.availItemGroup7);
+  ptr = parse(ptr, magOpt.reqClass7);
+  ptr = parse(ptr, magOpt.availItemGroup8);
+  ptr = parse(ptr, magOpt.reqClass8);
+  ptr = parse(ptr, magOpt.availItemGroup9);
+  ptr = parse(ptr, magOpt.reqClass9);
+  ptr = parse(ptr, magOpt.availItemGroup10);
+  parse(ptr, magOpt.reqClass10);
+	return magOpt;
 }
 
 pk2::ref::Skill parseSkilldataLine(const std::string &line) {

@@ -310,6 +310,11 @@ enum class TalkOption : uint8_t {
   kTeleportExitDungeon = 41,
 };
 
+enum class RepairType : uint8_t {
+  kRepairOne = 1,
+  kRepairAll = 2,
+};
+
 } // namespace packet::enums
 
 #endif // PACKET_ENUMS_HPP

@@ -180,8 +180,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kClientAgentInventoryStorageOpenRequest) {
     return "kClientAgentInventoryStorageOpenRequest";
   }
-  if (opcode == Opcode::CLIENT_REPAIR) {
-    return "CLIENT_REPAIR";
+  if (opcode == Opcode::kClientAgentInventoryRepairRequest) {
+    return "kClientAgentInventoryRepairRequest";
   }
   if (opcode == Opcode::CLIENT_USE_BERSERK) {
     return "CLIENT_USE_BERSERK";
@@ -405,11 +405,11 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_ALCHEMYSTONE) {
     return "SERVER_ALCHEMYSTONE";
   }
-  if (opcode == Opcode::SERVER_REPAIR) {
-    return "SERVER_REPAIR";
+  if (opcode == Opcode::kServerAgentInventoryRepairResponse) {
+    return "kServerAgentInventoryRepairResponse";
   }
-  if (opcode == Opcode::SERVER_ITEM_DURABILITY_CHANGE) {
-    return "SERVER_ITEM_DURABILITY_CHANGE";
+  if (opcode == Opcode::kServerAgentInventoryUpdateDurability) {
+    return "kServerAgentInventoryUpdateDurability";
   }
   if (opcode == Opcode::kServerAgentEntityUpdatePosition) {
     return "SERVER_CHARACTER_STUCK";

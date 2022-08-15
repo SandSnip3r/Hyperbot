@@ -68,6 +68,8 @@ void PacketProcessor::subscribeToPackets() {
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionDeselectResponse, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionSelectResponse, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionTalkResponse, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryRepairResponse, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryUpdateDurability, packetHandleFunction);
   // broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionDeselectRequest, packetHandleFunction);
   // broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionSelectRequest, packetHandleFunction);
   broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionTalkRequest, packetHandleFunction);
@@ -123,6 +125,8 @@ bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionDeselectResponse, serverAgentDeselectResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionSelectResponse, serverAgentSelectResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionTalkResponse, serverAgentTalkResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryRepairResponse, serverAgentInventoryRepairResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryUpdateDurability, serverAgentInventoryUpdateDurabilityReceived);
     // TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentActionDeselectRequest, clientAgentActionDeselectRequestReceived);
     // TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentActionSelectRequest, clientAgentActionSelectRequestReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentActionTalkRequest, clientAgentActionTalkRequestReceived);
@@ -212,8 +216,8 @@ bool PacketProcessor::charSelectionJoinResponseReceived(const packet::parsing::P
 
 bool PacketProcessor::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const {
   if (packet.globalId() == selfState_.globalId()) {
+    // Sync our position to the new one
     const auto &currentPosition = selfState_.position();
-    LOG() << "Syncing position: " << currentPosition.xOffset << ',' << currentPosition.zOffset << std::endl;
     selfState_.syncPosition(packet.position());
   }
   return false;
@@ -258,7 +262,6 @@ bool PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::S
         // We need to cancel this movement. Either move back to the source position or try to stop exactly where we are (by moving to our estimated position)
         LOG() << "Whoa, we're a bit off from where we thought we were. Expected: " << currentPosition.xOffset << ',' << currentPosition.zOffset << ", actual: " << sourcePosition.xOffset << ',' << sourcePosition.zOffset << std::endl;
       }
-      LOG() << "Syncing src position: " << sourcePosition.xOffset << ',' << sourcePosition.zOffset << std::endl;
       selfState_.syncPosition(sourcePosition);
     } else {
       // Server doesnt tell us where we're coming from, use our internally tracked position
@@ -266,26 +269,21 @@ bool PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::S
     }
     if (selfState_.haveMovingEventId()) {
       // Had a timer already running for movement, cancel it
-      LOG() << "Had a running timer, cancelling it" << std::endl;
       eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
       selfState_.resetMovingEventId();
     }
-    LOG() << "We are moving from " << sourcePosition << ' ';
     if (packet.hasDestination()) {
       auto destPosition = packet.destinationPosition();
-      std::cout << "to " << destPosition << '\n';
       if (sourcePosition.xOffset == destPosition.xOffset && sourcePosition.zOffset == destPosition.zOffset) {
         LOG() << "Server says we're moving to our current position. wtf?\n";
         // Ignore this
       } else {
         auto seconds = helpers::secondsToTravel(sourcePosition, destPosition, selfState_.currentSpeed());
-        LOG() << "Should take " << seconds << "s. Timer set\n";
         const auto movingEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementTimerEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
         selfState_.setMovingEventId(movingEventId);
         selfState_.setMoving(packet.destinationPosition());
       }
     } else {
-      std::cout << "toward " << packet.angle() << '\n';
       selfState_.setMoving(packet.angle());
     }
   }
@@ -345,7 +343,6 @@ bool PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Pa
 bool PacketProcessor::serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInvetoryStorageData &packet) const {
   selfState_.storageGold_ = packet.gold();
   helpers::initializeInventory(selfState_.storage, packet.storageSize(), packet.storageItemMap());
-  LOG() << "Storage initialized\n";
   selfState_.haveOpenedStorageSinceTeleport = true;
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStorageOpened));
   return true;
@@ -557,7 +554,6 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
             auto npcName = gameData_.characterData().getCharacterById(object->refObjId).codeName128;
             auto itemInfo = gameData_.shopData().getItemFromNpc(npcName, userPurchaseRequest.storeTabNumber, userPurchaseRequest.storeSlotNumber);
             const auto &itemRef = gameData_.itemData().getItemByCodeName128(itemInfo.refItemCodeName);
-            LOG() << "Bought " << movement.quantity << " x \"" << itemInfo.refItemCodeName << "\"(refId=" << itemRef.id << ") from \"" << npcName << "\"\n";
             if (movement.destSlots.size() == 1) {
               // Just a single item or single stack
               auto item = helpers::createItemFromScrap(itemInfo, itemRef);
@@ -566,16 +562,12 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
                 itemExp->quantity = movement.quantity;
               }
               selfState_.inventory.addItem(movement.destSlots[0], item);
-              helpers::printItem(movement.destSlots[0], item.get(), gameData_);
-              std::cout << '\n';
               eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlots[0]));
             } else {
               // Multiple destination slots, must be unstackable items like equipment
               for (auto destSlot : movement.destSlots) {
                 auto item = helpers::createItemFromScrap(itemInfo, itemRef);
                 selfState_.inventory.addItem(destSlot, item);
-                helpers::printItem(movement.destSlot, item.get(), gameData_);
-                std::cout << '\n';
                 eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlot));
               }
             }
@@ -656,9 +648,9 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
         std::cout << '\n';
       } else {
         if (movement.pickedItem != nullptr) {
-          LOG() << "Picked an item\n";
+          // Picked up an item
           if (selfState_.inventory.hasItem(movement.destSlot)) {
-            LOG() << "Already something here\n";
+            // There is already something in this slot
             auto existingItem = selfState_.inventory.getItem(movement.destSlot);
             bool addedToStack = false;
             if (existingItem->refItemId == movement.pickedItem->refItemId) {
@@ -678,9 +670,12 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
               LOG() << "Error: Item couldnt be added to the stack\n";
             }
           } else {
-            LOG() << "New item!\n";
+            // This is a new item
             selfState_.inventory.addItem(movement.destSlot, movement.pickedItem);
-            LOG() << "Item " << (selfState_.inventory.hasItem(movement.destSlot) ? "was " : "was not ") << "successfully added\n";
+            if (!selfState_.inventory.hasItem(movement.destSlot)) {
+              // This is especially weird since we already know that there was nothing in this slot
+              throw std::runtime_error("Could not add item to inventory");
+            }
           }
           helpers::printItem(movement.destSlot, movement.pickedItem.get(), gameData_);
         } else {
@@ -758,7 +753,6 @@ bool PacketProcessor::serverAgentSpawnReceived(const packet::parsing::ParsedServ
 }
 
 bool PacketProcessor::serverAgentDespawnReceived(const packet::parsing::ParsedServerAgentDespawn &packet) const {
-  LOG() << "Going to stop tracking object with id " << packet.gId() << std::endl;
   helpers::stopTrackingObject(entityState_, packet.gId());
   return true;
 }
@@ -767,24 +761,18 @@ bool PacketProcessor::serverAgentDespawnReceived(const packet::parsing::ParsedSe
 // ============================================================Misc============================================================
 // ============================================================================================================================
 
-// When the client requests to Talk, an Id is sent
-// When the server responds that Talking is successful, no Id is returned
-// To stop Talking, the client must send deselect with the Id
-
 bool PacketProcessor::serverAgentDeselectResponseReceived(const packet::parsing::ServerAgentActionDeselectResponse &packet) const {
   if (packet.result() == 1) {
     // Successfully deselected
     // If there is a talk dialog, and we have an npc selected, it will take 2 deselects to close both dialogs
     //  First, the talk dialog is closed
     if (selfState_.talkingGidAndOption) {
-      LOG() << "We're talking to an NPC, this closes the talk dialog" << std::endl;
+      // This closes the talk dialog
       selfState_.talkingGidAndOption.reset();
       eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kEntityDeselected));
     } else {
-      LOG() << "We were not talking to an NPC, maybe we have some entity selected" << std::endl;
       //  The entity is deselected
       if (selfState_.selectedEntity) {
-        LOG() << "Deselecting " << *selfState_.selectedEntity << std::endl;
         selfState_.selectedEntity.reset();
         eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kEntityDeselected));
       } else {
@@ -800,17 +788,13 @@ bool PacketProcessor::serverAgentDeselectResponseReceived(const packet::parsing:
 bool PacketProcessor::serverAgentSelectResponseReceived(const packet::parsing::ServerAgentActionSelectResponse &packet) const {
   if (packet.result() == 1) {
     // Successfully selected
-    LOG() << "We have successfully selected " << packet.gId() << std::endl;
     if (selfState_.selectedEntity) {
       // This happens if something is selected and then we select something else
       //  i.e. there is no deselect in between selects
-      LOG() << "Weird, we already have something selected\n";
-      // TODO: Maybe this is ok, maybe a deselect isnt required when switching between two entities
+      LOG() << "Weird, we already had something selected\n";
     }
     selfState_.selectedEntity = packet.gId();
     eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kEntitySelected));
-    // ====================================================================================================
-    // selfState_.selectedEntity = packet.gId();
   } else {
     LOG() << "Selection failed" << std::endl;
   }
@@ -819,17 +803,11 @@ bool PacketProcessor::serverAgentSelectResponseReceived(const packet::parsing::S
 
 bool PacketProcessor::serverAgentTalkResponseReceived(const packet::parsing::ServerAgentActionTalkResponse &packet) const {
   if (packet.result() == 1) {
-    LOG() << "We are now successfully talking to some npc" << std::endl;
+    // Successfully talking to an npc
     if (selfState_.pendingTalkGid) {
       // We were waiting for this response
-      LOG() << "The npc we are talking to is gid " << *selfState_.pendingTalkGid << std::endl;
       selfState_.talkingGidAndOption = std::make_pair(*selfState_.pendingTalkGid, packet.talkOption());
       selfState_.pendingTalkGid.reset();
-      // if (packet.talkOption() == packet::enums::TalkOption::kStorage) {
-      //   // In the weird case of storage, the talk options dialog is automatically closed by the client
-      //   LOG() << "In the weird case of storage, the talk options dialog is automatically closed by the client\n";
-      //   selfState_.selectedEntity.reset();
-      // }
       eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kNpcTalkStart));
     } else {
       LOG() << "Weird, we werent expecting to be talking to anything. As a result, we dont know what we're talking to" << std::endl;
@@ -837,6 +815,32 @@ bool PacketProcessor::serverAgentTalkResponseReceived(const packet::parsing::Ser
   } else {
     LOG() << "Failed to talk to NPC" << std::endl;
   }
+  return true;
+}
+
+bool PacketProcessor::serverAgentInventoryRepairResponseReceived(const packet::parsing::ServerAgentInventoryRepairResponse &packet) const {
+  if (packet.successful()) {
+    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kRepairSuccessful));
+  } else {
+    LOG() << "Repairing item(s) failed! Error code: " << packet.errorCode() << std::endl;
+  }
+  return true;
+}
+
+bool PacketProcessor::serverAgentInventoryUpdateDurabilityReceived(const packet::parsing::ServerAgentInventoryUpdateDurability &packet) const {
+  if (!selfState_.inventory.hasItem(packet.slotIndex())) {
+    throw std::runtime_error("Recieved durability update for inventory slot where no item exists");
+  }
+  auto *item = selfState_.inventory.getItem(packet.slotIndex());
+  if (item == nullptr) {
+    throw std::runtime_error("Recieved durability update for inventory item which is null");
+  }
+  auto *itemAsEquip = dynamic_cast<storage::ItemEquipment*>(item);
+  if (itemAsEquip == nullptr) {
+    throw std::runtime_error("Recieved durability update for inventory item which is not a piece of equipment");
+  }
+  // Update item's durability
+  itemAsEquip->durability = packet.durability();
   return true;
 }
 
@@ -849,11 +853,9 @@ bool PacketProcessor::serverAgentTalkResponseReceived(const packet::parsing::Ser
 // }
 
 bool PacketProcessor::clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const {
-  LOG() << "Client is requesting to talk to " << packet.gId() << std::endl;
   if (selfState_.pendingTalkGid) {
     LOG() << "Weird, we're already waiting on a response from the server to talk to someone\n";
   } else {
-    LOG() << "Setting that we're waiting on a response from the server to talk to someone\n";
     selfState_.pendingTalkGid = packet.gId();
   }
   return true;

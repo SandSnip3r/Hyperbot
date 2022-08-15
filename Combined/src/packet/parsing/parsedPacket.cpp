@@ -540,7 +540,6 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
       throw std::runtime_error("parseSpawn, have an item, but the obj pointer cannot be cast to a Item");
     }
     const auto &item = itemData.getItemById(obj->refObjId);
-    std::cout << "Item with refid " << obj->refObjId << " spawned\n";
     // ITEM
     //  ITEM_EQUIP
     //  ITEM_ETC
@@ -564,7 +563,6 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
       }
     }
     itemPtr->gId = stream.Read<uint32_t>();
-    std::cout << "Item's GID is " << itemPtr->gId << '\n';
     itemPtr->regionId = stream.Read<uint16_t>();
     uint32_t x = stream.Read<uint32_t>(); // Actually a float
     itemPtr->x = *reinterpret_cast<float*>(&x);
@@ -690,7 +688,6 @@ std::shared_ptr<Object> ParsedServerAgentSpawn::object() const {
 
 ParsedServerAgentDespawn::ParsedServerAgentDespawn(const PacketContainer &packet) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  LOG() << "Parsing a despawn" << std::endl;
   gId_ = parseDespawn(stream);
 }
 

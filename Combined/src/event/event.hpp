@@ -32,6 +32,7 @@ enum class EventCode {
   kEntitySelected,
   kNpcTalkStart,
   kStorageOpened,
+  kRepairSuccessful,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,

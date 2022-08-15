@@ -16,7 +16,9 @@
 #include "packet/parsing/serverAgentEntityUpdatePosition.hpp"
 #include "packet/parsing/serverAgentEntityUpdateState.hpp"
 #include "packet/parsing/serverAgentInventoryOperationResponse.hpp"
+#include "packet/parsing/serverAgentInventoryRepairResponse.hpp"
 #include "packet/parsing/serverAgentInventoryStorageData.hpp"
+#include "packet/parsing/serverAgentInventoryUpdateDurability.hpp"
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
 #include "state/entity.hpp"
@@ -86,6 +88,8 @@ private:
   bool serverAgentDeselectResponseReceived(const packet::parsing::ServerAgentActionDeselectResponse &packet) const;
   bool serverAgentSelectResponseReceived(const packet::parsing::ServerAgentActionSelectResponse &packet) const;
   bool serverAgentTalkResponseReceived(const packet::parsing::ServerAgentActionTalkResponse &packet) const;
+  bool serverAgentInventoryRepairResponseReceived(const packet::parsing::ServerAgentInventoryRepairResponse &packet) const;
+  bool serverAgentInventoryUpdateDurabilityReceived(const packet::parsing::ServerAgentInventoryUpdateDurability &packet) const;
   // bool clientAgentActionDeselectRequestReceived(const packet::parsing::ClientAgentActionDeselectRequest &packet) const;
   // bool clientAgentActionSelectRequestReceived(const packet::parsing::ClientAgentActionSelectRequest &packet) const;
   bool clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const;
