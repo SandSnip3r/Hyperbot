@@ -2,14 +2,6 @@ syntax = "proto3";
 
 package broadcast;
 
-message Message1 {
-  string data = 1;
-}
-
-message Message2 {
-  int32 data = 1;
-}
-
 message HpMpUpdate {
   int32 currentHp = 1;
   int32 maxHp = 2;
@@ -21,15 +13,19 @@ message CharacterLevelUpdate {
   int32 level = 1;
 }
 
+message CharacterExperienceUpdate {
+  uint64 experience = 1;
+}
+
 message CharacterNameUpdate {
   string name = 1;
 }
 
 message BroadcastMessage {
   oneof body {
-    Message1 message1 = 1;
-    HpMpUpdate hpMpUpdate = 3;
-    CharacterLevelUpdate characterLevelUpdate = 4;
-    CharacterNameUpdate characterNameUpdate = 2;
+    HpMpUpdate hpMpUpdate = 1;
+    CharacterLevelUpdate characterLevelUpdate = 2;
+    CharacterExperienceUpdate characterExperienceUpdate = 3;
+    CharacterNameUpdate characterNameUpdate = 4;
   }
 }
