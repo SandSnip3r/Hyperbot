@@ -185,7 +185,7 @@ void Bot::onUpdate(const event::Event *event) {
     return;
   }
 
-  // Note: Assuming we start in the spawnpoint of town
+  // Note: Assuming we start in the spawnpoint of Jangan
   // Which is somewhere near position { 25000, 951.0f, -33.0f, 1372.0f }
 
   if (!stateMachine_) {
@@ -205,6 +205,15 @@ void Bot::handleVitals() {
 
 void Bot::handleStartTraining() {
   LOG() << "Received message from UI! Start Training" << std::endl;
+  startTraining();
+}
+
+void Bot::handleStopTraining() {
+  LOG() << "Received message from UI! Stop Training" << std::endl;
+  stopTraining();
+}
+
+void Bot::startTraining() {
   // Hard coded data (for now)
   static const std::vector<packet::structures::Position> pathFromSpawnToStorage = {
     {25000, 981.0f, -32.0f, 1032.0f}
@@ -226,8 +235,9 @@ void Bot::handleStartTraining() {
   onUpdate();
 }
 
-void Bot::handleStopTraining() {
-  LOG() << "Received message from UI! Stop Training" << std::endl;
+void Bot::stopTraining() {
+  // TODO: Need to cleanup current action to avoid leaving the client in a bad state
+  //  Ex. Need to close a shop npc dialog
   selfState_.trainingIsActive = false;
   stateMachine_.reset();
 }

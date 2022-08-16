@@ -461,12 +461,6 @@ TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, i
   // Figure out what items to items to buy
   figureOutWhatToBuy();
 
-  if (doneWithNpc()) {
-    // We dont have anything to do here
-    done_ = true;
-    // Dont even bother blocking packets
-    return;
-  }
   pushBlockedOpcode(packet::Opcode::kServerAgentActionSelectResponse);
   pushBlockedOpcode(packet::Opcode::kServerAgentActionTalkResponse);
   pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
@@ -580,7 +574,7 @@ bool TalkingToShopNpc::doneWithNpc() const {
 
 void TalkingToShopNpc::onUpdate(const event::Event *event) {
   if (done_) {
-    LOG() << "TalkingToShopNpc on update called, but we're done. This is kind of weird" << std::endl;
+    LOG() << "TalkingToShopNpc on update called, but we're done. This is a smell of imperfect logic" << std::endl;
     return;
   }
 
@@ -664,7 +658,6 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
     } else {
       // No Npc is selected
       if (doneWithNpc()) {
-        // Deselection must have just succeeded, we're completely done
         done_ = true;
         return;
       }

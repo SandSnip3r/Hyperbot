@@ -73,6 +73,8 @@ private:
   // Bot actions from UI
   void handleStartTraining();
   void handleStopTraining();
+  void startTraining();
+  void stopTraining();
   // Debug help
   void handleInjectPacket(const event::InjectPacket &castedEvent);
   // Login events
