@@ -10,10 +10,6 @@ message Message2 {
   int32 data = 1;
 }
 
-message Message3 {
-  double data = 1;
-}
-
 message HpMpUpdate {
   int32 currentHp = 1;
   int32 maxHp = 2;
@@ -21,11 +17,15 @@ message HpMpUpdate {
   int32 maxMp = 4;
 }
 
+message LevelUpdate {
+  int32 level = 1;
+}
+
 message BroadcastMessage {
   oneof body {
     Message1 message1 = 1;
     Message2 message2 = 2;
-    Message3 message3 = 3;
-    HpMpUpdate hpMpUpdate = 4;
+    HpMpUpdate hpMpUpdate = 3;
+    LevelUpdate levelUpdate = 4;
   }
 }
