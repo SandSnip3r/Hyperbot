@@ -17,15 +17,19 @@ message HpMpUpdate {
   int32 maxMp = 4;
 }
 
-message LevelUpdate {
+message CharacterLevelUpdate {
   int32 level = 1;
+}
+
+message CharacterNameUpdate {
+  string name = 1;
 }
 
 message BroadcastMessage {
   oneof body {
     Message1 message1 = 1;
-    Message2 message2 = 2;
     HpMpUpdate hpMpUpdate = 3;
-    LevelUpdate levelUpdate = 4;
+    CharacterLevelUpdate characterLevelUpdate = 4;
+    CharacterNameUpdate characterNameUpdate = 2;
   }
 }
