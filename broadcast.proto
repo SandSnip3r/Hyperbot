@@ -21,11 +21,23 @@ message CharacterNameUpdate {
   string name = 1;
 }
 
+enum GoldLocation {
+  kInventory = 0;
+  kStorage = 1;
+  kGuildStorage = 2;
+}
+
+message GoldAmountUpdate {
+  uint64 goldAmount = 1;
+  GoldLocation goldLocation = 2;
+}
+
 message BroadcastMessage {
   oneof body {
     HpMpUpdate hpMpUpdate = 1;
     CharacterLevelUpdate characterLevelUpdate = 2;
     CharacterExperienceUpdate characterExperienceUpdate = 3;
     CharacterNameUpdate characterNameUpdate = 4;
+    GoldAmountUpdate goldAmountUpdate = 5;
   }
 }
