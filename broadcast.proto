@@ -11,10 +11,17 @@ message HpMpUpdate {
 
 message CharacterLevelUpdate {
   int32 level = 1;
+  int64 expRequired = 2;
+  int32 spExpRequired = 3;
 }
 
 message CharacterExperienceUpdate {
   uint64 experience = 1;
+}
+
+message CharacterSpUpdate {
+  uint32 skillPoints = 1;
+  uint32 currentSpExperience = 2;
 }
 
 message CharacterNameUpdate {
@@ -37,7 +44,8 @@ message BroadcastMessage {
     HpMpUpdate hpMpUpdate = 1;
     CharacterLevelUpdate characterLevelUpdate = 2;
     CharacterExperienceUpdate characterExperienceUpdate = 3;
-    CharacterNameUpdate characterNameUpdate = 4;
-    GoldAmountUpdate goldAmountUpdate = 5;
+    CharacterSpUpdate characterSpUpdate = 4;
+    CharacterNameUpdate characterNameUpdate = 5;
+    GoldAmountUpdate goldAmountUpdate = 6;
   }
 }
