@@ -38,6 +38,10 @@ message GoldAmountUpdate {
   GoldLocation goldLocation = 2;
 }
 
+message RegionNameUpdate {
+  string name = 1;
+}
+
 message BroadcastMessage {
   oneof body {
     HpMpUpdate hpMpUpdate = 1;
@@ -46,5 +50,6 @@ message BroadcastMessage {
     CharacterSpUpdate characterSpUpdate = 4;
     CharacterNameUpdate characterNameUpdate = 5;
     GoldAmountUpdate goldAmountUpdate = 6;
+    RegionNameUpdate regionNameUpdate = 7;
   }
 }
