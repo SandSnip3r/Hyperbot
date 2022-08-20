@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "characterData.hpp"
 #include "eventHandler.hpp"
 #include "requester.hpp"
 
@@ -23,22 +24,31 @@ private:
   zmq::context_t context_;
   EventHandler eventHandler_{context_};
   Requester requester_{context_};
+  CharacterData characterData_;
+
+  void initializeUi();
+  void connectMainControls();
+  void connectTabWidget();
+  void connectPacketInjection();
+
+  void injectPacket(request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes);
 private slots:
+  // UI actions
   void startTrainingButtonClicked();
   void stopTrainingButtonClicked();
+
+  void injectPacketButtonClicked();
+  void reinjectSelectedPackets();
+  void clearPackets();
+
+public slots:
+  // Bot updates
+  void onVitalsChanged(const broadcast::HpMpUpdate &hpMpUpdate);
+  void onCharacterLevelUpdate(int32_t level, int64_t expRequired);
+  void onCharacterExperienceUpdate(uint64_t currentExperience, uint32_t currentSpExperience);
+  void onCharacterSpUpdate(uint32_t skillPoints);
+  void onCharacterNameUpdate(const std::string &name);
+  void onInventoryGoldAmountUpdate(uint64_t goldAmount);
 };
 
-//   void injectPacket(request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes);
-
-// public slots:
-//   void onEventHandlerConnected();
-//   void onMessage1Received(const std::string &str);
-//   void onMessage2Received(const int32_t val);
-//   void onMessage3Received(const double val);
-//   void onVitalsChanged(const broadcast::HpMpUpdate &hpMpUpdate);
-// private slots:
-//   void onInjectPacketButtonClicked();
-//   void onReinjectSelectedPackets();
-//   void onClearPackets();
-// };
 #endif // MAINWINDOW_H

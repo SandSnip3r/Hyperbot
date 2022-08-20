@@ -31,33 +31,36 @@ void EventHandler::run() {
 
 void EventHandler::handle(const broadcast::BroadcastMessage &message) {
   switch (message.body_case()) {
-    case broadcast::BroadcastMessage::BodyCase::kMessage1: {
-        // std::lock_guard<std::mutex> lk(printMutex);
-        // std::cout << "Received an instance of Message1" << std::endl;
-        const broadcast::Message1 &message1 = message.message1();
-        // std::cout << "  Data: " << message1.data() << std::endl;
-        emit message1Received(message1.data());
-        break;
-      }
-    case broadcast::BroadcastMessage::BodyCase::kMessage2: {
-        // std::lock_guard<std::mutex> lk(printMutex);
-        // std::cout << "Received an instance of Message2" << std::endl;
-        const broadcast::Message2 &message2 = message.message2();
-        // std::cout << "  Data: " << message2.data() << std::endl;
-        emit message2Received(message2.data());
-        break;
-      }
-    case broadcast::BroadcastMessage::BodyCase::kMessage3: {
-        // std::lock_guard<std::mutex> lk(printMutex);
-        // std::cout << "Received an instance of Message3" << std::endl;
-        const broadcast::Message3 &message3 = message.message3();
-        // std::cout << "  Data: " << message3.data() << std::endl;
-        emit message3Received(message3.data());
-        break;
-      }
     case broadcast::BroadcastMessage::BodyCase::kHpMpUpdate: {
-        const broadcast::HpMpUpdate &hpMpUpdate = message.hpmpupdate();
-        emit vitalsChanged(hpMpUpdate);
+        const broadcast::HpMpUpdate &msg = message.hpmpupdate();
+        emit vitalsChanged(msg);
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kCharacterLevelUpdate: {
+        const broadcast::CharacterLevelUpdate &msg = message.characterlevelupdate();
+        emit characterLevelUpdate(msg.level(), msg.exprequired());
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kCharacterExperienceUpdate: {
+        const broadcast::CharacterExperienceUpdate &msg = message.characterexperienceupdate();
+        emit characterExperienceUpdate(msg.currentexperience(), msg.currentspexperience());
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kCharacterSpUpdate: {
+        const broadcast::CharacterSpUpdate &msg = message.characterspupdate();
+        emit characterSpUpdate(msg.skillpoints());
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kCharacterNameUpdate: {
+        const broadcast::CharacterNameUpdate &msg = message.characternameupdate();
+        emit characterNameUpdate(msg.name());
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kGoldAmountUpdate: {
+        const broadcast::GoldAmountUpdate &msg = message.goldamountupdate();
+        if (msg.goldlocation() == broadcast::GoldLocation::kInventory) {
+          emit inventoryGoldAmountUpdate(msg.goldamount());
+        }
         break;
       }
   }

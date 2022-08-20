@@ -23,8 +23,12 @@ set(TS_FILES hyperbot-ui_en_US.ts)
 
 set(PROJECT_SOURCES
   main.cpp
+  characterData.cpp
+  characterData.hpp
   eventHandler.cpp
   eventHandler.hpp
+  experienceProgressBar.cpp
+  experienceProgressBar.hpp
   mainwindow.cpp
   mainwindow.h
   packetListWidgetItem.cpp
