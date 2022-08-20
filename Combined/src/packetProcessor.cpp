@@ -73,6 +73,8 @@ void PacketProcessor::subscribeToPackets() {
   // broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionDeselectRequest, packetHandleFunction);
   // broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionSelectRequest, packetHandleFunction);
   broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionTalkRequest, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePoints, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateExperience, packetHandleFunction);
 }
 
 bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
@@ -130,6 +132,8 @@ bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
     // TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentActionDeselectRequest, clientAgentActionDeselectRequestReceived);
     // TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentActionSelectRequest, clientAgentActionSelectRequestReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentActionTalkRequest, clientAgentActionTalkRequestReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdatePoints, serverAgentEntityUpdatePointsReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateExperience, serverAgentEntityUpdateExperienceReceived);
 
   } catch (std::exception &ex) {
     LOG() << "Error while handling packet!\n  " << ex.what() << std::endl;
@@ -304,7 +308,13 @@ bool PacketProcessor::clientItemMoveReceived(const packet::parsing::ParsedClient
 }
 
 bool PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) const {
-  selfState_.initialize(packet.entityUniqueId(), packet.refObjId(), packet.hp(), packet.mp(), packet.masteries(), packet.skills());
+  selfState_.initialize(packet.entityUniqueId(), packet.refObjId());
+  selfState_.setHp(packet.hp());
+  selfState_.setMp(packet.mp());
+  selfState_.setCurrentLevel(packet.curLevel());
+  selfState_.setSkillPoints(packet.skillPoints());
+  selfState_.setCurrentExpAndSpExp(packet.currentExperience(), packet.currentSpExperience());
+  selfState_.setMasteriesAndSkills(packet.masteries(), packet.skills());
 
   // Position
   selfState_.setPosition(packet.position());
@@ -326,6 +336,7 @@ bool PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Pa
   // Speed
   selfState_.setSpeed(packet.walkSpeed(), packet.runSpeed());
   selfState_.setHwanSpeed(packet.hwanSpeed());
+  selfState_.characterName = packet.characterName();
   auto refObjId = packet.refObjId();
   selfState_.setGold(packet.gold());
   LOG() << "Gold: " << selfState_.getGold() << std::endl;
@@ -341,7 +352,7 @@ bool PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Pa
 }
 
 bool PacketProcessor::serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInvetoryStorageData &packet) const {
-  selfState_.storageGold_ = packet.gold();
+  selfState_.setStorageGold(packet.gold());
   helpers::initializeInventory(selfState_.storage, packet.storageSize(), packet.storageItemMap());
   selfState_.haveOpenedStorageSinceTeleport = true;
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStorageOpened));
@@ -393,7 +404,6 @@ bool PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsin
     // Our HP changed
     if (selfState_.hp() != packet.newHpValue()) {
       selfState_.setHp(packet.newHpValue());
-      eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
     } else {
       LOG() << "Weird, says HP changed, but it didn't\n";
     }
@@ -402,7 +412,6 @@ bool PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsin
     // Our MP changed
     if (selfState_.mp() != packet.newMpValue()) {
       selfState_.setMp(packet.newMpValue());
-      eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
     } else {
       LOG() << "Weird, says MP changed, but it didn't\n";
     }
@@ -642,10 +651,7 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
       std::cout << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kPickItem) {
       if (movement.destSlot == packet::structures::ItemMovement::kGoldSlot) {
-        LOG() << "Picked " << movement.goldPickAmount << " gold\n";
-        selfState_.addGold(movement.goldPickAmount);
-        LOG() << "Gold: " << selfState_.getGold() << std::endl;
-        std::cout << '\n';
+        // Another packet, ServerAgentEntityUpdatePoints, contains gold update information
       } else {
         if (movement.pickedItem != nullptr) {
           // Picked up an item
@@ -694,32 +700,32 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
         LOG() << "Error: But there's no item in this inventory slot\n";
       }
     } else if (movement.type == packet::enums::ItemMovementType::kGoldDrop) {
-      selfState_.subtractGold(movement.goldAmount);
+      selfState_.setGold(selfState_.getGold() - movement.goldAmount);
       LOG() << "Dropped " << movement.goldAmount << " gold\n";
       LOG() << "Gold: " << selfState_.getGold() << std::endl;
       LOG() << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kGoldStorageWithdraw) {
-      selfState_.addGold(movement.goldAmount);
+      selfState_.setGold(selfState_.getGold() + movement.goldAmount);
       LOG() << "Withdrew " << movement.goldAmount << " gold from storage\n";
       LOG() << "Gold: " << selfState_.getGold() << std::endl;
       LOG() << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kGoldStorageDeposit) {
-      selfState_.subtractGold(movement.goldAmount);
+      selfState_.setGold(selfState_.getGold() - movement.goldAmount);
       LOG() << "Deposited " << movement.goldAmount << " gold into storage\n";
       LOG() << "Gold: " << selfState_.getGold() << std::endl;
       LOG() << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kGoldGuildStorageDeposit) {
-      selfState_.subtractGold(movement.goldAmount);
+      selfState_.setGold(selfState_.getGold() - movement.goldAmount);
       LOG() << "Deposited " << movement.goldAmount << " gold into guild storage\n";
       LOG() << "Gold: " << selfState_.getGold() << std::endl;
       LOG() << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kGoldGuildStorageWithdraw) {
-      selfState_.addGold(movement.goldAmount);
+      selfState_.setGold(selfState_.getGold() + movement.goldAmount);
       LOG() << "Withdrew " << movement.goldAmount << " gold from guild storage\n";
       LOG() << "Gold: " << selfState_.getGold() << std::endl;
       LOG() << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kCosPickGold) {
-      selfState_.addGold(movement.goldPickAmount);
+      selfState_.setGold(selfState_.getGold() + movement.goldPickAmount);
       LOG() << "Pickpet picked " << movement.goldPickAmount << " gold\n";
       LOG() << "Gold: " << selfState_.getGold() << std::endl;
       LOG() << '\n';
@@ -788,11 +794,7 @@ bool PacketProcessor::serverAgentDeselectResponseReceived(const packet::parsing:
 bool PacketProcessor::serverAgentSelectResponseReceived(const packet::parsing::ServerAgentActionSelectResponse &packet) const {
   if (packet.result() == 1) {
     // Successfully selected
-    if (selfState_.selectedEntity) {
-      // This happens if something is selected and then we select something else
-      //  i.e. there is no deselect in between selects
-      LOG() << "Weird, we already had something selected\n";
-    }
+    // It is possible that we already have something selected. We will just overwrite it
     selfState_.selectedEntity = packet.gId();
     eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kEntitySelected));
   } else {
@@ -858,5 +860,22 @@ bool PacketProcessor::clientAgentActionTalkRequestReceived(const packet::parsing
   } else {
     selfState_.pendingTalkGid = packet.gId();
   }
+  return true;
+}
+
+bool PacketProcessor::serverAgentEntityUpdatePointsReceived(const packet::parsing::ServerAgentEntityUpdatePoints &packet) const {
+  if (packet.updatePointsType() == packet::enums::UpdatePointsType::kGold) {
+    selfState_.setGold(packet.gold());
+  } else if (packet.updatePointsType() == packet::enums::UpdatePointsType::kSp) {
+    selfState_.setSkillPoints(packet.skillPoints());
+  }
+  return true;
+}
+
+bool PacketProcessor::serverAgentEntityUpdateExperienceReceived(const packet::parsing::ServerAgentEntityUpdateExperience &packet) const {
+  const constexpr int kSpExperienceRequired{400}; // TODO: Move to a central location
+  const auto newExperience = selfState_.getCurrentExperience() + packet.gainedExperiencePoints();
+  const auto newSpExperience = (selfState_.getCurrentSpExperience() + packet.gainedSpExperiencePoints()) % kSpExperienceRequired;
+  selfState_.setCurrentExpAndSpExp(newExperience, newSpExperience);
   return true;
 }

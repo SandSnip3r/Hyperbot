@@ -11,8 +11,10 @@
 #include "packet/parsing/serverAgentActionTalkResponse.hpp"
 #include "packet/parsing/serverAgentCharacterData.hpp"
 #include "packet/parsing/serverAgentEntitySyncPosition.hpp"
+#include "packet/parsing/serverAgentEntityUpdateExperience.hpp"
 #include "packet/parsing/serverAgentEntityUpdateMovement.hpp"
 #include "packet/parsing/serverAgentEntityUpdateMoveSpeed.hpp"
+#include "packet/parsing/serverAgentEntityUpdatePoints.hpp"
 #include "packet/parsing/serverAgentEntityUpdatePosition.hpp"
 #include "packet/parsing/serverAgentEntityUpdateState.hpp"
 #include "packet/parsing/serverAgentInventoryOperationResponse.hpp"
@@ -93,6 +95,8 @@ private:
   // bool clientAgentActionDeselectRequestReceived(const packet::parsing::ClientAgentActionDeselectRequest &packet) const;
   // bool clientAgentActionSelectRequestReceived(const packet::parsing::ClientAgentActionSelectRequest &packet) const;
   bool clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const;
+  bool serverAgentEntityUpdatePointsReceived(const packet::parsing::ServerAgentEntityUpdatePoints &packet) const;
+  bool serverAgentEntityUpdateExperienceReceived(const packet::parsing::ServerAgentEntityUpdateExperience &packet) const;
 };
 
 #endif // PACKETPROCESSOR_HPP_

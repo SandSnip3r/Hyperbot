@@ -18,7 +18,11 @@ class ParsedServerAgentCharacterData : public ParsedPacket {
 public:
   ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData);
   uint32_t refObjId() const;
+  uint8_t curLevel() const;
+  uint64_t currentExperience() const;
+  uint32_t currentSpExperience() const;
   uint64_t gold() const;
+  uint32_t skillPoints() const;
   uint32_t entityUniqueId() const;
   uint32_t hp() const;
   uint32_t mp() const;
@@ -30,12 +34,17 @@ public:
   float walkSpeed() const;
   float runSpeed() const;
   float hwanSpeed() const;
+  std::string characterName() const;
   enums::LifeState lifeState() const;
   enums::MotionState motionState() const;
   enums::BodyState bodyState() const;
 private:
   uint32_t refObjId_;
+  uint8_t curLevel_;
+  uint64_t currentExperience_;
+  uint32_t currentSpExperience_;
   uint64_t gold_;
+  uint32_t skillPoints_;
   uint32_t entityUniqueId_;
   uint32_t hp_;
   uint32_t mp_;
@@ -47,6 +56,7 @@ private:
   float walkSpeed_;
   float runSpeed_;
   float hwanSpeed_;
+  std::string characterName_;
   enums::LifeState lifeState_;
   enums::MotionState motionState_;
   enums::BodyState bodyState_;

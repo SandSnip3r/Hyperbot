@@ -15,8 +15,10 @@
 #include "serverAgentCharacterData.hpp"
 #include "serverAgentChatUpdate.hpp"
 #include "serverAgentEntitySyncPosition.hpp"
+#include "serverAgentEntityUpdateExperience.hpp"
 #include "serverAgentEntityUpdateMovement.hpp"
 #include "serverAgentEntityUpdateMoveSpeed.hpp"
+#include "serverAgentEntityUpdatePoints.hpp"
 #include "serverAgentEntityUpdatePosition.hpp"
 #include "serverAgentEntityUpdateState.hpp"
 #include "serverAgentInventoryOperationResponse.hpp"
@@ -77,10 +79,14 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ParsedServerAgentDespawn>(packet);
       case Opcode::kServerAgentEntityUpdateStatus:
         return std::make_unique<ParsedServerAgentEntityUpdateStatus>(packet);
+      case Opcode::kServerAgentEntityUpdateExperience:
+        return std::make_unique<ServerAgentEntityUpdateExperience>(packet);
       case Opcode::kServerAgentAbnormalInfo:
         return std::make_unique<ParsedServerAgentAbnormalInfo>(packet);
       case Opcode::kServerAgentInventoryItemUseResponse:
         return std::make_unique<ParsedServerAgentInventoryItemUseResponse>(packet);
+      case Opcode::kServerAgentEntityUpdatePoints:
+        return std::make_unique<ServerAgentEntityUpdatePoints>(packet);
       case Opcode::kServerAgentCharacterUpdateStats:
         return std::make_unique<ParsedServerAgentCharacterUpdateStats>(packet);
       case Opcode::kServerAgentInventoryOperationResponse:

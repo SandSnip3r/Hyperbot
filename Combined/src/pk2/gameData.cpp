@@ -43,6 +43,7 @@ void GameData::parseMedia(Pk2ReaderModern &pk2Reader) {
   parseDivisionInfo(pk2Reader);
   parseShopData(pk2Reader);
   parseMagicOptionData(pk2Reader);
+  parseLevelData(pk2Reader);
   thrs.emplace_back(&GameData::parseCharacterData, this, std::ref(pk2Reader));
   thrs.emplace_back(&GameData::parseItemData, this, std::ref(pk2Reader));
   thrs.emplace_back(&GameData::parseSkillData, this, std::ref(pk2Reader));
@@ -74,6 +75,10 @@ const SkillData& GameData::skillData() const {
 
 const MagicOptionData& GameData::magicOptionData() const {
   return magicOptionData_;
+}
+
+const LevelData& GameData::levelData() const {
+  return levelData_;
 }
 
 const TeleportData& GameData::teleportData() const {
@@ -458,6 +463,16 @@ void GameData::parseMagicOptionData(Pk2ReaderModern &pk2Reader) {
   auto magicOptionData = pk2Reader.getEntryData(magicOptionDataEntry);
   auto magicOptionStr = parsing::fileDataToString(magicOptionData);
   parseDataFile<ref::MagicOption>(magicOptionStr, parsing::isValidMagicOptionDataLine, parsing::parseMagicOptionDataLine, std::bind(&MagicOptionData::addItem, &magicOptionData_, std::placeholders::_1));
+}
+
+void GameData::parseLevelData(Pk2ReaderModern &pk2Reader) {
+	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kLevelDataFilename = "leveldata.txt";
+  const std::string kLevelDataPath = kTextdataDirectory + kLevelDataFilename;
+  PK2Entry levelDataEntry = pk2Reader.getEntry(kLevelDataPath);
+  auto levelData = pk2Reader.getEntryData(levelDataEntry);
+  auto levelStr = parsing::fileDataToString(levelData);
+  parseDataFile<ref::Level>(levelStr, parsing::isValidLevelDataLine, parsing::parseLevelDataLine, std::bind(&LevelData::addLevelItem, &levelData_, std::placeholders::_1));
 }
 
 void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {

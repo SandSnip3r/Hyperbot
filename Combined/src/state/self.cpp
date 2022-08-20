@@ -8,32 +8,36 @@
 
 namespace state {
 
-Self::Self(const pk2::GameData &gameData) : gameData_(gameData) {}
+Self::Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData) : eventBroker_(eventBroker), gameData_(gameData) {}
 
-void Self::initialize(uint32_t globalId,
-                      uint32_t refObjId,
-                      uint32_t hp,
-                      uint32_t mp,
-                      const std::vector<packet::structures::Mastery> &masteries,
-                      const std::vector<packet::structures::Skill> &skills) {
-  spawned_ = true;
-  
+void Self::initialize(uint32_t globalId, uint32_t refObjId) {
   globalId_ = globalId;
   privateSetRaceAndGender(refObjId);
 
-  hp_ = hp;
-  mp_ = mp;
   maxHp_.reset();
   maxMp_.reset();
 
-  masteries_ = masteries;
-  skills_ = skills;
-
+  spawned_ = true;
   haveOpenedStorageSinceTeleport = false;
 }
 
 void Self::setRaceAndGender(uint32_t refObjId) {
   privateSetRaceAndGender(refObjId);
+}
+
+void Self::setCurrentLevel(uint8_t currentLevel) {
+  currentLevel_ = currentLevel;
+}
+
+void Self::setSkillPoints(uint64_t skillPoints) {
+  skillPoints_ = skillPoints;
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kCharacterSkillPointsUpdated));
+}
+
+void Self::setCurrentExpAndSpExp(uint32_t currentExperience, uint32_t currentSpExperience) {
+  currentExperience_ = currentExperience;
+  currentSpExperience_ = currentSpExperience;
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kCharacterExperienceUpdated));
 }
 
 void Self::resetHpPotionEventId() {
@@ -185,10 +189,12 @@ broker::TimerManager::TimerId Self::getMovingEventId() const {
 
 void Self::setHp(uint32_t hp) {
   hp_ = hp;
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
 }
 
 void Self::setMp(uint32_t mp) {
   mp_ = mp;
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
 }
 
 void Self::setMaxHpMp(uint32_t maxHp, uint32_t maxMp) {
@@ -254,25 +260,30 @@ void Self::setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t le
   modernStateLevels_[index] = level;
 }
 
-void Self::setGold(uint64_t gold) {
-  gold_ = gold;
+void Self::setMasteriesAndSkills(const std::vector<packet::structures::Mastery> &masteries,
+                                 const std::vector<packet::structures::Skill> &skills) {
+  masteries_ = masteries;
+  skills_ = skills;
 }
 
-void Self::addGold(uint64_t gold) {
-  gold_ += gold;
+void Self::setGold(uint64_t goldAmount) {
+  gold_ = goldAmount;
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kInventoryGoldUpdated));
 }
 
-void Self::subtractGold(uint64_t gold) {
-  gold_ -= gold;
+void Self::setStorageGold(uint64_t goldAmount) {
+  storageGold_ = goldAmount;
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStorageGoldUpdated));
 }
 
-void Self::setStorageGold(uint64_t gold) {
-  storageGold_ = gold;
+void Self::setGuildStorageGold(uint64_t goldAmount) {
+  guildStorageGold_ = goldAmount;
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kGuildStorageGoldUpdated));
 }
 
-void Self::setGuildStorageGold(uint64_t gold) {
-  guildStorageGold_ = gold;
-}
+// =========================================================================================================
+// =================================================Getters=================================================
+// =========================================================================================================
 
 bool Self::spawned() const {
   return spawned_;
@@ -288,6 +299,22 @@ Race Self::race() const {
 
 Gender Self::gender() const {
   return gender_;
+}
+
+uint8_t Self::getCurrentLevel() const {
+  return currentLevel_;
+}
+
+uint64_t Self::getSkillPoints() const {
+  return skillPoints_;
+}
+
+uint32_t Self::getCurrentExperience() const {
+  return currentExperience_;
+}
+
+uint32_t Self::getCurrentSpExperience() const {
+  return currentSpExperience_;
 }
 
 bool Self::haveHpPotionEventId() const {
@@ -455,24 +482,22 @@ std::array<uint8_t,32> Self::modernStateLevels() const {
   return modernStateLevels_;
 }
 
+uint64_t Self::getGold() const {
+  return gold_;
+}
+uint64_t Self::getStorageGold() const {
+  return storageGold_;
+}
+uint64_t Self::getGuildStorageGold() const {
+  return guildStorageGold_;
+}
+
 std::vector<packet::structures::Mastery> Self::masteries() const {
   return masteries_;
 }
 
 std::vector<packet::structures::Skill> Self::skills() const {
   return skills_;
-}
-
-uint64_t Self::getGold() const {
-  return gold_;
-}
-
-uint64_t Self::getStorageGold() const {
-  return storageGold_;
-}
-
-uint64_t Self::getGuildStorageGold() const {
-  return guildStorageGold_;
 }
 
 // =====================================Packets-in-flight state=====================================

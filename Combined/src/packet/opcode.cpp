@@ -267,6 +267,9 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_COUNTDOWN_INTERRUPT) {
     return "SERVER_COUNTDOWN_INTERRUPT";
   }
+  if (opcode == Opcode::kServerAgentEntityUpdatePoints) {
+    return "kServerAgentEntityUpdatePoints";
+  }
   if (opcode == Opcode::kServerAgentCharacterUpdateStats) {
     return "kServerAgentCharacterUpdateStats";
   }
@@ -285,8 +288,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_ANIMATION_LEVEL_UP) {
     return "SERVER_ANIMATION_LEVEL_UP";
   }
-  if (opcode == Opcode::SERVER_EXP) {
-    return "SERVER_EXP";
+  if (opcode == Opcode::kServerAgentEntityUpdateExperience) {
+    return "kServerAgentEntityUpdateExperience";
   }
   if (opcode == Opcode::SERVER_MASTERYUPDATE) {
     return "SERVER_MASTERYUPDATE";

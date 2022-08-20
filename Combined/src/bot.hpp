@@ -43,11 +43,11 @@ protected:
   friend class state::machine::Townlooping;
   const config::CharacterLoginData &loginData_; // TODO: Move this into a configuration object
   const pk2::GameData &gameData_;
-  state::Entity entityState_;
-  state::Self selfState_{gameData_};
   Proxy &proxy_;
   broker::PacketBroker &broker_;
   broker::EventBroker eventBroker_;
+  state::Entity entityState_;
+  state::Self selfState_{eventBroker_, gameData_};
   ui::UserInterface userInterface_{eventBroker_};
   packet::parsing::PacketParser packetParser_{gameData_};
   PacketProcessor packetProcessor_{entityState_, selfState_, broker_, eventBroker_, userInterface_, packetParser_, gameData_};
@@ -87,6 +87,7 @@ private:
   void handleSpeedUpdated();
   void handleMovementEnded();
   // Character info events
+  void handleSpawned();
   void handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &castedEvent);
   void handlePotionCooldownEnded(const event::EventCode eventCode);
   void handlePillCooldownEnded(const event::EventCode eventCode);

@@ -132,6 +132,7 @@ enum class Opcode {
   SERVER_COUNTDOWN = 0xB005,
   SERVER_COUNTDOWN_INTERRUPT = 0xB006,
 
+  kServerAgentEntityUpdatePoints = 0x304E,
   kServerAgentCharacterUpdateStats = 0x303D,
   SERVER_STR_UPDATE = 0xB050,
   SERVER_INT_UPDATE = 0xB051,
@@ -140,7 +141,7 @@ enum class Opcode {
   kServerAgentEntityUpdateMoveSpeed = 0x30D0,
   kServerAgentEntityUpdateStatus = 0x3057,
   SERVER_ANIMATION_LEVEL_UP = 0x3054,
-  SERVER_EXP = 0x3056,
+  kServerAgentEntityUpdateExperience = 0x3056,
   SERVER_MASTERYUPDATE = 0xB0A2,
   SERVER_SKILLPOINTS = 0x304E, // SERVER_NEW_GOLD_AMOUNT, SERVER_SKILLPOINTS
   SERVER_SKILLUPDATE = 0xB0A1,

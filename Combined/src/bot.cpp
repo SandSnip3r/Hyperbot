@@ -57,6 +57,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kCharacterSpeedUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMovementEnded, eventHandleFunction);
   // Character info events
+  eventBroker_.subscribeToEvent(event::EventCode::kSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemWaitForReuseDelay, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMpPotionCooldownEnded, eventHandleFunction);
@@ -77,6 +78,9 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kStorageOpened, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRepairSuccessful, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kInventoryGoldUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCharacterSkillPointsUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCharacterExperienceUpdated, eventHandleFunction);
 }
 
 void Bot::handleEvent(const event::Event *event) {
@@ -127,6 +131,9 @@ void Bot::handleEvent(const event::Event *event) {
         break;
 
       // Character info events
+      case event::EventCode::kSpawned:
+        handleSpawned();
+        break;
       case event::EventCode::kItemWaitForReuseDelay:
         {
           const event::ItemWaitForReuseDelay &castedEvent = dynamic_cast<const event::ItemWaitForReuseDelay&>(*event);
@@ -162,7 +169,15 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kStorageUpdated:
         onUpdate(event);
         break;
-
+      case event::EventCode::kInventoryGoldUpdated:
+        userInterface_.broadcastGoldAmountUpdate(selfState_.getGold(), broadcast::GoldLocation::kInventory);
+        break;
+      case event::EventCode::kCharacterSkillPointsUpdated:
+        userInterface_.broadcastCharacterSpUpdate(selfState_.getSkillPoints());
+        break;
+      case event::EventCode::kCharacterExperienceUpdated:
+        userInterface_.broadcastCharacterExperienceUpdate(selfState_.getCurrentExperience(), selfState_.getCurrentSpExperience());
+        break;
       default:
         LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
         break;
@@ -332,6 +347,15 @@ void Bot::handleMovementEnded() {
 // ============================================================================================================================
 // ===============================================Character info packet handling===============================================
 // ============================================================================================================================
+
+void Bot::handleSpawned() {
+  const auto &currentLevelData = gameData_.levelData().getLevel(selfState_.getCurrentLevel());
+  userInterface_.broadcastCharacterLevelUpdate(selfState_.getCurrentLevel(), currentLevelData.exp_C);
+  userInterface_.broadcastCharacterExperienceUpdate(selfState_.getCurrentExperience(), selfState_.getCurrentSpExperience());
+  userInterface_.broadcastCharacterSpUpdate(selfState_.getSkillPoints());
+  userInterface_.broadcastCharacterNameUpdate(selfState_.characterName);
+  userInterface_.broadcastGoldAmountUpdate(selfState_.getGold(), broadcast::GoldLocation::kInventory);
+}
 
 void Bot::handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &castedEvent) {
   LOG() << "Failed to use ";

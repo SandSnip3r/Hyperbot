@@ -37,16 +37,14 @@ enum class Gender {
 //  Or, when we're doing game logic
 class Self {
 public:
-  Self(const pk2::GameData &gameData);
-  void initialize(uint32_t globalId,
-                  uint32_t refObjId,
-                  uint32_t hp,
-                  uint32_t mp,
-                  const std::vector<packet::structures::Mastery> &masteries,
-                  const std::vector<packet::structures::Skill> &skills);
+  Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData);
+  void initialize(uint32_t globalId, uint32_t refObjId);
                   
   // Setters
   void setRaceAndGender(uint32_t refObjId);
+  void setCurrentLevel(uint8_t currentLevel);
+  void setSkillPoints(uint64_t skillPoints);
+  void setCurrentExpAndSpExp(uint32_t currentExperience, uint32_t currentSpExperience);
 
   void resetHpPotionEventId();
   void resetMpPotionEventId();
@@ -80,18 +78,23 @@ public:
   void setStateBitmask(uint32_t stateBitmask);
   void setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect);
   void setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level);
+  void setMasteriesAndSkills(const std::vector<packet::structures::Mastery> &masteries,
+                             const std::vector<packet::structures::Skill> &skills);
 
-  void setGold(uint64_t gold);
-  void addGold(uint64_t gold);
-  void subtractGold(uint64_t gold);
-  void setStorageGold(uint64_t gold);
-  void setGuildStorageGold(uint64_t gold);
+  void setGold(uint64_t goldAmount);
+  void setStorageGold(uint64_t goldAmount);
+  void setGuildStorageGold(uint64_t goldAmount);
 
   // Getters
   bool spawned() const;
   uint32_t globalId() const;
   Race race() const;
   Gender gender() const;
+
+  uint8_t getCurrentLevel() const;
+  uint64_t getSkillPoints() const;
+  uint32_t getCurrentExperience() const;
+  uint32_t getCurrentSpExperience() const;
 
   bool haveHpPotionEventId() const;
   bool haveMpPotionEventId() const;
@@ -133,13 +136,13 @@ public:
   uint32_t stateBitmask() const;
   std::array<uint16_t,6> legacyStateEffects() const;
   std::array<uint8_t,32> modernStateLevels() const;
-  
-  std::vector<packet::structures::Mastery> masteries() const;
-  std::vector<packet::structures::Skill> skills() const;
 
   uint64_t getGold() const;
   uint64_t getStorageGold() const;
   uint64_t getGuildStorageGold() const;
+
+  std::vector<packet::structures::Mastery> masteries() const;
+  std::vector<packet::structures::Skill> skills() const;
 
   // =================Packets-in-flight state=================
   struct UsedItem {
@@ -183,6 +186,12 @@ public:
   
   // Character info
   uint32_t globalId_{0};
+private:
+  uint8_t currentLevel_;
+  uint64_t currentExperience_;
+  uint32_t currentSpExperience_;
+  uint32_t skillPoints_;
+public:
   Race race_;
   Gender gender_;
 
@@ -194,6 +203,8 @@ public:
   float walkSpeed_;
   float runSpeed_;
   float hwanSpeed_;
+
+  std::string characterName;
 
   // Character states
   packet::enums::LifeState lifeState_;
@@ -210,10 +221,12 @@ public:
   std::optional<broker::TimerManager::TimerId> movingEventId_;
 
   // Health
+private:
   uint32_t hp_;
   uint32_t mp_;
   std::optional<uint32_t> maxHp_;
   std::optional<uint32_t> maxMp_;
+public:
 
   // Statuses
   // Bitmask of all states (initialized as having no states)
@@ -229,7 +242,12 @@ public:
   // Inventory
   storage::Storage inventory, storage;
   storage::BuybackQueue buybackQueue;
-  uint64_t gold_, storageGold_, guildStorageGold_;
+
+private:
+  uint64_t gold_;
+  uint64_t storageGold_;
+  uint64_t guildStorageGold_;
+public:
 
   // ################################################################################
   // Training state
@@ -243,6 +261,7 @@ public:
   // ################################################################################
 
 private:
+  broker::EventBroker &eventBroker_;
   const pk2::GameData &gameData_;
 
   void privateSetRaceAndGender(uint32_t refObjId);

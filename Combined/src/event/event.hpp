@@ -33,6 +33,11 @@ enum class EventCode {
   kNpcTalkStart,
   kStorageOpened,
   kRepairSuccessful,
+  kInventoryGoldUpdated,
+  kStorageGoldUpdated,
+  kGuildStorageGoldUpdated,
+  kCharacterSkillPointsUpdated,
+  kCharacterExperienceUpdated,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,

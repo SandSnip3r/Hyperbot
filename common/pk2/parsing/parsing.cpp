@@ -166,6 +166,11 @@ bool isValidMagicOptionDataLine(const std::string &line) {
   return isValidLine(kDataCount, line);
 }
 
+bool isValidLevelDataLine(const std::string &line) {
+  constexpr int kDataCount = 9;
+  return isValidLine(kDataCount, line);
+}
+
 bool isValidSkilldataLine(const std::string &line) {
   constexpr int kDataCount = 117;
   return isValidLine(kDataCount, line);
@@ -534,6 +539,21 @@ pk2::ref::MagicOption parseMagicOptionDataLine(const std::string &line) {
   ptr = parse(ptr, magOpt.availItemGroup10);
   parse(ptr, magOpt.reqClass10);
 	return magOpt;
+}
+
+pk2::ref::Level parseLevelDataLine(const std::string &line) {
+	pk2::ref::Level level;
+  const char *ptr = line.data();
+  ptr = parse(ptr, level.lvl);
+  ptr = parse(ptr, level.exp_C);
+  ptr = parse(ptr, level.exp_M);
+  ptr = parse(ptr, level.cost_M);
+  ptr = parse(ptr, level.cost_ST);
+  ptr = parse(ptr, level.gust_Mob_Exp);
+  ptr = parse(ptr, level.jobExp_Trader);
+  ptr = parse(ptr, level.jobExp_Robber);
+  parse(ptr, level.jobExp_Hunter);
+	return level;
 }
 
 pk2::ref::Skill parseSkilldataLine(const std::string &line) {

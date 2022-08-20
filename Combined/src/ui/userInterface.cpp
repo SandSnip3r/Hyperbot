@@ -18,6 +18,50 @@ void UserInterface::run() {
   thr_ = std::thread(&UserInterface::privateRun, this);
 }
 
+void UserInterface::broadcastCharacterLevelUpdate(uint8_t currentLevel, int64_t expRequired) {
+  broadcast::CharacterLevelUpdate characterLevelUpdate;
+  characterLevelUpdate.set_level(currentLevel);
+  characterLevelUpdate.set_exprequired(expRequired);
+  broadcast::BroadcastMessage broadcastMessage;
+  *broadcastMessage.mutable_characterlevelupdate() = characterLevelUpdate;
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastCharacterExperienceUpdate(uint64_t currentExperience, uint32_t currentSpExperience) {
+  broadcast::CharacterExperienceUpdate characterExperienceUpdate;
+  characterExperienceUpdate.set_currentexperience(currentExperience);
+  characterExperienceUpdate.set_currentspexperience(currentSpExperience);
+  broadcast::BroadcastMessage broadcastMessage;
+  *broadcastMessage.mutable_characterexperienceupdate() = characterExperienceUpdate;
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastCharacterSpUpdate(uint32_t skillPoints) {
+  broadcast::CharacterSpUpdate characterSpUpdate;
+  characterSpUpdate.set_skillpoints(skillPoints);
+  broadcast::BroadcastMessage broadcastMessage;
+  *broadcastMessage.mutable_characterspupdate() = characterSpUpdate;
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastCharacterNameUpdate(std::string_view characterName) {
+  broadcast::CharacterNameUpdate characterNameUpdate;
+  // TODO: std::string vs std::string_view. Might need to compile protobuf with c++17?
+  characterNameUpdate.set_name(std::string(characterName));
+  broadcast::BroadcastMessage broadcastMessage;
+  *broadcastMessage.mutable_characternameupdate() = characterNameUpdate;
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::GoldLocation goldLocation) {
+  broadcast::GoldAmountUpdate goldAmountUpdate;
+  goldAmountUpdate.set_goldamount(goldAmount);
+  goldAmountUpdate.set_goldlocation(goldLocation);
+  broadcast::BroadcastMessage broadcastMessage;
+  *broadcastMessage.mutable_goldamountupdate() = goldAmountUpdate;
+  broadcast(broadcastMessage);
+}
+
 void UserInterface::broadcast(const broadcast::BroadcastMessage &broadcastProto) {
   zmq::message_t message;
   message.rebuild(broadcastProto.ByteSizeLong());

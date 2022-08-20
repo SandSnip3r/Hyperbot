@@ -7,6 +7,8 @@
 
 #include <zmq.hpp>
 
+#include <string_view>
+
 namespace ui {
 
 class UserInterface {
@@ -14,6 +16,11 @@ public:
   UserInterface(broker::EventBroker &eventBroker);
   ~UserInterface();
   void run();
+  void broadcastCharacterLevelUpdate(uint8_t currentLevel, int64_t expRequired);
+  void broadcastCharacterExperienceUpdate(uint64_t currentExperience, uint32_t currentSpExperience);
+  void broadcastCharacterSpUpdate(uint32_t skillPoints);
+  void broadcastCharacterNameUpdate(std::string_view characterName);
+  void broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::GoldLocation goldLocation);
   void broadcast(const broadcast::BroadcastMessage &broadcastProto);
 private:
   zmq::context_t context_;

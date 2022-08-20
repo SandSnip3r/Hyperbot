@@ -1,7 +1,7 @@
 #include "commonParsing.hpp"
 #include "serverAgentCharacterData.hpp"
 
-#include <iostream>
+#include "logging.hpp"
 
 namespace packet::parsing {
 
@@ -10,12 +10,12 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   uint32_t serverTime = stream.Read<uint32_t>();
   refObjId_ = stream.Read<uint32_t>();
   uint8_t scale = stream.Read<uint8_t>();
-  uint8_t curLevel = stream.Read<uint8_t>();
+  curLevel_ = stream.Read<uint8_t>();
   uint8_t maxLevel = stream.Read<uint8_t>();
-  uint64_t expOffset = stream.Read<uint64_t>();
-  uint32_t sExpOffset = stream.Read<uint32_t>();
+  currentExperience_ = stream.Read<uint64_t>();
+  currentSpExperience_ = stream.Read<uint32_t>();
   gold_ = stream.Read<uint64_t>();
-  uint32_t remainSkillPoint = stream.Read<uint32_t>();
+  skillPoints_ = stream.Read<uint32_t>();
   uint16_t remainStatPoint = stream.Read<uint16_t>();
   uint8_t remainHwanCount = stream.Read<uint8_t>();
   uint32_t gatheredExpPoint = stream.Read<uint32_t>();
@@ -241,7 +241,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   }
 
   uint16_t nameLength = stream.Read<uint16_t>();
-  std::string name = stream.Read_Ascii(nameLength);
+  characterName_ = stream.Read_Ascii(nameLength);
   uint16_t jobNameLength = stream.Read<uint16_t>();
   std::string jobName = stream.Read_Ascii(jobNameLength);
   uint8_t jobType = stream.Read<uint8_t>();
@@ -291,8 +291,24 @@ uint32_t ParsedServerAgentCharacterData::refObjId() const {
   return refObjId_;
 }
 
+uint8_t ParsedServerAgentCharacterData::curLevel() const {
+  return curLevel_;
+}
+
+uint64_t ParsedServerAgentCharacterData::currentExperience() const {
+  return currentExperience_;
+}
+
+uint32_t ParsedServerAgentCharacterData::currentSpExperience() const {
+  return currentSpExperience_;
+}
+
 uint64_t ParsedServerAgentCharacterData::gold() const {
   return gold_;
+}
+
+uint32_t ParsedServerAgentCharacterData::skillPoints() const {
+  return skillPoints_;
 }
 
 uint32_t ParsedServerAgentCharacterData::entityUniqueId() const {
@@ -337,6 +353,10 @@ float ParsedServerAgentCharacterData::runSpeed() const {
 
 float ParsedServerAgentCharacterData::hwanSpeed() const {
   return hwanSpeed_;
+}
+
+std::string ParsedServerAgentCharacterData::characterName() const {
+  return characterName_;
 }
 
 enums::LifeState ParsedServerAgentCharacterData::lifeState() const {

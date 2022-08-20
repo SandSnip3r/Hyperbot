@@ -4,6 +4,7 @@
 #include "../divisionInfo.hpp"
 #include "../ref/character.hpp"
 #include "../ref/item.hpp"
+#include "../ref/level.hpp"
 #include "../ref/magicOption.hpp"
 #include "../ref/mappingShopGroup.hpp"
 #include "../ref/mappingShopWithTab.hpp"
@@ -56,6 +57,12 @@ bool isValidItemdataLine(const std::string &line);
 // [param] line   Line from PK2 file representing magic option data
 // [return]       Whether the line is valid or not
 bool isValidMagicOptionDataLine(const std::string &line);
+
+// Validates if the line of level data is valid
+//
+// [param] line   Line from PK2 file representing level data
+// [return]       Whether the line is valid or not
+bool isValidLevelDataLine(const std::string &line);
 
 // Validates if the line of teleport building data is valid
 //
@@ -122,6 +129,12 @@ pk2::ref::Item parseItemdataLine(const std::string &line);
 // [param] line   A line of text
 // [return]       A populated MagicOption object
 pk2::ref::MagicOption parseMagicOptionDataLine(const std::string &line);
+
+// Parses string representing a line of text from leveldata.txt in the Media.pk2 into a Level object
+//
+// [param] line   A line of text
+// [return]       A populated Level object
+pk2::ref::Level parseLevelDataLine(const std::string &line);
 
 // Parses string representing a line of text from teleportbuilding.txt in the Media.pk2 into a Teleport object
 //

@@ -315,6 +315,20 @@ enum class RepairType : uint8_t {
   kRepairAll = 2,
 };
 
+enum class UpdatePointsType : uint8_t {
+  kGold = 1,
+  kSp = 2,
+  kStatPoint = 3,
+  kHwan = 4,
+  //8 = ?
+  kAp = 16, // (Egypt)
+};
+
+enum class AcademyBuffUpdateFlag : uint8_t {
+  kCumulatedSize = 0x0F, // 1
+  kAccumulatedSize = 0xF0, // 16
+};
+
 } // namespace packet::enums
 
 #endif // PACKET_ENUMS_HPP
