@@ -66,8 +66,9 @@ void Bot::subscribeToEvents() {
 #ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
   eventBroker_.subscribeToEvent(event::EventCode::kPurificationPillCooldownEnded, eventHandleFunction);
 #endif
-  eventBroker_.subscribeToEvent(event::EventCode::kHpPercentChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kMpPercentChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kHpChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
 
   // Misc
@@ -149,8 +150,18 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kPurificationPillCooldownEnded:
         handlePillCooldownEnded(eventCode);
         break;
-      case event::EventCode::kHpPercentChanged:
-      case event::EventCode::kMpPercentChanged:
+      case event::EventCode::kHpChanged:
+        userInterface_.broadcastCharacterHpUpdate(selfState_.hp());
+        handleVitalsChanged();
+        break;
+      case event::EventCode::kMpChanged:
+        userInterface_.broadcastCharacterMpUpdate(selfState_.mp());
+        handleVitalsChanged();
+        break;
+      case event::EventCode::kMaxHpMpChanged:
+        if (selfState_.maxHp() && selfState_.maxMp()) {
+          userInterface_.broadcastCharacterMaxHpMpUpdate(*selfState_.maxHp(), *selfState_.maxMp());
+        }
         handleVitalsChanged();
         break;
       case event::EventCode::kStatesChanged:
@@ -341,6 +352,17 @@ void Bot::handleSpeedUpdated() {
 }
 
 void Bot::handleMovementEnded() {
+  {
+    static uint16_t lastKnownRegion{0xFFFF};
+    // TODO: Solve this problem in a more elegant way
+    //  Also, there is the problem that we might cross a region boundary before movement ends
+    if (selfState_.position().regionId != lastKnownRegion) {
+      // Region updated
+      const auto &regionName = gameData_.textZoneNameData().getRegionName(selfState_.position().regionId);
+      userInterface_.broadcastRegionNameUpdate(regionName);
+      lastKnownRegion = selfState_.position().regionId;
+    }
+  }
   onUpdate();
 }
 
@@ -355,6 +377,8 @@ void Bot::handleSpawned() {
   userInterface_.broadcastCharacterSpUpdate(selfState_.getSkillPoints());
   userInterface_.broadcastCharacterNameUpdate(selfState_.characterName);
   userInterface_.broadcastGoldAmountUpdate(selfState_.getGold(), broadcast::GoldLocation::kInventory);
+  const auto &regionName = gameData_.textZoneNameData().getRegionName(selfState_.position().regionId);
+  userInterface_.broadcastRegionNameUpdate(regionName);
 }
 
 void Bot::handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &castedEvent) {
@@ -399,22 +423,10 @@ void Bot::handlePillCooldownEnded(const event::EventCode eventCode) {
 }
 
 void Bot::handleVitalsChanged() {
-  // Broadcast message to UI
   if (!selfState_.maxHp() || !selfState_.maxMp()) {
     // Dont yet know our max
-    std::cout << "handleVitalsChanged: dont know max hp or mp\n";
     return;
   }
-
-  broadcast::HpMpUpdate hpMpUpdate;
-  hpMpUpdate.set_currenthp(selfState_.hp());
-  hpMpUpdate.set_maxhp(*selfState_.maxHp());
-  hpMpUpdate.set_currentmp(selfState_.mp());
-  hpMpUpdate.set_maxmp(*selfState_.maxMp());
-  broadcast::BroadcastMessage broadcastMessage;
-  *broadcastMessage.mutable_hpmpupdate() = hpMpUpdate;
-  userInterface_.broadcast(broadcastMessage);
-
   onUpdate();
 }
 

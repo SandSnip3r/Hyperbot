@@ -8,6 +8,7 @@
 #include "shopData.hpp"
 #include "skillData.hpp"
 #include "teleportData.hpp"
+#include "textZoneNameData.hpp"
 #include "navmesh/navmesh.hpp"
 #include "navmesh/triangulation/navmeshTriangulation.hpp"
 #include "../../../common/pk2/divisionInfo.hpp"
@@ -33,6 +34,7 @@ public:
   const SkillData& skillData() const;
   const MagicOptionData& magicOptionData() const;
   const LevelData& levelData() const;
+  const TextZoneNameData& textZoneNameData() const;
   const TeleportData& teleportData() const;
   const navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
 private:
@@ -45,6 +47,7 @@ private:
   SkillData skillData_;
   MagicOptionData magicOptionData_;
   LevelData levelData_;
+  TextZoneNameData textZoneNameData_;
   TeleportData teleportData_;
   std::optional<navmesh::Navmesh> navmesh_;
   std::optional<navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
@@ -61,6 +64,7 @@ private:
   void parseShopData(Pk2ReaderModern &pk2Reader);
   void parseMagicOptionData(Pk2ReaderModern &pk2Reader);
   void parseLevelData(Pk2ReaderModern &pk2Reader);
+  void parseTextData(Pk2ReaderModern &pk2Reader);
 };
 
 } // namespace pk2

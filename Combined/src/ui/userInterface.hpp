@@ -12,15 +12,20 @@
 namespace ui {
 
 class UserInterface {
+// TODO: std::string vs std::string_view. Might need to compile protobuf with c++17?
 public:
   UserInterface(broker::EventBroker &eventBroker);
   ~UserInterface();
   void run();
+  void broadcastCharacterHpUpdate(uint32_t currentHp);
+  void broadcastCharacterMpUpdate(uint32_t currentMp);
+  void broadcastCharacterMaxHpMpUpdate(uint32_t maxHp, uint32_t maxMp);
   void broadcastCharacterLevelUpdate(uint8_t currentLevel, int64_t expRequired);
   void broadcastCharacterExperienceUpdate(uint64_t currentExperience, uint32_t currentSpExperience);
   void broadcastCharacterSpUpdate(uint32_t skillPoints);
   void broadcastCharacterNameUpdate(std::string_view characterName);
   void broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::GoldLocation goldLocation);
+  void broadcastRegionNameUpdate(std::string_view regionName);
   void broadcast(const broadcast::BroadcastMessage &broadcastProto);
 private:
   zmq::context_t context_;

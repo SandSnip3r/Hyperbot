@@ -189,17 +189,18 @@ broker::TimerManager::TimerId Self::getMovingEventId() const {
 
 void Self::setHp(uint32_t hp) {
   hp_ = hp;
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpChanged));
 }
 
 void Self::setMp(uint32_t mp) {
   mp_ = mp;
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpChanged));
 }
 
 void Self::setMaxHpMp(uint32_t maxHp, uint32_t maxMp) {
   maxHp_ = maxHp;
   maxMp_ = maxMp;
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMaxHpMpChanged));
 }
 
 void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels) {

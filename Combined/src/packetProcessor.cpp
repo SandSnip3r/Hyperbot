@@ -438,8 +438,6 @@ bool PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::Par
 
 bool PacketProcessor::serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const {
   selfState_.setMaxHpMp(packet.maxHp(), packet.maxMp());
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpPercentChanged));
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpPercentChanged));
   return true;
 }
 

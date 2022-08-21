@@ -14,6 +14,7 @@
 #include "../ref/shopTab.hpp"
 #include "../ref/skill.hpp"
 #include "../ref/teleport.hpp"
+#include "../ref/textZoneName.hpp"
 
 #include <filesystem>
 #include <ostream>
@@ -106,6 +107,12 @@ bool isValidMappingShopGroupLine(const std::string &line);
 // [return]       Whether the line is valid or not
 bool isValidMappingShopWithTabLine(const std::string &line);
 
+// Validates if the line of text zone name data is valid
+//
+// [param] line   Line from PK2 file representing a text zone name
+// [return]       Whether the line is valid or not
+bool isValidTextZoneNameLine(const std::string &line);
+
 // Parses string representing a line of text from skilldata_xxxx.txt in the Media.pk2 into a Skill object
 //
 // [param] line   A line of text
@@ -177,6 +184,12 @@ pk2::ref::MappingShopGroup parseMappingShopGroupLine(const std::string &line);
 // [param] line   A line of text
 // [return]       A populated MappingShopWithTab object
 pk2::ref::MappingShopWithTab parseMappingShopWithTabLine(const std::string &line);
+
+// Parses string representing a line of text from textzonename.txt in the Media.pk2 into a TextZoneName object
+//
+// [param] line   A line of text
+// [return]       A populated TextZoneName object
+pk2::ref::TextZoneName parseTextZoneNameLine(const std::string &line);
 
 // Parses raw pk2 data into DivisionInfo object
 //

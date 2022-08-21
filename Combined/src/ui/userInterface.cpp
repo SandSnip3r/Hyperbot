@@ -18,6 +18,31 @@ void UserInterface::run() {
   thr_ = std::thread(&UserInterface::privateRun, this);
 }
 
+void UserInterface::broadcastCharacterHpUpdate(uint32_t currentHp) {
+  broadcast::CharacterHpUpdate characterHpUpdate;
+  characterHpUpdate.set_currenthp(currentHp);
+  broadcast::BroadcastMessage broadcastMessage;
+  *broadcastMessage.mutable_characterhpupdate() = characterHpUpdate;
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastCharacterMpUpdate(uint32_t currentMp) {
+  broadcast::CharacterMpUpdate characterMpUpdate;
+  characterMpUpdate.set_currentmp(currentMp);
+  broadcast::BroadcastMessage broadcastMessage;
+  *broadcastMessage.mutable_charactermpupdate() = characterMpUpdate;
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastCharacterMaxHpMpUpdate(uint32_t maxHp, uint32_t maxMp) {
+  broadcast::CharacterMaxHpMpUpdate characterMaxHpMpUpdate;
+  characterMaxHpMpUpdate.set_maxhp(maxHp);
+  characterMaxHpMpUpdate.set_maxmp(maxMp);
+  broadcast::BroadcastMessage broadcastMessage;
+  *broadcastMessage.mutable_charactermaxhpmpupdate() = characterMaxHpMpUpdate;
+  broadcast(broadcastMessage);
+}
+
 void UserInterface::broadcastCharacterLevelUpdate(uint8_t currentLevel, int64_t expRequired) {
   broadcast::CharacterLevelUpdate characterLevelUpdate;
   characterLevelUpdate.set_level(currentLevel);
@@ -46,7 +71,6 @@ void UserInterface::broadcastCharacterSpUpdate(uint32_t skillPoints) {
 
 void UserInterface::broadcastCharacterNameUpdate(std::string_view characterName) {
   broadcast::CharacterNameUpdate characterNameUpdate;
-  // TODO: std::string vs std::string_view. Might need to compile protobuf with c++17?
   characterNameUpdate.set_name(std::string(characterName));
   broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_characternameupdate() = characterNameUpdate;
@@ -59,6 +83,14 @@ void UserInterface::broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::Go
   goldAmountUpdate.set_goldlocation(goldLocation);
   broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_goldamountupdate() = goldAmountUpdate;
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastRegionNameUpdate(std::string_view regionName) {
+  broadcast::RegionNameUpdate regionNameUpdate;
+  regionNameUpdate.set_name(std::string(regionName));
+  broadcast::BroadcastMessage broadcastMessage;
+  *broadcastMessage.mutable_regionnameupdate() = regionNameUpdate;
   broadcast(broadcastMessage);
 }
 
