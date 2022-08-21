@@ -19,14 +19,15 @@ public:
   void runAsync();
 signals:
   void connected();
-  void message1Received(const std::string &str);
-  void message2Received(const int32_t val);
-  void vitalsChanged(const broadcast::HpMpUpdate &hpMpUpdate);
+  void characterHpUpdateChanged(uint32_t currentHp);
+  void characterMpUpdateChanged(uint32_t currentMp);
+  void characterMaxHpMpUpdateChanged(uint32_t maxHp, uint32_t maxMp);
   void characterLevelUpdate(int32_t level, int64_t expRequired);
   void characterExperienceUpdate(uint64_t currentExperience, uint32_t currentSpExperience);
   void characterSpUpdate(uint32_t skillPoints);
   void characterNameUpdate(const std::string &name);
   void inventoryGoldAmountUpdate(uint64_t goldAmount);
+  void regionNameUpdate(const std::string &regionName);
 private:
   zmq::context_t &context_;
   std::atomic<bool> run_;

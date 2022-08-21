@@ -29,6 +29,7 @@ private:
   void initializeUi();
   void connectMainControls();
   void connectTabWidget();
+  void connectBotBroadcastMessages();
   void connectPacketInjection();
 
   void injectPacket(request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes);
@@ -43,12 +44,15 @@ private slots:
 
 public slots:
   // Bot updates
-  void onVitalsChanged(const broadcast::HpMpUpdate &hpMpUpdate);
+  void onCharacterHpUpdateChanged(uint32_t currentHp);
+  void onCharacterMpUpdateChanged(uint32_t currentMp);
+  void onCharacterMaxHpMpUpdateChanged(uint32_t maxHp, uint32_t maxMp);
   void onCharacterLevelUpdate(int32_t level, int64_t expRequired);
   void onCharacterExperienceUpdate(uint64_t currentExperience, uint32_t currentSpExperience);
   void onCharacterSpUpdate(uint32_t skillPoints);
   void onCharacterNameUpdate(const std::string &name);
   void onInventoryGoldAmountUpdate(uint64_t goldAmount);
+  void onRegionNameUpdate(const std::string &regionName);
 };
 
 #endif // MAINWINDOW_H

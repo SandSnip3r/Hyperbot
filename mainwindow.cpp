@@ -8,13 +8,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
   connectMainControls();
   connectTabWidget();
-
-  connect(&eventHandler_, &EventHandler::vitalsChanged, this, &MainWindow::onVitalsChanged);
-  connect(&eventHandler_, &EventHandler::characterLevelUpdate, this, &MainWindow::onCharacterLevelUpdate);
-  connect(&eventHandler_, &EventHandler::characterExperienceUpdate, this, &MainWindow::onCharacterExperienceUpdate);
-  connect(&eventHandler_, &EventHandler::characterSpUpdate, this, &MainWindow::onCharacterSpUpdate);
-  connect(&eventHandler_, &EventHandler::characterNameUpdate, this, &MainWindow::onCharacterNameUpdate);
-  connect(&eventHandler_, &EventHandler::inventoryGoldAmountUpdate, this, &MainWindow::onInventoryGoldAmountUpdate);
+  connectBotBroadcastMessages();
 
   // Start bot connection
   // EventHandler is a subscriber to what the bot publishes
@@ -30,6 +24,7 @@ void MainWindow::initializeUi() {
       border: 1px solid black;
       border-radius: 2px;
       color: white;
+      background-color: #131113;
     }
     QProgressBar::chunk {
       background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #630410, stop: 0.5455 #ff3c52, stop: 1 #9c0010);
@@ -40,6 +35,7 @@ void MainWindow::initializeUi() {
       border: 1px solid black;
       border-radius: 2px;
       color: white;
+      background-color: #131113;
     }
     QProgressBar::chunk {
       background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #101c4a, stop: 0.5455 #4a69ce, stop: 1 #182c73);
@@ -49,6 +45,8 @@ void MainWindow::initializeUi() {
     QProgressBar {
       border: 1px solid black;
       border-radius: 2px;
+      color: white;
+      background-color: #131113;
     }
     QProgressBar::chunk {
       background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #e7bd10, stop: 0.2 #ffef73, stop: 1 #a57300);
@@ -58,6 +56,8 @@ void MainWindow::initializeUi() {
     QProgressBar {
       border: 1px solid black;
       border-radius: 2px;
+      color: white;
+      background-color: #131113;
     }
     QProgressBar::chunk {
       background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #325a1d, stop: 0.5 #8bca50, stop: 1 #1a4213);
@@ -72,6 +72,18 @@ void MainWindow::connectMainControls() {
 
 void MainWindow::connectTabWidget() {
   connectPacketInjection();
+}
+
+void MainWindow::connectBotBroadcastMessages() {
+  connect(&eventHandler_, &EventHandler::characterHpUpdateChanged, this, &MainWindow::onCharacterHpUpdateChanged);
+  connect(&eventHandler_, &EventHandler::characterMpUpdateChanged, this, &MainWindow::onCharacterMpUpdateChanged);
+  connect(&eventHandler_, &EventHandler::characterMaxHpMpUpdateChanged, this, &MainWindow::onCharacterMaxHpMpUpdateChanged);
+  connect(&eventHandler_, &EventHandler::characterLevelUpdate, this, &MainWindow::onCharacterLevelUpdate);
+  connect(&eventHandler_, &EventHandler::characterExperienceUpdate, this, &MainWindow::onCharacterExperienceUpdate);
+  connect(&eventHandler_, &EventHandler::characterSpUpdate, this, &MainWindow::onCharacterSpUpdate);
+  connect(&eventHandler_, &EventHandler::characterNameUpdate, this, &MainWindow::onCharacterNameUpdate);
+  connect(&eventHandler_, &EventHandler::inventoryGoldAmountUpdate, this, &MainWindow::onInventoryGoldAmountUpdate);
+  connect(&eventHandler_, &EventHandler::regionNameUpdate, this, &MainWindow::onRegionNameUpdate);
 }
 
 void MainWindow::connectPacketInjection() {
@@ -169,11 +181,33 @@ void MainWindow::clearPackets() {
 // ===================================================Bot updates===================================================
 // =================================================================================================================
 
-void MainWindow::onVitalsChanged(const broadcast::HpMpUpdate &hpMpUpdate) {
-  ui->hpProgressBar->setMaximum(hpMpUpdate.maxhp());
-  ui->hpProgressBar->setValue(hpMpUpdate.currenthp());
-  ui->mpProgressBar->setMaximum(hpMpUpdate.maxmp());
-  ui->mpProgressBar->setValue(hpMpUpdate.currentmp());
+void MainWindow::onCharacterHpUpdateChanged(uint32_t currentHp) {
+  characterData_.currentHp = currentHp;
+  if (characterData_.currentHp > ui->hpProgressBar->maximum() && ui->hpProgressBar->maximum() != 0) {
+    std::cout << "Whoa, setting value to something larger than max" << std::endl;
+    std::cout << "Max is " << ui->hpProgressBar->maximum() << " and we're setting it to " << characterData_.currentHp << std::endl;
+  }
+  ui->hpProgressBar->setValue(characterData_.currentHp);
+}
+
+void MainWindow::onCharacterMpUpdateChanged(uint32_t currentMp) {
+  characterData_.currentMp = currentMp;
+  if (characterData_.currentMp > ui->mpProgressBar->maximum() && ui->mpProgressBar->maximum() != 0) {
+    std::cout << "Whoa, setting value to something larger than max" << std::endl;
+    std::cout << "Max is " << ui->mpProgressBar->maximum() << " and we're setting it to " << characterData_.currentMp << std::endl;
+  }
+  ui->mpProgressBar->setValue(characterData_.currentMp);
+}
+
+void MainWindow::onCharacterMaxHpMpUpdateChanged(uint32_t maxHp, uint32_t maxMp) {
+  characterData_.maxHp = maxHp;
+  characterData_.maxMp = maxMp;
+  // Overflow in a progress bar is undesireable. If we get a new max value, we will make sure that the current value reflects that
+  // Need to set max before setting value to avoid potential overflow
+  ui->hpProgressBar->setMaximum(*characterData_.maxHp);
+  ui->hpProgressBar->setValue(std::min(static_cast<uint32_t>(characterData_.currentHp), *characterData_.maxHp));
+  ui->mpProgressBar->setMaximum(*characterData_.maxMp);
+  ui->mpProgressBar->setValue(std::min(static_cast<uint32_t>(characterData_.currentMp), *characterData_.maxMp));
 }
 
 void MainWindow::onCharacterLevelUpdate(int32_t level, int64_t expRequired) {
@@ -200,4 +234,8 @@ void MainWindow::onCharacterNameUpdate(const std::string &name) {
 
 void MainWindow::onInventoryGoldAmountUpdate(uint64_t goldAmount) {
   ui->inventoryGoldAmountLabel->setText(QString::number(goldAmount));
+}
+
+void MainWindow::onRegionNameUpdate(const std::string &regionName) {
+  ui->regionNameLabel->setText(QString::fromStdString(regionName));
 }

@@ -31,9 +31,19 @@ void EventHandler::run() {
 
 void EventHandler::handle(const broadcast::BroadcastMessage &message) {
   switch (message.body_case()) {
-    case broadcast::BroadcastMessage::BodyCase::kHpMpUpdate: {
-        const broadcast::HpMpUpdate &msg = message.hpmpupdate();
-        emit vitalsChanged(msg);
+    case broadcast::BroadcastMessage::BodyCase::kCharacterHpUpdate: {
+        const broadcast::CharacterHpUpdate &msg = message.characterhpupdate();
+        emit characterHpUpdateChanged(msg.currenthp());
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kCharacterMpUpdate: {
+        const broadcast::CharacterMpUpdate &msg = message.charactermpupdate();
+        emit characterMpUpdateChanged(msg.currentmp());
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kCharacterMaxHpMpUpdate: {
+        const broadcast::CharacterMaxHpMpUpdate &msg = message.charactermaxhpmpupdate();
+        emit characterMaxHpMpUpdateChanged(msg.maxhp(), msg.maxmp());
         break;
       }
     case broadcast::BroadcastMessage::BodyCase::kCharacterLevelUpdate: {
@@ -63,5 +73,13 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         }
         break;
       }
+    case broadcast::BroadcastMessage::BodyCase::kRegionNameUpdate: {
+        const broadcast::RegionNameUpdate &msg = message.regionnameupdate();
+        emit regionNameUpdate(msg.name());
+        break;
+      }
+    default:
+      // Unknown case. Might be a malformed message
+      break;
   }
 }
