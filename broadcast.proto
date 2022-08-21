@@ -2,11 +2,27 @@ syntax = "proto3";
 
 package broadcast;
 
-message HpMpUpdate {
-  int32 currentHp = 1;
-  int32 maxHp = 2;
-  int32 currentMp = 3;
-  int32 maxMp = 4;
+// Enums
+
+enum GoldLocation {
+  kInventory = 0;
+  kStorage = 1;
+  kGuildStorage = 2;
+}
+
+// Messages
+
+message CharacterHpUpdate {
+  uint32 currentHp = 1;
+}
+
+message CharacterMpUpdate {
+  uint32 currentMp = 1;
+}
+
+message CharacterMaxHpMpUpdate {
+  uint32 maxHp = 1;
+  uint32 maxMp = 2;
 }
 
 message CharacterLevelUpdate {
@@ -27,12 +43,6 @@ message CharacterNameUpdate {
   string name = 1;
 }
 
-enum GoldLocation {
-  kInventory = 0;
-  kStorage = 1;
-  kGuildStorage = 2;
-}
-
 message GoldAmountUpdate {
   uint64 goldAmount = 1;
   GoldLocation goldLocation = 2;
@@ -42,14 +52,18 @@ message RegionNameUpdate {
   string name = 1;
 }
 
+// Broadcast message
+
 message BroadcastMessage {
   oneof body {
-    HpMpUpdate hpMpUpdate = 1;
-    CharacterLevelUpdate characterLevelUpdate = 2;
-    CharacterExperienceUpdate characterExperienceUpdate = 3;
-    CharacterSpUpdate characterSpUpdate = 4;
-    CharacterNameUpdate characterNameUpdate = 5;
-    GoldAmountUpdate goldAmountUpdate = 6;
-    RegionNameUpdate regionNameUpdate = 7;
+    CharacterHpUpdate characterHpUpdate = 1;
+    CharacterMpUpdate characterMpUpdate = 2;
+    CharacterMaxHpMpUpdate characterMaxHpMpUpdate = 3;
+    CharacterLevelUpdate characterLevelUpdate = 4;
+    CharacterExperienceUpdate characterExperienceUpdate = 5;
+    CharacterSpUpdate characterSpUpdate = 6;
+    CharacterNameUpdate characterNameUpdate = 7;
+    GoldAmountUpdate goldAmountUpdate = 8;
+    RegionNameUpdate regionNameUpdate = 9;
   }
 }
