@@ -1,7 +1,5 @@
 #include "textZoneNameData.hpp"
 
-#include "logging.hpp"
-
 #include <cctype>
 #include <string_view>
 

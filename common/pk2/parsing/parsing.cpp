@@ -50,6 +50,9 @@ std::vector<std::string> fileDataToStringLines(const std::vector<uint8_t> &data)
   std::wstring wline;
   std::string u8line;
   while (getline(is16, wline)) {
+    if (wline.empty()) {
+      continue;
+    }
     u8line = converter.to_bytes(wline);
     if (u8line.back() == '\r') {
       u8line.pop_back();
@@ -210,7 +213,7 @@ bool isValidMappingShopWithTabLine(const std::string &line) {
   return isValidLine(kDataCount, line);
 }
 
-bool isValidTextZoneNameLine(const std::string &line) {
+bool isValidTextDataLine(const std::string &line) {
   constexpr int kDataCount = 16;
   return isValidLine(kDataCount, line);
 }
@@ -874,6 +877,28 @@ pk2::ref::TextZoneName parseTextZoneNameLine(const std::string &line) {
   ptr = parse(ptr, textZoneName.unkLang9);
   parse(ptr, textZoneName.unkLang10);
   return textZoneName;
+}
+
+pk2::ref::TextItemOrSkill parseTextItemOrSkillLine(const std::string &line) {
+  pk2::ref::TextItemOrSkill textItemOrSkill;
+  const char *ptr = line.data();
+  ptr = parse(ptr, textItemOrSkill.service);
+  ptr = parse(ptr, textItemOrSkill.key);
+  ptr = parse(ptr, textItemOrSkill.korean);
+  ptr = parse(ptr, textItemOrSkill.unkLang0);
+  ptr = parse(ptr, textItemOrSkill.unkLang1);
+  ptr = parse(ptr, textItemOrSkill.unkLang2);
+  ptr = parse(ptr, textItemOrSkill.unkLang3);
+  ptr = parse(ptr, textItemOrSkill.unkLang4);
+  ptr = parse(ptr, textItemOrSkill.english);
+  ptr = parse(ptr, textItemOrSkill.vietnamese);
+  ptr = parse(ptr, textItemOrSkill.unkLang5);
+  ptr = parse(ptr, textItemOrSkill.unkLang6);
+  ptr = parse(ptr, textItemOrSkill.unkLang7);
+  ptr = parse(ptr, textItemOrSkill.unkLang8);
+  ptr = parse(ptr, textItemOrSkill.unkLang9);
+  parse(ptr, textItemOrSkill.unkLang10);
+  return textItemOrSkill;
 }
 
 DivisionInfo parseDivisionInfo(const std::vector<uint8_t> &data) {

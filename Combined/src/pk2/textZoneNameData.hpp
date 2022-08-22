@@ -9,9 +9,6 @@ namespace pk2 {
 
 class TextZoneNameData {
 public:
-	// using LevelMap = std::unordered_map<uint8_t, ref::Level>;
-	// void addLevelItem(ref::Level &&level);
-	// const ref::Level& getLevel(uint8_t lvl) const;
   void addItem(ref::TextZoneName &&item);
   const std::string& getRegionName(const uint16_t regionId) const;
 private:

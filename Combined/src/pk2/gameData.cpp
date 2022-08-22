@@ -82,6 +82,10 @@ const LevelData& GameData::levelData() const {
   return levelData_;
 }
 
+const TextItemAndSkillData& GameData::textItemAndSkillData() const {
+  return textItemAndSkillData_;
+}
+
 const TextZoneNameData& GameData::textZoneNameData() const {
   return textZoneNameData_;
 }
@@ -155,7 +159,7 @@ std::string getFileDataAsString(Pk2ReaderModern &pk2Reader, const std::string &p
 } // namespace (anonymous)
 
 void GameData::parseCharacterData(Pk2ReaderModern &pk2Reader) {
-	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   const std::string kMasterCharacterdataName = "characterdata.txt";
   const std::string kMasterCharacterdataPath = kTextdataDirectory + kMasterCharacterdataName;
   PK2Entry masterCharacterdataEntry = pk2Reader.getEntry(kMasterCharacterdataPath);
@@ -190,7 +194,7 @@ void GameData::parseCharacterData(Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseItemData(Pk2ReaderModern &pk2Reader) {
-	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   const std::string kMasterItemdataName = "itemdata.txt";
   const std::string kMasterItemdataPath = kTextdataDirectory + kMasterItemdataName;
   auto masterItemdataStr = getFileDataAsString(pk2Reader, kMasterItemdataPath);
@@ -212,7 +216,7 @@ void GameData::parseItemData(Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseSkillData(Pk2ReaderModern &pk2Reader) {
-	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   // Prefer the encrypted file, as the client uses this and not the unencrypted version (skilldata.txt)
   const std::string kMasterSkilldataName = "skilldataenc.txt";
   const std::string kMasterSkilldataPath = kTextdataDirectory + kMasterSkilldataName;
@@ -239,7 +243,7 @@ void GameData::parseSkillData(Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseTeleportData(Pk2ReaderModern &pk2Reader) {
-	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   const std::string kTeleportDataFilename = "teleportbuilding.txt";
   {
     std::unique_lock<std::mutex> lock(printMutex_);
@@ -268,7 +272,7 @@ void GameData::parseShopData(Pk2ReaderModern &pk2Reader) {
   // List of Shop->ShopTabGroup
   std::vector<ref::MappingShopWithTab> mappingShopWithTabs;
 
-	const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
 
   // refscrapofpackageitem.txt
   // maps RefPackageItemCodeName="PACKAGE_ITEM_ETC_HP_POTION_01" to item data
@@ -457,11 +461,30 @@ void GameData::parseLevelData(Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseTextData(Pk2ReaderModern &pk2Reader) {
-  // server_dep\silkroad\textdata\textzonename.txt
-  // server_dep\silkroad\textdata\textdata_equip&skill.txt
+  parseTextZoneName(pk2Reader);
+  parseTextItemAndSkill(pk2Reader);
+}
+
+void GameData::parseTextZoneName(Pk2ReaderModern &pk2Reader) {
   const std::string kTextZoneNamePath = "server_dep\\silkroad\\textdata\\textzonename.txt";
   auto textZoneNameStr = getFileDataAsString(pk2Reader, kTextZoneNamePath);
-  parseDataFile<ref::TextZoneName>(textZoneNameStr, parsing::isValidTextZoneNameLine, parsing::parseTextZoneNameLine, std::bind(&TextZoneNameData::addItem, &textZoneNameData_, std::placeholders::_1));
+  parseDataFile<ref::TextZoneName>(textZoneNameStr, parsing::isValidTextDataLine, parsing::parseTextZoneNameLine, std::bind(&TextZoneNameData::addItem, &textZoneNameData_, std::placeholders::_1));
+}
+
+void GameData::parseTextItemAndSkill(Pk2ReaderModern &pk2Reader) {
+  const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kMasterTextDataName = "textdataname.txt";
+  const std::string kMasterTextDataPath = kTextdataDirectory + kMasterTextDataName;
+  PK2Entry masterTextDataEntry = pk2Reader.getEntry(kMasterTextDataPath);
+  auto masterTextDataData = pk2Reader.getEntryData(masterTextDataEntry);
+  auto textDataFilenames = parsing::fileDataToStringLines(masterTextDataData);
+  for (auto textDataFilename : textDataFilenames) {
+    auto textDataPath = kTextdataDirectory + textDataFilename;
+    PK2Entry textItemAndSkillEntry = pk2Reader.getEntry(textDataPath);
+    auto textItemAndSkillData = pk2Reader.getEntryData(textItemAndSkillEntry);
+    auto textItemAndSkillLines = parsing::fileDataToStringLines(textItemAndSkillData);
+    parseDataFile2<ref::TextItemOrSkill>(textItemAndSkillLines, parsing::isValidTextDataLine, parsing::parseTextItemOrSkillLine, std::bind(&TextItemAndSkillData::addItem, &textItemAndSkillData_, std::placeholders::_1));
+  }
 }
 
 void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {
