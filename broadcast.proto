@@ -60,7 +60,7 @@ message RegionNameUpdate {
   string name = 1;
 }
 
-message MovementBegan {
+message CharacterMovementBegan {
   Position currentPosition = 1;
   oneof destination {
     Position destinationPosition = 2;
@@ -69,7 +69,7 @@ message MovementBegan {
   float speed = 4;
 }
 
-message MovementEnded {
+message CharacterMovementEnded {
   Position currentPosition = 1;
 }
 
@@ -85,8 +85,8 @@ message BroadcastMessage {
     CharacterSpUpdate characterSpUpdate = 6;
     CharacterNameUpdate characterNameUpdate = 7;
     GoldAmountUpdate goldAmountUpdate = 8;
-    MovementBegan movementBegan = 9;
-    MovementEnded movementEnded = 10;
+    CharacterMovementBegan characterMovementBegan = 9;
+    CharacterMovementEnded characterMovementEnded = 10;
     RegionNameUpdate regionNameUpdate = 11;
   }
 }
