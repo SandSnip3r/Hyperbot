@@ -10,6 +10,14 @@ enum GoldLocation {
   kGuildStorage = 2;
 }
 
+// Sub-structures
+
+message Position {
+  uint32 regionId = 1;
+  float x = 2;
+  float y = 3;
+}
+
 // Messages
 
 message CharacterHpUpdate {
@@ -52,6 +60,19 @@ message RegionNameUpdate {
   string name = 1;
 }
 
+message MovementBegan {
+  Position currentPosition = 1;
+  oneof destination {
+    Position destinationPosition = 2;
+    uint32 destinationAngle = 3;
+  }
+  float speed = 4;
+}
+
+message MovementEnded {
+  Position currentPosition = 1;
+}
+
 // Broadcast message
 
 message BroadcastMessage {
@@ -64,6 +85,8 @@ message BroadcastMessage {
     CharacterSpUpdate characterSpUpdate = 6;
     CharacterNameUpdate characterNameUpdate = 7;
     GoldAmountUpdate goldAmountUpdate = 8;
-    RegionNameUpdate regionNameUpdate = 9;
+    MovementBegan movementBegan = 9;
+    MovementEnded movementEnded = 10;
+    RegionNameUpdate regionNameUpdate = 11;
   }
 }
