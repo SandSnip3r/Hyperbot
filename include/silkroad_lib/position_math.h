@@ -5,7 +5,7 @@
 
 namespace sro::position_math {
 
-float calculateDistance(const Position &srcPos, const Position &destPos);
+float calculateDistance2D(const Position &srcPos, const Position &destPos);
 Position interpolateBetweenPoints(const Position &srcPos, const Position &destPos, float percent);
 RegionId worldRegionIdFromSectors(const Sector xSector, const Sector zSector);
 

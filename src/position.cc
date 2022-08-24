@@ -1,37 +1,64 @@
+#include "game_constants.h"
 #include "position.h"
+#include "position_math.h"
+
+#include <cmath>
 
 namespace sro {
 
-Position::Position() {}
-
-Position::Position(RegionId regionId, float xOffset, float yOffset, float zOffset) {}
+Position::Position(RegionId regionId, float xOffset, float yOffset, float zOffset) : regionId_(regionId), xOffset_(xOffset), yOffset_(yOffset), zOffset_(zOffset) {
+  normalize();
+}
 
 RegionId Position::regionId() const {
-  return {};
+  return regionId_;
+}
+
+bool Position::isDungeon() const {
+  return regionId_ & 0x8000;
+}
+
+DungeonId Position::dungeonId() const {
+  return regionId_ & 0xFF;
 }
 
 Sector Position::xSector() const {
-  return {};
+  return regionId_ & 0xFF;
 }
 
 Sector Position::zSector() const {
-  return {};
+  return (regionId_ >> 8) & 0x7F;
 }
 
 float Position::xOffset() const {
-  return {};
+  return xOffset_;
 }
 
 float Position::yOffset() const {
-  return {};
+  return yOffset_;
 }
 
 float Position::zOffset() const {
-  return {};
+  return zOffset_;
 }
 
 void Position::normalize() {
-  
+  using sro::game_constants::kRegionSize;
+  if (isDungeon()) {
+    // Nothing to normalize, only one "region"
+    return;
+  }
+  Sector newXSector = xSector() + static_cast<Sector>(floor(xOffset_/kRegionSize));
+  Sector newZSector = zSector() + static_cast<Sector>(floor(zOffset_/kRegionSize));
+  xOffset_ = std::fmod(xOffset_, kRegionSize);
+  zOffset_ = std::fmod(zOffset_, kRegionSize);
+  if (xOffset_ < 0) {
+    xOffset_ += kRegionSize;
+  }
+  if (zOffset_ < 0) {
+    zOffset_ += kRegionSize;
+  }
+  regionId_ = sro::position_math::worldRegionIdFromSectors(newXSector, newZSector);
 }
 
 } // namespace sro

@@ -4,7 +4,8 @@
 namespace sro::game_constants {
 
 constexpr float kRegionWidth{1920.0f};
-constexpr float kRegionHeight{1920.0f};
+constexpr float kRegionHeight{kRegionWidth};
+constexpr float kRegionSize{kRegionWidth};
   
 } // namespace sro::game_constants
 

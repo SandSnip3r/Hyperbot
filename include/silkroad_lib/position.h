@@ -8,13 +8,16 @@
 namespace sro {
 
 using RegionId = uint16_t;
+using DungeonId = uint16_t;
 using Sector = uint8_t;
 
 class Position {
 public:
-  Position();
+  // Position() = default;
   Position(RegionId regionId, float xOffset, float yOffset, float zOffset);
   RegionId regionId() const;
+  bool isDungeon() const;
+  DungeonId dungeonId() const;
   Sector xSector() const;
   Sector zSector() const;
   float xOffset() const;
