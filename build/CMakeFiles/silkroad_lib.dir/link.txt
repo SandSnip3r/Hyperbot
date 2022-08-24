@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsilkroad_lib.a  CMakeFiles/silkroad_lib.dir/src/position_math.cc.o
+/usr/bin/ranlib libsilkroad_lib.a

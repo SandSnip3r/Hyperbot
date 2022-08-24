@@ -1,0 +1,3 @@
+/mnt/c/Users/Victor/Documents/Development/SilkroadLib/build/CMakeFiles/rebuild_cache.dir
+/mnt/c/Users/Victor/Documents/Development/SilkroadLib/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/Victor/Documents/Development/SilkroadLib/build/CMakeFiles/silkroad_lib.dir
