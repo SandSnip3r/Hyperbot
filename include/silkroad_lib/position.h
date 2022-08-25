@@ -10,6 +10,7 @@ namespace sro {
 using RegionId = uint16_t;
 using DungeonId = uint16_t;
 using Sector = uint8_t;
+using MovementAngle = uint16_t;
 
 struct GameCoordinate {
   int x, y;

@@ -2,9 +2,16 @@
 #include "position_math.h"
 
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace sro::position_math {
+
+namespace {
+
+constexpr double k2Pi{6.283185307179586};
+
+} // anonymous namespace
 
 float calculateDistance2D(const Position &srcPos, const Position &destPos) {
   using sro::game_constants::kRegionSize;
@@ -54,6 +61,16 @@ Position interpolateBetweenPoints(const Position &srcPos, const Position &destPo
     const auto newPositionZOffset = srcPos.zOffset() + zDistance*percent;
     return { srcPos.regionId(), newPositionXOffset, newPositionYOffset, newPositionZOffset };
   }
+}
+
+Position getNewPositionGivenAngleAndDistance(const Position &srcPos, MovementAngle angle, float distance) {
+  const auto angleRadians = k2Pi * static_cast<double>(angle) / std::numeric_limits<MovementAngle>::max();
+  const float dx = distance * cos(angleRadians);
+  const float dz = distance * sin(angleRadians);
+  return { srcPos.regionId(),
+           srcPos.xOffset() + dx,
+           srcPos.yOffset(),
+           srcPos.zOffset() + dz };
 }
 
 RegionId worldRegionIdFromSectors(const Sector xSector, const Sector zSector) {
