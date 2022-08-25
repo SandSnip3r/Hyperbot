@@ -3,6 +3,8 @@
 
 #include "proto/broadcast.pb.h"
 
+#include <silkroad_lib/position.h>
+
 #include <zmq.hpp>
 
 #include <QObject>
@@ -27,6 +29,9 @@ signals:
   void characterSpUpdate(uint32_t skillPoints);
   void characterNameUpdate(const std::string &name);
   void inventoryGoldAmountUpdate(uint64_t goldAmount);
+  void characterMovementBeganToDest(sro::Position currentPosition, sro::Position destinationPosition, float speed);
+  void characterMovementBeganTowardAngle(sro::Position currentPosition, uint16_t movementAngle, float speed);
+  void characterMovementEnded(sro::Position position);
   void regionNameUpdate(const std::string &regionName);
 private:
   zmq::context_t &context_;

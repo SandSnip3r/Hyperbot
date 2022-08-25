@@ -1,3 +1,6 @@
 [submodule "proto"]
 	path = proto
 	url = ../hyperbot-ui-proto/
+[submodule "SilkroadLib"]
+	path = SilkroadLib
+	url = /mnt/c/Users/Victor/Documents/Development/SilkroadLib

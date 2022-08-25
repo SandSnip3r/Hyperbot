@@ -2,6 +2,8 @@
 #include "packetListWidgetItem.hpp"
 #include "./ui_mainwindow.h"
 
+#include <silkroad_lib/position_math.h>
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
   initializeUi();
@@ -83,6 +85,9 @@ void MainWindow::connectBotBroadcastMessages() {
   connect(&eventHandler_, &EventHandler::characterSpUpdate, this, &MainWindow::onCharacterSpUpdate);
   connect(&eventHandler_, &EventHandler::characterNameUpdate, this, &MainWindow::onCharacterNameUpdate);
   connect(&eventHandler_, &EventHandler::inventoryGoldAmountUpdate, this, &MainWindow::onInventoryGoldAmountUpdate);
+  connect(&eventHandler_, &EventHandler::characterMovementBeganToDest, this, &MainWindow::onCharacterMovementBeganToDest);
+  connect(&eventHandler_, &EventHandler::characterMovementBeganTowardAngle, this, &MainWindow::onCharacterMovementBeganTowardAngle);
+  connect(&eventHandler_, &EventHandler::characterMovementEnded, this, &MainWindow::onCharacterMovementEnded);
   connect(&eventHandler_, &EventHandler::regionNameUpdate, this, &MainWindow::onRegionNameUpdate);
 }
 
@@ -91,6 +96,44 @@ void MainWindow::connectPacketInjection() {
   connect(ui->injectPacketButton, &QPushButton::clicked, this, &MainWindow::injectPacketButtonClicked);
   connect(ui->injectedPacketListWidget, &ReinjectablePacketListWidget::reinjectSelectedPackets, this, &MainWindow::reinjectSelectedPackets);
   connect(ui->injectedPacketListWidget, &ReinjectablePacketListWidget::clearPackets, this, &MainWindow::clearPackets);
+}
+
+void MainWindow::triggerMovementTimer() {
+  // Cleanup previous timer if it exists
+  killMovementTimer();
+  // Start timer to update position
+  movementUpdateTimer_ = new QTimer(this);
+  connect(movementUpdateTimer_, &QTimer::timeout, this, &MainWindow::timerTriggered);
+  movementUpdateTimer_->setInterval(kPositionRedrawDelayMs);
+  movementUpdateTimer_->start();
+}
+
+void MainWindow::timerTriggered() {
+  if (!characterData_.movement) {
+    throw std::runtime_error("Timer triggered, but we're not moving");
+  }
+  const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-characterData_.movement->startTime).count();
+  sro::Position currentPosition;
+  if (const auto *destPosPtr = std::get_if<Movement::kToDestination>(&characterData_.movement->destPosOrAngle)) {
+    const auto totalDistanceToTravel = sro::position_math::calculateDistance2D(characterData_.movement->srcPos, *destPosPtr);
+    const auto totalSecondsToTravel = totalDistanceToTravel/characterData_.movement->speed;
+    const double fractionTraveled = std::min(1.0, elapsedTimeMs / (totalSecondsToTravel*1000.0));
+    currentPosition = sro::position_math::interpolateBetweenPoints(characterData_.movement->srcPos, *destPosPtr, fractionTraveled);
+  } else {
+    const auto movementAngle = std::get<Movement::kTowardAngle>(characterData_.movement->destPosOrAngle);
+    const auto totalDistanceTraveled = elapsedTimeMs/1000.0 * characterData_.movement->speed;
+    currentPosition = sro::position_math::getNewPositionGivenAngleAndDistance(characterData_.movement->srcPos, movementAngle, totalDistanceTraveled);
+  }
+  const auto gameCoordinate = currentPosition.toGameCoordinate();
+  ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
+}
+
+void MainWindow::killMovementTimer() {
+  if (movementUpdateTimer_ != nullptr) {
+    delete movementUpdateTimer_;
+    movementUpdateTimer_ = nullptr;
+  }
 }
 
 MainWindow::~MainWindow() {
@@ -225,7 +268,7 @@ void MainWindow::onCharacterExperienceUpdate(uint64_t currentExperience, uint32_
 }
 
 void MainWindow::onCharacterSpUpdate(uint32_t skillPoints) {
-  ui->characterSpLabel->setText(QString(tr("%1")).arg(skillPoints));
+  ui->characterSpLabel->setText(QString("%1").arg(skillPoints));
 }
 
 void MainWindow::onCharacterNameUpdate(const std::string &name) {
@@ -234,6 +277,37 @@ void MainWindow::onCharacterNameUpdate(const std::string &name) {
 
 void MainWindow::onInventoryGoldAmountUpdate(uint64_t goldAmount) {
   ui->inventoryGoldAmountLabel->setText(QString::number(goldAmount));
+}
+
+void MainWindow::onCharacterMovementBeganToDest(sro::Position currentPosition, sro::Position destinationPosition, float speed) {
+  // Save info
+  characterData_.movement.emplace();
+  characterData_.movement->speed = speed;
+  characterData_.movement->startTime = std::chrono::high_resolution_clock::now();
+  characterData_.movement->srcPos = currentPosition;
+  characterData_.movement->destPosOrAngle = destinationPosition;
+  // Display current position
+  const auto gameCoordinate = currentPosition.toGameCoordinate();
+  ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
+  triggerMovementTimer();
+}
+
+void MainWindow::onCharacterMovementBeganTowardAngle(sro::Position currentPosition, uint16_t movementAngle, float speed) {
+  characterData_.movement.emplace();
+  characterData_.movement->speed = speed;
+  characterData_.movement->startTime = std::chrono::high_resolution_clock::now();
+  characterData_.movement->srcPos = currentPosition;
+  characterData_.movement->destPosOrAngle = movementAngle;
+  // Display current position
+  const auto gameCoordinate = currentPosition.toGameCoordinate();
+  ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
+  triggerMovementTimer();
+}
+
+void MainWindow::onCharacterMovementEnded(sro::Position position) {
+  killMovementTimer();
+  const auto gameCoordinate = position.toGameCoordinate();
+  ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
 }
 
 void MainWindow::onRegionNameUpdate(const std::string &regionName) {

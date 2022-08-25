@@ -227,7 +227,7 @@
             </widget>
            </item>
            <item row="5" column="2">
-            <widget class="QLabel" name="label_13">
+            <widget class="QLabel" name="characterPositionLabel">
              <property name="text">
               <string>345,11</string>
              </property>

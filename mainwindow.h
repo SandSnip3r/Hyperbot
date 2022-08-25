@@ -5,9 +5,12 @@
 #include "eventHandler.hpp"
 #include "requester.hpp"
 
+#include <silkroad_lib/position.h>
+
 #include <zmq.hpp>
 
 #include <QMainWindow>
+#include <QTimer>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -20,17 +23,21 @@ public:
   ~MainWindow();
 
 private:
+  static constexpr int kPositionRedrawDelayMs{33};
   Ui::MainWindow *ui;
   zmq::context_t context_;
   EventHandler eventHandler_{context_};
   Requester requester_{context_};
   CharacterData characterData_;
+  QTimer *movementUpdateTimer_{nullptr};
 
   void initializeUi();
   void connectMainControls();
   void connectTabWidget();
   void connectBotBroadcastMessages();
   void connectPacketInjection();
+  void triggerMovementTimer();
+  void killMovementTimer();
 
   void injectPacket(request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes);
 private slots:
@@ -52,7 +59,11 @@ public slots:
   void onCharacterSpUpdate(uint32_t skillPoints);
   void onCharacterNameUpdate(const std::string &name);
   void onInventoryGoldAmountUpdate(uint64_t goldAmount);
+  void onCharacterMovementBeganToDest(sro::Position currentPosition, sro::Position destinationPosition, float speed);
+  void onCharacterMovementBeganTowardAngle(sro::Position currentPosition, uint16_t movementAngle, float speed);
+  void onCharacterMovementEnded(sro::Position position);
   void onRegionNameUpdate(const std::string &regionName);
+  void timerTriggered();
 };
 
 #endif // MAINWINDOW_H

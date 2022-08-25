@@ -13,6 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FindProtobuf)
 add_subdirectory(proto)
+add_subdirectory(SilkroadLib)
 
 find_package(cppzmq CONFIG REQUIRED)
 
@@ -75,6 +76,7 @@ PRIVATE
   cppzmq-static
   proto
   ${PROTOBUF_LIBRARIES}
+  SilkroadLib
 )
 
 set_target_properties(hyperbot-ui PROPERTIES

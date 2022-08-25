@@ -73,6 +73,36 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         }
         break;
       }
+    case broadcast::BroadcastMessage::BodyCase::kCharacterMovementBegan: {
+        const broadcast::CharacterMovementBegan &msg = message.charactermovementbegan();
+        const broadcast::Position &currPos = msg.currentposition();
+        sro::Position currentPosition(currPos.regionid(), currPos.x(), currPos.y(), currPos.z());
+        const auto speed = msg.speed();
+        switch (msg.destination_case()) {
+          case broadcast::CharacterMovementBegan::DestinationCase::kDestinationPosition: {
+            const broadcast::Position &destPos = msg.destinationposition();
+            sro::Position destinationPosition(destPos.regionid(), destPos.x(), destPos.y(), destPos.z());
+            emit characterMovementBeganToDest(currentPosition, destinationPosition, speed);
+            break;
+          }
+          case broadcast::CharacterMovementBegan::DestinationCase::kDestinationAngle: {
+            const auto angle = msg.destinationangle();
+            emit characterMovementBeganTowardAngle(currentPosition, angle, speed);
+            break;
+          }
+          default:
+            // Unknown case. Might be a malformed message
+            break;
+        }
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kCharacterMovementEnded: {
+        const broadcast::CharacterMovementEnded &msg = message.charactermovementended();
+        const broadcast::Position &currPos = msg.currentposition();
+        sro::Position currentPosition(currPos.regionid(), currPos.x(), currPos.y(), currPos.z());
+        emit characterMovementEnded(currentPosition);
+        break;
+      }
     case broadcast::BroadcastMessage::BodyCase::kRegionNameUpdate: {
         const broadcast::RegionNameUpdate &msg = message.regionnameupdate();
         emit regionNameUpdate(msg.name());
