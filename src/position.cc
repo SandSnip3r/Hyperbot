@@ -42,6 +42,11 @@ float Position::zOffset() const {
   return zOffset_;
 }
 
+GameCoordinate Position::toGameCoordinate() const {
+  return { static_cast<int>(round((xSector() - 135) * 192 + xOffset() / 10.0)),
+           static_cast<int>(round((zSector() - 92) * 192 + zOffset() / 10.0)) };
+}
+
 void Position::normalize() {
   using sro::game_constants::kRegionSize;
   if (isDungeon()) {

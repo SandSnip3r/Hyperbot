@@ -11,6 +11,10 @@ using RegionId = uint16_t;
 using DungeonId = uint16_t;
 using Sector = uint8_t;
 
+struct GameCoordinate {
+  int x, y;
+};
+
 class Position {
 public:
   // Position() = default;
@@ -23,6 +27,7 @@ public:
   float xOffset() const;
   float yOffset() const;
   float zOffset() const;
+  GameCoordinate toGameCoordinate() const;
 private:
   RegionId regionId_;
   float xOffset_;
