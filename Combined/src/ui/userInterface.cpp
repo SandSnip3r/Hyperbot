@@ -86,6 +86,44 @@ void UserInterface::broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::Go
   broadcast(broadcastMessage);
 }
 
+void UserInterface::broadcastMovementBeganUpdate(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition, float speed) {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcast::Position *currPos = broadcastMessage.mutable_charactermovementbegan()->mutable_currentposition();
+  currPos->set_regionid(srcPosition.regionId);
+  currPos->set_x(srcPosition.xOffset);
+  currPos->set_y(srcPosition.yOffset);
+  currPos->set_z(srcPosition.zOffset);
+  broadcast::Position *destPos = broadcastMessage.mutable_charactermovementbegan()->mutable_destinationposition();
+  destPos->set_regionid(destPosition.regionId);
+  destPos->set_x(destPosition.xOffset);
+  destPos->set_y(destPosition.yOffset);
+  destPos->set_z(destPosition.zOffset);
+  broadcastMessage.mutable_charactermovementbegan()->set_speed(speed);
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastMovementBeganUpdate(const packet::structures::Position &srcPosition, uint16_t angle, float speed) {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcast::Position *currPos = broadcastMessage.mutable_charactermovementbegan()->mutable_currentposition();
+  currPos->set_regionid(srcPosition.regionId);
+  currPos->set_x(srcPosition.xOffset);
+  currPos->set_y(srcPosition.yOffset);
+  currPos->set_z(srcPosition.zOffset);
+  broadcastMessage.mutable_charactermovementbegan()->set_destinationangle(angle);
+  broadcastMessage.mutable_charactermovementbegan()->set_speed(speed);
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastMovementEndedUpdate(const packet::structures::Position &currentPosition) {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcast::Position *currPos = broadcastMessage.mutable_charactermovementended()->mutable_currentposition();
+  currPos->set_regionid(currentPosition.regionId);
+  currPos->set_x(currentPosition.xOffset);
+  currPos->set_y(currentPosition.yOffset);
+  currPos->set_z(currentPosition.zOffset);
+  broadcast(broadcastMessage);
+}
+
 void UserInterface::broadcastRegionNameUpdate(std::string_view regionName) {
   broadcast::RegionNameUpdate regionNameUpdate;
   regionNameUpdate.set_name(std::string(regionName));

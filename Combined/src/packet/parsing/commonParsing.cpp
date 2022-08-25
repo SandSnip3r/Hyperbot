@@ -1,5 +1,7 @@
 #include "commonParsing.hpp"
 
+#include "math/position.hpp"
+
 #include <iostream>
 
 namespace packet::parsing {
@@ -262,6 +264,7 @@ structures::Position parsePosition(StreamUtility &stream) {
   position.xOffset = stream.Read<float>();
   position.yOffset = stream.Read<float>();
   position.zOffset = stream.Read<float>();
+  math::position::normalize(position);
   return position;
 }
 

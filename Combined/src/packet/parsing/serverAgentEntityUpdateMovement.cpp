@@ -1,5 +1,7 @@
 #include "serverAgentEntityUpdateMovement.hpp"
 
+#include "math/position.hpp"
+
 #include <iostream>
 #include <utility>
 
@@ -24,6 +26,7 @@ ServerAgentEntityUpdateMovement::ServerAgentEntityUpdateMovement(const PacketCon
       tmpDestinationPosition.yOffset = stream.Read<int16_t>();
       tmpDestinationPosition.zOffset = stream.Read<int16_t>();
     }
+    math::position::normalize(tmpDestinationPosition);
     destinationPosition_.emplace(std::move(tmpDestinationPosition));
   } else {
     angleAction_ = static_cast<packet::enums::AngleAction>(stream.Read<uint8_t>());
@@ -49,6 +52,7 @@ ServerAgentEntityUpdateMovement::ServerAgentEntityUpdateMovement(const PacketCon
     // Source position comes with X and Z values x10
     tmpSourcePosition.xOffset /= 10.0;
     tmpSourcePosition.zOffset /= 10.0;
+    math::position::normalize(tmpSourcePosition);
     sourcePosition_.emplace(std::move(tmpSourcePosition));
   }
 }

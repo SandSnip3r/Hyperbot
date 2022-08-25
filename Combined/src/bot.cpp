@@ -54,8 +54,9 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kStateCharacterListUpdated, eventHandleFunction);
   // Movement events
   eventBroker_.subscribeToEvent(event::EventCode::kMovementTimerEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCharacterSpeedUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kMovementBegan, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMovementEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
   // Character info events
   eventBroker_.subscribeToEvent(event::EventCode::kSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemWaitForReuseDelay, eventHandleFunction);
@@ -124,11 +125,18 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kMovementTimerEnded:
         handleMovementTimerEnded();
         break;
-      case event::EventCode::kCharacterSpeedUpdated:
-        handleSpeedUpdated();
+      case event::EventCode::kMovementBegan:
+        handleMovementBegan();
         break;
       case event::EventCode::kMovementEnded:
         handleMovementEnded();
+        break;
+      case event::EventCode::kEnteredNewRegion:
+        {
+          const auto pos = selfState_.position();
+          const auto &regionName = gameData_.textZoneNameData().getRegionName(pos.regionId);
+          userInterface_.broadcastRegionNameUpdate(regionName);
+        }
         break;
 
       // Character info events
@@ -334,35 +342,23 @@ void Bot::handleStateCharacterListUpdated() const {
 // ============================================================================================================================
 
 void Bot::handleMovementTimerEnded() {
-  selfState_.resetMovingEventId();
-  selfState_.doneMoving();
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded));
+  selfState_.movementTimerCompleted();
 }
 
-void Bot::handleSpeedUpdated() {
-  if (selfState_.haveMovingEventId() && selfState_.moving()) {
-    if (selfState_.haveDestination()) {
-      // Need to update timer
-      auto seconds = helpers::secondsToTravel(selfState_.position(), selfState_.destination(), selfState_.currentSpeed());
-      eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
-      const auto movingEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementTimerEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
-      selfState_.setMovingEventId(movingEventId);
-    }
+void Bot::handleMovementBegan() {
+  if (!selfState_.moving()) {
+    throw std::runtime_error("Got a movement began event, but we're not moving");
+  }
+  const auto currentPosition = selfState_.position();
+  if (selfState_.haveDestination()) {
+    userInterface_.broadcastMovementBeganUpdate(currentPosition, selfState_.destination(), selfState_.currentSpeed());
+  } else {
+    userInterface_.broadcastMovementBeganUpdate(currentPosition, selfState_.movementAngle(), selfState_.currentSpeed());
   }
 }
 
 void Bot::handleMovementEnded() {
-  {
-    static uint16_t lastKnownRegion{0xFFFF};
-    // TODO: Solve this problem in a more elegant way
-    //  Also, there is the problem that we might cross a region boundary before movement ends
-    if (selfState_.position().regionId != lastKnownRegion) {
-      // Region updated
-      const auto &regionName = gameData_.textZoneNameData().getRegionName(selfState_.position().regionId);
-      userInterface_.broadcastRegionNameUpdate(regionName);
-      lastKnownRegion = selfState_.position().regionId;
-    }
-  }
+  userInterface_.broadcastMovementEndedUpdate(selfState_.position());
   onUpdate();
 }
 
@@ -378,6 +374,7 @@ void Bot::handleSpawned() {
   userInterface_.broadcastCharacterNameUpdate(selfState_.characterName);
   userInterface_.broadcastGoldAmountUpdate(selfState_.getGold(), broadcast::GoldLocation::kInventory);
   const auto &regionName = gameData_.textZoneNameData().getRegionName(selfState_.position().regionId);
+  userInterface_.broadcastMovementEndedUpdate(selfState_.position());
   userInterface_.broadcastRegionNameUpdate(regionName);
 }
 

@@ -1,3 +1,4 @@
+#include "logging.hpp"
 #include "position.hpp"
 
 #include <stdexcept>
@@ -32,8 +33,8 @@ void normalize(packet::structures::Position &position) {
     return;
   }
   constexpr int kRegionSize = 1920; // TODO: Move to a common area
-  uint16_t newXSector = position.xSector() + static_cast<uint8_t>(position.xOffset/kRegionSize);
-  uint16_t newZSector = position.zSector() + static_cast<uint8_t>(position.zOffset/kRegionSize);
+  uint16_t newXSector = position.xSector() + static_cast<uint8_t>(floor(position.xOffset/kRegionSize));
+  uint16_t newZSector = position.zSector() + static_cast<uint8_t>(floor(position.zOffset/kRegionSize));
   position.xOffset = std::fmod(position.xOffset, static_cast<float>(kRegionSize));
   position.zOffset = std::fmod(position.zOffset, static_cast<float>(kRegionSize));
   if (position.xOffset < 0) {
@@ -42,7 +43,7 @@ void normalize(packet::structures::Position &position) {
   if (position.zOffset < 0) {
     position.zOffset += kRegionSize;
   }
-  position.regionId = packet::structures::createWorldRegionId(newXSector, newZSector);
+  position.regionId = worldRegionIdFromXY(newXSector, newZSector);
 }
 
 packet::structures::Position interpolateBetweenPoints(const packet::structures::Position &srcPos, const packet::structures::Position &destPos, float percent) {
@@ -95,3 +96,23 @@ std::pair<int,int> regionXYFromRegionId(const uint16_t regionId) {
 }
 
 } // namespace math::position
+
+std::ostream& operator<<(std::ostream &stream, const packet::structures::Position &pos) {
+  stream << '{';
+  if (pos.isDungeon()) {
+    stream << (int)pos.dungeonId();
+  } else {
+    stream << (int)pos.xSector() << ',' << (int)pos.zSector();
+  }
+  stream << " (" << pos.xOffset << ',' << pos.yOffset << ',' << pos.zOffset << ")}";
+  return stream;
+}
+
+bool operator==(const packet::structures::Position &pos1, const packet::structures::Position &pos2) {
+  if (pos1.regionId != pos2.regionId) {
+    return false;
+  }
+  return ((pos1.xOffset == pos2.xOffset) &&
+          (pos1.yOffset == pos2.yOffset) &&
+          (pos1.zOffset == pos2.zOffset));
+}

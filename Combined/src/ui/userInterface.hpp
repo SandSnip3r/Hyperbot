@@ -2,6 +2,7 @@
 #define UI_USERINTERFACE_HPP_
 
 #include "broker/eventBroker.hpp"
+#include "packet/structures/packetInnerStructures.hpp"
 
 #include "ui-proto/broadcast.pb.h"
 
@@ -25,6 +26,9 @@ public:
   void broadcastCharacterSpUpdate(uint32_t skillPoints);
   void broadcastCharacterNameUpdate(std::string_view characterName);
   void broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::GoldLocation goldLocation);
+  void broadcastMovementBeganUpdate(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition, float speed);
+  void broadcastMovementBeganUpdate(const packet::structures::Position &srcPosition, uint16_t angle, float speed);
+  void broadcastMovementEndedUpdate(const packet::structures::Position &currentPosition);
   void broadcastRegionNameUpdate(std::string_view regionName);
   void broadcast(const broadcast::BroadcastMessage &broadcastProto);
 private:

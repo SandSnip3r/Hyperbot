@@ -1,14 +1,34 @@
 #include "helpers.hpp"
+#include "logging.hpp"
 #include "self.hpp"
 
 #include "math/position.hpp"
+
+// From Pathfinder
+#include "math_helpers.h"
 
 #include <cmath>
 #include <iostream>
 
 namespace state {
 
-Self::Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData) : eventBroker_(eventBroker), gameData_(gameData) {}
+Self::Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData) : eventBroker_(eventBroker), gameData_(gameData) {
+  auto eventHandleFunction = std::bind(&Self::handleEvent, this, std::placeholders::_1);
+  eventBroker_.subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
+}
+
+void Self::handleEvent(const event::Event *event) {
+  try {
+    const auto eventCode = event->eventCode;
+    switch (eventCode) {
+      case event::EventCode::kEnteredNewRegion:
+        enteredRegion();
+        break;
+    }
+  } catch (std::exception &ex) {
+    LOG() << "Error while handling event!\n  " << ex.what() << std::endl;
+  }
+}
 
 void Self::initialize(uint32_t globalId, uint32_t refObjId) {
   globalId_ = globalId;
@@ -86,13 +106,28 @@ void Self::setSpeed(float walkSpeed, float runSpeed) {
     // Didnt actually change
     return;
   }
-  if (moving_) {
-    // In order to be able to interpolate position in the future, we need to update these values
-    lastKnownPosition_ = interpolateCurrentPosition();
-    startedMovingTime_ = currentTime;
-  }
+  // Get interpolated position before change speed, since that calulation depends on our current speed
+  const auto interpolatedPosition = interpolateCurrentPosition();
   walkSpeed_ = walkSpeed;
   runSpeed_ = runSpeed;
+  if (moving_) {
+    // In order to be able to interpolate position in the future, we need to update these values
+    lastKnownPosition_ = interpolatedPosition;
+    startedMovingTime_ = currentTime;
+
+    if (destinationPosition_) {
+      if (!movingEventId_) {
+        throw std::runtime_error("We're moving towards some desitnation position, but there's no timer running");
+      }
+      // Update timer for new speed
+      eventBroker_.cancelDelayedEvent(*movingEventId_);
+      auto seconds = helpers::secondsToTravel(lastKnownPosition_, *destinationPosition_, currentSpeed());
+      movingEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementTimerEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+    }
+
+    // Publish a movement began event since this is essentially creating a new movement
+    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementBegan));
+  }
 }
 
 void Self::setHwanSpeed(float hwanSpeed) {
@@ -115,76 +150,179 @@ void Self::setBodyState(packet::enums::BodyState bodyState) {
   bodyState_ = bodyState;
 }
 
-void Self::setPosition(const packet::structures::Position &position) {
+void Self::setStationaryAtPosition(const packet::structures::Position &position) {
+  cancelMovement();
   lastKnownPosition_ = position;
-  moving_ = false;
   destinationPosition_.reset();
   movementAngle_.reset();
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded));
 }
 
 void Self::syncPosition(const packet::structures::Position &position) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto expectedPosition = this->position();
   lastKnownPosition_ = position;
   // TODO: Need angle?
   if (moving_) {
     startedMovingTime_ = currentTime;
+    const auto offByDistance = math::position::calculateDistance(expectedPosition, position);
+    LOG() << "We are moving, syncing our position. We were off by " << offByDistance << std::endl;
+    // Might be worth recalculating travel time and starting a new timer
   }
 }
 
-void Self::doneMoving() {
+void Self::movementTimerCompleted() {
+  if (movementAngle_) {
+    // A timer shouldnt exist if we're running towards some angle
+    throw std::runtime_error("Self: Movement timer completed, but we were running towards some angle");
+  }
+  if (!movingEventId_) {
+    throw std::runtime_error("Self: Movement timer completed, but had no running timer");
+  }
   if (!moving_) {
-    throw std::runtime_error("Self: Done moving, but we werent moving");
+    throw std::runtime_error("Self: Movement timer completed, but we werent moving");
   }
-  if (!destinationPosition_ && !movementAngle_) {
-    throw std::runtime_error("Self: Done moving, but we dont know where we were going");
+  if (!destinationPosition_) {
+    throw std::runtime_error("Self: Movement timer completed, but we dont know where we were going");
   }
-  moving_ = false;
+  cancelMovement();
   lastKnownPosition_ = *destinationPosition_;
   destinationPosition_.reset();
-  movementAngle_.reset();
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded));
 }
 
-void Self::setMoving(const packet::structures::Position &destination) {
+void Self::setMovingToDestination(const std::optional<packet::structures::Position> &sourcePosition, const packet::structures::Position &destinationPosition) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
-  if (moving_) {
+  if (sourcePosition) {
+    lastKnownPosition_ = *sourcePosition;
+  } else if (moving_) {
     // We've pivoted while moving, calculate where we are and save that
     lastKnownPosition_ = interpolateCurrentPosition();
   }
+  if (lastKnownPosition_ == destinationPosition) {
+    // Not going anywhere
+    setStationaryAtPosition(lastKnownPosition_);
+    return;
+  }
+  cancelMovement();
   moving_ = true;
   startedMovingTime_ = currentTime;
-  destinationPosition_ = destination;
+  destinationPosition_ = destinationPosition;
   movementAngle_.reset();
+
+  if (lastKnownPosition_.xOffset < 0 || lastKnownPosition_.zOffset >= 1920) {
+    throw std::runtime_error("lastKnownPosition is not normalized");
+  }
+  if (destinationPosition_->xOffset < 0 || destinationPosition_->zOffset >= 1920) {
+    throw std::runtime_error("destinationPosition is not normalized");
+  }
+
+  checkIfWillLeaveRegionAndSetTimer(lastKnownPosition_);
+
+  // Start timer
+  const auto seconds = helpers::secondsToTravel(lastKnownPosition_, *destinationPosition_, currentSpeed());
+  movingEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementTimerEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementBegan));
 }
 
-void Self::setMoving(const uint16_t angle) {
+void Self::setMovingTowardAngle(const std::optional<packet::structures::Position> &sourcePosition, const uint16_t angle) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
-  if (moving_) {
+  if (sourcePosition) {
+    lastKnownPosition_ = *sourcePosition;
+  } else if (moving_) {
     // We've pivoted while moving, calculate where we are and save that
     lastKnownPosition_ = interpolateCurrentPosition();
   }
+  cancelMovement();
   moving_ = true;
   startedMovingTime_ = currentTime;
-  movementAngle_ = angle;
   destinationPosition_.reset();
-}
+  movementAngle_ = angle;
 
-void Self::setMovingEventId(const broker::TimerManager::TimerId &timerId) {
-  movingEventId_ = timerId;
-}
-
-void Self::resetMovingEventId() {
-  movingEventId_.reset();
-}
-
-bool Self::haveMovingEventId() const {
-  return movingEventId_.has_value();
-}
-
-broker::TimerManager::TimerId Self::getMovingEventId() const {
-  if (!movingEventId_.has_value()) {
-    throw std::runtime_error("Self: Asking for moving event id, but we dont have one");
+  if (lastKnownPosition_.xOffset < 0 || lastKnownPosition_.zOffset >= 1920) {
+    throw std::runtime_error("lastKnownPosition is not normalized");
   }
-  return movingEventId_.value();
+
+  checkIfWillLeaveRegionAndSetTimer(lastKnownPosition_);
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementBegan));
+}
+
+void Self::checkIfWillLeaveRegionAndSetTimer(const packet::structures::Position &currentPosition) {
+  if (destinationPosition_) {
+    if (currentPosition.regionId == destinationPosition_->regionId) {
+      // Not going to leave our region
+      return;
+    }
+    // We're going to change regions
+    const auto xSectorDiff = destinationPosition_->xSector() - currentPosition.xSector();
+    const auto zSectorDiff = destinationPosition_->zSector() - currentPosition.zSector();
+    const auto xDiff = (destinationPosition_->xOffset - currentPosition.xOffset) + xSectorDiff * 1920.0;
+    const auto zDiff = (destinationPosition_->zOffset - currentPosition.zOffset) + zSectorDiff * 1920.0;
+    calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(currentPosition, xDiff, zDiff);
+  } else {
+    if (!movementAngle_) {
+      throw std::runtime_error("We know we're moving, but not to a destination nor with an angle");
+    }
+    const auto angleRadians = pathfinder::math::k2Pi * static_cast<double>(*movementAngle_) / std::numeric_limits<uint16_t>::max();
+    const double kLenToExtend = sqrt(2 * 1920.0 * 1920.0) + 1;
+    const double xAdd = kLenToExtend * cos(angleRadians);
+    const double yAdd = kLenToExtend * sin(angleRadians);
+    calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(currentPosition, xAdd, yAdd);
+  }
+}
+
+void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const packet::structures::Position &currentPosition, double dx, double dy) {
+  pathfinder::Vector trajectoryPoint0{currentPosition.xOffset, currentPosition.zOffset}, trajectoryPoint1{currentPosition.xOffset+dx, currentPosition.zOffset+dy};
+  std::array<std::pair<pathfinder::Vector, pathfinder::Vector>, 4> regionBoundaries = {
+    std::make_pair(pathfinder::Vector(0.0, 0.0), pathfinder::Vector(1920.0, 0.0)),
+    std::make_pair(pathfinder::Vector(0.0, 0.0), pathfinder::Vector(0.0, 1920.0)),
+    std::make_pair(pathfinder::Vector(1920.0, 1920.0), pathfinder::Vector(1920.0, 0.0)),
+    std::make_pair(pathfinder::Vector(1920.0, 1920.0), pathfinder::Vector(0.0, 1920.0))
+  };
+  std::optional<pathfinder::Vector> intersectionPoint = [&]() -> std::optional<pathfinder::Vector> {
+    for (const auto &regionBoundary : regionBoundaries) {
+      pathfinder::Vector intersectionPoint;
+      const auto intRes = pathfinder::math::intersect(trajectoryPoint0, trajectoryPoint1, regionBoundary.first, regionBoundary.second, &intersectionPoint);
+      if (intRes == pathfinder::math::IntersectionResult::kOne) {
+        return intersectionPoint;
+      }
+    }
+    return {};
+  }();
+  if (!intersectionPoint) {
+    throw std::runtime_error("This must intersect somewhere since we know we're crossing a region boundary");
+  }
+  packet::structures::Position intersectionPos;
+  intersectionPos.regionId = currentPosition.regionId;
+  intersectionPos.xOffset = intersectionPoint->x();
+  intersectionPos.zOffset = intersectionPoint->y();
+  math::position::normalize(intersectionPos);
+  // Start timer
+  const auto seconds = helpers::secondsToTravel(currentPosition, intersectionPos, currentSpeed());
+  enteredNewRegionEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kEnteredNewRegion), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+}
+
+void Self::enteredRegion() {
+  if (!moving_) {
+    // No work to do
+    LOG() << "[No retrigger] Not moving" << std::endl;
+    return;
+  }
+  // Do this check based on where we currently are
+  const auto currentPosition = position();
+  checkIfWillLeaveRegionAndSetTimer(currentPosition);
+}
+
+void Self::cancelMovement() {
+  if (movingEventId_) {
+    eventBroker_.cancelDelayedEvent(*movingEventId_);
+    movingEventId_.reset();
+  }
+  if (enteredNewRegionEventId_) {
+    eventBroker_.cancelDelayedEvent(*enteredNewRegionEventId_);
+    enteredNewRegionEventId_.reset();
+  }
+  moving_ = false;
 }
 
 void Self::setHp(uint32_t hp) {
@@ -421,7 +559,29 @@ float Self::hwanSpeed() const {
 }
 
 float Self::currentSpeed() const {
-  return internal_speed();
+  if (motionState_ == packet::enums::MotionState::kRun) {
+    return runSpeed_;
+  } else if (motionState_ == packet::enums::MotionState::kWalk) {
+    return walkSpeed_;
+  } else if (motionState_ == packet::enums::MotionState::kStand) {
+    if (lastMotionState_) {
+      if (*lastMotionState_ == packet::enums::MotionState::kRun) {
+        return runSpeed_;
+      } else if (*lastMotionState_ == packet::enums::MotionState::kWalk) {
+        return walkSpeed_;
+      } else {
+        throw std::runtime_error("Motion state is Stand, last motion state isnt walk or run ("+std::to_string(static_cast<int>(*lastMotionState_))+")");
+      }
+    } else {
+      // Motion  State: Stand, no previous motion state assuming that we're running
+      return runSpeed_;
+    }
+    return runSpeed_;
+  } else {
+    // TODO: Understand what the other cases are here
+    // TODO: Include zerk
+    throw std::runtime_error("Trying to get speed, but not walking nor running");
+  }
 }
 
 packet::enums::LifeState Self::lifeState() const {
@@ -453,6 +613,13 @@ packet::structures::Position Self::destination() const {
     throw std::runtime_error("Self: Trying to get destination that does not exist");
   }
   return destinationPosition_.value();
+}
+
+uint16_t Self::movementAngle() const {
+  if (!movementAngle_) {
+    throw std::runtime_error("Self: Trying to get movement angle that does not exist");
+  }
+  return movementAngle_.value();
 }
 
 uint32_t Self::hp() const {
@@ -596,7 +763,7 @@ packet::structures::Position Self::interpolateCurrentPosition() const {
       // We're at our destination
       return lastKnownPosition_;
     }
-    auto expectedTravelTimeSeconds = totalDistance / internal_speed();
+    auto expectedTravelTimeSeconds = totalDistance / currentSpeed();
     double percentTraveled = (elapsedTimeMs/1000.0) / expectedTravelTimeSeconds;
     if (percentTraveled < 0) {
       throw std::runtime_error("Self: Traveled negative distance");
@@ -618,37 +785,11 @@ packet::structures::Position Self::interpolateCurrentPosition() const {
     }
   } else if (movementAngle_) {
     float angle = *movementAngle_/static_cast<float>(std::numeric_limits<std::remove_reference_t<decltype(*movementAngle_)>>::max()) * 2*math::kPi;
-    float xOffset = std::cos(angle) * internal_speed() * (elapsedTimeMs/1000.0);
-    float zOffset = std::sin(angle) * internal_speed() * (elapsedTimeMs/1000.0);
+    float xOffset = std::cos(angle) * currentSpeed() * (elapsedTimeMs/1000.0);
+    float zOffset = std::sin(angle) * currentSpeed() * (elapsedTimeMs/1000.0);
     return math::position::offset(lastKnownPosition_, xOffset, zOffset);
   } else {
     throw std::runtime_error("Moving but no destination position or movement angle");
-  }
-}
-
-float Self::internal_speed() const {
-  if (motionState_ == packet::enums::MotionState::kRun) {
-    return runSpeed_;
-  } else if (motionState_ == packet::enums::MotionState::kWalk) {
-    return walkSpeed_;
-  } else if (motionState_ == packet::enums::MotionState::kStand) {
-    if (lastMotionState_) {
-      if (*lastMotionState_ == packet::enums::MotionState::kRun) {
-        return runSpeed_;
-      } else if (*lastMotionState_ == packet::enums::MotionState::kWalk) {
-        return walkSpeed_;
-      } else {
-        throw std::runtime_error("Motion state is Stand, last motion state isnt walk or run ("+std::to_string(static_cast<int>(*lastMotionState_))+")");
-      }
-    } else {
-      // Motion  State: Stand, no previous motion state assuming that we're running
-      return runSpeed_;
-    }
-    return runSpeed_;
-  } else {
-    // TODO: Understand what the other cases are here
-    // TODO: Include zerk
-    throw std::runtime_error("Trying to get speed, but not walking nor running");
   }
 }
 

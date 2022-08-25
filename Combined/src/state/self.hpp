@@ -63,13 +63,11 @@ public:
   void setMotionState(packet::enums::MotionState motionState);
   void setBodyState(packet::enums::BodyState bodyState);
 
-  void setPosition(const packet::structures::Position &position);
+  void setStationaryAtPosition(const packet::structures::Position &position);
   void syncPosition(const packet::structures::Position &position);
-  void doneMoving();
-  void setMoving(const packet::structures::Position &destination);
-  void setMoving(const uint16_t angle);
-  void setMovingEventId(const broker::TimerManager::TimerId &timerId);
-  void resetMovingEventId();
+  void movementTimerCompleted();
+  void setMovingToDestination(const std::optional<packet::structures::Position> &sourcePosition, const packet::structures::Position &destinationPosition);
+  void setMovingTowardAngle(const std::optional<packet::structures::Position> &sourcePosition, const uint16_t angle);
 
   void setHp(uint32_t hp);
   void setMp(uint32_t mp);
@@ -125,8 +123,7 @@ public:
   bool moving() const;
   bool haveDestination() const;
   packet::structures::Position destination() const;
-  bool haveMovingEventId() const;
-  broker::TimerManager::TimerId getMovingEventId() const;
+  uint16_t movementAngle() const;
   
   uint32_t hp() const;
   uint32_t mp() const;
@@ -219,6 +216,7 @@ public:
   std::optional<packet::structures::Position> destinationPosition_;
   std::optional<uint16_t> movementAngle_;
   std::optional<broker::TimerManager::TimerId> movingEventId_;
+  std::optional<broker::TimerManager::TimerId> enteredNewRegionEventId_;
 
   // Health
 private:
@@ -266,7 +264,11 @@ private:
 
   void privateSetRaceAndGender(uint32_t refObjId);
   packet::structures::Position interpolateCurrentPosition() const;
-  float internal_speed() const;
+  void calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const packet::structures::Position &currentPosition, double dx, double dy);
+  void handleEvent(const event::Event *event);
+  void enteredRegion();
+  void cancelMovement();
+  void checkIfWillLeaveRegionAndSetTimer(const packet::structures::Position &currentPosition);
 
   // Known delay for potion cooldown
   int potionDelayMs_;

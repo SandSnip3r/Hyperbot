@@ -3,6 +3,7 @@
 
 #include "../packet/structures/packetInnerStructures.hpp"
 
+#include <ostream>
 #include <utility>
 
 namespace math {
@@ -36,5 +37,8 @@ uint16_t worldRegionIdFromXY(const int regionX, const int regionY);
 std::pair<int,int> regionXYFromRegionId(const uint16_t regionId);
 
 } // namespace math::position
+
+std::ostream& operator<<(std::ostream &stream, const packet::structures::Position &pos);
+bool operator==(const packet::structures::Position &pos1, const packet::structures::Position &pos2);
 
 #endif // MATH_POSITION_HPP_

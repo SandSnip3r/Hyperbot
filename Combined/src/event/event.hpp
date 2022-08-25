@@ -23,7 +23,6 @@ enum class EventCode {
   kStorageUpdated,
   kSkillCastAboutToEnd,
   kKnockbackStatusEnded,
-  kCharacterSpeedUpdated,
   kItemWaitForReuseDelay,
   kInjectPacket,
   kMovementTimerEnded,
@@ -39,6 +38,7 @@ enum class EventCode {
   kGuildStorageGoldUpdated,
   kCharacterSkillPointsUpdated,
   kCharacterExperienceUpdated,
+  kEnteredNewRegion,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -48,6 +48,7 @@ enum class EventCode {
   kStateReceivedCaptchaPromptUpdated,
   kStateCharacterListUpdated,
   // Movement state updates
+  kMovementBegan,
   kMovementEnded,
   // ===================================================================================
 };

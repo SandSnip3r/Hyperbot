@@ -1,5 +1,6 @@
 #include "helpers.hpp"
 #include "logging.hpp"
+#include "math/position.hpp"
 #include "packetProcessor.hpp"
 
 #include "packet/opcode.hpp"
@@ -221,74 +222,29 @@ bool PacketProcessor::charSelectionJoinResponseReceived(const packet::parsing::P
 bool PacketProcessor::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const {
   if (packet.globalId() == selfState_.globalId()) {
     // Sync our position to the new one
-    const auto &currentPosition = selfState_.position();
     selfState_.syncPosition(packet.position());
   }
-  return false;
+  return true;
 }
 
 bool PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const {
   if (packet.globalId() == selfState_.globalId()) {
-    if (selfState_.moving()) {
-      LOG() << "Position update received" << std::endl;
-      // Happens when you collide with something
-      // Note: this also happens when running to pick an item
-      // Note: I think this also happens when a speed drug is cancelled
-      if (selfState_.haveMovingEventId()) {
-        LOG() << "Cancelling movement timer\n";
-        eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
-        selfState_.resetMovingEventId();
-      }
-    } else {
-      LOG() << "We werent moving, weird\n";
-      const auto pos = selfState_.position();
-      LOG() << "Expected pos: " << pos.xOffset << ',' << pos.zOffset << '\n';
-      LOG() << "Received pos: " << packet.position().xOffset << ',' << packet.position().zOffset << '\n';
-      // TODO: Does it make sense to update our position in this case? Probably
-      //  But it also seems like a problem because we mistakenly thought we were moving
-    }
-    selfState_.setPosition(packet.position());
-    LOG() << "Now stationary at " << selfState_.position() << '\n';
-    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded));
+    selfState_.setStationaryAtPosition(packet.position());
   }
   return true;
 }
 
 bool PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const {
   if (packet.globalId() == selfState_.globalId()) {
-    packet::structures::Position sourcePosition;
+    std::optional<packet::structures::Position> sourcePosition;
     if (packet.hasSource()) {
       // Server is telling us our source position
       sourcePosition = packet.sourcePosition();
-      const auto currentPosition = selfState_.position();
-      if (std::round(currentPosition.xOffset) != std::round(sourcePosition.xOffset) && std::round(currentPosition.zOffset) != std::round(sourcePosition.zOffset)) {
-        // We arent where we thought we were
-        // We need to cancel this movement. Either move back to the source position or try to stop exactly where we are (by moving to our estimated position)
-        LOG() << "Whoa, we're a bit off from where we thought we were. Expected: " << currentPosition.xOffset << ',' << currentPosition.zOffset << ", actual: " << sourcePosition.xOffset << ',' << sourcePosition.zOffset << std::endl;
-      }
-      selfState_.syncPosition(sourcePosition);
-    } else {
-      // Server doesnt tell us where we're coming from, use our internally tracked position
-      sourcePosition = selfState_.position();
-    }
-    if (selfState_.haveMovingEventId()) {
-      // Had a timer already running for movement, cancel it
-      eventBroker_.cancelDelayedEvent(selfState_.getMovingEventId());
-      selfState_.resetMovingEventId();
     }
     if (packet.hasDestination()) {
-      auto destPosition = packet.destinationPosition();
-      if (sourcePosition.xOffset == destPosition.xOffset && sourcePosition.zOffset == destPosition.zOffset) {
-        LOG() << "Server says we're moving to our current position. wtf?\n";
-        // Ignore this
-      } else {
-        auto seconds = helpers::secondsToTravel(sourcePosition, destPosition, selfState_.currentSpeed());
-        const auto movingEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementTimerEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
-        selfState_.setMovingEventId(movingEventId);
-        selfState_.setMoving(packet.destinationPosition());
-      }
+      selfState_.setMovingToDestination(sourcePosition, packet.destinationPosition());
     } else {
-      selfState_.setMoving(packet.angle());
+      selfState_.setMovingTowardAngle(sourcePosition, packet.angle());
     }
   }
   return true;
@@ -317,7 +273,7 @@ bool PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Pa
   selfState_.setMasteriesAndSkills(packet.masteries(), packet.skills());
 
   // Position
-  selfState_.setPosition(packet.position());
+  selfState_.setStationaryAtPosition(packet.position());
   LOG() << "Our Ref Obj Id " << packet.refObjId() << '\n';
   LOG() << "Position: " << (packet.position().isDungeon() ? "dungeon " : "world ");
   if (packet.position().isDungeon()) {
@@ -390,7 +346,6 @@ bool PacketProcessor::serverAgentEntityUpdateMoveSpeedReceived(const packet::par
     // Our speed was updated
     LOG() << "Our speed was updated from " << selfState_.walkSpeed() << ',' << selfState_.runSpeed() << " to " << packet.walkSpeed() << ',' << packet.runSpeed() << '\n';
     selfState_.setSpeed(packet.walkSpeed(), packet.runSpeed());
-    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kCharacterSpeedUpdated));
   }
   return true;
 }
@@ -699,34 +654,16 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
       }
     } else if (movement.type == packet::enums::ItemMovementType::kGoldDrop) {
       selfState_.setGold(selfState_.getGold() - movement.goldAmount);
-      LOG() << "Dropped " << movement.goldAmount << " gold\n";
-      LOG() << "Gold: " << selfState_.getGold() << std::endl;
-      LOG() << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kGoldStorageWithdraw) {
       selfState_.setGold(selfState_.getGold() + movement.goldAmount);
-      LOG() << "Withdrew " << movement.goldAmount << " gold from storage\n";
-      LOG() << "Gold: " << selfState_.getGold() << std::endl;
-      LOG() << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kGoldStorageDeposit) {
       selfState_.setGold(selfState_.getGold() - movement.goldAmount);
-      LOG() << "Deposited " << movement.goldAmount << " gold into storage\n";
-      LOG() << "Gold: " << selfState_.getGold() << std::endl;
-      LOG() << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kGoldGuildStorageDeposit) {
       selfState_.setGold(selfState_.getGold() - movement.goldAmount);
-      LOG() << "Deposited " << movement.goldAmount << " gold into guild storage\n";
-      LOG() << "Gold: " << selfState_.getGold() << std::endl;
-      LOG() << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kGoldGuildStorageWithdraw) {
       selfState_.setGold(selfState_.getGold() + movement.goldAmount);
-      LOG() << "Withdrew " << movement.goldAmount << " gold from guild storage\n";
-      LOG() << "Gold: " << selfState_.getGold() << std::endl;
-      LOG() << '\n';
     } else if (movement.type == packet::enums::ItemMovementType::kCosPickGold) {
       selfState_.setGold(selfState_.getGold() + movement.goldPickAmount);
-      LOG() << "Pickpet picked " << movement.goldPickAmount << " gold\n";
-      LOG() << "Gold: " << selfState_.getGold() << std::endl;
-      LOG() << '\n';
     } else {
       LOG() << "Unknown item movement type: " << static_cast<int>(movement.type) << std::endl;
     }

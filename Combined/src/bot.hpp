@@ -85,6 +85,7 @@ private:
   // Movement events
   void handleMovementTimerEnded();
   void handleSpeedUpdated();
+  void handleMovementBegan();
   void handleMovementEnded();
   // Character info events
   void handleSpawned();
