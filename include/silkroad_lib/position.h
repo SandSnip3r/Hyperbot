@@ -17,7 +17,7 @@ struct GameCoordinate {
 
 class Position {
 public:
-  // Position() = default;
+  Position() = default;
   Position(RegionId regionId, float xOffset, float yOffset, float zOffset);
   RegionId regionId() const;
   bool isDungeon() const;
@@ -29,10 +29,10 @@ public:
   float zOffset() const;
   GameCoordinate toGameCoordinate() const;
 private:
-  RegionId regionId_;
-  float xOffset_;
-  float yOffset_;
-  float zOffset_;
+  RegionId regionId_{0};
+  float xOffset_{0};
+  float yOffset_{0};
+  float zOffset_{0};
 
   void normalize();
 };
