@@ -4,8 +4,8 @@ package broadcast;
 
 // Enums
 
-enum GoldLocation {
-  kInventory = 0;
+enum ItemLocation {
+  kCharacterInventory = 0;
   kStorage = 1;
   kGuildStorage = 2;
 }
@@ -54,7 +54,7 @@ message CharacterNameUpdate {
 
 message GoldAmountUpdate {
   uint64 goldAmount = 1;
-  GoldLocation goldLocation = 2;
+  ItemLocation goldLocation = 2;
 }
 
 message RegionNameUpdate {
@@ -74,6 +74,13 @@ message CharacterMovementEnded {
   Position currentPosition = 1;
 }
 
+message ItemUpdated {
+  ItemLocation itemLocation = 1;
+  uint32 slotIndex = 2;
+  uint32 quantity = 3;
+  optional string itemName = 4;
+}
+
 // Broadcast message
 
 message BroadcastMessage {
@@ -89,5 +96,6 @@ message BroadcastMessage {
     CharacterMovementBegan characterMovementBegan = 9;
     CharacterMovementEnded characterMovementEnded = 10;
     RegionNameUpdate regionNameUpdate = 11;
+    ItemUpdated itemUpdated = 12;
   }
 }
