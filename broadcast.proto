@@ -74,7 +74,7 @@ message CharacterMovementEnded {
   Position currentPosition = 1;
 }
 
-message ItemUpdated {
+message ItemUpdate {
   ItemLocation itemLocation = 1;
   uint32 slotIndex = 2;
   uint32 quantity = 3;
@@ -96,6 +96,6 @@ message BroadcastMessage {
     CharacterMovementBegan characterMovementBegan = 9;
     CharacterMovementEnded characterMovementEnded = 10;
     RegionNameUpdate regionNameUpdate = 11;
-    ItemUpdated itemUpdated = 12;
+    ItemUpdate itemUpdate = 12;
   }
 }
