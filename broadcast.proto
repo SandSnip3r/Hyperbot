@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
+
 package broadcast;
 
 // Enums
@@ -85,17 +87,18 @@ message ItemUpdate {
 
 message BroadcastMessage {
   oneof body {
-    CharacterHpUpdate characterHpUpdate = 1;
-    CharacterMpUpdate characterMpUpdate = 2;
-    CharacterMaxHpMpUpdate characterMaxHpMpUpdate = 3;
-    CharacterLevelUpdate characterLevelUpdate = 4;
-    CharacterExperienceUpdate characterExperienceUpdate = 5;
-    CharacterSpUpdate characterSpUpdate = 6;
-    CharacterNameUpdate characterNameUpdate = 7;
-    GoldAmountUpdate goldAmountUpdate = 8;
-    CharacterMovementBegan characterMovementBegan = 9;
-    CharacterMovementEnded characterMovementEnded = 10;
-    RegionNameUpdate regionNameUpdate = 11;
-    ItemUpdate itemUpdate = 12;
+    google.protobuf.Empty characterSpawn = 1;
+    CharacterHpUpdate characterHpUpdate = 2;
+    CharacterMpUpdate characterMpUpdate = 3;
+    CharacterMaxHpMpUpdate characterMaxHpMpUpdate = 4;
+    CharacterLevelUpdate characterLevelUpdate = 5;
+    CharacterExperienceUpdate characterExperienceUpdate = 6;
+    CharacterSpUpdate characterSpUpdate = 7;
+    CharacterNameUpdate characterNameUpdate = 8;
+    GoldAmountUpdate goldAmountUpdate = 9;
+    CharacterMovementBegan characterMovementBegan = 10;
+    CharacterMovementEnded characterMovementEnded = 11;
+    RegionNameUpdate regionNameUpdate = 12;
+    ItemUpdate itemUpdate = 13;
   }
 }
