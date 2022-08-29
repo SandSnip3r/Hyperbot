@@ -9,8 +9,9 @@ package broadcast;
 enum ItemLocation {
   kCharacterInventory = 0;
   kAvatarInventory = 1;
-  kStorage = 2;
-  kGuildStorage = 3;
+  kCos = 2;
+  kStorage = 3;
+  kGuildStorage = 4;
 }
 
 // Sub-structures
