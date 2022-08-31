@@ -9,7 +9,7 @@ package broadcast;
 enum ItemLocation {
   kCharacterInventory = 0;
   kAvatarInventory = 1;
-  kCos = 2;
+  kCosInventory = 2;
   kStorage = 3;
   kGuildStorage = 4;
 }
