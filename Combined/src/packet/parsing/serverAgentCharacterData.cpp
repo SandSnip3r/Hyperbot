@@ -38,7 +38,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
 
   for (int itemNum=0; itemNum<inventoryItemCount; ++itemNum) {
     uint8_t slotNum = stream.Read<uint8_t>();
-    const auto item = parseGenericItem(stream, itemData);
+    auto item = parseGenericItem(stream, itemData);
     inventoryItemMap_.insert(std::pair<uint8_t, std::shared_ptr<storage::Item>>(slotNum, std::move(item)));
   }
 
@@ -46,46 +46,13 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   //================================== Avatar Inventory =================================
   //=====================================================================================
 
-  uint8_t avatarInventorySize = stream.Read<uint8_t>();
+  avatarInventorySize_ = stream.Read<uint8_t>();
   uint8_t avatarItemCount = stream.Read<uint8_t>();
 
   for (int i=0; i<avatarItemCount; ++i) {
     uint8_t slotNum = stream.Read<uint8_t>();
-    uint32_t rentType = stream.Read<uint32_t>(); // TODO: Enum for this
-    
-    // TODO: Move the block below into a function? It is duplicate code
-    if (rentType == 1) {
-      uint16_t canDelete = stream.Read<uint16_t>();
-      uint32_t periodBeginTime = stream.Read<uint32_t>();
-      uint32_t periodEndTime = stream.Read<uint32_t>();
-    } else if (rentType == 2) {
-      uint16_t canDelete = stream.Read<uint16_t>();
-      uint16_t canRecharge = stream.Read<uint16_t>();
-      uint32_t meterRateTime = stream.Read<uint32_t>();
-    } else if (rentType == 3) {
-      uint16_t canDelete = stream.Read<uint16_t>();
-      uint16_t canRecharge = stream.Read<uint16_t>();
-      uint32_t periodBeginTime = stream.Read<uint32_t>();
-      uint32_t periodEndTime = stream.Read<uint32_t>();
-      uint32_t packingTime = stream.Read<uint32_t>();
-    }
-
-    uint32_t refItemId = stream.Read<uint32_t>();
-    if (!itemData.haveItemWithId(refItemId)) {
-      throw std::runtime_error("Unable to parse packet. Encountered an item (id:"+std::to_string(refItemId)+") for which we have no data on.");
-    }
-    const pk2::ref::Item &item = itemData.getItemById(refItemId);
-      
-    if (item.typeId1 == 3) {
-      // ITEM_
-      if (item.typeId2 == 1) { //TODO: Narrow filters for AvatarInventory
-        // ITEM_CH
-        // ITEM_EU
-        // AVATAR_
-        storage::ItemEquipment parsedItem;
-        parseItem(parsedItem, stream);
-      }
-    }
+    auto item = parseGenericItem(stream, itemData);
+    avatarInventoryItemMap_.insert(std::pair<uint8_t, std::shared_ptr<storage::Item>>(slotNum, std::move(item)));
   }
 
   uint8_t unknownByte0 = stream.Read<uint8_t>(); // "not a counter"
@@ -219,14 +186,10 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   lifeState_ = static_cast<enums::LifeState>(stream.Read<uint8_t>());
   uint8_t unkByte0 = stream.Read<uint8_t>();
   motionState_ = static_cast<enums::MotionState>(stream.Read<uint8_t>());
-  std::cout << "Motion state is " << static_cast<int>(motionState_) << '\n';
   bodyState_ = static_cast<enums::BodyState>(stream.Read<uint8_t>());
   walkSpeed_ = stream.Read<float>();
-  std::cout << "walkSpeed: " << walkSpeed_ << '\n';
   runSpeed_ = stream.Read<float>();
-  std::cout << "runSpeed: " << runSpeed_ << '\n';
   hwanSpeed_ = stream.Read<float>();
-  std::cout << "hwanSpeed: " << hwanSpeed_ << '\n';
   uint8_t buffCount = stream.Read<uint8_t>();
   for (int i=0; i<buffCount; ++i) {
     uint32_t refSkillId = stream.Read<uint32_t>();
@@ -329,6 +292,14 @@ uint8_t ParsedServerAgentCharacterData::inventorySize() const {
 
 const std::map<uint8_t, std::shared_ptr<storage::Item>>& ParsedServerAgentCharacterData::inventoryItemMap() const {
   return inventoryItemMap_;
+}
+
+uint8_t ParsedServerAgentCharacterData::avatarInventorySize() const {
+  return avatarInventorySize_;
+}
+
+const std::map<uint8_t, std::shared_ptr<storage::Item>>& ParsedServerAgentCharacterData::avatarInventoryItemMap() const {
+  return avatarInventoryItemMap_;
 }
 
 const std::vector<structures::Mastery>& ParsedServerAgentCharacterData::masteries() const {

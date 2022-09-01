@@ -8,6 +8,7 @@
 
 #include <zmq.hpp>
 
+#include <optional>
 #include <string_view>
 
 namespace ui {
@@ -18,6 +19,7 @@ public:
   UserInterface(broker::EventBroker &eventBroker);
   ~UserInterface();
   void run();
+  void broadcastCharacterSpawn();
   void broadcastCharacterHpUpdate(uint32_t currentHp);
   void broadcastCharacterMpUpdate(uint32_t currentMp);
   void broadcastCharacterMaxHpMpUpdate(uint32_t maxHp, uint32_t maxMp);
@@ -25,11 +27,12 @@ public:
   void broadcastCharacterExperienceUpdate(uint64_t currentExperience, uint32_t currentSpExperience);
   void broadcastCharacterSpUpdate(uint32_t skillPoints);
   void broadcastCharacterNameUpdate(std::string_view characterName);
-  void broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::GoldLocation goldLocation);
+  void broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::ItemLocation goldLocation);
   void broadcastMovementBeganUpdate(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition, float speed);
   void broadcastMovementBeganUpdate(const packet::structures::Position &srcPosition, uint16_t angle, float speed);
   void broadcastMovementEndedUpdate(const packet::structures::Position &currentPosition);
   void broadcastRegionNameUpdate(std::string_view regionName);
+  void broadcastItemUpdate(broadcast::ItemLocation itemLocation, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName={});
   void broadcast(const broadcast::BroadcastMessage &broadcastProto);
 private:
   zmq::context_t context_;

@@ -10,6 +10,7 @@
 #include "packet/parsing/serverAgentActionSelectResponse.hpp"
 #include "packet/parsing/serverAgentActionTalkResponse.hpp"
 #include "packet/parsing/serverAgentCharacterData.hpp"
+#include "packet/parsing/serverAgentCosData.hpp"
 #include "packet/parsing/serverAgentEntitySyncPosition.hpp"
 #include "packet/parsing/serverAgentEntityUpdateExperience.hpp"
 #include "packet/parsing/serverAgentEntityUpdateMovement.hpp"
@@ -17,15 +18,19 @@
 #include "packet/parsing/serverAgentEntityUpdatePoints.hpp"
 #include "packet/parsing/serverAgentEntityUpdatePosition.hpp"
 #include "packet/parsing/serverAgentEntityUpdateState.hpp"
+#include "packet/parsing/serverAgentGuildStorageData.hpp"
 #include "packet/parsing/serverAgentInventoryOperationResponse.hpp"
 #include "packet/parsing/serverAgentInventoryRepairResponse.hpp"
 #include "packet/parsing/serverAgentInventoryStorageData.hpp"
 #include "packet/parsing/serverAgentInventoryUpdateDurability.hpp"
+#include "packet/parsing/serverAgentInventoryUpdateItem.hpp"
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
 #include "state/entity.hpp"
 #include "state/self.hpp"
 #include "ui/userInterface.hpp"
+
+#define ENFORCE_PURIFICATION_PILL_COOLDOWN
 
 /*  PacketProcessor
  *  As packets come in, this class will update the state
@@ -55,6 +60,7 @@ private:
   static const int kPotionDelayBufferMs_ = 225; //200 too fast sometimes, 300 seems always good
 
   void subscribeToPackets();
+  void resetDataBecauseCharacterSpawned() const;
 
   // Packet handle functions
   //  In principal, each of these functions should only update the state and maybe publish an event.
@@ -74,7 +80,8 @@ private:
   // From CharacterInfoModule
   bool clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) const;
   bool serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) const;
-  bool serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInvetoryStorageData &packet) const;
+  bool serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const;
+  bool serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInventoryStorageData &packet) const;
   bool serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const;
   bool serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const;
   bool serverAgentEntityUpdateStatusReceived(const packet::parsing::ParsedServerAgentEntityUpdateStatus &packet) const;
@@ -92,11 +99,13 @@ private:
   bool serverAgentTalkResponseReceived(const packet::parsing::ServerAgentActionTalkResponse &packet) const;
   bool serverAgentInventoryRepairResponseReceived(const packet::parsing::ServerAgentInventoryRepairResponse &packet) const;
   bool serverAgentInventoryUpdateDurabilityReceived(const packet::parsing::ServerAgentInventoryUpdateDurability &packet) const;
+  bool serverAgentInventoryUpdateItemReceived(const packet::parsing::ServerAgentInventoryUpdateItem &packet) const;
   // bool clientAgentActionDeselectRequestReceived(const packet::parsing::ClientAgentActionDeselectRequest &packet) const;
   // bool clientAgentActionSelectRequestReceived(const packet::parsing::ClientAgentActionSelectRequest &packet) const;
   bool clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const;
   bool serverAgentEntityUpdatePointsReceived(const packet::parsing::ServerAgentEntityUpdatePoints &packet) const;
   bool serverAgentEntityUpdateExperienceReceived(const packet::parsing::ServerAgentEntityUpdateExperience &packet) const;
+  bool serverAgentGuildStorageDataReceived(const packet::parsing::ServerAgentGuildStorageData &packet) const;
 };
 
 #endif // PACKETPROCESSOR_HPP_

@@ -126,7 +126,7 @@ enum class Opcode {
   kServerAgentInventoryItemUseResponse = 0xB04C,
   SERVER_ANIMATION_ITEM_USE = 0x305C,
   SERVER_ANIMATION_CAPE = 0x3041,
-  SERVER_ITEM_QUANTITY_UPDATE = 0x3040,
+  kServerAgentInventoryUpdateItem = 0x3040,
 
   SERVER_QUIT_GAME = 0x300A,
   SERVER_COUNTDOWN = 0xB005,
@@ -155,7 +155,7 @@ enum class Opcode {
   kServerAgentEntityUpdateMovement = 0xB021,
   SERVER_UNIQUE = 0x300C,
 
-  SERVER_ANIMATION_COS_SPAWN = 0x30C8,
+  kServerAgentCosData = 0x30C8,
   SERVER_COS_SIT_UP = 0xB0CB,
   SERVER_ANIMATION_COS_REMOVE_MENU = 0x30C9,
   SERVER_COS_DELETE = 0xB0C6,
@@ -193,6 +193,10 @@ enum class Opcode {
   kServerAgentInventoryStorageBegin = 0x3047,
   kServerAgentInventoryStorageData = 0x3049,
   kServerAgentInventoryStorageEnd = 0x3048,
+
+  kServerAgentGuildStorageBegin = 0x3253,
+  kServerAgentGuildStorageData = 0x3255,
+  kServerAgentGuildStorageEnd = 0x3254,
 
   SERVER_ALCHEMY = 0xB150,
   SERVER_ALCHEMYSTONE = 0xB151,

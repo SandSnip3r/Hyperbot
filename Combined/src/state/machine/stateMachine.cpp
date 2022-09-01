@@ -218,7 +218,7 @@ void BuyingItems::onUpdate(const event::Event *event) {
   {
     // TODO: We wouldn't have to do this if we could subscribe to our injected packets (via the PacketBroker)
     packet::structures::ItemMovement itemMovement;
-    itemMovement.type = packet::enums::ItemMovementType::kBuyFromNPC;
+    itemMovement.type = packet::enums::ItemMovementType::kBuyItem;
     itemMovement.globalId = bot_.selfState().talkingGidAndOption->first;
     itemMovement.storeTabNumber = nextPurchaseRequest.tabIndex;
     itemMovement.storeSlotNumber = nextPurchaseRequest.itemIndex;

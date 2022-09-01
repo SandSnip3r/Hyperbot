@@ -16,9 +16,9 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
     // Success
     structures::ItemMovement primaryItemMovement;
     primaryItemMovement.type = static_cast<packet::enums::ItemMovementType>(stream.Read<uint8_t>());
-    if (primaryItemMovement.type == packet::enums::ItemMovementType::kWithinInventory ||
-        primaryItemMovement.type == packet::enums::ItemMovementType::kAvatarToInventory ||
-        primaryItemMovement.type == packet::enums::ItemMovementType::kInventoryToAvatar) {
+    if (primaryItemMovement.type == packet::enums::ItemMovementType::kUpdateSlotsInventory ||
+        primaryItemMovement.type == packet::enums::ItemMovementType::kMoveItemAvatarToInventory ||
+        primaryItemMovement.type == packet::enums::ItemMovementType::kMoveItemInventoryToAvatar) {
       primaryItemMovement.srcSlot = stream.Read<uint8_t>();
       primaryItemMovement.destSlot = stream.Read<uint8_t>();
       primaryItemMovement.quantity = stream.Read<uint16_t>(); // Seems to be 0 when equiping or unequiping gear/avatars
@@ -36,22 +36,22 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
         secondaryItemMovement.quantity = stream.Read<uint16_t>(); // Seems to be 0 when equiping or unequiping gear/avatars
         itemMovements_.push_back(secondaryItemMovement);
       }
-    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kInventoryToStorage ||
-               primaryItemMovement.type == packet::enums::ItemMovementType::kStorageToInventory ||
-               primaryItemMovement.type == packet::enums::ItemMovementType::kInventoryToGuildStorage ||
-               primaryItemMovement.type == packet::enums::ItemMovementType::kGuildStorageToInventory) {
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kChestDepositItem ||
+               primaryItemMovement.type == packet::enums::ItemMovementType::kChestWithdrawItem ||
+               primaryItemMovement.type == packet::enums::ItemMovementType::kGuildChestDepositItem ||
+               primaryItemMovement.type == packet::enums::ItemMovementType::kGuildChestWithdrawItem) {
       primaryItemMovement.srcSlot = stream.Read<uint8_t>();
       primaryItemMovement.destSlot = stream.Read<uint8_t>();
-    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kInventoryToStorage) {
-      primaryItemMovement.srcSlot = stream.Read<uint8_t>();
-      primaryItemMovement.destSlot = stream.Read<uint8_t>();
-      primaryItemMovement.quantity = stream.Read<uint16_t>();
-    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kGoldDrop ||
-               primaryItemMovement.type == packet::enums::ItemMovementType::kGoldStorageWithdraw ||
-               primaryItemMovement.type == packet::enums::ItemMovementType::kGoldStorageDeposit ||
-               primaryItemMovement.type == packet::enums::ItemMovementType::kGoldGuildStorageDeposit ||
-               primaryItemMovement.type == packet::enums::ItemMovementType::kGoldGuildStorageWithdraw) {
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kDropGold ||
+               primaryItemMovement.type == packet::enums::ItemMovementType::kChestWithdrawGold ||
+               primaryItemMovement.type == packet::enums::ItemMovementType::kChestDepositGold ||
+               primaryItemMovement.type == packet::enums::ItemMovementType::kGuildChestDepositGold ||
+               primaryItemMovement.type == packet::enums::ItemMovementType::kGuildChestWithdrawGold ||
+               primaryItemMovement.type == packet::enums::ItemMovementType::kSetExchangeGold) {
       primaryItemMovement.goldAmount = stream.Read<uint64_t>();
+      if (primaryItemMovement.type == packet::enums::ItemMovementType::kSetExchangeGold) {
+        LOG() << "This gold update is \"kSetExchangeGold\" with amount: " << primaryItemMovement.goldAmount << std::endl;
+      }
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickItem) {
       primaryItemMovement.destSlot = stream.Read<uint8_t>();
       if (primaryItemMovement.destSlot == structures::ItemMovement::kGoldSlot) {
@@ -59,26 +59,35 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
         primaryItemMovement.goldPickAmount = stream.Read<uint32_t>();
       } else {
         // Picked an item
-        primaryItemMovement.pickedItem = parseGenericItem(stream, itemData);
+        primaryItemMovement.newItem = parseGenericItem(stream, itemData);
       }
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kDropItem) {
       primaryItemMovement.srcSlot = stream.Read<uint8_t>();
-    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kWithinCos) {
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kUpdateSlotsInventoryCos) {
       primaryItemMovement.globalId = stream.Read<uint32_t>(); // COS global ID
       primaryItemMovement.srcSlot = stream.Read<uint8_t>();
       primaryItemMovement.destSlot = stream.Read<uint8_t>();
       primaryItemMovement.quantity = stream.Read<uint16_t>();
-    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kCosToInventory ||
-               primaryItemMovement.type == packet::enums::ItemMovementType::kInventoryToCos) {
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kAddItemByServer) {
+      primaryItemMovement.destSlot = stream.Read<uint8_t>();
+      uint8_t reason = stream.Read<uint8_t>();
+      LOG() << "Add Item By Server. Reason: " << static_cast<int>(reason) << std::endl;
+      primaryItemMovement.newItem = parseGenericItem(stream, itemData);
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kRemoveItemByServer) {
+      primaryItemMovement.srcSlot = stream.Read<uint8_t>();
+      uint8_t reason = stream.Read<uint8_t>();
+      LOG() << "Remove Item By Server. Reason: " << static_cast<int>(reason) << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kMoveItemCosToInventory ||
+               primaryItemMovement.type == packet::enums::ItemMovementType::kMoveItemInventoryToCos) {
       primaryItemMovement.globalId = stream.Read<uint32_t>(); // COS global ID
       primaryItemMovement.srcSlot = stream.Read<uint8_t>();
       primaryItemMovement.destSlot = stream.Read<uint8_t>();
-    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kWithinStorage ||
-               primaryItemMovement.type == packet::enums::ItemMovementType::kWithinGuildStorage) {
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kUpdateSlotsChest ||
+               primaryItemMovement.type == packet::enums::ItemMovementType::kUpdateSlotsGuildChest) {
       primaryItemMovement.srcSlot = stream.Read<uint8_t>();
       primaryItemMovement.destSlot = stream.Read<uint8_t>();
       primaryItemMovement.quantity = stream.Read<uint16_t>();
-    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kBuyFromNPC) {
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kBuyItem) {
       primaryItemMovement.storeTabNumber = stream.Read<uint8_t>();
       primaryItemMovement.storeSlotNumber = stream.Read<uint8_t>();
       uint8_t stackCount = stream.Read<uint8_t>();
@@ -90,19 +99,73 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
       for (int i=0; i<stackCount; ++i) {
         primaryItemMovement.rentInfos.emplace_back(parseRentInfo(stream));
       }
-    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kCosPickGold) {
-      primaryItemMovement.globalId = stream.Read<uint32_t>(); // COS global ID
-      primaryItemMovement.destSlot = stream.Read<uint8_t>(); // Gold slot, always 0xFE
-      primaryItemMovement.goldPickAmount = stream.Read<uint32_t>();
-    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kSellToNPC) {
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kSellItem) {
       primaryItemMovement.srcSlot = stream.Read<uint8_t>();
       primaryItemMovement.quantity = stream.Read<uint16_t>();
       primaryItemMovement.globalId = stream.Read<uint32_t>(); // NPC global ID
-      primaryItemMovement.buybackStackSize = stream.Read<uint8_t>();
+      primaryItemMovement.buybackStackSize = stream.Read<uint8_t>(); // TODO: This might actually be target-slot, the NPC's buyback slot
+      LOG() << "Sold item. Buyback.??: " << static_cast<int>(primaryItemMovement.buybackStackSize) << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kBuyback) {
       primaryItemMovement.destSlot = stream.Read<uint8_t>();
       primaryItemMovement.srcSlot = stream.Read<uint8_t>(); // Shop buyback slot, left is max(buybackStackSize-1), right is 0
       primaryItemMovement.quantity = stream.Read<uint16_t>();
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickItemByOther) {
+      primaryItemMovement.globalId = stream.Read<uint32_t>(); // COS?
+      primaryItemMovement.destSlot = stream.Read<uint8_t>(); // Gold slot, always 0xFE
+      if (primaryItemMovement.destSlot == 0xFE) {
+        primaryItemMovement.goldPickAmount = stream.Read<uint32_t>();
+      } else {
+        LOG() << "Pick item by other. Slot: " << static_cast<int>(primaryItemMovement.destSlot) << std::endl;
+        primaryItemMovement.newItem = parseGenericItem(stream, itemData);
+      }
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kSetExchangeItem) {
+      LOG() << "InventoryOperationResponse type kSetExchangeItem" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kCancelExchangeItem) {
+      LOG() << "InventoryOperationResponse type kCancelExchangeItem" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickItemCos) {
+      primaryItemMovement.globalId = stream.Read<uint32_t>(); // COS
+      primaryItemMovement.destSlot = stream.Read<uint8_t>();
+      if (primaryItemMovement.destSlot == 0xFE) {
+        // Not yet sure if this is happens
+        throw std::runtime_error("COS picked item into gold slot");
+      }
+      primaryItemMovement.newItem = parseGenericItem(stream, itemData);
+      uint16_t ownerNameLength = stream.Read<uint16_t>();
+      std::string ownerName = stream.Read_Ascii(ownerNameLength);
+      if (ownerNameLength > 0 || ownerName.size() > 0) {
+        // Usually no owner, maybe this is for quest?
+        LOG() << "Cos picked item with owner \"" << ownerName << "\"(" << ownerNameLength << ")" << std::endl;
+      }
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kDropItemCos) {
+      LOG() << "InventoryOperationResponse type kDropItemCos" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kBuyItemCos) {
+      LOG() << "InventoryOperationResponse type kBuyItemCos" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kSellItemCos) {
+      LOG() << "InventoryOperationResponse type kSellItemCos" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kAddCositemByServer) {
+      LOG() << "InventoryOperationResponse type kAddCositemByServer" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kDelCositemByServer) {
+      LOG() << "InventoryOperationResponse type kDelCositemByServer" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kBuyCashItem) {
+      LOG() << "InventoryOperationResponse type kBuyCashItem" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kMoveItemTradeNow) {
+      LOG() << "InventoryOperationResponse type kMoveItemTradeNow" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPushItemIntoMagicCube) {
+      LOG() << "InventoryOperationResponse type kPushItemIntoMagicCube" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPopItemFromMagicCube) {
+      LOG() << "InventoryOperationResponse type kPopItemFromMagicCube" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kDelItemInMagicCube) {
+      LOG() << "InventoryOperationResponse type kDelItemInMagicCube" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kActivateMagicCube) {
+      LOG() << "InventoryOperationResponse type kActivateMagicCube" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kBuyItemWithToken) {
+      LOG() << "InventoryOperationResponse type kBuyItemWithToken" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickSpecialItem) {
+      LOG() << "InventoryOperationResponse type kPickSpecialItem" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickSpecialItemBySilkpet) {
+      LOG() << "InventoryOperationResponse type kPickSpecialItemBySilkpet" << std::endl;
+    } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickSpecialItemByOther) {
+      LOG() << "InventoryOperationResponse type kPickSpecialItemByOther" << std::endl;
     } else {
       LOG() << "Unhandled item movement case! Type: " << static_cast<int>(primaryItemMovement.type) << '\n';
     }

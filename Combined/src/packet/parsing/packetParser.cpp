@@ -14,6 +14,7 @@
 #include "serverAgentBuffRemove.hpp"
 #include "serverAgentCharacterData.hpp"
 #include "serverAgentChatUpdate.hpp"
+#include "serverAgentCosData.hpp"
 #include "serverAgentEntitySyncPosition.hpp"
 #include "serverAgentEntityUpdateExperience.hpp"
 #include "serverAgentEntityUpdateMovement.hpp"
@@ -21,10 +22,12 @@
 #include "serverAgentEntityUpdatePoints.hpp"
 #include "serverAgentEntityUpdatePosition.hpp"
 #include "serverAgentEntityUpdateState.hpp"
+#include "serverAgentGuildStorageData.hpp"
 #include "serverAgentInventoryOperationResponse.hpp"
 #include "serverAgentInventoryRepairResponse.hpp"
 #include "serverAgentInventoryStorageData.hpp"
 #include "serverAgentInventoryUpdateDurability.hpp"
+#include "serverAgentInventoryUpdateItem.hpp"
 #include "serverAgentSkillBegin.hpp"
 #include "serverAgentSkillEnd.hpp"
 
@@ -72,7 +75,9 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       case Opcode::kServerAgentEntityGroupspawnData:
         return std::make_unique<ParsedServerAgentEntityGroupSpawnData>(packet, gameData_.characterData(), gameData_.itemData(), gameData_.skillData(), gameData_.teleportData());
       case Opcode::kServerAgentInventoryStorageData:
-        return std::make_unique<ParsedServerAgentInvetoryStorageData>(packet, gameData_.itemData());
+        return std::make_unique<ParsedServerAgentInventoryStorageData>(packet, gameData_.itemData());
+      case Opcode::kServerAgentGuildStorageData:
+        return std::make_unique<ServerAgentGuildStorageData>(packet, gameData_.itemData());
       case Opcode::kServerAgentEntitySpawn:
         return std::make_unique<ParsedServerAgentSpawn>(packet, gameData_.characterData(), gameData_.itemData(), gameData_.skillData(), gameData_.teleportData());
       case Opcode::kServerAgentEntityDespawn:
@@ -85,6 +90,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ParsedServerAgentAbnormalInfo>(packet);
       case Opcode::kServerAgentInventoryItemUseResponse:
         return std::make_unique<ParsedServerAgentInventoryItemUseResponse>(packet);
+      case Opcode::kServerAgentInventoryUpdateItem:
+        return std::make_unique<ServerAgentInventoryUpdateItem>(packet);
       case Opcode::kServerAgentEntityUpdatePoints:
         return std::make_unique<ServerAgentEntityUpdatePoints>(packet);
       case Opcode::kServerAgentCharacterUpdateStats:
@@ -125,6 +132,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ServerAgentEntityUpdatePosition>(packet);
       case Opcode::kServerAgentEntitySyncPosition:
         return std::make_unique<ServerAgentEntitySyncPosition>(packet);
+      case Opcode::kServerAgentCosData:
+        return std::make_unique<ServerAgentCosData>(packet, gameData_.characterData(), gameData_.itemData());
       case Opcode::kClientAgentAuthRequest:
       case Opcode::kServerGatewayLoginIbuvChallenge:
       // case static_cast<Opcode>(0x2005):

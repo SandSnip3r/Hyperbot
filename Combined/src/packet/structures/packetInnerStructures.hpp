@@ -133,7 +133,7 @@ struct ItemMovement {
   std::vector<uint8_t> destSlots;
   std::vector<structures::RentInfo> rentInfos;
   uint8_t buybackStackSize;
-  std::shared_ptr<storage::Item> pickedItem;
+  std::shared_ptr<storage::Item> newItem;
 };
 
 struct Position {

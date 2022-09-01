@@ -28,6 +28,8 @@ public:
   uint32_t mp() const;
   uint8_t inventorySize() const;
   const std::map<uint8_t, std::shared_ptr<storage::Item>>& inventoryItemMap() const;
+  uint8_t avatarInventorySize() const;
+  const std::map<uint8_t, std::shared_ptr<storage::Item>>& avatarInventoryItemMap() const;
   const std::vector<structures::Mastery>& masteries() const;
   const std::vector<structures::Skill>& skills() const;
   packet::structures::Position position() const;
@@ -50,16 +52,18 @@ private:
   uint32_t mp_;
   uint8_t inventorySize_;
   std::map<uint8_t, std::shared_ptr<storage::Item>> inventoryItemMap_;
+  uint8_t avatarInventorySize_;
+  std::map<uint8_t, std::shared_ptr<storage::Item>> avatarInventoryItemMap_;
   std::vector<structures::Mastery> masteries_;
   std::vector<structures::Skill> skills_;
   packet::structures::Position position_;
+  enums::LifeState lifeState_;
+  enums::MotionState motionState_;
+  enums::BodyState bodyState_;
   float walkSpeed_;
   float runSpeed_;
   float hwanSpeed_;
   std::string characterName_;
-  enums::LifeState lifeState_;
-  enums::MotionState motionState_;
-  enums::BodyState bodyState_;
 };
 
 } // namespace packet::parsing

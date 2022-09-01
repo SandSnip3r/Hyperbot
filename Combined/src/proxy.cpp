@@ -291,6 +291,16 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           storagePacketContainer_.emplace(p);
           // Update opcode to reflect "data"
           storagePacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentInventoryStorageData);
+        } else if (opcodeAsEnum == packet::Opcode::kServerAgentGuildStorageBegin) {
+          // Initialize data/container
+          if (guildStoragePacketContainer_) {
+            // What? There's already one?
+            std::cout << "[@@@] Wait, we got a guild storage begin packet, but we've already initialized the data\n";
+          }
+          // Initialize packet data with the "begin" data
+          guildStoragePacketContainer_.emplace(p);
+          // Update opcode to reflect "data"
+          guildStoragePacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentGuildStorageData);
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentCharacterData) {
           // Append all data to container
           characterInfoPacketContainer_->data.Write(p.data.GetStreamVector());
@@ -300,6 +310,9 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageData) {
           // Append all data to container
           storagePacketContainer_->data.Write(p.data.GetStreamVector());
+        } else if (opcodeAsEnum == packet::Opcode::kServerAgentGuildStorageData) {
+          // Append all data to container
+          guildStoragePacketContainer_->data.Write(p.data.GetStreamVector());
         }
 
         // Run packet through bot, regardless if it's blocked
@@ -320,12 +333,19 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           botWantsPacketForwarded = broker_.packetReceived(*storagePacketContainer_, PacketContainer::Direction::kServerToClient);
           // Reset data
           storagePacketContainer_.reset();
+        } else if (opcodeAsEnum == packet::Opcode::kServerAgentGuildStorageEnd) {
+          // Send packet to broker
+          botWantsPacketForwarded = broker_.packetReceived(*guildStoragePacketContainer_, PacketContainer::Direction::kServerToClient);
+          // Reset data
+          guildStoragePacketContainer_.reset();
         } else if (opcodeAsEnum != packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN &&
                     opcodeAsEnum != packet::Opcode::kServerAgentCharacterData &&
                     opcodeAsEnum != packet::Opcode::kServerAgentEntityGroupspawnBegin &&
                     opcodeAsEnum != packet::Opcode::kServerAgentEntityGroupspawnData &&
                     opcodeAsEnum != packet::Opcode::kServerAgentInventoryStorageBegin &&
-                    opcodeAsEnum != packet::Opcode::kServerAgentInventoryStorageData) {
+                    opcodeAsEnum != packet::Opcode::kServerAgentInventoryStorageData &&
+                    opcodeAsEnum != packet::Opcode::kServerAgentGuildStorageBegin &&
+                    opcodeAsEnum != packet::Opcode::kServerAgentGuildStorageData) {
           // In all other cases, if its not "begin" or "data", send it
           botWantsPacketForwarded = broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
         }

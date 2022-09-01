@@ -9,6 +9,7 @@ namespace event {
 
 enum class EventCode {
   kSpawned,
+  kCosSpawned,
   kHpPotionCooldownEnded,
   kMpPotionCooldownEnded,
   kVigorPotionCooldownEnded,
@@ -20,7 +21,10 @@ enum class EventCode {
   kStatesChanged,
   kSkillCooldownEnded,
   kInventoryUpdated,
+  kAvatarInventoryUpdated,
+  kCosInventoryUpdated,
   kStorageUpdated,
+  kGuildStorageUpdated,
   kSkillCastAboutToEnd,
   kKnockbackStatusEnded,
   kItemWaitForReuseDelay,
@@ -31,7 +35,8 @@ enum class EventCode {
   kEntityDeselected,
   kEntitySelected,
   kNpcTalkStart,
-  kStorageOpened,
+  kStorageInitialized,
+  kGuildStorageInitialized,
   kRepairSuccessful,
   kInventoryGoldUpdated,
   kStorageGoldUpdated,
@@ -75,12 +80,37 @@ public:
   virtual ~InventoryUpdated() = default;
 };
 
+struct AvatarInventoryUpdated : public Event {
+public:
+  AvatarInventoryUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  const std::optional<int8_t> srcSlotNum;
+  const std::optional<int8_t> destSlotNum;
+  virtual ~AvatarInventoryUpdated() = default;
+};
+
+struct CosInventoryUpdated : public Event {
+public:
+  CosInventoryUpdated(uint32_t gId, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  uint32_t globalId;
+  const std::optional<int8_t> srcSlotNum;
+  const std::optional<int8_t> destSlotNum;
+  virtual ~CosInventoryUpdated() = default;
+};
+
 struct StorageUpdated : public Event {
 public:
   StorageUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
   const std::optional<int8_t> srcSlotNum;
   const std::optional<int8_t> destSlotNum;
   virtual ~StorageUpdated() = default;
+};
+
+struct GuildStorageUpdated : public Event {
+public:
+  GuildStorageUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  const std::optional<int8_t> srcSlotNum;
+  const std::optional<int8_t> destSlotNum;
+  virtual ~GuildStorageUpdated() = default;
 };
 
 struct ItemWaitForReuseDelay : public Event {
@@ -99,6 +129,13 @@ public:
   uint16_t opcode;
   std::string data;
   virtual ~InjectPacket() = default;
+};
+
+struct CosSpawned : public Event {
+public:
+  CosSpawned(uint32_t cosGId);
+  const uint32_t cosGlobalId;
+  virtual ~CosSpawned() = default;
 };
 
 } // namespace event

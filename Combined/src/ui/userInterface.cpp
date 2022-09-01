@@ -18,6 +18,12 @@ void UserInterface::run() {
   thr_ = std::thread(&UserInterface::privateRun, this);
 }
 
+void UserInterface::broadcastCharacterSpawn() {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcastMessage.mutable_characterspawn();
+  broadcast(broadcastMessage);
+}
+
 void UserInterface::broadcastCharacterHpUpdate(uint32_t currentHp) {
   broadcast::CharacterHpUpdate characterHpUpdate;
   characterHpUpdate.set_currenthp(currentHp);
@@ -77,7 +83,7 @@ void UserInterface::broadcastCharacterNameUpdate(std::string_view characterName)
   broadcast(broadcastMessage);
 }
 
-void UserInterface::broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::GoldLocation goldLocation) {
+void UserInterface::broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::ItemLocation goldLocation) {
   broadcast::GoldAmountUpdate goldAmountUpdate;
   goldAmountUpdate.set_goldamount(goldAmount);
   goldAmountUpdate.set_goldlocation(goldLocation);
@@ -129,6 +135,21 @@ void UserInterface::broadcastRegionNameUpdate(std::string_view regionName) {
   regionNameUpdate.set_name(std::string(regionName));
   broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_regionnameupdate() = regionNameUpdate;
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastItemUpdate(broadcast::ItemLocation itemLocation, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName) {
+  broadcast::BroadcastMessage broadcastMessage;
+  auto *itemUpdate = broadcastMessage.mutable_itemupdate();
+  itemUpdate->set_itemlocation(itemLocation);
+  itemUpdate->set_slotindex(slotIndex);
+  itemUpdate->set_quantity(quantity);
+  if (quantity != 0) {
+    if (!itemName) {
+      throw std::runtime_error("Quantity of item positive, but we were given no item name");
+    }
+    itemUpdate->set_itemname(*itemName);
+  }
   broadcast(broadcastMessage);
 }
 

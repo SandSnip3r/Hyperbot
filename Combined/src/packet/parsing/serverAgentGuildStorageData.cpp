@@ -1,9 +1,9 @@
 #include "commonParsing.hpp"
-#include "serverAgentInventoryStorageData.hpp"
+#include "serverAgentGuildStorageData.hpp"
 
 namespace packet::parsing {
 
-ParsedServerAgentInventoryStorageData::ParsedServerAgentInventoryStorageData(const PacketContainer &packet, const pk2::ItemData &itemData) : ParsedPacket(packet) {
+ServerAgentGuildStorageData::ServerAgentGuildStorageData(const PacketContainer &packet, const pk2::ItemData &itemData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   gold_ = stream.Read<uint64_t>();
   storageSize_ = stream.Read<uint8_t>();
@@ -15,15 +15,15 @@ ParsedServerAgentInventoryStorageData::ParsedServerAgentInventoryStorageData(con
   }
 }
 
-uint64_t ParsedServerAgentInventoryStorageData::gold() const {
+uint64_t ServerAgentGuildStorageData::gold() const {
   return gold_;
 }
 
-uint8_t ParsedServerAgentInventoryStorageData::storageSize() const {
+uint8_t ServerAgentGuildStorageData::storageSize() const {
   return storageSize_;
 }
 
-const std::map<uint8_t, std::shared_ptr<storage::Item>>& ParsedServerAgentInventoryStorageData::storageItemMap() const {
+const std::map<uint8_t, std::shared_ptr<storage::Item>>& ServerAgentGuildStorageData::storageItemMap() const {
   return storageItemMap_;
 }
 

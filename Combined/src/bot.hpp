@@ -89,7 +89,8 @@ private:
   void handleMovementEnded();
   // Character info events
   void handleSpawned();
-  void handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &castedEvent);
+  void handleCosSpawned(const event::CosSpawned &event);
+  void handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &event);
   void handlePotionCooldownEnded(const event::EventCode eventCode);
   void handlePillCooldownEnded(const event::EventCode eventCode);
   void handleVitalsChanged();
@@ -109,6 +110,15 @@ private:
   void usePurificationPill();
 
   void useItem(uint8_t slotNum, uint16_t typeData);
+
+  void storageInitialized();
+  void guildStorageInitialized();
+  void inventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent);
+  void avatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent);
+  void cosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent);
+  void storageUpdated(const event::StorageUpdated &storageUpdatedEvent);
+  void guildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent);
+  void broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex);
 };
 
 #endif

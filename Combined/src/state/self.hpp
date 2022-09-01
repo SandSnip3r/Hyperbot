@@ -17,6 +17,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -134,6 +135,8 @@ public:
   std::array<uint16_t,6> legacyStateEffects() const;
   std::array<uint8_t,32> modernStateLevels() const;
 
+  storage::Storage& getCosInventory(uint32_t globalId);
+
   uint64_t getGold() const;
   uint64_t getStorageGold() const;
   uint64_t getGuildStorageGold() const;
@@ -238,8 +241,13 @@ public:
   std::vector<packet::structures::Skill> skills_;
 
   // Inventory
-  storage::Storage inventory, storage;
+  storage::Storage inventory, storage, guildStorage;
+  storage::Storage avatarInventory;
   storage::BuybackQueue buybackQueue;
+
+  // COS
+  // TODO: Create a proper COS object
+  std::unordered_map<uint32_t, storage::Storage> cosInventoryMap;
 
 private:
   uint64_t gold_;

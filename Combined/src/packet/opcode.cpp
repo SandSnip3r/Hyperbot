@@ -255,8 +255,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_ANIMATION_CAPE) {
     return "SERVER_ANIMATION_CAPE";
   }
-  if (opcode == Opcode::SERVER_ITEM_QUANTITY_UPDATE) {
-    return "SERVER_ITEM_QUANTITY_UPDATE";
+  if (opcode == Opcode::kServerAgentInventoryUpdateItem) {
+    return "kServerAgentInventoryUpdateItem";
   }
   if (opcode == Opcode::SERVER_QUIT_GAME) {
     return "SERVER_QUIT_GAME";
@@ -321,8 +321,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_UNIQUE) {
     return "SERVER_UNIQUE";
   }
-  if (opcode == Opcode::SERVER_ANIMATION_COS_SPAWN) {
-    return "SERVER_ANIMATION_COS_SPAWN";
+  if (opcode == Opcode::kServerAgentCosData) {
+    return "kServerAgentCosData";
   }
   if (opcode == Opcode::SERVER_COS_SIT_UP) {
     return "SERVER_COS_SIT_UP";

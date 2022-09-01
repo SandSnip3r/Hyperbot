@@ -109,31 +109,55 @@ enum class InventoryErrorCode : uint16_t {
 };
 
 enum class ItemMovementType : uint8_t {
-  kWithinInventory =          0x00,
-  kWithinStorage =            0x01,
-  kInventoryToStorage =       0x02,
-  kStorageToInventory =       0x03,
-  kPickItem =                 0x06,
-  kDropItem =                 0x07,
-  kBuyFromNPC =               0x08,
-  kSellToNPC =                0x09,
-  kGoldDrop =                 0x0A,
-  kGoldStorageWithdraw =      0x0B,
-  kGoldStorageDeposit =       0x0C,
-  kWithinCos =                0x10,
-  kAddItemByServer =          0x0E,
-  // kBuyFromItemMall =          0x18,
-  kCosToInventory =           0x1A,
-  kInventoryToCos =           0x1B,
-  kCosPickGold =              0x1C,
-  kWithinGuildStorage =       0x1D,
-  kInventoryToGuildStorage =  0x1E,
-  kGuildStorageToInventory =  0x1F,
-  kGoldGuildStorageDeposit =  0x20,
-  kGoldGuildStorageWithdraw = 0x21,
-  kBuyback =                  0x22,
-  kAvatarToInventory =        0x23,
-  kInventoryToAvatar =        0x24
+  kUpdateSlotsInventory =      0,
+  kUpdateSlotsChest =          1,
+  kChestDepositItem =          2,
+  kChestWithdrawItem =         3,
+  kSetExchangeItem =           4, //SP_ADD_EXCHANGE
+  kCancelExchangeItem =        5, //SP_DEL_EXCHANGE
+  kPickItem =                  6,
+  kDropItem =                  7,
+  kBuyItem =                   8,
+  kSellItem =                  9,
+  kDropGold =                  10,
+  kChestWithdrawGold =         11,
+  kChestDepositGold =          12,
+  kSetExchangeGold =           13, //SP_UPDATE_EXCHANGE_GOLD
+  kAddItemByServer =           14,
+  kRemoveItemByServer =        15,
+  kUpdateSlotsInventoryCos =   16,
+  kPickItemCos =               17,
+  kDropItemCos =               18,
+  kBuyItemCos =                19,
+  kSellItemCos =               20,
+  kAddCositemByServer =        21,
+  kDelCositemByServer =        22,
+  // Missing                   23
+  kBuyCashItem =               24,
+  // Missing                   25
+  kMoveItemCosToInventory =    26,
+  kMoveItemInventoryToCos =    27,
+  kPickItemByOther =           28,
+  kUpdateSlotsGuildChest =     29,
+  kGuildChestDepositItem =     30,
+  kGuildChestWithdrawItem =    31,
+  kGuildChestWithdrawGold =    32,
+  kGuildChestDepositGold =     33,
+  kBuyback =                   34,
+  kMoveItemAvatarToInventory = 35,
+  kMoveItemInventoryToAvatar = 36,
+  // Missing                   37
+  kMoveItemTradeNow =          38,
+  kPushItemIntoMagicCube =     39,
+  kPopItemFromMagicCube =      40,
+  kDelItemInMagicCube =        41,
+  kActivateMagicCube =         42,
+  kBuyItemWithToken =          43,
+  kPickSpecialItem =           44,
+  // Missing                   45-51
+  kPickSpecialItemBySilkpet =  52,
+  // Missing                   53
+  kPickSpecialItemByOther =    54,
 };
 
 enum class LifeState : uint8_t {
@@ -327,6 +351,17 @@ enum class UpdatePointsType : uint8_t {
 enum class AcademyBuffUpdateFlag : uint8_t {
   kCumulatedSize = 0x0F, // 1
   kAccumulatedSize = 0xF0, // 16
+};
+
+enum class ItemUpdateFlag : uint8_t {
+  kRefObjID = 1,
+  kOptLevel = 2,
+  kVariance = 4,
+  kQuantity = 8,
+  kDurability = 16,
+  kMagParams = 32,
+  kState = 64,
+  kUnknown128 = 128,
 };
 
 } // namespace packet::enums

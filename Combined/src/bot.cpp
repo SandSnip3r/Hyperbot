@@ -59,6 +59,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
   // Character info events
   eventBroker_.subscribeToEvent(event::EventCode::kSpawned, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCosSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemWaitForReuseDelay, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMpPotionCooldownEnded, eventHandleFunction);
@@ -77,10 +78,16 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kEntitySelected, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kNpcTalkStart, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStorageOpened, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kAvatarInventoryUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCosInventoryUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStorageInitialized, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageInitialized, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRepairSuccessful, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kInventoryGoldUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStorageGoldUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageGoldUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCharacterSkillPointsUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCharacterExperienceUpdated, eventHandleFunction);
 }
@@ -143,6 +150,12 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kSpawned:
         handleSpawned();
         break;
+      case event::EventCode::kCosSpawned:
+        {
+          const event::CosSpawned &castedEvent = dynamic_cast<const event::CosSpawned&>(*event);
+          handleCosSpawned(castedEvent);
+        }
+        break;
       case event::EventCode::kItemWaitForReuseDelay:
         {
           const event::ItemWaitForReuseDelay &castedEvent = dynamic_cast<const event::ItemWaitForReuseDelay&>(*event);
@@ -177,19 +190,54 @@ void Bot::handleEvent(const event::Event *event) {
         break;
 
       // Misc
+      case event::EventCode::kStorageInitialized:
+        storageInitialized();
+      case event::EventCode::kGuildStorageInitialized:
+        guildStorageInitialized();
       case event::EventCode::kEntityDeselected:
       case event::EventCode::kEntitySelected:
       case event::EventCode::kNpcTalkStart:
-      case event::EventCode::kStorageOpened:
       case event::EventCode::kRepairSuccessful:
         onUpdate();
         break;
       case event::EventCode::kInventoryUpdated:
+        {
+          const event::InventoryUpdated &castedEvent = dynamic_cast<const event::InventoryUpdated&>(*event);
+          inventoryUpdated(castedEvent);
+          break;
+        }
+      case event::EventCode::kAvatarInventoryUpdated:
+        {
+          const event::AvatarInventoryUpdated &castedEvent = dynamic_cast<const event::AvatarInventoryUpdated&>(*event);
+          avatarInventoryUpdated(castedEvent);
+          break;
+        }
+      case event::EventCode::kCosInventoryUpdated:
+        {
+          const event::CosInventoryUpdated &castedEvent = dynamic_cast<const event::CosInventoryUpdated&>(*event);
+          cosInventoryUpdated(castedEvent);
+          break;
+        }
       case event::EventCode::kStorageUpdated:
-        onUpdate(event);
-        break;
+        {
+          const event::StorageUpdated &castedEvent = dynamic_cast<const event::StorageUpdated&>(*event);
+          storageUpdated(castedEvent);
+          break;
+        }
+      case event::EventCode::kGuildStorageUpdated:
+        {
+          const event::GuildStorageUpdated &castedEvent = dynamic_cast<const event::GuildStorageUpdated&>(*event);
+          guildStorageUpdated(castedEvent);
+          break;
+        }
       case event::EventCode::kInventoryGoldUpdated:
-        userInterface_.broadcastGoldAmountUpdate(selfState_.getGold(), broadcast::GoldLocation::kInventory);
+        userInterface_.broadcastGoldAmountUpdate(selfState_.getGold(), broadcast::ItemLocation::kCharacterInventory);
+        break;
+      case event::EventCode::kStorageGoldUpdated:
+        userInterface_.broadcastGoldAmountUpdate(selfState_.getStorageGold(), broadcast::ItemLocation::kStorage);
+        break;
+      case event::EventCode::kGuildStorageGoldUpdated:
+        userInterface_.broadcastGoldAmountUpdate(selfState_.getGuildStorageGold(), broadcast::ItemLocation::kGuildStorage);
         break;
       case event::EventCode::kCharacterSkillPointsUpdated:
         userInterface_.broadcastCharacterSpUpdate(selfState_.getSkillPoints());
@@ -367,28 +415,56 @@ void Bot::handleMovementEnded() {
 // ============================================================================================================================
 
 void Bot::handleSpawned() {
+  userInterface_.broadcastCharacterSpawn();
   const auto &currentLevelData = gameData_.levelData().getLevel(selfState_.getCurrentLevel());
   userInterface_.broadcastCharacterLevelUpdate(selfState_.getCurrentLevel(), currentLevelData.exp_C);
   userInterface_.broadcastCharacterExperienceUpdate(selfState_.getCurrentExperience(), selfState_.getCurrentSpExperience());
   userInterface_.broadcastCharacterSpUpdate(selfState_.getSkillPoints());
   userInterface_.broadcastCharacterNameUpdate(selfState_.characterName);
-  userInterface_.broadcastGoldAmountUpdate(selfState_.getGold(), broadcast::GoldLocation::kInventory);
+  userInterface_.broadcastGoldAmountUpdate(selfState_.getGold(), broadcast::ItemLocation::kCharacterInventory);
   const auto &regionName = gameData_.textZoneNameData().getRegionName(selfState_.position().regionId);
   userInterface_.broadcastMovementEndedUpdate(selfState_.position());
   userInterface_.broadcastRegionNameUpdate(regionName);
+  // Send entire inventory
+  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<selfState_.inventory.size(); ++inventorySlotIndex) {
+    if (selfState_.inventory.hasItem(inventorySlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, selfState_.inventory, inventorySlotIndex);
+    }
+  }
+  // Send avatar inventory too
+  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<selfState_.avatarInventory.size(); ++inventorySlotIndex) {
+    if (selfState_.avatarInventory.hasItem(inventorySlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, selfState_.avatarInventory, inventorySlotIndex);
+    }
+  }
 }
 
-void Bot::handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &castedEvent) {
+void Bot::handleCosSpawned(const event::CosSpawned &event) {
+  LOG() << "Cos spawned" << std::endl;
+  // Send COS inventory
+  auto it = selfState_.cosInventoryMap.find(event.cosGlobalId);
+  if (it == selfState_.cosInventoryMap.end()) {
+    throw std::runtime_error("Received COS Spawned event, but dont have this COS");
+  }
+  const auto &cosInventory = it->second;
+  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<cosInventory.size(); ++inventorySlotIndex) {
+    if (cosInventory.hasItem(inventorySlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, inventorySlotIndex);
+    }
+  }
+}
+
+void Bot::handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &event) {
   LOG() << "Failed to use ";
-  if (castedEvent.itemTypeId == helpers::type_id::makeTypeId(3, 3, 1, 1)) {
+  if (event.itemTypeId == helpers::type_id::makeTypeId(3, 3, 1, 1)) {
     std::cout << "hp";
-  } else if (castedEvent.itemTypeId == helpers::type_id::makeTypeId(3, 3, 1, 2)) {
+  } else if (event.itemTypeId == helpers::type_id::makeTypeId(3, 3, 1, 2)) {
     std::cout << "mp";
-  } else if (castedEvent.itemTypeId == helpers::type_id::makeTypeId(3, 3, 1, 3)) {
+  } else if (event.itemTypeId == helpers::type_id::makeTypeId(3, 3, 1, 3)) {
     std::cout << "vigor";
   }
   std::cout << " potion because there's still a cooldown, going to retry" << std::endl;
-  useItem(castedEvent.inventorySlotNum, castedEvent.itemTypeId);
+  useItem(event.inventorySlotNum, event.itemTypeId);
 }
 
 void Bot::handlePotionCooldownEnded(const event::EventCode eventCode) {
@@ -565,7 +641,7 @@ bool Bot::alreadyUsedUniversalPill() {
 
 bool Bot::alreadyUsedPurificationPill() {
 #ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
-  if (selfState_.purificationPillOnCooldown()) {
+  if (selfState_.havePurificationPillEventId()) {
     return true;
   }
 #endif
@@ -704,4 +780,89 @@ void Bot::useItem(uint8_t slotNum, uint16_t typeData) {
   }
   broker_.injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slotNum, typeData), PacketContainer::Direction::kClientToServer);
   selfState_.pushItemToUsedItemQueue(slotNum, typeData);
+}
+
+void Bot::storageInitialized() {
+  for (uint8_t storageSlotIndex=0; storageSlotIndex<selfState_.storage.size(); ++storageSlotIndex) {
+    if (selfState_.storage.hasItem(storageSlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, selfState_.storage, storageSlotIndex);
+    }
+  }
+  onUpdate();
+}
+
+void Bot::guildStorageInitialized() {
+  for (uint8_t storageSlotIndex=0; storageSlotIndex<selfState_.guildStorage.size(); ++storageSlotIndex) {
+    if (selfState_.guildStorage.hasItem(storageSlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, selfState_.guildStorage, storageSlotIndex);
+    }
+  }
+}
+
+void Bot::inventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent) {
+  if (inventoryUpdatedEvent.srcSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, selfState_.inventory, *inventoryUpdatedEvent.srcSlotNum);
+  }
+  if (inventoryUpdatedEvent.destSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, selfState_.inventory, *inventoryUpdatedEvent.destSlotNum);
+  }
+  onUpdate(&inventoryUpdatedEvent);
+}
+
+void Bot::avatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent) {
+  if (avatarInventoryUpdatedEvent.srcSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, selfState_.avatarInventory, *avatarInventoryUpdatedEvent.srcSlotNum);
+  }
+  if (avatarInventoryUpdatedEvent.destSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, selfState_.avatarInventory, *avatarInventoryUpdatedEvent.destSlotNum);
+  }
+}
+
+void Bot::cosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent) {
+  auto it = selfState_.cosInventoryMap.find(cosInventoryUpdatedEvent.globalId);
+  if (it == selfState_.cosInventoryMap.end()) {
+    throw std::runtime_error("COS inventory updated, but not tracking this COS");
+  }
+  const auto &cosInventory = it->second;
+  if (cosInventoryUpdatedEvent.srcSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.srcSlotNum);
+  }
+  if (cosInventoryUpdatedEvent.destSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.destSlotNum);
+  }
+}
+
+void Bot::storageUpdated(const event::StorageUpdated &storageUpdatedEvent) {
+  if (storageUpdatedEvent.srcSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, selfState_.storage, *storageUpdatedEvent.srcSlotNum);
+  }
+  if (storageUpdatedEvent.destSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, selfState_.storage, *storageUpdatedEvent.destSlotNum);
+  }
+  onUpdate(&storageUpdatedEvent);
+}
+
+void Bot::guildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent) {
+  if (guildStorageUpdatedEvent.srcSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, selfState_.guildStorage, *guildStorageUpdatedEvent.srcSlotNum);
+  }
+  if (guildStorageUpdatedEvent.destSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, selfState_.guildStorage, *guildStorageUpdatedEvent.destSlotNum);
+  }
+}
+
+void Bot::broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex) {
+  uint16_t quantity{0};
+  std::optional<std::string> itemName;
+  if (itemStorage.hasItem(slotIndex)) {
+    const auto *item = itemStorage.getItem(slotIndex);
+    if (const auto *itemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(item)) {
+      quantity = itemAsExpendable->quantity;
+    } else {
+      // Not an expendable, only 1
+      quantity = 1;
+    }
+    itemName = gameData_.textItemAndSkillData().getItemName(item->itemInfo->nameStrID128);
+  }
+  userInterface_.broadcastItemUpdate(itemLocation, slotIndex, quantity, itemName);
 }

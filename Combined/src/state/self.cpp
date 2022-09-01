@@ -650,6 +650,14 @@ std::array<uint8_t,32> Self::modernStateLevels() const {
   return modernStateLevels_;
 }
 
+storage::Storage& Self::getCosInventory(uint32_t globalId) {
+  auto cosPairIt = cosInventoryMap.find(globalId);
+  if (cosPairIt == cosInventoryMap.end()) {
+    throw std::runtime_error("Asking for COS inventory which we don't have");
+  }
+  return cosPairIt->second;
+}
+
 uint64_t Self::getGold() const {
   return gold_;
 }

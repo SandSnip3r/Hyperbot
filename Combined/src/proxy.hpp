@@ -43,7 +43,7 @@ private:
   boost::asio::io_service ioService_;
   const int kPacketProcessDelayMs{10};
 	PacketLogger packetLogger{"C:\\Users\\Victor\\Documents\\Development\\packet-logs\\"};
-  std::optional<PacketContainer> characterInfoPacketContainer_, groupSpawnPacketContainer_, storagePacketContainer_;
+  std::optional<PacketContainer> characterInfoPacketContainer_, groupSpawnPacketContainer_, storagePacketContainer_, guildStoragePacketContainer_;
 
 	//Accepts TCP connections
 	boost::asio::ip::tcp::acceptor acceptor;
