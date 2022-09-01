@@ -30,6 +30,10 @@ set(PROJECT_SOURCES
   eventHandler.hpp
   experienceProgressBar.cpp
   experienceProgressBar.hpp
+  itemListWidget.cpp
+  itemListWidget.hpp
+  itemListWidgetItem.cpp
+  itemListWidgetItem.hpp
   mainwindow.cpp
   mainwindow.h
   packetListWidgetItem.cpp

@@ -1,6 +1,6 @@
 #include "packetListWidgetItem.hpp"
 
-PacketListWidgetItem::PacketListWidgetItem(request::PacketToInject::Direction dir, const uint16_t op, std::string d, QListWidget *parent) : direction_(dir), opcode_(op), data_(d), QListWidgetItem(parent) {
+PacketListWidgetItem::PacketListWidgetItem(request::PacketToInject::Direction dir, const uint16_t op, std::string d, QListWidget *parent) : direction_(dir), opcode_(op), data_(d), QListWidgetItem(parent, Type) {
   //
 }
 

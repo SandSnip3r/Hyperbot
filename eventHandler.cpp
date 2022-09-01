@@ -31,6 +31,10 @@ void EventHandler::run() {
 
 void EventHandler::handle(const broadcast::BroadcastMessage &message) {
   switch (message.body_case()) {
+    case broadcast::BroadcastMessage::BodyCase::kCharacterSpawn: {
+        emit characterSpawn();
+        break;
+      }
     case broadcast::BroadcastMessage::BodyCase::kCharacterHpUpdate: {
         const broadcast::CharacterHpUpdate &msg = message.characterhpupdate();
         emit characterHpUpdateChanged(msg.currenthp());
@@ -68,8 +72,12 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
       }
     case broadcast::BroadcastMessage::BodyCase::kGoldAmountUpdate: {
         const broadcast::GoldAmountUpdate &msg = message.goldamountupdate();
-        if (msg.goldlocation() == broadcast::GoldLocation::kInventory) {
+        if (msg.goldlocation() == broadcast::ItemLocation::kCharacterInventory) {
           emit inventoryGoldAmountUpdate(msg.goldamount());
+        } else if (msg.goldlocation() == broadcast::ItemLocation::kStorage) {
+          emit storageGoldAmountUpdate(msg.goldamount());
+        } else if (msg.goldlocation() == broadcast::ItemLocation::kGuildStorage) {
+          emit guildStorageGoldAmountUpdate(msg.goldamount());
         }
         break;
       }
@@ -106,6 +114,25 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
     case broadcast::BroadcastMessage::BodyCase::kRegionNameUpdate: {
         const broadcast::RegionNameUpdate &msg = message.regionnameupdate();
         emit regionNameUpdate(msg.name());
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kItemUpdate: {
+        const broadcast::ItemUpdate &msg = message.itemupdate();
+        std::optional<std::string> itemName;
+        if (msg.has_itemname()) {
+          itemName = msg.itemname();
+        }
+        if (msg.itemlocation() == broadcast::ItemLocation::kCharacterInventory) {
+          emit characterInventoryItemUpdate(msg.slotindex(), msg.quantity(), itemName);
+        } else if (msg.itemlocation() == broadcast::ItemLocation::kAvatarInventory) {
+          emit avatarInventoryItemUpdate(msg.slotindex(), msg.quantity(), itemName);
+        } else if (msg.itemlocation() == broadcast::ItemLocation::kCosInventory) {
+          emit cosInventoryItemUpdate(msg.slotindex(), msg.quantity(), itemName);
+        } else if (msg.itemlocation() == broadcast::ItemLocation::kStorage) {
+          emit storageItemUpdate(msg.slotindex(), msg.quantity(), itemName);
+        } else if (msg.itemlocation() == broadcast::ItemLocation::kGuildStorage) {
+          emit guildStorageItemUpdate(msg.slotindex(), msg.quantity(), itemName);
+        }
         break;
       }
     default:

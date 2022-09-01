@@ -10,6 +10,8 @@
 #include <QObject>
 
 #include <mutex>
+#include <optional>
+#include <string>
 #include <thread>
 
 class EventHandler : public QObject {
@@ -21,6 +23,7 @@ public:
   void runAsync();
 signals:
   void connected();
+  void characterSpawn();
   void characterHpUpdateChanged(uint32_t currentHp);
   void characterMpUpdateChanged(uint32_t currentMp);
   void characterMaxHpMpUpdateChanged(uint32_t maxHp, uint32_t maxMp);
@@ -29,10 +32,17 @@ signals:
   void characterSpUpdate(uint32_t skillPoints);
   void characterNameUpdate(const std::string &name);
   void inventoryGoldAmountUpdate(uint64_t goldAmount);
+  void storageGoldAmountUpdate(uint64_t goldAmount);
+  void guildStorageGoldAmountUpdate(uint64_t goldAmount);
   void characterMovementBeganToDest(sro::Position currentPosition, sro::Position destinationPosition, float speed);
   void characterMovementBeganTowardAngle(sro::Position currentPosition, uint16_t movementAngle, float speed);
   void characterMovementEnded(sro::Position position);
   void regionNameUpdate(const std::string &regionName);
+  void characterInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
+  void avatarInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
+  void cosInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
+  void storageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
+  void guildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
 private:
   zmq::context_t &context_;
   std::atomic<bool> run_;

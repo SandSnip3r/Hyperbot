@@ -3,14 +3,20 @@
 
 #include "characterData.hpp"
 #include "eventHandler.hpp"
+#include "itemListWidget.hpp"
 #include "requester.hpp"
 
 #include <silkroad_lib/position.h>
 
 #include <zmq.hpp>
 
+#include <QLabel>
 #include <QMainWindow>
 #include <QTimer>
+
+#include <cstdint>
+#include <optional>
+#include <string>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -40,6 +46,9 @@ private:
   void killMovementTimer();
 
   void injectPacket(request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes);
+  void updateItemList(ItemListWidget *itemListWidget, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
+  void updateGoldLabel(QLabel *label, uint64_t goldAmount);
+
 private slots:
   // UI actions
   void startTrainingButtonClicked();
@@ -49,8 +58,11 @@ private slots:
   void reinjectSelectedPackets();
   void clearPackets();
 
+  void timerTriggered();
+
 public slots:
   // Bot updates
+  void onCharacterSpawn();
   void onCharacterHpUpdateChanged(uint32_t currentHp);
   void onCharacterMpUpdateChanged(uint32_t currentMp);
   void onCharacterMaxHpMpUpdateChanged(uint32_t maxHp, uint32_t maxMp);
@@ -59,11 +71,17 @@ public slots:
   void onCharacterSpUpdate(uint32_t skillPoints);
   void onCharacterNameUpdate(const std::string &name);
   void onInventoryGoldAmountUpdate(uint64_t goldAmount);
+  void onStorageGoldAmountUpdate(uint64_t goldAmount);
+  void onGuildStorageGoldAmountUpdate(uint64_t goldAmount);
   void onCharacterMovementBeganToDest(sro::Position currentPosition, sro::Position destinationPosition, float speed);
   void onCharacterMovementBeganTowardAngle(sro::Position currentPosition, uint16_t movementAngle, float speed);
   void onCharacterMovementEnded(sro::Position position);
   void onRegionNameUpdate(const std::string &regionName);
-  void timerTriggered();
+  void onCharacterInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
+  void onAvatarInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
+  void onCosInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
+  void onStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
+  void onGuildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
 };
 
 #endif // MAINWINDOW_H

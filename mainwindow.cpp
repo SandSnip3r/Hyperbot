@@ -1,3 +1,4 @@
+#include "itemListWidgetItem.hpp"
 #include "mainwindow.h"
 #include "packetListWidgetItem.hpp"
 #include "./ui_mainwindow.h"
@@ -18,6 +19,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
   // Requester is a req/rep socket to the bot to cause actions
   requester_.connect();
+}
+
+MainWindow::~MainWindow() {
+  delete ui;
 }
 
 void MainWindow::initializeUi() {
@@ -77,6 +82,7 @@ void MainWindow::connectTabWidget() {
 }
 
 void MainWindow::connectBotBroadcastMessages() {
+  connect(&eventHandler_, &EventHandler::characterSpawn, this, &MainWindow::onCharacterSpawn);
   connect(&eventHandler_, &EventHandler::characterHpUpdateChanged, this, &MainWindow::onCharacterHpUpdateChanged);
   connect(&eventHandler_, &EventHandler::characterMpUpdateChanged, this, &MainWindow::onCharacterMpUpdateChanged);
   connect(&eventHandler_, &EventHandler::characterMaxHpMpUpdateChanged, this, &MainWindow::onCharacterMaxHpMpUpdateChanged);
@@ -85,10 +91,17 @@ void MainWindow::connectBotBroadcastMessages() {
   connect(&eventHandler_, &EventHandler::characterSpUpdate, this, &MainWindow::onCharacterSpUpdate);
   connect(&eventHandler_, &EventHandler::characterNameUpdate, this, &MainWindow::onCharacterNameUpdate);
   connect(&eventHandler_, &EventHandler::inventoryGoldAmountUpdate, this, &MainWindow::onInventoryGoldAmountUpdate);
+  connect(&eventHandler_, &EventHandler::storageGoldAmountUpdate, this, &MainWindow::onStorageGoldAmountUpdate);
+  connect(&eventHandler_, &EventHandler::guildStorageGoldAmountUpdate, this, &MainWindow::onGuildStorageGoldAmountUpdate);
   connect(&eventHandler_, &EventHandler::characterMovementBeganToDest, this, &MainWindow::onCharacterMovementBeganToDest);
   connect(&eventHandler_, &EventHandler::characterMovementBeganTowardAngle, this, &MainWindow::onCharacterMovementBeganTowardAngle);
   connect(&eventHandler_, &EventHandler::characterMovementEnded, this, &MainWindow::onCharacterMovementEnded);
   connect(&eventHandler_, &EventHandler::regionNameUpdate, this, &MainWindow::onRegionNameUpdate);
+  connect(&eventHandler_, &EventHandler::characterInventoryItemUpdate, this, &MainWindow::onCharacterInventoryItemUpdate);
+  connect(&eventHandler_, &EventHandler::avatarInventoryItemUpdate, this, &MainWindow::onAvatarInventoryItemUpdate);
+  connect(&eventHandler_, &EventHandler::cosInventoryItemUpdate, this, &MainWindow::onCosInventoryItemUpdate);
+  connect(&eventHandler_, &EventHandler::storageItemUpdate, this, &MainWindow::onStorageItemUpdate);
+  connect(&eventHandler_, &EventHandler::guildStorageItemUpdate, this, &MainWindow::onGuildStorageItemUpdate);
 }
 
 void MainWindow::connectPacketInjection() {
@@ -136,15 +149,29 @@ void MainWindow::killMovementTimer() {
   }
 }
 
-MainWindow::~MainWindow() {
-  delete ui;
-}
-
 void MainWindow::injectPacket(request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes) {
   requester_.injectPacket(packetDirection, opcode, actualBytes);
   PacketListWidgetItem *packet = new PacketListWidgetItem(packetDirection, opcode, actualBytes, ui->injectedPacketListWidget);
   ui->injectedPacketListWidget->addItem(packet);
   ui->injectedPacketListWidget->scrollToBottom();
+}
+
+void MainWindow::updateItemList(ItemListWidget *itemListWidget, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName) {
+  if (quantity == 0) {
+    // Remove item
+    itemListWidget->removeItem(slotIndex);
+  } else {
+    // Added or changed item
+    if (!itemName) {
+      throw std::runtime_error("Received an item without a name");
+    }
+    ItemListWidgetItem *item = new ItemListWidgetItem(slotIndex, quantity, *itemName);
+    itemListWidget->addItem(item);
+  }
+}
+
+void MainWindow::updateGoldLabel(QLabel *label, uint64_t goldAmount) {
+  label->setText(QLocale(QLocale::English).toString(goldAmount));
 }
 
 // =================================================================================================================
@@ -224,6 +251,12 @@ void MainWindow::clearPackets() {
 // ===================================================Bot updates===================================================
 // =================================================================================================================
 
+void MainWindow::onCharacterSpawn() {
+  // Reset item list
+  ui->characterInventoryListWidget->clear();
+  ui->avatarInventoryListWidget->clear();
+}
+
 void MainWindow::onCharacterHpUpdateChanged(uint32_t currentHp) {
   characterData_.currentHp = currentHp;
   if (characterData_.currentHp > ui->hpProgressBar->maximum() && ui->hpProgressBar->maximum() != 0) {
@@ -255,7 +288,7 @@ void MainWindow::onCharacterMaxHpMpUpdateChanged(uint32_t maxHp, uint32_t maxMp)
 
 void MainWindow::onCharacterLevelUpdate(int32_t level, int64_t expRequired) {
   characterData_.expRequired = expRequired;
-  ui->characterLevelLabel->setText(QString::number(level));
+  ui->characterLevelLabel->setText(QLocale(QLocale::English).toString(level));
   ui->characterExperienceProgressBar->setMaximum(characterData_.expRequired);
 }
 
@@ -268,7 +301,7 @@ void MainWindow::onCharacterExperienceUpdate(uint64_t currentExperience, uint32_
 }
 
 void MainWindow::onCharacterSpUpdate(uint32_t skillPoints) {
-  ui->characterSpLabel->setText(QString("%1").arg(skillPoints));
+  ui->characterSpLabel->setText(QLocale(QLocale::English).toString(skillPoints));
 }
 
 void MainWindow::onCharacterNameUpdate(const std::string &name) {
@@ -276,7 +309,15 @@ void MainWindow::onCharacterNameUpdate(const std::string &name) {
 }
 
 void MainWindow::onInventoryGoldAmountUpdate(uint64_t goldAmount) {
-  ui->inventoryGoldAmountLabel->setText(QString::number(goldAmount));
+  updateGoldLabel(ui->inventoryGoldAmountLabel, goldAmount);
+}
+
+void MainWindow::onStorageGoldAmountUpdate(uint64_t goldAmount) {
+  updateGoldLabel(ui->storageGoldAmountLabel, goldAmount);
+}
+
+void MainWindow::onGuildStorageGoldAmountUpdate(uint64_t goldAmount) {
+  updateGoldLabel(ui->guildStorageGoldAmountLabel, goldAmount);
 }
 
 void MainWindow::onCharacterMovementBeganToDest(sro::Position currentPosition, sro::Position destinationPosition, float speed) {
@@ -312,4 +353,24 @@ void MainWindow::onCharacterMovementEnded(sro::Position position) {
 
 void MainWindow::onRegionNameUpdate(const std::string &regionName) {
   ui->regionNameLabel->setText(QString::fromStdString(regionName));
+}
+
+void MainWindow::onCharacterInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName) {
+  updateItemList(ui->characterInventoryListWidget, slotIndex, quantity, itemName);
+}
+
+void MainWindow::onAvatarInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName) {
+  updateItemList(ui->avatarInventoryListWidget, slotIndex, quantity, itemName);
+}
+
+void MainWindow::onCosInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName) {
+  updateItemList(ui->cosInventoryListWidget, slotIndex, quantity, itemName);
+}
+
+void MainWindow::onStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName) {
+  updateItemList(ui->storageListWidget, slotIndex, quantity, itemName);
+}
+
+void MainWindow::onGuildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName) {
+  updateItemList(ui->guildStorageListWidget, slotIndex, quantity, itemName);
 }

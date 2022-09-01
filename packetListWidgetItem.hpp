@@ -12,6 +12,7 @@ public:
   request::PacketToInject::Direction direction() const;
   uint16_t opcode() const;
   std::string data() const;
+  enum { Type = UserType + 1 };
 private:
   request::PacketToInject::Direction direction_;
   const uint16_t opcode_;
