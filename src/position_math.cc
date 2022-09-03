@@ -68,6 +68,10 @@ Position getNewPositionGivenAngleAndDistance(const Position &srcPos, MovementAng
            srcPos.zOffset() + dz };
 }
 
+Position createNewPositionWith2dOffset(const Position &startingPos, const float xOffset, const float zOffset) {
+  return {startingPos.regionId(), startingPos.xOffset()+xOffset, startingPos.yOffset(), startingPos.zOffset()+zOffset};
+}
+
 RegionId worldRegionIdFromSectors(const Sector xSector, const Sector zSector) {
   return ((xSector & 0xFF) | (static_cast<RegionId>(zSector & 0xFF) << 8));
 }
