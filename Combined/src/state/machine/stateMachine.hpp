@@ -118,7 +118,7 @@ private:
   size_t currentNpcIndex_{0};
   std::variant<std::monostate, Walking, TalkingToNpc> childState_;
 
-  std::vector<packet::structures::Position> pathBetweenNpcs(Npc npcSrc, Npc npcDest) const;
+  std::vector<packet::structures::Position> pathToNpc(Npc npc) const;
 };
 
 } // namespace state::machine

@@ -12,6 +12,9 @@
 #include "packet/building/clientAgentInventoryStorageOpenRequest.hpp"
 #include "packet/building/serverAgentInventoryOperationResponse.hpp"
 
+#include "pathfinder.h"
+#include "math_helpers.h"
+
 namespace state::machine {
 
 CommonStateMachine::CommonStateMachine(Bot &bot) : bot_(bot) {
@@ -67,7 +70,10 @@ void Walking::onUpdate(const event::Event *event) {
   // We are not moving, we're not at the current waypoint, and there's not a pending movement request
   // Send a request to move to the current waypoint
   const auto &currentWaypoint = waypoints_[currentWaypointIndex_];
-  const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::packet(currentWaypoint.regionId, currentWaypoint.xOffset, currentWaypoint.yOffset, currentWaypoint.zOffset);
+  const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint.regionId,
+                                                                                                static_cast<uint32_t>(currentWaypoint.xOffset),
+                                                                                                static_cast<uint32_t>(currentWaypoint.yOffset),
+                                                                                                static_cast<uint32_t>(currentWaypoint.zOffset));
   bot_.broker_.injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
   requestedMovement_ = true;
 }
@@ -238,10 +244,10 @@ bool BuyingItems::done() const {
 
 TalkingToStorageNpc::TalkingToStorageNpc(Bot &bot) : bot_(bot) {
   // Figure out what we want to deposit into storage
-  const uint16_t kArrowTypeId{helpers::type_id::makeTypeId(3,3,4,1)};
-  const uint16_t kHpPotionTypeId{helpers::type_id::makeTypeId(3,3,1,1)};
-  itemTypesToStore_.insert(kArrowTypeId);
-  itemTypesToStore_.insert(kHpPotionTypeId);
+  // const uint16_t kArrowTypeId{helpers::type_id::makeTypeId(3,3,4,1)};
+  // const uint16_t kHpPotionTypeId{helpers::type_id::makeTypeId(3,3,1,1)};
+  // itemTypesToStore_.insert(kArrowTypeId);
+  // itemTypesToStore_.insert(kHpPotionTypeId);
 }
 
 void TalkingToStorageNpc::onUpdate(const event::Event *event) {
@@ -712,14 +718,19 @@ Townlooping::Townlooping(Bot &bot) : CommonStateMachine(bot) {
     { 62, 1000 }, //ITEM_ETC_AMMO_ARROW_01 (Arrow)
     { 3909, 1 }, //ITEM_COS_C_DHORSE1 (Ironclad Horse)
   };
+
   // Figure out which npcs we want to visit and in what order
   npcsToVisit_ = { Npc::kStorage, Npc::kPotion , Npc::kGrocery, Npc::kBlacksmith, Npc::kProtector, Npc::kStable };
+
+  if (npcsToVisit_.empty()) {
+    LOG() << "No NPCs to visit in townloop" << std::endl;
+    return;
+  }
+
   // Calculate the path to the first Npc
-  std::vector<packet::structures::Position> pathToFirstNpc = {
-    {25000, 981.0f, -32.0f, 1032.0f}
-  };
+  auto path = pathToNpc(npcsToVisit_[currentNpcIndex_]);
   // Initialize state as walking
-  childState_.emplace<Walking>(bot_, pathToFirstNpc);
+  childState_.emplace<Walking>(bot_, path);
 }
 
 void Townlooping::onUpdate(const event::Event *event) {
@@ -762,7 +773,7 @@ TODO_REMOVE_THIS_LABEL:
       }
 
       // Calculate the path from the just-finished npc to the next npc
-      auto path = pathBetweenNpcs(npcsToVisit_[currentNpcIndex_-1], npcsToVisit_[currentNpcIndex_]);
+      auto path = pathToNpc(npcsToVisit_[currentNpcIndex_]);
       // Update our state to walk to the next npc
       childState_.emplace<Walking>(bot_, path);
       // TODO: Go back to the top of this function
@@ -772,51 +783,100 @@ TODO_REMOVE_THIS_LABEL:
 }
 
 bool Townlooping::done() const {
-  return (currentNpcIndex_ == npcsToVisit_.size());
+  return (npcsToVisit_.empty() || currentNpcIndex_ == npcsToVisit_.size());
 }
 
-std::vector<packet::structures::Position> Townlooping::pathBetweenNpcs(Npc npcSrc, Npc npcDest) const {
-  using PathType = std::vector<packet::structures::Position>;
-  static const std::map<Npc, std::map<Npc, PathType>> pathBetween = []{
-    std::map<Npc, std::map<Npc, PathType>> result;
+std::vector<packet::structures::Position> Townlooping::pathToNpc(Npc npc) const {
+  auto pathfindingResultPathToVectorOfPositions = [&, this](const auto &pathfindingShortestPath) {
+    const auto &navmeshTriangulation = bot_.gameData_.navmeshTriangulation();
 
-    result[Npc::kStorage][Npc::kPotion] = {{ 25000, 1525.0f, 0.0f, 1385.0f }};
-    result[Npc::kStorage][Npc::kBlacksmith] = {{ 25000, 397.0f, 0.0f, 1358.0f }};
-    result[Npc::kStorage][Npc::kProtector] = {{ 25000, 363.0f, 0.0f, 1083.0f }};
-    result[Npc::kStorage][Npc::kStable] = {{ 25000, 390.0f, 0.0f, 493.0f }};
-    result[Npc::kStorage][Npc::kGrocery] = {{ 25000, 1618.0f, 0.0f, 1078.0f }};
+    // Get a list of all straight segments
+    std::vector<pathfinder::StraightPathSegment*> straightSegments;
+    for (const auto &segment : pathfindingShortestPath) {
+      pathfinder::StraightPathSegment *straightSegment = dynamic_cast<pathfinder::StraightPathSegment*>(segment.get());
+      if (straightSegment != nullptr) {
+        straightSegments.push_back(straightSegment);
+      }
+    }
 
-    result[Npc::kGrocery][Npc::kPotion] = {{ 25000, 1525.0f, 0.0f, 1385.0f }};
-    result[Npc::kGrocery][Npc::kProtector] = {{ 25000, 363.0f, 0.0f, 1083.0f }};
-    result[Npc::kGrocery][Npc::kBlacksmith] = {{ 25000, 910.0f, -32.0f, 1148.0f }, { 25000, 397.0f, 0.0f, 1358.0f }};
-    result[Npc::kGrocery][Npc::kStable] = {{ 25000, 1456.0f, 0.0f, 1025.0f }, { 25000, 1020.0f, -32.0f, 718.0f }, { 25000, 538.0f, -24.0f, 563.0f }, { 25000, 390.0f, 0.0f, 493.0f }};
+    // Turn straight segments into a list of waypoints
+    std::vector<packet::structures::Position> waypoints;
+    // Note: We are ignoring the start of the first segment, since we assume we're already there
+    for (int i=0; i<straightSegments.size()-1; ++i) {
+      // Find the average between the end of this straight segment and the beginning of the next
+      //  Between these two is an arc, which we're ignoring
+      // TODO: There is a chance that this yields a bad path
+      const auto &point1 = straightSegments[i]->endPoint;
+      const auto &point2 = straightSegments[i+1]->startPoint;
+      const auto midpoint = pathfinder::math::extendLineSegmentToLength(point1, point2, pathfinder::math::distance(point1, point2)/2.0);
+      // Vector startPoint, endPoint;
+      // Vector extendLineSegmentToLength(const Vector &point1, const Vector &point2, const double targetLength) {
+      const auto regionAndPointPair = navmeshTriangulation.transformAbsolutePointIntoRegion({static_cast<float>(midpoint.x()), 0.0f, static_cast<float>(midpoint.y())});
+      if (regionAndPointPair.second.x < 0) {
+        // TODO: A proper Position constructor which normalizes this will remove the need for this
+        throw std::runtime_error("Transformed point to Position, but x is negative");
+      }
+      if (regionAndPointPair.second.z < 0) {
+        // TODO: A proper Position constructor which normalizes this will remove the need for this
+        throw std::runtime_error("Transformed point to Position, but z is negative");
+      }
+      // TODO: Rounding the position could result in an invalid path
+      waypoints.push_back({regionAndPointPair.first, std::round(regionAndPointPair.second.x), std::round(regionAndPointPair.second.y), std::round(regionAndPointPair.second.z)});
+    }
 
-    result[Npc::kPotion][Npc::kGrocery] = {{ 25000, 1618.0f, 0.0f, 1078.0f }};
-    result[Npc::kPotion][Npc::kBlacksmith] = {{ 25000, 1283.0f, -33.0f, 1299.0f }, { 25000, 667.0f, -32.0f, 1269.0f }, { 25000, 397.0f, 0.0f, 1358.0f }};
-    result[Npc::kPotion][Npc::kProtector] = {{ 25000, 1283.0f, -33.0f, 1299.0f }, { 25000, 667.0f, -32.0f, 1269.0f }, { 25000, 363.0f, 0.0f, 1083.0f }};
-    result[Npc::kPotion][Npc::kStable] = {{ 25000,  981.0f,  -32.0f,  1032.0f }, { 25000, 390.0f, 0.0f, 493.0f }};
+    // Additionally, add the endpoint of the final segment
+    const auto finalRegionAndPointPair = navmeshTriangulation.transformAbsolutePointIntoRegion({static_cast<float>(straightSegments.back()->endPoint.x()), 0.0f, static_cast<float>(straightSegments.back()->endPoint.y())});
+    waypoints.push_back({finalRegionAndPointPair.first, std::round(finalRegionAndPointPair.second.x), std::round(finalRegionAndPointPair.second.y), std::round(finalRegionAndPointPair.second.z)});
 
-    result[Npc::kBlacksmith][Npc::kProtector] = {{ 25000, 363.0f, 0.0f, 1083.0f }};
-    result[Npc::kBlacksmith][Npc::kStable] = {{ 25000, 390.0f, 0.0f, 493.0f }};
+    // Remove duplicates
+    auto newEndIt = std::unique(waypoints.begin(), waypoints.end(), [](const auto &lhs, const auto &rhs){
+      return lhs.regionId == rhs.regionId &&
+             lhs.xOffset  == rhs.xOffset &&
+             lhs.yOffset  == rhs.yOffset &&
+             lhs.zOffset  == rhs.zOffset;
+    });
+    if (newEndIt != waypoints.end()) {
+      LOG() << "Removed " << std::distance(newEndIt, waypoints.end()) << " duplicate waypoints" << std::endl;
+      waypoints.erase(newEndIt, waypoints.end());
+    }
+    return waypoints;
+  };
 
-    result[Npc::kProtector][Npc::kBlacksmith] = {{ 25000, 397.0f, 0.0f, 1358.0f }};
-    result[Npc::kProtector][Npc::kStable] = {{ 25000, 390.0f, 0.0f, 493.0f }};
-    
-    return result;
+  // Hard code the NPCs' locations
+  static const auto npcPositionMap = []{
+    std::map<Npc, packet::structures::Position> npcPositions;
+    npcPositions[Npc::kStorage]    = { 25000,  981.0f, 0.0f, 1032.0f };
+    npcPositions[Npc::kPotion]     = { 25000, 1525.0f, 0.0f, 1385.0f };
+    npcPositions[Npc::kBlacksmith] = { 25000,  397.0f, 0.0f, 1358.0f };
+    npcPositions[Npc::kProtector]  = { 25000,  363.0f, 0.0f, 1083.0f };
+    npcPositions[Npc::kStable]     = { 25000,  390.0f, 0.0f,  493.0f };
+    npcPositions[Npc::kGrocery]    = { 25000, 1618.0f, 0.0f, 1078.0f };
+    return npcPositions;
   }();
 
-  auto it1 = pathBetween.find(npcSrc);
-  if (it1 == pathBetween.end()) {
-    LOG() << "No path exists between " << npcSrc << " and " << npcDest << std::endl;
-    return { bot_.selfState_.position() };
+  constexpr const double kAgentRadius{7.23};
+  pathfinder::Pathfinder<navmesh::triangulation::NavmeshTriangulation> pathfinder(bot_.gameData_.navmeshTriangulation(), kAgentRadius);
+  try {
+    const auto currentPosition = bot_.selfState().position();
+    const math::Vector currentPositionPoint(currentPosition.xOffset, currentPosition.yOffset, currentPosition.zOffset);
+    const auto navmeshCurrentPosition = bot_.gameData_.navmeshTriangulation().transformRegionPointIntoAbsolute(currentPositionPoint, currentPosition.regionId);
+    auto it = npcPositionMap.find(npc);
+    if (it == npcPositionMap.end()) {
+      throw std::runtime_error("Do not know location of NPC");
+    }
+    const auto &npcPosition = it->second;
+    const math::Vector destinationPositionPoint(npcPosition.xOffset, npcPosition.yOffset, npcPosition.zOffset);
+    const auto navmeshDestinationPosition = bot_.gameData_.navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, npcPosition.regionId);
+    const auto pathfindingResult = pathfinder.findShortestPath(navmeshCurrentPosition, navmeshDestinationPosition);
+    const auto &path = pathfindingResult.shortestPath;
+    if (path.empty()) {
+      throw std::runtime_error("Found empty path");
+    }
+    return pathfindingResultPathToVectorOfPositions(path);
+  } catch (std::exception &ex) {
+    LOG() << "Cannot find path with pathfinder: \"" << ex.what() << "\"" << std::endl;
   }
-  auto it2 = it1->second.find(npcDest);
-  if (it2 == it1->second.end()) {
-    LOG() << "No path exists between " << npcSrc << " and " << npcDest << std::endl;
-    return { bot_.selfState_.position() };
-  }
-
-  return it2->second;
+  return {};
 }
 
 // =====================================================================================================================================
