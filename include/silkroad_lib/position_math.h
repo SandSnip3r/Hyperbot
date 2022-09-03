@@ -12,6 +12,7 @@ Position interpolateBetweenPoints(const Position &srcPos, const Position &destPo
 Position getNewPositionGivenAngleAndDistance(const Position &srcPos, MovementAngle angle, float distance);
 RegionId worldRegionIdFromSectors(const Sector xSector, const Sector zSector);
 std::pair<Sector,Sector> sectorsFromWorldRegionId(const RegionId regionId);
+bool regionIsDungeon(const RegionId regionId);
 
 } // namespace sro::position_math
 

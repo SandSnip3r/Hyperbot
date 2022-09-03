@@ -15,7 +15,7 @@ RegionId Position::regionId() const {
 }
 
 bool Position::isDungeon() const {
-  return regionId_ & 0x8000;
+  return position_math::regionIsDungeon(regionId_);
 }
 
 DungeonId Position::dungeonId() const {

@@ -81,4 +81,8 @@ std::pair<Sector,Sector> sectorsFromWorldRegionId(const RegionId regionId) {
   return {(regionId & 0xFF), ((regionId >> 8) & 0xFF)};
 }
 
+bool regionIsDungeon(const RegionId regionId) {
+  return regionId & 0x8000;
+}
+
 } // namespace sro::position_math
