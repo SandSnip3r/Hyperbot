@@ -44,6 +44,10 @@ Walking::Walking(Bot &bot, const std::vector<packet::structures::Position> &wayp
   }
 }
 
+Walking::Walking(Bot &bot, const packet::structures::Position &destinationPosition) : bot_(bot) {
+  waypoints_ = calculatePathToDestination(destinationPosition);
+}
+
 void Walking::onUpdate(const event::Event *event) {
   if (bot_.selfState_.moving()) {
     // Still moving, nothing to do
@@ -80,6 +84,83 @@ void Walking::onUpdate(const event::Event *event) {
 
 bool Walking::done() const {
   return (currentWaypointIndex_ == waypoints_.size());
+}
+
+std::vector<packet::structures::Position> Walking::calculatePathToDestination(const packet::structures::Position &destinationPosition) const {
+  auto pathfindingResultPathToVectorOfPositions = [&, this](const auto &pathfindingShortestPath) {
+    const auto &navmeshTriangulation = bot_.gameData_.navmeshTriangulation();
+
+    // Get a list of all straight segments
+    std::vector<pathfinder::StraightPathSegment*> straightSegments;
+    for (const auto &segment : pathfindingShortestPath) {
+      pathfinder::StraightPathSegment *straightSegment = dynamic_cast<pathfinder::StraightPathSegment*>(segment.get());
+      if (straightSegment != nullptr) {
+        straightSegments.push_back(straightSegment);
+      }
+    }
+
+    // Turn straight segments into a list of waypoints
+    std::vector<packet::structures::Position> waypoints;
+    // Note: We are ignoring the start of the first segment, since we assume we're already there
+    for (int i=0; i<straightSegments.size()-1; ++i) {
+      // Find the average between the end of this straight segment and the beginning of the next
+      //  Between these two is an arc, which we're ignoring
+      // TODO: There is a chance that this yields a bad path
+      const auto &point1 = straightSegments[i]->endPoint;
+      const auto &point2 = straightSegments[i+1]->startPoint;
+      const auto midpoint = pathfinder::math::extendLineSegmentToLength(point1, point2, pathfinder::math::distance(point1, point2)/2.0);
+      // Vector startPoint, endPoint;
+      // Vector extendLineSegmentToLength(const Vector &point1, const Vector &point2, const double targetLength) {
+      const auto regionAndPointPair = navmeshTriangulation.transformAbsolutePointIntoRegion({static_cast<float>(midpoint.x()), 0.0f, static_cast<float>(midpoint.y())});
+      if (regionAndPointPair.second.x < 0) {
+        // TODO: A proper Position constructor which normalizes this will remove the need for this
+        throw std::runtime_error("Transformed point to Position, but x is negative");
+      }
+      if (regionAndPointPair.second.z < 0) {
+        // TODO: A proper Position constructor which normalizes this will remove the need for this
+        throw std::runtime_error("Transformed point to Position, but z is negative");
+      }
+      // TODO: Rounding the position could result in an invalid path
+      waypoints.push_back({regionAndPointPair.first, std::round(regionAndPointPair.second.x), std::round(regionAndPointPair.second.y), std::round(regionAndPointPair.second.z)});
+    }
+
+    // Additionally, add the endpoint of the final segment
+    const auto finalRegionAndPointPair = navmeshTriangulation.transformAbsolutePointIntoRegion({static_cast<float>(straightSegments.back()->endPoint.x()), 0.0f, static_cast<float>(straightSegments.back()->endPoint.y())});
+    waypoints.push_back({finalRegionAndPointPair.first, std::round(finalRegionAndPointPair.second.x), std::round(finalRegionAndPointPair.second.y), std::round(finalRegionAndPointPair.second.z)});
+
+    // Remove duplicates
+    auto newEndIt = std::unique(waypoints.begin(), waypoints.end(), [](const auto &lhs, const auto &rhs){
+      return lhs.regionId == rhs.regionId &&
+             lhs.xOffset  == rhs.xOffset &&
+             lhs.yOffset  == rhs.yOffset &&
+             lhs.zOffset  == rhs.zOffset;
+    });
+    if (newEndIt != waypoints.end()) {
+      LOG() << "Removed " << std::distance(newEndIt, waypoints.end()) << " duplicate waypoints" << std::endl;
+      waypoints.erase(newEndIt, waypoints.end());
+    }
+    return waypoints;
+  };
+
+  constexpr const double kAgentRadius{7.23};
+  pathfinder::Pathfinder<navmesh::triangulation::NavmeshTriangulation> pathfinder(bot_.gameData_.navmeshTriangulation(), kAgentRadius);
+  try {
+    const auto currentPosition = bot_.selfState().position();
+    const math::Vector currentPositionPoint(currentPosition.xOffset, currentPosition.yOffset, currentPosition.zOffset);
+    const auto navmeshCurrentPosition = bot_.gameData_.navmeshTriangulation().transformRegionPointIntoAbsolute(currentPositionPoint, currentPosition.regionId);
+
+    const math::Vector destinationPositionPoint(destinationPosition.xOffset, destinationPosition.yOffset, destinationPosition.zOffset);
+    const auto navmeshDestinationPosition = bot_.gameData_.navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, destinationPosition.regionId);
+
+    const auto pathfindingResult = pathfinder.findShortestPath(navmeshCurrentPosition, navmeshDestinationPosition);
+    const auto &path = pathfindingResult.shortestPath;
+    if (path.empty()) {
+      throw std::runtime_error("Found empty path");
+    }
+    return pathfindingResultPathToVectorOfPositions(path);
+  } catch (std::exception &ex) {
+    throw std::runtime_error("Cannot find path with pathfinder: \""+std::string(ex.what())+"\"");
+  }
 }
 
 // =====================================================================================================================================
@@ -727,10 +808,8 @@ Townlooping::Townlooping(Bot &bot) : CommonStateMachine(bot) {
     return;
   }
 
-  // Calculate the path to the first Npc
-  auto path = pathToNpc(npcsToVisit_[currentNpcIndex_]);
-  // Initialize state as walking
-  childState_.emplace<Walking>(bot_, path);
+  // Initialize state as walking to first NPC
+  childState_.emplace<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
 }
 
 void Townlooping::onUpdate(const event::Event *event) {
@@ -772,10 +851,8 @@ TODO_REMOVE_THIS_LABEL:
         return;
       }
 
-      // Calculate the path from the just-finished npc to the next npc
-      auto path = pathToNpc(npcsToVisit_[currentNpcIndex_]);
       // Update our state to walk to the next npc
-      childState_.emplace<Walking>(bot_, path);
+      childState_.emplace<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
       // TODO: Go back to the top of this function
       goto TODO_REMOVE_THIS_LABEL;
     }
@@ -786,63 +863,8 @@ bool Townlooping::done() const {
   return (npcsToVisit_.empty() || currentNpcIndex_ == npcsToVisit_.size());
 }
 
-std::vector<packet::structures::Position> Townlooping::pathToNpc(Npc npc) const {
-  auto pathfindingResultPathToVectorOfPositions = [&, this](const auto &pathfindingShortestPath) {
-    const auto &navmeshTriangulation = bot_.gameData_.navmeshTriangulation();
-
-    // Get a list of all straight segments
-    std::vector<pathfinder::StraightPathSegment*> straightSegments;
-    for (const auto &segment : pathfindingShortestPath) {
-      pathfinder::StraightPathSegment *straightSegment = dynamic_cast<pathfinder::StraightPathSegment*>(segment.get());
-      if (straightSegment != nullptr) {
-        straightSegments.push_back(straightSegment);
-      }
-    }
-
-    // Turn straight segments into a list of waypoints
-    std::vector<packet::structures::Position> waypoints;
-    // Note: We are ignoring the start of the first segment, since we assume we're already there
-    for (int i=0; i<straightSegments.size()-1; ++i) {
-      // Find the average between the end of this straight segment and the beginning of the next
-      //  Between these two is an arc, which we're ignoring
-      // TODO: There is a chance that this yields a bad path
-      const auto &point1 = straightSegments[i]->endPoint;
-      const auto &point2 = straightSegments[i+1]->startPoint;
-      const auto midpoint = pathfinder::math::extendLineSegmentToLength(point1, point2, pathfinder::math::distance(point1, point2)/2.0);
-      // Vector startPoint, endPoint;
-      // Vector extendLineSegmentToLength(const Vector &point1, const Vector &point2, const double targetLength) {
-      const auto regionAndPointPair = navmeshTriangulation.transformAbsolutePointIntoRegion({static_cast<float>(midpoint.x()), 0.0f, static_cast<float>(midpoint.y())});
-      if (regionAndPointPair.second.x < 0) {
-        // TODO: A proper Position constructor which normalizes this will remove the need for this
-        throw std::runtime_error("Transformed point to Position, but x is negative");
-      }
-      if (regionAndPointPair.second.z < 0) {
-        // TODO: A proper Position constructor which normalizes this will remove the need for this
-        throw std::runtime_error("Transformed point to Position, but z is negative");
-      }
-      // TODO: Rounding the position could result in an invalid path
-      waypoints.push_back({regionAndPointPair.first, std::round(regionAndPointPair.second.x), std::round(regionAndPointPair.second.y), std::round(regionAndPointPair.second.z)});
-    }
-
-    // Additionally, add the endpoint of the final segment
-    const auto finalRegionAndPointPair = navmeshTriangulation.transformAbsolutePointIntoRegion({static_cast<float>(straightSegments.back()->endPoint.x()), 0.0f, static_cast<float>(straightSegments.back()->endPoint.y())});
-    waypoints.push_back({finalRegionAndPointPair.first, std::round(finalRegionAndPointPair.second.x), std::round(finalRegionAndPointPair.second.y), std::round(finalRegionAndPointPair.second.z)});
-
-    // Remove duplicates
-    auto newEndIt = std::unique(waypoints.begin(), waypoints.end(), [](const auto &lhs, const auto &rhs){
-      return lhs.regionId == rhs.regionId &&
-             lhs.xOffset  == rhs.xOffset &&
-             lhs.yOffset  == rhs.yOffset &&
-             lhs.zOffset  == rhs.zOffset;
-    });
-    if (newEndIt != waypoints.end()) {
-      LOG() << "Removed " << std::distance(newEndIt, waypoints.end()) << " duplicate waypoints" << std::endl;
-      waypoints.erase(newEndIt, waypoints.end());
-    }
-    return waypoints;
-  };
-
-  // Hard code the NPCs' locations
+packet::structures::Position Townlooping::positionOfNpc(Npc npc) const {
+  // Hard code the NPCs' locations, for now
   static const auto npcPositionMap = []{
     std::map<Npc, packet::structures::Position> npcPositions;
     npcPositions[Npc::kStorage]    = { 25000,  981.0f, 0.0f, 1032.0f };
@@ -854,29 +876,11 @@ std::vector<packet::structures::Position> Townlooping::pathToNpc(Npc npc) const 
     return npcPositions;
   }();
 
-  constexpr const double kAgentRadius{7.23};
-  pathfinder::Pathfinder<navmesh::triangulation::NavmeshTriangulation> pathfinder(bot_.gameData_.navmeshTriangulation(), kAgentRadius);
-  try {
-    const auto currentPosition = bot_.selfState().position();
-    const math::Vector currentPositionPoint(currentPosition.xOffset, currentPosition.yOffset, currentPosition.zOffset);
-    const auto navmeshCurrentPosition = bot_.gameData_.navmeshTriangulation().transformRegionPointIntoAbsolute(currentPositionPoint, currentPosition.regionId);
-    auto it = npcPositionMap.find(npc);
-    if (it == npcPositionMap.end()) {
-      throw std::runtime_error("Do not know location of NPC");
-    }
-    const auto &npcPosition = it->second;
-    const math::Vector destinationPositionPoint(npcPosition.xOffset, npcPosition.yOffset, npcPosition.zOffset);
-    const auto navmeshDestinationPosition = bot_.gameData_.navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, npcPosition.regionId);
-    const auto pathfindingResult = pathfinder.findShortestPath(navmeshCurrentPosition, navmeshDestinationPosition);
-    const auto &path = pathfindingResult.shortestPath;
-    if (path.empty()) {
-      throw std::runtime_error("Found empty path");
-    }
-    return pathfindingResultPathToVectorOfPositions(path);
-  } catch (std::exception &ex) {
-    LOG() << "Cannot find path with pathfinder: \"" << ex.what() << "\"" << std::endl;
+  const auto it = npcPositionMap.find(npc);
+  if (it == npcPositionMap.end()) {
+    throw std::runtime_error("Trying to get position of NPC which does not exist");
   }
-  return {};
+  return it->second;
 }
 
 // =====================================================================================================================================

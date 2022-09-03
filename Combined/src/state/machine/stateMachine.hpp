@@ -31,6 +31,7 @@ private:
 class Walking {
 public:
   Walking(Bot &bot, const std::vector<packet::structures::Position> &waypoints);
+  Walking(Bot &bot, const packet::structures::Position &destinationPosition);
   void onUpdate(const event::Event *event);
   bool done() const;
 private:
@@ -38,6 +39,7 @@ private:
   std::vector<packet::structures::Position> waypoints_;
   size_t currentWaypointIndex_{0};
   bool requestedMovement_{false};
+  std::vector<packet::structures::Position> calculatePathToDestination(const packet::structures::Position &destinationPosition) const;
 };
 
 class BuyingItems : public CommonStateMachine {
@@ -118,7 +120,7 @@ private:
   size_t currentNpcIndex_{0};
   std::variant<std::monostate, Walking, TalkingToNpc> childState_;
 
-  std::vector<packet::structures::Position> pathToNpc(Npc npc) const;
+  packet::structures::Position positionOfNpc(Npc npc) const;
 };
 
 } // namespace state::machine
