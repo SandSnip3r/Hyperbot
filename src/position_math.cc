@@ -77,4 +77,8 @@ RegionId worldRegionIdFromSectors(const Sector xSector, const Sector zSector) {
   return ((xSector & 0xFF) | (static_cast<RegionId>(zSector & 0xFF) << 8));
 }
 
+std::pair<Sector,Sector> sectorsFromWorldRegionId(const RegionId regionId) {
+  return {(regionId & 0xFF), ((regionId >> 8) & 0xFF)};
+}
+
 } // namespace sro::position_math
