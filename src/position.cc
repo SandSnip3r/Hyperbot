@@ -67,3 +67,23 @@ void Position::normalize() {
 }
 
 } // namespace sro
+
+std::ostream& operator<<(std::ostream &stream, const sro::Position &pos) {
+  stream << '{';
+  if (pos.isDungeon()) {
+    stream << (int)pos.dungeonId();
+  } else {
+    stream << (int)pos.xSector() << ',' << (int)pos.zSector();
+  }
+  stream << " (" << pos.xOffset() << ',' << pos.yOffset() << ',' << pos.zOffset() << ")}";
+  return stream;
+}
+
+bool operator==(const sro::Position &pos1, const sro::Position &pos2) {
+  if (pos1.regionId() != pos2.regionId()) {
+    return false;
+  }
+  return ((pos1.xOffset() == pos2.xOffset()) &&
+          (pos1.yOffset() == pos2.yOffset()) &&
+          (pos1.zOffset() == pos2.zOffset()));
+}

@@ -4,6 +4,7 @@
 #include "scalar_types.h"
 
 #include <cstdint>
+#include <ostream>
 
 namespace sro {
 
@@ -39,5 +40,8 @@ private:
 };
 
 } // namespace sro
+
+std::ostream& operator<<(std::ostream &stream, const sro::Position &pos);
+bool operator==(const sro::Position &pos1, const sro::Position &pos2);
 
 #endif // POSITION_H_
