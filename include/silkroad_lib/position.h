@@ -39,9 +39,9 @@ private:
   void normalize();
 };
 
-} // namespace sro
+std::ostream& operator<<(std::ostream &stream, const Position &pos);
+bool operator==(const Position &pos1, const Position &pos2);
 
-std::ostream& operator<<(std::ostream &stream, const sro::Position &pos);
-bool operator==(const sro::Position &pos1, const sro::Position &pos2);
+} // namespace sro
 
 #endif // POSITION_H_

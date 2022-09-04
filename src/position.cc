@@ -66,9 +66,7 @@ void Position::normalize() {
   regionId_ = sro::position_math::worldRegionIdFromSectors(newXSector, newZSector);
 }
 
-} // namespace sro
-
-std::ostream& operator<<(std::ostream &stream, const sro::Position &pos) {
+std::ostream& operator<<(std::ostream &stream, const Position &pos) {
   stream << '{';
   if (pos.isDungeon()) {
     stream << (int)pos.dungeonId();
@@ -79,7 +77,7 @@ std::ostream& operator<<(std::ostream &stream, const sro::Position &pos) {
   return stream;
 }
 
-bool operator==(const sro::Position &pos1, const sro::Position &pos2) {
+bool operator==(const Position &pos1, const Position &pos2) {
   if (pos1.regionId() != pos2.regionId()) {
     return false;
   }
@@ -87,3 +85,5 @@ bool operator==(const sro::Position &pos1, const sro::Position &pos2) {
           (pos1.yOffset() == pos2.yOffset()) &&
           (pos1.zOffset() == pos2.zOffset()));
 }
+
+} // namespace sro
