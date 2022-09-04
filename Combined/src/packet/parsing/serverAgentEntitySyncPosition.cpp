@@ -3,8 +3,6 @@
 
 namespace packet::parsing {
 
-// kServerAgentEntitySyncPosition = 0x3028
-
 ServerAgentEntitySyncPosition::ServerAgentEntitySyncPosition(const PacketContainer &packet) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
@@ -17,7 +15,7 @@ uint32_t ServerAgentEntitySyncPosition::globalId() const {
   return globalId_;
 }
 
-structures::Position ServerAgentEntitySyncPosition::position() const {
+sro::Position ServerAgentEntitySyncPosition::position() const {
   return position_;
 }
 

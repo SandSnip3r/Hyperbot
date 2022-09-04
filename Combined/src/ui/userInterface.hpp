@@ -6,6 +6,7 @@
 
 #include "ui-proto/broadcast.pb.h"
 
+#include <silkroad_lib/position.h>
 #include <zmq.hpp>
 
 #include <optional>
@@ -28,9 +29,9 @@ public:
   void broadcastCharacterSpUpdate(uint32_t skillPoints);
   void broadcastCharacterNameUpdate(std::string_view characterName);
   void broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::ItemLocation goldLocation);
-  void broadcastMovementBeganUpdate(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition, float speed);
-  void broadcastMovementBeganUpdate(const packet::structures::Position &srcPosition, uint16_t angle, float speed);
-  void broadcastMovementEndedUpdate(const packet::structures::Position &currentPosition);
+  void broadcastMovementBeganUpdate(const sro::Position &srcPosition, const sro::Position &destPosition, float speed);
+  void broadcastMovementBeganUpdate(const sro::Position &srcPosition, uint16_t angle, float speed);
+  void broadcastMovementEndedUpdate(const sro::Position &currentPosition);
   void broadcastRegionNameUpdate(std::string_view regionName);
   void broadcastItemUpdate(broadcast::ItemLocation itemLocation, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName={});
   void broadcast(const broadcast::BroadcastMessage &broadcastProto);

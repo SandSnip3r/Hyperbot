@@ -310,7 +310,7 @@ const std::vector<structures::Skill>& ParsedServerAgentCharacterData::skills() c
   return skills_;
 }
 
-packet::structures::Position ParsedServerAgentCharacterData::position() const {
+sro::Position ParsedServerAgentCharacterData::position() const {
   return position_;
 }
 

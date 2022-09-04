@@ -1,5 +1,6 @@
-#include "../math/position.hpp"
 #include "navmesh.hpp"
+
+#include <silkroad_lib/position_math.h>
 
 #include <chrono>
 #include <iostream>
@@ -96,8 +97,8 @@ math::Matrix4x4 Navmesh::getTransformationFromObjectInstanceToWorld(const uint32
     translationMatrix.setTranslation(objectInstance.center);
   } else {
     // This object isnt for our region, we need to shift it into our region
-    const auto [ourRegionX, ourRegionY] = math::position::regionXYFromRegionId(regionId);
-    const auto [owningRegionX, owningRegionY] = math::position::regionXYFromRegionId(objectInstance.regionId);
+    const auto [ourRegionX, ourRegionY] = sro::position_math::sectorsFromWorldRegionId(regionId);
+    const auto [owningRegionX, owningRegionY] = sro::position_math::sectorsFromWorldRegionId(objectInstance.regionId);
     const int dx = (ourRegionX - owningRegionX) * 1920;
     const int dy = (ourRegionY - owningRegionY) * 1920;
     auto newObjectCenter = objectInstance.center;
@@ -181,8 +182,8 @@ void Navmesh::sanityCheck() {
   // =================================== Sanity check #1 ====================================
   // For every global region edge, there should be a matching global edge in the neighboring region
   auto edgesAreEqual = [](const auto &edge, const auto srcRegionId, auto potentialEdge, const auto destRegionId) {
-    const auto [srcRegionX, srcRegionY] = math::position::regionXYFromRegionId(srcRegionId);
-    const auto [destRegionX, destRegionY] = math::position::regionXYFromRegionId(destRegionId);
+    const auto [srcRegionX, srcRegionY] = sro::position_math::sectorsFromWorldRegionId(srcRegionId);
+    const auto [destRegionX, destRegionY] = sro::position_math::sectorsFromWorldRegionId(destRegionId);
     if (destRegionX > srcRegionX) {
       // Region to the right
       potentialEdge.min.x = 1920.0;
@@ -349,7 +350,7 @@ void Navmesh::postProcess() {
   // We need to check for any overlap and possibly add to the Region::objectInstanceIds list
   const auto startTime = std::chrono::high_resolution_clock::now();
   auto calculateOverlappingRegions = [](const uint16_t regionId, const float minX, const float minZ, const float maxX, const float maxZ) {
-    const auto [regionX, regionY] = math::position::regionXYFromRegionId(regionId);
+    const auto [regionX, regionY] = sro::position_math::sectorsFromWorldRegionId(regionId);
     const int minRegionX = regionX + static_cast<int>(std::floor(minX/1920.0));
     const int maxRegionX = regionX + static_cast<int>(std::floor(maxX/1920.0));
     const int minRegionY = regionY + static_cast<int>(std::floor(minZ/1920.0));
@@ -358,7 +359,7 @@ void Navmesh::postProcess() {
     regions.reserve((maxRegionX-minRegionX+1) * (maxRegionY-minRegionY+1));
     for (int rx=minRegionX; rx<=maxRegionX; ++rx) {
       for (int ry=minRegionY; ry<=maxRegionY; ++ry) {
-        regions.push_back(math::position::worldRegionIdFromXY(rx, ry));
+        regions.push_back(sro::position_math::worldRegionIdFromSectors(rx, ry));
       }
     }
     return regions;

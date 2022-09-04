@@ -15,7 +15,7 @@ uint32_t ServerAgentEntityUpdatePosition::globalId() const {
   return globalId_;
 }
 
-structures::Position ServerAgentEntityUpdatePosition::position() const {
+sro::Position ServerAgentEntityUpdatePosition::position() const {
   return position_;
 }
 

@@ -4,6 +4,8 @@
 #include "helpers.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 
+#include <silkroad_lib/position.h>
+
 #include <map>
 #include <variant>
 #include <vector>
@@ -30,16 +32,15 @@ private:
 
 class Walking {
 public:
-  Walking(Bot &bot, const std::vector<packet::structures::Position> &waypoints);
-  Walking(Bot &bot, const packet::structures::Position &destinationPosition);
+  Walking(Bot &bot, const sro::Position &destinationPosition);
   void onUpdate(const event::Event *event);
   bool done() const;
 private:
   Bot &bot_;
-  std::vector<packet::structures::Position> waypoints_;
+  std::vector<sro::Position> waypoints_;
   size_t currentWaypointIndex_{0};
   bool requestedMovement_{false};
-  std::vector<packet::structures::Position> calculatePathToDestination(const packet::structures::Position &destinationPosition) const;
+  std::vector<sro::Position> calculatePathToDestination(const sro::Position &destinationPosition) const;
 };
 
 class BuyingItems : public CommonStateMachine {
@@ -120,7 +121,7 @@ private:
   size_t currentNpcIndex_{0};
   std::variant<std::monostate, Walking, TalkingToNpc> childState_;
 
-  packet::structures::Position positionOfNpc(Npc npc) const;
+  sro::Position positionOfNpc(Npc npc) const;
 };
 
 } // namespace state::machine

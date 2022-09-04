@@ -2,7 +2,6 @@
 #include "helpers.hpp"
 #include "logging.hpp"
 
-#include "math/position.hpp"
 #include "packet/building/clientAgentActionDeselectRequest.hpp"
 #include "packet/building/clientAgentActionSelectRequest.hpp"
 #include "packet/building/clientAgentActionTalkRequest.hpp"
@@ -141,7 +140,7 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kEnteredNewRegion:
         {
           const auto pos = selfState_.position();
-          const auto &regionName = gameData_.textZoneNameData().getRegionName(pos.regionId);
+          const auto &regionName = gameData_.textZoneNameData().getRegionName(pos.regionId());
           userInterface_.broadcastRegionNameUpdate(regionName);
         }
         break;
@@ -296,11 +295,6 @@ void Bot::handleStopTraining() {
 }
 
 void Bot::startTraining() {
-  // Hard coded data (for now)
-  static const std::vector<packet::structures::Position> pathFromSpawnToStorage = {
-    {25000, 981.0f, -32.0f, 1032.0f}
-  };
-
   if (selfState_.trainingIsActive) {
     LOG() << "Asked to start training, but we're already training" << std::endl;
     return;
@@ -422,7 +416,7 @@ void Bot::handleSpawned() {
   userInterface_.broadcastCharacterSpUpdate(selfState_.getSkillPoints());
   userInterface_.broadcastCharacterNameUpdate(selfState_.characterName);
   userInterface_.broadcastGoldAmountUpdate(selfState_.getGold(), broadcast::ItemLocation::kCharacterInventory);
-  const auto &regionName = gameData_.textZoneNameData().getRegionName(selfState_.position().regionId);
+  const auto &regionName = gameData_.textZoneNameData().getRegionName(selfState_.position().regionId());
   userInterface_.broadcastMovementEndedUpdate(selfState_.position());
   userInterface_.broadcastRegionNameUpdate(regionName);
   // Send entire inventory

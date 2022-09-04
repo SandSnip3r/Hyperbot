@@ -2,10 +2,11 @@
 #include "logging.hpp"
 #include "self.hpp"
 
-#include "math/position.hpp"
-
 // From Pathfinder
 #include "math_helpers.h"
+
+#include <silkroad_lib/position_math.h>
+#include <silkroad_lib/constants.h>
 
 #include <cmath>
 #include <iostream>
@@ -150,7 +151,7 @@ void Self::setBodyState(packet::enums::BodyState bodyState) {
   bodyState_ = bodyState;
 }
 
-void Self::setStationaryAtPosition(const packet::structures::Position &position) {
+void Self::setStationaryAtPosition(const sro::Position &position) {
   cancelMovement();
   lastKnownPosition_ = position;
   destinationPosition_.reset();
@@ -158,14 +159,14 @@ void Self::setStationaryAtPosition(const packet::structures::Position &position)
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded));
 }
 
-void Self::syncPosition(const packet::structures::Position &position) {
+void Self::syncPosition(const sro::Position &position) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
   const auto expectedPosition = this->position();
   lastKnownPosition_ = position;
   // TODO: Need angle?
   if (moving_) {
     startedMovingTime_ = currentTime;
-    const auto offByDistance = math::position::calculateDistance(expectedPosition, position);
+    const auto offByDistance = sro::position_math::calculateDistance2D(expectedPosition, position);
     LOG() << "We are moving, syncing our position. We were off by " << offByDistance << std::endl;
     // Might be worth recalculating travel time and starting a new timer
   }
@@ -191,7 +192,7 @@ void Self::movementTimerCompleted() {
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementEnded));
 }
 
-void Self::setMovingToDestination(const std::optional<packet::structures::Position> &sourcePosition, const packet::structures::Position &destinationPosition) {
+void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
   if (sourcePosition) {
     lastKnownPosition_ = *sourcePosition;
@@ -210,10 +211,10 @@ void Self::setMovingToDestination(const std::optional<packet::structures::Positi
   destinationPosition_ = destinationPosition;
   movementAngle_.reset();
 
-  if (lastKnownPosition_.xOffset < 0 || lastKnownPosition_.zOffset >= 1920) {
+  if (lastKnownPosition_.xOffset() < 0 || lastKnownPosition_.zOffset() >= 1920) {
     throw std::runtime_error("lastKnownPosition is not normalized");
   }
-  if (destinationPosition_->xOffset < 0 || destinationPosition_->zOffset >= 1920) {
+  if (destinationPosition_->xOffset() < 0 || destinationPosition_->zOffset() >= 1920) {
     throw std::runtime_error("destinationPosition is not normalized");
   }
 
@@ -225,7 +226,7 @@ void Self::setMovingToDestination(const std::optional<packet::structures::Positi
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementBegan));
 }
 
-void Self::setMovingTowardAngle(const std::optional<packet::structures::Position> &sourcePosition, const uint16_t angle) {
+void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const uint16_t angle) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
   if (sourcePosition) {
     lastKnownPosition_ = *sourcePosition;
@@ -239,7 +240,7 @@ void Self::setMovingTowardAngle(const std::optional<packet::structures::Position
   destinationPosition_.reset();
   movementAngle_ = angle;
 
-  if (lastKnownPosition_.xOffset < 0 || lastKnownPosition_.zOffset >= 1920) {
+  if (lastKnownPosition_.xOffset() < 0 || lastKnownPosition_.zOffset() >= 1920) {
     throw std::runtime_error("lastKnownPosition is not normalized");
   }
 
@@ -247,17 +248,17 @@ void Self::setMovingTowardAngle(const std::optional<packet::structures::Position
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementBegan));
 }
 
-void Self::checkIfWillLeaveRegionAndSetTimer(const packet::structures::Position &currentPosition) {
+void Self::checkIfWillLeaveRegionAndSetTimer(const sro::Position &currentPosition) {
   if (destinationPosition_) {
-    if (currentPosition.regionId == destinationPosition_->regionId) {
+    if (currentPosition.regionId() == destinationPosition_->regionId()) {
       // Not going to leave our region
       return;
     }
     // We're going to change regions
     const auto xSectorDiff = destinationPosition_->xSector() - currentPosition.xSector();
     const auto zSectorDiff = destinationPosition_->zSector() - currentPosition.zSector();
-    const auto xDiff = (destinationPosition_->xOffset - currentPosition.xOffset) + xSectorDiff * 1920.0;
-    const auto zDiff = (destinationPosition_->zOffset - currentPosition.zOffset) + zSectorDiff * 1920.0;
+    const auto xDiff = (destinationPosition_->xOffset() - currentPosition.xOffset()) + xSectorDiff * 1920.0;
+    const auto zDiff = (destinationPosition_->zOffset() - currentPosition.zOffset()) + zSectorDiff * 1920.0;
     calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(currentPosition, xDiff, zDiff);
   } else {
     if (!movementAngle_) {
@@ -271,8 +272,8 @@ void Self::checkIfWillLeaveRegionAndSetTimer(const packet::structures::Position 
   }
 }
 
-void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const packet::structures::Position &currentPosition, double dx, double dy) {
-  pathfinder::Vector trajectoryPoint0{currentPosition.xOffset, currentPosition.zOffset}, trajectoryPoint1{currentPosition.xOffset+dx, currentPosition.zOffset+dy};
+void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const sro::Position &currentPosition, double dx, double dy) {
+  pathfinder::Vector trajectoryPoint0{currentPosition.xOffset(), currentPosition.zOffset()}, trajectoryPoint1{currentPosition.xOffset()+dx, currentPosition.zOffset()+dy};
   std::array<std::pair<pathfinder::Vector, pathfinder::Vector>, 4> regionBoundaries = {
     std::make_pair(pathfinder::Vector(0.0, 0.0), pathfinder::Vector(1920.0, 0.0)),
     std::make_pair(pathfinder::Vector(0.0, 0.0), pathfinder::Vector(0.0, 1920.0)),
@@ -292,11 +293,7 @@ void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(c
   if (!intersectionPoint) {
     throw std::runtime_error("This must intersect somewhere since we know we're crossing a region boundary");
   }
-  packet::structures::Position intersectionPos;
-  intersectionPos.regionId = currentPosition.regionId;
-  intersectionPos.xOffset = intersectionPoint->x();
-  intersectionPos.zOffset = intersectionPoint->y();
-  math::position::normalize(intersectionPos);
+  sro::Position intersectionPos(currentPosition.regionId(), intersectionPoint->x(), 0.0f, intersectionPoint->y());
   // Start timer
   const auto seconds = helpers::secondsToTravel(currentPosition, intersectionPos, currentSpeed());
   enteredNewRegionEventId_ = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kEnteredNewRegion), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
@@ -596,7 +593,7 @@ packet::enums::BodyState Self::bodyState() const {
   return bodyState_;
 }
 
-packet::structures::Position Self::position() const {
+sro::Position Self::position() const {
   return interpolateCurrentPosition();
 }
 
@@ -608,7 +605,7 @@ bool Self::haveDestination() const {
   return destinationPosition_.has_value();
 }
 
-packet::structures::Position Self::destination() const {
+sro::Position Self::destination() const {
   if (!destinationPosition_) {
     throw std::runtime_error("Self: Trying to get destination that does not exist");
   }
@@ -759,14 +756,14 @@ void Self::privateSetRaceAndGender(uint32_t refObjId) {
   }
 }
 
-packet::structures::Position Self::interpolateCurrentPosition() const {
+sro::Position Self::interpolateCurrentPosition() const {
   if (!moving_) {
     return lastKnownPosition_;
   }
   const auto currentTime = std::chrono::high_resolution_clock::now();
   auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-startedMovingTime_).count();
   if (destinationPosition_) {
-    auto totalDistance = math::position::calculateDistance(lastKnownPosition_, *destinationPosition_);
+    auto totalDistance = sro::position_math::calculateDistance2D(lastKnownPosition_, *destinationPosition_);
     if (totalDistance < 0.0001 /* TODO: Use a double equal function */) {
       // We're at our destination
       return lastKnownPosition_;
@@ -780,22 +777,22 @@ packet::structures::Position Self::interpolateCurrentPosition() const {
     } else if (percentTraveled == 1) {
       return *destinationPosition_;
     } else {
-      const auto resultPos = math::position::interpolateBetweenPoints(lastKnownPosition_, *destinationPosition_, percentTraveled);
+      const auto resultPos = sro::position_math::interpolateBetweenPoints(lastKnownPosition_, *destinationPosition_, percentTraveled);
       if (percentTraveled > 1) {
-        std::cout << "Weird, we're moving, but we've traveled \"past\" our destination (" << percentTraveled*100 << "%)\n";
+        LOG() << "Weird, we're moving, but we've traveled \"past\" our destination (" << percentTraveled*100 << "%)" << std::endl;
         if (percentTraveled == std::numeric_limits<double>::infinity()) {
           throw std::runtime_error("Nooo");
         }
-        std::cout << "   Destination: " << destinationPosition_->xOffset << ',' << destinationPosition_->zOffset << "\n";
-        std::cout << "   Returning pos " << resultPos.xOffset << ',' << resultPos.zOffset << '\n';
+        LOG() << "   Destination: " << destinationPosition_->xOffset() << ',' << destinationPosition_->zOffset() << std::endl;
+        LOG() << "   Returning pos " << resultPos.xOffset() << ',' << resultPos.zOffset() << std::endl;
       }
       return resultPos;
     }
   } else if (movementAngle_) {
-    float angle = *movementAngle_/static_cast<float>(std::numeric_limits<std::remove_reference_t<decltype(*movementAngle_)>>::max()) * 2*math::kPi;
+    float angle = *movementAngle_/static_cast<float>(std::numeric_limits<std::remove_reference_t<decltype(*movementAngle_)>>::max()) * sro::constants::k2Pi;
     float xOffset = std::cos(angle) * currentSpeed() * (elapsedTimeMs/1000.0);
     float zOffset = std::sin(angle) * currentSpeed() * (elapsedTimeMs/1000.0);
-    return math::position::offset(lastKnownPosition_, xOffset, zOffset);
+    return sro::position_math::createNewPositionWith2dOffset(lastKnownPosition_, xOffset, zOffset);
   } else {
     throw std::runtime_error("Moving but no destination position or movement angle");
   }

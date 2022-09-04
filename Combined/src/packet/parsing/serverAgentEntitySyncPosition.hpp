@@ -5,20 +5,20 @@
 #include "../enums/packetEnums.hpp"
 #include "../structures/packetInnerStructures.hpp"
 
+#include <silkroad_lib/position.h>
+
 #include <cstdint>
 
 namespace packet::parsing {
 
-// kServerAgentEntitySyncPosition = 0x3028
-
 class ServerAgentEntitySyncPosition : public ParsedPacket {
 public:
   ServerAgentEntitySyncPosition(const PacketContainer &packet);
-  structures::Position position() const;
+  sro::Position position() const;
   uint16_t angle() const;
   uint32_t globalId() const;
 private:
-  structures::Position position_;
+  sro::Position position_;
   uint16_t angle_;
   uint32_t globalId_;
 

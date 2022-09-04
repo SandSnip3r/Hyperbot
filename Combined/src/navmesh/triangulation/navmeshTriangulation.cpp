@@ -3,8 +3,9 @@
 #include "triangle/triangle_api.h"
 
 #include "math/matrix.hpp"
-#include "math/position.hpp"
 #include "navmeshTriangulation.hpp"
+
+#include <silkroad_lib/position_math.h>
 
 #include <fstream>
 #include <set>
@@ -131,12 +132,12 @@ void NavmeshTriangulation::linkGlobalEdgesBetweenRegions() {
     Direction direction;
   };
   auto getNeighboringRegionIds = [](const uint16_t regionId) -> std::array<NeighboringRegion, 4> {
-    const auto [regionX, regionY] = math::position::regionXYFromRegionId(regionId);
+    const auto [regionX, regionY] = sro::position_math::sectorsFromWorldRegionId(regionId);
     return {{
-      {math::position::worldRegionIdFromXY(regionX+1,regionY), Direction::kRight},
-      {math::position::worldRegionIdFromXY(regionX-1,regionY), Direction::kLeft},
-      {math::position::worldRegionIdFromXY(regionX,regionY+1), Direction::kTop},
-      {math::position::worldRegionIdFromXY(regionX,regionY-1), Direction::kBottom}
+      {sro::position_math::worldRegionIdFromSectors(regionX+1,regionY), Direction::kRight},
+      {sro::position_math::worldRegionIdFromSectors(regionX-1,regionY), Direction::kLeft},
+      {sro::position_math::worldRegionIdFromSectors(regionX,regionY+1), Direction::kTop},
+      {sro::position_math::worldRegionIdFromSectors(regionX,regionY-1), Direction::kBottom}
     }};
   };
   auto edgesAllMatch = [&](const uint16_t thisRegionId, const auto &thisRegionEdges, const Direction direction, const uint16_t otherRegionId, const auto &otherRegionEdges) {
@@ -428,18 +429,18 @@ uint16_t NavmeshTriangulation::getOriginRegion() const {
 }
 
 math::Vector NavmeshTriangulation::transformRegionPointIntoAbsolute(const math::Vector &point, const uint16_t regionId) const {
-  const auto [regionX, regionY] = math::position::regionXYFromRegionId(regionId);
-  const auto [originRegionX, originRegionY] = math::position::regionXYFromRegionId(originRegionId_);
+  const auto [regionX, regionY] = sro::position_math::sectorsFromWorldRegionId(regionId);
+  const auto [originRegionX, originRegionY] = sro::position_math::sectorsFromWorldRegionId(originRegionId_);
   const auto absoluteX = point.x + (regionX-originRegionX)*1920.0f;
   const auto absoluteZ = point.z + (regionY-originRegionY)*1920.0f;
   return math::Vector{absoluteX, point.y, absoluteZ};
 }
 
 std::pair<uint16_t, math::Vector> NavmeshTriangulation::transformAbsolutePointIntoRegion(const math::Vector &point) const {
-  const auto [originRegionX, originRegionY] = math::position::regionXYFromRegionId(originRegionId_);
+  const auto [originRegionX, originRegionY] = sro::position_math::sectorsFromWorldRegionId(originRegionId_);
   const int regionXOffset = static_cast<int>(std::floor(point.x/1920.0));
   const int regionYOffset = static_cast<int>(std::floor(point.z/1920.0));
-  const auto newRegionId = math::position::worldRegionIdFromXY(originRegionX+regionXOffset, originRegionY+regionYOffset);
+  const auto newRegionId = sro::position_math::worldRegionIdFromSectors(originRegionX+regionXOffset, originRegionY+regionYOffset);
   math::Vector newPoint{point.x-(1920.0f*regionXOffset), point.y, point.z-(1920.0f*regionYOffset)};
   return {newRegionId, newPoint};
 }
@@ -525,7 +526,7 @@ NavmeshTriangulation::TriangleVerticesType NavmeshTriangulation::getTriangleVert
 
 std::optional<NavmeshTriangulation::GlobalEdgeAndTriangleIndices> NavmeshTriangulation::getNeighborTriangleAndEdge(const IndexType edgeIndex) const {
   auto getNeighborRegionIdAcrossEdge = [](const auto edge, const uint16_t regionId) {
-    auto [neighborRegionX, neighborRegionY] = math::position::regionXYFromRegionId(regionId);
+    auto [neighborRegionX, neighborRegionY] = sro::position_math::sectorsFromWorldRegionId(regionId);
     if (edge.first.x() == edge.second.x()) {
       // Edge is vertical
       if (edge.first.x() == 0.0) {
@@ -552,7 +553,7 @@ std::optional<NavmeshTriangulation::GlobalEdgeAndTriangleIndices> NavmeshTriangu
       throw std::runtime_error("Global edge is neither vertical nor horizontal");
     }
 
-    return math::position::worldRegionIdFromXY(neighborRegionX, neighborRegionY);
+    return sro::position_math::worldRegionIdFromSectors(neighborRegionX, neighborRegionY);
   };
 
   // Get the neighboring region ID
@@ -696,8 +697,8 @@ NavmeshTriangulation::EdgeType NavmeshTriangulation::getSharedEdge(const IndexTy
   } else {
     // They're in different regions
     // Quick check to make sure that they're in neighboring regions
-    const auto [triangle1RegionX, triangle1RegionY] = math::position::regionXYFromRegionId(triangle1RegionId);
-    const auto [triangle2RegionX, triangle2RegionY] = math::position::regionXYFromRegionId(triangle2RegionId);
+    const auto [triangle1RegionX, triangle1RegionY] = sro::position_math::sectorsFromWorldRegionId(triangle1RegionId);
+    const auto [triangle2RegionX, triangle2RegionY] = sro::position_math::sectorsFromWorldRegionId(triangle2RegionId);
     if (std::abs(triangle1RegionX-triangle2RegionX)+std::abs(triangle1RegionY-triangle2RegionY) != 1) {
       throw std::runtime_error("Trying to get shared edge between two regions which are not neighbors");
     }
@@ -730,18 +731,18 @@ NavmeshTriangulation::EdgeType NavmeshTriangulation::getEdge(const IndexType edg
 }
   
 pathfinder::Vector NavmeshTriangulation::translatePointToGlobal(pathfinder::Vector point, const uint16_t regionId) const {
-  const auto [originRegionX, originRegionY] = math::position::regionXYFromRegionId(originRegionId_);
-  const auto [regionX, regionY] = math::position::regionXYFromRegionId(regionId);
+  const auto [originRegionX, originRegionY] = sro::position_math::sectorsFromWorldRegionId(originRegionId_);
+  const auto [regionX, regionY] = sro::position_math::sectorsFromWorldRegionId(regionId);
   point.setX(point.x() + 1920.0 * (regionX-originRegionX));
   point.setY(point.y() + 1920.0 * (regionY-originRegionY));
   return point;
 }
 
 std::pair<uint16_t,pathfinder::Vector> NavmeshTriangulation::translatePointToRegion(const pathfinder::Vector &point) const {
-  const auto [originRegionX, originRegionY] = math::position::regionXYFromRegionId(originRegionId_);
+  const auto [originRegionX, originRegionY] = sro::position_math::sectorsFromWorldRegionId(originRegionId_);
   const int regionXOffset = static_cast<int>(std::floor(point.x()/1920.0));
   const int regionYOffset = static_cast<int>(std::floor(point.y()/1920.0));
-  const auto newRegionId = math::position::worldRegionIdFromXY(originRegionX+regionXOffset, originRegionY+regionYOffset);
+  const auto newRegionId = sro::position_math::worldRegionIdFromSectors(originRegionX+regionXOffset, originRegionY+regionYOffset);
   pathfinder::Vector newPoint{point.x()-(1920.0*regionXOffset), point.y()-(1920.0*regionYOffset)};
   return {newRegionId, newPoint};
 }
@@ -828,15 +829,15 @@ void NavmeshTriangulation::buildGlobalEdgesBasedOnBlockedTerrain(const Navmesh &
   };
 
   auto getNeighboringRegionId = [](const uint16_t regionId, const GlobalEdgeSide side) {
-    const auto [regionX, regionY] = math::position::regionXYFromRegionId(regionId);
+    const auto [regionX, regionY] = sro::position_math::sectorsFromWorldRegionId(regionId);
     if (side == GlobalEdgeSide::kLeft) {
-      return math::position::worldRegionIdFromXY(regionX-1,regionY);
+      return sro::position_math::worldRegionIdFromSectors(regionX-1,regionY);
     } else if (side == GlobalEdgeSide::kRight) {
-      return math::position::worldRegionIdFromXY(regionX+1,regionY);
+      return sro::position_math::worldRegionIdFromSectors(regionX+1,regionY);
     } else if (side == GlobalEdgeSide::kBottom) {
-      return math::position::worldRegionIdFromXY(regionX,regionY-1);
+      return sro::position_math::worldRegionIdFromSectors(regionX,regionY-1);
     } else if (side == GlobalEdgeSide::kTop) {
-      return math::position::worldRegionIdFromXY(regionX,regionY+1);
+      return sro::position_math::worldRegionIdFromSectors(regionX,regionY+1);
     } else {
       throw std::runtime_error("Impossible direction");
     }
@@ -1329,8 +1330,8 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
     }
 
     // Calculate region offset so we can trim it for our region
-    const auto [originRegionX, originRegionY] = math::position::regionXYFromRegionId(objectInstance.regionId);
-    const auto [ourRegionX, ourRegionY] = math::position::regionXYFromRegionId(region.id);
+    const auto [originRegionX, originRegionY] = sro::position_math::sectorsFromWorldRegionId(objectInstance.regionId);
+    const auto [ourRegionX, ourRegionY] = sro::position_math::sectorsFromWorldRegionId(region.id);
     const auto regionDx = ourRegionX-originRegionX;
     const auto regionDy = ourRegionY-originRegionY;
 

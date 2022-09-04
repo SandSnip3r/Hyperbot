@@ -10,6 +10,8 @@
 #include "storage/buybackQueue.hpp"
 #include "storage/storage.hpp"
 
+#include <silkroad_lib/position.h>
+
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -64,11 +66,11 @@ public:
   void setMotionState(packet::enums::MotionState motionState);
   void setBodyState(packet::enums::BodyState bodyState);
 
-  void setStationaryAtPosition(const packet::structures::Position &position);
-  void syncPosition(const packet::structures::Position &position);
+  void setStationaryAtPosition(const sro::Position &position);
+  void syncPosition(const sro::Position &position);
   void movementTimerCompleted();
-  void setMovingToDestination(const std::optional<packet::structures::Position> &sourcePosition, const packet::structures::Position &destinationPosition);
-  void setMovingTowardAngle(const std::optional<packet::structures::Position> &sourcePosition, const uint16_t angle);
+  void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition);
+  void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const uint16_t angle);
 
   void setHp(uint32_t hp);
   void setMp(uint32_t mp);
@@ -120,10 +122,10 @@ public:
   packet::enums::MotionState motionState() const;
   packet::enums::BodyState bodyState() const;
 
-  packet::structures::Position position() const;
+  sro::Position position() const;
   bool moving() const;
   bool haveDestination() const;
-  packet::structures::Position destination() const;
+  sro::Position destination() const;
   uint16_t movementAngle() const;
   
   uint32_t hp() const;
@@ -213,10 +215,10 @@ public:
   packet::enums::BodyState bodyState_;
 
   // Movement/position
-  packet::structures::Position lastKnownPosition_;
+  sro::Position lastKnownPosition_;
   bool moving_{false};
   std::chrono::high_resolution_clock::time_point startedMovingTime_;
-  std::optional<packet::structures::Position> destinationPosition_;
+  std::optional<sro::Position> destinationPosition_;
   std::optional<uint16_t> movementAngle_;
   std::optional<broker::TimerManager::TimerId> movingEventId_;
   std::optional<broker::TimerManager::TimerId> enteredNewRegionEventId_;
@@ -271,12 +273,12 @@ private:
   const pk2::GameData &gameData_;
 
   void privateSetRaceAndGender(uint32_t refObjId);
-  packet::structures::Position interpolateCurrentPosition() const;
-  void calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const packet::structures::Position &currentPosition, double dx, double dy);
+  sro::Position interpolateCurrentPosition() const;
+  void calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const sro::Position &currentPosition, double dx, double dy);
   void handleEvent(const event::Event *event);
   void enteredRegion();
   void cancelMovement();
-  void checkIfWillLeaveRegionAndSetTimer(const packet::structures::Position &currentPosition);
+  void checkIfWillLeaveRegionAndSetTimer(const sro::Position &currentPosition);
 
   // Known delay for potion cooldown
   int potionDelayMs_;

@@ -1,11 +1,13 @@
 #include "helpers.hpp"
 #include "logging.hpp"
-#include "math/position.hpp"
+
+#include <silkroad_lib/position.h>
+#include <silkroad_lib/position_math.h>
 
 namespace helpers {
 
-float secondsToTravel(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition, const float currentSpeed) {
-  auto distance = math::position::calculateDistance(srcPosition, destPosition);
+float secondsToTravel(const sro::Position &srcPosition, const sro::Position &destPosition, const float currentSpeed) {
+  const auto distance = sro::position_math::calculateDistance2D(srcPosition, destPosition);
   return distance / currentSpeed;
 }
 

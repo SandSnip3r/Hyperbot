@@ -1,9 +1,10 @@
-#include "helpers.hpp"
-#include "logging.hpp"
-#include "math/position.hpp"
 #include "packetProcessor.hpp"
 
+#include "helpers.hpp"
+#include "logging.hpp"
 #include "packet/opcode.hpp"
+
+#include <silkroad_lib/position.h>
 
 #define TRY_CAST_AND_HANDLE_PACKET(PACKET_TYPE, HANDLE_FUNCTION_NAME) \
 { \
@@ -245,7 +246,7 @@ bool PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::S
 
 bool PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const {
   if (packet.globalId() == selfState_.globalId()) {
-    std::optional<packet::structures::Position> sourcePosition;
+    std::optional<sro::Position> sourcePosition;
     if (packet.hasSource()) {
       // Server is telling us our source position
       sourcePosition = packet.sourcePosition();
@@ -292,8 +293,7 @@ bool PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Pa
   } else {
     std::cout << "region (" << (int)packet.position().xSector() << ',' << (int)packet.position().zSector() << ")";
   }
-  std::cout << " (" << packet.position().xOffset << ',' << packet.position().yOffset << ',' << packet.position().zOffset << ")\n";
-  LOG() << "{" << packet.position().regionId << ',' << packet.position().xOffset << "f," << packet.position().yOffset << "f," << packet.position().zOffset << "f}" << std::endl;
+  std::cout << " (" << packet.position().xOffset() << ',' << packet.position().yOffset() << ',' << packet.position().zOffset() << ")\n";
 
   // State
   selfState_.setLifeState(packet.lifeState());

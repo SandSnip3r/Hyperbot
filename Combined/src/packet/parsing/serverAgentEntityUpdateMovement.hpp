@@ -4,6 +4,8 @@
 #include "parsedPacket.hpp"
 #include "../enums/packetEnums.hpp"
 
+#include <silkroad_lib/position.h>
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -16,16 +18,16 @@ public:
   uint32_t globalId() const;
   bool hasDestination() const;
   bool hasSource() const;
-  const packet::structures::Position& destinationPosition() const;
+  const sro::Position& destinationPosition() const;
   packet::enums::AngleAction angleAction() const;
   uint16_t angle() const;
-  const packet::structures::Position& sourcePosition() const;
+  const sro::Position& sourcePosition() const;
 private:
   uint32_t globalId_;
-  std::optional<packet::structures::Position> destinationPosition_;
+  std::optional<sro::Position> destinationPosition_;
   packet::enums::AngleAction angleAction_;
   uint16_t angle_;
-  std::optional<packet::structures::Position> sourcePosition_;
+  std::optional<sro::Position> sourcePosition_;
 };
 
 } // namespace packet::parsing

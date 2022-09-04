@@ -8,6 +8,8 @@
 #include "../../pk2/skillData.hpp"
 #include "../../shared/silkroad_security.h"
 
+#include <silkroad_lib/position.h>
+
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -32,7 +34,7 @@ public:
   const std::map<uint8_t, std::shared_ptr<storage::Item>>& avatarInventoryItemMap() const;
   const std::vector<structures::Mastery>& masteries() const;
   const std::vector<structures::Skill>& skills() const;
-  packet::structures::Position position() const;
+  sro::Position position() const;
   float walkSpeed() const;
   float runSpeed() const;
   float hwanSpeed() const;
@@ -56,7 +58,7 @@ private:
   std::map<uint8_t, std::shared_ptr<storage::Item>> avatarInventoryItemMap_;
   std::vector<structures::Mastery> masteries_;
   std::vector<structures::Skill> skills_;
-  packet::structures::Position position_;
+  sro::Position position_;
   enums::LifeState lifeState_;
   enums::MotionState motionState_;
   enums::BodyState bodyState_;

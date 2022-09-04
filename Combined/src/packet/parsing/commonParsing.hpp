@@ -6,6 +6,8 @@
 #include "storage/item.hpp"
 #include "../../shared/stream_utility.h"
 
+#include <silkroad_lib/position.h>
+
 #include <memory>
 
 namespace packet::parsing {
@@ -23,7 +25,7 @@ void parseItem(storage::ItemStone &item, StreamUtility &stream);
 void parseItem(storage::ItemMagicPop &item, StreamUtility &stream);
 void parseItem(storage::Item *item, StreamUtility &stream);
 structures::SkillAction parseSkillAction(StreamUtility &stream);
-structures::Position parsePosition(StreamUtility &stream);
+sro::Position parsePosition(StreamUtility &stream);
 
 } // namespace packet::parsing
 

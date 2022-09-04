@@ -11,13 +11,15 @@
 #include "../../common/pk2/ref/item.hpp"
 #include "../../common/pk2/ref/scrapOfPackageItem.hpp"
 
+#include <silkroad_lib/position.h>
+
 #include <map>
 #include <memory>
 #include <tuple>
 
 namespace helpers {
 
-float secondsToTravel(const packet::structures::Position &srcPosition, const packet::structures::Position &destPosition, const float currentSpeed);
+float secondsToTravel(const sro::Position &srcPosition, const sro::Position &destPosition, const float currentSpeed);
 void initializeInventory(storage::Storage &inventory, uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<storage::Item>> &inventoryItemMap);
 void printItem(uint8_t slot, const storage::Item *item, const pk2::GameData &gameData);
 int toBitNum(packet::enums::AbnormalStateFlag stateFlag);

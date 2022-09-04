@@ -72,8 +72,6 @@ set(no_group_source_files
     "src/logging.hpp"
     "src/math/matrix.cpp"
     "src/math/matrix.hpp"
-    "src/math/position.cpp"
-    "src/math/position.hpp"
     "src/math/vector.cpp"
     "src/math/vector.hpp"
     "src/navmesh/navmesh.cpp"
@@ -407,6 +405,7 @@ target_link_libraries(${PROJECT_NAME}
     ${PROTOBUF_LIBRARIES}
     cppzmq
     cppzmq-static
+    SilkroadLib
 )
 
 # ==============================================================================

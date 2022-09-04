@@ -5,6 +5,8 @@
 #include "../enums/packetEnums.hpp"
 #include "../structures/packetInnerStructures.hpp"
 
+#include <silkroad_lib/position.h>
+
 #include <cstdint>
 
 namespace packet::parsing {
@@ -13,11 +15,11 @@ class ServerAgentEntityUpdatePosition : public ParsedPacket {
 public:
   ServerAgentEntityUpdatePosition(const PacketContainer &packet);
   uint32_t globalId() const;
-  structures::Position position() const;
+  sro::Position position() const;
   uint16_t angle() const;
 private:
   uint32_t globalId_;
-  structures::Position position_;
+  sro::Position position_;
   uint16_t angle_;
 };
 

@@ -2,7 +2,6 @@
 
 #include "bot.hpp"
 #include "logging.hpp"
-#include "math/position.hpp"
 #include "packet/building/clientAgentActionDeselectRequest.hpp"
 #include "packet/building/clientAgentActionSelectRequest.hpp"
 #include "packet/building/clientAgentActionTalkRequest.hpp"
@@ -14,6 +13,8 @@
 
 #include "pathfinder.h"
 #include "math_helpers.h"
+
+#include <silkroad_lib/position_math.h>
 
 namespace state::machine {
 
@@ -38,13 +39,7 @@ CommonStateMachine::~CommonStateMachine() {
 // ===============================================================Walking===============================================================
 // =====================================================================================================================================
 
-Walking::Walking(Bot &bot, const std::vector<packet::structures::Position> &waypoints) : bot_(bot), waypoints_(waypoints) {
-  if (waypoints_.empty()) {
-    throw std::runtime_error("Given empty list of waypoints");
-  }
-}
-
-Walking::Walking(Bot &bot, const packet::structures::Position &destinationPosition) : bot_(bot) {
+Walking::Walking(Bot &bot, const sro::Position &destinationPosition) : bot_(bot) {
   waypoints_ = calculatePathToDestination(destinationPosition);
 }
 
@@ -56,7 +51,7 @@ void Walking::onUpdate(const event::Event *event) {
 
   // We're not moving
   // Did we just arrive at this waypoint?
-  if (math::position::calculateDistance(bot_.selfState_.position(), waypoints_[currentWaypointIndex_]) < 5) { // TODO: Choose better measure of "close enough"
+  if (sro::position_math::calculateDistance2D(bot_.selfState_.position(), waypoints_[currentWaypointIndex_]) < 1.0) { // TODO: Choose better measure of "close enough"
     // Just arrived at the waypoint, increment index
     ++currentWaypointIndex_;
     requestedMovement_ = false;
@@ -74,10 +69,10 @@ void Walking::onUpdate(const event::Event *event) {
   // We are not moving, we're not at the current waypoint, and there's not a pending movement request
   // Send a request to move to the current waypoint
   const auto &currentWaypoint = waypoints_[currentWaypointIndex_];
-  const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint.regionId,
-                                                                                                static_cast<uint32_t>(currentWaypoint.xOffset),
-                                                                                                static_cast<uint32_t>(currentWaypoint.yOffset),
-                                                                                                static_cast<uint32_t>(currentWaypoint.zOffset));
+  const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint.regionId(),
+                                                                                                static_cast<uint32_t>(currentWaypoint.xOffset()),
+                                                                                                static_cast<uint32_t>(currentWaypoint.yOffset()),
+                                                                                                static_cast<uint32_t>(currentWaypoint.zOffset()));
   bot_.broker_.injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
   requestedMovement_ = true;
 }
@@ -86,7 +81,7 @@ bool Walking::done() const {
   return (currentWaypointIndex_ == waypoints_.size());
 }
 
-std::vector<packet::structures::Position> Walking::calculatePathToDestination(const packet::structures::Position &destinationPosition) const {
+std::vector<sro::Position> Walking::calculatePathToDestination(const sro::Position &destinationPosition) const {
   auto pathfindingResultPathToVectorOfPositions = [&, this](const auto &pathfindingShortestPath) {
     const auto &navmeshTriangulation = bot_.gameData_.navmeshTriangulation();
 
@@ -100,7 +95,7 @@ std::vector<packet::structures::Position> Walking::calculatePathToDestination(co
     }
 
     // Turn straight segments into a list of waypoints
-    std::vector<packet::structures::Position> waypoints;
+    std::vector<sro::Position> waypoints;
     // Note: We are ignoring the start of the first segment, since we assume we're already there
     for (int i=0; i<straightSegments.size()-1; ++i) {
       // Find the average between the end of this straight segment and the beginning of the next
@@ -129,12 +124,13 @@ std::vector<packet::structures::Position> Walking::calculatePathToDestination(co
     waypoints.push_back({finalRegionAndPointPair.first, std::round(finalRegionAndPointPair.second.x), std::round(finalRegionAndPointPair.second.y), std::round(finalRegionAndPointPair.second.z)});
 
     // Remove duplicates
-    auto newEndIt = std::unique(waypoints.begin(), waypoints.end(), [](const auto &lhs, const auto &rhs){
-      return lhs.regionId == rhs.regionId &&
-             lhs.xOffset  == rhs.xOffset &&
-             lhs.yOffset  == rhs.yOffset &&
-             lhs.zOffset  == rhs.zOffset;
-    });
+    auto newEndIt = std::unique(waypoints.begin(), waypoints.end());
+    // auto newEndIt = std::unique(waypoints.begin(), waypoints.end(), [](const auto &lhs, const auto &rhs){
+    //   return lhs.regionId() == rhs.regionId() &&
+    //          lhs.xOffset()  == rhs.xOffset() &&
+    //          lhs.yOffset()  == rhs.yOffset() &&
+    //          lhs.zOffset()  == rhs.zOffset();
+    // });
     if (newEndIt != waypoints.end()) {
       LOG() << "Removed " << std::distance(newEndIt, waypoints.end()) << " duplicate waypoints" << std::endl;
       waypoints.erase(newEndIt, waypoints.end());
@@ -146,11 +142,11 @@ std::vector<packet::structures::Position> Walking::calculatePathToDestination(co
   pathfinder::Pathfinder<navmesh::triangulation::NavmeshTriangulation> pathfinder(bot_.gameData_.navmeshTriangulation(), kAgentRadius);
   try {
     const auto currentPosition = bot_.selfState().position();
-    const math::Vector currentPositionPoint(currentPosition.xOffset, currentPosition.yOffset, currentPosition.zOffset);
-    const auto navmeshCurrentPosition = bot_.gameData_.navmeshTriangulation().transformRegionPointIntoAbsolute(currentPositionPoint, currentPosition.regionId);
+    const math::Vector currentPositionPoint(currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset());
+    const auto navmeshCurrentPosition = bot_.gameData_.navmeshTriangulation().transformRegionPointIntoAbsolute(currentPositionPoint, currentPosition.regionId());
 
-    const math::Vector destinationPositionPoint(destinationPosition.xOffset, destinationPosition.yOffset, destinationPosition.zOffset);
-    const auto navmeshDestinationPosition = bot_.gameData_.navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, destinationPosition.regionId);
+    const math::Vector destinationPositionPoint(destinationPosition.xOffset(), destinationPosition.yOffset(), destinationPosition.zOffset());
+    const auto navmeshDestinationPosition = bot_.gameData_.navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, destinationPosition.regionId());
 
     const auto pathfindingResult = pathfinder.findShortestPath(navmeshCurrentPosition, navmeshDestinationPosition);
     const auto &path = pathfindingResult.shortestPath;
@@ -532,8 +528,8 @@ TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, i
         continue;
       }
 
-      const packet::structures::Position npcPosition{ objectPtr->regionId, objectPtr->x, objectPtr->y, objectPtr->z };
-      const auto distanceToNpc = math::position::calculateDistance(bot_.selfState_.position(), npcPosition);
+      const sro::Position npcPosition{ objectPtr->regionId, objectPtr->x, objectPtr->y, objectPtr->z };
+      const auto distanceToNpc = sro::position_math::calculateDistance2D(bot_.selfState_.position(), npcPosition);
       if (distanceToNpc < closestNpcDistance) {
         closestNpcGId = entityIdObjectPair.first;
         closestNpcDistance = distanceToNpc;
@@ -863,16 +859,16 @@ bool Townlooping::done() const {
   return (npcsToVisit_.empty() || currentNpcIndex_ == npcsToVisit_.size());
 }
 
-packet::structures::Position Townlooping::positionOfNpc(Npc npc) const {
+sro::Position Townlooping::positionOfNpc(Npc npc) const {
   // Hard code the NPCs' locations, for now
   static const auto npcPositionMap = []{
-    std::map<Npc, packet::structures::Position> npcPositions;
+    std::map<Npc, sro::Position> npcPositions;
     npcPositions[Npc::kStorage]    = { 25000,  981.0f, 0.0f, 1032.0f };
     npcPositions[Npc::kPotion]     = { 25000, 1525.0f, 0.0f, 1385.0f };
+    npcPositions[Npc::kGrocery]    = { 25000, 1618.0f, 0.0f, 1078.0f };
     npcPositions[Npc::kBlacksmith] = { 25000,  397.0f, 0.0f, 1358.0f };
     npcPositions[Npc::kProtector]  = { 25000,  363.0f, 0.0f, 1083.0f };
     npcPositions[Npc::kStable]     = { 25000,  390.0f, 0.0f,  493.0f };
-    npcPositions[Npc::kGrocery]    = { 25000, 1618.0f, 0.0f, 1078.0f };
     return npcPositions;
   }();
 

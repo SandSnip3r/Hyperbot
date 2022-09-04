@@ -136,16 +136,6 @@ struct ItemMovement {
   std::shared_ptr<storage::Item> newItem;
 };
 
-struct Position {
-public:
-  uint16_t regionId;
-  float xOffset, yOffset, zOffset;
-  bool isDungeon() const { return regionId & 0x8000; }
-  uint8_t dungeonId() const { return regionId & 0xFF; }
-  uint8_t xSector() const { return regionId & 0xFF; }
-  uint8_t zSector() const { return (regionId >> 8) & 0x7F; }
-};
-
 } // namespace packet::structures
 
 #endif // PACKET_INNER_STRUCTURES_HPP

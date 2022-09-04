@@ -86,6 +86,7 @@ enable_testing()
 # Sub-projects
 ################################################################################
 add_subdirectory(Pathfinder)
+add_subdirectory(SilkroadLib)
 add_subdirectory(Combined)
 add_subdirectory(loaderDll)
 

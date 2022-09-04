@@ -1,6 +1,6 @@
 #include "navmeshParser.hpp"
 
-#include "../../math/position.hpp"
+#include <silkroad_lib/position_math.h>
 
 #include <array>
 #include <exception>
@@ -74,7 +74,7 @@ navmesh::Navmesh NavmeshParser::parseNavmesh() {
   navmesh::Navmesh navmesh;
   for (int regionRow=0; regionRow<mapInfo_.mapHeight; ++regionRow) {
     for (int regionCol=0; regionCol<mapInfo_.mapWidth; ++regionCol) {
-      const auto regionId = math::position::worldRegionIdFromXY(regionCol, regionRow);
+      const auto regionId = sro::position_math::worldRegionIdFromSectors(regionCol, regionRow);
       if (regionIsEnabled(regionId)) {
         parseRegion(regionId, navmesh);
       }
@@ -173,7 +173,7 @@ bool NavmeshParser::regionIsEnabled(uint16_t regionId) const {
     // {122,85,10,10},  // Karakoram (100)
     // {45,84,13,12},  // Alexandria (156)
   };
-  const auto [regionX, regionY] = math::position::regionXYFromRegionId(regionId);
+  const auto [regionX, regionY] = sro::position_math::sectorsFromWorldRegionId(regionId);
   bool matchedOne = specialAreas.empty();
   for (const auto &area : specialAreas) {
     const int maxRegionX = area.regionX + area.width-1;
@@ -278,8 +278,8 @@ void NavmeshParser::parseRegionObjectInstances(std::istringstream &navmeshData, 
     // If this object instance belongs in another region, shift the center over for that region
     if (object.regionId != region.id) {
       // The given center is for our region, we should instead save it as a center for the owning region
-      const auto [ourRegionX, ourRegionY] = math::position::regionXYFromRegionId(region.id);
-      const auto [owningRegionX, owningRegionY] = math::position::regionXYFromRegionId(object.regionId);
+      const auto [ourRegionX, ourRegionY] = sro::position_math::sectorsFromWorldRegionId(region.id);
+      const auto [owningRegionX, owningRegionY] = sro::position_math::sectorsFromWorldRegionId(object.regionId);
       const int dx = (ourRegionX - owningRegionX) * 1920;
       const int dy = (ourRegionY - owningRegionY) * 1920;
       object.center.x += dx;
