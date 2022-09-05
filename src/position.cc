@@ -43,8 +43,9 @@ float Position::zOffset() const {
 }
 
 GameCoordinate Position::toGameCoordinate() const {
-  return { static_cast<int>((xSector() - 135) * 192 + xOffset() / 10.0),
-           static_cast<int>((zSector() - 92) * 192 + zOffset() / 10.0) };
+  using sro::game_constants::kRegionSize;
+  return { static_cast<int>((xSector() - 135) * kRegionSize/10.0 + xOffset() / 10.0),
+           static_cast<int>((zSector() - 92) * kRegionSize/10.0 + zOffset() / 10.0) };
 }
 
 void Position::normalize() {
