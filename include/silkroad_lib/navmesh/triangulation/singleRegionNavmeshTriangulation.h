@@ -5,7 +5,6 @@
 #include "math/vector3.h"
 #include "navmesh/navmesh.h"
 
-// TODO: From Pathfinder?
 #include "triangle_lib_navmesh.h"
 #include "vector.h"
 

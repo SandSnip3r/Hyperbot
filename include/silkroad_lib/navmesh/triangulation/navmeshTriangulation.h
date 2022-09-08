@@ -5,7 +5,6 @@
 #include "pk2/navmeshParser.h"
 #include "singleRegionNavmeshTriangulation.h"
 
-// TODO: From Pathfinder?
 #include "vector.h"
 
 #include <memory>

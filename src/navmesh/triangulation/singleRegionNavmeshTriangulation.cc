@@ -1,6 +1,5 @@
 #include "navmesh/triangulation/singleRegionNavmeshTriangulation.h"
 
-// TODO: From Pathfinder?
 #include "math_helpers.h"
 
 #include <functional>

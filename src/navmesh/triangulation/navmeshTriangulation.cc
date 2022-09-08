@@ -2,7 +2,6 @@
 #include "navmesh/triangulation/navmeshTriangulation.h"
 #include "position_math.h"
 
-// TODO: From Pathfinder?
 #include "behaviorBuilder.h"
 #include "math_helpers.h"
 #include "triangle/triangle_api.h"

@@ -12,11 +12,6 @@
 #include <string>
 #include <vector>
 
-// TODO:
-namespace pk2::parsing {
-class NavmeshParser;
-}
-
 namespace sro::navmesh {
 
 // ============ Object Instance ============
