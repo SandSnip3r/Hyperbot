@@ -1,5 +1,5 @@
-#ifndef POSITION_H_
-#define POSITION_H_
+#ifndef SRO_POSITION_H_
+#define SRO_POSITION_H_
 
 #include "scalar_types.h"
 
@@ -44,4 +44,4 @@ bool operator==(const Position &pos1, const Position &pos2);
 
 } // namespace sro
 
-#endif // POSITION_H_
+#endif // SRO_POSITION_H_

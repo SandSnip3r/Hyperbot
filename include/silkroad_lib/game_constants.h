@@ -1,5 +1,5 @@
-#ifndef GAME_CONSTANTS_H_
-#define GAME_CONSTANTS_H_
+#ifndef SRO_GAME_CONSTANTS_H_
+#define SRO_GAME_CONSTANTS_H_
 
 namespace sro::game_constants {
 
@@ -9,4 +9,4 @@ constexpr float kRegionSize{kRegionWidth};
   
 } // namespace sro::game_constants
 
-#endif // GAME_CONSTANTS_H_
+#endif // SRO_GAME_CONSTANTS_H_

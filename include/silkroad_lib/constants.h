@@ -1,5 +1,5 @@
-#ifndef CONSTANTS_H_
-#define CONSTANTS_H_
+#ifndef SRO_CONSTANTS_H_
+#define SRO_CONSTANTS_H_
 
 namespace sro::constants {
 
@@ -8,4 +8,4 @@ constexpr double k2Pi = 6.283185307179586;
 
 } // namespace sro::constants
 
-#endif // CONSTANTS_H_
+#endif // SRO_CONSTANTS_H_

@@ -1,5 +1,5 @@
-#ifndef POSITION_MATH_H_
-#define POSITION_MATH_H_
+#ifndef SRO_POSITION_MATH_H_
+#define SRO_POSITION_MATH_H_
 
 #include "position.h"
 
@@ -17,4 +17,4 @@ bool regionIsDungeon(const RegionId regionId);
 
 } // namespace sro::position_math
 
-#endif // POSITION_MATH_H_
+#endif // SRO_POSITION_MATH_H_
