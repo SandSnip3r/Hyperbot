@@ -2,12 +2,18 @@
 #include "mainwindow.h"
 #include "packetListWidgetItem.hpp"
 #include "./ui_mainwindow.h"
+#include "regionGraphicsItem.hpp"
 
 #include <silkroad_lib/position_math.h>
+#include <silkroad_lib/pk2/pk2ReaderModern.h>
+#include <silkroad_lib/pk2/navmeshParser.h>
+
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
   initializeUi();
+  initializeMap();
 
   connectMainControls();
   connectTabWidget();
@@ -70,6 +76,57 @@ void MainWindow::initializeUi() {
       background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #325a1d, stop: 0.5 #8bca50, stop: 1 #1a4213);
     }
   )");
+}
+
+void MainWindow::initializeMap() {
+  const auto startTime = std::chrono::high_resolution_clock::now();
+  loadNavmeshIntoScene();
+  const auto endTime = std::chrono::high_resolution_clock::now();
+  std::cout << "Loading the navmesh into the scene " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime-startTime).count()/1000.0 << "s" << std::endl;
+
+  ui->navmeshGraphicsView->setScene(scene_);
+  if (!navmeshTriangulation_.has_value()) {
+    throw std::runtime_error("Navmesh Triangulation missing");
+  }
+  ui->navmeshGraphicsView->setWorldNavmesh(*navmeshTriangulation_);
+  // connect(navmeshGraphicsView, &NavmeshGraphicsView::setPathStart, this, &MainWindow::setPathStart);
+  // connect(navmeshGraphicsView, &NavmeshGraphicsView::setPathGoal, this, &MainWindow::setPathGoal);
+  // connect(navmeshGraphicsView, &NavmeshGraphicsView::resetPath, this, &MainWindow::resetPath);
+  // connect(navmeshGraphicsView, &NavmeshGraphingulation_);
+  // connect(navmeshGraphicscsView::mouseMoved, this, &MainWindow::mouseMoved);
+
+}
+
+void MainWindow::loadNavmeshIntoScene() {
+  // TODO: Get this from the user/config
+  const QString silkroadPk2Path{tr("C:/Users/Victor/Documents/Development/Daxter Silkroad server files/Silkroad Client/Data.pk2")};
+
+  try {
+    // First, try to open the file and build the navmesh
+    sro::pk2::Pk2ReaderModern pk2Reader{silkroadPk2Path.toStdString()};
+    sro::pk2::NavmeshParser navmeshParser{pk2Reader};
+    navmesh_ = navmeshParser.parseNavmesh();
+    navmeshTriangulation_ = sro::navmesh::triangulation::NavmeshTriangulation(*navmesh_);
+    for (const auto &regionIdTriangulationPair : navmeshTriangulation_->getNavmeshTriangulationMap()) {
+      const auto regionId = regionIdTriangulationPair.first;
+      const auto [regionX, regionY] = sro::position_math::sectorsFromWorldRegionId(regionId);
+      const auto &regionTriangulation = regionIdTriangulationPair.second;
+
+      // Create new graphics item for this region's navmesh
+      const auto &region = navmesh_->getRegion(regionId);
+      RegionGraphicsItem *item = new RegionGraphicsItem(*navmesh_, region, regionTriangulation);
+      item->setPos(1920*regionX, 1920*(128-regionY)); // TODO: Maybe use a transformation function to flip Y value
+      scene_->addItem(item);
+      // Creating labels takes a while, kick it off in another thread
+      std::thread thr(&RegionGraphicsItem::createLabels, item);
+      thr.detach();
+    }
+  } catch (std::exception &ex) {
+    // Could not open the file
+    QMessageBox msgBox;
+    msgBox.setText("Could not open file \""+silkroadPk2Path+"\". The file may have invalid .pk2 format. Error: \""+ex.what()+"\"");
+    msgBox.exec();
+  }
 }
 
 void MainWindow::connectMainControls() {

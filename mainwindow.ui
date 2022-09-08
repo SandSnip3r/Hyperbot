@@ -799,6 +799,23 @@
        <attribute name="title">
         <string>Map</string>
        </attribute>
+       <layout class="QGridLayout" name="gridLayout_17">
+        <item row="0" column="0">
+         <widget class="NavmeshView" name="navmeshFrame">
+          <property name="frameShape">
+           <enum>QFrame::StyledPanel</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Raised</enum>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_18">
+           <item row="0" column="0">
+            <widget class="NavmeshGraphicsView" name="navmeshGraphicsView"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QWidget" name="tab_7">
        <attribute name="title">
@@ -881,6 +898,17 @@
    <class>ItemListWidget</class>
    <extends>QListWidget</extends>
    <header>itemListWidget.hpp</header>
+  </customwidget>
+  <customwidget>
+   <class>NavmeshGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>navmeshView.hpp</header>
+  </customwidget>
+  <customwidget>
+   <class>NavmeshView</class>
+   <extends>QFrame</extends>
+   <header>navmeshView.hpp</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

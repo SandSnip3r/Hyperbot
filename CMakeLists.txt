@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(hyperbot-ui VERSION 0.1 LANGUAGES CXX)
+project(hyperbot-ui VERSION 0.1 LANGUAGES CXX C)
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+# set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -13,12 +13,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FindProtobuf)
 add_subdirectory(proto)
+add_subdirectory(Pathfinder)
 add_subdirectory(SilkroadLib)
 
 find_package(cppzmq CONFIG REQUIRED)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets LinguistTools)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
+find_package(Qt6 COMPONENTS OpenGLWidgets REQUIRED)
 
 set(TS_FILES hyperbot-ui_en_US.ts)
 
@@ -36,14 +38,25 @@ set(PROJECT_SOURCES
   itemListWidgetItem.hpp
   mainwindow.cpp
   mainwindow.h
+  navmeshView.cpp
+  navmeshView.hpp
+  noScaleLabel.cpp
+  noScaleLabel.hpp
   packetListWidgetItem.cpp
   packetListWidgetItem.hpp
   reinjectablePacketListWidget.cpp
   reinjectablePacketListWidget.hpp
+  regionGraphicsItem.cpp
+  regionGraphicsItem.hpp
   requester.cpp
   requester.hpp
   mainwindow.ui
   ${TS_FILES}
+)
+
+# For proto files
+include_directories(
+  ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -73,9 +86,15 @@ else()
     qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 endif()
 
+# target_include_directories(${PROJECT_NAME} PRIVATE
+#   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+#   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+# )
+
 target_link_libraries(hyperbot-ui
 PRIVATE
   Qt${QT_VERSION_MAJOR}::Widgets
+  Qt6::OpenGLWidgets
   cppzmq
   cppzmq-static
   proto

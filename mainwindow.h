@@ -6,10 +6,13 @@
 #include "itemListWidget.hpp"
 #include "requester.hpp"
 
+#include <silkroad_lib/navmesh/navmesh.h>
+#include <silkroad_lib/navmesh/triangulation/navmeshTriangulation.h>
 #include <silkroad_lib/position.h>
 
 #include <zmq.hpp>
 
+#include <QGraphicsScene>
 #include <QLabel>
 #include <QMainWindow>
 #include <QTimer>
@@ -36,8 +39,13 @@ private:
   Requester requester_{context_};
   CharacterData characterData_;
   QTimer *movementUpdateTimer_{nullptr};
+  QGraphicsScene *scene_{new QGraphicsScene(this)};
+  std::optional<sro::navmesh::Navmesh> navmesh_;
+  std::optional<sro::navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
 
   void initializeUi();
+  void initializeMap();
+  void loadNavmeshIntoScene();
   void connectMainControls();
   void connectTabWidget();
   void connectBotBroadcastMessages();

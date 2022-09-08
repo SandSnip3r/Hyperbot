@@ -4,3 +4,6 @@
 [submodule "SilkroadLib"]
 	path = SilkroadLib
 	url = /mnt/c/Users/Victor/Documents/Development/SilkroadLib
+[submodule "Pathfinder"]
+	path = Pathfinder
+	url = git@github.com:SandSnip3r/Pathfinder.git
