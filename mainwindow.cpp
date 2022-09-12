@@ -8,10 +8,25 @@
 #include <silkroad_lib/pk2/pk2ReaderModern.h>
 #include <silkroad_lib/pk2/navmeshParser.h>
 
+#include <gli/convert.hpp>
+#include <gli/format.hpp>
+#include <gli/load_dds.hpp>
+#include <gli/sampler2d.hpp>
+
+#include <QDir>
+#include <QImage>
 #include <QMessageBox>
+
+const std::filesystem::path MainWindow::kSilkroadPath_{"C:/Users/Victor/Documents/Development/Daxter Silkroad server files/Silkroad Client"};
+
+namespace {
+QImage convertTexture2dToQImage(const gli::texture2d &texture2d);
+} // anonymous namespace
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
+  // TODO: At this point, we assume that we already know our PK2 path and have cached the necessary stuff
+  //  In the future, we will need to be able to set the PK2 path after construction of this object
   initializeUi();
   initializeMap();
 
@@ -78,6 +93,32 @@ void MainWindow::initializeUi() {
   )");
 }
 
+std::optional<QPixmap> MainWindow::parseRegionMinimapPixmapFromPk2(sro::pk2::Pk2ReaderModern &pk2Reader, sro::Sector xSector, sro::Sector ySector) {
+  const std::string kMinimapDirectory = "minimap\\";
+  const std::string kMiniMapImageFileName = std::to_string(xSector) + "x" + std::to_string(ySector) + ".ddj";
+  const std::string kMiniMapImagePath = kMinimapDirectory + kMiniMapImageFileName;
+  if (!pk2Reader.hasEntry(kMiniMapImagePath)) {
+    return {};
+  }
+  sro::pk2::PK2Entry miniMapImageEntry = pk2Reader.getEntry(kMiniMapImagePath);
+  auto miniMapImageData = pk2Reader.getEntryData(miniMapImageEntry);
+
+  // First 20 bytes are joymax specific
+  const auto kJoymaxHeaderSize = 20;
+  auto *buffer = miniMapImageData.data() + kJoymaxHeaderSize;
+  const char *charBuffer = reinterpret_cast<const char*>(buffer);
+
+  const auto texture = gli::load_dds(charBuffer, miniMapImageData.size() - kJoymaxHeaderSize);
+  if (texture.size() == 0) {
+    // Check if returned texture is not "empty"
+    std::cout << "Couldnt parse minimap image" << std::endl;
+    return {};
+  }
+
+  auto texture2d = gli::texture2d(texture);
+  return QPixmap::fromImage(convertTexture2dToQImage(texture2d));
+}
+
 void MainWindow::initializeMap() {
   const auto startTime = std::chrono::high_resolution_clock::now();
   loadNavmeshIntoScene();
@@ -94,17 +135,17 @@ void MainWindow::initializeMap() {
   // connect(navmeshGraphicsView, &NavmeshGraphicsView::resetPath, this, &MainWindow::resetPath);
   // connect(navmeshGraphicsView, &NavmeshGraphingulation_);
   // connect(navmeshGraphicscsView::mouseMoved, this, &MainWindow::mouseMoved);
-
 }
 
 void MainWindow::loadNavmeshIntoScene() {
-  // TODO: Get this from the user/config
-  const QString silkroadPk2Path{tr("C:/Users/Victor/Documents/Development/Daxter Silkroad server files/Silkroad Client/Data.pk2")};
-
   try {
-    // First, try to open the file and build the navmesh
-    sro::pk2::Pk2ReaderModern pk2Reader{silkroadPk2Path.toStdString()};
-    sro::pk2::NavmeshParser navmeshParser{pk2Reader};
+    const auto kMediaPath = kSilkroadPath_ / "Media.pk2";
+    const auto kDataPath = kSilkroadPath_ / "Data.pk2";
+    sro::pk2::Pk2ReaderModern pk2MediaReader{kMediaPath};
+    sro::pk2::Pk2ReaderModern pk2DataReader{kDataPath};
+
+    // Open the file and build the navmesh
+    sro::pk2::NavmeshParser navmeshParser{pk2DataReader};
     navmesh_ = navmeshParser.parseNavmesh();
     navmeshTriangulation_ = sro::navmesh::triangulation::NavmeshTriangulation(*navmesh_);
     for (const auto &regionIdTriangulationPair : navmeshTriangulation_->getNavmeshTriangulationMap()) {
@@ -115,6 +156,15 @@ void MainWindow::loadNavmeshIntoScene() {
       // Create new graphics item for this region's navmesh
       const auto &region = navmesh_->getRegion(regionId);
       RegionGraphicsItem *item = new RegionGraphicsItem(*navmesh_, region, regionTriangulation);
+      {
+        // Set minimap pixmap for region
+        const auto minimapPixmap = parseRegionMinimapPixmapFromPk2(pk2MediaReader, regionX, regionY);
+        if (minimapPixmap) {
+          item->setPixmap(*minimapPixmap);
+        } else {
+          std::cout << "Couldn't load minimap image for region " << static_cast<int>(regionX) << ',' << static_cast<int>(regionY) << std::endl;
+        }
+      }
       item->setPos(1920*regionX, 1920*(128-regionY)); // TODO: Maybe use a transformation function to flip Y value
       scene_->addItem(item);
       // Creating labels takes a while, kick it off in another thread
@@ -124,7 +174,7 @@ void MainWindow::loadNavmeshIntoScene() {
   } catch (std::exception &ex) {
     // Could not open the file
     QMessageBox msgBox;
-    msgBox.setText("Could not open file \""+silkroadPk2Path+"\". The file may have invalid .pk2 format. Error: \""+ex.what()+"\"");
+    msgBox.setText(QString(tr("Could not load navmesh into scene. The file may have invalid .pk2 format. Error: \""))+ex.what()+"\"");
     msgBox.exec();
   }
 }
@@ -431,3 +481,46 @@ void MainWindow::onStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::
 void MainWindow::onGuildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName) {
   updateItemList(ui->guildStorageListWidget, slotIndex, quantity, itemName);
 }
+
+namespace {
+
+QImage convertTexture2dToQImage(const gli::texture2d &texture2d) {
+  if (texture2d.format() != gli::FORMAT_RGBA_DXT1_UNORM_BLOCK8) {
+    throw std::runtime_error("Trying to convery wrong texture");
+  }
+  if (texture2d.levels() < 1) {
+    throw std::runtime_error("Have texture with no levels");
+  }
+  const auto &extent2d = texture2d.extent(0);
+  QImage image(extent2d.x, extent2d.y, QImage::Format_RGB32);
+
+  gli::extent2d blockExtent;
+  {
+    gli::extent3d tempExtent = gli::block_extent(gli::FORMAT_RGBA_DXT1_UNORM_BLOCK8);
+    blockExtent.x = tempExtent.x;
+    blockExtent.y = tempExtent.y;
+  }
+
+  gli::extent2d texelCoord;
+  gli::extent2d blockCoord;
+  gli::extent2d levelExtent = texture2d.extent(0);
+  gli::extent2d levelExtentInBlocks = glm::max(gli::extent2d(1, 1), levelExtent / blockExtent);
+  for (blockCoord.y = 0, texelCoord.y = 0; blockCoord.y < levelExtentInBlocks.y; ++blockCoord.y, texelCoord.y += blockExtent.y) {
+    for (blockCoord.x = 0, texelCoord.x = 0; blockCoord.x < levelExtentInBlocks.x; ++blockCoord.x, texelCoord.x += blockExtent.x) {
+      const gli::detail::dxt1_block *dxt1Block = texture2d.data<gli::detail::dxt1_block>(0, 0, 0) + (blockCoord.y * levelExtentInBlocks.x + blockCoord.x);
+      const gli::detail::texel_block4x4 decompressedBlock = gli::detail::decompress_dxt1_block(*dxt1Block);
+
+      gli::extent2d decompressedBlockCoord;
+      for (decompressedBlockCoord.y = 0; decompressedBlockCoord.y < glm::min(4, levelExtent.y); ++decompressedBlockCoord.y) {
+        for (decompressedBlockCoord.x = 0; decompressedBlockCoord.x < glm::min(4, levelExtent.x); ++decompressedBlockCoord.x) {
+          const auto resultingCoordinate = texelCoord + decompressedBlockCoord;
+          const auto &texel = decompressedBlock.Texel[decompressedBlockCoord.y][decompressedBlockCoord.x];
+          image.setPixelColor(resultingCoordinate.x, resultingCoordinate.y, QColor::fromRgbF(texel.r, texel.g, texel.b, texel.a));
+        }
+      }
+    }
+  }
+  return image;
+}
+
+} // anonymous namespace

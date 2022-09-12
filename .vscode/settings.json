@@ -81,6 +81,14 @@
     "xstddef": "cpp",
     "xtr1common": "cpp",
     "xtree": "cpp",
-    "*.ipp": "cpp"
+    "*.ipp": "cpp",
+    "cstdarg": "cpp",
+    "cwctype": "cpp",
+    "filesystem": "cpp",
+    "queue": "cpp",
+    "random": "cpp",
+    "valarray": "cpp",
+    "condition_variable": "cpp",
+    "future": "cpp"
   }
 }

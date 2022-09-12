@@ -7,3 +7,6 @@
 [submodule "Pathfinder"]
 	path = Pathfinder
 	url = git@github.com:SandSnip3r/Pathfinder.git
+[submodule "gli"]
+	path = gli
+	url = https://github.com/g-truc/gli

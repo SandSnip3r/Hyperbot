@@ -15,6 +15,7 @@
 #include <QGraphicsScene>
 #include <QLabel>
 #include <QMainWindow>
+#include <QPixmap>
 #include <QTimer>
 
 #include <cstdint>
@@ -32,6 +33,7 @@ public:
   ~MainWindow();
 
 private:
+  static const std::filesystem::path kSilkroadPath_;
   static constexpr int kPositionRedrawDelayMs{33};
   Ui::MainWindow *ui;
   zmq::context_t context_;
@@ -44,6 +46,7 @@ private:
   std::optional<sro::navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
 
   void initializeUi();
+  std::optional<QPixmap> parseRegionMinimapPixmapFromPk2(sro::pk2::Pk2ReaderModern &pk2Reader, sro::Sector xSector, sro::Sector ySector);
   void initializeMap();
   void loadNavmeshIntoScene();
   void connectMainControls();

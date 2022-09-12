@@ -7,6 +7,7 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    a.setApplicationName("Hyperbot");
 
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();

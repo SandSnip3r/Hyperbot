@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FindProtobuf)
+add_subdirectory(gli)
 add_subdirectory(proto)
 add_subdirectory(Pathfinder)
 add_subdirectory(SilkroadLib)
@@ -97,6 +98,7 @@ PRIVATE
   Qt6::OpenGLWidgets
   cppzmq
   cppzmq-static
+  gli
   proto
   ${PROTOBUF_LIBRARIES}
   SilkroadLib

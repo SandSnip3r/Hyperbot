@@ -66,15 +66,20 @@ void RegionGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem
   painter->setBrush(brush);
   painter->setRenderHint(QPainter::Antialiasing, true);
 
+  // TODO: Somehow need to solve for the tiny gap that's shown between regions at certain zoom levels
+  QRect target(0,0,1920,1920);
+  QRect src(0,0,pixmap_.width(),pixmap_.height());
+  painter->drawPixmap(target, pixmap_, src);
+
   drawBlockedTiles(*painter, *option);
 
   drawObjectColors(*painter, *option);
   drawLinkAreas(*painter, *option);
 
-  drawVertices(*painter, *option);
+  // drawVertices(*painter, *option);
   drawEdges(*painter, *option);
 
-  drawEdgeLinks(*painter, *option);
+  // drawEdgeLinks(*painter, *option);
 }
 
 void RegionGraphicsItem::addTriangleLabels() {
@@ -268,9 +273,9 @@ const sro::navmesh::triangulation::SingleRegionNavmeshTriangulation& RegionGraph
 
 void RegionGraphicsItem::drawBlockedTiles(QPainter &painter, const QStyleOptionGraphicsItem &option) const {
   const qreal levelOfDetail = option.levelOfDetailFromTransform(painter.worldTransform());
-  if (levelOfDetail >= 0.35) {
+  if (levelOfDetail >= 0.1) {
     painter.save();
-    QBrush brush(QColor(255,230,230));
+    QBrush brush(QColor(255,0,0,100));
     painter.setBrush(brush);
     painter.setPen(Qt::NoPen);
     auto tileXYToQuad = [](int row, int col) -> std::tuple<double,double> {
@@ -387,9 +392,11 @@ void RegionGraphicsItem::drawVertices(QPainter &painter, const QStyleOptionGraph
 }
 
 void RegionGraphicsItem::drawEdges(QPainter &painter, const QStyleOptionGraphicsItem &option) const {
+  constexpr bool kDisplayGlobalEdges{false};
+  constexpr bool kDisplayNonConstraintEdges{false};
+  constexpr double kMinimumLevelOfDetailForNonConstraintEdges{0.35};
   const qreal levelOfDetail = option.levelOfDetailFromTransform(painter.worldTransform());
   // std::cout << "Level of detail " << levelOfDetail << std::endl;
-  constexpr bool displayNonConstraintEdges_{false}; // TODO:
   painter.save();
   QPen edgePen;
   qreal penWidth = 0;
@@ -399,21 +406,28 @@ void RegionGraphicsItem::drawEdges(QPainter &painter, const QStyleOptionGraphics
   edgePen.setWidth(penWidth);
   for (std::size_t edgeIndex=0; edgeIndex<navmeshTriangulation_.getEdgeCount(); ++edgeIndex) {
     const int marker = navmeshTriangulation_.getEdgeMarker(static_cast<pathfinder::navmesh::TriangleLibNavmesh::IndexType>(edgeIndex));
-    if (levelOfDetail < 0.35 && marker <= 1) {
+    if (marker <= 1 && (!kDisplayNonConstraintEdges || levelOfDetail <= kMinimumLevelOfDetailForNonConstraintEdges)) {
       // Do not display non-input edges
       continue;
     }
     const auto &[vertexA, vertexB] = navmeshTriangulation_.getEdge(static_cast<pathfinder::navmesh::TriangleLibNavmesh::IndexType>(edgeIndex));
     const auto transformedVertexA = transformNavmeshCoordinateToQtCoordinate(vertexA);
     const auto transformedVertexB = transformNavmeshCoordinateToQtCoordinate(vertexB);
-    bool skip{marker > 1};
+    bool skip{false};//{marker > 1};
     if (marker > 1) {
       const auto &edgeConstraintData = navmeshTriangulation_.getEdgeConstraintData(marker);
-      // Skip object internal edges when zoomed out very far
       for (const auto &constraint : edgeConstraintData) {
-        if (!(levelOfDetail <= 0.04 && constraint.forObject() && constraint.is(sro::navmesh::triangulation::EdgeConstraintFlag::kInternal))) {
-          skip = false;
+        if (levelOfDetail <= 0.4 && constraint.forObject() && constraint.is(sro::navmesh::triangulation::EdgeConstraintFlag::kInternal)) {
+          // Skip object internal edges when zoomed out very far
+          skip = true;
           break;
+        }
+        if constexpr (!kDisplayGlobalEdges) {
+          if (!constraint.forObject() && constraint.is(sro::navmesh::triangulation::EdgeConstraintFlag::kGlobal)) {
+            // Skip region boundaries
+            skip = true;
+            break;
+          }
         }
       }
     }
@@ -527,4 +541,8 @@ QColor RegionGraphicsItem::getColorForEdgeMarker(const int marker) const {
 
 QPointF RegionGraphicsItem::transformNavmeshCoordinateToQtCoordinate(const pathfinder::Vector &vertex) const {
   return {vertex.x(), 1920-vertex.y()};
+}
+
+void RegionGraphicsItem::setPixmap(const QPixmap &pixmap) {
+  pixmap_ = pixmap;
 }

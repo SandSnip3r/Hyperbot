@@ -7,6 +7,7 @@
 #include <QGraphicsItem>
 #include <QGraphicsSimpleTextItem>
 #include <QPainter>
+#include <QPixmap>
 #include <QStyleOptionGraphicsItem>
 
 #include <atomic>
@@ -39,6 +40,7 @@ public:
   void removeEdgeLabels();
   void removeVertexLabels();
   void createLabels();
+  void setPixmap(const QPixmap &pixmap);
 private:
   const sro::navmesh::Navmesh &navmesh_;
   const sro::navmesh::Region &region_;
@@ -48,6 +50,7 @@ private:
   std::atomic<bool> labelsCreated_{false};
   LabelStatus triangleLabelStatus_{LabelStatus::kNotAdded}, edgeLabelStatus_{LabelStatus::kNotAdded}, vertexLabelStatus_{LabelStatus::kNotAdded};
   std::vector<NoScaleLabel*> triangleLabels_, edgeLabels_, vertexLabels_;
+  QPixmap pixmap_;
 
   void drawBlockedTiles(QPainter &painter, const QStyleOptionGraphicsItem &option) const;
   void drawObjectColors(QPainter &painter, const QStyleOptionGraphicsItem &option) const;
