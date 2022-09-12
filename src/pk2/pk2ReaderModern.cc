@@ -19,6 +19,12 @@ Pk2ReaderModern::~Pk2ReaderModern() {
   pk2Reader_.Close();
 }
 
+bool Pk2ReaderModern::hasEntry(const std::string &entryName) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  PK2Entry entry = {0};
+  return pk2Reader_.GetEntry(entryName.c_str(), entry);
+}
+
 PK2Entry Pk2ReaderModern::getEntry(const std::string &entryName) {
   std::unique_lock<std::mutex> lock(mutex_);
   PK2Entry entry = {0};
@@ -48,5 +54,11 @@ std::vector<char> Pk2ReaderModern::getEntryDataChar(PK2Entry &entry) {
   }
   return data;
 }
+
+void Pk2ReaderModern::clearCache() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  pk2Reader_.ClearCache();
+}
+
 
 } // namespace sro::pk2

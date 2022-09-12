@@ -17,9 +17,11 @@ class Pk2ReaderModern {
 public:
   Pk2ReaderModern(const fs::path &pk2Path);
   ~Pk2ReaderModern();
+  bool hasEntry(const std::string &entryName);
   PK2Entry getEntry(const std::string &entryName);
   std::vector<uint8_t> getEntryData(PK2Entry &entry);
   std::vector<char> getEntryDataChar(PK2Entry &entry);
+  void clearCache();
 private:
   std::mutex mutex_;
   fs::path pk2Path_;
