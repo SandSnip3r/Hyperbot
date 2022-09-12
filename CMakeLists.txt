@@ -29,6 +29,8 @@ set(PROJECT_SOURCES
   main.cpp
   characterData.cpp
   characterData.hpp
+  entityGraphicsItem.cpp
+  entityGraphicsItem.hpp
   eventHandler.cpp
   eventHandler.hpp
   experienceProgressBar.cpp

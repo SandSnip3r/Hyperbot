@@ -16,9 +16,6 @@ class NavmeshView;
 class NavmeshGraphicsView : public QGraphicsView {
   Q_OBJECT
 public:
-  // NavmeshGraphicsView(NavmeshView *v) : QGraphicsView(), navmeshView_(v) {
-  //   setMouseTracking(true);
-  // }
   NavmeshGraphicsView(QWidget *parent=nullptr);
   void setWorldNavmesh(const sro::navmesh::triangulation::NavmeshTriangulation &navmeshTriangulation);
 

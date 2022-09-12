@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include "characterData.hpp"
+#include "entityGraphicsItem.hpp"
 #include "eventHandler.hpp"
 #include "itemListWidget.hpp"
 #include "requester.hpp"
@@ -41,9 +42,10 @@ private:
   Requester requester_{context_};
   CharacterData characterData_;
   QTimer *movementUpdateTimer_{nullptr};
-  QGraphicsScene *scene_{new QGraphicsScene(this)};
+  QGraphicsScene *mapScene_{new QGraphicsScene(this)};
   std::optional<sro::navmesh::Navmesh> navmesh_;
   std::optional<sro::navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
+  EntityGraphicsItem *entityGraphicsItem_{nullptr};
 
   void initializeUi();
   std::optional<QPixmap> parseRegionMinimapPixmapFromPk2(sro::pk2::Pk2ReaderModern &pk2Reader, sro::Sector xSector, sro::Sector ySector);
@@ -59,6 +61,8 @@ private:
   void injectPacket(request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes);
   void updateItemList(ItemListWidget *itemListWidget, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void updateGoldLabel(QLabel *label, uint64_t goldAmount);
+  void updateDisplayedPosition(const sro::Position &position);
+  QPointF sroPositionToMapPosition(const sro::Position &position) const;
 
 private slots:
   // UI actions

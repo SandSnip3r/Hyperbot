@@ -4,6 +4,7 @@
 #include "./ui_mainwindow.h"
 #include "regionGraphicsItem.hpp"
 
+#include <silkroad_lib/game_constants.h>
 #include <silkroad_lib/position_math.h>
 #include <silkroad_lib/pk2/pk2ReaderModern.h>
 #include <silkroad_lib/pk2/navmeshParser.h>
@@ -125,7 +126,7 @@ void MainWindow::initializeMap() {
   const auto endTime = std::chrono::high_resolution_clock::now();
   std::cout << "Loading the navmesh into the scene " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime-startTime).count()/1000.0 << "s" << std::endl;
 
-  ui->navmeshGraphicsView->setScene(scene_);
+  ui->navmeshGraphicsView->setScene(mapScene_);
   if (!navmeshTriangulation_.has_value()) {
     throw std::runtime_error("Navmesh Triangulation missing");
   }
@@ -166,7 +167,7 @@ void MainWindow::loadNavmeshIntoScene() {
         }
       }
       item->setPos(1920*regionX, 1920*(128-regionY)); // TODO: Maybe use a transformation function to flip Y value
-      scene_->addItem(item);
+      mapScene_->addItem(item);
       // Creating labels takes a while, kick it off in another thread
       std::thread thr(&RegionGraphicsItem::createLabels, item);
       thr.detach();
@@ -177,6 +178,13 @@ void MainWindow::loadNavmeshIntoScene() {
     msgBox.setText(QString(tr("Could not load navmesh into scene. The file may have invalid .pk2 format. Error: \""))+ex.what()+"\"");
     msgBox.exec();
   }
+}
+
+QPointF MainWindow::sroPositionToMapPosition(const sro::Position &position) const {
+  const auto [regionX, regionY] = sro::position_math::sectorsFromWorldRegionId(position.regionId());
+  return {sro::game_constants::kRegionWidth  *        regionX  +                                       position.xOffset(),
+          sro::game_constants::kRegionHeight * (128 - regionY) + (sro::game_constants::kRegionHeight - position.zOffset())};
+
 }
 
 void MainWindow::connectMainControls() {
@@ -245,8 +253,8 @@ void MainWindow::timerTriggered() {
     const auto totalDistanceTraveled = elapsedTimeMs/1000.0 * characterData_.movement->speed;
     currentPosition = sro::position_math::getNewPositionGivenAngleAndDistance(characterData_.movement->srcPos, movementAngle, totalDistanceTraveled);
   }
-  const auto gameCoordinate = currentPosition.toGameCoordinate();
-  ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
+
+  updateDisplayedPosition(currentPosition);
 }
 
 void MainWindow::killMovementTimer() {
@@ -434,10 +442,22 @@ void MainWindow::onCharacterMovementBeganToDest(sro::Position currentPosition, s
   characterData_.movement->startTime = std::chrono::high_resolution_clock::now();
   characterData_.movement->srcPos = currentPosition;
   characterData_.movement->destPosOrAngle = destinationPosition;
-  // Display current position
-  const auto gameCoordinate = currentPosition.toGameCoordinate();
-  ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
   triggerMovementTimer();
+  updateDisplayedPosition(currentPosition);
+}
+
+void MainWindow::updateDisplayedPosition(const sro::Position &position) {
+  // Update label
+  const auto gameCoordinate = position.toGameCoordinate();
+  ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
+
+  // Update map
+  if (entityGraphicsItem_ != nullptr) {
+    auto mapPosition = sroPositionToMapPosition(position);
+    entityGraphicsItem_->setPos(mapPosition);
+  } else {
+    std::cout << "Dont have an entity graphics item" << std::endl;
+  }
 }
 
 void MainWindow::onCharacterMovementBeganTowardAngle(sro::Position currentPosition, uint16_t movementAngle, float speed) {
@@ -446,16 +466,20 @@ void MainWindow::onCharacterMovementBeganTowardAngle(sro::Position currentPositi
   characterData_.movement->startTime = std::chrono::high_resolution_clock::now();
   characterData_.movement->srcPos = currentPosition;
   characterData_.movement->destPosOrAngle = movementAngle;
-  // Display current position
-  const auto gameCoordinate = currentPosition.toGameCoordinate();
-  ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
   triggerMovementTimer();
+  updateDisplayedPosition(currentPosition);
 }
 
 void MainWindow::onCharacterMovementEnded(sro::Position position) {
   killMovementTimer();
-  const auto gameCoordinate = position.toGameCoordinate();
-  ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
+
+  // This is where we first get the player's position when they spawn.
+  // Might need to create the dot on the map for the player
+  if (entityGraphicsItem_ == nullptr) {
+    entityGraphicsItem_ = new EntityGraphicsItem();
+    mapScene_->addItem(entityGraphicsItem_);
+  }
+  updateDisplayedPosition(position);
 }
 
 void MainWindow::onRegionNameUpdate(const std::string &regionName) {
