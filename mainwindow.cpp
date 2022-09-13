@@ -166,7 +166,8 @@ void MainWindow::loadNavmeshIntoScene() {
           std::cout << "Couldn't load minimap image for region " << static_cast<int>(regionX) << ',' << static_cast<int>(regionY) << std::endl;
         }
       }
-      item->setPos(1920*regionX, 1920*(128-regionY)); // TODO: Maybe use a transformation function to flip Y value
+      const auto mapPos = sroPositionToMapPosition({regionId, 0.0, 0.0, 0.0});
+      item->setPos(mapPos);
       mapScene_->addItem(item);
       // Creating labels takes a while, kick it off in another thread
       std::thread thr(&RegionGraphicsItem::createLabels, item);
