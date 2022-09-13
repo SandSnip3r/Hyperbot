@@ -166,7 +166,7 @@ void MainWindow::loadNavmeshIntoScene() {
           std::cout << "Couldn't load minimap image for region " << static_cast<int>(regionX) << ',' << static_cast<int>(regionY) << std::endl;
         }
       }
-      const auto mapPos = sroPositionToMapPosition({regionId, 0.0, 0.0, 0.0});
+      const auto mapPos = sroPositionToMapPosition({regionId, 0.0, 0.0, sro::game_constants::kRegionHeight});
       item->setPos(mapPos);
       mapScene_->addItem(item);
       // Creating labels takes a while, kick it off in another thread
