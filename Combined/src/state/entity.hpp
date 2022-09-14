@@ -1,7 +1,8 @@
 #ifndef STATE_ENTITY_HPP
 #define STATE_ENTITY_HPP
 
-#include "../packet/parsing/parsedPacket.hpp" // Object
+#include "broker/eventBroker.hpp"
+#include "packet/parsing/parsedPacket.hpp"
 
 #include <memory>
 #include <mutex>
@@ -11,6 +12,7 @@ namespace state {
   
 class Entity {
 public:
+  Entity(broker::EventBroker &eventBroker);
   using EntityId = uint32_t;
   void trackEntity(std::shared_ptr<packet::parsing::Object> obj);
   void stopTrackingEntity(EntityId gId);
@@ -20,6 +22,7 @@ public:
   size_t size() const;
   const std::map<EntityId, std::shared_ptr<packet::parsing::Object>>& getEntityMap() const;
 private:
+  broker::EventBroker &eventBroker_;
   mutable std::mutex entityMutex_;
   std::map<EntityId, std::shared_ptr<packet::parsing::Object>> entityMap_;
 };

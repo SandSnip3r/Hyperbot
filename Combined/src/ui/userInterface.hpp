@@ -34,6 +34,8 @@ public:
   void broadcastMovementEndedUpdate(const sro::Position &currentPosition);
   void broadcastRegionNameUpdate(std::string_view regionName);
   void broadcastItemUpdate(broadcast::ItemLocation itemLocation, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName={});
+  void broadcastEntitySpawned(uint32_t globalId, const sro::Position &position, broadcast::EntityType entityType);
+  void broadcastEntityDespawned(uint32_t globalId);
   void broadcast(const broadcast::BroadcastMessage &broadcastProto);
 private:
   zmq::context_t context_;

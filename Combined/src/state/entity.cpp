@@ -1,6 +1,10 @@
 #include "entity.hpp"
+#include "event/event.hpp"
 
 namespace state {
+
+Entity::Entity(broker::EventBroker &eventBroker) : eventBroker_(eventBroker) {
+}
 
 void Entity::trackEntity(std::shared_ptr<packet::parsing::Object> obj) {
   std::unique_lock<std::mutex> entityLockGuard(entityMutex_);
@@ -8,6 +12,7 @@ void Entity::trackEntity(std::shared_ptr<packet::parsing::Object> obj) {
     throw std::runtime_error("Entity::trackEntity Entity "+std::to_string(obj->gId)+" already exists");
   }
   entityMap_.emplace(obj->gId, obj);
+  eventBroker_.publishEvent(std::make_unique<event::EntitySpawned>(obj->gId));
 }
 
 void Entity::stopTrackingEntity(EntityId gId) {
@@ -18,6 +23,7 @@ void Entity::stopTrackingEntity(EntityId gId) {
   } else {
     throw std::runtime_error("Entity::stopTrackingEntity Entity "+std::to_string(gId)+" does not exist");
   }
+  eventBroker_.publishEvent(std::make_unique<event::EntityDespawned>(gId));
 }
 
 bool Entity::trackingEntity(EntityId gId) const {

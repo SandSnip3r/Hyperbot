@@ -22,4 +22,8 @@ InjectPacket::InjectPacket(InjectPacket::Direction dir, uint16_t op, const std::
 
 CosSpawned::CosSpawned(uint32_t cosGId) : Event(EventCode::kCosSpawned), cosGlobalId(cosGId) {}
 
+EntitySpawned::EntitySpawned(uint32_t id) : Event(EventCode::kEntitySpawned), globalId(id) {}
+
+EntityDespawned::EntityDespawned(uint32_t id) : Event(EventCode::kEntityDespawned), globalId(id) {}
+
 } // namespace event

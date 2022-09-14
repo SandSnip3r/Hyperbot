@@ -46,7 +46,7 @@ protected:
   Proxy &proxy_;
   broker::PacketBroker &broker_;
   broker::EventBroker eventBroker_;
-  state::Entity entityState_;
+  state::Entity entityState_{eventBroker_};
   state::Self selfState_{eventBroker_, gameData_};
   ui::UserInterface userInterface_{eventBroker_};
   packet::parsing::PacketParser packetParser_{gameData_};

@@ -1,7 +1,6 @@
 #include "gameData.hpp"
 
 #include "logging.hpp"
-#include "math/position.hpp"
 #include "pk2/parsing/navmeshParser.hpp"
 #include "../../../common/pk2/pk2.h"
 #include "../../../common/pk2/parsing/parsing.hpp"

@@ -44,6 +44,8 @@ enum class EventCode {
   kCharacterSkillPointsUpdated,
   kCharacterExperienceUpdated,
   kEnteredNewRegion,
+  kEntitySpawned,
+  kEntityDespawned,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -136,6 +138,20 @@ public:
   CosSpawned(uint32_t cosGId);
   const uint32_t cosGlobalId;
   virtual ~CosSpawned() = default;
+};
+
+struct EntitySpawned : public Event {
+public:
+  EntitySpawned(uint32_t id);
+  const uint32_t globalId;
+  virtual ~EntitySpawned() = default;
+};
+
+struct EntityDespawned : public Event {
+public:
+  EntityDespawned(uint32_t id);
+  const uint32_t globalId;
+  virtual ~EntityDespawned() = default;
 };
 
 } // namespace event

@@ -153,6 +153,29 @@ void UserInterface::broadcastItemUpdate(broadcast::ItemLocation itemLocation, ui
   broadcast(broadcastMessage);
 }
 
+void UserInterface::broadcastEntitySpawned(uint32_t globalId, const sro::Position &position, broadcast::EntityType entityType) {
+  broadcast::BroadcastMessage broadcastMessage;
+  auto *entitySpawnedMsg = broadcastMessage.mutable_entityspawned();
+
+  entitySpawnedMsg->set_globalid(globalId);
+
+  broadcast::Position *posMsg = entitySpawnedMsg->mutable_position();
+  posMsg->set_regionid(position.regionId());
+  posMsg->set_x(position.xOffset());
+  posMsg->set_y(position.yOffset());
+  posMsg->set_z(position.zOffset());
+
+  entitySpawnedMsg->set_entitytype(entityType);
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastEntityDespawned(uint32_t globalId) {
+  broadcast::BroadcastMessage broadcastMessage;
+  auto *entityDespawnedMsg = broadcastMessage.mutable_entitydespawned();
+  entityDespawnedMsg->set_globalid(globalId);
+  broadcast(broadcastMessage);
+}
+
 void UserInterface::broadcast(const broadcast::BroadcastMessage &broadcastProto) {
   zmq::message_t message;
   message.rebuild(broadcastProto.ByteSizeLong());
