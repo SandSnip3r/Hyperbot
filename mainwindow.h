@@ -20,6 +20,7 @@
 #include <QTimer>
 
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <string>
 
@@ -46,6 +47,7 @@ private:
   std::optional<sro::navmesh::Navmesh> navmesh_;
   std::optional<sro::navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
   EntityGraphicsItem *entityGraphicsItem_{nullptr};
+  std::map<uint32_t, EntityGraphicsItem*> entityGraphicsItemMap_;
 
   void initializeUi();
   std::optional<QPixmap> parseRegionMinimapPixmapFromPk2(sro::pk2::Pk2ReaderModern &pk2Reader, sro::Sector xSector, sro::Sector ySector);
@@ -97,6 +99,8 @@ public slots:
   void onCosInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void onStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void onGuildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
+  void onEntitySpawned(uint32_t globalId, sro::Position position, sro::entity_types::EntityType entityType);
+  void onEntityDespawned(uint32_t globalId);
 };
 
 #endif // MAINWINDOW_H

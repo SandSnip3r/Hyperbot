@@ -218,6 +218,8 @@ void MainWindow::connectBotBroadcastMessages() {
   connect(&eventHandler_, &EventHandler::cosInventoryItemUpdate, this, &MainWindow::onCosInventoryItemUpdate);
   connect(&eventHandler_, &EventHandler::storageItemUpdate, this, &MainWindow::onStorageItemUpdate);
   connect(&eventHandler_, &EventHandler::guildStorageItemUpdate, this, &MainWindow::onGuildStorageItemUpdate);
+  connect(&eventHandler_, &EventHandler::entitySpawned, this, &MainWindow::onEntitySpawned);
+  connect(&eventHandler_, &EventHandler::entityDespawned, this, &MainWindow::onEntityDespawned);
 }
 
 void MainWindow::connectPacketInjection() {
@@ -477,7 +479,7 @@ void MainWindow::onCharacterMovementEnded(sro::Position position) {
   // This is where we first get the player's position when they spawn.
   // Might need to create the dot on the map for the player
   if (entityGraphicsItem_ == nullptr) {
-    entityGraphicsItem_ = new EntityGraphicsItem();
+    entityGraphicsItem_ = new EntityGraphicsItem(sro::entity_types::EntityType::kSelf);
     mapScene_->addItem(entityGraphicsItem_);
   }
   updateDisplayedPosition(position);
@@ -505,6 +507,26 @@ void MainWindow::onStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::
 
 void MainWindow::onGuildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName) {
   updateItemList(ui->guildStorageListWidget, slotIndex, quantity, itemName);
+}
+
+void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, sro::entity_types::EntityType entityType) {
+  auto *item = new EntityGraphicsItem(entityType);
+  mapScene_->addItem(item);
+  auto mapPosition = sroPositionToMapPosition(position);
+  item->setPos(mapPosition);
+  if (auto it=entityGraphicsItemMap_.find(globalId); it != entityGraphicsItemMap_.end()) {
+    throw std::runtime_error("Entity spawn, but already exists in our map!");
+  }
+  entityGraphicsItemMap_[globalId] = item;
+}
+
+void MainWindow::onEntityDespawned(uint32_t globalId) {
+  auto it = entityGraphicsItemMap_.find(globalId);
+  if (it == entityGraphicsItemMap_.end()) {
+    throw std::runtime_error("Entity despawned, but does not exist in our map!");
+  }
+  delete it->second;
+  entityGraphicsItemMap_.erase(it);
 }
 
 namespace {

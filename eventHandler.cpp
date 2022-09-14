@@ -135,6 +135,42 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         }
         break;
       }
+    case broadcast::BroadcastMessage::BodyCase::kEntitySpawned: {
+        const broadcast::EntitySpawned &msg = message.entityspawned();
+        const broadcast::Position &pos = msg.position();
+        sro::Position sroPos(pos.regionid(), pos.x(), pos.y(), pos.z());
+        sro::entity_types::EntityType entityType;
+        switch (msg.entitytype()) {
+          case broadcast::EntityType::kSelf:
+            entityType = sro::entity_types::EntityType::kSelf;
+            break;
+          case broadcast::EntityType::kCharacter:
+            entityType = sro::entity_types::EntityType::kCharacter;
+            break;
+          case broadcast::EntityType::kPlayerCharacter:
+            entityType = sro::entity_types::EntityType::kPlayerCharacter;
+            break;
+          case broadcast::EntityType::kNonplayerCharacter:
+            entityType = sro::entity_types::EntityType::kNonplayerCharacter;
+            break;
+          case broadcast::EntityType::kMonster:
+            entityType = sro::entity_types::EntityType::kMonster;
+            break;
+          case broadcast::EntityType::kItem:
+            entityType = sro::entity_types::EntityType::kItem;
+            break;
+          case broadcast::EntityType::kPortal:
+            entityType = sro::entity_types::EntityType::kPortal;
+            break;
+        }
+        emit entitySpawned(msg.globalid(), sroPos, entityType);
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kEntityDespawned: {
+        const broadcast::EntityDespawned &msg = message.entitydespawned();
+        emit entityDespawned(msg.globalid());
+        break;
+      }
     default:
       // Unknown case. Might be a malformed message
       break;

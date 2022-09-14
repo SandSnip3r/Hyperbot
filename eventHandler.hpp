@@ -3,6 +3,7 @@
 
 #include "proto/broadcast.pb.h"
 
+#include <silkroad_lib/entity_types.h>
 #include <silkroad_lib/position.h>
 
 #include <zmq.hpp>
@@ -43,6 +44,8 @@ signals:
   void cosInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void storageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void guildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
+  void entitySpawned(uint32_t globalId, sro::Position position, sro::entity_types::EntityType entityType);
+  void entityDespawned(uint32_t globalId);
 private:
   zmq::context_t &context_;
   std::atomic<bool> run_;
