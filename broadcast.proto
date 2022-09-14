@@ -15,12 +15,13 @@ enum ItemLocation {
 }
 
 enum EntityType {
-  kCharacter = 0;
-  kPlayerCharacter = 1;
-  kNonplayerCharacter = 2;
-  kMonster = 3;
-  kItem = 4;
-  kPortal = 5;
+  kSelf = 0;
+  kCharacter = 1;
+  kPlayerCharacter = 2;
+  kNonplayerCharacter = 3;
+  kMonster = 4;
+  kItem = 5;
+  kPortal = 6;
 };
 
 // Sub-structures
