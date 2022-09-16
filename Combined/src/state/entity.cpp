@@ -8,43 +8,43 @@ Entity::Entity(broker::EventBroker &eventBroker) : eventBroker_(eventBroker) {
 
 void Entity::trackEntity(std::shared_ptr<packet::parsing::Object> obj) {
   std::unique_lock<std::mutex> entityLockGuard(entityMutex_);
-  if (entityMap_.find(obj->gId) != entityMap_.end()) {
-    throw std::runtime_error("Entity::trackEntity Entity "+std::to_string(obj->gId)+" already exists");
+  if (entityMap_.find(obj->globalId) != entityMap_.end()) {
+    throw std::runtime_error("Entity::trackEntity Entity "+std::to_string(obj->globalId)+" already exists");
   }
-  entityMap_.emplace(obj->gId, obj);
-  eventBroker_.publishEvent(std::make_unique<event::EntitySpawned>(obj->gId));
+  entityMap_.emplace(obj->globalId, obj);
+  eventBroker_.publishEvent(std::make_unique<event::EntitySpawned>(obj->globalId));
 }
 
-void Entity::stopTrackingEntity(EntityId gId) {
+void Entity::stopTrackingEntity(EntityId globalId) {
   std::unique_lock<std::mutex> entityLockGuard(entityMutex_);
-  auto it = entityMap_.find(gId);
+  auto it = entityMap_.find(globalId);
   if (it != entityMap_.end()) {
     entityMap_.erase(it);
   } else {
-    throw std::runtime_error("Entity::stopTrackingEntity Entity "+std::to_string(gId)+" does not exist");
+    throw std::runtime_error("Entity::stopTrackingEntity Entity "+std::to_string(globalId)+" does not exist");
   }
-  eventBroker_.publishEvent(std::make_unique<event::EntityDespawned>(gId));
+  eventBroker_.publishEvent(std::make_unique<event::EntityDespawned>(globalId));
 }
 
-bool Entity::trackingEntity(EntityId gId) const {
+bool Entity::trackingEntity(EntityId globalId) const {
   std::unique_lock<std::mutex> entityLockGuard(entityMutex_);
-  return (entityMap_.find(gId) != entityMap_.end());
+  return (entityMap_.find(globalId) != entityMap_.end());
 }
 
-packet::parsing::Object* Entity::getEntity(EntityId gId) {
+packet::parsing::Object* Entity::getEntity(EntityId globalId) {
   std::unique_lock<std::mutex> entityLockGuard(entityMutex_);
-  auto it = entityMap_.find(gId);
+  auto it = entityMap_.find(globalId);
   if (it == entityMap_.end()) {
-    throw std::runtime_error("Entity::getEntity Enttiy "+std::to_string(gId)+" does not exist");
+    throw std::runtime_error("Entity::getEntity Enttiy "+std::to_string(globalId)+" does not exist");
   }
   return it->second.get();
 }
 
-const packet::parsing::Object* Entity::getEntity(EntityId gId) const {
+const packet::parsing::Object* Entity::getEntity(EntityId globalId) const {
   std::unique_lock<std::mutex> entityLockGuard(entityMutex_);
-  auto it = entityMap_.find(gId);
+  auto it = entityMap_.find(globalId);
   if (it == entityMap_.end()) {
-    throw std::runtime_error("Entity::getEntity Enttiy "+std::to_string(gId)+" does not exist");
+    throw std::runtime_error("Entity::getEntity Enttiy "+std::to_string(globalId)+" does not exist");
   }
   return it->second.get();
 }

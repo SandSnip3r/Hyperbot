@@ -9,6 +9,9 @@
 #include "../../shared/silkroad_security.h"
 #include "../../storage/item.hpp"
 
+#include <silkroad_lib/entity_types.h>
+#include <silkroad_lib/position.h>
+
 #include <array>
 #include <map>
 #include <memory>
@@ -109,68 +112,44 @@ enum class GroupSpawnType {
   kDespawn=2
 };
 
-enum class ObjectType {
-  kCharacter,
-  kPlayerCharacter,
-  kNonplayerCharacter,
-  kMonster,
-  kItem,
-  kPortal
-};
-
 class Object {
 public:
-  ObjectType type;
   uint32_t refObjId;
   uint8_t typeId1, typeId2, typeId3, typeId4;
-  uint32_t gId;
-  // TODO: Replace the position data with the packet::structures::Position object
-  uint16_t regionId;
-  float x, y, z;
-  Object(ObjectType t) : type(t) {}
+  uint32_t globalId;
+  sro::Position position;
   virtual ~Object() = default;
 };
 
 class Character : public Object {
 public:
-  Character() : Object(ObjectType::kCharacter) {}
   uint8_t lifeState;
-protected:
-  Character(ObjectType t) : Object(t) {}
 };
 
 class PlayerCharacter : public Character {
 public:
-  PlayerCharacter() : Character(ObjectType::kPlayerCharacter) {}
   std::string name;
 };
 
-class NonplayerCharacter : public Character {
-public:
-  NonplayerCharacter() : Character(ObjectType::kNonplayerCharacter) {}
-protected:
-  NonplayerCharacter(ObjectType t) : Character(t) {}
-};
+class NonplayerCharacter : public Character {};
 
 class Monster : public NonplayerCharacter {
 public:
-  Monster() : NonplayerCharacter(ObjectType::kMonster) {}
   uint8_t monsterRarity;
 };
 
 class Item : public Object {
 public:
-  Item() : Object(ObjectType::kItem) {}
   uint8_t rarity;
 };
 
 class Portal : public Object {
 public:
-  Portal() : Object(ObjectType::kPortal) {}
   uint8_t unkByte3;
 };
 
-void printObj(const packet::parsing::Object *obj, const pk2::GameData &gameData);
+void printObj(const Object *obj, const pk2::GameData &gameData);
+sro::entity_types::EntityType entityTypeForObject(const Object *obj);
 
 class ParsedServerAgentEntityGroupSpawnData : public ParsedPacket {
 public:

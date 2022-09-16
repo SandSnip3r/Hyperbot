@@ -249,41 +249,13 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kEntitySpawned:
         {
           const auto &castedEvent = dynamic_cast<const event::EntitySpawned&>(*event);
-          const bool trackingEntity = entityState_.trackingEntity(castedEvent.globalId);
-          if (!trackingEntity) {
-            throw std::runtime_error("Received entity spawned event, but we're not tracking this entity");
-          }
-          const auto *entity = entityState_.getEntity(castedEvent.globalId);
-          sro::Position position(entity->regionId, entity->x, entity->y, entity->z);
-          broadcast::EntityType entityType;
-
-          switch (entity->type) {
-            case packet::parsing::ObjectType::kCharacter:
-              entityType = broadcast::EntityType::kCharacter;
-              break;
-            case packet::parsing::ObjectType::kPlayerCharacter:
-              entityType = broadcast::EntityType::kPlayerCharacter;
-              break;
-            case packet::parsing::ObjectType::kNonplayerCharacter:
-              entityType = broadcast::EntityType::kNonplayerCharacter;
-              break;
-            case packet::parsing::ObjectType::kMonster:
-              entityType = broadcast::EntityType::kMonster;
-              break;
-            case packet::parsing::ObjectType::kItem:
-              entityType = broadcast::EntityType::kItem;
-              break;
-            case packet::parsing::ObjectType::kPortal:
-              entityType = broadcast::EntityType::kPortal;
-              break;
-          }
-          userInterface_.broadcastEntitySpawned(castedEvent.globalId, position, entityType);
+          entitySpawned(castedEvent);
           break;
         }
       case event::EventCode::kEntityDespawned:
         {
           const auto &castedEvent = dynamic_cast<const event::EntityDespawned&>(*event);
-          userInterface_.broadcastEntityDespawned(castedEvent.globalId);
+          entityDespawned(castedEvent);
           break;
         }
       default:
@@ -901,4 +873,17 @@ void Bot::broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const
     itemName = gameData_.textItemAndSkillData().getItemName(item->itemInfo->nameStrID128);
   }
   userInterface_.broadcastItemUpdate(itemLocation, slotIndex, quantity, itemName);
+}
+
+void Bot::entitySpawned(const event::EntitySpawned &event) {
+  const bool trackingEntity = entityState_.trackingEntity(event.globalId);
+  if (!trackingEntity) {
+    throw std::runtime_error("Received entity spawned event, but we're not tracking this entity");
+  }
+  const auto *entity = entityState_.getEntity(event.globalId);
+  userInterface_.broadcastEntitySpawned(event.globalId, entity->position, packet::parsing::entityTypeForObject(entity));
+}
+
+void Bot::entityDespawned(const event::EntityDespawned &event) {
+  userInterface_.broadcastEntityDespawned(event.globalId);
 }

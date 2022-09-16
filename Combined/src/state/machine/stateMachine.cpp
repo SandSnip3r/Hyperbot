@@ -523,13 +523,13 @@ TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, i
       if (!objectPtr) {
         throw std::runtime_error("Entity map contains a null item");
       }
-      if (objectPtr->type != packet::parsing::ObjectType::kNonplayerCharacter) {
+
+      if (packet::parsing::entityTypeForObject(objectPtr.get()) != sro::entity_types::EntityType::kNonplayerCharacter) {
         // Not an npc, skip
         continue;
       }
 
-      const sro::Position npcPosition{ objectPtr->regionId, objectPtr->x, objectPtr->y, objectPtr->z };
-      const auto distanceToNpc = sro::position_math::calculateDistance2D(bot_.selfState_.position(), npcPosition);
+      const auto distanceToNpc = sro::position_math::calculateDistance2D(bot_.selfState_.position(), objectPtr->position);
       if (distanceToNpc < closestNpcDistance) {
         closestNpcGId = entityIdObjectPair.first;
         closestNpcDistance = distanceToNpc;
@@ -584,7 +584,7 @@ void TalkingToShopNpc::figureOutWhatToBuy() {
     if (npc == nullptr) {
       throw std::runtime_error("Got entity, but it's null");
     }
-    if (npc->type != packet::parsing::ObjectType::kNonplayerCharacter) {
+    if (packet::parsing::entityTypeForObject(npc) != sro::entity_types::EntityType::kNonplayerCharacter) {
       throw std::runtime_error("Entity is not a NonplayerCharacter");
     }
 

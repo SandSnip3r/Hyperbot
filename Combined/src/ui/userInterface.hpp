@@ -7,6 +7,7 @@
 #include "ui-proto/broadcast.pb.h"
 
 #include <silkroad_lib/position.h>
+#include <silkroad_lib/entity_types.h>
 #include <zmq.hpp>
 
 #include <optional>
@@ -34,7 +35,7 @@ public:
   void broadcastMovementEndedUpdate(const sro::Position &currentPosition);
   void broadcastRegionNameUpdate(std::string_view regionName);
   void broadcastItemUpdate(broadcast::ItemLocation itemLocation, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName={});
-  void broadcastEntitySpawned(uint32_t globalId, const sro::Position &position, broadcast::EntityType entityType);
+  void broadcastEntitySpawned(uint32_t globalId, const sro::Position &position, sro::entity_types::EntityType entityType);
   void broadcastEntityDespawned(uint32_t globalId);
   void broadcast(const broadcast::BroadcastMessage &broadcastProto);
 private:

@@ -263,8 +263,11 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
     throw std::runtime_error("Failed to create object for spawn");
   }
 
-  if (characterData.haveCharacterWithId(obj->refObjId) && characterData.getCharacterById(obj->refObjId).typeId1 == 1) {
+  if (characterData.haveCharacterWithId(obj->refObjId)) {
     const auto &character = characterData.getCharacterById(obj->refObjId);
+    if (character.typeId1 != 1) {
+      throw std::runtime_error("Have a character, but type Id 1 is not 1");
+    }
     Character *characterPtr = dynamic_cast<Character*>(obj.get());
     if (characterPtr == nullptr) {
       throw std::runtime_error("parseSpawn, have a character, but the obj pointer cannot be cast to a Character");
@@ -345,16 +348,10 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
       uint16_t structureState = stream.Read<uint16_t>();
     }
 
-    characterPtr->gId = stream.Read<uint32_t>();
+    characterPtr->globalId = stream.Read<uint32_t>();
 
     // Position
-    characterPtr->regionId = stream.Read<uint16_t>();
-    uint32_t x = stream.Read<uint32_t>(); // really a float
-    characterPtr->x = *reinterpret_cast<float*>(&x);
-    uint32_t y = stream.Read<uint32_t>(); // really a float
-    characterPtr->y = *reinterpret_cast<float*>(&y);
-    uint32_t z = stream.Read<uint32_t>(); // really a float
-    characterPtr->z = *reinterpret_cast<float*>(&z);
+    characterPtr->position = parsePosition(stream);
     uint16_t angle = stream.Read<uint16_t>();
 
     bool movementHasDestination = stream.Read<uint8_t>();
@@ -534,12 +531,15 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
       //   uint16_t angle = stream.Read<uint16_t>();
       }
     }
-  } else if (itemData.haveItemWithId(obj->refObjId) && itemData.getItemById(obj->refObjId).typeId1 == 3) {
+  } else if (itemData.haveItemWithId(obj->refObjId)) {
+    const auto &item = itemData.getItemById(obj->refObjId);
+    if (item.typeId1 != 3) {
+      throw std::runtime_error("Have an item, but type Id 1 is not 3");
+    }
     Item *itemPtr = dynamic_cast<Item*>(obj.get());
     if (itemPtr == nullptr) {
       throw std::runtime_error("parseSpawn, have an item, but the obj pointer cannot be cast to a Item");
     }
-    const auto &item = itemData.getItemById(obj->refObjId);
     // ITEM
     //  ITEM_EQUIP
     //  ITEM_ETC
@@ -562,21 +562,19 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
         std::cout << "Item is a quest item belonging to " << ownerName << '\n';
       }
     }
-    itemPtr->gId = stream.Read<uint32_t>();
-    itemPtr->regionId = stream.Read<uint16_t>();
-    uint32_t x = stream.Read<uint32_t>(); // Actually a float
-    itemPtr->x = *reinterpret_cast<float*>(&x);
-    uint32_t y = stream.Read<uint32_t>(); // Actually a float
-    itemPtr->y = *reinterpret_cast<float*>(&y);
-    uint32_t z = stream.Read<uint32_t>(); // Actually a float
-    itemPtr->z = *reinterpret_cast<float*>(&z);
+    itemPtr->globalId = stream.Read<uint32_t>();
+    itemPtr->position = parsePosition(stream);
     uint16_t angle = stream.Read<uint16_t>();
     bool hasOwner = stream.Read<uint8_t>();
     if (hasOwner) {
       uint32_t ownerJId = stream.Read<uint32_t>();
     }
     itemPtr->rarity = stream.Read<uint8_t>(); // Educated guess: 0=white, 1=blue, 2=sox
-  } else if (teleportData.haveTeleportWithId(obj->refObjId) && teleportData.getTeleportById(obj->refObjId).typeId1 == 4) {
+  } else if (teleportData.haveTeleportWithId(obj->refObjId)) {
+    const auto &teleport = teleportData.getTeleportById(obj->refObjId);
+    if (teleport.typeId1 != 4) {
+      throw std::runtime_error("Have a structure, but type Id 1 is not 4");
+    }
     Portal *portalPtr = dynamic_cast<Portal*>(obj.get());
     if (portalPtr == nullptr) {
       throw std::runtime_error("parseSpawn, have a portal, but the obj pointer cannot be cast to a Portal");
@@ -584,14 +582,8 @@ std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
     // PORTALS
     //  STORE
     //  INS_TELEPORTER
-    portalPtr->gId = stream.Read<uint32_t>();
-    portalPtr->regionId = stream.Read<uint16_t>();
-    uint32_t x = stream.Read<uint32_t>(); // Actually a float
-    portalPtr->x = *reinterpret_cast<float*>(&x);
-    uint32_t y = stream.Read<uint32_t>(); // Actually a float
-    portalPtr->y = *reinterpret_cast<float*>(&y);
-    uint32_t z = stream.Read<uint32_t>(); // Actually a float
-    portalPtr->z = *reinterpret_cast<float*>(&z);
+    portalPtr->globalId = stream.Read<uint32_t>();
+    portalPtr->position = parsePosition(stream);
     uint16_t angle = stream.Read<uint16_t>();
 
     uint8_t unkByte0 = stream.Read<uint8_t>();
@@ -964,44 +956,66 @@ structures::ItemMovement ParsedClientItemMove::movement() const {
   return movement_;
 }
 
-void printObj(const packet::parsing::Object *obj, const pk2::GameData &gameData) {
-  switch (obj->type) {
-    case packet::parsing::ObjectType::kPlayerCharacter:
+void printObj(const Object *obj, const pk2::GameData &gameData) {
+  const auto type = entityTypeForObject(obj);
+  switch (type) {
+    case sro::entity_types::EntityType::kPlayerCharacter:
       {
-        auto ptr = reinterpret_cast<const packet::parsing::PlayerCharacter*>(obj);
-        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) GId:%d, name:\"%s\"\n","Player", obj->gId, obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->gId, ptr->name.c_str());
+        auto ptr = reinterpret_cast<const PlayerCharacter*>(obj);
+        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) GId:%d, name:\"%s\"\n","Player", obj->globalId, obj->refObjId, ptr->position.xOffset(), ptr->position.yOffset(), ptr->position.zOffset(), ptr->globalId, ptr->name.c_str());
       } 
       break;
-    case packet::parsing::ObjectType::kNonplayerCharacter:
+    case sro::entity_types::EntityType::kNonplayerCharacter:
       {
-        auto ptr = reinterpret_cast<const packet::parsing::NonplayerCharacter*>(obj);
+        auto ptr = reinterpret_cast<const NonplayerCharacter*>(obj);
         const auto &character = gameData.characterData().getCharacterById(obj->refObjId);
-        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) \"%s\"\n","NPC", obj->gId, obj->refObjId, ptr->x, ptr->y, ptr->z, character.codeName128.c_str());
+        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) \"%s\"\n","NPC", obj->globalId, obj->refObjId, ptr->position.xOffset(), ptr->position.yOffset(), ptr->position.zOffset(), character.codeName128.c_str());
       } 
       break;
-    case packet::parsing::ObjectType::kMonster:
+    case sro::entity_types::EntityType::kMonster:
       {
-        auto ptr = reinterpret_cast<const packet::parsing::Monster*>(obj);
+        auto ptr = reinterpret_cast<const Monster*>(obj);
         const auto &character = gameData.characterData().getCharacterById(obj->refObjId);
-        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) type:%d, \"%s\"\n","Monster", obj->gId, obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->monsterRarity, character.codeName128.c_str());
+        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) type:%d, \"%s\"\n","Monster", obj->globalId, obj->refObjId, ptr->position.xOffset(), ptr->position.yOffset(), ptr->position.zOffset(), ptr->monsterRarity, character.codeName128.c_str());
       } 
       break;
-    case packet::parsing::ObjectType::kItem:
+    case sro::entity_types::EntityType::kItem:
       {
-        auto ptr = reinterpret_cast<const packet::parsing::Item*>(obj);
+        auto ptr = reinterpret_cast<const Item*>(obj);
         const auto &item = gameData.itemData().getItemById(obj->refObjId);
-        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) rarity:%d, \"%s\"\n","Item", obj->gId, obj->refObjId, ptr->x, ptr->y, ptr->z, ptr->rarity, item.codeName128.c_str());
+        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) rarity:%d, \"%s\"\n","Item", obj->globalId, obj->refObjId, ptr->position.xOffset(), ptr->position.yOffset(), ptr->position.zOffset(), ptr->rarity, item.codeName128.c_str());
       } 
       break;
-    case packet::parsing::ObjectType::kPortal:
+    case sro::entity_types::EntityType::kPortal:
       {
-        auto ptr = reinterpret_cast<const packet::parsing::Portal*>(obj);
+        auto ptr = reinterpret_cast<const Portal*>(obj);
         const auto &portal = gameData.teleportData().getTeleportById(obj->refObjId);
-        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) \"%s\"\n","Portal", obj->gId, obj->refObjId, ptr->x, ptr->y, ptr->z, portal.codeName128.c_str());
+        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) \"%s\"\n","Portal", obj->globalId, obj->refObjId, ptr->position.xOffset(), ptr->position.yOffset(), ptr->position.zOffset(), portal.codeName128.c_str());
       }
       break;
   }
 }
+sro::entity_types::EntityType entityTypeForObject(const Object *obj) {
+  if (dynamic_cast<const packet::parsing::Character*>(obj)) {
+    if (dynamic_cast<const packet::parsing::PlayerCharacter*>(obj)) {
+      return sro::entity_types::EntityType::kPlayerCharacter;
+    } else if (dynamic_cast<const packet::parsing::NonplayerCharacter*>(obj)) {
+      if (dynamic_cast<const packet::parsing::Monster*>(obj)) {
+        return sro::entity_types::EntityType::kMonster;
+      } else {
+        return sro::entity_types::EntityType::kNonplayerCharacter;
+      }
+    } else {
+      return sro::entity_types::EntityType::kCharacter;
+    }
+  } else if (dynamic_cast<const packet::parsing::Item*>(obj)) {
+    return sro::entity_types::EntityType::kItem;
+  } else if (dynamic_cast<const packet::parsing::Portal*>(obj)) {
+    return sro::entity_types::EntityType::kPortal;
+  }
+  throw std::runtime_error("Cannot get entity type for object");
+}
+
 
 //=========================================================================================================================================================
 } // namespace packet::parsing

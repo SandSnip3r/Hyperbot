@@ -119,6 +119,9 @@ private:
   void storageUpdated(const event::StorageUpdated &storageUpdatedEvent);
   void guildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent);
   void broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex);
+  void entitySpawned(const event::EntitySpawned &event);
+  void entityDespawned(const event::EntityDespawned &event);
+
 };
 
 #endif

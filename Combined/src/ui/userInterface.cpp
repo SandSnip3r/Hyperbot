@@ -2,6 +2,31 @@
 
 #include "ui-proto/request.pb.h"
 
+namespace {
+
+broadcast::EntityType sroEntityTypeToBroadcastEntityType(const sro::entity_types::EntityType entityType) {
+  switch (entityType) {
+    case sro::entity_types::EntityType::kSelf:
+      return broadcast::EntityType::kSelf;
+    case sro::entity_types::EntityType::kCharacter:
+      return broadcast::EntityType::kCharacter;
+    case sro::entity_types::EntityType::kPlayerCharacter:
+      return broadcast::EntityType::kPlayerCharacter;
+    case sro::entity_types::EntityType::kNonplayerCharacter:
+      return broadcast::EntityType::kNonplayerCharacter;
+    case sro::entity_types::EntityType::kMonster:
+      return broadcast::EntityType::kMonster;
+    case sro::entity_types::EntityType::kItem:
+      return broadcast::EntityType::kItem;
+    case sro::entity_types::EntityType::kPortal:
+      return broadcast::EntityType::kPortal;
+    default:
+      throw std::runtime_error("Unknown entity type");
+  }
+}
+
+} // anonymous namespace
+
 namespace ui {
 
 UserInterface::UserInterface(broker::EventBroker &eventBroker) : eventBroker_(eventBroker) {}
@@ -153,7 +178,7 @@ void UserInterface::broadcastItemUpdate(broadcast::ItemLocation itemLocation, ui
   broadcast(broadcastMessage);
 }
 
-void UserInterface::broadcastEntitySpawned(uint32_t globalId, const sro::Position &position, broadcast::EntityType entityType) {
+void UserInterface::broadcastEntitySpawned(uint32_t globalId, const sro::Position &position, sro::entity_types::EntityType entityType) {
   broadcast::BroadcastMessage broadcastMessage;
   auto *entitySpawnedMsg = broadcastMessage.mutable_entityspawned();
 
@@ -165,7 +190,7 @@ void UserInterface::broadcastEntitySpawned(uint32_t globalId, const sro::Positio
   posMsg->set_y(position.yOffset());
   posMsg->set_z(position.zOffset());
 
-  entitySpawnedMsg->set_entitytype(entityType);
+  entitySpawnedMsg->set_entitytype(sroEntityTypeToBroadcastEntityType(entityType));
   broadcast(broadcastMessage);
 }
 
