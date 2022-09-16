@@ -6,7 +6,7 @@ EntityGraphicsItem::EntityGraphicsItem(sro::entity_types::EntityType type) : ent
 }
 
 QRectF EntityGraphicsItem::boundingRect() const {
-  return QRectF(0,0,kRadius_*2,kRadius_*2);
+  return QRectF(-pointRadius_, -pointRadius_, pointRadius_*2, pointRadius_*2);
 }
 
 void EntityGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
@@ -36,6 +36,9 @@ void EntityGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem
       painter->setBrush(QBrush(QColor(175,0,175)));
       break;
   }
-  painter->drawEllipse({kRadius_, kRadius_}, kRadius_, kRadius_);
+  // Update radius of point based on zoom level
+  pointRadius_ = 3.0 * 1/painter->worldTransform().m11();
+  // Draw point
+  painter->drawEllipse({0, 0}, pointRadius_, pointRadius_);
   painter->restore();
 }

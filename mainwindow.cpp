@@ -455,12 +455,13 @@ void MainWindow::updateDisplayedPosition(const sro::Position &position) {
   ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
 
   // Update map
-  if (entityGraphicsItem_ != nullptr) {
-    auto mapPosition = sroPositionToMapPosition(position);
-    entityGraphicsItem_->setPos(mapPosition);
-  } else {
-    std::cout << "Dont have an entity graphics item" << std::endl;
+  if (entityGraphicsItem_ == nullptr) {
+    // Dont yet have a position marker for ourself
+    entityGraphicsItem_ = new EntityGraphicsItem(sro::entity_types::EntityType::kSelf);
+    mapScene_->addItem(entityGraphicsItem_);
   }
+  auto mapPosition = sroPositionToMapPosition(position);
+  entityGraphicsItem_->setPos(mapPosition);
 }
 
 void MainWindow::onCharacterMovementBeganTowardAngle(sro::Position currentPosition, uint16_t movementAngle, float speed) {
@@ -475,13 +476,6 @@ void MainWindow::onCharacterMovementBeganTowardAngle(sro::Position currentPositi
 
 void MainWindow::onCharacterMovementEnded(sro::Position position) {
   killMovementTimer();
-
-  // This is where we first get the player's position when they spawn.
-  // Might need to create the dot on the map for the player
-  if (entityGraphicsItem_ == nullptr) {
-    entityGraphicsItem_ = new EntityGraphicsItem(sro::entity_types::EntityType::kSelf);
-    mapScene_->addItem(entityGraphicsItem_);
-  }
   updateDisplayedPosition(position);
 }
 
@@ -514,8 +508,8 @@ void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, sro:
   mapScene_->addItem(item);
   auto mapPosition = sroPositionToMapPosition(position);
   item->setPos(mapPosition);
-  if (auto it=entityGraphicsItemMap_.find(globalId); it != entityGraphicsItemMap_.end()) {
-    throw std::runtime_error("Entity spawn, but already exists in our map!");
+  if (entityGraphicsItemMap_.find(globalId) != entityGraphicsItemMap_.end()) {
+    throw std::runtime_error("Entity spawn, but already exists in our map");
   }
   entityGraphicsItemMap_[globalId] = item;
 }
@@ -523,9 +517,14 @@ void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, sro:
 void MainWindow::onEntityDespawned(uint32_t globalId) {
   auto it = entityGraphicsItemMap_.find(globalId);
   if (it == entityGraphicsItemMap_.end()) {
-    throw std::runtime_error("Entity despawned, but does not exist in our map!");
+    // It's ok if we werent tracking this item, nothing to do
+    return;
   }
-  delete it->second;
+  if (it->second != nullptr) {
+    delete it->second;
+  } else {
+    throw std::runtime_error("Entity despawned, but it already holds a nullptr");
+  }
   entityGraphicsItemMap_.erase(it);
 }
 

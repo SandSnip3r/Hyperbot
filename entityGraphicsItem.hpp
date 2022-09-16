@@ -14,7 +14,7 @@ public:
   // enum { Type = UserType + 2 };
   // int type() const override { return Type; };
 private:
-  static constexpr const float kRadius_{10.0};
+  double pointRadius_{3.0};
   sro::entity_types::EntityType entityType_;
 };
 
