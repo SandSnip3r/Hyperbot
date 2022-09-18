@@ -105,6 +105,16 @@ message EntityDespawned {
   uint32 globalId = 1;
 }
 
+message EntityMovementBegan {
+  uint32 globalId = 1;
+  CharacterMovementBegan characterMovementBegan = 2;
+}
+
+message EntityMovementEnded {
+  uint32 globalId = 1;
+  CharacterMovementEnded characterMovementEnded = 2;
+}
+
 // Broadcast message
 
 message BroadcastMessage {
@@ -124,5 +134,7 @@ message BroadcastMessage {
     ItemUpdate itemUpdate = 13;
     EntitySpawned entitySpawned = 14;
     EntityDespawned entityDespawned = 15;
+    EntityMovementBegan entityMovementBegan = 16;
+    EntityMovementEnded entityMovementEnded = 17;
   }
 }
