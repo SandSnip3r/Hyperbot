@@ -1,5 +1,37 @@
 #include "eventHandler.hpp"
 
+namespace {
+
+sro::types::EntityType entityTypeFromProtoEntityType(broadcast::EntityType type) {
+  switch (type) {
+    case broadcast::EntityType::kSelf:
+      return sro::types::EntityType::kSelf;
+      break;
+    case broadcast::EntityType::kCharacter:
+      return sro::types::EntityType::kCharacter;
+      break;
+    case broadcast::EntityType::kPlayerCharacter:
+      return sro::types::EntityType::kPlayerCharacter;
+      break;
+    case broadcast::EntityType::kNonplayerCharacter:
+      return sro::types::EntityType::kNonplayerCharacter;
+      break;
+    case broadcast::EntityType::kMonster:
+      return sro::types::EntityType::kMonster;
+      break;
+    case broadcast::EntityType::kItem:
+      return sro::types::EntityType::kItem;
+      break;
+    case broadcast::EntityType::kPortal:
+      return sro::types::EntityType::kPortal;
+      break;
+    default:
+      throw std::runtime_error("Unknown entity type from proto");
+  }
+}
+
+} // anonymous namespace
+
 EventHandler::EventHandler(zmq::context_t &context) : context_(context) {}
 
 EventHandler::~EventHandler() {
@@ -139,36 +171,54 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         const broadcast::EntitySpawned &msg = message.entityspawned();
         const broadcast::Position &pos = msg.position();
         sro::Position sroPos(pos.regionid(), pos.x(), pos.y(), pos.z());
-        sro::entity_types::EntityType entityType;
-        switch (msg.entitytype()) {
-          case broadcast::EntityType::kSelf:
-            entityType = sro::entity_types::EntityType::kSelf;
-            break;
-          case broadcast::EntityType::kCharacter:
-            entityType = sro::entity_types::EntityType::kCharacter;
-            break;
-          case broadcast::EntityType::kPlayerCharacter:
-            entityType = sro::entity_types::EntityType::kPlayerCharacter;
-            break;
-          case broadcast::EntityType::kNonplayerCharacter:
-            entityType = sro::entity_types::EntityType::kNonplayerCharacter;
-            break;
-          case broadcast::EntityType::kMonster:
-            entityType = sro::entity_types::EntityType::kMonster;
-            break;
-          case broadcast::EntityType::kItem:
-            entityType = sro::entity_types::EntityType::kItem;
-            break;
-          case broadcast::EntityType::kPortal:
-            entityType = sro::entity_types::EntityType::kPortal;
-            break;
-        }
+        sro::types::EntityType entityType = entityTypeFromProtoEntityType(msg.entitytype());
         emit entitySpawned(msg.globalid(), sroPos, entityType);
         break;
       }
     case broadcast::BroadcastMessage::BodyCase::kEntityDespawned: {
         const broadcast::EntityDespawned &msg = message.entitydespawned();
         emit entityDespawned(msg.globalid());
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kEntityPositionChanged: {
+        const broadcast::EntityPositionChanged &msg = message.entitypositionchanged();
+        const broadcast::Position &currPos = msg.position();
+        sro::Position currentPosition(currPos.regionid(), currPos.x(), currPos.y(), currPos.z());
+        emit entityPositionChanged(msg.globalid(), currentPosition);
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kEntityMovementBegan: {
+        const broadcast::EntityMovementBegan &msg = message.entitymovementbegan();
+        const auto entityId = msg.globalid();
+        const broadcast::CharacterMovementBegan &charMovementMsg = msg.charactermovementbegan();
+        const broadcast::Position &currPos = charMovementMsg.currentposition();
+        sro::Position currentPosition(currPos.regionid(), currPos.x(), currPos.y(), currPos.z());
+        const auto speed = charMovementMsg.speed();
+        switch (charMovementMsg.destination_case()) {
+          case broadcast::CharacterMovementBegan::DestinationCase::kDestinationPosition: {
+            const broadcast::Position &destPos = charMovementMsg.destinationposition();
+            sro::Position destinationPosition(destPos.regionid(), destPos.x(), destPos.y(), destPos.z());
+            emit entityMovementBeganToDest(entityId, currentPosition, destinationPosition, speed);
+            break;
+          }
+          case broadcast::CharacterMovementBegan::DestinationCase::kDestinationAngle: {
+            const auto angle = charMovementMsg.destinationangle();
+            emit entityMovementBeganTowardAngle(entityId, currentPosition, angle, speed);
+            break;
+          }
+          default:
+            // Unknown case. Might be a malformed message
+            break;
+        }
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kEntityMovementEnded: {
+        const broadcast::EntityMovementEnded &msg = message.entitymovementended();
+        const broadcast::CharacterMovementEnded &charMovementMsg = msg.charactermovementended();
+        const auto entityId = msg.globalid();
+        const broadcast::Position &currPos = charMovementMsg.currentposition();
+        sro::Position currentPosition(currPos.regionid(), currPos.x(), currPos.y(), currPos.z());
+        emit entityMovementEnded(entityId, currentPosition);
         break;
       }
     default:

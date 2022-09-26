@@ -36,7 +36,7 @@ public:
 
 private:
   static const std::filesystem::path kSilkroadPath_;
-  static constexpr int kPositionRedrawDelayMs{33};
+  static constexpr int kPositionRedrawDelayMs{16};
   Ui::MainWindow *ui;
   zmq::context_t context_;
   EventHandler eventHandler_{context_};
@@ -48,6 +48,9 @@ private:
   std::optional<sro::navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
   EntityGraphicsItem *entityGraphicsItem_{nullptr};
   std::map<uint32_t, EntityGraphicsItem*> entityGraphicsItemMap_;
+  std::map<sro::scalar_types::EntityGlobalId, EntityData> entityData_;
+
+  QTimer *entityMovementUpdateTimer_{nullptr};
 
   void initializeUi();
   std::optional<QPixmap> parseRegionMinimapPixmapFromPk2(sro::pk2::Pk2ReaderModern &pk2Reader, sro::Sector xSector, sro::Sector ySector);
@@ -60,11 +63,14 @@ private:
   void triggerMovementTimer();
   void killMovementTimer();
 
+  void entityMovementTimerTriggered();
+
   void injectPacket(request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes);
   void updateItemList(ItemListWidget *itemListWidget, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void updateGoldLabel(QLabel *label, uint64_t goldAmount);
   void updateDisplayedPosition(const sro::Position &position);
   QPointF sroPositionToMapPosition(const sro::Position &position) const;
+  void updateEntityDisplayedPosition(sro::scalar_types::EntityGlobalId globalId, const sro::Position &position);
 
 private slots:
   // UI actions
@@ -99,8 +105,12 @@ public slots:
   void onCosInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void onStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void onGuildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
-  void onEntitySpawned(uint32_t globalId, sro::Position position, sro::entity_types::EntityType entityType);
+  void onEntitySpawned(uint32_t globalId, sro::Position position, sro::types::EntityType entityType);
   void onEntityDespawned(uint32_t globalId);
+  void onEntityPositionChanged(sro::scalar_types::EntityGlobalId globalId, sro::Position position);
+  void onEntityMovementBeganToDest(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, sro::Position destinationPosition, float speed);
+  void onEntityMovementBeganTowardAngle(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, uint16_t movementAngle, float speed);
+  void onEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId, sro::Position position);
 };
 
 #endif // MAINWINDOW_H

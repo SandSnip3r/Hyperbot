@@ -53,6 +53,8 @@ set(PROJECT_SOURCES
   regionGraphicsItem.hpp
   requester.cpp
   requester.hpp
+  sro_types.hpp
+
   mainwindow.ui
   ${TS_FILES}
 )

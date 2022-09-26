@@ -41,6 +41,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
   // Requester is a req/rep socket to the bot to cause actions
   requester_.connect();
+
+  // TODO: Reorganize
+  // Start timer to update entities positions
+  entityMovementUpdateTimer_ = new QTimer(this);
+  connect(entityMovementUpdateTimer_, &QTimer::timeout, this, &MainWindow::entityMovementTimerTriggered);
+  entityMovementUpdateTimer_->setInterval(1000/60.0);
+  entityMovementUpdateTimer_->start();
 }
 
 MainWindow::~MainWindow() {
@@ -220,6 +227,10 @@ void MainWindow::connectBotBroadcastMessages() {
   connect(&eventHandler_, &EventHandler::guildStorageItemUpdate, this, &MainWindow::onGuildStorageItemUpdate);
   connect(&eventHandler_, &EventHandler::entitySpawned, this, &MainWindow::onEntitySpawned);
   connect(&eventHandler_, &EventHandler::entityDespawned, this, &MainWindow::onEntityDespawned);
+  connect(&eventHandler_, &EventHandler::entityPositionChanged, this, &MainWindow::onEntityPositionChanged);
+  connect(&eventHandler_, &EventHandler::entityMovementBeganToDest, this, &MainWindow::onEntityMovementBeganToDest);
+  connect(&eventHandler_, &EventHandler::entityMovementBeganTowardAngle, this, &MainWindow::onEntityMovementBeganTowardAngle);
+  connect(&eventHandler_, &EventHandler::entityMovementEnded, this, &MainWindow::onEntityMovementEnded);
 }
 
 void MainWindow::connectPacketInjection() {
@@ -266,6 +277,32 @@ void MainWindow::killMovementTimer() {
     movementUpdateTimer_ = nullptr;
   }
 }
+
+void MainWindow::entityMovementTimerTriggered() {
+  for (auto &i : entityData_) {
+    if (!i.second.movement) {
+      // Entity is not moving
+      continue;
+    }
+    const auto &movement = *i.second.movement;
+    const auto currentTime = std::chrono::high_resolution_clock::now();
+    const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-movement.startTime).count();
+    sro::Position currentPosition;
+    if (const auto *destPosPtr = std::get_if<Movement::kToDestination>(&movement.destPosOrAngle)) {
+      const auto totalDistanceToTravel = sro::position_math::calculateDistance2D(movement.srcPos, *destPosPtr);
+      const auto totalSecondsToTravel = totalDistanceToTravel/movement.speed;
+      const double fractionTraveled = std::min(1.0, elapsedTimeMs / (totalSecondsToTravel*1000.0));
+      currentPosition = sro::position_math::interpolateBetweenPoints(movement.srcPos, *destPosPtr, fractionTraveled);
+    } else {
+      const auto movementAngle = std::get<Movement::kTowardAngle>(movement.destPosOrAngle);
+      const auto totalDistanceTraveled = elapsedTimeMs/1000.0 * movement.speed;
+      currentPosition = sro::position_math::getNewPositionGivenAngleAndDistance(movement.srcPos, movementAngle, totalDistanceTraveled);
+    }
+
+    updateEntityDisplayedPosition(i.first, currentPosition);
+  }
+}
+
 
 void MainWindow::injectPacket(request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes) {
   requester_.injectPacket(packetDirection, opcode, actualBytes);
@@ -440,11 +477,11 @@ void MainWindow::onGuildStorageGoldAmountUpdate(uint64_t goldAmount) {
 
 void MainWindow::onCharacterMovementBeganToDest(sro::Position currentPosition, sro::Position destinationPosition, float speed) {
   // Save info
-  characterData_.movement.emplace();
-  characterData_.movement->speed = speed;
-  characterData_.movement->startTime = std::chrono::high_resolution_clock::now();
-  characterData_.movement->srcPos = currentPosition;
-  characterData_.movement->destPosOrAngle = destinationPosition;
+  auto &movement = characterData_.movement.emplace();
+  movement.speed = speed;
+  movement.startTime = std::chrono::high_resolution_clock::now();
+  movement.srcPos = currentPosition;
+  movement.destPosOrAngle = destinationPosition;
   triggerMovementTimer();
   updateDisplayedPosition(currentPosition);
 }
@@ -457,7 +494,7 @@ void MainWindow::updateDisplayedPosition(const sro::Position &position) {
   // Update map
   if (entityGraphicsItem_ == nullptr) {
     // Dont yet have a position marker for ourself
-    entityGraphicsItem_ = new EntityGraphicsItem(sro::entity_types::EntityType::kSelf);
+    entityGraphicsItem_ = new EntityGraphicsItem(sro::types::EntityType::kSelf);
     mapScene_->addItem(entityGraphicsItem_);
   }
   auto mapPosition = sroPositionToMapPosition(position);
@@ -465,11 +502,11 @@ void MainWindow::updateDisplayedPosition(const sro::Position &position) {
 }
 
 void MainWindow::onCharacterMovementBeganTowardAngle(sro::Position currentPosition, uint16_t movementAngle, float speed) {
-  characterData_.movement.emplace();
-  characterData_.movement->speed = speed;
-  characterData_.movement->startTime = std::chrono::high_resolution_clock::now();
-  characterData_.movement->srcPos = currentPosition;
-  characterData_.movement->destPosOrAngle = movementAngle;
+  auto &movement = characterData_.movement.emplace();
+  movement.speed = speed;
+  movement.startTime = std::chrono::high_resolution_clock::now();
+  movement.srcPos = currentPosition;
+  movement.destPosOrAngle = movementAngle;
   triggerMovementTimer();
   updateDisplayedPosition(currentPosition);
 }
@@ -503,15 +540,23 @@ void MainWindow::onGuildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, 
   updateItemList(ui->guildStorageListWidget, slotIndex, quantity, itemName);
 }
 
-void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, sro::entity_types::EntityType entityType) {
+void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, sro::types::EntityType entityType) {
   auto *item = new EntityGraphicsItem(entityType);
   mapScene_->addItem(item);
   auto mapPosition = sroPositionToMapPosition(position);
   item->setPos(mapPosition);
-  if (entityGraphicsItemMap_.find(globalId) != entityGraphicsItemMap_.end()) {
-    throw std::runtime_error("Entity spawn, but already exists in our map");
+  if (auto it = entityGraphicsItemMap_.find(globalId); it != entityGraphicsItemMap_.end()) {
+    // Already have an item here, delete it, we'll replace it
+
+    // This happens when the bot disconnects and entities are left behind; when the bot reconnects, it will try to spawn entities that we're already tracking
+    // TODO: In the future, when the bot disconnects, we should clean up all entities
+    delete it->second;
+    entityGraphicsItemMap_.erase(it);
   }
   entityGraphicsItemMap_[globalId] = item;
+
+  // Add entity to entityData map
+  entityData_[globalId] = EntityData{globalId};
 }
 
 void MainWindow::onEntityDespawned(uint32_t globalId) {
@@ -526,6 +571,87 @@ void MainWindow::onEntityDespawned(uint32_t globalId) {
     throw std::runtime_error("Entity despawned, but it already holds a nullptr");
   }
   entityGraphicsItemMap_.erase(it);
+
+  // Remove entity from entityData map
+  if (auto it = entityData_.find(globalId); it != entityData_.end()) {
+    entityData_.erase(it);
+  }
+}
+
+void MainWindow::onEntityPositionChanged(sro::scalar_types::EntityGlobalId globalId, sro::Position position) {
+  auto it = entityData_.find(globalId);
+  if (it == entityData_.end()) {
+    // Not tracking this entity
+    return;
+  }
+  if (it->second.movement) {
+    // Entity is moving, update where it is
+    it->second.movement->startTime = std::chrono::high_resolution_clock::now();
+    it->second.movement->srcPos = position;
+    // The running movement timer will move the item within the scene
+  } else {
+    // Entity is not moving, we need to move the position of the graphics item ourself
+    auto it2 = entityGraphicsItemMap_.find(globalId);
+    if (it2 == entityGraphicsItemMap_.end()) {
+      throw std::runtime_error("Position updated for entity which has no graphics item");
+    }
+    auto mapPosition = sroPositionToMapPosition(position);
+    it2->second->setPos(mapPosition);
+  }
+}
+
+void MainWindow::onEntityMovementBeganToDest(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, sro::Position destinationPosition, float speed) {
+  auto it = entityData_.find(globalId);
+  if (it == entityData_.end()) {
+    // Not tracking this entity
+    return;
+  }
+  // Save info
+  auto &movement = it->second.movement.emplace();
+  movement.speed = speed;
+  movement.startTime = std::chrono::high_resolution_clock::now();
+  movement.srcPos = currentPosition;
+  movement.destPosOrAngle = destinationPosition;
+  updateEntityDisplayedPosition(globalId, currentPosition);
+}
+
+void MainWindow::onEntityMovementBeganTowardAngle(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, uint16_t movementAngle, float speed) {
+  auto it = entityData_.find(globalId);
+  if (it == entityData_.end()) {
+    // Not tracking this entity
+    return;
+  }
+  auto &movement = it->second.movement.emplace();
+  movement.speed = speed;
+  movement.startTime = std::chrono::high_resolution_clock::now();
+  movement.srcPos = currentPosition;
+  movement.destPosOrAngle = movementAngle;
+  updateEntityDisplayedPosition(globalId, currentPosition);
+}
+
+void MainWindow::onEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId, sro::Position position) {
+  // Cancel movement if it exists
+  auto it = entityData_.find(globalId);
+  if (it == entityData_.end()) {
+    // Not tracking this entity
+    return;
+  }
+  if (it->second.movement) {
+    it->second.movement.reset();
+  }
+  updateEntityDisplayedPosition(globalId, position);
+}
+
+void MainWindow::updateEntityDisplayedPosition(sro::scalar_types::EntityGlobalId globalId, const sro::Position &position) {
+  // Update map
+  auto it = entityGraphicsItemMap_.find(globalId);
+  if (it == entityGraphicsItemMap_.end()) {
+    // No map item for this entity
+    return;
+  }
+
+  auto mapPosition = sroPositionToMapPosition(position);
+  it->second->setPos(mapPosition);
 }
 
 namespace {

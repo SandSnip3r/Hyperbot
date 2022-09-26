@@ -2,7 +2,7 @@
 
 #include <QGraphicsSceneContextMenuEvent>
 
-EntityGraphicsItem::EntityGraphicsItem(sro::entity_types::EntityType type) : entityType_(type) {
+EntityGraphicsItem::EntityGraphicsItem(sro::types::EntityType type) : entityType_(type) {
 }
 
 QRectF EntityGraphicsItem::boundingRect() const {
@@ -15,23 +15,23 @@ void EntityGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem
   pen.setWidth(0);
   painter->setPen(pen);
   switch (entityType_) {
-    case sro::entity_types::EntityType::kSelf:
+    case sro::types::EntityType::kSelf:
       painter->setBrush(QBrush(QColor(255,193,9)));
       break;
-    case sro::entity_types::EntityType::kPlayerCharacter:
-      painter->setBrush(QBrush(QColor(71,255,71)));
+    case sro::types::EntityType::kPlayerCharacter:
+      painter->setBrush(QBrush(QColor(204,239,57)));
       break;
-    case sro::entity_types::EntityType::kNonplayerCharacter:
+    case sro::types::EntityType::kNonplayerCharacter:
       painter->setBrush(QBrush(QColor(53,107,230)));
       break;
-    case sro::entity_types::EntityType::kMonster:
+    case sro::types::EntityType::kMonster:
       painter->setBrush(QBrush(QColor(255,1,1)));
       break;
-    case sro::entity_types::EntityType::kItem:
+    case sro::types::EntityType::kItem:
       painter->setBrush(QBrush(QColor(255,255,255)));
       break;
-    case sro::entity_types::EntityType::kCharacter:
-    case sro::entity_types::EntityType::kPortal:
+    case sro::types::EntityType::kCharacter:
+    case sro::types::EntityType::kPortal:
     default:
       painter->setBrush(QBrush(QColor(175,0,175)));
       break;

@@ -1,10 +1,12 @@
 #ifndef EVENT_HANDLER_HPP_
 #define EVENT_HANDLER_HPP_
 
+#include "sro_types.hpp"
+
 #include "proto/broadcast.pb.h"
 
-#include <silkroad_lib/entity_types.h>
 #include <silkroad_lib/position.h>
+#include <silkroad_lib/scalar_types.h>
 
 #include <zmq.hpp>
 
@@ -44,8 +46,12 @@ signals:
   void cosInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void storageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void guildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
-  void entitySpawned(uint32_t globalId, sro::Position position, sro::entity_types::EntityType entityType);
+  void entitySpawned(uint32_t globalId, sro::Position position, sro::types::EntityType entityType);
   void entityDespawned(uint32_t globalId);
+  void entityPositionChanged(sro::scalar_types::EntityGlobalId globalId, sro::Position position);
+  void entityMovementBeganToDest(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, sro::Position destinationPosition, float speed);
+  void entityMovementBeganTowardAngle(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, uint16_t movementAngle, float speed);
+  void entityMovementEnded(sro::scalar_types::EntityGlobalId globalId, sro::Position position);
 private:
   zmq::context_t &context_;
   std::atomic<bool> run_;

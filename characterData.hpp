@@ -2,6 +2,7 @@
 #define CHARACTER_DATA_HPP_
 
 #include <silkroad_lib/position.h>
+#include <silkroad_lib/scalar_types.h>
 
 #include <chrono>
 #include <cstdint>
@@ -26,6 +27,12 @@ public:
   std::optional<uint32_t> maxHp, maxMp;
   std::optional<Movement> movement;
   static const constexpr int32_t spExpRequired{400};
+};
+
+class EntityData {
+public:
+  sro::scalar_types::EntityGlobalId globalId;
+  std::optional<Movement> movement;
 };
 
 #endif // CHARACTER_DATA_HPP_
