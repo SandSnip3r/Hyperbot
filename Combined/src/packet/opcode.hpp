@@ -205,6 +205,7 @@ enum class Opcode {
   kServerAgentInventoryUpdateDurability = 0x3052,
 
   kServerAgentEntityUpdatePosition = 0xB023,
+  kServerAgentEntityUpdateAngle = 0xB024,
 };
 
 std::string toStr(Opcode opcode);

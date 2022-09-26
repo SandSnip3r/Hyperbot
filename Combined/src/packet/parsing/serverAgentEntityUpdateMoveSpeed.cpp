@@ -5,16 +5,12 @@ namespace packet::parsing {
 ServerAgentEntityUpdateMoveSpeed::ServerAgentEntityUpdateMoveSpeed(const PacketContainer &packet) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  globalId_ = stream.Read<uint32_t>();
-
-  uint32_t walkSpeedBytes = stream.Read<uint32_t>();
-  walkSpeed_ = *reinterpret_cast<float*>(&walkSpeedBytes);
-
-  uint32_t runSpeedBytes = stream.Read<uint32_t>();
-  runSpeed_ = *reinterpret_cast<float*>(&runSpeedBytes);
+  globalId_ = stream.Read<sro::scalar_types::EntityGlobalId>();
+  walkSpeed_ = stream.Read<float>();
+  runSpeed_ = stream.Read<float>();
 }
 
-uint32_t ServerAgentEntityUpdateMoveSpeed::globalId() const {
+sro::scalar_types::EntityGlobalId ServerAgentEntityUpdateMoveSpeed::globalId() const {
   return globalId_;
 }
 

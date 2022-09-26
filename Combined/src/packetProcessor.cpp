@@ -1,5 +1,6 @@
 #include "packetProcessor.hpp"
 
+#include "entity/entity.hpp"
 #include "helpers.hpp"
 #include "logging.hpp"
 #include "packet/opcode.hpp"
@@ -14,14 +15,14 @@
   } \
 }
 
-PacketProcessor::PacketProcessor(state::Entity &entityState,
+PacketProcessor::PacketProcessor(state::EntityTracker &entityTracker,
                                  state::Self &selfState,
                                  broker::PacketBroker &brokerSystem,
                                  broker::EventBroker &eventBroker,
                                  ui::UserInterface &userInterface,
                                  const packet::parsing::PacketParser &packetParser,
                                  const pk2::GameData &gameData) :
-      entityState_(entityState),
+      entityTracker_(entityTracker),
       selfState_(selfState),
       broker_(brokerSystem),
       eventBroker_(eventBroker),
@@ -46,6 +47,7 @@ void PacketProcessor::subscribeToPackets() {
   broker_.subscribeToServerPacket(packet::Opcode::kServerGatewayLoginIbuvChallenge, packetHandleFunction);
   // broker_.subscribeToServerPacket(static_cast<packet::Opcode>(0x6005), packetHandleFunction);
   //   Movement packets
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateAngle, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMovement, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePosition, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySyncPosition, packetHandleFunction);
@@ -78,6 +80,10 @@ void PacketProcessor::subscribeToPackets() {
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePoints, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateExperience, packetHandleFunction);
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentGuildStorageData, packetHandleFunction);
+
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionCommandResponse, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillBegin, packetHandleFunction);
+  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillEnd, packetHandleFunction);
 }
 
 bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
@@ -107,6 +113,7 @@ bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse, charSelectionJoinResponseReceived);
 
     // Movement packet handlers
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateAngle, serverAgentEntityUpdateAngleReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateMovement, serverAgentEntityUpdateMovementReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdatePosition, serverAgentEntityUpdatePositionReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntitySyncPosition, serverAgentEntitySyncPositionReceived);
@@ -141,6 +148,9 @@ bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateExperience, serverAgentEntityUpdateExperienceReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentGuildStorageData, serverAgentGuildStorageDataReceived);
 
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionCommandResponse, serverAgentActionCommandResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentSkillBegin, serverAgentSkillBeginReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentSkillEnd, serverAgentSkillEndReceived);
   } catch (std::exception &ex) {
     LOG() << "Error while handling packet!\n  " << ex.what() << std::endl;
   }
@@ -229,17 +239,55 @@ bool PacketProcessor::charSelectionJoinResponseReceived(const packet::parsing::P
 // ==================================================Movement packet handling==================================================
 // ============================================================================================================================
 
+bool PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::ServerAgentEntityUpdateAngle &packet) const {
+  if (packet.globalId() == selfState_.globalId()) {
+    LOG() << "Updated our angle" << std::endl;
+    if (selfState_.moving()) {
+      if (selfState_.haveDestination()) {
+        throw std::runtime_error("Got angle update, but we're running to a destination");
+      }
+      if (selfState_.movementAngle() != packet.angle()) {
+        // Changed angle while running
+        selfState_.setMovingTowardAngle(std::nullopt, packet.angle());
+      }
+    }
+  } else {
+    if (!entityTracker_.trackingEntity(packet.globalId())) {
+      throw std::runtime_error("Received movement update for something we're not tracking");
+    }
+    auto &mobileEntity = entityTracker_.getEntity<entity::MobileEntity>(packet.globalId());
+    if (mobileEntity.moving) {
+      if (mobileEntity.destinationPosition) {
+        throw std::runtime_error("Got angle update, but we're running to a destination");
+      }
+      if (*mobileEntity.movementAngle != packet.angle()) {
+        // Changed angle while running
+        mobileEntity.setMovingTowardAngle(std::nullopt, packet.angle(), eventBroker_);
+      }
+    }
+  }
+  return true;
+}
+
 bool PacketProcessor::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const {
   if (packet.globalId() == selfState_.globalId()) {
     // Sync our position to the new one
+    LOG() << "Sync our position to " << packet.position() << std::endl;
     selfState_.syncPosition(packet.position());
+  } else {
+    auto &mobileEntity = entityTracker_.getEntity<entity::MobileEntity>(packet.globalId());
+    mobileEntity.syncPosition(packet.position(), eventBroker_);
   }
   return true;
 }
 
 bool PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const {
   if (packet.globalId() == selfState_.globalId()) {
+    LOG() << "Update our position to " << packet.position() << std::endl;
     selfState_.setStationaryAtPosition(packet.position());
+  } else {
+    auto &mobileEntity = entityTracker_.getEntity<entity::MobileEntity>(packet.globalId());
+    mobileEntity.setStationaryAtPosition(packet.position(), eventBroker_);
   }
   return true;
 }
@@ -252,9 +300,27 @@ bool PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::S
       sourcePosition = packet.sourcePosition();
     }
     if (packet.hasDestination()) {
+      LOG() << "We are moving to " << packet.destinationPosition() << std::endl;
       selfState_.setMovingToDestination(sourcePosition, packet.destinationPosition());
     } else {
+      LOG() << "We are moving toward angle " << packet.angle() << std::endl;
       selfState_.setMovingTowardAngle(sourcePosition, packet.angle());
+    }
+  } else {
+    // Someone other than us is moving
+    if (!entityTracker_.trackingEntity(packet.globalId())) {
+      throw std::runtime_error("Received movement update for something we're not tracking");
+    }
+    auto &mobileEntity = entityTracker_.getEntity<entity::MobileEntity>(packet.globalId());
+    std::optional<sro::Position> sourcePosition;
+    if (packet.hasSource()) {
+      // Server is telling us our source position
+      sourcePosition = packet.sourcePosition();
+    }
+    if (packet.hasDestination()) {
+      mobileEntity.setMovingToDestination(sourcePosition, packet.destinationPosition(), eventBroker_);
+    } else {
+      mobileEntity.setMovingTowardAngle(sourcePosition, packet.angle(), eventBroker_);
     }
   }
   return true;
@@ -356,26 +422,45 @@ bool PacketProcessor::serverAgentInventoryStorageDataReceived(const packet::pars
 }
 
 bool PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const {
-  if (selfState_.spawned() && packet.gId() == selfState_.globalId()) {
-    if (packet.stateType() == packet::parsing::StateType::kBodyState) {
-      selfState_.setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
+  if (packet.globalId() == selfState_.globalId()) {
+    if (selfState_.spawned()) {
+      if (packet.stateType() == packet::parsing::StateType::kBodyState) {
+        selfState_.setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
+      } else if (packet.stateType() == packet::parsing::StateType::kLifeState) {
+        selfState_.setLifeState(static_cast<entity::LifeState>(packet.state()));
+        if (static_cast<entity::LifeState>(packet.state()) == entity::LifeState::kDead) {
+          LOG() << "CharacterInfoModule: We died, clearing used item queue" << std::endl;
+          selfState_.clearUsedItemQueue();
+        }
+      } else if (packet.stateType() == packet::parsing::StateType::kMotionState) {
+        const auto entityMotionState = static_cast<entity::MotionState>(packet.state());
+        if (entityMotionState == entity::MotionState::kWalk) {
+          LOG() << "Motion state update to walk\n";
+        } else if (entityMotionState == entity::MotionState::kRun) {
+          LOG() << "Motion state update to run\n";
+        } else if (entityMotionState == entity::MotionState::kSit) {
+          LOG() << "Motion state update to sit\n";
+        } else {
+          LOG() << "Motion state update to " << static_cast<int>(packet.state()) << '\n';
+        }
+        selfState_.setMotionState(entityMotionState);
+      }
+    } else {
+      LOG() << "Got state for ourself, but we're not spawned" << std::endl;
+    }
+  } else {
+    // State for other entity
+    if (packet.stateType() == packet::parsing::StateType::kMotionState) {
+      auto &mobileEntity = entityTracker_.getEntity<entity::MobileEntity>(packet.globalId());
+      mobileEntity.setMotionState(static_cast<entity::MotionState>(packet.state()), eventBroker_);
     } else if (packet.stateType() == packet::parsing::StateType::kLifeState) {
-      selfState_.setLifeState(static_cast<packet::enums::LifeState>(packet.state()));
-      if (static_cast<packet::enums::LifeState>(packet.state()) == packet::enums::LifeState::kDead) {
-        LOG() << "CharacterInfoModule: We died, clearing used item queue" << std::endl;
-        selfState_.clearUsedItemQueue();
-      }
-    } else if (packet.stateType() == packet::parsing::StateType::kMotionState) {
-      if (static_cast<packet::enums::MotionState>(packet.state()) == packet::enums::MotionState::kWalk) {
-        LOG() << "Motion state update to walk\n";
-      } else if (static_cast<packet::enums::MotionState>(packet.state()) == packet::enums::MotionState::kRun) {
-        LOG() << "Motion state update to run\n";
-      } else if (static_cast<packet::enums::MotionState>(packet.state()) == packet::enums::MotionState::kSit) {
-        LOG() << "Motion state update to sit\n";
+      const auto newLifeState = static_cast<entity::LifeState>(packet.state());
+      auto &characterEntity = entityTracker_.getEntity<entity::Character>(packet.globalId());
+      if (characterEntity.lifeState != newLifeState) {
+        characterEntity.setLifeState(newLifeState, eventBroker_);
       } else {
-        LOG() << "Motion state update to " << static_cast<int>(packet.state()) << '\n';
+        LOG() << "Got life state update for entity, but nothing changed" << std::endl;
       }
-      selfState_.setMotionState(static_cast<packet::enums::MotionState>(packet.state()));
     }
   }
   return true;
@@ -386,6 +471,9 @@ bool PacketProcessor::serverAgentEntityUpdateMoveSpeedReceived(const packet::par
     // Our speed was updated
     LOG() << "Our speed was updated from " << selfState_.walkSpeed() << ',' << selfState_.runSpeed() << " to " << packet.walkSpeed() << ',' << packet.runSpeed() << '\n';
     selfState_.setSpeed(packet.walkSpeed(), packet.runSpeed());
+  } else {
+    auto &mobileEntity = entityTracker_.getEntity<entity::MobileEntity>(packet.globalId());
+    mobileEntity.setSpeed(packet.walkSpeed(), packet.runSpeed(), eventBroker_);
   }
   return true;
 }
@@ -602,8 +690,8 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
       if (selfState_.haveUserPurchaseRequest()) {
         const auto userPurchaseRequest = selfState_.getUserPurchaseRequest();
         // User purchased something, we saved this so that we can get the NPC's global Id
-        if (entityState_.trackingEntity(userPurchaseRequest.globalId)) {
-          auto object = entityState_.getEntity(userPurchaseRequest.globalId);
+        if (entityTracker_.trackingEntity(userPurchaseRequest.globalId)) {
+          auto object = entityTracker_.getEntity(userPurchaseRequest.globalId);
           // Found the NPC which this purchase was made with
           if (gameData_.characterData().haveCharacterWithId(object->refObjId)) {
             auto npcName = gameData_.characterData().getCharacterById(object->refObjId).codeName128;
@@ -743,20 +831,20 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
 
 bool PacketProcessor::serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ParsedServerAgentEntityGroupSpawnData &packet) const {
   if (packet.groupSpawnType() == packet::parsing::GroupSpawnType::kSpawn) {
-    for (auto obj : packet.objects()) {
-      helpers::trackObject(entityState_, obj);
+    for (auto entity : packet.entities()) {
+      entitySpawned(entity);
     }
   } else {
-    for (auto gId : packet.despawns()) {
-      helpers::stopTrackingObject(entityState_, gId);
+    for (auto globalId : packet.despawnGlobalIds()) {
+      entityDespawned(globalId);
     }
   }
   return true;
 }
 
 bool PacketProcessor::serverAgentSpawnReceived(const packet::parsing::ParsedServerAgentSpawn &packet) const {
-  if (packet.object()) {
-    helpers::trackObject(entityState_, packet.object());
+  if (packet.entity()) {
+    entitySpawned(packet.entity());
   } else {
     LOG() << "Object spawned which we cannot track\n";
   }
@@ -764,8 +852,46 @@ bool PacketProcessor::serverAgentSpawnReceived(const packet::parsing::ParsedServ
 }
 
 bool PacketProcessor::serverAgentDespawnReceived(const packet::parsing::ParsedServerAgentDespawn &packet) const {
-  helpers::stopTrackingObject(entityState_, packet.gId());
+  entityDespawned(packet.globalId());
   return true;
+}
+
+void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) const {
+  entityTracker_.trackEntity(entity);
+  eventBroker_.publishEvent(std::make_unique<event::EntitySpawned>(entity->globalId));
+
+  // Check if the entity spawned in as already moving
+  auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(entity.get());
+  if (mobileEntity == nullptr) {
+    // Non-mobile, nothing to do
+    return;
+  }
+  if (mobileEntity->moving) {
+    if (mobileEntity->destinationPosition) {
+      // Entity spawned and is moving to a destination
+      mobileEntity->setMovingToDestination(mobileEntity->position(), *mobileEntity->destinationPosition, eventBroker_);
+    } else if (mobileEntity->movementAngle) {
+      mobileEntity->setMovingTowardAngle(mobileEntity->position(), *mobileEntity->movementAngle, eventBroker_);
+    } else {
+      throw std::runtime_error("Entity is moving, but has no destination position nor angle");
+    }
+  }
+}
+
+void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId) const {
+  // Before destroying an entity, see if we have a running movement timer to cancel
+  auto *entity = entityTracker_.getEntity(globalId);
+  auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(entity);
+  if (mobileEntity != nullptr) {
+    // Is a mobile entity
+    if (mobileEntity->movingEventId) {
+      eventBroker_.cancelDelayedEvent(*mobileEntity->movingEventId);
+    }
+  }
+
+  // Destroy entity
+  entityTracker_.stopTrackingEntity(globalId);
+  eventBroker_.publishEvent(std::make_unique<event::EntityDespawned>(globalId));
 }
 
 // ============================================================================================================================
@@ -915,5 +1041,52 @@ bool PacketProcessor::serverAgentGuildStorageDataReceived(const packet::parsing:
   selfState_.setGuildStorageGold(packet.gold());
   helpers::initializeInventory(selfState_.guildStorage, packet.storageSize(), packet.storageItemMap());
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kGuildStorageInitialized));
+  return true;
+}
+
+bool PacketProcessor::serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const {
+  LOG() << "serverAgentActionCommandResponseReceived" << std::endl;
+  return true;
+}
+
+bool PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const {
+  LOG() << "serverAgentSkillBeginReceived" << std::endl;
+  // TODO: Check if this skill can be cast while moving or not
+  if (packet.casterGlobalId() == selfState_.globalId()) {
+    // We casted this skill
+    LOG() << "We're the one who cast the skill" << std::endl;
+    if (!gameData_.skillData().haveSkillWithId(packet.refSkillId())) {
+      throw std::runtime_error("Cast a skill which we dont have data for");
+    }
+    const auto &skill = gameData_.skillData().getSkillById(packet.refSkillId());
+    switch (skill.basicActivity) {
+      case 0:
+        // Seems to be passives
+        LOG() << "Cast a skill with basic activity == 0" << std::endl;
+        break;
+      case 1:
+        // Dont stop while running. Can be cast while something else is being case
+        LOG() << "Cast a skill which does not affect movement" << std::endl;
+        break;
+      case 2:
+        // Will stop you if you're running
+        LOG() << "Cast a skill which stops us";
+        if (selfState_.moving()) {
+          selfState_.setStationaryAtPosition(selfState_.position());
+        } else {
+          std::cout << " but we werent moving";
+        }
+        std::cout << std::endl;
+        break;
+      default:
+        LOG() << "Cast a skill with unknown basic activity == " << skill.basicActivity << std::endl;
+        break;
+    }
+  }
+  return true;
+}
+
+bool PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const {
+  LOG() << "serverAgentSkillEndReceived" << std::endl;
   return true;
 }

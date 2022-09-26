@@ -1,6 +1,5 @@
 #include "serverAgentCosData.hpp"
 
-#include "logging.hpp"
 #include "packet/parsing/commonParsing.hpp"
 
 namespace packet::parsing {
@@ -12,10 +11,8 @@ ServerAgentCosData::ServerAgentCosData(const PacketContainer &packet, const pk2:
   uint32_t refObjId = stream.Read<uint32_t>();
   uint32_t currHp = stream.Read<uint32_t>();
   uint32_t maxHp = stream.Read<uint32_t>();
-  LOG() << "COS hp: " << currHp << '/' << maxHp << std::endl;
 
   const auto &cosRef = characterData.getCharacterById(refObjId);
-  LOG() << "Character ref id " << refObjId << " with typeid " << static_cast<int>(cosRef.typeId1) << ',' << static_cast<int>(cosRef.typeId2) << ',' << static_cast<int>(cosRef.typeId3) << ',' << static_cast<int>(cosRef.typeId4) << std::endl;
   if (!(cosRef.typeId1 == 1 && cosRef.typeId2 == 2 && cosRef.typeId3 == 3)) {
     throw std::runtime_error("Cos data given refObjId which does not have matching type data for a Cos");
   }
@@ -23,22 +20,17 @@ ServerAgentCosData::ServerAgentCosData(const PacketContainer &packet, const pk2:
 
   if (isAbilityPet()) {
     // Ability/pickpet
-    LOG() << "Pet is ability/pickpet" << std::endl;
     uint32_t settings = stream.Read<uint32_t>();
-    LOG() << "  Settings " << settings << std::endl;
     uint16_t nameLength = stream.Read<uint16_t>();
     std::string name = stream.Read_Ascii(nameLength);
-    LOG() << "  with name \"" << name << "\"" << std::endl;
     inventorySize_ = stream.Read<uint8_t>();
     uint8_t inventoryItemCount = stream.Read<uint8_t>();
     for (int i=0; i<inventoryItemCount; ++i) {
       uint8_t slotNum = stream.Read<uint8_t>();
       inventoryItemMap_.insert(std::pair<uint8_t, std::shared_ptr<storage::Item>>(slotNum, parseGenericItem(stream, itemData)));
     }
-    LOG() << "  Inventory: " << static_cast<int>(inventoryItemCount) << " (" << inventoryItemMap_.size() << ") / " << static_cast<int>(inventorySize_) << std::endl;
     ownerGlobalId_ = stream.Read<uint32_t>();
     uint8_t slotInOwnerInventory = stream.Read<uint8_t>();
-    LOG() << "  This pet belongs to " << ownerGlobalId_ << " in slot " << static_cast<int>(slotInOwnerInventory) << std::endl;
   }
 
   // Get type ID from refObjId

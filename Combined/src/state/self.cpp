@@ -135,13 +135,13 @@ void Self::setHwanSpeed(float hwanSpeed) {
   hwanSpeed_ = hwanSpeed;
 }
 
-void Self::setLifeState(packet::enums::LifeState lifeState) {
+void Self::setLifeState(entity::LifeState lifeState) {
   lifeState_ = lifeState;
 }
 
-void Self::setMotionState(packet::enums::MotionState motionState) {
+void Self::setMotionState(entity::MotionState motionState) {
   motionState_ = motionState;
-  if (motionState_ == packet::enums::MotionState::kRun || motionState_ == packet::enums::MotionState::kWalk) {
+  if (motionState_ == entity::MotionState::kRun || motionState_ == entity::MotionState::kWalk) {
     // Save whether we were walking or running last
     lastMotionState_ = motionState_;
   }
@@ -211,13 +211,6 @@ void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosi
   destinationPosition_ = destinationPosition;
   movementAngle_.reset();
 
-  if (lastKnownPosition_.xOffset() < 0 || lastKnownPosition_.zOffset() >= 1920) {
-    throw std::runtime_error("lastKnownPosition is not normalized");
-  }
-  if (destinationPosition_->xOffset() < 0 || destinationPosition_->zOffset() >= 1920) {
-    throw std::runtime_error("destinationPosition is not normalized");
-  }
-
   checkIfWillLeaveRegionAndSetTimer(lastKnownPosition_);
 
   // Start timer
@@ -239,10 +232,6 @@ void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePositi
   startedMovingTime_ = currentTime;
   destinationPosition_.reset();
   movementAngle_ = angle;
-
-  if (lastKnownPosition_.xOffset() < 0 || lastKnownPosition_.zOffset() >= 1920) {
-    throw std::runtime_error("lastKnownPosition is not normalized");
-  }
 
   checkIfWillLeaveRegionAndSetTimer(lastKnownPosition_);
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementBegan));
@@ -556,15 +545,15 @@ float Self::hwanSpeed() const {
 }
 
 float Self::currentSpeed() const {
-  if (motionState_ == packet::enums::MotionState::kRun) {
+  if (motionState_ == entity::MotionState::kRun) {
     return runSpeed_;
-  } else if (motionState_ == packet::enums::MotionState::kWalk) {
+  } else if (motionState_ == entity::MotionState::kWalk) {
     return walkSpeed_;
-  } else if (motionState_ == packet::enums::MotionState::kStand) {
+  } else if (motionState_ == entity::MotionState::kStand) {
     if (lastMotionState_) {
-      if (*lastMotionState_ == packet::enums::MotionState::kRun) {
+      if (*lastMotionState_ == entity::MotionState::kRun) {
         return runSpeed_;
-      } else if (*lastMotionState_ == packet::enums::MotionState::kWalk) {
+      } else if (*lastMotionState_ == entity::MotionState::kWalk) {
         return walkSpeed_;
       } else {
         throw std::runtime_error("Motion state is Stand, last motion state isnt walk or run ("+std::to_string(static_cast<int>(*lastMotionState_))+")");
@@ -581,11 +570,11 @@ float Self::currentSpeed() const {
   }
 }
 
-packet::enums::LifeState Self::lifeState() const {
+entity::LifeState Self::lifeState() const {
   return lifeState_;
 }
 
-packet::enums::MotionState Self::motionState() const {
+entity::MotionState Self::motionState() const {
   return motionState_;
 }
 

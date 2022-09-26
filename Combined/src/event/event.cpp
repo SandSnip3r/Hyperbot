@@ -26,4 +26,12 @@ EntitySpawned::EntitySpawned(uint32_t id) : Event(EventCode::kEntitySpawned), gl
 
 EntityDespawned::EntityDespawned(uint32_t id) : Event(EventCode::kEntityDespawned), globalId(id) {}
 
+EntityMovementEnded::EntityMovementEnded(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityMovementEnded), globalId(id) {}
+
+EntityMovementBegan::EntityMovementBegan(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityMovementBegan), globalId(id) {}
+
+EntityMovementTimerEnded::EntityMovementTimerEnded(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityMovementTimerEnded), globalId(id) {}
+
+EntitySyncedPosition::EntitySyncedPosition(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntitySyncedPosition), globalId(id) {}
+
 } // namespace event

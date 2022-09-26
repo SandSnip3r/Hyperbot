@@ -4,21 +4,21 @@
 
 namespace {
 
-broadcast::EntityType sroEntityTypeToBroadcastEntityType(const sro::entity_types::EntityType entityType) {
+broadcast::EntityType sroEntityTypeToBroadcastEntityType(const entity::EntityType entityType) {
   switch (entityType) {
-    case sro::entity_types::EntityType::kSelf:
+    case entity::EntityType::kSelf:
       return broadcast::EntityType::kSelf;
-    case sro::entity_types::EntityType::kCharacter:
+    case entity::EntityType::kCharacter:
       return broadcast::EntityType::kCharacter;
-    case sro::entity_types::EntityType::kPlayerCharacter:
+    case entity::EntityType::kPlayerCharacter:
       return broadcast::EntityType::kPlayerCharacter;
-    case sro::entity_types::EntityType::kNonplayerCharacter:
+    case entity::EntityType::kNonplayerCharacter:
       return broadcast::EntityType::kNonplayerCharacter;
-    case sro::entity_types::EntityType::kMonster:
+    case entity::EntityType::kMonster:
       return broadcast::EntityType::kMonster;
-    case sro::entity_types::EntityType::kItem:
+    case entity::EntityType::kItem:
       return broadcast::EntityType::kItem;
-    case sro::entity_types::EntityType::kPortal:
+    case entity::EntityType::kPortal:
       return broadcast::EntityType::kPortal;
     default:
       throw std::runtime_error("Unknown entity type");
@@ -119,39 +119,19 @@ void UserInterface::broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::It
 
 void UserInterface::broadcastMovementBeganUpdate(const sro::Position &srcPosition, const sro::Position &destPosition, float speed) {
   broadcast::BroadcastMessage broadcastMessage;
-  broadcast::Position *currPos = broadcastMessage.mutable_charactermovementbegan()->mutable_currentposition();
-  currPos->set_regionid(srcPosition.regionId());
-  currPos->set_x(srcPosition.xOffset());
-  currPos->set_y(srcPosition.yOffset());
-  currPos->set_z(srcPosition.zOffset());
-  broadcast::Position *destPos = broadcastMessage.mutable_charactermovementbegan()->mutable_destinationposition();
-  destPos->set_regionid(destPosition.regionId());
-  destPos->set_x(destPosition.xOffset());
-  destPos->set_y(destPosition.yOffset());
-  destPos->set_z(destPosition.zOffset());
-  broadcastMessage.mutable_charactermovementbegan()->set_speed(speed);
+  setCharacterMovementBegan(broadcastMessage.mutable_charactermovementbegan(), srcPosition, destPosition, speed);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastMovementBeganUpdate(const sro::Position &srcPosition, uint16_t angle, float speed) {
   broadcast::BroadcastMessage broadcastMessage;
-  broadcast::Position *currPos = broadcastMessage.mutable_charactermovementbegan()->mutable_currentposition();
-  currPos->set_regionid(srcPosition.regionId());
-  currPos->set_x(srcPosition.xOffset());
-  currPos->set_y(srcPosition.yOffset());
-  currPos->set_z(srcPosition.zOffset());
-  broadcastMessage.mutable_charactermovementbegan()->set_destinationangle(angle);
-  broadcastMessage.mutable_charactermovementbegan()->set_speed(speed);
+  setCharacterMovementBegan(broadcastMessage.mutable_charactermovementbegan(), srcPosition, angle, speed);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastMovementEndedUpdate(const sro::Position &currentPosition) {
   broadcast::BroadcastMessage broadcastMessage;
-  broadcast::Position *currPos = broadcastMessage.mutable_charactermovementended()->mutable_currentposition();
-  currPos->set_regionid(currentPosition.regionId());
-  currPos->set_x(currentPosition.xOffset());
-  currPos->set_y(currentPosition.yOffset());
-  currPos->set_z(currentPosition.zOffset());
+  setCharacterMovementEnded(broadcastMessage.mutable_charactermovementended(), currentPosition);
   broadcast(broadcastMessage);
 }
 
@@ -178,18 +158,11 @@ void UserInterface::broadcastItemUpdate(broadcast::ItemLocation itemLocation, ui
   broadcast(broadcastMessage);
 }
 
-void UserInterface::broadcastEntitySpawned(uint32_t globalId, const sro::Position &position, sro::entity_types::EntityType entityType) {
+void UserInterface::broadcastEntitySpawned(uint32_t globalId, const sro::Position &position, entity::EntityType entityType) {
   broadcast::BroadcastMessage broadcastMessage;
   auto *entitySpawnedMsg = broadcastMessage.mutable_entityspawned();
-
   entitySpawnedMsg->set_globalid(globalId);
-
-  broadcast::Position *posMsg = entitySpawnedMsg->mutable_position();
-  posMsg->set_regionid(position.regionId());
-  posMsg->set_x(position.xOffset());
-  posMsg->set_y(position.yOffset());
-  posMsg->set_z(position.zOffset());
-
+  setPosition(entitySpawnedMsg->mutable_position(), position);
   entitySpawnedMsg->set_entitytype(sroEntityTypeToBroadcastEntityType(entityType));
   broadcast(broadcastMessage);
 }
@@ -198,6 +171,38 @@ void UserInterface::broadcastEntityDespawned(uint32_t globalId) {
   broadcast::BroadcastMessage broadcastMessage;
   auto *entityDespawnedMsg = broadcastMessage.mutable_entitydespawned();
   entityDespawnedMsg->set_globalid(globalId);
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastEntityPositionChanged(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &position) {
+  broadcast::BroadcastMessage broadcastMessage;
+  auto *entityPositionChangedMsg = broadcastMessage.mutable_entitypositionchanged();
+  entityPositionChangedMsg->set_globalid(globalId);
+  setPosition(entityPositionChangedMsg->mutable_position(), position);
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastEntityMovementBegan(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &srcPosition, const sro::Position &destPosition, float speed) {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcast::EntityMovementBegan *entityMovementBegan = broadcastMessage.mutable_entitymovementbegan();
+  entityMovementBegan->set_globalid(globalId);
+  setCharacterMovementBegan(entityMovementBegan->mutable_charactermovementbegan(), srcPosition, destPosition, speed);
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastEntityMovementBegan(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &srcPosition, uint16_t angle, float speed) {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcast::EntityMovementBegan *entityMovementBegan = broadcastMessage.mutable_entitymovementbegan();
+  entityMovementBegan->set_globalid(globalId);
+  setCharacterMovementBegan(entityMovementBegan->mutable_charactermovementbegan(), srcPosition, angle, speed);
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastEntityMovementEnded(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &currentPosition) {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcast::EntityMovementEnded *entityMovementEnded = broadcastMessage.mutable_entitymovementended();
+  entityMovementEnded->set_globalid(globalId);
+  setCharacterMovementEnded(entityMovementEnded->mutable_charactermovementended(), currentPosition);
   broadcast(broadcastMessage);
 }
 
@@ -257,6 +262,29 @@ void UserInterface::handle(const zmq::message_t &request) {
       std::cout << "Unknown request type" << std::endl;
       break;
   }
+}
+
+void UserInterface::setPosition(broadcast::Position *msg, const sro::Position &pos) const {
+  msg->set_regionid(pos.regionId());
+  msg->set_x(pos.xOffset());
+  msg->set_y(pos.yOffset());
+  msg->set_z(pos.zOffset());
+}
+
+void UserInterface::setCharacterMovementBegan(broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Position &destPosition, const float speed) const {
+  setPosition(msg->mutable_currentposition(), srcPosition);
+  setPosition(msg->mutable_destinationposition(), destPosition);
+  msg->set_speed(speed);
+}
+
+void UserInterface::setCharacterMovementBegan(broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::MovementAngle angle, const float speed) const {
+  setPosition(msg->mutable_currentposition(), srcPosition);
+  msg->set_destinationangle(angle);
+  msg->set_speed(speed);
+}
+
+void UserInterface::setCharacterMovementEnded(broadcast::CharacterMovementEnded *msg, const sro::Position &currentPosition) const {
+  setPosition(msg->mutable_currentposition(), currentPosition);
 }
 
 } // namespace ui

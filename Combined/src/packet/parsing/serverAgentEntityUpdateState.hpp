@@ -4,6 +4,8 @@
 #include "parsedPacket.hpp"
 #include "../enums/packetEnums.hpp"
 
+#include <silkroad_lib/scalar_types.h>
+
 #include <cstdint>
 
 namespace packet::parsing {
@@ -38,12 +40,12 @@ enum class ScrollState : uint8_t {
 class ServerAgentEntityUpdateState : public ParsedPacket {
 public:
   ServerAgentEntityUpdateState(const PacketContainer &packet);
-  uint32_t gId() const;
+  sro::scalar_types::EntityGlobalId globalId() const;
   StateType stateType() const;
   uint8_t state() const;
   bool isEnhanced() const;
 private:
-  uint32_t gId_;
+  sro::scalar_types::EntityGlobalId globalId_;
   StateType stateType_;
   uint8_t state_;
   bool isEnhanced_;

@@ -160,35 +160,6 @@ enum class ItemMovementType : uint8_t {
   kPickSpecialItemByOther =    54,
 };
 
-enum class LifeState : uint8_t {
-  kEmbryo = 0,
-  kAlive = 1,
-  kDead = 2,
-  kGone = 3
-};
-
-enum class MotionState : uint8_t {
-  kStand = 0,
-  kSkill = 1,
-  kWalk = 2,
-  kRun = 3,
-  kSit = 4
-  // kJump = 5,
-  // kSwim = 6,
-  // kRide = 7,
-  // kKnockdown = 8,
-  // kStun = 9,
-  // kFrozen = 10,
-  // kHit = 11,
-  // kReqHelp = 12,
-  // kPao = 13,
-  // kCounterattack = 14,
-  // kSkillActionOff = 15,
-  // kSkillKnockback = 16,
-  // kSkillProtectionWall = 17,
-  // kChangeMotion = 18,
-};
-
 enum class BodyState : uint8_t {
   kNormal = 0,
   kHwan = 1,

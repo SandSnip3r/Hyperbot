@@ -1,15 +1,15 @@
-#include "../opcode.hpp"
-#include "../enums/packetEnums.hpp"
-#include "../structures/packetInnerStructures.hpp"
-#include "../../pk2/characterData.hpp"
-#include "../../pk2/gameData.hpp"
-#include "../../pk2/itemData.hpp"
-#include "../../pk2/skillData.hpp"
-#include "../../pk2/teleportData.hpp"
-#include "../../shared/silkroad_security.h"
-#include "../../storage/item.hpp"
+#include "entity/entity.hpp"
+#include "packet/opcode.hpp"
+#include "packet/enums/packetEnums.hpp"
+#include "packet/structures/packetInnerStructures.hpp"
+#include "pk2/characterData.hpp"
+#include "pk2/gameData.hpp"
+#include "pk2/itemData.hpp"
+#include "pk2/skillData.hpp"
+#include "pk2/teleportData.hpp"
+#include "shared/silkroad_security.h"
+#include "storage/item.hpp"
 
-#include <silkroad_lib/entity_types.h>
 #include <silkroad_lib/position.h>
 
 #include <array>
@@ -112,45 +112,6 @@ enum class GroupSpawnType {
   kDespawn=2
 };
 
-class Object {
-public:
-  uint32_t refObjId;
-  uint8_t typeId1, typeId2, typeId3, typeId4;
-  uint32_t globalId;
-  sro::Position position;
-  virtual ~Object() = default;
-};
-
-class Character : public Object {
-public:
-  uint8_t lifeState;
-};
-
-class PlayerCharacter : public Character {
-public:
-  std::string name;
-};
-
-class NonplayerCharacter : public Character {};
-
-class Monster : public NonplayerCharacter {
-public:
-  uint8_t monsterRarity;
-};
-
-class Item : public Object {
-public:
-  uint8_t rarity;
-};
-
-class Portal : public Object {
-public:
-  uint8_t unkByte3;
-};
-
-void printObj(const Object *obj, const pk2::GameData &gameData);
-sro::entity_types::EntityType entityTypeForObject(const Object *obj);
-
 class ParsedServerAgentEntityGroupSpawnData : public ParsedPacket {
 public:
   ParsedServerAgentEntityGroupSpawnData(const PacketContainer &packet,
@@ -159,12 +120,12 @@ public:
                               const pk2::SkillData &skillData,
                               const pk2::TeleportData &teleportData);
   GroupSpawnType groupSpawnType() const;
-  const std::vector<std::shared_ptr<Object>>& objects() const;
-  const std::vector<uint32_t>& despawns() const;
+  const std::vector<std::shared_ptr<entity::Entity>>& entities() const;
+  const std::vector<sro::scalar_types::EntityGlobalId>& despawnGlobalIds() const;
 private:
   GroupSpawnType groupSpawnType_;
-  std::vector<std::shared_ptr<Object>> objects_;
-  std::vector<uint32_t> despawns_;
+  std::vector<std::shared_ptr<entity::Entity>> entities_;
+  std::vector<uint32_t> despawnGlobalIds_;
 };
 
 //=========================================================================================================================================================
@@ -176,9 +137,9 @@ public:
                          const pk2::ItemData &itemData,
                          const pk2::SkillData &skillData,
                          const pk2::TeleportData &teleportData);
-  std::shared_ptr<Object> object() const;
+  std::shared_ptr<entity::Entity> entity() const;
 private:
-  std::shared_ptr<Object> object_;
+  std::shared_ptr<entity::Entity> entity_;
 };
 
 //=========================================================================================================================================================
@@ -186,9 +147,9 @@ private:
 class ParsedServerAgentDespawn : public ParsedPacket {
 public:
   ParsedServerAgentDespawn(const PacketContainer &packet);
-  uint32_t gId() const;
+  uint32_t globalId() const;
 private:
-  uint32_t gId_;
+  uint32_t globalId_;
 };
   
 //=========================================================================================================================================================

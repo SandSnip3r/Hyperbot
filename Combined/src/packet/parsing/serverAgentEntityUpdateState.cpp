@@ -5,8 +5,8 @@ namespace packet::parsing {
 ServerAgentEntityUpdateState::ServerAgentEntityUpdateState(const PacketContainer &packet) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  gId_ = stream.Read<uint32_t>();
-  stateType_ = static_cast<StateType>(stream.Read<uint8_t>());
+  globalId_ = stream.Read<sro::scalar_types::EntityGlobalId>();
+  stateType_ = stream.Read<StateType>();
   state_ = stream.Read<uint8_t>();
   if (stateType_ == StateType::kBodyState) {
     if (static_cast<enums::BodyState>(state_) == enums::BodyState::kHwan) {
@@ -15,8 +15,8 @@ ServerAgentEntityUpdateState::ServerAgentEntityUpdateState(const PacketContainer
   }
 }
 
-uint32_t ServerAgentEntityUpdateState::gId() const {
-  return gId_;
+sro::scalar_types::EntityGlobalId ServerAgentEntityUpdateState::globalId() const {
+  return globalId_;
 }
 
 StateType ServerAgentEntityUpdateState::stateType() const {

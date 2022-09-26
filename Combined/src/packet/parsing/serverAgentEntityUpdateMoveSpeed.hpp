@@ -4,6 +4,8 @@
 #include "parsedPacket.hpp"
 #include "../enums/packetEnums.hpp"
 
+#include <silkroad_lib/scalar_types.h>
+
 #include <cstdint>
 #include <string>
 
@@ -12,11 +14,11 @@ namespace packet::parsing {
 class ServerAgentEntityUpdateMoveSpeed : public ParsedPacket {
 public:
   ServerAgentEntityUpdateMoveSpeed(const PacketContainer &packet);
-  uint32_t globalId() const;
+  sro::scalar_types::EntityGlobalId globalId() const;
   float walkSpeed() const;
   float runSpeed() const;
 private:
-  uint32_t globalId_;
+  sro::scalar_types::EntityGlobalId globalId_;
   float walkSpeed_;
   float runSpeed_;
 };

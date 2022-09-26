@@ -16,6 +16,7 @@
 #include "serverAgentChatUpdate.hpp"
 #include "serverAgentCosData.hpp"
 #include "serverAgentEntitySyncPosition.hpp"
+#include "serverAgentEntityUpdateAngle.hpp"
 #include "serverAgentEntityUpdateExperience.hpp"
 #include "serverAgentEntityUpdateMovement.hpp"
 #include "serverAgentEntityUpdateMoveSpeed.hpp"
@@ -130,6 +131,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ServerAgentChatUpdate>(packet);
       case Opcode::kServerAgentEntityUpdatePosition:
         return std::make_unique<ServerAgentEntityUpdatePosition>(packet);
+      case Opcode::kServerAgentEntityUpdateAngle:
+        return std::make_unique<ServerAgentEntityUpdateAngle>(packet);
       case Opcode::kServerAgentEntitySyncPosition:
         return std::make_unique<ServerAgentEntitySyncPosition>(packet);
       case Opcode::kServerAgentCosData:

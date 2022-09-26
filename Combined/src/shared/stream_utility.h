@@ -67,9 +67,8 @@ public:
 	StreamUtility Extract( int32_t index, int32_t count );
 
 	template <typename type>
-	type Read( bool peek = false )
-	{
-		type val = 0;
+	type Read( bool peek = false ) {
+		type val{0};
 		Read< type >( &val, 1, peek );
 		return val;
 	}

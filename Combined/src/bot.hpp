@@ -8,7 +8,7 @@
 #include "packetProcessor.hpp"
 #include "pk2/gameData.hpp"
 #include "proxy.hpp"
-#include "state/entity.hpp"
+#include "state/entityTracker.hpp"
 #include "state/machine/stateMachine.hpp"
 #include "state/self.hpp"
 #include "ui/userInterface.hpp"
@@ -46,11 +46,11 @@ protected:
   Proxy &proxy_;
   broker::PacketBroker &broker_;
   broker::EventBroker eventBroker_;
-  state::Entity entityState_{eventBroker_};
+  state::EntityTracker entityTracker_;
   state::Self selfState_{eventBroker_, gameData_};
   ui::UserInterface userInterface_{eventBroker_};
   packet::parsing::PacketParser packetParser_{gameData_};
-  PacketProcessor packetProcessor_{entityState_, selfState_, broker_, eventBroker_, userInterface_, packetParser_, gameData_};
+  PacketProcessor packetProcessor_{entityTracker_, selfState_, broker_, eventBroker_, userInterface_, packetParser_, gameData_};
 
 private:
   //******************************************************************************************
@@ -87,6 +87,10 @@ private:
   void handleSpeedUpdated();
   void handleMovementBegan();
   void handleMovementEnded();
+  void handleEntityMovementBegan(sro::scalar_types::EntityGlobalId globalId);
+  void handleEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId);
+  void handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId);
+  void handleEntitySyncedPosition(sro::scalar_types::EntityGlobalId globalId);
   // Character info events
   void handleSpawned();
   void handleCosSpawned(const event::CosSpawned &event);

@@ -2,6 +2,8 @@
 #include "logging.hpp"
 #include "parsedPacket.hpp"
 
+#include <silkroad_lib/position_math.h>
+
 #include <iostream>
 
 namespace packet::parsing {
@@ -179,442 +181,6 @@ ParsedServerAgentCharacterUpdateStats::ParsedServerAgentCharacterUpdateStats(con
 
 //=========================================================================================================================================================
 
-std::shared_ptr<Object> newObjectFromId(uint32_t refObjId, const pk2::CharacterData &characterData, const pk2::ItemData &itemData, const pk2::TeleportData &teleportData) {
-  if (characterData.haveCharacterWithId(refObjId) &&
-      characterData.getCharacterById(refObjId).typeId1 == 1) {
-    const auto &character = characterData.getCharacterById(refObjId);
-    if (character.typeId2 == 1) {
-      auto ptr = std::make_shared<PlayerCharacter>();
-      ptr->refObjId = refObjId;
-      ptr->typeId1 = character.typeId1;
-      ptr->typeId2 = character.typeId2;
-      ptr->typeId3 = character.typeId3;
-      ptr->typeId4 = character.typeId4;
-      return ptr;
-    } else if (character.typeId2 == 2 && character.typeId3 == 1) {
-      auto ptr = std::make_shared<Monster>();
-      ptr->refObjId = refObjId;
-      ptr->typeId1 = character.typeId1;
-      ptr->typeId2 = character.typeId2;
-      ptr->typeId3 = character.typeId3;
-      ptr->typeId4 = character.typeId4;
-      return ptr;
-    } else {
-      auto ptr = std::make_shared<NonplayerCharacter>();
-      ptr->refObjId = refObjId;
-      ptr->typeId1 = character.typeId1;
-      ptr->typeId2 = character.typeId2;
-      ptr->typeId3 = character.typeId3;
-      ptr->typeId4 = character.typeId4;
-      return ptr;
-    }
-  } else if (itemData.haveItemWithId(refObjId) && itemData.getItemById(refObjId).typeId1 == 3) {
-    const auto &item = itemData.getItemById(refObjId);
-    auto ptr = std::make_shared<Item>();
-    ptr->refObjId = refObjId;
-    ptr->typeId1 = item.typeId1;
-    ptr->typeId2 = item.typeId2;
-    ptr->typeId3 = item.typeId3;
-    ptr->typeId4 = item.typeId4;
-    return ptr;
-  } else if (teleportData.haveTeleportWithId(refObjId) && teleportData.getTeleportById(refObjId).typeId1 == 4) {
-    const auto &portal = teleportData.getTeleportById(refObjId);
-    auto ptr = std::make_shared<Portal>();
-    ptr->refObjId = refObjId;
-    ptr->typeId1 = portal.typeId1;
-    ptr->typeId2 = portal.typeId2;
-    ptr->typeId3 = portal.typeId3;
-    ptr->typeId4 = portal.typeId4;
-    return ptr;
-  }
-}
-
-std::shared_ptr<Object> parseSpawn(StreamUtility &stream,
-                                   const pk2::CharacterData &characterData,
-                                   const pk2::ItemData &itemData,
-                                   const pk2::SkillData &skillData,
-                                   const pk2::TeleportData &teleportData) {
-  const uint32_t refObjId = stream.Read<uint32_t>();
-  if (refObjId == std::numeric_limits<uint32_t>::max()) {
-    // Special case, refObjId == -1
-    std::cout << "EVENT_ZONE\n";
-    // EVENT_ZONE (Traps, Buffzones, ...)
-    uint16_t eventZoneTypeId = stream.Read<uint16_t>();
-    std::cout << " eventZoneTypeId:" << eventZoneTypeId << '\n';
-    uint32_t eventZoneRefSkillId = stream.Read<uint32_t>();
-    std::cout << " eventZoneRefSkillId:" << eventZoneRefSkillId << '\n';
-    uint32_t uniqueId = stream.Read<uint32_t>();
-    std::cout << " uniqueId:" << uniqueId << '\n';
-    uint16_t regionId = stream.Read<uint16_t>();
-    std::cout << " regionId:" << regionId << '\n';
-    uint32_t x = stream.Read<uint32_t>(); // Actually a float
-    std::cout << " x:" << *reinterpret_cast<float*>(&x) << '\n';
-    uint32_t y = stream.Read<uint32_t>(); // Actually a float
-    std::cout << " y:" << *reinterpret_cast<float*>(&y) << '\n';
-    uint32_t z = stream.Read<uint32_t>(); // Actually a float
-    std::cout << " z:" << *reinterpret_cast<float*>(&z) << '\n';
-    uint16_t angle = stream.Read<uint16_t>();
-    std::cout << " angle:" << angle << '\n';
-    return {};
-  }
-
-  std::shared_ptr<Object> obj = newObjectFromId(refObjId, characterData, itemData, teleportData);
-  if (!obj) {
-    throw std::runtime_error("Failed to create object for spawn");
-  }
-
-  if (characterData.haveCharacterWithId(obj->refObjId)) {
-    const auto &character = characterData.getCharacterById(obj->refObjId);
-    if (character.typeId1 != 1) {
-      throw std::runtime_error("Have a character, but type Id 1 is not 1");
-    }
-    Character *characterPtr = dynamic_cast<Character*>(obj.get());
-    if (characterPtr == nullptr) {
-      throw std::runtime_error("parseSpawn, have a character, but the obj pointer cannot be cast to a Character");
-    }
-    bool characterHasJobEquipmentInInventory = false; // TODO: Create better mechanism
-    // BIONIC:
-    //  CHARACTER
-    //  NPC
-    //   NPC_FORTRESS_STRUCT
-    //   NPC_MOB
-    //   NPC_COS
-    //   NPC_FORTRESS_COS   
-    if (character.typeId2 == 1) {
-      // CHARACTER
-      uint8_t scale = stream.Read<uint8_t>();
-      uint8_t hwanLevel = stream.Read<uint8_t>();
-      uint8_t pvpCape = stream.Read<uint8_t>();         //0 = None, 1 = Red, 2 = Gray, 3 = Blue, 4 = White, 5 = Orange
-      uint8_t autoInverstExp = stream.Read<uint8_t>();  //1 = Beginner Icon, 2 = Helpful, 3 = Beginner & Helpful
-      
-      // Inventory
-      uint8_t inventorySize = stream.Read<uint8_t>();
-      uint8_t inventoryItemCount = stream.Read<uint8_t>();
-      for (int i=0; i<inventoryItemCount; ++i) {
-        uint32_t itemRefId = stream.Read<uint32_t>();
-        if (!itemData.haveItemWithId(itemRefId)) {
-          throw std::runtime_error("Parsing ServerAgentGroupSpawn, found item in character's inventory which we have no data on");
-        }
-        const auto &item = itemData.getItemById(itemRefId);
-        if (item.typeId1 == 3 && item.typeId2 == 1) {
-          uint8_t optLevel = stream.Read<uint8_t>();
-        }
-        if (item.typeId1 == 3 && item.typeId2 == 1 && item.typeId3 == 7 && item.typeId4 < 4) {
-          // TypeId4 values:
-          //  1,2,3 are normal job
-          //  3 Santa
-          //  4 Free PVP
-          //  6,7 new job
-          characterHasJobEquipmentInInventory = true;
-        }
-      }
-
-      // AvatarInventory
-      uint8_t avatarInventorySize = stream.Read<uint8_t>();
-      uint8_t avatarInventoryItemCount = stream.Read<uint8_t>();
-      for (int i=0; i<avatarInventoryItemCount; ++i) {
-        uint32_t itemRefId = stream.Read<uint32_t>();
-        if (!itemData.haveItemWithId(itemRefId)) {
-          throw std::runtime_error("Parsing ServerAgentGroupSpawn, found item in character's avatar inventory which we have no data on");
-        }
-        const auto &item = itemData.getItemById(itemRefId);
-        if (item.typeId1 == 3 && item.typeId2 == 1) {
-          uint8_t optLevel = stream.Read<uint8_t>();
-        }
-      }
-
-      // Mask
-      bool hasMask = stream.Read<uint8_t>();
-      if (hasMask) {
-        uint32_t maskRefObjId = stream.Read<uint32_t>();
-        if (!itemData.haveItemWithId(maskRefObjId)) {
-          throw std::runtime_error("Parsing ServerAgentGroupSpawn, found mask on character which we have no data on");
-        }
-        const auto &maskItem = itemData.getItemById(maskRefObjId);
-        if (maskItem.typeId1 == character.typeId1 &&
-            maskItem.typeId2 == character.typeId2) {
-          // Duplicate
-          uint8_t maskScale = stream.Read<uint8_t>();
-          uint8_t maskItemCount = stream.Read<uint8_t>();
-          for (int i=0; i<maskItemCount; ++i) {
-            uint32_t maskItemRefId = stream.Read<uint32_t>();
-          }
-        }
-      }
-    } else if (character.typeId2 == 2 && character.typeId3 == 5) {
-      //NPC_FORTRESS_STRUCT
-      uint32_t structureHp = stream.Read<uint32_t>();
-      uint32_t structureRefEventStructId = stream.Read<uint32_t>();
-      uint16_t structureState = stream.Read<uint16_t>();
-    }
-
-    characterPtr->globalId = stream.Read<uint32_t>();
-
-    // Position
-    characterPtr->position = parsePosition(stream);
-    uint16_t angle = stream.Read<uint16_t>();
-
-    bool movementHasDestination = stream.Read<uint8_t>();
-    uint8_t movementType = stream.Read<uint8_t>();
-    if (movementHasDestination) {
-      // Mouse destination
-      uint16_t destinationRegionId = stream.Read<uint16_t>();
-      if (destinationRegionId & 0x8000) {
-        // Dungeon
-        uint32_t destinationOffsetX = stream.Read<uint32_t>();
-        uint32_t destinationOffsetY = stream.Read<uint32_t>();
-        uint32_t destinationOffsetZ = stream.Read<uint32_t>();
-      } else {
-        // World
-        uint16_t destinationOffsetX = stream.Read<uint16_t>();
-        uint16_t destinationOffsetY = stream.Read<uint16_t>();
-        uint16_t destinationOffsetZ = stream.Read<uint16_t>();
-      }
-    } else {
-      packet::enums::AngleAction angleAction_ = static_cast<packet::enums::AngleAction>(stream.Read<uint8_t>());
-      uint16_t angle = stream.Read<uint16_t>(); // Represents the new angle, character is looking at
-    }
-  
-    // State
-    uint8_t lifeState = stream.Read<uint8_t>(); // 1=Alive, 2=Dead
-    uint8_t unkByte0 = stream.Read<uint8_t>(); // Obsolete
-    uint8_t motionState = stream.Read<uint8_t>(); // 0=None, 2=Walking, 3=Running, 4=Sitting
-    uint8_t bodyState = stream.Read<uint8_t>(); // 0=None, 1=Hwan, 2=Untouchable, 3=GameMasterInvincible, 5=GameMasterInvisible, 6=Stealth, 7=Invisible
-    uint32_t walkSpeed = stream.Read<uint32_t>();
-    uint32_t runSpeed = stream.Read<uint32_t>();
-    uint32_t hwanSpeed = stream.Read<uint32_t>();
-
-    // Buffs
-    uint8_t buffCount = stream.Read<uint8_t>();
-    for (int i=0; i<buffCount; ++i) {
-      uint32_t skillRefId = stream.Read<uint32_t>();
-      uint32_t token = stream.Read<uint32_t>();
-      if (!skillData.haveSkillWithId(skillRefId)) {
-        throw std::runtime_error("Parsing ServerAgentGroupSpawn, found buff which we have no data on"); // TODO: Add skill id to error
-        // TODO: Also, I think we need to print this error when we catch the exception
-      }
-      const auto &skill = skillData.getSkillById(skillRefId);
-      if (skill.isEfta()) {
-        uint8_t creatorFlag = stream.Read<uint8_t>(); // 1=Creator, 2=Other
-      }
-    }
-
-    if (character.typeId2 == 1) {
-      // CHARACTER
-      PlayerCharacter *playerCharacterPtr = dynamic_cast<PlayerCharacter*>(obj.get());
-      if (playerCharacterPtr == nullptr) {
-        throw std::runtime_error("parseSpawn, have a player character, but the obj pointer cannot be cast to a PlayerCharacter");
-      }
-      uint16_t nameLength = stream.Read<uint16_t>();
-      playerCharacterPtr->name = stream.Read_Ascii(nameLength);
-      
-      uint8_t jobType = stream.Read<uint8_t>(); // 0=None, 1=Trader, 2=Tief, 3=Hunter
-      uint8_t jobLevel = stream.Read<uint8_t>();
-      uint8_t murderState = stream.Read<uint8_t>(); //0=White (Neutral), 1=Purple (Assaulter), 2=Red (Murder)
-      bool isRiding = stream.Read<uint8_t>();
-      bool inCombat = stream.Read<uint8_t>();
-      if(isRiding) {
-        uint32_t transportUniqueId = stream.Read<uint32_t>();
-      }
-      uint8_t scrollMode = stream.Read<uint8_t>(); // 0=None, 1=Return Scroll, 2=Bandit Return Scroll
-      uint8_t interactMode = stream.Read<uint8_t>(); //0=None 2=P2P, 4=P2N_TALK, 6=OPNMKT_DEAL
-      // exchange, talking to npc, stalling, etc
-      uint8_t unkByte4 = stream.Read<uint8_t>();
-
-      //Guild
-      uint16_t guildNameLength = stream.Read<uint16_t>();
-      std::string guildName = stream.Read_Ascii(guildNameLength);
-      
-      if (!characterHasJobEquipmentInInventory) {
-        uint32_t guildId = stream.Read<uint32_t>();
-        uint16_t guildMemberNicknameLength = stream.Read<uint16_t>();
-        std::string guildMemberNickname = stream.Read_Ascii(guildMemberNicknameLength);
-        uint32_t guildLastCrestRev = stream.Read<uint32_t>();
-        uint32_t unionId = stream.Read<uint32_t>();
-        uint32_t unionLastCrestRev = stream.Read<uint32_t>();
-        uint8_t guildIsFriendly = stream.Read<uint8_t>(); // 0 = Hostile, 1 = Friendly
-        uint8_t guildMemberSiegeAuthority = stream.Read<uint8_t>(); // See SiegeAuthority.cs
-      }
-
-      if (interactMode == 4) {
-        uint16_t stallNameLength = stream.Read<uint16_t>();
-        std::string stallName = stream.Read_Ascii(stallNameLength);
-        uint32_t stallDecorationRefId = stream.Read<uint32_t>();
-      }
-
-      uint8_t equipmentCooldown = stream.Read<uint8_t>(); // Yellow bar when equipping or unequipping
-      uint8_t pkFlag = stream.Read<uint8_t>();
-    } else if (character.typeId2 == 2) {
-      // NPC
-      uint8_t talkFlag = stream.Read<uint8_t>();
-      if (talkFlag == 2) {
-        uint8_t talkOptionCount = stream.Read<uint8_t>();
-        std::vector<uint8_t> talkOptions;
-        for (int i=0; i<talkOptionCount; ++i) {
-          talkOptions.emplace_back(stream.Read<uint8_t>());
-        }
-      }
-      
-      if (character.typeId3 == 1) {
-        // NPC_MOB
-        Monster *monsterPtr = dynamic_cast<Monster*>(obj.get());
-        if (monsterPtr == nullptr) {
-          throw std::runtime_error("parseSpawn, have a monster, but the obj pointer cannot be cast to a Monster");
-        }
-        monsterPtr->monsterRarity = stream.Read<uint8_t>();
-        if (character.typeId4 == 2 || character.typeId4 == 3) {
-          // NPC_MOB_THIEF, NPC_MOB_HUNTER
-          uint8_t appearance = stream.Read<uint8_t>();
-        }
-      } else if (character.typeId3 == 3) {
-        // NPC_COS
-        if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
-            character.typeId4 == 3 || // NPC_COS_P_GROWTH
-            character.typeId4 == 4 || // NPC_COS_P_ABILITY
-            character.typeId4 == 5 || // NPC_COS_GUILD
-            character.typeId4 == 6 || // NPC_COS_CAPTURED
-            character.typeId4 == 7 || // NPC_COS_QUEST
-            character.typeId4 == 8) { // NPC_COS_QUEST
-          if (character.typeId4 == 3 || character.typeId4 == 4) { // NPC_COS_P_GROWTH, NPC_COS_P_ABILITY
-            uint16_t nameLength = stream.Read<uint16_t>();
-            std::string name = stream.Read_Ascii(nameLength);
-          } else if (character.typeId4 == 5) { // NPC_COS_GUILD
-            uint16_t guildNameLength = stream.Read<uint16_t>();
-            std::string guildName = stream.Read_Ascii(guildNameLength);
-          }
-          
-          if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
-              character.typeId4 == 3 || // NPC_COS_P_GROWTH
-              character.typeId4 == 4 || // NPC_COS_P_ABILITY
-              character.typeId4 == 5 || // NPC_COS_GUILD
-              character.typeId4 == 6) { // NPC_COS_CAPTURED
-            uint16_t ownerNameLength = stream.Read<uint16_t>();
-            std::string ownerName = stream.Read_Ascii(ownerNameLength);
-                  
-            if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
-                character.typeId4 == 3 || // NPC_COS_P_GROWTH
-                character.typeId4 == 4 || // NPC_COS_P_ABILITY
-                character.typeId4 == 5) { // NPC_COS_GUILD
-              uint8_t ownerJobType = stream.Read<uint8_t>();
-                          
-              if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
-                  character.typeId4 == 3 || // NPC_COS_P_GROWTH
-                  character.typeId4 == 5) { // NPC_COS_GUILD
-                uint8_t ownerPvpState = stream.Read<uint8_t>();
-                if (character.typeId4 == 5) { //NPC_COS_GUILD
-                  uint32_t ownerRefId = stream.Read<uint32_t>();
-                }
-              }
-            }
-          }
-          uint32_t ownerUniqueId = stream.Read<uint32_t>();
-        }
-      } else if (character.typeId3 == 4) {
-        // GObjSiegeObject
-        // NPC_FORTRESS_COS
-        uint32_t guildId = stream.Read<uint32_t>();
-        uint16_t guildNameLength = stream.Read<uint16_t>();
-        std::string guildName = stream.Read_Ascii(guildNameLength);
-      // } else if (character.typeId3 == 5) {
-      //   // CGObjSiegeStruct
-      //   uint32_t unk0 = stream.Read<uint32_t>(); // 0xFFFFFFFF
-      //   uint16_t unk1 = stream.Read<uint16_t>(); // 0x0054
-      //   uint32_t unk2 = stream.Read<uint32_t>(); // 0x000052FE
-      //   uint32_t unk3 = stream.Read<uint32_t>(); // 0x0001ACB9
-      //   uint16_t unk4 = stream.Read<uint16_t>(); // 0x4547      (region Id)
-      //   uint32_t xBytes = stream.Read<uint32_t>();
-      //   float x = *reinterpret_cast<float*>(&xBytes);
-      //   uint32_t yBytes = stream.Read<uint32_t>();
-      //   float y = *reinterpret_cast<float*>(&yBytes);
-      //   uint32_t zBytes = stream.Read<uint32_t>();
-      //   float z = *reinterpret_cast<float*>(&zBytes);
-      //   uint16_t angle = stream.Read<uint16_t>();
-      }
-    }
-  } else if (itemData.haveItemWithId(obj->refObjId)) {
-    const auto &item = itemData.getItemById(obj->refObjId);
-    if (item.typeId1 != 3) {
-      throw std::runtime_error("Have an item, but type Id 1 is not 3");
-    }
-    Item *itemPtr = dynamic_cast<Item*>(obj.get());
-    if (itemPtr == nullptr) {
-      throw std::runtime_error("parseSpawn, have an item, but the obj pointer cannot be cast to a Item");
-    }
-    // ITEM
-    //  ITEM_EQUIP
-    //  ITEM_ETC
-    //   ITEM_ETC_MONEY_GOLD
-    //   ITEM_ETC_TRADE
-    //   ITEM_ETC_QUEST
-    if (item.typeId2 == 1) {
-      // ITEM_EQUIP
-      uint8_t optLevel = stream.Read<uint8_t>();
-    } else if (item.typeId2 == 3) {
-      // ITEM_ETC
-      if (item.typeId3 == 5 && item.typeId4 == 0) {
-        // ITEM_ETC_MONEY_GOLD
-        uint32_t goldAmount = stream.Read<uint32_t>();
-      } else if (item.typeId3 == 8 || item.typeId3 == 9) {
-        // ITEM_ETC_TRADE
-        // ITEM_ETC_QUEST
-        uint16_t ownerNameLength = stream.Read<uint16_t>();
-        std::string ownerName = stream.Read_Ascii(ownerNameLength);
-        std::cout << "Item is a quest item belonging to " << ownerName << '\n';
-      }
-    }
-    itemPtr->globalId = stream.Read<uint32_t>();
-    itemPtr->position = parsePosition(stream);
-    uint16_t angle = stream.Read<uint16_t>();
-    bool hasOwner = stream.Read<uint8_t>();
-    if (hasOwner) {
-      uint32_t ownerJId = stream.Read<uint32_t>();
-    }
-    itemPtr->rarity = stream.Read<uint8_t>(); // Educated guess: 0=white, 1=blue, 2=sox
-  } else if (teleportData.haveTeleportWithId(obj->refObjId)) {
-    const auto &teleport = teleportData.getTeleportById(obj->refObjId);
-    if (teleport.typeId1 != 4) {
-      throw std::runtime_error("Have a structure, but type Id 1 is not 4");
-    }
-    Portal *portalPtr = dynamic_cast<Portal*>(obj.get());
-    if (portalPtr == nullptr) {
-      throw std::runtime_error("parseSpawn, have a portal, but the obj pointer cannot be cast to a Portal");
-    }
-    // PORTALS
-    //  STORE
-    //  INS_TELEPORTER
-    portalPtr->globalId = stream.Read<uint32_t>();
-    portalPtr->position = parsePosition(stream);
-    uint16_t angle = stream.Read<uint16_t>();
-
-    uint8_t unkByte0 = stream.Read<uint8_t>();
-    uint8_t unkByte1 = stream.Read<uint8_t>();
-    uint8_t unkByte2 = stream.Read<uint8_t>();
-    portalPtr->unkByte3 = stream.Read<uint8_t>();
-
-    if (portalPtr->unkByte3 == 1) {
-      // Regular
-      uint32_t unkUInt0 = stream.Read<uint32_t>();
-      uint32_t unkUInt1 = stream.Read<uint32_t>();
-    } else if (portalPtr->unkByte3 == 6) {
-      // Dimension Hole
-      uint16_t ownerNameLength = stream.Read<uint16_t>();
-      std::string ownerName = stream.Read_Ascii(ownerNameLength);
-      uint32_t ownerUId = stream.Read<uint32_t>();
-    }
-
-    if (unkByte1 == 1) {
-      // STORE_EVENTZONE_DEFAULT
-      uint32_t unkUint2 = stream.Read<uint32_t>();
-      uint8_t unkByte4 = stream.Read<uint8_t>();
-    }
-  }
-  return obj;
-}
-
-uint32_t parseDespawn(StreamUtility &stream) {
-  return stream.Read<uint32_t>();
-}
-
 ParsedServerAgentEntityGroupSpawnData::ParsedServerAgentEntityGroupSpawnData(const PacketContainer &packet,
                                                          const pk2::CharacterData &characterData,
                                                          const pk2::ItemData &itemData,
@@ -626,15 +192,15 @@ ParsedServerAgentEntityGroupSpawnData::ParsedServerAgentEntityGroupSpawnData(con
   uint16_t groupSpawnAmount = stream.Read<uint16_t>();
   if (groupSpawnType_ == GroupSpawnType::kSpawn) {
     for (int spawnNum=0; spawnNum<groupSpawnAmount; ++spawnNum) {
-      auto obj = parseSpawn(stream, characterData, itemData, skillData, teleportData);
-      if (obj) {
+      auto entity = parseSpawn(stream, characterData, itemData, skillData, teleportData);
+      if (entity) {
         // TODO: Handle "skill objects", like the recovery circle (will be nullptr)
-        objects_.emplace_back(obj);
+        entities_.emplace_back(entity);
       }
     }
   } else if (groupSpawnType_ == GroupSpawnType::kDespawn) {
     for (int despawnNum=0; despawnNum<groupSpawnAmount; ++despawnNum) {
-      despawns_.emplace_back(parseDespawn(stream));
+      despawnGlobalIds_.emplace_back(stream.Read<sro::scalar_types::EntityGlobalId>());
     }
   }
 }
@@ -643,12 +209,12 @@ GroupSpawnType ParsedServerAgentEntityGroupSpawnData::groupSpawnType() const {
   return groupSpawnType_;
 }
 
-const std::vector<std::shared_ptr<Object>>& ParsedServerAgentEntityGroupSpawnData::objects() const {
-  return objects_;
+const std::vector<std::shared_ptr<entity::Entity>>& ParsedServerAgentEntityGroupSpawnData::entities() const {
+  return entities_;
 }
 
-const std::vector<uint32_t>& ParsedServerAgentEntityGroupSpawnData::despawns() const {
-  return despawns_;
+const std::vector<sro::scalar_types::EntityGlobalId>& ParsedServerAgentEntityGroupSpawnData::despawnGlobalIds() const {
+  return despawnGlobalIds_;
 }
 
 //=========================================================================================================================================================
@@ -659,32 +225,32 @@ ParsedServerAgentSpawn::ParsedServerAgentSpawn(const PacketContainer &packet,
                                                const pk2::SkillData &skillData,
                                                const pk2::TeleportData &teleportData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  object_ = parseSpawn(stream, characterData, itemData, skillData, teleportData);
-  if (object_) {
+  entity_ = parseSpawn(stream, characterData, itemData, skillData, teleportData);
+  if (entity_) {
     // TODO: Handle "skill objects", like the recovery circle (will be nullptr)
-    if (object_->typeId1 == 1 || object_->typeId1 == 4) {
+    if (entity_->typeId1 == 1 || entity_->typeId1 == 4) {
       //BIONIC and STORE
       uint8_t spawnType = stream.Read<uint8_t>(); // 1=COS_SUMMON, 3=SPAWN, 4=SPAWN_WALK
-    } else if (object_->typeId1 == 3) {
+    } else if (entity_->typeId1 == 3) {
       uint8_t dropSource = stream.Read<uint8_t>();
       uint32_t dropperUniqueId = stream.Read<uint32_t>();
     }
   }
 }
 
-std::shared_ptr<Object> ParsedServerAgentSpawn::object() const {
-  return object_;
+std::shared_ptr<entity::Entity> ParsedServerAgentSpawn::entity() const {
+  return entity_;
 }
                          
 //=========================================================================================================================================================
 
 ParsedServerAgentDespawn::ParsedServerAgentDespawn(const PacketContainer &packet) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  gId_ = parseDespawn(stream);
+  globalId_ = stream.Read<sro::scalar_types::EntityGlobalId>();
 }
 
-uint32_t ParsedServerAgentDespawn::gId() const {
-  return gId_;
+uint32_t ParsedServerAgentDespawn::globalId() const {
+  return globalId_;
 }
 
 //=========================================================================================================================================================
@@ -956,66 +522,6 @@ structures::ItemMovement ParsedClientItemMove::movement() const {
   return movement_;
 }
 
-void printObj(const Object *obj, const pk2::GameData &gameData) {
-  const auto type = entityTypeForObject(obj);
-  switch (type) {
-    case sro::entity_types::EntityType::kPlayerCharacter:
-      {
-        auto ptr = reinterpret_cast<const PlayerCharacter*>(obj);
-        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) GId:%d, name:\"%s\"\n","Player", obj->globalId, obj->refObjId, ptr->position.xOffset(), ptr->position.yOffset(), ptr->position.zOffset(), ptr->globalId, ptr->name.c_str());
-      } 
-      break;
-    case sro::entity_types::EntityType::kNonplayerCharacter:
-      {
-        auto ptr = reinterpret_cast<const NonplayerCharacter*>(obj);
-        const auto &character = gameData.characterData().getCharacterById(obj->refObjId);
-        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) \"%s\"\n","NPC", obj->globalId, obj->refObjId, ptr->position.xOffset(), ptr->position.yOffset(), ptr->position.zOffset(), character.codeName128.c_str());
-      } 
-      break;
-    case sro::entity_types::EntityType::kMonster:
-      {
-        auto ptr = reinterpret_cast<const Monster*>(obj);
-        const auto &character = gameData.characterData().getCharacterById(obj->refObjId);
-        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) type:%d, \"%s\"\n","Monster", obj->globalId, obj->refObjId, ptr->position.xOffset(), ptr->position.yOffset(), ptr->position.zOffset(), ptr->monsterRarity, character.codeName128.c_str());
-      } 
-      break;
-    case sro::entity_types::EntityType::kItem:
-      {
-        auto ptr = reinterpret_cast<const Item*>(obj);
-        const auto &item = gameData.itemData().getItemById(obj->refObjId);
-        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) rarity:%d, \"%s\"\n","Item", obj->globalId, obj->refObjId, ptr->position.xOffset(), ptr->position.yOffset(), ptr->position.zOffset(), ptr->rarity, item.codeName128.c_str());
-      } 
-      break;
-    case sro::entity_types::EntityType::kPortal:
-      {
-        auto ptr = reinterpret_cast<const Portal*>(obj);
-        const auto &portal = gameData.teleportData().getTeleportById(obj->refObjId);
-        printf("%7s %5d %5d (%8.2f,%8.2f,%8.2f) \"%s\"\n","Portal", obj->globalId, obj->refObjId, ptr->position.xOffset(), ptr->position.yOffset(), ptr->position.zOffset(), portal.codeName128.c_str());
-      }
-      break;
-  }
-}
-sro::entity_types::EntityType entityTypeForObject(const Object *obj) {
-  if (dynamic_cast<const packet::parsing::Character*>(obj)) {
-    if (dynamic_cast<const packet::parsing::PlayerCharacter*>(obj)) {
-      return sro::entity_types::EntityType::kPlayerCharacter;
-    } else if (dynamic_cast<const packet::parsing::NonplayerCharacter*>(obj)) {
-      if (dynamic_cast<const packet::parsing::Monster*>(obj)) {
-        return sro::entity_types::EntityType::kMonster;
-      } else {
-        return sro::entity_types::EntityType::kNonplayerCharacter;
-      }
-    } else {
-      return sro::entity_types::EntityType::kCharacter;
-    }
-  } else if (dynamic_cast<const packet::parsing::Item*>(obj)) {
-    return sro::entity_types::EntityType::kItem;
-  } else if (dynamic_cast<const packet::parsing::Portal*>(obj)) {
-    return sro::entity_types::EntityType::kPortal;
-  }
-  throw std::runtime_error("Cannot get entity type for object");
-}
-
-
 //=========================================================================================================================================================
+
 } // namespace packet::parsing

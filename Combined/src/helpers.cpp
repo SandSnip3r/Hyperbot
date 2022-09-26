@@ -103,24 +103,6 @@ std::shared_ptr<storage::Item> createItemFromScrap(const pk2::ref::ScrapOfPackag
   return item;
 }
 
-// TODO: Maybe move to the entity state?
-void trackObject(state::Entity &entityState, std::shared_ptr<packet::parsing::Object> obj) {
-  entityState.trackEntity(obj);
-  // printf("[+++] (%5d)  ", entityState.size());
-  // packet::parsing::printObj(obj.get(), gameData_);
-}
-
-void stopTrackingObject(state::Entity &entityState, uint32_t gId) {
-  if (entityState.trackingEntity(gId)) {
-    auto objPtr = entityState.getEntity(gId);
-    // printf("[---] (%5d)  ", entityState.size()-1);
-    // packet::parsing::printObj(objPtr, gameData_);
-    entityState.stopTrackingEntity(gId);
-  } else {
-    LOG() << "Asked to despawn something that we werent tracking" << std::endl;
-  }
-}
-
 namespace type_id {
 
 namespace {

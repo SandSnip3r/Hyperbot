@@ -1,6 +1,8 @@
 #ifndef EVENT_EVENT_HPP_
 #define EVENT_EVENT_HPP_
 
+#include <silkroad_lib/scalar_types.h>
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -46,6 +48,10 @@ enum class EventCode {
   kEnteredNewRegion,
   kEntitySpawned,
   kEntityDespawned,
+  kEntityMovementEnded,
+  kEntityMovementBegan,
+  kEntityMovementTimerEnded,
+  kEntitySyncedPosition,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -152,6 +158,34 @@ public:
   EntityDespawned(uint32_t id);
   const uint32_t globalId;
   virtual ~EntityDespawned() = default;
+};
+
+struct EntityMovementEnded : public Event {
+public:
+  EntityMovementEnded(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityMovementEnded() = default;
+};
+
+struct EntityMovementBegan : public Event {
+public:
+  EntityMovementBegan(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityMovementBegan() = default;
+};
+
+struct EntityMovementTimerEnded : public Event {
+public:
+  EntityMovementTimerEnded(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityMovementTimerEnded() = default;
+};
+
+struct EntitySyncedPosition : public Event {
+public:
+  EntitySyncedPosition(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntitySyncedPosition() = default;
 };
 
 } // namespace event

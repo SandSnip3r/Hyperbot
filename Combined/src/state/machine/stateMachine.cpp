@@ -517,19 +517,19 @@ TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, i
   npcGid_ = [&]{
     std::optional<uint32_t> closestNpcGId;
     float closestNpcDistance = std::numeric_limits<float>::max();
-    const auto &entityMap = bot_.entityState_.getEntityMap();
+    const auto &entityMap = bot_.entityTracker_.getEntityMap();
     for (const auto &entityIdObjectPair : entityMap) {
-      const auto &objectPtr = entityIdObjectPair.second;
-      if (!objectPtr) {
+      const auto &entityPtr = entityIdObjectPair.second;
+      if (!entityPtr) {
         throw std::runtime_error("Entity map contains a null item");
       }
 
-      if (packet::parsing::entityTypeForObject(objectPtr.get()) != sro::entity_types::EntityType::kNonplayerCharacter) {
+      if (entityPtr->entityType() != entity::EntityType::kNonplayerCharacter) {
         // Not an npc, skip
         continue;
       }
 
-      const auto distanceToNpc = sro::position_math::calculateDistance2D(bot_.selfState_.position(), objectPtr->position);
+      const auto distanceToNpc = sro::position_math::calculateDistance2D(bot_.selfState_.position(), entityPtr->position());
       if (distanceToNpc < closestNpcDistance) {
         closestNpcGId = entityIdObjectPair.first;
         closestNpcDistance = distanceToNpc;
@@ -580,11 +580,11 @@ void TalkingToShopNpc::figureOutWhatToBuy() {
     }
     const auto &item = bot_.gameData_.itemData().getItemById(itemRefId);
     const auto &nameOfItemToBuy = item.codeName128;
-    const auto *npc = bot_.entityState_.getEntity(npcGid_);
+    const auto *npc = bot_.entityTracker_.getEntity(npcGid_);
     if (npc == nullptr) {
       throw std::runtime_error("Got entity, but it's null");
     }
-    if (packet::parsing::entityTypeForObject(npc) != sro::entity_types::EntityType::kNonplayerCharacter) {
+    if (npc->entityType() != entity::EntityType::kNonplayerCharacter) {
       throw std::runtime_error("Entity is not a NonplayerCharacter");
     }
 

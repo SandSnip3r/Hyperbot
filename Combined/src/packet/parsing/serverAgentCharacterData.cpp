@@ -183,9 +183,9 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   //======================================= State =======================================
   //=====================================================================================
 
-  lifeState_ = static_cast<enums::LifeState>(stream.Read<uint8_t>());
+  lifeState_ = stream.Read<entity::LifeState>();
   uint8_t unkByte0 = stream.Read<uint8_t>();
-  motionState_ = static_cast<enums::MotionState>(stream.Read<uint8_t>());
+  motionState_ = stream.Read<entity::MotionState>();
   bodyState_ = static_cast<enums::BodyState>(stream.Read<uint8_t>());
   walkSpeed_ = stream.Read<float>();
   runSpeed_ = stream.Read<float>();
@@ -330,11 +330,11 @@ std::string ParsedServerAgentCharacterData::characterName() const {
   return characterName_;
 }
 
-enums::LifeState ParsedServerAgentCharacterData::lifeState() const {
+entity::LifeState ParsedServerAgentCharacterData::lifeState() const {
   return lifeState_;
 }
 
-enums::MotionState ParsedServerAgentCharacterData::motionState() const {
+entity::MotionState ParsedServerAgentCharacterData::motionState() const {
   return motionState_;
 }
 

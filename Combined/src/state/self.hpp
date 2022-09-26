@@ -3,6 +3,7 @@
 
 #include "broker/eventBroker.hpp"
 #include "broker/timerManager.hpp"
+#include "entity/entity.hpp"
 #include "pk2/gameData.hpp"
 #include "packet/enums/packetEnums.hpp"
 #include "packet/parsing/parsedPacket.hpp"
@@ -62,8 +63,8 @@ public:
 
   void setSpeed(float walkSpeed, float runSpeed);
   void setHwanSpeed(float hwanSpeed);
-  void setLifeState(packet::enums::LifeState lifeState);
-  void setMotionState(packet::enums::MotionState motionState);
+  void setLifeState(entity::LifeState lifeState);
+  void setMotionState(entity::MotionState motionState);
   void setBodyState(packet::enums::BodyState bodyState);
 
   void setStationaryAtPosition(const sro::Position &position);
@@ -118,8 +119,8 @@ public:
   float runSpeed() const;
   float hwanSpeed() const;
   float currentSpeed() const;
-  packet::enums::LifeState lifeState() const;
-  packet::enums::MotionState motionState() const;
+  entity::LifeState lifeState() const;
+  entity::MotionState motionState() const;
   packet::enums::BodyState bodyState() const;
 
   sro::Position position() const;
@@ -209,9 +210,9 @@ public:
   std::string characterName;
 
   // Character states
-  packet::enums::LifeState lifeState_;
-  packet::enums::MotionState motionState_;
-  std::optional<packet::enums::MotionState> lastMotionState_;
+  entity::LifeState lifeState_;
+  entity::MotionState motionState_;
+  std::optional<entity::MotionState> lastMotionState_;
   packet::enums::BodyState bodyState_;
 
   // Movement/position

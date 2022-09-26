@@ -1,6 +1,7 @@
 #ifndef PACKET_PARSING_SERVER_AGENT_CHARACTER_DATA_HPP
 #define PACKET_PARSING_SERVER_AGENT_CHARACTER_DATA_HPP
 
+#include "entity/entity.hpp"
 #include "parsedPacket.hpp"
 #include "../enums./packetEnums.hpp"
 #include "../structures/packetInnerStructures.hpp"
@@ -39,8 +40,8 @@ public:
   float runSpeed() const;
   float hwanSpeed() const;
   std::string characterName() const;
-  enums::LifeState lifeState() const;
-  enums::MotionState motionState() const;
+  entity::LifeState lifeState() const;
+  entity::MotionState motionState() const;
   enums::BodyState bodyState() const;
 private:
   uint32_t refObjId_;
@@ -59,8 +60,8 @@ private:
   std::vector<structures::Mastery> masteries_;
   std::vector<structures::Skill> skills_;
   sro::Position position_;
-  enums::LifeState lifeState_;
-  enums::MotionState motionState_;
+  entity::LifeState lifeState_;
+  entity::MotionState motionState_;
   enums::BodyState bodyState_;
   float walkSpeed_;
   float runSpeed_;

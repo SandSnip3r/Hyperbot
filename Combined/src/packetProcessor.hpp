@@ -6,12 +6,14 @@
 // #include "packet/parsing/clientAgentActionDeselectRequest.hpp"
 // #include "packet/parsing/clientAgentActionSelectRequest.hpp"
 #include "packet/parsing/clientAgentActionTalkRequest.hpp"
+#include "packet/parsing/serverAgentActionCommandResponse.hpp"
 #include "packet/parsing/serverAgentActionDeselectResponse.hpp"
 #include "packet/parsing/serverAgentActionSelectResponse.hpp"
 #include "packet/parsing/serverAgentActionTalkResponse.hpp"
 #include "packet/parsing/serverAgentCharacterData.hpp"
 #include "packet/parsing/serverAgentCosData.hpp"
 #include "packet/parsing/serverAgentEntitySyncPosition.hpp"
+#include "packet/parsing/serverAgentEntityUpdateAngle.hpp"
 #include "packet/parsing/serverAgentEntityUpdateExperience.hpp"
 #include "packet/parsing/serverAgentEntityUpdateMovement.hpp"
 #include "packet/parsing/serverAgentEntityUpdateMoveSpeed.hpp"
@@ -24,9 +26,11 @@
 #include "packet/parsing/serverAgentInventoryStorageData.hpp"
 #include "packet/parsing/serverAgentInventoryUpdateDurability.hpp"
 #include "packet/parsing/serverAgentInventoryUpdateItem.hpp"
+#include "packet/parsing/serverAgentSkillBegin.hpp"
+#include "packet/parsing/serverAgentSkillEnd.hpp"
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
-#include "state/entity.hpp"
+#include "state/entityTracker.hpp"
 #include "state/self.hpp"
 #include "ui/userInterface.hpp"
 
@@ -37,7 +41,7 @@
  */
 class PacketProcessor {
 public:
-  PacketProcessor(state::Entity &entityState,
+  PacketProcessor(state::EntityTracker &entityTracker,
                   state::Self &selfState,
                   broker::PacketBroker &brokerSystem,
                   broker::EventBroker &eventBroker,
@@ -47,7 +51,7 @@ public:
 
   bool handlePacket(const PacketContainer &packet) const;
 private:
-  state::Entity &entityState_;
+  state::EntityTracker &entityTracker_;
   state::Self &selfState_;
   broker::PacketBroker &broker_;
   broker::EventBroker &eventBroker_;
@@ -74,6 +78,7 @@ private:
   bool charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet) const;
   bool charSelectionJoinResponseReceived(const packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse &packet) const;
   // From MovementModule
+  bool serverAgentEntityUpdateAngleReceived(packet::parsing::ServerAgentEntityUpdateAngle &packet) const;
   bool serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const;
   bool serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const;
   bool serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const;
@@ -92,6 +97,8 @@ private:
   bool serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ParsedServerAgentEntityGroupSpawnData &packet) const;
   bool serverAgentSpawnReceived(const packet::parsing::ParsedServerAgentSpawn &packet) const;
   bool serverAgentDespawnReceived(const packet::parsing::ParsedServerAgentDespawn &packet) const;
+  void entitySpawned(std::shared_ptr<entity::Entity> entity) const;
+  void entityDespawned(sro::scalar_types::EntityGlobalId globalId) const;
 
   // Misc
   bool serverAgentDeselectResponseReceived(const packet::parsing::ServerAgentActionDeselectResponse &packet) const;
@@ -106,6 +113,10 @@ private:
   bool serverAgentEntityUpdatePointsReceived(const packet::parsing::ServerAgentEntityUpdatePoints &packet) const;
   bool serverAgentEntityUpdateExperienceReceived(const packet::parsing::ServerAgentEntityUpdateExperience &packet) const;
   bool serverAgentGuildStorageDataReceived(const packet::parsing::ServerAgentGuildStorageData &packet) const;
+
+  bool serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const;
+  bool serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const;
+  bool serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const;
 };
 
 #endif // PACKETPROCESSOR_HPP_

@@ -4,7 +4,6 @@
 #include "packet/enums/packetEnums.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 #include "pk2/gameData.hpp"
-#include "state/entity.hpp"
 #include "storage/item.hpp"
 #include "storage/storage.hpp"
 
@@ -25,8 +24,6 @@ void printItem(uint8_t slot, const storage::Item *item, const pk2::GameData &gam
 int toBitNum(packet::enums::AbnormalStateFlag stateFlag);
 packet::enums::AbnormalStateFlag fromBitNum(int n);
 std::shared_ptr<storage::Item> createItemFromScrap(const pk2::ref::ScrapOfPackageItem &itemScrap, const pk2::ref::Item &itemRef);
-void trackObject(state::Entity &entityState, std::shared_ptr<packet::parsing::Object> obj);
-void stopTrackingObject(state::Entity &entityState, uint32_t gId);
 
 namespace type_id {
 

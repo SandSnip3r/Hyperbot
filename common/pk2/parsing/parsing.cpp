@@ -150,7 +150,19 @@ bool isValidLine(const int fieldCount, const std::string &line) {
   if (line[0] == '/' && line[1] == '/') {
     return false;
   }
-  return true;
+  // Check for at least fieldCount-1 tabs, since we know files have fields separated by tabs
+  int tabCount=0;
+  for (int i=0; i<line.size(); ++i) {
+    if (line[i] == '\t') {
+      ++tabCount;
+    }
+    if (tabCount == fieldCount-1) {
+      // Have enough tabs
+      return true;
+    }
+  }
+  // Didnt find enough tabs
+  return false;
 }
 } // namespace (anonymous)
 

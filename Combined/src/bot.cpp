@@ -91,6 +91,10 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kCharacterExperienceUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntitySpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityDespawned, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementBegan, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementTimerEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntitySyncedPosition, eventHandleFunction);
 }
 
 void Bot::handleEvent(const event::Event *event) {
@@ -258,6 +262,30 @@ void Bot::handleEvent(const event::Event *event) {
           entityDespawned(castedEvent);
           break;
         }
+      case event::EventCode::kEntityMovementBegan:
+        {
+          const auto &castedEvent = dynamic_cast<const event::EntityMovementBegan&>(*event);
+          handleEntityMovementBegan(castedEvent.globalId);
+          break;
+        }
+      case event::EventCode::kEntityMovementEnded:
+        {
+          const auto &castedEvent = dynamic_cast<const event::EntityMovementEnded&>(*event);
+          handleEntityMovementEnded(castedEvent.globalId);
+          break;
+        }
+      case event::EventCode::kEntityMovementTimerEnded:
+        {
+          const auto &castedEvent = dynamic_cast<const event::EntityMovementTimerEnded&>(*event);
+          handleEntityMovementTimerEnded(castedEvent.globalId);
+          break;
+        }
+      case event::EventCode::kEntitySyncedPosition:
+        {
+          const auto &castedEvent = dynamic_cast<const event::EntitySyncedPosition&>(*event);
+          handleEntitySyncedPosition(castedEvent.globalId);
+          break;
+        }
       default:
         LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
         break;
@@ -418,6 +446,44 @@ void Bot::handleMovementEnded() {
   onUpdate();
 }
 
+void Bot::handleEntityMovementBegan(sro::scalar_types::EntityGlobalId globalId) {
+  auto &mobileEntity = entityTracker_.getEntity<entity::MobileEntity>(globalId);
+  if (!mobileEntity.moving) {
+    throw std::runtime_error("Got an entity movement began event, but it is not moving");
+  }
+  const auto currentPosition = mobileEntity.position();
+  if (mobileEntity.destinationPosition) {
+    userInterface_.broadcastEntityMovementBegan(globalId, currentPosition, *mobileEntity.destinationPosition, mobileEntity.currentSpeed());
+  } else {
+    userInterface_.broadcastEntityMovementBegan(globalId, currentPosition, *mobileEntity.movementAngle, mobileEntity.currentSpeed());
+  }
+}
+
+void Bot::handleEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId) {
+  auto &mobileEntity = entityTracker_.getEntity<entity::MobileEntity>(globalId);
+  userInterface_.broadcastEntityMovementEnded(globalId, mobileEntity.position());
+}
+
+void Bot::handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId) {
+  auto &mobileEntity = entityTracker_.getEntity<entity::MobileEntity>(globalId);
+  mobileEntity.movementTimerCompleted(eventBroker_);
+}
+
+void Bot::handleEntitySyncedPosition(sro::scalar_types::EntityGlobalId globalId) {
+  auto &mobileEntity = entityTracker_.getEntity<entity::MobileEntity>(globalId);
+  const auto currentPosition = mobileEntity.position();
+  if (mobileEntity.moving) {
+    if (mobileEntity.destinationPosition) {
+      userInterface_.broadcastEntityMovementBegan(mobileEntity.globalId, currentPosition, *mobileEntity.destinationPosition, mobileEntity.currentSpeed());
+    } else {
+      userInterface_.broadcastEntityMovementBegan(mobileEntity.globalId, currentPosition, *mobileEntity.movementAngle, mobileEntity.currentSpeed());
+    }
+  } else {
+    // Not moving
+    userInterface_.broadcastEntityPositionChanged(mobileEntity.globalId, currentPosition);
+  }
+}
+
 // ============================================================================================================================
 // ===============================================Character info packet handling===============================================
 // ============================================================================================================================
@@ -448,7 +514,6 @@ void Bot::handleSpawned() {
 }
 
 void Bot::handleCosSpawned(const event::CosSpawned &event) {
-  LOG() << "Cos spawned" << std::endl;
   // Send COS inventory
   auto it = selfState_.cosInventoryMap.find(event.cosGlobalId);
   if (it == selfState_.cosInventoryMap.end()) {
@@ -876,12 +941,12 @@ void Bot::broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const
 }
 
 void Bot::entitySpawned(const event::EntitySpawned &event) {
-  const bool trackingEntity = entityState_.trackingEntity(event.globalId);
+  const bool trackingEntity = entityTracker_.trackingEntity(event.globalId);
   if (!trackingEntity) {
     throw std::runtime_error("Received entity spawned event, but we're not tracking this entity");
   }
-  const auto *entity = entityState_.getEntity(event.globalId);
-  userInterface_.broadcastEntitySpawned(event.globalId, entity->position, packet::parsing::entityTypeForObject(entity));
+  const auto *entity = entityTracker_.getEntity(event.globalId);
+  userInterface_.broadcastEntitySpawned(event.globalId, entity->position(), entity->entityType());
 }
 
 void Bot::entityDespawned(const event::EntityDespawned &event) {

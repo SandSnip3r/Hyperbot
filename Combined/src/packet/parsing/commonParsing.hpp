@@ -1,6 +1,7 @@
 #ifndef PACKET_PARSING_COMMON_HPP
 #define PACKET_PARSING_COMMON_HPP
 
+#include "entity/entity.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 #include "pk2/itemData.hpp"
 #include "storage/item.hpp"
@@ -26,6 +27,11 @@ void parseItem(storage::ItemMagicPop &item, StreamUtility &stream);
 void parseItem(storage::Item *item, StreamUtility &stream);
 structures::SkillAction parseSkillAction(StreamUtility &stream);
 sro::Position parsePosition(StreamUtility &stream);
+std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
+                                           const pk2::CharacterData &characterData,
+                                           const pk2::ItemData &itemData,
+                                           const pk2::SkillData &skillData,
+                                           const pk2::TeleportData &teleportData);
 
 } // namespace packet::parsing
 

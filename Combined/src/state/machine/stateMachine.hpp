@@ -2,6 +2,7 @@
 #define STATE_MACHINE_STATEMACHINE_HPP_
 
 #include "helpers.hpp"
+#include "packet/opcode.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 
 #include <silkroad_lib/position.h>
