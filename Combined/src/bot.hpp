@@ -126,6 +126,8 @@ private:
   void entitySpawned(const event::EntitySpawned &event);
   void entityDespawned(const event::EntityDespawned &event);
 
+  // Helpers
+  entity::MobileEntity& getMobileEntity(sro::scalar_types::EntityGlobalId globalId);
 };
 
 #endif

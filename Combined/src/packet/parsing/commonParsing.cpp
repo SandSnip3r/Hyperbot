@@ -1,5 +1,7 @@
 #include "commonParsing.hpp"
 
+#include "logging.hpp"
+
 #include <silkroad_lib/position_math.h>
 
 #include <iostream>
@@ -264,14 +266,21 @@ void parseItem(storage::Item *item, StreamUtility &stream) {
 }
 
 structures::SkillAction parseSkillAction(StreamUtility &stream) {
-  structures::SkillAction result;
-  result.actionFlag = stream.Read<uint8_t>();
-  if (result.actionFlag & static_cast<uint8_t>(enums::ActionFlag::kAttack)) {
+  auto parseInt32Pos = [](auto &stream) {
+    const auto regionId = stream.Read<sro::RegionId>();
+    const auto xOffset = stream.Read<int32_t>();
+    const auto yOffset = stream.Read<int32_t>();
+    const auto zOffset = stream.Read<int32_t>();
+    return sro::Position(regionId, xOffset, yOffset, zOffset);
+  };
+  structures::SkillAction skillAction;
+  skillAction.actionFlag = stream.Read<uint8_t>();
+  if (skillAction.actionFlag & static_cast<uint8_t>(enums::ActionFlag::kAttack)) {
     uint8_t successiveHitCount = stream.Read<uint8_t>();
     uint8_t struckObjectCount = stream.Read<uint8_t>();
     for (int objNum=0; objNum<struckObjectCount; ++objNum) {
       structures::SkillActionHitObject hitObject;
-      hitObject.objGlobalId = stream.Read<uint32_t>();
+      hitObject.targetGlobalId = stream.Read<sro::scalar_types::EntityGlobalId>();
       for (int hitNum=0; hitNum<successiveHitCount; ++hitNum) {
         structures::SkillActionHitResult hit;
         hit.hitResult = static_cast<enums::HitResult>(stream.Read<uint8_t>());
@@ -285,31 +294,19 @@ structures::SkillAction parseSkillAction(StreamUtility &stream) {
 
         if (hit.hitResult == enums::HitResult::kKnockdown || hit.hitResult == enums::HitResult::kKnockback) {
           // Only ever knocked down or knocked back, there is no combination
-          hit.regionId = stream.Read<uint16_t>();
-          uint32_t xAsInt = stream.Read<uint32_t>();
-          hit.x = *reinterpret_cast<float*>(&xAsInt);
-          uint32_t yAsInt = stream.Read<uint32_t>();
-          hit.y = *reinterpret_cast<float*>(&yAsInt);
-          uint32_t zAsInt = stream.Read<uint32_t>();
-          hit.z = *reinterpret_cast<float*>(&zAsInt);
+          hit.position = parseInt32Pos(stream);
         } else if (static_cast<uint8_t>(hit.hitResult) == 7) {
           std::cout << "parseSkillAction: WHOAAAAA!!!! Unhandled skill end case. Unknown what this is!!!\n";
         }
         hitObject.hits.emplace_back(std::move(hit));
       }
-      result.hitObjects.emplace_back(std::move(hitObject));
+      skillAction.hitObjects.emplace_back(std::move(hitObject));
     }
   }
-  if (result.actionFlag & static_cast<uint8_t>(enums::ActionFlag::kTeleport) || result.actionFlag & static_cast<uint8_t>(enums::ActionFlag::kSprint)) {
-    result.regionId = stream.Read<uint16_t>();
-    uint32_t xAsInt = stream.Read<uint32_t>();
-    result.x = *reinterpret_cast<float*>(&xAsInt);
-    uint32_t yAsInt = stream.Read<uint32_t>();
-    result.y = *reinterpret_cast<float*>(&yAsInt);
-    uint32_t zAsInt = stream.Read<uint32_t>();
-    result.z = *reinterpret_cast<float*>(&zAsInt);
+  if (skillAction.actionFlag & static_cast<uint8_t>(enums::ActionFlag::kTeleport) || skillAction.actionFlag & static_cast<uint8_t>(enums::ActionFlag::kSprint)) {
+    skillAction.position = parseInt32Pos(stream);
   }
-  return result;
+  return skillAction;
 }
 
 sro::Position parsePosition(StreamUtility &stream) {

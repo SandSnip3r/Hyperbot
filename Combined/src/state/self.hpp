@@ -12,6 +12,7 @@
 #include "storage/storage.hpp"
 
 #include <silkroad_lib/position.h>
+#include <silkroad_lib/scalar_types.h>
 
 #include <array>
 #include <chrono>
@@ -39,13 +40,12 @@ enum class Gender {
 // TODO: It will probably make more sense to lock the character state more broadly
 //  For example, when a packet comes in and we're updating the state
 //  Or, when we're doing game logic
-class Self {
+class Self : public entity::PlayerCharacter {
 public:
   Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData);
-  void initialize(uint32_t globalId, uint32_t refObjId);
+  void initialize(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId);
                   
   // Setters
-  void setRaceAndGender(uint32_t refObjId);
   void setCurrentLevel(uint8_t currentLevel);
   void setSkillPoints(uint64_t skillPoints);
   void setCurrentExpAndSpExp(uint32_t currentExperience, uint32_t currentSpExperience);
@@ -61,17 +61,11 @@ public:
   void setUniversalPillEventId(const broker::TimerManager::TimerId &timerId);
   void setPurificationPillEventId(const broker::TimerManager::TimerId &timerId);
 
-  void setSpeed(float walkSpeed, float runSpeed);
   void setHwanSpeed(float hwanSpeed);
-  void setLifeState(entity::LifeState lifeState);
-  void setMotionState(entity::MotionState motionState);
   void setBodyState(packet::enums::BodyState bodyState);
 
-  void setStationaryAtPosition(const sro::Position &position);
-  void syncPosition(const sro::Position &position);
-  void movementTimerCompleted();
-  void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition);
-  void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const uint16_t angle);
+  void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) override;
+  void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::MovementAngle angle, broker::EventBroker &eventBroker) override;
 
   void setHp(uint32_t hp);
   void setMp(uint32_t mp);
@@ -89,7 +83,6 @@ public:
 
   // Getters
   bool spawned() const;
-  uint32_t globalId() const;
   Race race() const;
   Gender gender() const;
 
@@ -115,19 +108,8 @@ public:
   int getUniversalPillDelay() const;
   int getPurificationPillDelay() const;
 
-  float walkSpeed() const;
-  float runSpeed() const;
   float hwanSpeed() const;
-  float currentSpeed() const;
-  entity::LifeState lifeState() const;
-  entity::MotionState motionState() const;
   packet::enums::BodyState bodyState() const;
-
-  sro::Position position() const;
-  bool moving() const;
-  bool haveDestination() const;
-  sro::Position destination() const;
-  uint16_t movementAngle() const;
   
   uint32_t hp() const;
   uint32_t mp() const;
@@ -188,7 +170,6 @@ public:
   bool spawned_{false};
   
   // Character info
-  uint32_t globalId_{0};
 private:
   uint8_t currentLevel_;
   uint64_t currentExperience_;
@@ -203,25 +184,12 @@ public:
   std::optional<broker::TimerManager::TimerId> universalPillEventId_, purificationPillEventId_;
 
   // Speeds
-  float walkSpeed_;
-  float runSpeed_;
   float hwanSpeed_;
 
-  std::string characterName;
-
   // Character states
-  entity::LifeState lifeState_;
-  entity::MotionState motionState_;
-  std::optional<entity::MotionState> lastMotionState_;
   packet::enums::BodyState bodyState_;
 
   // Movement/position
-  sro::Position lastKnownPosition_;
-  bool moving_{false};
-  std::chrono::high_resolution_clock::time_point startedMovingTime_;
-  std::optional<sro::Position> destinationPosition_;
-  std::optional<uint16_t> movementAngle_;
-  std::optional<broker::TimerManager::TimerId> movingEventId_;
   std::optional<broker::TimerManager::TimerId> enteredNewRegionEventId_;
 
   // Health
@@ -273,13 +241,12 @@ private:
   broker::EventBroker &eventBroker_;
   const pk2::GameData &gameData_;
 
-  void privateSetRaceAndGender(uint32_t refObjId);
-  sro::Position interpolateCurrentPosition() const;
-  void calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const sro::Position &currentPosition, double dx, double dy);
+  void setRaceAndGender();
+  void calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const sro::Position &currentPosition, double dx, double dy, broker::EventBroker &eventBroker);
   void handleEvent(const event::Event *event);
   void enteredRegion();
-  void cancelMovement();
-  void checkIfWillLeaveRegionAndSetTimer(const sro::Position &currentPosition);
+  void cancelMovement(broker::EventBroker &eventBroker);
+  void checkIfWillLeaveRegionAndSetTimer(broker::EventBroker &eventBroker);
 
   // Known delay for potion cooldown
   int potionDelayMs_;

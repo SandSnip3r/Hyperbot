@@ -4,6 +4,8 @@
 #include "packet/enums/packetEnums.hpp"
 #include "storage/item.hpp"
 
+#include <silkroad_lib/position.h>
+
 #include <cmath>
 #include <ostream>
 #include <string>
@@ -88,12 +90,11 @@ struct SkillActionHitResult {
   enums::DamageFlag damageFlag;
   uint32_t damage;
   uint32_t effect;
-  uint16_t regionId;
-  float x, y, z;
+  sro::Position position;
 };
 
 struct SkillActionHitObject {
-  uint32_t objGlobalId;
+  sro::scalar_types::EntityGlobalId targetGlobalId;
   std::vector<SkillActionHitResult> hits;
 };
 
@@ -101,8 +102,7 @@ struct SkillAction {
   uint8_t actionFlag;
   std::vector<SkillActionHitObject> hitObjects;
   // If teleport or sprint
-  uint16_t regionId;
-  float x, y, z;
+  sro::Position position;
 };
 
 struct ActionCommand {

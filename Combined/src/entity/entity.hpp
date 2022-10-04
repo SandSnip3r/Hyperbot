@@ -88,8 +88,8 @@ public:
   void setMotionState(entity::MotionState motionState, broker::EventBroker &eventBroker);
   void setStationaryAtPosition(const sro::Position &position, broker::EventBroker &eventBroker);
   void syncPosition(const sro::Position &position, broker::EventBroker &eventBroker);
-  void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker);
-  void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::MovementAngle angle, broker::EventBroker &eventBroker);
+  virtual void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker);
+  virtual void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::MovementAngle angle, broker::EventBroker &eventBroker);
   void movementTimerCompleted(broker::EventBroker &eventBroker);
 protected:
   mutable std::mutex mutex_;

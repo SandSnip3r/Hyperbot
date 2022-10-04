@@ -117,6 +117,9 @@ private:
   bool serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const;
   bool serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const;
   bool serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const;
+
+  // Helpers
+  entity::MobileEntity& getMobileEntity(sro::scalar_types::EntityGlobalId globalId) const;
 };
 
 #endif // PACKETPROCESSOR_HPP_

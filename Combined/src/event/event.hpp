@@ -31,7 +31,6 @@ enum class EventCode {
   kKnockbackStatusEnded,
   kItemWaitForReuseDelay,
   kInjectPacket,
-  kMovementTimerEnded,
   kStartTraining,
   kStopTraining,
   kEntityDeselected,
@@ -60,9 +59,6 @@ enum class EventCode {
   kStateConnectedToAgentServerUpdated,
   kStateReceivedCaptchaPromptUpdated,
   kStateCharacterListUpdated,
-  // Movement state updates
-  kMovementBegan,
-  kMovementEnded,
   // ===================================================================================
 };
 

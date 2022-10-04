@@ -44,7 +44,7 @@ Walking::Walking(Bot &bot, const sro::Position &destinationPosition) : bot_(bot)
 }
 
 void Walking::onUpdate(const event::Event *event) {
-  if (bot_.selfState_.moving()) {
+  if (bot_.selfState_.moving) {
     // Still moving, nothing to do
     return;
   }
@@ -69,10 +69,7 @@ void Walking::onUpdate(const event::Event *event) {
   // We are not moving, we're not at the current waypoint, and there's not a pending movement request
   // Send a request to move to the current waypoint
   const auto &currentWaypoint = waypoints_[currentWaypointIndex_];
-  const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint.regionId(),
-                                                                                                static_cast<uint32_t>(currentWaypoint.xOffset()),
-                                                                                                static_cast<uint32_t>(currentWaypoint.yOffset()),
-                                                                                                static_cast<uint32_t>(currentWaypoint.zOffset()));
+  const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint);
   bot_.broker_.injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
   requestedMovement_ = true;
 }

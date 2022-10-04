@@ -70,11 +70,11 @@ void MobileEntity::setSpeed(float walkSpeed, float runSpeed, broker::EventBroker
       // Update timer for new speed
       eventBroker.cancelDelayedEvent(*movingEventId);
       auto seconds = helpers::secondsToTravel(position_, *destinationPosition, privateCurrentSpeed());
-      movingEventId = eventBroker.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementTimerEnded), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+      movingEventId = eventBroker.publishDelayedEvent(std::make_unique<event::EntityMovementTimerEnded>(globalId), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
     }
 
     // Publish a movement began event since this is essentially creating a new movement
-    eventBroker.publishEvent(std::make_unique<event::Event>(event::EventCode::kMovementBegan));
+    eventBroker.publishEvent(std::make_unique<event::EntityMovementBegan>(globalId));
   }
 }
 
@@ -83,10 +83,10 @@ void MobileEntity::setMotionState(entity::MotionState motionState, broker::Event
   std::lock_guard<std::mutex> lock(mutex_);
   auto prevSpeed = privateCurrentSpeed();
   bool changedSpeed{false};
-  if (this->motionState == entity::MotionState::kWalk && motionState == entity::MotionState::kRun) {
+  if (this->lastMotionState && *this->lastMotionState == entity::MotionState::kWalk && motionState == entity::MotionState::kRun) {
     // Entity changed from walking to running
     changedSpeed = true;
-  } else if (this->motionState == entity::MotionState::kRun && motionState == entity::MotionState::kWalk) {
+  } else if (this->lastMotionState && *this->lastMotionState == entity::MotionState::kRun && motionState == entity::MotionState::kWalk) {
     // Entity changed from running to walking
     changedSpeed = true;
   }
@@ -109,7 +109,6 @@ void MobileEntity::setMotionState(entity::MotionState motionState, broker::Event
       throw std::runtime_error("Changes speed, but dont know our position when it happened");
     }
     if (destinationPosition) {
-      LOG() << "Set motion state, changed speed (from " << prevSpeed << " to " << privateCurrentSpeed() << "). Starting new movement" << std::endl;
       privateSetMovingToDestination(srcPosition, *destinationPosition, eventBroker);
     } else if (movementAngle) {
       privateSetMovingTowardAngle(srcPosition, *movementAngle, eventBroker);
@@ -133,7 +132,6 @@ void MobileEntity::syncPosition(const sro::Position &position, broker::EventBrok
   if (moving) {
     startedMovingTime = currentTime;
     const auto offByDistance = sro::position_math::calculateDistance2D(whereWeThoughtWeWere, position);
-    LOG() << "Entity are moving, syncing our position, we're off by " << offByDistance << std::endl;
     // Might be worth recalculating travel time and starting a new timer
     // TODO: Should we fire an event. This update might be worth sending to the UI at least
   }
@@ -309,6 +307,7 @@ void MobileEntity::initializeAsMoving(sro::MovementAngle destinationAngle) {
 
 void Character::setLifeState(LifeState newLifeState, broker::EventBroker &eventBroker) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
+  lifeState = newLifeState;
   if (newLifeState == LifeState::kDead) {
     privateSetStationaryAtPosition(interpolateCurrentPosition(currentTime), eventBroker);
   }
