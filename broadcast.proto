@@ -19,9 +19,21 @@ enum EntityType {
   kCharacter = 1;
   kPlayerCharacter = 2;
   kNonplayerCharacter = 3;
-  kMonster = 4;
-  kItem = 5;
-  kPortal = 6;
+
+  kMonsterGeneral = 4;
+  kMonsterChampion = 5;
+  kMonsterGiant = 6;
+  kMonsterElite = 7;
+  kMonsterUnique = 8;
+  kMonsterPartyGeneral = 9;
+  kMonsterPartyChampion = 10;
+  kMonsterPartyGiant = 11;
+
+  kItemCommon = 12;
+  kItemRare = 13;
+  kItemSox = 14;
+
+  kPortal = 15;
 };
 
 // Sub-structures
