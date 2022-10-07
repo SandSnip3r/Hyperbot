@@ -11,6 +11,7 @@ set(LIBRARY_NAME
 
 set(PROJECT_SOURCES
   src/blowfish.cc
+  src/entity.cc
   src/position.cc
   src/position_math.cc
   src/shared_io.cc
