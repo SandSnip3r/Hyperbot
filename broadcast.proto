@@ -36,6 +36,13 @@ enum EntityType {
   kPortal = 15;
 };
 
+enum LifeState {
+  kEmbryo = 0;
+  kAlive = 1;
+  kDead = 2;
+  kGone = 3;
+};
+
 // Sub-structures
 
 message Position {
@@ -132,6 +139,11 @@ message EntityMovementEnded {
   CharacterMovementEnded characterMovementEnded = 2;
 }
 
+message EntityLifeStateChanged {
+  uint32 globalId = 1;
+  LifeState lifeState = 2;
+}
+
 // Broadcast message
 
 message BroadcastMessage {
@@ -154,5 +166,6 @@ message BroadcastMessage {
     EntityPositionChanged entityPositionChanged = 16;
     EntityMovementBegan entityMovementBegan = 17;
     EntityMovementEnded entityMovementEnded = 18;
+    EntityLifeStateChanged entityLifeStateChanged = 19;
   }
 }
