@@ -94,6 +94,10 @@ message RegionNameUpdate {
   string name = 1;
 }
 
+message CharacterPositionChanged {
+  Position position = 1;
+}
+
 message CharacterMovementBegan {
   Position currentPosition = 1;
   oneof destination {
@@ -157,15 +161,16 @@ message BroadcastMessage {
     CharacterSpUpdate characterSpUpdate = 7;
     CharacterNameUpdate characterNameUpdate = 8;
     GoldAmountUpdate goldAmountUpdate = 9;
-    CharacterMovementBegan characterMovementBegan = 10;
-    CharacterMovementEnded characterMovementEnded = 11;
-    RegionNameUpdate regionNameUpdate = 12;
-    ItemUpdate itemUpdate = 13;
-    EntitySpawned entitySpawned = 14;
-    EntityDespawned entityDespawned = 15;
-    EntityPositionChanged entityPositionChanged = 16;
-    EntityMovementBegan entityMovementBegan = 17;
-    EntityMovementEnded entityMovementEnded = 18;
-    EntityLifeStateChanged entityLifeStateChanged = 19;
+    CharacterPositionChanged characterPositionChanged = 10;
+    CharacterMovementBegan characterMovementBegan = 11;
+    CharacterMovementEnded characterMovementEnded = 12;
+    RegionNameUpdate regionNameUpdate = 13;
+    ItemUpdate itemUpdate = 14;
+    EntitySpawned entitySpawned = 15;
+    EntityDespawned entityDespawned = 16;
+    EntityPositionChanged entityPositionChanged = 17;
+    EntityMovementBegan entityMovementBegan = 18;
+    EntityMovementEnded entityMovementEnded = 19;
+    EntityLifeStateChanged entityLifeStateChanged = 20;
   }
 }
