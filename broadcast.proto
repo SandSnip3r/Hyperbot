@@ -111,6 +111,10 @@ message CharacterMovementEnded {
   Position currentPosition = 1;
 }
 
+message CharacterNotMovingAngleChanged {
+  uint32 angle = 1;
+}
+
 message ItemUpdate {
   ItemLocation itemLocation = 1;
   uint32 slotIndex = 2;
@@ -164,13 +168,14 @@ message BroadcastMessage {
     CharacterPositionChanged characterPositionChanged = 10;
     CharacterMovementBegan characterMovementBegan = 11;
     CharacterMovementEnded characterMovementEnded = 12;
-    RegionNameUpdate regionNameUpdate = 13;
-    ItemUpdate itemUpdate = 14;
-    EntitySpawned entitySpawned = 15;
-    EntityDespawned entityDespawned = 16;
-    EntityPositionChanged entityPositionChanged = 17;
-    EntityMovementBegan entityMovementBegan = 18;
-    EntityMovementEnded entityMovementEnded = 19;
-    EntityLifeStateChanged entityLifeStateChanged = 20;
+    CharacterNotMovingAngleChanged characterNotMovingAngleChanged = 13;
+    RegionNameUpdate regionNameUpdate = 14;
+    ItemUpdate itemUpdate = 15;
+    EntitySpawned entitySpawned = 16;
+    EntityDespawned entityDespawned = 17;
+    EntityPositionChanged entityPositionChanged = 18;
+    EntityMovementBegan entityMovementBegan = 19;
+    EntityMovementEnded entityMovementEnded = 20;
+    EntityLifeStateChanged entityLifeStateChanged = 21;
   }
 }
