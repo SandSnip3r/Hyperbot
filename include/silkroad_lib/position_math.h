@@ -7,6 +7,7 @@
 
 namespace sro::position_math {
 
+MovementAngle calculateAngleOfLine(const Position &srcPos, const Position &destPos);
 float calculateDistance2D(const Position &srcPos, const Position &destPos);
 Position interpolateBetweenPoints(const Position &srcPos, const Position &destPos, float percent);
 Position getNewPositionGivenAngleAndDistance(const Position &srcPos, MovementAngle angle, float distance);

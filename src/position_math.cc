@@ -8,6 +8,33 @@
 
 namespace sro::position_math {
 
+MovementAngle calculateAngleOfLine(const Position &srcPos, const Position &destPos) {
+  using sro::game_constants::kRegionSize;
+  if (srcPos.isDungeon() ^ destPos.isDungeon()) {
+    throw std::runtime_error("Cannot calculate distances between different worlds");
+  }
+  float dx, dz;
+  if (srcPos.isDungeon()) {
+    if (srcPos.dungeonId() != destPos.dungeonId()) {
+      throw std::runtime_error("Cannot calculate distance between different dungeons");
+    }
+    // Simple distance calculation
+    dx = destPos.xOffset() - srcPos.xOffset();
+    dz = destPos.zOffset() - srcPos.zOffset();
+  } else {
+    // Need to account for regions
+    dx = (destPos.xSector() - srcPos.xSector()) * kRegionSize + (destPos.xOffset() - srcPos.xOffset());
+    dz = (destPos.zSector() - srcPos.zSector()) * kRegionSize + (destPos.zOffset() - srcPos.zOffset());
+  }
+  double angle = std::atan(dz/dx);
+  if (dx < 0) {
+    angle += constants::kPi;
+  } else if (dz < 0) {
+    angle += constants::k2Pi;
+  }
+  return std::round((angle / constants::k2Pi) * std::numeric_limits<MovementAngle>::max());
+}
+
 float calculateDistance2D(const Position &srcPos, const Position &destPos) {
   using sro::game_constants::kRegionSize;
   if (srcPos.isDungeon() ^ destPos.isDungeon()) {
