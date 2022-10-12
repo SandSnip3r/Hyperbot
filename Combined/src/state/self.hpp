@@ -43,6 +43,7 @@ enum class Gender {
 class Self : public entity::PlayerCharacter {
 public:
   Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData);
+  virtual ~Self() = default;
   void initialize(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId);
                   
   // Setters
@@ -65,7 +66,7 @@ public:
   void setBodyState(packet::enums::BodyState bodyState);
 
   void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) override;
-  void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::MovementAngle angle, broker::EventBroker &eventBroker) override;
+  void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) override;
 
   void setHp(uint32_t hp);
   void setMp(uint32_t mp);
@@ -82,6 +83,7 @@ public:
   void setGuildStorageGold(uint64_t goldAmount);
 
   // Getters
+  entity::EntityType entityType() const override;
   bool spawned() const;
   Race race() const;
   Gender gender() const;

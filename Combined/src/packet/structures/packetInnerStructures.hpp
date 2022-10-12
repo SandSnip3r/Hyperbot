@@ -86,7 +86,7 @@ struct Skill {
 };
 
 struct SkillActionHitResult {
-  enums::HitResult hitResult;
+  enums::HitResult hitResultFlag;
   enums::DamageFlag damageFlag;
   uint32_t damage;
   uint32_t effect;

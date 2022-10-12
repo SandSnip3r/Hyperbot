@@ -193,10 +193,7 @@ ParsedServerAgentEntityGroupSpawnData::ParsedServerAgentEntityGroupSpawnData(con
   if (groupSpawnType_ == GroupSpawnType::kSpawn) {
     for (int spawnNum=0; spawnNum<groupSpawnAmount; ++spawnNum) {
       auto entity = parseSpawn(stream, characterData, itemData, skillData, teleportData);
-      if (entity) {
-        // TODO: Handle "skill objects", like the recovery circle (will be nullptr)
-        entities_.emplace_back(entity);
-      }
+      entities_.emplace_back(entity);
     }
   } else if (groupSpawnType_ == GroupSpawnType::kDespawn) {
     for (int despawnNum=0; despawnNum<groupSpawnAmount; ++despawnNum) {

@@ -111,12 +111,15 @@ void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosi
   checkIfWillLeaveRegionAndSetTimer(eventBroker);
 }
 
-void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::MovementAngle angle, broker::EventBroker &eventBroker) {
+void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) {
   entity::MobileEntity::setMovingTowardAngle(sourcePosition, angle, eventBroker);
   checkIfWillLeaveRegionAndSetTimer(eventBroker);
 }
 
 void Self::checkIfWillLeaveRegionAndSetTimer(broker::EventBroker &eventBroker) {
+  if (!moving()) {
+    throw std::runtime_error("This function expects that we're moving");
+  }
   const auto currentPosition = position();
   if (destinationPosition) {
     if (currentPosition.regionId() == destinationPosition->regionId()) {
@@ -130,10 +133,7 @@ void Self::checkIfWillLeaveRegionAndSetTimer(broker::EventBroker &eventBroker) {
     const auto zDiff = (destinationPosition->zOffset() - currentPosition.zOffset()) + zSectorDiff * 1920.0;
     calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(currentPosition, xDiff, zDiff, eventBroker);
   } else {
-    if (!movementAngle) {
-      throw std::runtime_error("We know we're moving, but not to a destination nor with an angle");
-    }
-    const auto angleRadians = pathfinder::math::k2Pi * static_cast<double>(*movementAngle) / std::numeric_limits<uint16_t>::max();
+    const auto angleRadians = pathfinder::math::k2Pi * static_cast<double>(angle_) / std::numeric_limits<uint16_t>::max();
     const double kLenToExtend = sqrt(2 * 1920.0 * 1920.0) + 1;
     const double xAdd = kLenToExtend * cos(angleRadians);
     const double yAdd = kLenToExtend * sin(angleRadians);
@@ -169,9 +169,8 @@ void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(c
 }
 
 void Self::enteredRegion() {
-  if (!moving) {
+  if (!moving()) {
     // No work to do
-    LOG() << "[No retrigger] Not moving" << std::endl;
     return;
   }
   // Do this check based on where we currently are
@@ -285,6 +284,10 @@ void Self::setGuildStorageGold(uint64_t goldAmount) {
 // =========================================================================================================
 // =================================================Getters=================================================
 // =========================================================================================================
+
+entity::EntityType Self::entityType() const {
+  return entity::EntityType::kSelf;
+}
 
 bool Self::spawned() const {
   return spawned_;

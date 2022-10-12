@@ -30,17 +30,20 @@ public:
   void broadcastCharacterSpUpdate(uint32_t skillPoints);
   void broadcastCharacterNameUpdate(std::string_view characterName);
   void broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::ItemLocation goldLocation);
+  void broadcastPositionChangedUpdate(const sro::Position &currentPosition);
   void broadcastMovementBeganUpdate(const sro::Position &srcPosition, const sro::Position &destPosition, float speed);
-  void broadcastMovementBeganUpdate(const sro::Position &srcPosition, uint16_t angle, float speed);
+  void broadcastMovementBeganUpdate(const sro::Position &srcPosition, sro::Angle angle, float speed);
   void broadcastMovementEndedUpdate(const sro::Position &currentPosition);
+  void broadcastNotMovingAngleChangedUpdate(sro::Angle angle);
   void broadcastRegionNameUpdate(std::string_view regionName);
   void broadcastItemUpdate(broadcast::ItemLocation itemLocation, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName={});
-  void broadcastEntitySpawned(uint32_t globalId, const sro::Position &position, entity::EntityType entityType);
+  void broadcastEntitySpawned(const entity::Entity *entity);
   void broadcastEntityDespawned(uint32_t globalId);
   void broadcastEntityPositionChanged(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &position);
   void broadcastEntityMovementBegan(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &srcPosition, const sro::Position &destPosition, float speed);
-  void broadcastEntityMovementBegan(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &srcPosition, uint16_t angle, float speed);
+  void broadcastEntityMovementBegan(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &srcPosition, sro::Angle angle, float speed);
   void broadcastEntityMovementEnded(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &currentPosition);
+  void broadcastEntityLifeStateChanged(const sro::scalar_types::EntityGlobalId globalId, const sro::entity::LifeState lifeState);
   void broadcast(const broadcast::BroadcastMessage &broadcastProto);
 private:
   zmq::context_t context_;
@@ -52,7 +55,7 @@ private:
 
   void setPosition(broadcast::Position *msg, const sro::Position &pos) const;
   void setCharacterMovementBegan(broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Position &destPosition, const float speed) const;
-  void setCharacterMovementBegan(broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::MovementAngle angle, const float speed) const;
+  void setCharacterMovementBegan(broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Angle angle, const float speed) const;
   void setCharacterMovementEnded(broadcast::CharacterMovementEnded *msg, const sro::Position &currentPosition) const;
 };
 

@@ -6,14 +6,14 @@ ServerAgentEntityUpdateAngle::ServerAgentEntityUpdateAngle(const PacketContainer
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   globalId_ = stream.Read<sro::scalar_types::EntityGlobalId>();
-  angle_ = stream.Read<sro::MovementAngle>();
+  angle_ = stream.Read<sro::Angle>();
 }
 
 sro::scalar_types::EntityGlobalId ServerAgentEntityUpdateAngle::globalId() const {
   return globalId_;
 }
 
-sro::MovementAngle ServerAgentEntityUpdateAngle::angle() const {
+sro::Angle ServerAgentEntityUpdateAngle::angle() const {
   return angle_;
 }
 

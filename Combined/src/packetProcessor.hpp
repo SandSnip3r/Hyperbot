@@ -118,8 +118,22 @@ private:
   bool serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const;
   bool serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const;
 
+  void handleSkillAction(const packet::structures::SkillAction &action, std::optional<sro::scalar_types::EntityGlobalId> globalId = std::nullopt) const;
+
   // Helpers
-  entity::MobileEntity& getMobileEntity(sro::scalar_types::EntityGlobalId globalId) const;
+  template<typename EntityType>
+  EntityType& getEntity(sro::scalar_types::EntityGlobalId globalId) const {
+    if (globalId == selfState_.globalId) {
+      if (dynamic_cast<const EntityType*>(&selfState_) == nullptr) {
+        throw std::runtime_error("Trying to get self entity as an invalid type");
+      }
+      return selfState_;
+    } else if (entityTracker_.trackingEntity(globalId)) {
+      return entityTracker_.getEntity<EntityType>(globalId);
+    } else {
+      throw std::runtime_error("Trying to get untracked entity");
+    }
+  }
 };
 
 #endif // PACKETPROCESSOR_HPP_

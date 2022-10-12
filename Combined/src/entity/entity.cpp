@@ -7,12 +7,20 @@
 
 namespace entity {
 
-void Entity::setPosition(const sro::Position &position) {
+void Entity::initializePosition(const sro::Position &position) {
   position_ = position;
+}
+
+void Entity::initializeAngle(sro::Angle angle) {
+  angle_ = angle;
 }
 
 sro::Position Entity::position() const {
   return position_;
+}
+
+sro::Angle Entity::angle() const {
+  return angle_;
 }
 
 EntityType Entity::entityType() const  {
@@ -34,6 +42,10 @@ EntityType Entity::entityType() const  {
     return EntityType::kPortal;
   }
   throw std::runtime_error("Cannot get entity type");
+}
+
+bool MobileEntity::moving() const {
+  return moving_;
 }
 
 sro::Position MobileEntity::position() const {
@@ -58,7 +70,7 @@ void MobileEntity::setSpeed(float walkSpeed, float runSpeed, broker::EventBroker
   const auto interpolatedPosition = interpolateCurrentPosition(currentTime);
   this->walkSpeed = walkSpeed;
   this->runSpeed = runSpeed;
-  if (moving) {
+  if (moving()) {
     // In order to be able to interpolate position in the future, we need to update these values
     position_ = interpolatedPosition;
     startedMovingTime = currentTime;
@@ -76,6 +88,15 @@ void MobileEntity::setSpeed(float walkSpeed, float runSpeed, broker::EventBroker
     // Publish a movement began event since this is essentially creating a new movement
     eventBroker.publishEvent(std::make_unique<event::EntityMovementBegan>(globalId));
   }
+}
+
+void MobileEntity::setAngle(sro::Angle angle, broker::EventBroker &eventBroker) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (moving()) {
+    throw std::runtime_error("We're moving and changing our angle");
+  }
+  this->angle_ = angle;
+  eventBroker.publishEvent(std::make_unique<event::EntityNotMovingAngleChanged>(globalId));
 }
 
 void MobileEntity::setMotionState(entity::MotionState motionState, broker::EventBroker &eventBroker) {
@@ -104,16 +125,14 @@ void MobileEntity::setMotionState(entity::MotionState motionState, broker::Event
     lastMotionState = this->motionState;
   }
 
-  if (changedSpeed && moving) {
+  if (changedSpeed && moving()) {
     if (!srcPosition) {
       throw std::runtime_error("Changes speed, but dont know our position when it happened");
     }
     if (destinationPosition) {
       privateSetMovingToDestination(srcPosition, *destinationPosition, eventBroker);
-    } else if (movementAngle) {
-      privateSetMovingTowardAngle(srcPosition, *movementAngle, eventBroker);
     } else {
-      throw std::runtime_error("Entity is moving, but not to a destination nor towards an angle");
+      privateSetMovingTowardAngle(srcPosition, angle_, eventBroker);
     }
   }
 }
@@ -129,7 +148,7 @@ void MobileEntity::syncPosition(const sro::Position &position, broker::EventBrok
   const auto whereWeThoughtWeWere = interpolateCurrentPosition(currentTime);
   position_ = position;
   // TODO: Need angle?
-  if (moving) {
+  if (moving()) {
     startedMovingTime = currentTime;
     const auto offByDistance = sro::position_math::calculateDistance2D(whereWeThoughtWeWere, position);
     // Might be worth recalculating travel time and starting a new timer
@@ -143,21 +162,17 @@ void MobileEntity::setMovingToDestination(const std::optional<sro::Position> &so
   privateSetMovingToDestination(sourcePosition, destinationPosition, eventBroker);
 }
 
-void MobileEntity::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::MovementAngle angle, broker::EventBroker &eventBroker) {
+void MobileEntity::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) {
   std::lock_guard<std::mutex> lock(mutex_);
   privateSetMovingTowardAngle(sourcePosition, angle, eventBroker);
 }
 
 void MobileEntity::movementTimerCompleted(broker::EventBroker &eventBroker) {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (movementAngle) {
-    // A timer shouldnt exist if we're running towards some angle
-    throw std::runtime_error("MobileEntity: Movement timer completed, but entity was running towards some angle");
-  }
   if (!movingEventId) {
     throw std::runtime_error("MobileEntity: Movement timer completed, but had no running timer");
   }
-  if (!moving) {
+  if (!moving()) {
     throw std::runtime_error("MobileEntity: Movement timer completed, but entity wasnt moving");
   }
   if (!destinationPosition) {
@@ -173,13 +188,12 @@ void MobileEntity::cancelMovement(broker::EventBroker &eventBroker) {
     eventBroker.cancelDelayedEvent(*movingEventId);
     movingEventId.reset();
   }
-  moving = false;
-  movementAngle.reset();
+  moving_ = false;
   destinationPosition.reset();
 }
 
 sro::Position MobileEntity::interpolateCurrentPosition(const std::chrono::high_resolution_clock::time_point &currentTime) const {
-  if (!moving) {
+  if (!moving()) {
     return position_;
   }
   auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-startedMovingTime).count();
@@ -209,13 +223,11 @@ sro::Position MobileEntity::interpolateCurrentPosition(const std::chrono::high_r
       }
       return resultPos;
     }
-  } else if (movementAngle) {
-    float angle = *movementAngle/static_cast<float>(std::numeric_limits<std::remove_reference_t<decltype(*movementAngle)>>::max()) * sro::constants::k2Pi;
-    float xOffset = std::cos(angle) * privateCurrentSpeed() * (elapsedTimeMs/1000.0);
-    float zOffset = std::sin(angle) * privateCurrentSpeed() * (elapsedTimeMs/1000.0);
-    return sro::position_math::createNewPositionWith2dOffset(position_, xOffset, zOffset);
   } else {
-    throw std::runtime_error("Moving but no destination position or movement angle");
+    float angleRadians = angle_/static_cast<float>(std::numeric_limits<std::remove_reference_t<decltype(angle_)>>::max()) * sro::constants::k2Pi;
+    float xOffset = std::cos(angleRadians) * privateCurrentSpeed() * (elapsedTimeMs/1000.0);
+    float zOffset = std::sin(angleRadians) * privateCurrentSpeed() * (elapsedTimeMs/1000.0);
+    return sro::position_math::createNewPositionWith2dOffset(position_, xOffset, zOffset);
   }
 }
 
@@ -246,15 +258,24 @@ float MobileEntity::privateCurrentSpeed() const {
 
 void MobileEntity::privateSetStationaryAtPosition(const sro::Position &position, broker::EventBroker &eventBroker) {
   cancelMovement(eventBroker);
+  bool angleUpdated{false};
+  if (position_ != position) {
+    // Calculate angle of line created by these two points. Entity is facing that dirction
+    angle_ = sro::position_math::calculateAngleOfLine(position_, position);
+    angleUpdated = true;
+  }
   position_ = position;
   eventBroker.publishEvent(std::make_unique<event::EntityMovementEnded>(globalId));
+  if (angleUpdated) {
+    eventBroker.publishEvent(std::make_unique<event::EntityNotMovingAngleChanged>(globalId));
+  }
 }
 
 void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
   if (sourcePosition) {
     position_ = *sourcePosition;
-  } else if (moving) {
+  } else if (moving()) {
     // We've pivoted while moving, calculate where we are and save that
     position_ = interpolateCurrentPosition(currentTime);
   }
@@ -264,7 +285,7 @@ void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Positi
     return;
   }
   cancelMovement(eventBroker);
-  moving = true;
+  moving_ = true;
   startedMovingTime = currentTime;
   this->destinationPosition = destinationPosition;
 
@@ -274,42 +295,46 @@ void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Positi
   movingEventId = eventBroker.publishDelayedEvent(std::make_unique<event::EntityMovementTimerEnded>(globalId), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
 }
 
-void MobileEntity::privateSetMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::MovementAngle angle, broker::EventBroker &eventBroker) {
+void MobileEntity::privateSetMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
   if (sourcePosition) {
     position_ = *sourcePosition;
-  } else if (moving) {
+  } else if (moving()) {
     // We've pivoted while moving, calculate where we are and save that
     position_ = interpolateCurrentPosition(currentTime);
   }
   cancelMovement(eventBroker);
-  moving = true;
+  moving_ = true;
   startedMovingTime = currentTime;
-  this->movementAngle = angle;
+  this->angle_ = angle;
 
   eventBroker.publishEvent(std::make_unique<event::EntityMovementBegan>(globalId));
 }
 
 void MobileEntity::initializeAsMoving(const sro::Position &destinationPosition) {
-  this->moving = true;
+  this->moving_ = true;
   this->startedMovingTime = std::chrono::high_resolution_clock::now();
   this->destinationPosition = destinationPosition;
 }
 
-void MobileEntity::initializeAsMoving(sro::MovementAngle destinationAngle) {
-  this->moving = true;
+void MobileEntity::initializeAsMoving(sro::Angle destinationAngle) {
+  this->moving_ = true;
   this->startedMovingTime = std::chrono::high_resolution_clock::now();
-  this->movementAngle = destinationAngle;
+  this->angle_ = destinationAngle;
 }
   
 
 // ============================================================================================================================================
 
-void Character::setLifeState(LifeState newLifeState, broker::EventBroker &eventBroker) {
+void Character::setLifeState(sro::entity::LifeState newLifeState, broker::EventBroker &eventBroker) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
+  const bool changed = lifeState != newLifeState;
   lifeState = newLifeState;
-  if (newLifeState == LifeState::kDead) {
+  if (newLifeState == sro::entity::LifeState::kDead) {
     privateSetStationaryAtPosition(interpolateCurrentPosition(currentTime), eventBroker);
+  }
+  if (changed) {
+    eventBroker.publishEvent(std::make_unique<event::EntityLifeStateChanged>(globalId));
   }
 }
 
@@ -331,27 +356,6 @@ std::ostream& operator<<(std::ostream &stream, MotionState motionState) {
       break;
     case MotionState::kSit:
       stream << "Sit";
-      break;
-    default:
-      stream << "UNKNOWN";
-      break;
-  }
-  return stream;
-}
-
-std::ostream& operator<<(std::ostream &stream, LifeState lifeState) {
-  switch(lifeState) {
-    case LifeState::kEmbryo:
-      stream << "Embryo";
-      break;
-    case LifeState::kAlive:
-      stream << "Alive";
-      break;
-    case LifeState::kDead:
-      stream << "Dead";
-      break;
-    case LifeState::kGone:
-      stream << "Gone";
       break;
     default:
       stream << "UNKNOWN";

@@ -240,33 +240,35 @@ bool PacketProcessor::charSelectionJoinResponseReceived(const packet::parsing::P
 // ============================================================================================================================
 
 bool PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::ServerAgentEntityUpdateAngle &packet) const {
-  entity::MobileEntity &mobileEntity = getMobileEntity(packet.globalId());
-  if (mobileEntity.moving) {
+  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
+  if (mobileEntity.moving()) {
     if (mobileEntity.destinationPosition) {
       throw std::runtime_error("Got angle update, but we're running to a destination");
     }
-    if (*mobileEntity.movementAngle != packet.angle()) {
+    if (mobileEntity.angle() != packet.angle()) {
       // Changed angle while running
       mobileEntity.setMovingTowardAngle(std::nullopt, packet.angle(), eventBroker_);
     }
+  } else {
+    mobileEntity.setAngle(packet.angle(), eventBroker_);
   }
   return true;
 }
 
 bool PacketProcessor::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const {
-  entity::MobileEntity &mobileEntity = getMobileEntity(packet.globalId());
+  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
   mobileEntity.syncPosition(packet.position(), eventBroker_);
   return true;
 }
 
 bool PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const {
-  entity::MobileEntity &mobileEntity = getMobileEntity(packet.globalId());
+  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
   mobileEntity.setStationaryAtPosition(packet.position(), eventBroker_);
   return true;
 }
 
 bool PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const {
-  entity::MobileEntity &mobileEntity = getMobileEntity(packet.globalId());
+  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
   std::optional<sro::Position> sourcePosition;
   if (packet.hasSource()) {
     // Server is telling us our source position
@@ -307,6 +309,7 @@ bool PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Pa
   // Position
   // TODO: Handle the case when the character spawns in a moving state
   selfState_.setStationaryAtPosition(packet.position(), eventBroker_);
+  selfState_.initializeAngle(packet.angle());
 
   // State
   selfState_.setLifeState(packet.lifeState(), eventBroker_);
@@ -368,24 +371,15 @@ bool PacketProcessor::serverAgentInventoryStorageDataReceived(const packet::pars
 
 bool PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const {
   if (packet.stateType() == packet::parsing::StateType::kMotionState) {
-    entity::MobileEntity &mobileEntity = getMobileEntity(packet.globalId());
+    entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
     mobileEntity.setMotionState(static_cast<entity::MotionState>(packet.state()), eventBroker_);
   } else if (packet.stateType() == packet::parsing::StateType::kLifeState) {
-    entity::Character *characterEntity;
-    if (packet.globalId() == selfState_.globalId) {
-      if (!selfState_.spawned()) {
-        throw std::runtime_error("Got life state update for ourself, but we are not spawned");
-      }
-      characterEntity = &selfState_;
-    } else {
-      characterEntity = &entityTracker_.getEntity<entity::Character>(packet.globalId());
+    entity::Character &characterEntity = getEntity<entity::Character>(packet.globalId());
+    if (packet.globalId() == selfState_.globalId && !selfState_.spawned()) {
+      throw std::runtime_error("Got life state update for ourself, but we are not spawned");
     }
-    const auto newLifeState = static_cast<entity::LifeState>(packet.state());
-    if (characterEntity->lifeState != newLifeState) {
-      characterEntity->setLifeState(newLifeState, eventBroker_);
-    } else {
-      LOG() << "Got life state update for entity, but nothing changed" << std::endl;
-    }
+    const auto newLifeState = static_cast<sro::entity::LifeState>(packet.state());
+    characterEntity.setLifeState(newLifeState, eventBroker_);
   } else {
     if (!selfState_.spawned()) {
       throw std::runtime_error("Got state update for ourself, but we are not spawned");
@@ -398,7 +392,7 @@ bool PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
 }
 
 bool PacketProcessor::serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const {
-  entity::MobileEntity &mobileEntity = getMobileEntity(packet.globalId());
+  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
   mobileEntity.setSpeed(packet.walkSpeed(), packet.runSpeed(), eventBroker_);
   return true;
 }
@@ -757,7 +751,11 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
 bool PacketProcessor::serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ParsedServerAgentEntityGroupSpawnData &packet) const {
   if (packet.groupSpawnType() == packet::parsing::GroupSpawnType::kSpawn) {
     for (auto entity : packet.entities()) {
-      entitySpawned(entity);
+      if (entity) {
+        entitySpawned(entity);
+      } else {
+        LOG() << "Received null entity from group spawn" << std::endl;
+      }
     }
   } else {
     for (auto globalId : packet.despawnGlobalIds()) {
@@ -771,7 +769,7 @@ bool PacketProcessor::serverAgentSpawnReceived(const packet::parsing::ParsedServ
   if (packet.entity()) {
     entitySpawned(packet.entity());
   } else {
-    LOG() << "Object spawned which we cannot track\n";
+    LOG() << "Received null entity from spawn" << std::endl;
   }
   return true;
 }
@@ -791,19 +789,23 @@ void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) cons
     // Non-mobile, nothing to do
     return;
   }
-  if (mobileEntity->moving) {
+  if (mobileEntity->moving()) {
     if (mobileEntity->destinationPosition) {
       // Entity spawned and is moving to a destination
       mobileEntity->setMovingToDestination(mobileEntity->position(), *mobileEntity->destinationPosition, eventBroker_);
-    } else if (mobileEntity->movementAngle) {
-      mobileEntity->setMovingTowardAngle(mobileEntity->position(), *mobileEntity->movementAngle, eventBroker_);
     } else {
-      throw std::runtime_error("Entity is moving, but has no destination position nor angle");
+      mobileEntity->setMovingTowardAngle(mobileEntity->position(), mobileEntity->angle(), eventBroker_);
     }
   }
 }
 
 void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId) const {
+  if (!entityTracker_.trackingEntity(globalId)) {
+    // TODO: Once eventzones are handled, this check can be removed;
+    //  getEntity will throw
+    LOG() << "Entity despawned, but we're not tracking it" << std::endl;
+    return;
+  }
   // Before destroying an entity, see if we have a running movement timer to cancel
   auto *entity = entityTracker_.getEntity(globalId);
   auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(entity);
@@ -994,8 +996,8 @@ bool PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     case 2:
       {
         // Will stop you if you're running
-        entity::MobileEntity &casterAsMobileEntity = getMobileEntity(packet.casterGlobalId());
-        if (casterAsMobileEntity.moving) {
+        entity::MobileEntity &casterAsMobileEntity = getEntity<entity::MobileEntity>(packet.casterGlobalId());
+        if (casterAsMobileEntity.moving()) {
           casterAsMobileEntity.setStationaryAtPosition(casterAsMobileEntity.position(), eventBroker_);
         }
         break;
@@ -1005,39 +1007,35 @@ bool PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       break;
   }
 
-  const auto action = packet.action();
-  if (action.actionFlag & static_cast<uint8_t>(packet::enums::ActionFlag::kTeleport) || action.actionFlag & static_cast<uint8_t>(packet::enums::ActionFlag::kSprint)) {
+  handleSkillAction(packet.action(), packet.casterGlobalId());
+  return true;
+}
+
+void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &action, std::optional<sro::scalar_types::EntityGlobalId> casterGlobalId) const {
+  if (casterGlobalId &&
+     (action.actionFlag & static_cast<uint8_t>(packet::enums::ActionFlag::kTeleport) ||
+      action.actionFlag & static_cast<uint8_t>(packet::enums::ActionFlag::kSprint))) {
     // Entity teleported or sprinted to a new position. Sprints are actually teleports on the server side, even though the skill actually has a duration. The duration is only used for animation
-    entity::MobileEntity &casterAsMobileEntity = getMobileEntity(packet.casterGlobalId());
+    entity::MobileEntity &casterAsMobileEntity = getEntity<entity::MobileEntity>(*casterGlobalId);
     casterAsMobileEntity.setStationaryAtPosition(action.position, eventBroker_);
   }
 
   for (const auto &hitObject : action.hitObjects) {
     for (const auto &hitResult : hitObject.hits) {
-      if (hitResult.hitResult == packet::enums::HitResult::kKnockdown || hitResult.hitResult == packet::enums::HitResult::kKnockback) {
-        entity::MobileEntity &targetAsMobileEntity = getMobileEntity(hitObject.targetGlobalId);
+      if (static_cast<uint8_t>(hitResult.hitResultFlag) & static_cast<uint8_t>(packet::enums::HitResult::kKnockdown) ||
+          static_cast<uint8_t>(hitResult.hitResultFlag) & static_cast<uint8_t>(packet::enums::HitResult::kKnockback)) {
+        entity::MobileEntity &targetAsMobileEntity = getEntity<entity::MobileEntity>(hitObject.targetGlobalId);
         targetAsMobileEntity.setStationaryAtPosition(hitResult.position, eventBroker_);
       }
     }
-
   }
-  return true;
 }
 
 bool PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const {
-  return true;
-}
-
-// =========================================================================================================================
-// =========================================================Helpers=========================================================
-// =========================================================================================================================
-
-entity::MobileEntity& PacketProcessor::getMobileEntity(sro::scalar_types::EntityGlobalId globalId) const {
-  if (globalId == selfState_.globalId) {
-    return selfState_;
-  } else if (entityTracker_.trackingEntity(globalId)) {
-    return entityTracker_.getEntity<entity::MobileEntity>(globalId);
-  } else {
-    throw std::runtime_error("Trying to get untracked mobile entity");
+  if (packet.result() == 2) {
+    // Not successful?
+    return true;
   }
+  handleSkillAction(packet.action());
+  return true;
 }

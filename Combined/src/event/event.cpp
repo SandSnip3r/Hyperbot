@@ -34,4 +34,8 @@ EntityMovementTimerEnded::EntityMovementTimerEnded(sro::scalar_types::EntityGlob
 
 EntitySyncedPosition::EntitySyncedPosition(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntitySyncedPosition), globalId(id) {}
 
+EntityNotMovingAngleChanged::EntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityNotMovingAngleChanged), globalId(id) {}
+
+EntityLifeStateChanged::EntityLifeStateChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityLifeStateChanged), globalId(id) {}
+
 } // namespace event

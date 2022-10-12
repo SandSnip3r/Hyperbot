@@ -44,7 +44,7 @@ Walking::Walking(Bot &bot, const sro::Position &destinationPosition) : bot_(bot)
 }
 
 void Walking::onUpdate(const event::Event *event) {
-  if (bot_.selfState_.moving) {
+  if (bot_.selfState_.moving()) {
     // Still moving, nothing to do
     return;
   }

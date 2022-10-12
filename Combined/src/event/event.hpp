@@ -51,6 +51,8 @@ enum class EventCode {
   kEntityMovementBegan,
   kEntityMovementTimerEnded,
   kEntitySyncedPosition,
+  kEntityNotMovingAngleChanged,
+  kEntityLifeStateChanged,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -182,6 +184,20 @@ public:
   EntitySyncedPosition(sro::scalar_types::EntityGlobalId id);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntitySyncedPosition() = default;
+};
+
+struct EntityNotMovingAngleChanged : public Event {
+public:
+  EntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityNotMovingAngleChanged() = default;
+};
+
+struct EntityLifeStateChanged : public Event {
+public:
+  EntityLifeStateChanged(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityLifeStateChanged() = default;
 };
 
 } // namespace event

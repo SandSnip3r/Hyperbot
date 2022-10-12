@@ -12,10 +12,10 @@ class ServerAgentEntityUpdateAngle : public ParsedPacket {
 public:
   ServerAgentEntityUpdateAngle(const PacketContainer &packet);
   sro::scalar_types::EntityGlobalId globalId() const;
-  sro::MovementAngle angle() const;
+  sro::Angle angle() const;
 private:
   sro::scalar_types::EntityGlobalId globalId_;
-  sro::MovementAngle angle_;
+  sro::Angle angle_;
 };
 
 } // namespace packet::parsing

@@ -283,8 +283,8 @@ structures::SkillAction parseSkillAction(StreamUtility &stream) {
       hitObject.targetGlobalId = stream.Read<sro::scalar_types::EntityGlobalId>();
       for (int hitNum=0; hitNum<successiveHitCount; ++hitNum) {
         structures::SkillActionHitResult hit;
-        hit.hitResult = static_cast<enums::HitResult>(stream.Read<uint8_t>());
-        if (hit.hitResult == enums::HitResult::kBlocked || hit.hitResult == enums::HitResult::kCopy) {
+        hit.hitResultFlag = static_cast<enums::HitResult>(stream.Read<uint8_t>());
+        if (static_cast<uint8_t>(hit.hitResultFlag) & static_cast<uint8_t>(enums::HitResult::kBlocked) || static_cast<uint8_t>(hit.hitResultFlag) & static_cast<uint8_t>(enums::HitResult::kCopy)) {
           continue;
         }
         uint32_t damageData = stream.Read<uint32_t>();
@@ -292,10 +292,10 @@ structures::SkillAction parseSkillAction(StreamUtility &stream) {
         hit.damage = (damageData >> 8);
         hit.effect = stream.Read<uint32_t>();
 
-        if (hit.hitResult == enums::HitResult::kKnockdown || hit.hitResult == enums::HitResult::kKnockback) {
+        if (static_cast<uint8_t>(hit.hitResultFlag) & static_cast<uint8_t>(enums::HitResult::kKnockdown) || static_cast<uint8_t>(hit.hitResultFlag) & static_cast<uint8_t>(enums::HitResult::kKnockback)) {
           // Only ever knocked down or knocked back, there is no combination
           hit.position = parseInt32Pos(stream);
-        } else if (static_cast<uint8_t>(hit.hitResult) == 7) {
+        } else if (static_cast<uint8_t>(hit.hitResultFlag) == 7) {
           std::cout << "parseSkillAction: WHOAAAAA!!!! Unhandled skill end case. Unknown what this is!!!\n";
         }
         hitObject.hits.emplace_back(std::move(hit));
@@ -329,19 +329,13 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
     // EVENT_ZONE (Traps, Buffzones, ...)
     uint16_t eventZoneTypeId = stream.Read<uint16_t>();
     std::cout << " eventZoneTypeId:" << eventZoneTypeId << '\n';
-    uint32_t eventZoneRefSkillId = stream.Read<uint32_t>();
+    sro::scalar_types::ReferenceObjectId eventZoneRefSkillId = stream.Read<sro::scalar_types::ReferenceObjectId>();
     std::cout << " eventZoneRefSkillId:" << eventZoneRefSkillId << '\n';
-    uint32_t uniqueId = stream.Read<uint32_t>();
-    std::cout << " uniqueId:" << uniqueId << '\n';
-    uint16_t regionId = stream.Read<uint16_t>();
-    std::cout << " regionId:" << regionId << '\n';
-    uint32_t x = stream.Read<uint32_t>(); // Actually a float
-    std::cout << " x:" << *reinterpret_cast<float*>(&x) << '\n';
-    uint32_t y = stream.Read<uint32_t>(); // Actually a float
-    std::cout << " y:" << *reinterpret_cast<float*>(&y) << '\n';
-    uint32_t z = stream.Read<uint32_t>(); // Actually a float
-    std::cout << " z:" << *reinterpret_cast<float*>(&z) << '\n';
-    uint16_t angle = stream.Read<uint16_t>();
+    sro::scalar_types::EntityGlobalId globalId = stream.Read<sro::scalar_types::EntityGlobalId>();
+    std::cout << " globalId:" << globalId << '\n';
+    const auto position = parsePosition(stream);
+    std::cout << " position:" << position << '\n';
+    sro::Angle angle = stream.Read<sro::Angle>();
     std::cout << " angle:" << angle << '\n';
     return {};
   }
@@ -439,8 +433,9 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
     characterPtr->globalId = stream.Read<uint32_t>();
 
     // Position
-    characterPtr->setPosition(parsePosition(stream));
-    uint16_t angle = stream.Read<uint16_t>();
+    characterPtr->initializePosition(parsePosition(stream));
+    sro::Angle angle = stream.Read<sro::Angle>();
+    characterPtr->initializeAngle(angle);
 
     bool movementHasDestination = stream.Read<uint8_t>();
 
@@ -471,7 +466,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
       }
     } else {
       packet::enums::AngleAction angleAction_ = static_cast<packet::enums::AngleAction>(stream.Read<uint8_t>());
-      uint16_t angle = stream.Read<uint16_t>(); // Represents the new angle, character is looking at
+      sro::Angle angle = stream.Read<sro::Angle>(); // Represents the new angle, character is looking at
       // For monsters, I think this means that they have never moved before, otherwise, they will have a destination that is the last point they moved to
       if (angleAction_ == packet::enums::AngleAction::kGoForward) {
         // Entity is currently moving
@@ -480,7 +475,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
     }
 
     // State
-    characterPtr->lifeState = stream.Read<entity::LifeState>();
+    characterPtr->lifeState = stream.Read<sro::entity::LifeState>();
     uint8_t unkByte0 = stream.Read<uint8_t>(); // Obsolete
     characterPtr->motionState = stream.Read<entity::MotionState>();
     if (characterPtr->motionState == entity::MotionState::kRun || characterPtr->motionState == entity::MotionState::kWalk) {
@@ -570,7 +565,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
         if (monsterPtr == nullptr) {
           throw std::runtime_error("parseSpawn, have a monster, but the entity pointer cannot be cast to a Monster");
         }
-        monsterPtr->monsterRarity = stream.Read<uint8_t>();
+        monsterPtr->rarity = stream.Read<sro::entity::MonsterRarity>();
         if (character.typeId4 == 2 || character.typeId4 == 3) {
           // NPC_MOB_THIEF, NPC_MOB_HUNTER
           uint8_t appearance = stream.Read<uint8_t>();
@@ -624,7 +619,8 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
         uint32_t guildId = stream.Read<uint32_t>();
         uint16_t guildNameLength = stream.Read<uint16_t>();
         std::string guildName = stream.Read_Ascii(guildNameLength);
-      // } else if (character.typeId3 == 5) {
+      } else if (character.typeId3 == 5) {
+        LOG() << "CGObjSiegeStruct encountered in parseSpawn, but unhandled" << std::endl;
       //   // CGObjSiegeStruct
       //   uint32_t unk0 = stream.Read<uint32_t>(); // 0xFFFFFFFF
       //   uint16_t unk1 = stream.Read<uint16_t>(); // 0x0054
@@ -672,13 +668,14 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
       }
     }
     itemPtr->globalId = stream.Read<uint32_t>();
-    itemPtr->setPosition(parsePosition(stream));
-    uint16_t angle = stream.Read<uint16_t>();
+    itemPtr->initializePosition(parsePosition(stream));
+    sro::Angle angle = stream.Read<sro::Angle>();
+    itemPtr->initializeAngle(angle);
     bool hasOwner = stream.Read<uint8_t>();
     if (hasOwner) {
       uint32_t ownerJId = stream.Read<uint32_t>();
     }
-    itemPtr->rarity = stream.Read<uint8_t>(); // Educated guess: 0=white, 1=blue, 2=sox
+    itemPtr->rarity = stream.Read<sro::entity::ItemRarity>();
   } else if (teleportData.haveTeleportWithId(entity->refObjId)) {
     const auto &teleport = teleportData.getTeleportById(entity->refObjId);
     if (teleport.typeId1 != 4) {
@@ -692,8 +689,9 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
     //  STORE
     //  INS_TELEPORTER
     portalPtr->globalId = stream.Read<uint32_t>();
-    portalPtr->setPosition(parsePosition(stream));
-    uint16_t angle = stream.Read<uint16_t>();
+    portalPtr->initializePosition(parsePosition(stream));
+    sro::Angle angle = stream.Read<sro::Angle>();
+    portalPtr->initializeAngle(angle);
 
     uint8_t unkByte0 = stream.Read<uint8_t>();
     uint8_t unkByte1 = stream.Read<uint8_t>();

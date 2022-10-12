@@ -150,7 +150,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   //===================================== Position ======================================
   //=====================================================================================
   position_ = parsePosition(stream);
-  uint16_t angle = stream.Read<uint16_t>();
+  angle_ = stream.Read<sro::Angle>();
 
   //=====================================================================================
   //===================================== Movement ======================================
@@ -183,7 +183,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   //======================================= State =======================================
   //=====================================================================================
 
-  lifeState_ = stream.Read<entity::LifeState>();
+  lifeState_ = stream.Read<sro::entity::LifeState>();
   uint8_t unkByte0 = stream.Read<uint8_t>();
   motionState_ = stream.Read<entity::MotionState>();
   bodyState_ = static_cast<enums::BodyState>(stream.Read<uint8_t>());
@@ -314,6 +314,10 @@ sro::Position ParsedServerAgentCharacterData::position() const {
   return position_;
 }
 
+sro::Angle ParsedServerAgentCharacterData::angle() const {
+  return angle_;
+}
+
 float ParsedServerAgentCharacterData::walkSpeed() const {
   return walkSpeed_;
 }
@@ -330,7 +334,7 @@ std::string ParsedServerAgentCharacterData::characterName() const {
   return characterName_;
 }
 
-entity::LifeState ParsedServerAgentCharacterData::lifeState() const {
+sro::entity::LifeState ParsedServerAgentCharacterData::lifeState() const {
   return lifeState_;
 }
 

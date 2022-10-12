@@ -36,11 +36,12 @@ public:
   const std::vector<structures::Mastery>& masteries() const;
   const std::vector<structures::Skill>& skills() const;
   sro::Position position() const;
+  sro::Angle angle() const;
   float walkSpeed() const;
   float runSpeed() const;
   float hwanSpeed() const;
   std::string characterName() const;
-  entity::LifeState lifeState() const;
+  sro::entity::LifeState lifeState() const;
   entity::MotionState motionState() const;
   enums::BodyState bodyState() const;
 private:
@@ -60,7 +61,8 @@ private:
   std::vector<structures::Mastery> masteries_;
   std::vector<structures::Skill> skills_;
   sro::Position position_;
-  entity::LifeState lifeState_;
+  sro::Angle angle_;
+  sro::entity::LifeState lifeState_;
   entity::MotionState motionState_;
   enums::BodyState bodyState_;
   float walkSpeed_;

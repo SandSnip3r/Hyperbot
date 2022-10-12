@@ -1,6 +1,8 @@
 #include "commonParsing.hpp"
 #include "serverAgentSkillBegin.hpp"
 
+#include "logging.hpp"
+
 namespace packet::parsing {
 
 ServerAgentSkillBegin::ServerAgentSkillBegin(const PacketContainer &packet) :

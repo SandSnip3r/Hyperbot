@@ -91,6 +91,7 @@ private:
   void handleEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId);
   void handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId);
   void handleEntitySyncedPosition(sro::scalar_types::EntityGlobalId globalId);
+  void handleEntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId globalId);
   // Character info events
   void handleSpawned();
   void handleCosSpawned(const event::CosSpawned &event);
@@ -125,9 +126,22 @@ private:
   void broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex);
   void entitySpawned(const event::EntitySpawned &event);
   void entityDespawned(const event::EntityDespawned &event);
+  void entityLifeStateChanged(const event::EntityLifeStateChanged &event);
 
   // Helpers
-  entity::MobileEntity& getMobileEntity(sro::scalar_types::EntityGlobalId globalId);
+  template<typename EntityType>
+  EntityType& getEntity(sro::scalar_types::EntityGlobalId globalId) {
+    if (globalId == selfState_.globalId) {
+      if (dynamic_cast<const EntityType*>(&selfState_) == nullptr) {
+        throw std::runtime_error("Trying to get self entity as an invalid type");
+      }
+      return selfState_;
+    } else if (entityTracker_.trackingEntity(globalId)) {
+      return entityTracker_.getEntity<EntityType>(globalId);
+    } else {
+      throw std::runtime_error("Trying to get untracked entity");
+    }
+  }
 };
 
 #endif
