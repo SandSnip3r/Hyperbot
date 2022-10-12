@@ -8,7 +8,7 @@
 
 namespace sro::position_math {
 
-MovementAngle calculateAngleOfLine(const Position &srcPos, const Position &destPos) {
+Angle calculateAngleOfLine(const Position &srcPos, const Position &destPos) {
   using sro::game_constants::kRegionSize;
   if (srcPos.isDungeon() ^ destPos.isDungeon()) {
     throw std::runtime_error("Cannot calculate distances between different worlds");
@@ -32,7 +32,7 @@ MovementAngle calculateAngleOfLine(const Position &srcPos, const Position &destP
   } else if (dz < 0) {
     angle += constants::k2Pi;
   }
-  return std::round((angle / constants::k2Pi) * std::numeric_limits<MovementAngle>::max());
+  return std::round((angle / constants::k2Pi) * std::numeric_limits<Angle>::max());
 }
 
 float calculateDistance2D(const Position &srcPos, const Position &destPos) {
@@ -85,8 +85,8 @@ Position interpolateBetweenPoints(const Position &srcPos, const Position &destPo
   }
 }
 
-Position getNewPositionGivenAngleAndDistance(const Position &srcPos, MovementAngle angle, float distance) {
-  const auto angleRadians = constants::k2Pi * static_cast<double>(angle) / std::numeric_limits<MovementAngle>::max();
+Position getNewPositionGivenAngleAndDistance(const Position &srcPos, Angle angle, float distance) {
+  const auto angleRadians = constants::k2Pi * static_cast<double>(angle) / std::numeric_limits<Angle>::max();
   const float dx = distance * cos(angleRadians);
   const float dz = distance * sin(angleRadians);
   return { srcPos.regionId(),

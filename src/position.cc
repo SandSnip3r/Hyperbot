@@ -87,4 +87,8 @@ bool operator==(const Position &pos1, const Position &pos2) {
           (pos1.zOffset() == pos2.zOffset()));
 }
 
+bool operator!=(const Position &pos1, const Position &pos2) {
+  return !(pos1 == pos2);
+}
+
 } // namespace sro

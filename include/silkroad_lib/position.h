@@ -11,7 +11,7 @@ namespace sro {
 using RegionId = uint16_t;
 using DungeonId = uint16_t;
 using Sector = uint8_t;
-using MovementAngle = uint16_t;
+using Angle = uint16_t;
 
 struct GameCoordinate {
   int x, y;
@@ -41,6 +41,7 @@ private:
 
 std::ostream& operator<<(std::ostream &stream, const Position &pos);
 bool operator==(const Position &pos1, const Position &pos2);
+bool operator!=(const Position &pos1, const Position &pos2);
 
 } // namespace sro
 

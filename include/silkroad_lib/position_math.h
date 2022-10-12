@@ -7,10 +7,10 @@
 
 namespace sro::position_math {
 
-MovementAngle calculateAngleOfLine(const Position &srcPos, const Position &destPos);
+Angle calculateAngleOfLine(const Position &srcPos, const Position &destPos);
 float calculateDistance2D(const Position &srcPos, const Position &destPos);
 Position interpolateBetweenPoints(const Position &srcPos, const Position &destPos, float percent);
-Position getNewPositionGivenAngleAndDistance(const Position &srcPos, MovementAngle angle, float distance);
+Position getNewPositionGivenAngleAndDistance(const Position &srcPos, Angle angle, float distance);
 Position createNewPositionWith2dOffset(const Position &startingPos, const float xOffset, const float zOffset);
 RegionId worldRegionIdFromSectors(const Sector xSector, const Sector zSector);
 std::pair<Sector,Sector> sectorsFromWorldRegionId(const RegionId regionId);
