@@ -1,8 +1,10 @@
 #include "itemListWidgetItem.hpp"
 #include "mainwindow.h"
+#include "map/characterGraphicsItem.hpp"
+#include "map/itemGraphicsItem.hpp"
 #include "packetListWidgetItem.hpp"
-#include "./ui_mainwindow.h"
 #include "regionGraphicsItem.hpp"
+#include "./ui_mainwindow.h"
 
 #include <silkroad_lib/game_constants.h>
 #include <silkroad_lib/position_math.h>
@@ -216,9 +218,11 @@ void MainWindow::connectBotBroadcastMessages() {
   connect(&eventHandler_, &EventHandler::inventoryGoldAmountUpdate, this, &MainWindow::onInventoryGoldAmountUpdate);
   connect(&eventHandler_, &EventHandler::storageGoldAmountUpdate, this, &MainWindow::onStorageGoldAmountUpdate);
   connect(&eventHandler_, &EventHandler::guildStorageGoldAmountUpdate, this, &MainWindow::onGuildStorageGoldAmountUpdate);
+  connect(&eventHandler_, &EventHandler::characterPositionChanged, this, &MainWindow::onCharacterPositionChanged);
   connect(&eventHandler_, &EventHandler::characterMovementBeganToDest, this, &MainWindow::onCharacterMovementBeganToDest);
   connect(&eventHandler_, &EventHandler::characterMovementBeganTowardAngle, this, &MainWindow::onCharacterMovementBeganTowardAngle);
   connect(&eventHandler_, &EventHandler::characterMovementEnded, this, &MainWindow::onCharacterMovementEnded);
+  connect(&eventHandler_, &EventHandler::characterNotMovingAngleChanged, this, &MainWindow::onCharacterNotMovingAngleChanged);
   connect(&eventHandler_, &EventHandler::regionNameUpdate, this, &MainWindow::onRegionNameUpdate);
   connect(&eventHandler_, &EventHandler::characterInventoryItemUpdate, this, &MainWindow::onCharacterInventoryItemUpdate);
   connect(&eventHandler_, &EventHandler::avatarInventoryItemUpdate, this, &MainWindow::onAvatarInventoryItemUpdate);
@@ -231,6 +235,7 @@ void MainWindow::connectBotBroadcastMessages() {
   connect(&eventHandler_, &EventHandler::entityMovementBeganToDest, this, &MainWindow::onEntityMovementBeganToDest);
   connect(&eventHandler_, &EventHandler::entityMovementBeganTowardAngle, this, &MainWindow::onEntityMovementBeganTowardAngle);
   connect(&eventHandler_, &EventHandler::entityMovementEnded, this, &MainWindow::onEntityMovementEnded);
+  connect(&eventHandler_, &EventHandler::entityLifeStateChanged, this, &MainWindow::onEntityLifeStateChanged);
 }
 
 void MainWindow::connectPacketInjection() {
@@ -251,21 +256,21 @@ void MainWindow::triggerMovementTimer() {
 }
 
 void MainWindow::timerTriggered() {
-  if (!characterData_.movement) {
+  if (!selfData_.movement) {
     throw std::runtime_error("Timer triggered, but we're not moving");
   }
   const auto currentTime = std::chrono::high_resolution_clock::now();
-  const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-characterData_.movement->startTime).count();
+  const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-selfData_.movement->startTime).count();
   sro::Position currentPosition;
-  if (const auto *destPosPtr = std::get_if<Movement::kToDestination>(&characterData_.movement->destPosOrAngle)) {
-    const auto totalDistanceToTravel = sro::position_math::calculateDistance2D(characterData_.movement->srcPos, *destPosPtr);
-    const auto totalSecondsToTravel = totalDistanceToTravel/characterData_.movement->speed;
+  if (const auto *destPosPtr = std::get_if<entity_data::Movement::kToDestination>(&selfData_.movement->destPosOrAngle)) {
+    const auto totalDistanceToTravel = sro::position_math::calculateDistance2D(selfData_.movement->srcPos, *destPosPtr);
+    const auto totalSecondsToTravel = totalDistanceToTravel/selfData_.movement->speed;
     const double fractionTraveled = std::min(1.0, elapsedTimeMs / (totalSecondsToTravel*1000.0));
-    currentPosition = sro::position_math::interpolateBetweenPoints(characterData_.movement->srcPos, *destPosPtr, fractionTraveled);
+    currentPosition = sro::position_math::interpolateBetweenPoints(selfData_.movement->srcPos, *destPosPtr, fractionTraveled);
   } else {
-    const auto movementAngle = std::get<Movement::kTowardAngle>(characterData_.movement->destPosOrAngle);
-    const auto totalDistanceTraveled = elapsedTimeMs/1000.0 * characterData_.movement->speed;
-    currentPosition = sro::position_math::getNewPositionGivenAngleAndDistance(characterData_.movement->srcPos, movementAngle, totalDistanceTraveled);
+    const auto movementAngle = std::get<entity_data::Movement::kTowardAngle>(selfData_.movement->destPosOrAngle);
+    const auto totalDistanceTraveled = elapsedTimeMs/1000.0 * selfData_.movement->speed;
+    currentPosition = sro::position_math::getNewPositionGivenAngleAndDistance(selfData_.movement->srcPos, movementAngle, totalDistanceTraveled);
   }
 
   updateDisplayedPosition(currentPosition);
@@ -280,21 +285,26 @@ void MainWindow::killMovementTimer() {
 
 void MainWindow::entityMovementTimerTriggered() {
   for (auto &i : entityData_) {
-    if (!i.second.movement) {
+    const auto *mobileEntity = dynamic_cast<entity_data::MobileEntity*>(i.second.get());
+    if (mobileEntity == nullptr) {
+      // Not a mobile entity, nothing to do
+      continue;
+    }
+    if (!mobileEntity->movement) {
       // Entity is not moving
       continue;
     }
-    const auto &movement = *i.second.movement;
+    const auto &movement = *mobileEntity->movement;
     const auto currentTime = std::chrono::high_resolution_clock::now();
     const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-movement.startTime).count();
     sro::Position currentPosition;
-    if (const auto *destPosPtr = std::get_if<Movement::kToDestination>(&movement.destPosOrAngle)) {
+    if (const auto *destPosPtr = std::get_if<entity_data::Movement::kToDestination>(&movement.destPosOrAngle)) {
       const auto totalDistanceToTravel = sro::position_math::calculateDistance2D(movement.srcPos, *destPosPtr);
       const auto totalSecondsToTravel = totalDistanceToTravel/movement.speed;
       const double fractionTraveled = std::min(1.0, elapsedTimeMs / (totalSecondsToTravel*1000.0));
       currentPosition = sro::position_math::interpolateBetweenPoints(movement.srcPos, *destPosPtr, fractionTraveled);
     } else {
-      const auto movementAngle = std::get<Movement::kTowardAngle>(movement.destPosOrAngle);
+      const auto movementAngle = std::get<entity_data::Movement::kTowardAngle>(movement.destPosOrAngle);
       const auto totalDistanceTraveled = elapsedTimeMs/1000.0 * movement.speed;
       currentPosition = sro::position_math::getNewPositionGivenAngleAndDistance(movement.srcPos, movementAngle, totalDistanceTraveled);
     }
@@ -406,6 +416,30 @@ void MainWindow::clearPackets() {
 // ===================================================Bot updates===================================================
 // =================================================================================================================
 
+namespace {
+
+qreal sroAngleToQtAngle(const sro::Angle angle) {
+  // Silkroad angle 0 means right, Qt 0 means down
+  // Silkroad angle is uint16 min to max, Qt is degrees (0-359)
+  int int32Angle = std::numeric_limits<uint16_t>::max() - angle;
+  // Rotate 270 degrees counterclockwise (90 degrees clockwise)
+  int32Angle = (int32Angle + 3 * (1<<14)) % (1<<16);
+  // Transform from [0, uint16_max) to [0,360)
+  return 360 * static_cast<double>(int32Angle) / std::numeric_limits<uint16_t>::max();
+}
+
+qreal calculateAngleFromMovement(const entity_data::Movement &movement) {
+  sro::Angle angle;
+  if (const auto *destPosPtr = std::get_if<entity_data::Movement::kToDestination>(&movement.destPosOrAngle)) {
+    angle = sro::position_math::calculateAngleOfLine(movement.srcPos, *destPosPtr);
+  } else {
+    angle = std::get<entity_data::Movement::kTowardAngle>(movement.destPosOrAngle);
+  }
+  return sroAngleToQtAngle(angle);
+}
+
+} // anonymous namespace
+
 void MainWindow::onCharacterSpawn() {
   // Reset item list
   ui->characterInventoryListWidget->clear();
@@ -413,43 +447,43 @@ void MainWindow::onCharacterSpawn() {
 }
 
 void MainWindow::onCharacterHpUpdateChanged(uint32_t currentHp) {
-  characterData_.currentHp = currentHp;
-  if (characterData_.currentHp > ui->hpProgressBar->maximum() && ui->hpProgressBar->maximum() != 0) {
+  selfData_.currentHp = currentHp;
+  if (selfData_.currentHp > ui->hpProgressBar->maximum() && ui->hpProgressBar->maximum() != 0) {
     std::cout << "Whoa, setting value to something larger than max" << std::endl;
-    std::cout << "Max is " << ui->hpProgressBar->maximum() << " and we're setting it to " << characterData_.currentHp << std::endl;
+    std::cout << "Max is " << ui->hpProgressBar->maximum() << " and we're setting it to " << selfData_.currentHp << std::endl;
   }
-  ui->hpProgressBar->setValue(characterData_.currentHp);
+  ui->hpProgressBar->setValue(selfData_.currentHp);
 }
 
 void MainWindow::onCharacterMpUpdateChanged(uint32_t currentMp) {
-  characterData_.currentMp = currentMp;
-  if (characterData_.currentMp > ui->mpProgressBar->maximum() && ui->mpProgressBar->maximum() != 0) {
+  selfData_.currentMp = currentMp;
+  if (selfData_.currentMp > ui->mpProgressBar->maximum() && ui->mpProgressBar->maximum() != 0) {
     std::cout << "Whoa, setting value to something larger than max" << std::endl;
-    std::cout << "Max is " << ui->mpProgressBar->maximum() << " and we're setting it to " << characterData_.currentMp << std::endl;
+    std::cout << "Max is " << ui->mpProgressBar->maximum() << " and we're setting it to " << selfData_.currentMp << std::endl;
   }
-  ui->mpProgressBar->setValue(characterData_.currentMp);
+  ui->mpProgressBar->setValue(selfData_.currentMp);
 }
 
 void MainWindow::onCharacterMaxHpMpUpdateChanged(uint32_t maxHp, uint32_t maxMp) {
-  characterData_.maxHp = maxHp;
-  characterData_.maxMp = maxMp;
+  selfData_.maxHp = maxHp;
+  selfData_.maxMp = maxMp;
   // Overflow in a progress bar is undesireable. If we get a new max value, we will make sure that the current value reflects that
   // Need to set max before setting value to avoid potential overflow
-  ui->hpProgressBar->setMaximum(*characterData_.maxHp);
-  ui->hpProgressBar->setValue(std::min(static_cast<uint32_t>(characterData_.currentHp), *characterData_.maxHp));
-  ui->mpProgressBar->setMaximum(*characterData_.maxMp);
-  ui->mpProgressBar->setValue(std::min(static_cast<uint32_t>(characterData_.currentMp), *characterData_.maxMp));
+  ui->hpProgressBar->setMaximum(*selfData_.maxHp);
+  ui->hpProgressBar->setValue(std::min(static_cast<uint32_t>(selfData_.currentHp), *selfData_.maxHp));
+  ui->mpProgressBar->setMaximum(*selfData_.maxMp);
+  ui->mpProgressBar->setValue(std::min(static_cast<uint32_t>(selfData_.currentMp), *selfData_.maxMp));
 }
 
 void MainWindow::onCharacterLevelUpdate(int32_t level, int64_t expRequired) {
-  characterData_.expRequired = expRequired;
+  selfData_.expRequired = expRequired;
   ui->characterLevelLabel->setText(QLocale(QLocale::English).toString(level));
-  ui->characterExperienceProgressBar->setMaximum(characterData_.expRequired);
+  ui->characterExperienceProgressBar->setMaximum(selfData_.expRequired);
 }
 
 void MainWindow::onCharacterExperienceUpdate(uint64_t currentExperience, uint32_t currentSpExperience) {
   if (ui->characterSpProgressBar->maximum() == 0) {
-    ui->characterSpProgressBar->setMaximum(characterData_.spExpRequired);
+    ui->characterSpProgressBar->setMaximum(selfData_.spExpRequired);
   }
   ui->characterExperienceProgressBar->setValue(currentExperience);
   ui->characterSpProgressBar->setValue(currentSpExperience);
@@ -475,14 +509,27 @@ void MainWindow::onGuildStorageGoldAmountUpdate(uint64_t goldAmount) {
   updateGoldLabel(ui->guildStorageGoldAmountLabel, goldAmount);
 }
 
+void MainWindow::onCharacterPositionChanged(sro::Position currentPosition) {
+  if (selfData_.movement) {
+    // We are moving, update where we are
+    selfData_.movement->startTime = std::chrono::high_resolution_clock::now();
+    selfData_.movement->srcPos = currentPosition;
+    // The running movement timer will move the item within the scene
+  } else {
+    // We are not moving, we need to move the position of the graphics item ourself
+    updateDisplayedPosition(currentPosition);
+  }
+}
+
 void MainWindow::onCharacterMovementBeganToDest(sro::Position currentPosition, sro::Position destinationPosition, float speed) {
   // Save info
-  auto &movement = characterData_.movement.emplace();
+  auto &movement = selfData_.movement.emplace();
   movement.speed = speed;
   movement.startTime = std::chrono::high_resolution_clock::now();
   movement.srcPos = currentPosition;
   movement.destPosOrAngle = destinationPosition;
   triggerMovementTimer();
+  updateDisplayedAngle(calculateAngleFromMovement(movement));
   updateDisplayedPosition(currentPosition);
 }
 
@@ -492,28 +539,44 @@ void MainWindow::updateDisplayedPosition(const sro::Position &position) {
   ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
 
   // Update map
-  if (entityGraphicsItem_ == nullptr) {
+  if (selfGraphicsItem_ == nullptr) {
     // Dont yet have a position marker for ourself
-    entityGraphicsItem_ = new EntityGraphicsItem(sro::types::EntityType::kSelf);
-    mapScene_->addItem(entityGraphicsItem_);
+    selfGraphicsItem_ = new map::BotCharacterGraphicsItem();
+    mapScene_->addItem(selfGraphicsItem_);
   }
   auto mapPosition = sroPositionToMapPosition(position);
-  entityGraphicsItem_->setPos(mapPosition);
+  selfGraphicsItem_->setPos(mapPosition);
+  ui->navmeshGraphicsView->centerOn(mapPosition);
+}
+
+void MainWindow::updateDisplayedAngle(qreal angle) {
+  // Update map
+  if (selfGraphicsItem_ == nullptr) {
+    // Dont yet have a position marker for ourself
+    selfGraphicsItem_ = new map::BotCharacterGraphicsItem();
+    mapScene_->addItem(selfGraphicsItem_);
+  }
+  selfGraphicsItem_->setAngle(angle);
 }
 
 void MainWindow::onCharacterMovementBeganTowardAngle(sro::Position currentPosition, uint16_t movementAngle, float speed) {
-  auto &movement = characterData_.movement.emplace();
+  auto &movement = selfData_.movement.emplace();
   movement.speed = speed;
   movement.startTime = std::chrono::high_resolution_clock::now();
   movement.srcPos = currentPosition;
   movement.destPosOrAngle = movementAngle;
   triggerMovementTimer();
+  updateDisplayedAngle(calculateAngleFromMovement(movement));
   updateDisplayedPosition(currentPosition);
 }
 
 void MainWindow::onCharacterMovementEnded(sro::Position position) {
   killMovementTimer();
   updateDisplayedPosition(position);
+}
+
+void MainWindow::onCharacterNotMovingAngleChanged(sro::Angle angle) {
+  updateDisplayedAngle(sroAngleToQtAngle(angle));
 }
 
 void MainWindow::onRegionNameUpdate(const std::string &regionName) {
@@ -540,11 +603,69 @@ void MainWindow::onGuildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, 
   updateItemList(ui->guildStorageListWidget, slotIndex, quantity, itemName);
 }
 
-void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, sro::types::EntityType entityType) {
-  auto *item = new EntityGraphicsItem(entityType);
+void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, broadcast::EntityType entityType) {
+  std::unique_ptr<entity_data::Entity> entity;
+  // Create an entity object
+  switch (entityType) {
+    case broadcast::EntityType::kSelf:
+      throw std::runtime_error("Right now, we dont expect ourself to be spawning");
+    case broadcast::EntityType::kCharacter:
+    case broadcast::EntityType::kPlayerCharacter:
+    case broadcast::EntityType::kNonplayerCharacter:
+    case broadcast::EntityType::kMonsterGeneral:
+    case broadcast::EntityType::kMonsterChampion:
+    case broadcast::EntityType::kMonsterGiant:
+    case broadcast::EntityType::kMonsterElite:
+    case broadcast::EntityType::kMonsterUnique:
+    case broadcast::EntityType::kMonsterPartyGeneral:
+    case broadcast::EntityType::kMonsterPartyChampion:
+    case broadcast::EntityType::kMonsterPartyGiant:
+      entity = std::make_unique<entity_data::Character>();
+      break;
+    case broadcast::EntityType::kItemCommon:
+    case broadcast::EntityType::kItemRare:
+    case broadcast::EntityType::kItemSox:
+    case broadcast::EntityType::kPortal:
+      entity = std::make_unique<entity_data::Entity>();
+      break;
+    default:
+      throw std::runtime_error("There should be no other entity types");
+  }
+  entity->globalId = globalId;
+  entity->entityType = entityType;
+
+  QGraphicsItem *item;
+  if (entityType == broadcast::EntityType::kItemCommon ||
+      entityType == broadcast::EntityType::kItemRare ||
+      entityType == broadcast::EntityType::kItemSox) {
+    item = new map::ItemGraphicsItem(entityType);
+  } else {
+    item = new map::CharacterGraphicsItem(entityType);
+  }
   mapScene_->addItem(item);
   auto mapPosition = sroPositionToMapPosition(position);
   item->setPos(mapPosition);
+  [](auto *item, const auto type) {
+    const std::map<broadcast::EntityType, qreal> entityZValues = {
+      {broadcast::EntityType::kPortal, 1},
+      {broadcast::EntityType::kCharacter, 1},
+      {broadcast::EntityType::kNonplayerCharacter, 2},
+      {broadcast::EntityType::kItemCommon, 3},
+      {broadcast::EntityType::kItemRare, 4},
+      {broadcast::EntityType::kItemSox, 5},
+      {broadcast::EntityType::kPlayerCharacter, 6},
+      {broadcast::EntityType::kSelf, 7},
+      {broadcast::EntityType::kMonsterGeneral, 8},
+      {broadcast::EntityType::kMonsterChampion, 9},
+      {broadcast::EntityType::kMonsterPartyGeneral, 10},
+      {broadcast::EntityType::kMonsterElite, 11},
+      {broadcast::EntityType::kMonsterGiant, 12},
+      {broadcast::EntityType::kMonsterPartyChampion, 13},
+      {broadcast::EntityType::kMonsterPartyGiant, 14},
+      {broadcast::EntityType::kMonsterUnique, 15},
+    };
+    item->setZValue(entityZValues.at(type));
+  }(item, entityType);
   if (auto it = entityGraphicsItemMap_.find(globalId); it != entityGraphicsItemMap_.end()) {
     // Already have an item here, delete it, we'll replace it
 
@@ -556,7 +677,7 @@ void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, sro:
   entityGraphicsItemMap_[globalId] = item;
 
   // Add entity to entityData map
-  entityData_[globalId] = EntityData{globalId};
+  entityData_.emplace(globalId, std::move(entity));
 }
 
 void MainWindow::onEntityDespawned(uint32_t globalId) {
@@ -579,15 +700,15 @@ void MainWindow::onEntityDespawned(uint32_t globalId) {
 }
 
 void MainWindow::onEntityPositionChanged(sro::scalar_types::EntityGlobalId globalId, sro::Position position) {
-  auto it = entityData_.find(globalId);
-  if (it == entityData_.end()) {
+  if (!haveEntity(globalId)) {
     // Not tracking this entity
     return;
   }
-  if (it->second.movement) {
+  auto &mobileEntity = getEntity<entity_data::MobileEntity>(globalId);
+  if (mobileEntity.movement) {
     // Entity is moving, update where it is
-    it->second.movement->startTime = std::chrono::high_resolution_clock::now();
-    it->second.movement->srcPos = position;
+    mobileEntity.movement->startTime = std::chrono::high_resolution_clock::now();
+    mobileEntity.movement->srcPos = position;
     // The running movement timer will move the item within the scene
   } else {
     // Entity is not moving, we need to move the position of the graphics item ourself
@@ -601,13 +722,12 @@ void MainWindow::onEntityPositionChanged(sro::scalar_types::EntityGlobalId globa
 }
 
 void MainWindow::onEntityMovementBeganToDest(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, sro::Position destinationPosition, float speed) {
-  auto it = entityData_.find(globalId);
-  if (it == entityData_.end()) {
+  if (!haveEntity(globalId)) {
     // Not tracking this entity
     return;
   }
-  // Save info
-  auto &movement = it->second.movement.emplace();
+  auto &mobileEntity = getEntity<entity_data::MobileEntity>(globalId);
+  auto &movement = mobileEntity.movement.emplace();
   movement.speed = speed;
   movement.startTime = std::chrono::high_resolution_clock::now();
   movement.srcPos = currentPosition;
@@ -616,12 +736,12 @@ void MainWindow::onEntityMovementBeganToDest(sro::scalar_types::EntityGlobalId g
 }
 
 void MainWindow::onEntityMovementBeganTowardAngle(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, uint16_t movementAngle, float speed) {
-  auto it = entityData_.find(globalId);
-  if (it == entityData_.end()) {
+  if (!haveEntity(globalId)) {
     // Not tracking this entity
     return;
   }
-  auto &movement = it->second.movement.emplace();
+  auto &mobileEntity = getEntity<entity_data::MobileEntity>(globalId);
+  auto &movement = mobileEntity.movement.emplace();
   movement.speed = speed;
   movement.startTime = std::chrono::high_resolution_clock::now();
   movement.srcPos = currentPosition;
@@ -631,15 +751,27 @@ void MainWindow::onEntityMovementBeganTowardAngle(sro::scalar_types::EntityGloba
 
 void MainWindow::onEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId, sro::Position position) {
   // Cancel movement if it exists
-  auto it = entityData_.find(globalId);
-  if (it == entityData_.end()) {
+  if (!haveEntity(globalId)) {
     // Not tracking this entity
     return;
   }
-  if (it->second.movement) {
-    it->second.movement.reset();
+  auto &mobileEntity = getEntity<entity_data::MobileEntity>(globalId);
+  if (mobileEntity.movement) {
+    mobileEntity.movement.reset();
   }
   updateEntityDisplayedPosition(globalId, position);
+}
+
+void MainWindow::onEntityLifeStateChanged(sro::scalar_types::EntityGlobalId globalId, sro::entity::LifeState lifeState) {
+  if (lifeState == sro::entity::LifeState::kDead) {
+    auto it = entityGraphicsItemMap_.find(globalId);
+    if (it == entityGraphicsItemMap_.end()) {
+      // No map item for this entity
+      return;
+    }
+    auto &characterEntityGraphicsItem = dynamic_cast<map::CharacterGraphicsItem&>(*it->second);
+    characterEntityGraphicsItem.setDead();
+  }
 }
 
 void MainWindow::updateEntityDisplayedPosition(sro::scalar_types::EntityGlobalId globalId, const sro::Position &position) {
@@ -654,11 +786,17 @@ void MainWindow::updateEntityDisplayedPosition(sro::scalar_types::EntityGlobalId
   it->second->setPos(mapPosition);
 }
 
+bool MainWindow::haveEntity(sro::scalar_types::EntityGlobalId globalId) {
+  return entityData_.find(globalId) != entityData_.end();
+}
+
 namespace {
 
 QImage convertTexture2dToQImage(const gli::texture2d &texture2d) {
   if (texture2d.format() != gli::FORMAT_RGBA_DXT1_UNORM_BLOCK8) {
-    throw std::runtime_error("Trying to convery wrong texture");
+    return {};
+    // TODO: Why does this happen?
+    throw std::runtime_error("Trying to convert wrong texture");
   }
   if (texture2d.levels() < 1) {
     throw std::runtime_error("Have texture with no levels");

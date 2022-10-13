@@ -1,10 +1,11 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "characterData.hpp"
-#include "entityGraphicsItem.hpp"
+#include "entityData/entity.hpp"
+#include "entityData/self.hpp"
 #include "eventHandler.hpp"
 #include "itemListWidget.hpp"
+#include "map/botCharacterGraphicsItem.hpp"
 #include "requester.hpp"
 
 #include <silkroad_lib/navmesh/navmesh.h>
@@ -21,6 +22,7 @@
 
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -41,14 +43,14 @@ private:
   zmq::context_t context_;
   EventHandler eventHandler_{context_};
   Requester requester_{context_};
-  CharacterData characterData_;
+  entity_data::Self selfData_;
   QTimer *movementUpdateTimer_{nullptr};
   QGraphicsScene *mapScene_{new QGraphicsScene(this)};
   std::optional<sro::navmesh::Navmesh> navmesh_;
   std::optional<sro::navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
-  EntityGraphicsItem *entityGraphicsItem_{nullptr};
-  std::map<uint32_t, EntityGraphicsItem*> entityGraphicsItemMap_;
-  std::map<sro::scalar_types::EntityGlobalId, EntityData> entityData_;
+  map::BotCharacterGraphicsItem *selfGraphicsItem_{nullptr};
+  std::map<uint32_t, QGraphicsItem*> entityGraphicsItemMap_;
+  std::map<sro::scalar_types::EntityGlobalId, std::unique_ptr<entity_data::Entity>> entityData_;
 
   QTimer *entityMovementUpdateTimer_{nullptr};
 
@@ -69,8 +71,28 @@ private:
   void updateItemList(ItemListWidget *itemListWidget, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void updateGoldLabel(QLabel *label, uint64_t goldAmount);
   void updateDisplayedPosition(const sro::Position &position);
+  void updateDisplayedAngle(qreal angle);
   QPointF sroPositionToMapPosition(const sro::Position &position) const;
   void updateEntityDisplayedPosition(sro::scalar_types::EntityGlobalId globalId, const sro::Position &position);
+  bool haveEntity(sro::scalar_types::EntityGlobalId globalId);
+
+  template<typename EntityType>
+  EntityType& getEntity(sro::scalar_types::EntityGlobalId globalId) {
+    const auto it = entityData_.find(globalId);
+    if (it == entityData_.end()) {
+      throw std::runtime_error("No tracking requested entity");
+    }
+    return dynamic_cast<EntityType&>(*it->second.get());
+  }
+
+  template<typename EntityType>
+  EntityType* tryGetEntity(sro::scalar_types::EntityGlobalId globalId) {
+    const auto it = entityData_.find(globalId);
+    if (it == entityData_.end()) {
+      return nullptr;
+    }
+    return dynamic_cast<EntityType*>(it->second.get());
+  }
 
 private slots:
   // UI actions
@@ -96,21 +118,24 @@ public slots:
   void onInventoryGoldAmountUpdate(uint64_t goldAmount);
   void onStorageGoldAmountUpdate(uint64_t goldAmount);
   void onGuildStorageGoldAmountUpdate(uint64_t goldAmount);
+  void onCharacterPositionChanged(sro::Position currentPosition);
   void onCharacterMovementBeganToDest(sro::Position currentPosition, sro::Position destinationPosition, float speed);
   void onCharacterMovementBeganTowardAngle(sro::Position currentPosition, uint16_t movementAngle, float speed);
   void onCharacterMovementEnded(sro::Position position);
+  void onCharacterNotMovingAngleChanged(sro::Angle angle);
   void onRegionNameUpdate(const std::string &regionName);
   void onCharacterInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void onAvatarInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void onCosInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void onStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void onGuildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
-  void onEntitySpawned(uint32_t globalId, sro::Position position, sro::types::EntityType entityType);
+  void onEntitySpawned(uint32_t globalId, sro::Position position, broadcast::EntityType entityType);
   void onEntityDespawned(uint32_t globalId);
   void onEntityPositionChanged(sro::scalar_types::EntityGlobalId globalId, sro::Position position);
   void onEntityMovementBeganToDest(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, sro::Position destinationPosition, float speed);
   void onEntityMovementBeganTowardAngle(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, uint16_t movementAngle, float speed);
   void onEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId, sro::Position position);
+  void onEntityLifeStateChanged(sro::scalar_types::EntityGlobalId globalId, sro::entity::LifeState lifeState);
 };
 
 #endif // MAINWINDOW_H

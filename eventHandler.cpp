@@ -2,31 +2,18 @@
 
 namespace {
 
-sro::types::EntityType entityTypeFromProtoEntityType(broadcast::EntityType type) {
-  switch (type) {
-    case broadcast::EntityType::kSelf:
-      return sro::types::EntityType::kSelf;
-      break;
-    case broadcast::EntityType::kCharacter:
-      return sro::types::EntityType::kCharacter;
-      break;
-    case broadcast::EntityType::kPlayerCharacter:
-      return sro::types::EntityType::kPlayerCharacter;
-      break;
-    case broadcast::EntityType::kNonplayerCharacter:
-      return sro::types::EntityType::kNonplayerCharacter;
-      break;
-    case broadcast::EntityType::kMonster:
-      return sro::types::EntityType::kMonster;
-      break;
-    case broadcast::EntityType::kItem:
-      return sro::types::EntityType::kItem;
-      break;
-    case broadcast::EntityType::kPortal:
-      return sro::types::EntityType::kPortal;
-      break;
+sro::entity::LifeState lifeStateFromProto(const broadcast::LifeState lifeState) {
+  switch (lifeState) {
+    case broadcast::LifeState::kEmbryo:
+      return sro::entity::LifeState::kEmbryo;
+    case broadcast::LifeState::kAlive:
+      return sro::entity::LifeState::kAlive;
+    case broadcast::LifeState::kDead:
+      return sro::entity::LifeState::kDead;
+    case broadcast::LifeState::kGone:
+      return sro::entity::LifeState::kGone;
     default:
-      throw std::runtime_error("Unknown entity type from proto");
+      throw std::runtime_error("Unknown lifestate");
   }
 }
 
@@ -113,6 +100,13 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         }
         break;
       }
+    case broadcast::BroadcastMessage::BodyCase::kCharacterPositionChanged: {
+        const broadcast::CharacterPositionChanged &msg = message.characterpositionchanged();
+        const broadcast::Position &pos = msg.position();
+        sro::Position position(pos.regionid(), pos.x(), pos.y(), pos.z());
+        emit characterPositionChanged(position);
+        break;
+      }
     case broadcast::BroadcastMessage::BodyCase::kCharacterMovementBegan: {
         const broadcast::CharacterMovementBegan &msg = message.charactermovementbegan();
         const broadcast::Position &currPos = msg.currentposition();
@@ -143,6 +137,11 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         emit characterMovementEnded(currentPosition);
         break;
       }
+    case broadcast::BroadcastMessage::BodyCase::kCharacterNotMovingAngleChanged: {
+        const broadcast::CharacterNotMovingAngleChanged &msg = message.characternotmovinganglechanged();
+        emit characterNotMovingAngleChanged(msg.angle());
+        break;
+      }
     case broadcast::BroadcastMessage::BodyCase::kRegionNameUpdate: {
         const broadcast::RegionNameUpdate &msg = message.regionnameupdate();
         emit regionNameUpdate(msg.name());
@@ -171,8 +170,7 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         const broadcast::EntitySpawned &msg = message.entityspawned();
         const broadcast::Position &pos = msg.position();
         sro::Position sroPos(pos.regionid(), pos.x(), pos.y(), pos.z());
-        sro::types::EntityType entityType = entityTypeFromProtoEntityType(msg.entitytype());
-        emit entitySpawned(msg.globalid(), sroPos, entityType);
+        emit entitySpawned(msg.globalid(), sroPos, msg.entitytype());
         break;
       }
     case broadcast::BroadcastMessage::BodyCase::kEntityDespawned: {
@@ -219,6 +217,13 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         const broadcast::Position &currPos = charMovementMsg.currentposition();
         sro::Position currentPosition(currPos.regionid(), currPos.x(), currPos.y(), currPos.z());
         emit entityMovementEnded(entityId, currentPosition);
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kEntityLifeStateChanged: {
+        const broadcast::EntityLifeStateChanged &msg = message.entitylifestatechanged();
+        const auto entityId = msg.globalid();
+        const auto lifeState = lifeStateFromProto(msg.lifestate());
+        emit entityLifeStateChanged(entityId, lifeState);
         break;
       }
     default:

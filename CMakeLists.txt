@@ -27,10 +27,9 @@ set(TS_FILES hyperbot-ui_en_US.ts)
 
 set(PROJECT_SOURCES
   main.cpp
-  characterData.cpp
-  characterData.hpp
-  entityGraphicsItem.cpp
-  entityGraphicsItem.hpp
+  entityData/common.hpp
+  entityData/entity.hpp
+  entityData/self.hpp
   eventHandler.cpp
   eventHandler.hpp
   experienceProgressBar.cpp
@@ -41,6 +40,12 @@ set(PROJECT_SOURCES
   itemListWidgetItem.hpp
   mainwindow.cpp
   mainwindow.h
+  map/botCharacterGraphicsItem.cpp
+  map/botCharacterGraphicsItem.hpp
+  map/characterGraphicsItem.cpp
+  map/characterGraphicsItem.hpp
+  map/itemGraphicsItem.cpp
+  map/itemGraphicsItem.hpp
   navmeshView.cpp
   navmeshView.hpp
   noScaleLabel.cpp
@@ -53,7 +58,6 @@ set(PROJECT_SOURCES
   regionGraphicsItem.hpp
   requester.cpp
   requester.hpp
-  sro_types.hpp
 
   mainwindow.ui
   ${TS_FILES}
@@ -61,6 +65,7 @@ set(PROJECT_SOURCES
 
 # For proto files
 include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}
 )
 
