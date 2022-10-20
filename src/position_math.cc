@@ -5,18 +5,17 @@
 #include <cmath>
 #include <limits>
 #include <stdexcept>
-
 namespace sro::position_math {
 
-Angle calculateAngleOfLine(const Position &srcPos, const Position &destPos) {
+std::pair<float,float> calculateOffset2d(const Position &srcPos, const Position &destPos) {
   using sro::game_constants::kRegionSize;
   if (srcPos.isDungeon() ^ destPos.isDungeon()) {
-    throw std::runtime_error("Cannot calculate distances between different worlds");
+    throw std::runtime_error("Cannot calculate offset between different worlds");
   }
   float dx, dz;
   if (srcPos.isDungeon()) {
     if (srcPos.dungeonId() != destPos.dungeonId()) {
-      throw std::runtime_error("Cannot calculate distance between different dungeons");
+      throw std::runtime_error("Cannot calculate offset between different dungeons");
     }
     // Simple distance calculation
     dx = destPos.xOffset() - srcPos.xOffset();
@@ -26,6 +25,10 @@ Angle calculateAngleOfLine(const Position &srcPos, const Position &destPos) {
     dx = (destPos.xSector() - srcPos.xSector()) * kRegionSize + (destPos.xOffset() - srcPos.xOffset());
     dz = (destPos.zSector() - srcPos.zSector()) * kRegionSize + (destPos.zOffset() - srcPos.zOffset());
   }
+  return {dx, dz};
+}
+Angle calculateAngleOfLine(const Position &srcPos, const Position &destPos) {
+  const auto [dx, dz] = calculateOffset2d(srcPos, destPos);
   double angle = std::atan(dz/dx);
   if (dx < 0) {
     angle += constants::kPi;
@@ -35,25 +38,9 @@ Angle calculateAngleOfLine(const Position &srcPos, const Position &destPos) {
   return std::round((angle / constants::k2Pi) * std::numeric_limits<Angle>::max());
 }
 
-float calculateDistance2D(const Position &srcPos, const Position &destPos) {
-  using sro::game_constants::kRegionSize;
-  if (srcPos.isDungeon() ^ destPos.isDungeon()) {
-    throw std::runtime_error("Cannot calculate distances between different worlds");
-  }
-  if (srcPos.isDungeon()) {
-    if (srcPos.dungeonId() != destPos.dungeonId()) {
-      throw std::runtime_error("Cannot calculate distance between different dungeons");
-    }
-    // Simple distance calculation
-    auto xDistance = destPos.xOffset() - srcPos.xOffset();
-    auto zDistance = destPos.zOffset() - srcPos.zOffset();
-    return sqrt(xDistance*xDistance + zDistance*zDistance);
-  } else {
-    // Need to account for regions
-    auto xDistance = (destPos.xSector() - srcPos.xSector()) * kRegionSize + (destPos.xOffset() - srcPos.xOffset());
-    auto zDistance = (destPos.zSector() - srcPos.zSector()) * kRegionSize + (destPos.zOffset() - srcPos.zOffset());
-    return sqrt(xDistance*xDistance + zDistance*zDistance);
-  }
+float calculateDistance2d(const Position &srcPos, const Position &destPos) {
+  const auto [dx, dz] = calculateOffset2d(srcPos, destPos);
+  return sqrt(dx*dx + dz*dz);
 }
 
 Position interpolateBetweenPoints(const Position &srcPos, const Position &destPos, float percent) {
