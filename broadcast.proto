@@ -152,6 +152,17 @@ message EntityLifeStateChanged {
   LifeState lifeState = 2;
 }
 
+message Circle {
+  Position center = 1;
+  float radius = 2;
+}
+
+message TrainingAreaSet {
+  oneof geometry {
+    Circle circle = 1;
+  }
+}
+
 // Broadcast message
 
 message BroadcastMessage {
@@ -177,5 +188,7 @@ message BroadcastMessage {
     EntityMovementBegan entityMovementBegan = 19;
     EntityMovementEnded entityMovementEnded = 20;
     EntityLifeStateChanged entityLifeStateChanged = 21;
+    TrainingAreaSet trainingAreaSet = 22;
+    google.protobuf.Empty trainingAreaReset = 23;
   }
 }
