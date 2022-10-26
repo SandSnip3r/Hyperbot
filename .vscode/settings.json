@@ -89,6 +89,7 @@
     "random": "cpp",
     "valarray": "cpp",
     "condition_variable": "cpp",
-    "future": "cpp"
+    "future": "cpp",
+    "qgraphicsscenecontextmenuevent": "cpp"
   }
 }

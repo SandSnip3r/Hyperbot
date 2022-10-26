@@ -46,6 +46,8 @@ set(PROJECT_SOURCES
   map/characterGraphicsItem.hpp
   map/itemGraphicsItem.cpp
   map/itemGraphicsItem.hpp
+  map/trainingAreaGraphicsItem.cpp
+  map/trainingAreaGraphicsItem.hpp
   navmeshView.cpp
   navmeshView.hpp
   noScaleLabel.cpp

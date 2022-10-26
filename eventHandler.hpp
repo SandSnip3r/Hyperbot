@@ -54,6 +54,8 @@ signals:
   void entityMovementBeganTowardAngle(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, uint16_t movementAngle, float speed);
   void entityMovementEnded(sro::scalar_types::EntityGlobalId globalId, sro::Position position);
   void entityLifeStateChanged(sro::scalar_types::EntityGlobalId globalId, sro::entity::LifeState lifeState);
+  void trainingAreaCircleSet(sro::Position center, float radius);
+  void trainingAreaReset();
 private:
   zmq::context_t &context_;
   std::atomic<bool> run_;

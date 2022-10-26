@@ -6,6 +6,7 @@
 #include "eventHandler.hpp"
 #include "itemListWidget.hpp"
 #include "map/botCharacterGraphicsItem.hpp"
+#include "map/trainingAreaGraphicsItem.hpp"
 #include "requester.hpp"
 
 #include <silkroad_lib/navmesh/navmesh.h>
@@ -49,6 +50,7 @@ private:
   std::optional<sro::navmesh::Navmesh> navmesh_;
   std::optional<sro::navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
   map::BotCharacterGraphicsItem *selfGraphicsItem_{nullptr};
+  map::TrainingAreaGraphicsItem *trainingAreaGraphicsItem_{nullptr};
   std::map<uint32_t, QGraphicsItem*> entityGraphicsItemMap_;
   std::map<sro::scalar_types::EntityGlobalId, std::unique_ptr<entity_data::Entity>> entityData_;
 
@@ -136,6 +138,8 @@ public slots:
   void onEntityMovementBeganTowardAngle(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, uint16_t movementAngle, float speed);
   void onEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId, sro::Position position);
   void onEntityLifeStateChanged(sro::scalar_types::EntityGlobalId globalId, sro::entity::LifeState lifeState);
+  void onTrainingAreaCircleSet(sro::Position center, float radius);
+  void onTrainingAreaReset();
 };
 
 #endif // MAINWINDOW_H

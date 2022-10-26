@@ -48,6 +48,14 @@ void EventHandler::run() {
   }
 }
 
+namespace {
+
+sro::Position parsePosition(const broadcast::Position &pos) {
+  return {static_cast<sro::RegionId>(pos.regionid()), pos.x(), pos.y(), pos.z()};
+}
+
+} // namespace
+
 void EventHandler::handle(const broadcast::BroadcastMessage &message) {
   switch (message.body_case()) {
     case broadcast::BroadcastMessage::BodyCase::kCharacterSpawn: {
@@ -102,21 +110,16 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
       }
     case broadcast::BroadcastMessage::BodyCase::kCharacterPositionChanged: {
         const broadcast::CharacterPositionChanged &msg = message.characterpositionchanged();
-        const broadcast::Position &pos = msg.position();
-        sro::Position position(pos.regionid(), pos.x(), pos.y(), pos.z());
-        emit characterPositionChanged(position);
+        emit characterPositionChanged(parsePosition(msg.position()));
         break;
       }
     case broadcast::BroadcastMessage::BodyCase::kCharacterMovementBegan: {
         const broadcast::CharacterMovementBegan &msg = message.charactermovementbegan();
-        const broadcast::Position &currPos = msg.currentposition();
-        sro::Position currentPosition(currPos.regionid(), currPos.x(), currPos.y(), currPos.z());
+        const sro::Position currentPosition = parsePosition(msg.currentposition());
         const auto speed = msg.speed();
         switch (msg.destination_case()) {
           case broadcast::CharacterMovementBegan::DestinationCase::kDestinationPosition: {
-            const broadcast::Position &destPos = msg.destinationposition();
-            sro::Position destinationPosition(destPos.regionid(), destPos.x(), destPos.y(), destPos.z());
-            emit characterMovementBeganToDest(currentPosition, destinationPosition, speed);
+            emit characterMovementBeganToDest(currentPosition, parsePosition(msg.destinationposition()), speed);
             break;
           }
           case broadcast::CharacterMovementBegan::DestinationCase::kDestinationAngle: {
@@ -132,9 +135,7 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
       }
     case broadcast::BroadcastMessage::BodyCase::kCharacterMovementEnded: {
         const broadcast::CharacterMovementEnded &msg = message.charactermovementended();
-        const broadcast::Position &currPos = msg.currentposition();
-        sro::Position currentPosition(currPos.regionid(), currPos.x(), currPos.y(), currPos.z());
-        emit characterMovementEnded(currentPosition);
+        emit characterMovementEnded(parsePosition(msg.currentposition()));
         break;
       }
     case broadcast::BroadcastMessage::BodyCase::kCharacterNotMovingAngleChanged: {
@@ -168,9 +169,7 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
       }
     case broadcast::BroadcastMessage::BodyCase::kEntitySpawned: {
         const broadcast::EntitySpawned &msg = message.entityspawned();
-        const broadcast::Position &pos = msg.position();
-        sro::Position sroPos(pos.regionid(), pos.x(), pos.y(), pos.z());
-        emit entitySpawned(msg.globalid(), sroPos, msg.entitytype());
+        emit entitySpawned(msg.globalid(), parsePosition(msg.position()), msg.entitytype());
         break;
       }
     case broadcast::BroadcastMessage::BodyCase::kEntityDespawned: {
@@ -180,23 +179,18 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
       }
     case broadcast::BroadcastMessage::BodyCase::kEntityPositionChanged: {
         const broadcast::EntityPositionChanged &msg = message.entitypositionchanged();
-        const broadcast::Position &currPos = msg.position();
-        sro::Position currentPosition(currPos.regionid(), currPos.x(), currPos.y(), currPos.z());
-        emit entityPositionChanged(msg.globalid(), currentPosition);
+        emit entityPositionChanged(msg.globalid(), parsePosition(msg.position()));
         break;
       }
     case broadcast::BroadcastMessage::BodyCase::kEntityMovementBegan: {
         const broadcast::EntityMovementBegan &msg = message.entitymovementbegan();
         const auto entityId = msg.globalid();
         const broadcast::CharacterMovementBegan &charMovementMsg = msg.charactermovementbegan();
-        const broadcast::Position &currPos = charMovementMsg.currentposition();
-        sro::Position currentPosition(currPos.regionid(), currPos.x(), currPos.y(), currPos.z());
+        sro::Position currentPosition = parsePosition(charMovementMsg.currentposition());
         const auto speed = charMovementMsg.speed();
         switch (charMovementMsg.destination_case()) {
           case broadcast::CharacterMovementBegan::DestinationCase::kDestinationPosition: {
-            const broadcast::Position &destPos = charMovementMsg.destinationposition();
-            sro::Position destinationPosition(destPos.regionid(), destPos.x(), destPos.y(), destPos.z());
-            emit entityMovementBeganToDest(entityId, currentPosition, destinationPosition, speed);
+            emit entityMovementBeganToDest(entityId, currentPosition, parsePosition(charMovementMsg.destinationposition()), speed);
             break;
           }
           case broadcast::CharacterMovementBegan::DestinationCase::kDestinationAngle: {
@@ -214,9 +208,7 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         const broadcast::EntityMovementEnded &msg = message.entitymovementended();
         const broadcast::CharacterMovementEnded &charMovementMsg = msg.charactermovementended();
         const auto entityId = msg.globalid();
-        const broadcast::Position &currPos = charMovementMsg.currentposition();
-        sro::Position currentPosition(currPos.regionid(), currPos.x(), currPos.y(), currPos.z());
-        emit entityMovementEnded(entityId, currentPosition);
+        emit entityMovementEnded(entityId, parsePosition(charMovementMsg.currentposition()));
         break;
       }
     case broadcast::BroadcastMessage::BodyCase::kEntityLifeStateChanged: {
@@ -224,6 +216,22 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         const auto entityId = msg.globalid();
         const auto lifeState = lifeStateFromProto(msg.lifestate());
         emit entityLifeStateChanged(entityId, lifeState);
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kTrainingAreaSet: {
+        const broadcast::TrainingAreaSet &msg = message.trainingareaset();
+        switch (msg.geometry_case()) {
+          case broadcast::TrainingAreaSet::GeometryCase::kCircle: {
+            emit trainingAreaCircleSet(parsePosition(msg.circle().center()), msg.circle().radius());
+            break;
+          }
+          default:
+            throw std::runtime_error("Unhandled training area geometry");
+        }
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kTrainingAreaReset: {
+        emit trainingAreaReset();
         break;
       }
     default:

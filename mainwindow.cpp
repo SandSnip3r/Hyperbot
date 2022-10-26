@@ -236,6 +236,8 @@ void MainWindow::connectBotBroadcastMessages() {
   connect(&eventHandler_, &EventHandler::entityMovementBeganTowardAngle, this, &MainWindow::onEntityMovementBeganTowardAngle);
   connect(&eventHandler_, &EventHandler::entityMovementEnded, this, &MainWindow::onEntityMovementEnded);
   connect(&eventHandler_, &EventHandler::entityLifeStateChanged, this, &MainWindow::onEntityLifeStateChanged);
+  connect(&eventHandler_, &EventHandler::trainingAreaCircleSet, this, &MainWindow::onTrainingAreaCircleSet);
+  connect(&eventHandler_, &EventHandler::trainingAreaReset, this, &MainWindow::onTrainingAreaReset);
 }
 
 void MainWindow::connectPacketInjection() {
@@ -771,6 +773,24 @@ void MainWindow::onEntityLifeStateChanged(sro::scalar_types::EntityGlobalId glob
     }
     auto &characterEntityGraphicsItem = dynamic_cast<map::CharacterGraphicsItem&>(*it->second);
     characterEntityGraphicsItem.setDead();
+  }
+}
+
+void MainWindow::onTrainingAreaCircleSet(sro::Position center, float radius) {
+  if (trainingAreaGraphicsItem_) {
+    // Already have a training area graphics item
+    delete trainingAreaGraphicsItem_;
+  }
+  trainingAreaGraphicsItem_ = new map::TrainingAreaGraphicsItem(radius);
+  mapScene_->addItem(trainingAreaGraphicsItem_);
+  auto mapCenterPosition = sroPositionToMapPosition(center);
+  trainingAreaGraphicsItem_->setPos(mapCenterPosition);
+}
+
+void MainWindow::onTrainingAreaReset() {
+  if (trainingAreaGraphicsItem_) {
+    delete trainingAreaGraphicsItem_;
+    trainingAreaGraphicsItem_= nullptr;
   }
 }
 
