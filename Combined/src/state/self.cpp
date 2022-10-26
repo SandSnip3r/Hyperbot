@@ -118,7 +118,8 @@ void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePositi
 
 void Self::checkIfWillLeaveRegionAndSetTimer(broker::EventBroker &eventBroker) {
   if (!moving()) {
-    throw std::runtime_error("This function expects that we're moving");
+    // Not moving, nothing to do
+    return;
   }
   const auto currentPosition = position();
   if (destinationPosition) {
@@ -523,6 +524,18 @@ packet::structures::ItemMovement Self::getUserPurchaseRequest() const {
     throw std::runtime_error("Self: Trying to get user purchase request that does not exist");
   }
   return userPurchaseRequest_.value();
+}
+
+// =================================================================================================
+
+void Self::setTrainingAreaGeometry(std::unique_ptr<entity::Circle> &&geometry) {
+  trainingAreaGeometry = std::move(geometry);
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTrainingAreaSet));
+}
+
+void Self::resetTrainingAreaGeometry() {
+  trainingAreaGeometry.reset();
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTrainingAreaReset));
 }
 
 // =================================================================================================

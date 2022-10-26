@@ -44,6 +44,45 @@ EntityType Entity::entityType() const  {
   throw std::runtime_error("Cannot get entity type");
 }
 
+void MobileEntity::initializeAsMoving(const sro::Position &destinationPosition) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  this->moving_ = true;
+  this->startedMovingTime = std::chrono::high_resolution_clock::now();
+  this->destinationPosition = destinationPosition;
+}
+
+void MobileEntity::initializeAsMoving(sro::Angle destinationAngle) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  this->moving_ = true;
+  this->startedMovingTime = std::chrono::high_resolution_clock::now();
+  this->angle_ = destinationAngle;
+}
+
+void MobileEntity::registerGeometryBoundary(std::unique_ptr<Geometry> geometry, broker::EventBroker &eventBroker) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  LOG() << "Registered geometry for entity" << std::endl;
+  if (geometry_) {
+    throw std::runtime_error("MobileEntity already holds geometry");
+  }
+  geometry_ = std::move(geometry);
+  if (moving()) {
+    checkIfWillCrossGeometryBoundary(eventBroker);
+  }
+}
+
+void MobileEntity::resetGeometryBoundary(broker::EventBroker &eventBroker) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (geometry_) {
+    geometry_.reset();
+  }
+  cancelGeometryEvents(eventBroker);
+}
+
+void MobileEntity::cancelEvents(broker::EventBroker &eventBroker) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  privateCancelEvents(eventBroker);
+}
+
 bool MobileEntity::moving() const {
   return moving_;
 }
@@ -71,22 +110,11 @@ void MobileEntity::setSpeed(float walkSpeed, float runSpeed, broker::EventBroker
   this->walkSpeed = walkSpeed;
   this->runSpeed = runSpeed;
   if (moving()) {
-    // In order to be able to interpolate position in the future, we need to update these values
-    position_ = interpolatedPosition;
-    startedMovingTime = currentTime;
-
     if (destinationPosition) {
-      if (!movingEventId) {
-        throw std::runtime_error("We're moving towards some desitnation position, but there's no timer running");
-      }
-      // Update timer for new speed
-      eventBroker.cancelDelayedEvent(*movingEventId);
-      auto seconds = helpers::secondsToTravel(position_, *destinationPosition, privateCurrentSpeed());
-      movingEventId = eventBroker.publishDelayedEvent(std::make_unique<event::EntityMovementTimerEnded>(globalId), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+      privateSetMovingToDestination(interpolatedPosition, *destinationPosition, eventBroker);
+    } else {
+      privateSetMovingTowardAngle(interpolatedPosition, angle_, eventBroker);
     }
-
-    // Publish a movement began event since this is essentially creating a new movement
-    eventBroker.publishEvent(std::make_unique<event::EntityMovementBegan>(globalId));
   }
 }
 
@@ -145,16 +173,16 @@ void MobileEntity::setStationaryAtPosition(const sro::Position &position, broker
 void MobileEntity::syncPosition(const sro::Position &position, broker::EventBroker &eventBroker) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
   std::lock_guard<std::mutex> lock(mutex_);
-  const auto whereWeThoughtWeWere = interpolateCurrentPosition(currentTime);
-  position_ = position;
-  // TODO: Need angle?
   if (moving()) {
-    startedMovingTime = currentTime;
-    const auto offByDistance = sro::position_math::calculateDistance2D(whereWeThoughtWeWere, position);
-    // Might be worth recalculating travel time and starting a new timer
-    // TODO: Should we fire an event. This update might be worth sending to the UI at least
+    if (destinationPosition) {
+      privateSetMovingToDestination(position, *destinationPosition, eventBroker);
+    } else {
+      privateSetMovingTowardAngle(position, angle_, eventBroker);
+    }
+  } else {
+    position_ = position;
+    eventBroker.publishEvent(std::make_unique<event::EntityPositionUpdated>(globalId));
   }
-  eventBroker.publishEvent(std::make_unique<event::EntitySyncedPosition>(globalId));
 }
 
 void MobileEntity::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) {
@@ -183,11 +211,16 @@ void MobileEntity::movementTimerCompleted(broker::EventBroker &eventBroker) {
   eventBroker.publishEvent(std::make_unique<event::EntityMovementEnded>(globalId));
 }
 
-void MobileEntity::cancelMovement(broker::EventBroker &eventBroker) {
+void MobileEntity::privateCancelEvents(broker::EventBroker &eventBroker) {
   if (movingEventId) {
     eventBroker.cancelDelayedEvent(*movingEventId);
     movingEventId.reset();
   }
+  cancelGeometryEvents(eventBroker);
+}
+
+void MobileEntity::cancelMovement(broker::EventBroker &eventBroker) {
+  privateCancelEvents(eventBroker);
   moving_ = false;
   destinationPosition.reset();
 }
@@ -198,7 +231,7 @@ sro::Position MobileEntity::interpolateCurrentPosition(const std::chrono::high_r
   }
   auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-startedMovingTime).count();
   if (destinationPosition) {
-    auto totalDistance = sro::position_math::calculateDistance2D(position_, *destinationPosition);
+    auto totalDistance = sro::position_math::calculateDistance2d(position_, *destinationPosition);
     if (totalDistance < 0.0001 /* TODO: Use a double equal function */) {
       // We're at our destination
       return *destinationPosition;
@@ -293,6 +326,7 @@ void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Positi
   const auto seconds = helpers::secondsToTravel(position_, *this->destinationPosition, privateCurrentSpeed());
   eventBroker.publishEvent(std::make_unique<event::EntityMovementBegan>(globalId));
   movingEventId = eventBroker.publishDelayedEvent(std::make_unique<event::EntityMovementTimerEnded>(globalId), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+  checkIfWillCrossGeometryBoundary(eventBroker);
 }
 
 void MobileEntity::privateSetMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) {
@@ -309,20 +343,56 @@ void MobileEntity::privateSetMovingTowardAngle(const std::optional<sro::Position
   this->angle_ = angle;
 
   eventBroker.publishEvent(std::make_unique<event::EntityMovementBegan>(globalId));
+  checkIfWillCrossGeometryBoundary(eventBroker);
 }
 
-void MobileEntity::initializeAsMoving(const sro::Position &destinationPosition) {
-  this->moving_ = true;
-  this->startedMovingTime = std::chrono::high_resolution_clock::now();
-  this->destinationPosition = destinationPosition;
+void MobileEntity::checkIfWillCrossGeometryBoundary(broker::EventBroker &eventBroker) {
+  if (!geometry_) {
+    // No geometry to collide with
+    return;
+  }
+  const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto currentPosition = interpolateCurrentPosition(currentTime);
+
+  if (destinationPosition) {
+    // Moving to some destination
+    auto maybeTimeUntilEnter = geometry_->timeUntilEnter(currentPosition, *destinationPosition, privateCurrentSpeed());
+    if (maybeTimeUntilEnter) {
+      LOG() << " Entity will enter the geometry boundary in " << *maybeTimeUntilEnter << " second(s)" << std::endl;
+      // TODO: Need some way to reference the geometry from the event
+      enterGeometryEventId_ = eventBroker.publishDelayedEvent(std::make_unique<event::EntityEnteredGeometry>(globalId), std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilEnter)*1000)));
+    }
+    auto maybeTimeUntilExit = geometry_->timeUntilExit(currentPosition, *destinationPosition, privateCurrentSpeed());
+    if (maybeTimeUntilExit) {
+      LOG() << " Entity will exit the geometry boundary in " << *maybeTimeUntilExit << " second(s)" << std::endl;
+      // TODO: Need some way to reference the geometry from the event
+      exitGeometryEventId_ = eventBroker.publishDelayedEvent(std::make_unique<event::EntityExitedGeometry>(globalId), std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilExit)*1000)));
+    }
+  } else {
+    // Moving towards some angle
+    auto maybeTimeUntilEnter = geometry_->timeUntilEnter(currentPosition, angle_, privateCurrentSpeed());
+    if (maybeTimeUntilEnter) {
+      // TODO: Need some way to reference the geometry from the event
+      enterGeometryEventId_ = eventBroker.publishDelayedEvent(std::make_unique<event::EntityEnteredGeometry>(globalId), std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilEnter)*1000)));
+    }
+    auto maybeTimeUntilExit = geometry_->timeUntilExit(currentPosition, angle_, privateCurrentSpeed());
+    if (maybeTimeUntilExit) {
+      // TODO: Need some way to reference the geometry from the event
+      exitGeometryEventId_ = eventBroker.publishDelayedEvent(std::make_unique<event::EntityExitedGeometry>(globalId), std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilExit)*1000)));
+    }
+  }
 }
 
-void MobileEntity::initializeAsMoving(sro::Angle destinationAngle) {
-  this->moving_ = true;
-  this->startedMovingTime = std::chrono::high_resolution_clock::now();
-  this->angle_ = destinationAngle;
+void MobileEntity::cancelGeometryEvents(broker::EventBroker &eventBroker) {
+  if (enterGeometryEventId_) {
+    eventBroker.cancelDelayedEvent(*enterGeometryEventId_);
+    enterGeometryEventId_.reset();
+  }
+  if (exitGeometryEventId_) {
+    eventBroker.cancelDelayedEvent(*exitGeometryEventId_);
+    exitGeometryEventId_.reset();
+  }
 }
-  
 
 // ============================================================================================================================================
 

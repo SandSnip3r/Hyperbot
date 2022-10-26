@@ -1,7 +1,11 @@
 #include "stateMachine.hpp"
 
 #include "bot.hpp"
+#include "entity/geometry.hpp"
 #include "logging.hpp"
+
+#include "packet/building/clientAgentActionCommandRequest.hpp"
+
 #include "packet/building/clientAgentActionDeselectRequest.hpp"
 #include "packet/building/clientAgentActionSelectRequest.hpp"
 #include "packet/building/clientAgentActionTalkRequest.hpp"
@@ -15,20 +19,20 @@
 #include "math_helpers.h"
 
 #include <silkroad_lib/position_math.h>
-
+#include <silkroad_lib/game_constants.h>
 namespace state::machine {
 
-CommonStateMachine::CommonStateMachine(Bot &bot) : bot_(bot) {
+StateMachine::StateMachine(Bot &bot) : bot_(bot) {
 }
 
-void CommonStateMachine::pushBlockedOpcode(packet::Opcode opcode) {
+void StateMachine::pushBlockedOpcode(packet::Opcode opcode) {
   if (!bot_.proxy_.blockingOpcode(opcode)) {
     bot_.proxy_.blockOpcode(opcode);
     blockedOpcodes_.push_back(opcode);
   }
 }
 
-CommonStateMachine::~CommonStateMachine() {
+StateMachine::~StateMachine() {
   // Undo all blocked opcodes
   for (const auto opcode : blockedOpcodes_) {
     bot_.proxy_.unblockOpcode(opcode);
@@ -39,11 +43,14 @@ CommonStateMachine::~CommonStateMachine() {
 // ===============================================================Walking===============================================================
 // =====================================================================================================================================
 
-Walking::Walking(Bot &bot, const sro::Position &destinationPosition) : bot_(bot) {
+Walking::Walking(Bot &bot, const sro::Position &destinationPosition) : StateMachine(bot) {
   waypoints_ = calculatePathToDestination(destinationPosition);
 }
 
 void Walking::onUpdate(const event::Event *event) {
+  if (done()) {
+    return;
+  }
   if (bot_.selfState_.moving()) {
     // Still moving, nothing to do
     return;
@@ -51,26 +58,28 @@ void Walking::onUpdate(const event::Event *event) {
 
   // We're not moving
   // Did we just arrive at this waypoint?
-  if (sro::position_math::calculateDistance2D(bot_.selfState_.position(), waypoints_[currentWaypointIndex_]) < 1.0) { // TODO: Choose better measure of "close enough"
-    // Just arrived at the waypoint, increment index
+  while (sro::position_math::calculateDistance2d(bot_.selfState_.position(), waypoints_.at(currentWaypointIndex_)) < 1.0) { // TODO: Choose better measure of "close enough"
+    // Already at this waypoint, increment index
     ++currentWaypointIndex_;
     requestedMovement_ = false;
-  } else if (requestedMovement_) {
-    // Already asked to move, nothing to do
-    return;
+
+    if (done()) {
+      // Finished walking
+      return;
+    }
   }
 
-  // We are not moving, and we do not have a pending movement request
-  if (done()) {
-    // Finished walking
+  // Not yet done walking
+  if (requestedMovement_) {
+    // Already asked to move, nothing to do
     return;
   }
 
   // We are not moving, we're not at the current waypoint, and there's not a pending movement request
   // Send a request to move to the current waypoint
-  const auto &currentWaypoint = waypoints_[currentWaypointIndex_];
+  const auto &currentWaypoint = waypoints_.at(currentWaypointIndex_);
   const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint);
-  bot_.broker_.injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
+  bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
   requestedMovement_ = true;
 }
 
@@ -79,6 +88,10 @@ bool Walking::done() const {
 }
 
 std::vector<sro::Position> Walking::calculatePathToDestination(const sro::Position &destinationPosition) const {
+  if (sro::position_math::calculateDistance2d(bot_.selfState_.position(), destinationPosition) < 1.0) {
+    // Already at destination
+    return {};
+  }
   auto pathfindingResultPathToVectorOfPositions = [&, this](const auto &pathfindingShortestPath) {
     const auto &navmeshTriangulation = bot_.gameData_.navmeshTriangulation();
 
@@ -122,17 +135,44 @@ std::vector<sro::Position> Walking::calculatePathToDestination(const sro::Positi
 
     // Remove duplicates
     auto newEndIt = std::unique(waypoints.begin(), waypoints.end());
-    // auto newEndIt = std::unique(waypoints.begin(), waypoints.end(), [](const auto &lhs, const auto &rhs){
-    //   return lhs.regionId() == rhs.regionId() &&
-    //          lhs.xOffset()  == rhs.xOffset() &&
-    //          lhs.yOffset()  == rhs.yOffset() &&
-    //          lhs.zOffset()  == rhs.zOffset();
-    // });
     if (newEndIt != waypoints.end()) {
       LOG() << "Removed " << std::distance(newEndIt, waypoints.end()) << " duplicate waypoints" << std::endl;
       waypoints.erase(newEndIt, waypoints.end());
     }
     return waypoints;
+  };
+
+  auto breakUpLongMovements = [](std::vector<sro::Position> &waypoints) {
+    auto tooFar = [](const auto &srcWaypoint, const auto &destWaypoint) {
+      // The difference between a pair of xOffsets must be <= 1920.
+      // The difference between a pair of zOffsets must be <= 1920.
+      const auto [dx, dz] = sro::position_math::calculateOffset2d(srcWaypoint, destWaypoint);
+      return (std::abs(dx) > sro::game_constants::kRegionWidth ||
+              std::abs(dz) > sro::game_constants::kRegionHeight);
+    };
+    auto splitWaypoints = [](const auto &srcWaypoint, const auto &destWaypoint) {
+      const auto [dx, dz] = sro::position_math::calculateOffset2d(srcWaypoint, destWaypoint);
+      if (std::abs(dx) > std::abs(dz)) {
+        const double ratio = static_cast<double>(sro::game_constants::kRegionWidth) / std::abs(dx);
+        const auto newDxOffset = (dx > 0 ? 1 : -1) * sro::game_constants::kRegionWidth;
+        const double newDzOffset = dz * ratio;
+        return sro::position_math::createNewPositionWith2dOffset(destWaypoint, -newDxOffset, -newDzOffset);
+      } else {
+        const double ratio = static_cast<double>(sro::game_constants::kRegionWidth) / std::abs(dz);
+        const auto newDxOffset = dx * ratio;
+        const double newDzOffset = (dz > 0 ? 1 : -1) * sro::game_constants::kRegionWidth;
+        return sro::position_math::createNewPositionWith2dOffset(destWaypoint, -newDxOffset, -newDzOffset);
+      }
+    };
+    for (int i=waypoints.size()-1; i>0;) {
+      if (tooFar(waypoints.at(i-1), waypoints.at(i))) {
+        // Pick a point that is the maxmimum distance possible away from waypoints[i] and insert it before waypoints[i]
+        const auto newWaypoint = splitWaypoints(waypoints.at(i-1), waypoints.at(i));
+        waypoints.insert(waypoints.begin()+i, newWaypoint);
+      } else {
+        --i;
+      }
+    }
   };
 
   constexpr const double kAgentRadius{7.23};
@@ -150,7 +190,11 @@ std::vector<sro::Position> Walking::calculatePathToDestination(const sro::Positi
     if (path.empty()) {
       throw std::runtime_error("Found empty path");
     }
-    return pathfindingResultPathToVectorOfPositions(path);
+    auto waypoints = pathfindingResultPathToVectorOfPositions(path);
+    // Add our own position to the beginning of this list so that we can break up the distance if it's too far.
+    waypoints.insert(waypoints.begin(), currentPosition);
+    breakUpLongMovements(waypoints);
+    return waypoints;
   } catch (std::exception &ex) {
     throw std::runtime_error("Cannot find path with pathfinder: \""+std::string(ex.what())+"\"");
   }
@@ -160,7 +204,7 @@ std::vector<sro::Position> Walking::calculatePathToDestination(const sro::Positi
 // =============================================================BuyingItems=============================================================
 // =====================================================================================================================================
 
-BuyingItems::BuyingItems(Bot &bot, const std::map<uint32_t, PurchaseRequest> &itemsToBuy) : CommonStateMachine(bot), itemsToBuy_(itemsToBuy) {
+BuyingItems::BuyingItems(Bot &bot, const std::map<uint32_t, PurchaseRequest> &itemsToBuy) : StateMachine(bot), itemsToBuy_(itemsToBuy) {
   // We must be talking to an NPC at this point
   // Prevent the client from closing the talk dialog
   pushBlockedOpcode(packet::Opcode::kClientAgentActionDeselectRequest);
@@ -316,13 +360,13 @@ bool BuyingItems::done() const {
 // =====================================================================================================================================
 
 
-TalkingToStorageNpc::TalkingToStorageNpc(Bot &bot) : bot_(bot) {
-  // Figure out what we want to deposit into storage
-  // const uint16_t kArrowTypeId{helpers::type_id::makeTypeId(3,3,4,1)};
-  // const uint16_t kHpPotionTypeId{helpers::type_id::makeTypeId(3,3,1,1)};
-  // itemTypesToStore_.insert(kArrowTypeId);
-  // itemTypesToStore_.insert(kHpPotionTypeId);
-}
+// TalkingToStorageNpc::TalkingToStorageNpc(Bot &bot) : bot_(bot) {
+//   // Figure out what we want to deposit into storage
+//   // const uint16_t kArrowTypeId{helpers::type_id::makeTypeId(3,3,4,1)};
+//   // const uint16_t kHpPotionTypeId{helpers::type_id::makeTypeId(3,3,1,1)};
+//   // itemTypesToStore_.insert(kArrowTypeId);
+//   // itemTypesToStore_.insert(kHpPotionTypeId);
+// }
 
 void TalkingToStorageNpc::onUpdate(const event::Event *event) {
   if (npcInteractionState_ == NpcInteractionState::kStart) {
@@ -509,7 +553,7 @@ void TalkingToStorageNpc::storeItems(const event::Event *event) {
 // ==========================================================TalkingToShopNpc===========================================================
 // =====================================================================================================================================
 
-TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList) : CommonStateMachine(bot), npc_(npc), shoppingList_(shoppingList) {
+TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList) : StateMachine(bot), npc_(npc), shoppingList_(shoppingList) {
   // We know we are near our npc, lets find the closest npc to us
   npcGid_ = [&]{
     std::optional<uint32_t> closestNpcGId;
@@ -526,7 +570,7 @@ TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, i
         continue;
       }
 
-      const auto distanceToNpc = sro::position_math::calculateDistance2D(bot_.selfState_.position(), entityPtr->position());
+      const auto distanceToNpc = sro::position_math::calculateDistance2d(bot_.selfState_.position(), entityPtr->position());
       if (distanceToNpc < closestNpcDistance) {
         closestNpcGId = entityIdObjectPair.first;
         closestNpcDistance = distanceToNpc;
@@ -612,8 +656,7 @@ bool TalkingToShopNpc::doneBuyingItems() const {
   if (itemsToBuy_.empty()) {
     return true;
   }
-  auto *buyingItemsState = std::get_if<BuyingItems>(&childState_);
-  return (buyingItemsState != nullptr) && buyingItemsState->done();
+  return buyingItemsChildState_ && buyingItemsChildState_->done();
 }
 
 bool TalkingToShopNpc::needToRepair() const {
@@ -669,16 +712,15 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
     if (waitingForTalkResponse_) {
       // Successfully began talking to Npc
       waitingForTalkResponse_ = false;
-      childState_.emplace<BuyingItems>(bot_, itemsToBuy_);
+      buyingItemsChildState_ = std::make_unique<BuyingItems>(bot_, itemsToBuy_);
     }
 
     // Now that we are talking to the npc, start buying items
-    auto *buyingItemsState = std::get_if<BuyingItems>(&childState_);
-    if (buyingItemsState == nullptr) {
+    if (!buyingItemsChildState_) {
       throw std::runtime_error("If we reach this point, the state must be BuyingItems");
     }
-    buyingItemsState->onUpdate(event);
-    if (!buyingItemsState->done()) {
+    buyingItemsChildState_->onUpdate(event);
+    if (!buyingItemsChildState_->done()) {
       // Still buying items, do not continue
       return;
     }
@@ -781,8 +823,9 @@ bool TalkingToShopNpc::done() const {
 // =============================================================Townlooping=============================================================
 // =====================================================================================================================================
 
-Townlooping::Townlooping(Bot &bot) : CommonStateMachine(bot) {
+Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
   // Build a shopping list
+  // TODO: This should be based on a botting config
   shoppingList_ = {
     { 8, 200 }, //ITEM_ETC_HP_POTION_05 (XL hp potion)
     { 15, 200 }, //ITEM_ETC_MP_POTION_05 (XL mp potion)
@@ -794,6 +837,7 @@ Townlooping::Townlooping(Bot &bot) : CommonStateMachine(bot) {
   };
 
   // Figure out which npcs we want to visit and in what order
+  // TODO: This list should be constructed dynamically based on what we need to do in town
   npcsToVisit_ = { Npc::kStorage, Npc::kPotion , Npc::kGrocery, Npc::kBlacksmith, Npc::kProtector, Npc::kStable };
 
   if (npcsToVisit_.empty()) {
@@ -802,7 +846,7 @@ Townlooping::Townlooping(Bot &bot) : CommonStateMachine(bot) {
   }
 
   // Initialize state as walking to first NPC
-  childState_.emplace<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
+  childState_ = std::make_unique<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
 }
 
 void Townlooping::onUpdate(const event::Event *event) {
@@ -810,32 +854,26 @@ TODO_REMOVE_THIS_LABEL:
   if (done()) {
     return;
   }
-  if (auto *walkingState = std::get_if<Walking>(&childState_)) {
+  if (auto *walkingState = dynamic_cast<Walking*>(childState_.get())) {
     walkingState->onUpdate(event);
 
     if (walkingState->done()) {
       // Done walking, advance state
-      childState_.emplace<TalkingToNpc>();
-      auto &talkingToNpcState = std::get<TalkingToNpc>(childState_);
       if (npcsToVisit_[currentNpcIndex_] == Npc::kStorage) {
-        talkingToNpcState.emplace<TalkingToStorageNpc>(bot_);
+        childState_ = std::make_unique<TalkingToStorageNpc>(bot_);
       } else {
-        talkingToNpcState.emplace<TalkingToShopNpc>(bot_, npcsToVisit_[currentNpcIndex_], shoppingList_);
+        childState_ = std::make_unique<TalkingToShopNpc>(bot_, npcsToVisit_[currentNpcIndex_], shoppingList_);
       }
       // TODO: Go back to the top of this function
       goto TODO_REMOVE_THIS_LABEL;
     }
-  } else if (auto *talkingToNpcState = std::get_if<TalkingToNpc>(&childState_)) {
-    bool doneTalkingToNpc{false};
-    if (auto *talkingToStorageNpcState = std::get_if<TalkingToStorageNpc>(talkingToNpcState)) {
-      talkingToStorageNpcState->onUpdate(event);
-      doneTalkingToNpc = talkingToStorageNpcState->done();
-    } else if (auto *talkingToShopNpcState = std::get_if<TalkingToShopNpc>(talkingToNpcState)) {
-      talkingToShopNpcState->onUpdate(event);
-      doneTalkingToNpc = talkingToShopNpcState->done();
+  } else {
+    if (!childState_) {
+      throw std::runtime_error("Not valid for childState_ to be empty");
     }
-
-    if (doneTalkingToNpc) {
+    // childState_ is either TalkingToStorageNpc or TalkingToShopNpc
+    childState_->onUpdate(event);
+    if (childState_->done()) {
       // Moving on to next npc
       ++currentNpcIndex_;
       if (done()) {
@@ -845,7 +883,7 @@ TODO_REMOVE_THIS_LABEL:
       }
 
       // Update our state to walk to the next npc
-      childState_.emplace<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
+      childState_ = std::make_unique<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
       // TODO: Go back to the top of this function
       goto TODO_REMOVE_THIS_LABEL;
     }
@@ -874,6 +912,134 @@ sro::Position Townlooping::positionOfNpc(Npc npc) const {
     throw std::runtime_error("Trying to get position of NPC which does not exist");
   }
   return it->second;
+}
+
+// =====================================================================================================================================
+// ===============================================================Training==============================================================
+// =====================================================================================================================================
+
+Training::Training(Bot &bot, const sro::Position &trainingSpotCenter) : StateMachine(bot), trainingSpotCenter_(trainingSpotCenter) {
+  bot_.selfState().setTrainingAreaGeometry(std::make_unique<entity::Circle>(trainingSpotCenter_, kMonsterRange_));
+  // Register training area geometry with all entities
+  for (const auto &idPtrPair : bot_.entityTracker().getEntityMap()) {
+    if (idPtrPair.second) {
+      if (auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(idPtrPair.second.get())) {
+        mobileEntity->registerGeometryBoundary(bot_.selfState().trainingAreaGeometry->clone(), bot_.eventBroker());
+      }
+    }
+  }
+}
+
+Training::~Training() {
+  bot_.selfState().resetTrainingAreaGeometry();
+  for (const auto &idPtrPair : bot_.entityTracker().getEntityMap()) {
+    if (idPtrPair.second) {
+      if (auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(idPtrPair.second.get())) {
+        mobileEntity->resetGeometryBoundary(bot_.eventBroker());
+      }
+    }
+  }
+}
+
+void Training::onUpdate(const event::Event *event) {
+  if (const auto *entitySpawnedEvent = dynamic_cast<const event::EntitySpawned*>(event)) {
+    auto *entity = bot_.entityTracker().getEntity(entitySpawnedEvent->globalId);
+    if (auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(entity)) {
+      mobileEntity->registerGeometryBoundary(bot_.selfState().trainingAreaGeometry->clone(), bot_.eventBroker());
+    }
+  }
+
+  // What's in the area?
+  std::vector<const entity::Monster*> monstersInRange;
+  std::vector<const entity::Item*> itemsInRange;
+  int totalMonsterCount{0};
+  int totalItemCount{0};
+  for (const auto &entityIdPtrPair : bot_.entityTracker().getEntityMap()) {
+    if (const auto *monster = dynamic_cast<const entity::Monster*>(entityIdPtrPair.second.get())) {
+      ++totalMonsterCount;
+      const auto distance = sro::position_math::calculateDistance2d(trainingSpotCenter_, monster->position());
+      if (distance < kMonsterRange_) {
+        monstersInRange.push_back(monster);
+      }
+    } else if (const auto *item = dynamic_cast<const entity::Item*>(entityIdPtrPair.second.get())) {
+      ++totalItemCount;
+      const auto distance = sro::position_math::calculateDistance2d(trainingSpotCenter_, item->position());
+      if (distance < kItemRange_) {
+        itemsInRange.push_back(item);
+      }
+    }
+  }
+  LOG() << "There are " << monstersInRange.size() << " monsters in range /" << totalMonsterCount << std::endl;
+  LOG() << "There are " << itemsInRange.size() << " items in range /" << totalItemCount << std::endl;
+
+  if (!monstersInRange.empty()) {
+    // Simple common attack monster with no check if we're already attacking
+    // TODO: Robustify
+    LOG() << "Trying to attack one monster" << std::endl;
+    const auto attackPacket = packet::building::ClientAgentActionCommandRequest::attack(monstersInRange.front()->globalId);
+    bot_.packetBroker().injectPacket(attackPacket, PacketContainer::Direction::kClientToServer);
+  }
+}
+
+bool Training::done() const {
+  return false;
+}
+
+// =====================================================================================================================================
+// ===============================================================Botting===============================================================
+// =====================================================================================================================================
+
+Botting::Botting(Bot &bot) : StateMachine(bot) {
+  trainingSpotCenter_ = sro::Position{24742, 1114.48f, 47.0569f, 898.176f }; // TODO: Need to get from botting config
+}
+
+void Botting::onUpdate(const event::Event *event) {
+  if (!childState_) {
+    throw std::runtime_error("Botting must always have a child state when onUpdate is called");
+  }
+
+  childState_->onUpdate(event);
+  if (childState_->done()) {
+    // Move on to the next thing
+    if (dynamic_cast<Townlooping*>(childState_.get())) {
+      // After the townloop, we will walk to the training area
+      childState_ = std::make_unique<Walking>(bot_, trainingSpotCenter_);
+    } else if (dynamic_cast<Walking*>(childState_.get())) {
+      // We either just walked to town or walked to our training spot
+      //  For now, we assume that we walked to our training spot
+      childState_ = std::make_unique<Training>(bot_, trainingSpotCenter_);
+    } else if (dynamic_cast<Training*>(childState_.get())) {
+      // Done training, need to go back to town
+      static const sro::Position kCenterOfJangan{25000, 951.0f, -33.0f, 1372.0f}; // TODO: Do better
+      childState_ = std::make_unique<Walking>(bot_, kCenterOfJangan);
+    } else {
+      throw std::runtime_error("Botting's child state is not valid");
+    }
+    // Recurse so that we start the next state
+    // TODO: Might not be ideal
+    onUpdate(event);
+  }
+}
+
+bool Botting::done() const {
+  // Botting is never done
+  return false;
+}
+
+void Botting::initialize() {
+  if (childState_) {
+    LOG() << "Initializing, but we already have a child state" << std::endl;
+  }
+  // TODO: Figure out what we should initialize our childState_ as
+  //  For development, we assume we want to be training, so first walk to the training spot
+  childState_ = std::make_unique<Walking>(bot_, trainingSpotCenter_);
+}
+
+void Botting::reset() {
+  if (!childState_) {
+    throw std::runtime_error("Trying to reset un-set child state");
+  }
+  childState_.reset();
 }
 
 // =====================================================================================================================================

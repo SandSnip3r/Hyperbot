@@ -3,6 +3,7 @@
 #include <boost/random.hpp>
 #include <exception>
 #include <list>
+#include <mutex>
 #include <vector>
 #include <set>
 
@@ -163,6 +164,7 @@ struct SilkroadSecurityData
 	StreamUtility m_massive_packet;
 	std::list< PacketContainer > m_incoming_packets;
 	std::list< PacketContainer > m_outgoing_packets;
+	std::mutex m_outgoing_packet_mutex;
 	uint32_t m_value_x;
 	uint32_t m_value_g;
 	uint32_t m_value_p;
@@ -343,6 +345,7 @@ public:
 			response.data.Write< uint32_t >( m_value_p );
 			response.data.Write< uint32_t >( m_value_A );
 		}
+    std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
 		m_outgoing_packets.push_front( response );
 	}
 
@@ -451,6 +454,7 @@ public:
 			response.opcode = 0x5000;
 			response.data.Write< uint8_t >( tmp_flag );
 			response.data.Write< uint64_t >( m_challenge_key );
+      std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
 			m_outgoing_packets.push_front( response );
 		}
 		else
@@ -534,7 +538,10 @@ public:
 				response.opcode = 0x5000;
 				response.data.Write< uint32_t >( m_value_B );
 				response.data.Write< uint64_t >( m_client_key );
-				m_outgoing_packets.push_front( response );
+        {
+          std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
+          m_outgoing_packets.push_front( response );
+        }
 
 				// The handshake has started
 				m_started_handshake = true;
@@ -559,8 +566,11 @@ public:
 				response2.data.Write_Ascii( m_identity_name );
 				response2.data.Write< uint8_t >( m_identity_flag );
 
-				m_outgoing_packets.push_front( response2 );
-				m_outgoing_packets.push_front( response1 );
+        {
+          std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
+          m_outgoing_packets.push_front( response2 );
+          m_outgoing_packets.push_front( response1 );
+        }
 
 				// Mark the handshake as accepted now
 				m_started_handshake = true;
@@ -596,6 +606,7 @@ void SilkroadSecurity::ChangeIdentity( const std::string & name, uint8_t flag )
 
 uint8_t SilkroadSecurity::HasPacketToSend() const
 {
+  std::unique_lock<std::mutex> outgoing_packet_lock(m_data->m_outgoing_packet_mutex);
 	// No packets, easy case
 	if( m_data->m_outgoing_packets.empty() )
 	{
@@ -624,16 +635,19 @@ uint8_t SilkroadSecurity::HasPacketToSend() const
 
 std::vector< uint8_t > SilkroadSecurity::GetPacketToSend()
 {
-	if( m_data->m_outgoing_packets.empty() )
-	{
-		throw( std::runtime_error( "[SilkroadSecurity::GetPacketToSend] No packets are avaliable to send.") );
-	}
-
   PacketContainer packet_container;
   {
-    const auto &nextPacket = m_data->m_outgoing_packets.front();
-    packet_container = nextPacket;
-    m_data->m_outgoing_packets.pop_front();
+    std::unique_lock<std::mutex> outgoing_packet_lock(m_data->m_outgoing_packet_mutex);
+    if( m_data->m_outgoing_packets.empty() )
+    {
+      throw( std::runtime_error( "[SilkroadSecurity::GetPacketToSend] No packets are avaliable to send.") );
+    }
+
+    {
+      const auto &nextPacket = m_data->m_outgoing_packets.front();
+      packet_container = nextPacket;
+      m_data->m_outgoing_packets.pop_front();
+    }
   }
 
 	if( packet_container.massive )
@@ -728,7 +742,7 @@ void SilkroadSecurity::Send( uint16_t opcode, const StreamUtility & data, uint8_
 	{
 		throw( std::runtime_error( "[SilkroadSecurity::Send] Handshake packets cannot be sent through this function.") );
 	}
-	//TODO: Raceconditions?
+  std::unique_lock<std::mutex> outgoing_packet_lock(m_data->m_outgoing_packet_mutex);
 	m_data->m_outgoing_packets.push_back( PacketContainer( opcode, data, encrypted, massive ) );
 }
 

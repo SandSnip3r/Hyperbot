@@ -1,6 +1,7 @@
 #ifndef ENTITY_ENTITY_HPP_
 #define ENTITY_ENTITY_HPP_
 
+#include "geometry.hpp"
 #include "broker/eventBroker.hpp"
 #include "broker/timerManager.hpp"
 
@@ -75,6 +76,9 @@ public:
   std::optional<broker::TimerManager::TimerId> movingEventId;
   void initializeAsMoving(const sro::Position &destinationPosition);
   void initializeAsMoving(sro::Angle destinationAngle);
+  void registerGeometryBoundary(std::unique_ptr<Geometry> geometry, broker::EventBroker &eventBroker);
+  void resetGeometryBoundary(broker::EventBroker &eventBroker);
+  void cancelEvents(broker::EventBroker &eventBroker);
 
   bool moving() const;
   virtual sro::Position position() const override;
@@ -91,12 +95,21 @@ public:
 protected:
   mutable std::mutex mutex_;
   bool moving_;
+
+  // Only cancels movement timers and sets internal state; does not send any events.
+  void privateCancelEvents(broker::EventBroker &eventBroker);
   void cancelMovement(broker::EventBroker &eventBroker);
   sro::Position interpolateCurrentPosition(const std::chrono::high_resolution_clock::time_point &currentTime) const;
   float privateCurrentSpeed() const;
   void privateSetStationaryAtPosition(const sro::Position &position, broker::EventBroker &eventBroker);
   void privateSetMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker);
   void privateSetMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker);
+private:
+  std::unique_ptr<Geometry> geometry_;
+  std::optional<broker::TimerManager::TimerId> enterGeometryEventId_;
+  std::optional<broker::TimerManager::TimerId> exitGeometryEventId_;
+  void checkIfWillCrossGeometryBoundary(broker::EventBroker &eventBroker);
+  void cancelGeometryEvents(broker::EventBroker &eventBroker);
 };
 
 class Character : public MobileEntity {

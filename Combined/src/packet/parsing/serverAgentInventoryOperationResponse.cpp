@@ -104,7 +104,6 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
       primaryItemMovement.quantity = stream.Read<uint16_t>();
       primaryItemMovement.globalId = stream.Read<uint32_t>(); // NPC global ID
       primaryItemMovement.buybackStackSize = stream.Read<uint8_t>(); // TODO: This might actually be target-slot, the NPC's buyback slot
-      LOG() << "Sold item. Buyback.??: " << static_cast<int>(primaryItemMovement.buybackStackSize) << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kBuyback) {
       primaryItemMovement.destSlot = stream.Read<uint8_t>();
       primaryItemMovement.srcSlot = stream.Read<uint8_t>(); // Shop buyback slot, left is max(buybackStackSize-1), right is 0

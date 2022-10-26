@@ -7,7 +7,7 @@
 namespace helpers {
 
 float secondsToTravel(const sro::Position &srcPosition, const sro::Position &destPosition, const float currentSpeed) {
-  const auto distance = sro::position_math::calculateDistance2D(srcPosition, destPosition);
+  const auto distance = sro::position_math::calculateDistance2d(srcPosition, destPosition);
   return distance / currentSpeed;
 }
 

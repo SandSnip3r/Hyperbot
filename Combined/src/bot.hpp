@@ -30,13 +30,15 @@ public:
       broker::PacketBroker &broker);
 
   state::Self& selfState();
+  state::EntityTracker& entityTracker();
   Proxy& proxy() const;
   broker::PacketBroker& packetBroker() const;
+  broker::EventBroker& eventBroker();
 protected:
   friend class broker::EventBroker;
   void handleEvent(const event::Event *event);
 
-  friend class state::machine::CommonStateMachine;
+  friend class state::machine::StateMachine;
   friend class state::machine::Walking;
   friend class state::machine::TalkingToStorageNpc;
   friend class state::machine::TalkingToShopNpc;
@@ -62,7 +64,7 @@ private:
   const double kMpThreshold_{0.80};
   const double kVigorThreshold_{0.40};
   //******************************************************************************************
-  std::optional<state::machine::Townlooping> stateMachine_;
+  state::machine::Botting stateMachine_{*this};
 
   void subscribeToEvents();
 
@@ -90,8 +92,10 @@ private:
   void handleEntityMovementBegan(sro::scalar_types::EntityGlobalId globalId);
   void handleEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId);
   void handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId);
-  void handleEntitySyncedPosition(sro::scalar_types::EntityGlobalId globalId);
+  void handleEntityPositionUpdated(sro::scalar_types::EntityGlobalId globalId);
   void handleEntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId globalId);
+  void handleEntityEnteredGeometry(const event::EntityEnteredGeometry &event);
+  void handleEntityExitedGeometry(const event::EntityExitedGeometry &event);
   // Character info events
   void handleSpawned();
   void handleCosSpawned(const event::CosSpawned &event);

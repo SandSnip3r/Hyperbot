@@ -811,9 +811,7 @@ void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId
   auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(entity);
   if (mobileEntity != nullptr) {
     // Is a mobile entity
-    if (mobileEntity->movingEventId) {
-      eventBroker_.cancelDelayedEvent(*mobileEntity->movingEventId);
-    }
+    mobileEntity->cancelEvents(eventBroker_);
   }
 
   // Destroy entity
@@ -981,6 +979,8 @@ bool PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     return true;
   }
 
+  // TODO: We need to save this skill to be referenced later on skill end
+
   if (!gameData_.skillData().haveSkillWithId(packet.refSkillId())) {
     throw std::runtime_error("Cast a skill which we dont have data for");
   }
@@ -1037,5 +1037,7 @@ bool PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
     return true;
   }
   handleSkillAction(packet.action());
+  // TODO: Need to fetch the skill that began casting in order to get caster ID to publish event
+  //  eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(packet.errorCode));
   return true;
 }

@@ -32,10 +32,16 @@ EntityMovementBegan::EntityMovementBegan(sro::scalar_types::EntityGlobalId id) :
 
 EntityMovementTimerEnded::EntityMovementTimerEnded(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityMovementTimerEnded), globalId(id) {}
 
-EntitySyncedPosition::EntitySyncedPosition(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntitySyncedPosition), globalId(id) {}
+EntityPositionUpdated::EntityPositionUpdated(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityPositionUpdated), globalId(id) {}
 
 EntityNotMovingAngleChanged::EntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityNotMovingAngleChanged), globalId(id) {}
 
 EntityLifeStateChanged::EntityLifeStateChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityLifeStateChanged), globalId(id) {}
+
+EntityEnteredGeometry::EntityEnteredGeometry(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityEnteredGeometry), globalId(id) {}
+
+EntityExitedGeometry::EntityExitedGeometry(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityExitedGeometry), globalId(id) {}
+
+SkillEnded::SkillEnded(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kSkillEnded), casterGlobalId(id) {}
 
 } // namespace event

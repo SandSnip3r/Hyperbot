@@ -4,6 +4,7 @@
 #include "broker/eventBroker.hpp"
 #include "broker/timerManager.hpp"
 #include "entity/entity.hpp"
+#include "entity/geometry.hpp"
 #include "pk2/gameData.hpp"
 #include "packet/enums/packetEnums.hpp"
 #include "packet/parsing/parsedPacket.hpp"
@@ -18,6 +19,7 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -237,6 +239,14 @@ public:
   std::optional<std::pair<uint32_t, packet::enums::TalkOption>> talkingGidAndOption;
 
   bool haveOpenedStorageSinceTeleport{false};
+
+  // Training area
+  std::unique_ptr<entity::Geometry> trainingAreaGeometry;
+  void setTrainingAreaGeometry(std::unique_ptr<entity::Circle> &&geometry);
+  void resetTrainingAreaGeometry();
+  // ################################################################################
+  // Skill state
+  std::map<uint32_t, sro::scalar_types::EntityGlobalId> skillCastIdCasterIdMap;
   // ################################################################################
 
 private:

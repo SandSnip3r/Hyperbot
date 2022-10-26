@@ -48,11 +48,24 @@ enum class EventCode {
   kEntitySpawned,
   kEntityDespawned,
   kEntityMovementEnded,
+
+  kSkillEnded,
+
+  // Only used for sending to UI
   kEntityMovementBegan,
+
+  // Only used to directly update movement state of entity
   kEntityMovementTimerEnded,
-  kEntitySyncedPosition,
+
+  // Only used to send position changed to UI
+  kEntityPositionUpdated,
+
   kEntityNotMovingAngleChanged,
   kEntityLifeStateChanged,
+  kEntityEnteredGeometry,
+  kEntityExitedGeometry,
+  kTrainingAreaSet,
+  kTrainingAreaReset,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -179,11 +192,11 @@ public:
   virtual ~EntityMovementTimerEnded() = default;
 };
 
-struct EntitySyncedPosition : public Event {
+struct EntityPositionUpdated : public Event {
 public:
-  EntitySyncedPosition(sro::scalar_types::EntityGlobalId id);
+  EntityPositionUpdated(sro::scalar_types::EntityGlobalId id);
   const sro::scalar_types::EntityGlobalId globalId;
-  virtual ~EntitySyncedPosition() = default;
+  virtual ~EntityPositionUpdated() = default;
 };
 
 struct EntityNotMovingAngleChanged : public Event {
@@ -198,6 +211,27 @@ public:
   EntityLifeStateChanged(sro::scalar_types::EntityGlobalId id);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityLifeStateChanged() = default;
+};
+
+struct EntityEnteredGeometry : public Event {
+public:
+  EntityEnteredGeometry(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityEnteredGeometry() = default;
+};
+
+struct EntityExitedGeometry : public Event {
+public:
+  EntityExitedGeometry(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityExitedGeometry() = default;
+};
+
+struct SkillEnded : public Event {
+public:
+  SkillEnded(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId casterGlobalId;
+  virtual ~SkillEnded() = default;
 };
 
 } // namespace event

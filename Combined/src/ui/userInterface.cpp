@@ -290,7 +290,25 @@ void UserInterface::broadcastEntityLifeStateChanged(const sro::scalar_types::Ent
   entityLifeStateChanged->set_globalid(globalId);
   entityLifeStateChanged->set_lifestate(lifeStateToProto(lifeState));
   broadcast(broadcastMessage);
+}
 
+void UserInterface::broadcastTrainingAreaSet(const entity::Geometry *trainingAreaGeometry) {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcast::TrainingAreaSet *trainingAreaSet = broadcastMessage.mutable_trainingareaset();
+  if (const auto *trainingAreaCircle = dynamic_cast<const entity::Circle*>(trainingAreaGeometry)) {
+    broadcast::Circle *circle = trainingAreaSet->mutable_circle();
+    setPosition(circle->mutable_center(), trainingAreaCircle->center());
+    circle->set_radius(trainingAreaCircle->radius());
+  } else {
+    throw std::runtime_error("Unsupported training area geometry");
+  }
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastTrainingAreaReset() {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcastMessage.mutable_trainingareareset();
+  broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcast(const broadcast::BroadcastMessage &broadcastProto) {
