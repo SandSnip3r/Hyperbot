@@ -47,6 +47,7 @@ TimerManager::TimerId TimerManager::registerTimer(std::chrono::milliseconds time
   // Creating a new timer
   auto timerEndTimePoint = std::chrono::high_resolution_clock::now() + timerDuration;
   bool shouldNotify=false;
+  TimerId thisTimerId;
   {
     std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
     TimePoint prevTime = (timerDataHeap_.empty() ? TimePoint::max() : timerDataHeap_.front().endTime);
@@ -58,12 +59,12 @@ TimerManager::TimerId TimerManager::registerTimer(std::chrono::milliseconds time
       // Wake up the thread to handle this
       shouldNotify = true;
     }
+    thisTimerId = timerIdCounter_;
+    ++timerIdCounter_;
   }
   if (shouldNotify) {
     cv_.notify_one();
   }
-  const auto thisTimerId = timerIdCounter_;
-  ++timerIdCounter_;
   return thisTimerId;
 }
 
@@ -73,6 +74,7 @@ void TimerManager::triggerInstantTimer(std::function<void()> callback){
       // Add the new "timer" on the "heap"
     timerDataHeap_.emplace_back(timerIdCounter_, std::chrono::high_resolution_clock::now(), callback);
     std::push_heap(timerDataHeap_.begin(), timerDataHeap_.end(), std::greater<Timer>());
+    ++timerIdCounter_;
   }
   cv_.notify_one();
 }
@@ -158,6 +160,20 @@ TimerManager::~TimerManager() {
   cv_.notify_one();
   // Wait for it to finish
   thr_.join();
+}
+
+bool operator<(const TimerManager::Timer &lhs, const TimerManager::Timer &rhs) {
+  if (lhs.endTime == rhs.endTime) {
+    return lhs.id < rhs.id;
+  }
+  return lhs.endTime < rhs.endTime;
+}
+
+bool operator>(const TimerManager::Timer &lhs, const TimerManager::Timer &rhs) {
+  if (lhs.endTime == rhs.endTime) {
+    return lhs.id > rhs.id;
+  }
+  return lhs.endTime > rhs.endTime;
 }
 
 } // namespace broker

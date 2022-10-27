@@ -12,7 +12,7 @@ namespace broker {
 
 class TimerManager {
 public:
-  using TimerId = int;
+  using TimerId = uint32_t;
   void run();
   TimerId registerTimer(std::chrono::milliseconds timerDuration, std::function<void()> timerCompletedFunction);
   void triggerInstantTimer(std::function<void()> callback);
@@ -27,12 +27,12 @@ private:
     std::function<void()> completionFunction;
     Timer() = default;
     Timer(TimerId tId, TimePoint et, std::function<void()> f) : id(tId), endTime(et), completionFunction(f) {}
-    bool operator<(const Timer &other) const { return endTime < other.endTime; }
-    bool operator>(const Timer &other) const { return endTime > other.endTime; }
   };
+  friend bool operator<(const Timer &lhs, const Timer &rhs);
+  friend bool operator>(const Timer &lhs, const Timer &rhs);
 
   bool keepRunning_{true};
-  int timerIdCounter_{0};
+  TimerId timerIdCounter_{0};
   std::vector<Timer> timerDataHeap_;
   std::condition_variable cv_;
   std::mutex timerDataMutex_;
@@ -43,6 +43,10 @@ private:
   void timerFinished(const Timer &timer);
   bool mostRecentTimerIsFinished();
 };
+
+
+bool operator<(const TimerManager::Timer &lhs, const TimerManager::Timer &rhs);
+bool operator>(const TimerManager::Timer &lhs, const TimerManager::Timer &rhs);
 
 } // namespace broker
 
