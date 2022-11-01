@@ -14,6 +14,7 @@ enum class MonsterRarity : uint8_t {
   kElite = 6,
   kEliteStrong = 7,
   kUnique2 = 8,
+  kPartyFlag = 16,
   kGeneralParty = 16,
   kChampionParty = 17,
   kUniqueParty = 19,
