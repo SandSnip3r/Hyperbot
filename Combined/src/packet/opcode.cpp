@@ -15,8 +15,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::LOGIN_CLIENT_KEEP_ALIVE) {
     return "LOGIN_CLIENT_KEEP_ALIVE";
   }
-  if (opcode == Opcode::LOGIN_CLIENT_PATCH_REQUEST) {
-    return "LOGIN_CLIENT_PATCH_REQUEST";
+  if (opcode == Opcode::kClientGatewayPatchRequest) {
+    return "kClientGatewayPatchRequest";
   }
   if (opcode == Opcode::LOGIN_CLIENT_SERVERLIST_REQUEST) {
     return "LOGIN_CLIENT_SERVERLIST_REQUEST";
@@ -42,11 +42,11 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::LOGIN_SERVER_LAUNCHER) {
     return "LOGIN_SERVER_LAUNCHER";
   }
-  if (opcode == Opcode::LOGIN_SERVER_LIST) {
-    return "LOGIN_SERVER_LIST";
+  if (opcode == Opcode::kServerGatewayShardListResponse) {
+    return "kServerGatewayShardListResponse";
   }
-  if (opcode == Opcode::LOGIN_SERVER_AUTH_INFO) {
-    return "LOGIN_SERVER_AUTH_INFO";
+  if (opcode == Opcode::kServerGatewayLoginResponse) {
+    return "kServerGatewayLoginResponse";
   }
   if (opcode == Opcode::CLIENT_INFO) {
     return "CLIENT_INFO";
@@ -195,17 +195,17 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_PATCH_INFO) {
     return "SERVER_PATCH_INFO";
   }
-  if (opcode == Opcode::SERVER_LOGIN_RESULT) {
-    return "SERVER_LOGIN_RESULT";
+  if (opcode == Opcode::kServerAgentAuthResponse) {
+    return "kServerAgentAuthResponse";
   }
-  if (opcode == Opcode::SERVER_CHARACTER) {
-    return "SERVER_CHARACTER";
+  if (opcode == Opcode::kServerAgentCharacterSelectionActionResponse) {
+    return "kServerAgentCharacterSelectionActionResponse";
   }
   if (opcode == Opcode::kServerAgentCharacterData) {
     return "kServerAgentCharacterData";
   }
-  if (opcode == Opcode::SERVER_INGAME_ACCEPT) {
-    return "SERVER_INGAME_ACCEPT";
+  if (opcode == Opcode::kServerAgentCharacterSelectionJoinResponse) {
+    return "kServerAgentCharacterSelectionJoinResponse";
   }
   if (opcode == Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN) {
     return "SERVER_AGENT_CHARACTER_INFO_BEGIN";
@@ -213,8 +213,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::SERVER_AGENT_CHARACTER_INFO_END) {
     return "SERVER_AGENT_CHARACTER_INFO_END";
   }
-  if (opcode == Opcode::SERVER_WORLD_CLOCK) {
-    return "SERVER_WORLD_CLOCK";
+  if (opcode == Opcode::kServerAgentEnvironmentCelestialPosition) {
+    return "kServerAgentEnvironmentCelestialPosition";
   }
   if (opcode == Opcode::kServerAgentEntitySpawn) {
     return "kServerAgentEntitySpawn";
@@ -416,6 +416,21 @@ std::string toStr(Opcode opcode) {
   }
   if (opcode == Opcode::kServerAgentEntityUpdatePosition) {
     return "SERVER_CHARACTER_STUCK";
+  }
+  if (opcode == Opcode::kClientAgentFreePvpUpdateRequest) {
+    return "kClientAgentFreePvpUpdateRequest";
+  }
+  if (opcode == Opcode::kServerAgentFreePvpUpdateResponse) {
+    return "kServerAgentFreePvpUpdateResponse";
+  }
+  if (opcode == Opcode::kClientGatewayLoginIbuvAnswer) {
+    return "kClientGatewayLoginIbuvAnswer";
+  }
+  if (opcode == Opcode::kServerGatewayLoginIbuvChallenge) {
+    return "kServerGatewayLoginIbuvChallenge";
+  }
+  if (opcode == Opcode::kServerGatewayLoginIbuvResult) {
+    return "kServerGatewayLoginIbuvResult";
   }
   return "UNKNOWN";
 }

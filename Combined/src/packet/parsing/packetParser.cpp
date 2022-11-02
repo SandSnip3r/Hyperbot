@@ -59,17 +59,17 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ClientAgentActionSelectRequest>(packet);
       case Opcode::kClientAgentActionTalkRequest:
         return std::make_unique<ClientAgentActionTalkRequest>(packet);
-      case Opcode::LOGIN_SERVER_LIST:
+      case Opcode::kServerGatewayShardListResponse:
         return std::make_unique<ParsedLoginServerList>(packet);
-      case Opcode::LOGIN_SERVER_AUTH_INFO:
+      case Opcode::kServerGatewayLoginResponse:
         return std::make_unique<ParsedLoginResponse>(packet);
       case Opcode::LOGIN_CLIENT_INFO:
         return std::make_unique<ParsedLoginClientInfo>(packet);
-      case Opcode::SERVER_LOGIN_RESULT:
+      case Opcode::kServerAgentAuthResponse:
         return std::make_unique<ParsedServerAuthResponse>(packet);
-      case Opcode::SERVER_CHARACTER:
+      case Opcode::kServerAgentCharacterSelectionActionResponse:
         return std::make_unique<ParsedServerAgentCharacterSelectionActionResponse>(packet);
-      case Opcode::SERVER_INGAME_ACCEPT:
+      case Opcode::kServerAgentCharacterSelectionJoinResponse:
         return std::make_unique<ParsedServerAgentCharacterSelectionJoinResponse>(packet);
       case Opcode::kServerAgentCharacterData:
         return std::make_unique<ParsedServerAgentCharacterData>(packet, gameData_.itemData(), gameData_.skillData());
