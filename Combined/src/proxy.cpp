@@ -192,8 +192,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         }
 
         // Run packet through bot, regardless if it's blocked
-        const bool botWantsPacketForwarded = packetBroker_.packetReceived(packet, direction);
-        forward &= botWantsPacketForwarded;
+        packetBroker_.packetReceived(packet, direction);
 
         //Forward the packet to Joymax
         if (forward && serverConnection.security) {
@@ -321,26 +320,25 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         }
 
         // Run packet through bot, regardless if it's blocked
-        bool botWantsPacketForwarded = true;
         // Handle "begin", "data", and "end" pieces of split packets
         if (opcodeAsEnum == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_END) {
           // Send packet to broker
-          botWantsPacketForwarded = packetBroker_.packetReceived(*characterInfoPacketContainer_, direction);
+          packetBroker_.packetReceived(*characterInfoPacketContainer_, direction);
           // Reset data
           characterInfoPacketContainer_.reset();
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentEntityGroupspawnEnd) {
           // Send packet to broker
-          botWantsPacketForwarded = packetBroker_.packetReceived(*groupSpawnPacketContainer_, direction);
+          packetBroker_.packetReceived(*groupSpawnPacketContainer_, direction);
           // Reset data
           groupSpawnPacketContainer_.reset();
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageEnd) {
           // Send packet to broker
-          botWantsPacketForwarded = packetBroker_.packetReceived(*storagePacketContainer_, direction);
+          packetBroker_.packetReceived(*storagePacketContainer_, direction);
           // Reset data
           storagePacketContainer_.reset();
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentGuildStorageEnd) {
           // Send packet to broker
-          botWantsPacketForwarded = packetBroker_.packetReceived(*guildStoragePacketContainer_, direction);
+          packetBroker_.packetReceived(*guildStoragePacketContainer_, direction);
           // Reset data
           guildStoragePacketContainer_.reset();
         } else if (opcodeAsEnum != packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN &&
@@ -352,9 +350,8 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
                     opcodeAsEnum != packet::Opcode::kServerAgentGuildStorageBegin &&
                     opcodeAsEnum != packet::Opcode::kServerAgentGuildStorageData) {
           // In all other cases, if its not "begin" or "data", send it
-          botWantsPacketForwarded = packetBroker_.packetReceived(packet, direction);
+          packetBroker_.packetReceived(packet, direction);
         }
-        forward &= botWantsPacketForwarded;
 
         //Forward the packet to the Silkroad server
         if (forward && clientConnection.security) {

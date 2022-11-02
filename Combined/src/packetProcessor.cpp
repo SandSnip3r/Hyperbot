@@ -11,7 +11,8 @@
 { \
   auto *castedParsedPacket = dynamic_cast<PACKET_TYPE*>(parsedPacket.get()); \
   if (castedParsedPacket != nullptr) { \
-    return HANDLE_FUNCTION_NAME(*castedParsedPacket); \
+    HANDLE_FUNCTION_NAME(*castedParsedPacket); \
+    return; \
   } \
 }
 
@@ -86,18 +87,18 @@ void PacketProcessor::subscribeToPackets() {
   broker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillEnd, packetHandleFunction);
 }
 
-bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
+void PacketProcessor::handlePacket(const PacketContainer &packet) const {
   std::unique_ptr<packet::parsing::ParsedPacket> parsedPacket;
   try {
     parsedPacket = packetParser_.parsePacket(packet);
   } catch (std::exception &ex) {
     std::cerr << "[PacketProcessor] Failed to parse packet " << std::hex << packet.opcode << std::dec << "\n  Error: \"" << ex.what() << "\"\n";
-    return true;
+    return;
   }
 
   if (!parsedPacket) {
     // Not yet parsing this packet
-    return true;
+    return;
   }
 
   std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
@@ -156,7 +157,7 @@ bool PacketProcessor::handlePacket(const PacketContainer &packet) const {
   }
 
   LOG() << "Unhandled packet subscribed to\n";
-  return true;
+  return;
 }
 
 void PacketProcessor::resetDataBecauseCharacterSpawned() const {
@@ -168,71 +169,64 @@ void PacketProcessor::resetDataBecauseCharacterSpawned() const {
 // ===============================================Login process packet handling================================================
 // ============================================================================================================================
 
-bool PacketProcessor::serverListReceived(const packet::parsing::ParsedLoginServerList &packet) const {
+void PacketProcessor::serverListReceived(const packet::parsing::ParsedLoginServerList &packet) const {
   selfState_.shardId = packet.shardId();
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStateShardIdUpdated));
-  return true;
 }
 
-bool PacketProcessor::loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) const {
+void PacketProcessor::loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) const {
   if (packet.result() == packet::enums::LoginResult::kSuccess) {
     selfState_.token = packet.token();
   } else {
     LOG() << " Login failed\n";
   }
-  return true;
 }
 
-bool PacketProcessor::loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet) const {
+void PacketProcessor::loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet) const {
   // This packet is a response to the client sending 0x2001 where the client indicates that it is the "SR_Client"
   if (packet.serviceName() == "AgentServer") {
     // Connected to agentserver, send client auth packet
     selfState_.connectedToAgentServer = true;
     eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStateConnectedToAgentServerUpdated));
   }
-  return true;
 }
 
-bool PacketProcessor::unknownPacketReceived(const packet::parsing::ParsedUnknown &packet) const {
+void PacketProcessor::unknownPacketReceived(const packet::parsing::ParsedUnknown &packet) const {
   if (packet.opcode() == packet::Opcode::kServerGatewayLoginIbuvChallenge) {
     // Got the captcha prompt, respond with an answer
     selfState_.receivedCaptchaPrompt = true;
     eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStateReceivedCaptchaPromptUpdated));
   }
-  return true;
 }
 
-bool PacketProcessor::serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet) const {
+void PacketProcessor::serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet) const {
   if (packet.result() == 0x01) {
     // Successful login
     eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kLoggedIn));
     // Client will automatically request the character listing
     // TODO: For clientless, we will need to do this ourself
   }
-  return true;
 }
 
-bool PacketProcessor::charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet) const {
+void PacketProcessor::charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet) const {
   selfState_.characterList = packet.characters();
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStateCharacterListUpdated));
-  return true;
 }
 
-bool PacketProcessor::charSelectionJoinResponseReceived(const packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse &packet) const {
+void PacketProcessor::charSelectionJoinResponseReceived(const packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse &packet) const {
   // A character was selected after login, this is the response
   if (packet.result() != 0x01) {
     // Character selection failed
     // TODO: Properly handle error
     LOG() << "Failed when selecting character\n";
   }
-  return true;
 }
 
 // ============================================================================================================================
 // ==================================================Movement packet handling==================================================
 // ============================================================================================================================
 
-bool PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::ServerAgentEntityUpdateAngle &packet) const {
+void PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::ServerAgentEntityUpdateAngle &packet) const {
   entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
   if (mobileEntity.moving()) {
     if (mobileEntity.destinationPosition) {
@@ -245,22 +239,19 @@ bool PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::Serv
   } else {
     mobileEntity.setAngle(packet.angle(), eventBroker_);
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const {
+void PacketProcessor::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const {
   entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
   mobileEntity.syncPosition(packet.position(), eventBroker_);
-  return true;
 }
 
-bool PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const {
+void PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const {
   entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
   mobileEntity.setStationaryAtPosition(packet.position(), eventBroker_);
-  return true;
 }
 
-bool PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const {
+void PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const {
   entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
   std::optional<sro::Position> sourcePosition;
   if (packet.hasSource()) {
@@ -272,23 +263,21 @@ bool PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::S
   } else {
     mobileEntity.setMovingTowardAngle(sourcePosition, packet.angle(), eventBroker_);
   }
-  return true;
 }
 
 // ============================================================================================================================
 // ===============================================Character info packet handling===============================================
 // ============================================================================================================================
 
-bool PacketProcessor::clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) const {
+void PacketProcessor::clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) const {
   const auto itemMovement = packet.movement();
   if (itemMovement.type == packet::enums::ItemMovementType::kBuyItem) {
     // User is buying something from the store
     selfState_.setUserPurchaseRequest(itemMovement);
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) const {
+void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) const {
   resetDataBecauseCharacterSpawned();
 
   selfState_.initialize(packet.entityUniqueId(), packet.refObjId());
@@ -323,10 +312,9 @@ bool PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Pa
 
   LOG() << "GID:" << selfState_.globalId << ", and we have " << selfState_.hp() << " hp and " << selfState_.mp() << " mp\n";
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kSpawned));
-  return true;
 }
 
-bool PacketProcessor::serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const {
+void PacketProcessor::serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const {
   if (packet.isAbilityPet()) {
     if (packet.ownerGlobalId() == selfState_.globalId) {
       auto it = selfState_.cosInventoryMap.find(packet.globalId());
@@ -351,18 +339,16 @@ bool PacketProcessor::serverAgentCosDataReceived(const packet::parsing::ServerAg
   } else {
     LOG() << "Non-ability Cos" << std::endl;
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInventoryStorageData &packet) const {
+void PacketProcessor::serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInventoryStorageData &packet) const {
   selfState_.setStorageGold(packet.gold());
   helpers::initializeInventory(selfState_.storage, packet.storageSize(), packet.storageItemMap());
   selfState_.haveOpenedStorageSinceTeleport = true;
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStorageInitialized));
-  return true;
 }
 
-bool PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const {
+void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const {
   if (packet.stateType() == packet::parsing::StateType::kMotionState) {
     entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
     mobileEntity.setMotionState(static_cast<entity::MotionState>(packet.state()), eventBroker_);
@@ -381,62 +367,80 @@ bool PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
       selfState_.setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
     }
   }
-  return true;
+  
+  // TODO: Remove
+  if (packet.globalId() == selfState_.globalId) {
+    static bool done = false;
+    if (!done) {
+      // Just spawned in
+      // Set self as visible
+      LOG() << "Setting self as visible" << std::endl;
+      const auto setVisiblePacket = packet::building::ClientAgentOperatorRequest::toggleInvisible();
+      packetBroker_.injectPacket(setVisiblePacket, PacketContainer::Direction::kClientToServer);
+      
+      LOG() << "Setting free pvp mode" << std::endl;
+      const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
+      packetBroker_.injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
+
+      done = true;
+    }
+  }
 }
 
-bool PacketProcessor::serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const {
+void PacketProcessor::serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const {
   entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
   mobileEntity.setSpeed(packet.walkSpeed(), packet.runSpeed(), eventBroker_);
   return true;
 }
 
-bool PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsing::ParsedServerAgentEntityUpdateStatus &packet) const {
-  if (packet.entityUniqueId() != selfState_.globalId) {
-    // Not for my character, can ignore
-    return true;
-  }
-  if (packet.vitalBitmask() & static_cast<uint8_t>(packet::enums::VitalInfoFlag::kVitalInfoHp)) {
-    // Our HP changed
-    if (selfState_.hp() != packet.newHpValue()) {
-      selfState_.setHp(packet.newHpValue());
-    } else {
-      LOG() << "Weird, says HP changed, but it didn't\n";
+void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsing::ServerAgentEntityUpdateStatus &packet) const {
+  if (packet.entityUniqueId() == selfState_.globalId) {
+    if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoHp)) {
+      // Our HP changed
+      if (selfState_.currentHp() != packet.newHpValue()) {
+        selfState_.setCurrentHp(packet.newHpValue(), eventBroker_);
+      } else {
+        LOG() << "Weird, says HP changed, but it didn't\n";
+      }
     }
-  }
-  if (packet.vitalBitmask() & static_cast<uint8_t>(packet::enums::VitalInfoFlag::kVitalInfoMp)) {
-    // Our MP changed
-    if (selfState_.mp() != packet.newMpValue()) {
-      selfState_.setMp(packet.newMpValue());
-    } else {
-      LOG() << "Weird, says MP changed, but it didn't\n";
+    if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoMp)) {
+      // Our MP changed
+      if (selfState_.mp() != packet.newMpValue()) {
+        selfState_.setMp(packet.newMpValue());
+      } else {
+        LOG() << "Weird, says MP changed, but it didn't\n";
+      }
     }
-  }
 
-  if (packet.vitalBitmask() & static_cast<uint8_t>(packet::enums::VitalInfoFlag::kVitalInfoAbnormal)) {
-    // Our states changed
-    auto stateBitmask = packet.stateBitmask();
-    auto stateLevels = packet.stateLevels();
-    selfState_.updateStates(stateBitmask, stateLevels);
-    LOG() << "Updated our states\n";
-    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStatesChanged));
+    if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoAbnormal)) {
+      // Our states changed
+      auto stateBitmask = packet.stateBitmask();
+      auto stateLevels = packet.stateLevels();
+      selfState_.updateStates(stateBitmask, stateLevels);
+      LOG() << "Updated our states\n";
+      eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStatesChanged));
+    }
+  } else {
+    // Not for my character
+    if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoHp)) {
+      auto &character = getEntity<entity::Character>(packet.entityUniqueId());
+      character.setCurrentHp(packet.newHpValue(), eventBroker_);
+    }
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const {
+void PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const {
   for (int i=0; i<=helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie); ++i) {
     selfState_.setLegacyStateEffect(helpers::fromBitNum(i), packet.states()[i].effectOrLevel);
   }
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStatesChanged));
-  return true;
 }
 
-bool PacketProcessor::serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const {
+void PacketProcessor::serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const {
   selfState_.setMaxHpMp(packet.maxHp(), packet.maxMp());
-  return true;
 }
 
-bool PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::parsing::ParsedServerAgentInventoryItemUseResponse &packet) const {
+void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::parsing::ParsedServerAgentInventoryItemUseResponse &packet) const {
   if (packet.result() == 1) {
     // Successfully used an item
     if (selfState_.inventory.hasItem(packet.slotNum())) {
@@ -521,10 +525,9 @@ bool PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     }
   }
   selfState_.popItemFromUsedItemQueueIfNotEmpty();
-  return true;
 }
 
-bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet::parsing::ServerAgentInventoryOperationResponse &packet) const {
+void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet::parsing::ServerAgentInventoryOperationResponse &packet) const {
   auto addItemToInventory = [this](auto &inventory, const auto newItem, const auto destSlot) {
     if (newItem != nullptr) {
       // Picked up an item
@@ -738,11 +741,10 @@ bool PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
       LOG() << "Unknown item movement type: " << static_cast<int>(movement.type) << std::endl;
     }
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ParsedServerAgentEntityGroupSpawnData &packet) const {
-  if (packet.groupSpawnType() == packet::parsing::GroupSpawnType::kSpawn) {
+void PacketProcessor::serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ServerAgentEntityGroupSpawnData &packet) const {
+  if (packet.groupSpawnType() == packet::enums::GroupSpawnType::kSpawn) {
     for (auto entity : packet.entities()) {
       if (entity) {
         entitySpawned(entity);
@@ -755,21 +757,18 @@ bool PacketProcessor::serverAgentEntityGroupSpawnDataReceived(const packet::pars
       entityDespawned(globalId);
     }
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentSpawnReceived(const packet::parsing::ParsedServerAgentSpawn &packet) const {
+void PacketProcessor::serverAgentEntitySpawnReceived(const packet::parsing::ServerAgentEntitySpawn &packet) const {
   if (packet.entity()) {
     entitySpawned(packet.entity());
   } else {
     LOG() << "Received null entity from spawn" << std::endl;
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentDespawnReceived(const packet::parsing::ParsedServerAgentDespawn &packet) const {
+void PacketProcessor::serverAgentEntityDespawnReceived(const packet::parsing::ServerAgentEntityDespawn &packet) const {
   entityDespawned(packet.globalId());
-  return true;
 }
 
 void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) const {
@@ -816,7 +815,7 @@ void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId
 // ============================================================Misc============================================================
 // ============================================================================================================================
 
-bool PacketProcessor::serverAgentDeselectResponseReceived(const packet::parsing::ServerAgentActionDeselectResponse &packet) const {
+void PacketProcessor::serverAgentDeselectResponseReceived(const packet::parsing::ServerAgentActionDeselectResponse &packet) const {
   if (packet.result() == 1) {
     // Successfully deselected
     // If there is a talk dialog, and we have an npc selected, it will take 2 deselects to close both dialogs
@@ -837,22 +836,33 @@ bool PacketProcessor::serverAgentDeselectResponseReceived(const packet::parsing:
   } else {
     LOG() << "Deselection failed" << std::endl;
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentSelectResponseReceived(const packet::parsing::ServerAgentActionSelectResponse &packet) const {
-  if (packet.result() == 1) {
-    // Successfully selected
-    // It is possible that we already have something selected. We will just overwrite it
-    selfState_.selectedEntity = packet.gId();
-    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kEntitySelected));
-  } else {
+void PacketProcessor::serverAgentSelectResponseReceived(const packet::parsing::ServerAgentActionSelectResponse &packet) const {
+  if (packet.result() != 1) {
     LOG() << "Selection failed" << std::endl;
+    return;
   }
-  return true;
+
+  // Successfully selected
+  // It is possible that we already have something selected. We will just overwrite it
+  selfState_.selectedEntity = packet.globalId();
+  auto *entity = entityTracker_.getEntity(packet.globalId());
+  if (entity == nullptr) {
+    throw std::runtime_error("Selected an entity which we are not tracking");
+  }
+  if (auto *monster = dynamic_cast<entity::Monster*>(entity)) {
+    // Selected a monster
+    if (flags::isSet(packet.vitalInfoMask(), packet::enums::VitalInfoFlag::kVitalInfoHp)) {
+      // Received monster's current HP
+      LOG() << "Selected monster. Setting HP" << std::endl;
+      monster->setCurrentHp(packet.hp(), eventBroker_);
+    }
+  }
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kEntitySelected));
 }
 
-bool PacketProcessor::serverAgentTalkResponseReceived(const packet::parsing::ServerAgentActionTalkResponse &packet) const {
+void PacketProcessor::serverAgentTalkResponseReceived(const packet::parsing::ServerAgentActionTalkResponse &packet) const {
   if (packet.result() == 1) {
     // Successfully talking to an npc
     if (selfState_.pendingTalkGid) {
@@ -866,19 +876,17 @@ bool PacketProcessor::serverAgentTalkResponseReceived(const packet::parsing::Ser
   } else {
     LOG() << "Failed to talk to NPC" << std::endl;
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentInventoryRepairResponseReceived(const packet::parsing::ServerAgentInventoryRepairResponse &packet) const {
+void PacketProcessor::serverAgentInventoryRepairResponseReceived(const packet::parsing::ServerAgentInventoryRepairResponse &packet) const {
   if (packet.successful()) {
     eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kRepairSuccessful));
   } else {
     LOG() << "Repairing item(s) failed! Error code: " << packet.errorCode() << std::endl;
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentInventoryUpdateDurabilityReceived(const packet::parsing::ServerAgentInventoryUpdateDurability &packet) const {
+void PacketProcessor::serverAgentInventoryUpdateDurabilityReceived(const packet::parsing::ServerAgentInventoryUpdateDurability &packet) const {
   if (!selfState_.inventory.hasItem(packet.slotIndex())) {
     throw std::runtime_error("Recieved durability update for inventory slot where no item exists");
   }
@@ -892,10 +900,9 @@ bool PacketProcessor::serverAgentInventoryUpdateDurabilityReceived(const packet:
   }
   // Update item's durability
   itemAsEquip->durability = packet.durability();
-  return true;
 }
 
-bool PacketProcessor::serverAgentInventoryUpdateItemReceived(const packet::parsing::ServerAgentInventoryUpdateItem &packet) const {
+void PacketProcessor::serverAgentInventoryUpdateItemReceived(const packet::parsing::ServerAgentInventoryUpdateItem &packet) const {
   if (!selfState_.inventory.hasItem(packet.slotIndex())) {
     throw std::runtime_error("Recieved item update for inventory slot where no item exists");
   }
@@ -918,58 +925,116 @@ bool PacketProcessor::serverAgentInventoryUpdateItemReceived(const packet::parsi
       throw std::runtime_error("Item quantity updated, but this item is not an expendable");
     }
   }
-  return true;
 }
 
-// bool PacketProcessor::clientAgentActionDeselectRequestReceived(const packet::parsing::ClientAgentActionDeselectRequest &packet) const {
-//   return true;
+// void PacketProcessor::clientAgentActionDeselectRequestReceived(const packet::parsing::ClientAgentActionDeselectRequest &packet) const {
 // }
 
-// bool PacketProcessor::clientAgentActionSelectRequestReceived(const packet::parsing::ClientAgentActionSelectRequest &packet) const {
-//   return true;
+// void PacketProcessor::clientAgentActionSelectRequestReceived(const packet::parsing::ClientAgentActionSelectRequest &packet) const {
 // }
 
-bool PacketProcessor::clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const {
+void PacketProcessor::clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const {
   if (selfState_.pendingTalkGid) {
     LOG() << "Weird, we're already waiting on a response from the server to talk to someone\n";
   } else {
     selfState_.pendingTalkGid = packet.gId();
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentEntityUpdatePointsReceived(const packet::parsing::ServerAgentEntityUpdatePoints &packet) const {
+void PacketProcessor::serverAgentEntityUpdatePointsReceived(const packet::parsing::ServerAgentEntityUpdatePoints &packet) const {
   if (packet.updatePointsType() == packet::enums::UpdatePointsType::kGold) {
     selfState_.setGold(packet.gold());
   } else if (packet.updatePointsType() == packet::enums::UpdatePointsType::kSp) {
     selfState_.setSkillPoints(packet.skillPoints());
   }
-  return true;
 }
 
-bool PacketProcessor::serverAgentEntityUpdateExperienceReceived(const packet::parsing::ServerAgentEntityUpdateExperience &packet) const {
+void PacketProcessor::serverAgentEntityUpdateExperienceReceived(const packet::parsing::ServerAgentEntityUpdateExperience &packet) const {
   const constexpr int kSpExperienceRequired{400}; // TODO: Move to a central location
   const auto newExperience = selfState_.getCurrentExperience() + packet.gainedExperiencePoints();
   const auto newSpExperience = (selfState_.getCurrentSpExperience() + packet.gainedSpExperiencePoints()) % kSpExperienceRequired;
   selfState_.setCurrentExpAndSpExp(newExperience, newSpExperience);
-  return true;
 }
 
-bool PacketProcessor::serverAgentGuildStorageDataReceived(const packet::parsing::ServerAgentGuildStorageData &packet) const {
+void PacketProcessor::serverAgentGuildStorageDataReceived(const packet::parsing::ServerAgentGuildStorageData &packet) const {
   selfState_.setGuildStorageGold(packet.gold());
   helpers::initializeInventory(selfState_.guildStorage, packet.storageSize(), packet.storageItemMap());
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kGuildStorageInitialized));
-  return true;
 }
 
-bool PacketProcessor::serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const {
-  return true;
+void PacketProcessor::clientAgentActionCommandRequestReceived(const packet::parsing::ClientAgentActionCommandRequest &packet) const {
+  LOG() << "Client command action received: \"" << packet.actionCommand() << "\"" << std::endl;
+  selfState_.pendingCommandQueue.push_back(packet.actionCommand());
 }
 
-bool PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const {
+void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const {
+  std::cout << "============================================" << packet.actionState() << "============================================" << std::endl;
+  std::cout << "Pending command Queue:" << (selfState_.pendingCommandQueue.empty() ? " <empty>" : "") << std::endl;
+  for (const auto &c : selfState_.pendingCommandQueue) {
+    std::cout << "  " << c << std::endl;
+  }
+  std::cout << "Accepted command Queue:" << (selfState_.acceptedCommandQueue.empty() ? " <empty>" : "") << std::endl;
+  for (const auto &c : selfState_.acceptedCommandQueue) {
+    std::cout << "  " << c << std::endl;
+  }
+  std::cout << "----------------" << std::endl;
+
+  if (packet.actionState() == packet::enums::ActionState::kQueued) {
+    if (selfState_.pendingCommandQueue.empty()) {
+      throw std::runtime_error("Command queued, but pending command list is empty");
+    }
+    std::cout << "Command queued: \"" << selfState_.pendingCommandQueue.front() << "\"" << std::endl;
+    selfState_.acceptedCommandQueue.push_back(selfState_.pendingCommandQueue.front());
+    selfState_.pendingCommandQueue.erase(selfState_.pendingCommandQueue.begin());
+  } else if (packet.actionState() == packet::enums::ActionState::kError) {
+    if (selfState_.pendingCommandQueue.empty()) {
+      throw std::runtime_error("Command error, but pending command list is empty");
+    }
+    std::cout << "Command error " << packet.errorCode() << ": " << selfState_.pendingCommandQueue.front() << std::endl;
+    // Error seems to always refer to the most recent
+    selfState_.pendingCommandQueue.erase(selfState_.pendingCommandQueue.begin());
+  } else {
+    if (selfState_.acceptedCommandQueue.empty()) {
+      LOG() << "WARNING: Command ended, but we had no accepted command" << std::endl;
+      // throw std::runtime_error("Command ended, but accepted command list is empty");
+    } else {
+      std::cout << "Command ended: \"" << selfState_.acceptedCommandQueue.front() << "\"" << std::endl;
+      selfState_.acceptedCommandQueue.erase(selfState_.acceptedCommandQueue.begin());
+    }
+  }
+
+  std::cout << "----------------" << std::endl;
+  std::cout << "Pending command Queue:" << (selfState_.pendingCommandQueue.empty() ? " <empty>" : "") << std::endl;
+  for (const auto &c : selfState_.pendingCommandQueue) {
+    std::cout << "  " << c << std::endl;
+  }
+  std::cout << "Accepted command Queue:" << (selfState_.acceptedCommandQueue.empty() ? " <empty>" : "") << std::endl;
+  for (const auto &c : selfState_.acceptedCommandQueue) {
+    std::cout << "  " << c << std::endl;
+  }
+  std::cout << "==========================================================================================" << std::endl;
+}
+
+// Skill Notes:
+/*
+ActionCastingTime is the amount of time it takes for the skill to "end" after it began
+ActionActionDuration is the amount of time it takes for the skill to cast before the character is free
+ActionReuseDelay is the skill's cooldown
+*/
+
+void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const {
+  auto getRootSkillRefId = [&, this](auto refId) {
+    const auto &skillData = gameData_.skillData().getSkillById(refId);
+    if ()
+  };
   if (packet.result() == 2) {
     // Not successful?
-    return true;
+    LOG() << "Skill unsuccessful, err " << packet.errorCode() << std::endl;
+    if (packet.casterGlobalId()) {
+      LOG() << "Our skill failed" << std::endl;
+      eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kOurSkillFailed));
+    }
+    return;
   }
 
   // TODO: We need to save this skill to be referenced later on skill end
@@ -1001,7 +1066,6 @@ bool PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
   }
 
   handleSkillAction(packet.action(), packet.casterGlobalId());
-  return true;
 }
 
 void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &action, std::optional<sro::scalar_types::EntityGlobalId> casterGlobalId) const {
@@ -1024,13 +1088,30 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
   }
 }
 
-bool PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const {
+void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const {
+  LOG() << "Skill end packet received" << std::endl;
   if (packet.result() == 2) {
     // Not successful?
-    return true;
+    return;
   }
   handleSkillAction(packet.action());
-  // TODO: Need to fetch the skill that began casting in order to get caster ID to publish event
-  //  eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(packet.errorCode));
-  return true;
+
+  // Have we tracked this skill?
+  if (auto it = selfState_.skillCastIdMap.find(packet.castId()); it!=selfState_.skillCastIdMap.end()) {
+    auto &skillInfo = it->second;
+    if (skillInfo.casterGlobalId == selfState_.globalId) {
+      // We cast this skill
+      const auto &skillData = gameData_.skillData().getSkillById(skillInfo.skillRefId);
+      if (skillData.basicChainCode != 0) {
+        // Another piece coming
+        LOG() << " Another piece coming" << std::endl;
+        skillInfo.skillRefId = skillData.basicChainCode;
+      } else {
+        LOG() << " Done with skill" << std::endl;
+        // Remove it from the map
+        selfState_.skillCastIdMap.erase(it);
+        eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(selfState_.globalId));
+      }
+    }
+  }
 }

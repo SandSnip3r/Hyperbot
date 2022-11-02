@@ -49,7 +49,7 @@ public:
                   const packet::parsing::PacketParser &packetParser,
                   const pk2::GameData &gameData);
 
-  bool handlePacket(const PacketContainer &packet) const;
+  void handlePacket(const PacketContainer &packet) const;
 private:
   state::EntityTracker &entityTracker_;
   state::Self &selfState_;
@@ -70,53 +70,54 @@ private:
   //  In principal, each of these functions should only update the state and maybe publish an event.
   //  All member functions are const because this class should hold no state.
   // From LoginModule
-  bool serverListReceived(const packet::parsing::ParsedLoginServerList &packet) const;
-  bool loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) const;
-  bool loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet) const;
-  bool unknownPacketReceived(const packet::parsing::ParsedUnknown &packet) const;
-  bool serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet) const;
-  bool charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet) const;
-  bool charSelectionJoinResponseReceived(const packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse &packet) const;
+  void serverListReceived(const packet::parsing::ParsedLoginServerList &packet) const;
+  void loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) const;
+  void loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet) const;
+  void unknownPacketReceived(const packet::parsing::ParsedUnknown &packet) const;
+  void serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet) const;
+  void charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet) const;
+  void charSelectionJoinResponseReceived(const packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse &packet) const;
   // From MovementModule
-  bool serverAgentEntityUpdateAngleReceived(packet::parsing::ServerAgentEntityUpdateAngle &packet) const;
-  bool serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const;
-  bool serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const;
-  bool serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const;
+  void serverAgentEntityUpdateAngleReceived(packet::parsing::ServerAgentEntityUpdateAngle &packet) const;
+  void serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const;
+  void serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const;
+  void serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const;
   // From CharacterInfoModule
-  bool clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) const;
-  bool serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) const;
-  bool serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const;
-  bool serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInventoryStorageData &packet) const;
-  bool serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const;
-  bool serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const;
-  bool serverAgentEntityUpdateStatusReceived(const packet::parsing::ParsedServerAgentEntityUpdateStatus &packet) const;
-  bool serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const;
-  bool serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const;
-  bool serverAgentInventoryItemUseResponseReceived(const packet::parsing::ParsedServerAgentInventoryItemUseResponse &packet) const;
-  bool serverAgentInventoryOperationResponseReceived(const packet::parsing::ServerAgentInventoryOperationResponse &packet) const;
-  bool serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ParsedServerAgentEntityGroupSpawnData &packet) const;
-  bool serverAgentSpawnReceived(const packet::parsing::ParsedServerAgentSpawn &packet) const;
-  bool serverAgentDespawnReceived(const packet::parsing::ParsedServerAgentDespawn &packet) const;
+  void clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) const;
+  void serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) const;
+  void serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const;
+  void serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInventoryStorageData &packet) const;
+  void serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const;
+  void serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const;
+  void serverAgentEntityUpdateStatusReceived(const packet::parsing::ServerAgentEntityUpdateStatus &packet) const;
+  void serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const;
+  void serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const;
+  void serverAgentInventoryItemUseResponseReceived(const packet::parsing::ParsedServerAgentInventoryItemUseResponse &packet) const;
+  void serverAgentInventoryOperationResponseReceived(const packet::parsing::ServerAgentInventoryOperationResponse &packet) const;
+  void serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ServerAgentEntityGroupSpawnData &packet) const;
+  void serverAgentEntitySpawnReceived(const packet::parsing::ServerAgentEntitySpawn &packet) const;
+  void serverAgentEntityDespawnReceived(const packet::parsing::ServerAgentEntityDespawn &packet) const;
   void entitySpawned(std::shared_ptr<entity::Entity> entity) const;
   void entityDespawned(sro::scalar_types::EntityGlobalId globalId) const;
 
   // Misc
-  bool serverAgentDeselectResponseReceived(const packet::parsing::ServerAgentActionDeselectResponse &packet) const;
-  bool serverAgentSelectResponseReceived(const packet::parsing::ServerAgentActionSelectResponse &packet) const;
-  bool serverAgentTalkResponseReceived(const packet::parsing::ServerAgentActionTalkResponse &packet) const;
-  bool serverAgentInventoryRepairResponseReceived(const packet::parsing::ServerAgentInventoryRepairResponse &packet) const;
-  bool serverAgentInventoryUpdateDurabilityReceived(const packet::parsing::ServerAgentInventoryUpdateDurability &packet) const;
-  bool serverAgentInventoryUpdateItemReceived(const packet::parsing::ServerAgentInventoryUpdateItem &packet) const;
-  // bool clientAgentActionDeselectRequestReceived(const packet::parsing::ClientAgentActionDeselectRequest &packet) const;
-  // bool clientAgentActionSelectRequestReceived(const packet::parsing::ClientAgentActionSelectRequest &packet) const;
-  bool clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const;
-  bool serverAgentEntityUpdatePointsReceived(const packet::parsing::ServerAgentEntityUpdatePoints &packet) const;
-  bool serverAgentEntityUpdateExperienceReceived(const packet::parsing::ServerAgentEntityUpdateExperience &packet) const;
-  bool serverAgentGuildStorageDataReceived(const packet::parsing::ServerAgentGuildStorageData &packet) const;
+  void serverAgentDeselectResponseReceived(const packet::parsing::ServerAgentActionDeselectResponse &packet) const;
+  void serverAgentSelectResponseReceived(const packet::parsing::ServerAgentActionSelectResponse &packet) const;
+  void serverAgentTalkResponseReceived(const packet::parsing::ServerAgentActionTalkResponse &packet) const;
+  void serverAgentInventoryRepairResponseReceived(const packet::parsing::ServerAgentInventoryRepairResponse &packet) const;
+  void serverAgentInventoryUpdateDurabilityReceived(const packet::parsing::ServerAgentInventoryUpdateDurability &packet) const;
+  void serverAgentInventoryUpdateItemReceived(const packet::parsing::ServerAgentInventoryUpdateItem &packet) const;
+  // void clientAgentActionDeselectRequestReceived(const packet::parsing::ClientAgentActionDeselectRequest &packet) const;
+  // void clientAgentActionSelectRequestReceived(const packet::parsing::ClientAgentActionSelectRequest &packet) const;
+  void clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const;
+  void serverAgentEntityUpdatePointsReceived(const packet::parsing::ServerAgentEntityUpdatePoints &packet) const;
+  void serverAgentEntityUpdateExperienceReceived(const packet::parsing::ServerAgentEntityUpdateExperience &packet) const;
+  void serverAgentGuildStorageDataReceived(const packet::parsing::ServerAgentGuildStorageData &packet) const;
 
-  bool serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const;
-  bool serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const;
-  bool serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const;
+  void clientAgentActionCommandRequestReceived(const packet::parsing::ClientAgentActionCommandRequest &packet) const;
+  void serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const;
+  void serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const;
+  void serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const;
 
   void handleSkillAction(const packet::structures::SkillAction &action, std::optional<sro::scalar_types::EntityGlobalId> globalId = std::nullopt) const;
 

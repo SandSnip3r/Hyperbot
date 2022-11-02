@@ -9,7 +9,7 @@ void PacketBroker::setInjectionFunction(PacketInjectionFunction &&injectionFunct
   injectionFunction_ = std::move(injectionFunction);
 }
 
-bool PacketBroker::packetReceived(const PacketContainer &packet, PacketContainer::Direction packetDirection) {
+void PacketBroker::packetReceived(const PacketContainer &packet, PacketContainer::Direction packetDirection) {
   // A new packet has arrived
   // First, determine which "event bus" to "put it on"
   PacketSubscriptionMap *subscriptionMap;
@@ -21,11 +21,10 @@ bool PacketBroker::packetReceived(const PacketContainer &packet, PacketContainer
     subscriptionMap = &serverPacketSubscriptions_;
   } else {
     // Injected packet, not subscribing to it yet
-    return true;
+    return;
   }
   
   
-  bool forwardPacket=true;
   // Check if anybody is subscribed to this packet
   auto subscriptionIt = subscriptionMap->find(static_cast<packet::Opcode>(packet.opcode));
   if (subscriptionIt != subscriptionMap->end()) {
@@ -33,10 +32,9 @@ bool PacketBroker::packetReceived(const PacketContainer &packet, PacketContainer
     std::vector<PacketHandleFunction> &handleFunctions = subscriptionIt->second;
     for (auto &handleFunction : handleFunctions) {
       // Send this packet and make note if the packet should be forwarded
-      forwardPacket &= handleFunction(packet);
+      handleFunction(packet);
     }
   }
-  return forwardPacket;
 }
 
 void PacketBroker::injectPacket(const PacketContainer &packet, const PacketContainer::Direction packetDirection) {
