@@ -197,6 +197,7 @@ bool PacketProcessor::unknownPacketReceived(const packet::parsing::ParsedUnknown
   if (packet.opcode() == packet::Opcode::kClientAgentAuthRequest) {
     // The client is trying to authenticate
     if (selfState_.loggingIn) {
+      // TODO: This could instead be resolved by setting/unsetting blocked opcodes
       // We're the ones logging in, the client is not in the correct state, so this packet will break the login process
       // Block this from the server
       return false;

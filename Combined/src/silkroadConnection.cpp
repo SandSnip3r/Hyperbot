@@ -89,9 +89,9 @@ boost::system::error_code SilkroadConnection::Connect(const std::string & IP, ui
   return ec;
 }
 
-//Hands packets off to the security API
-bool SilkroadConnection::Inject(uint16_t opcode, StreamUtility & p, bool encrypted) {
-  if(security) {
+// Insert packet into the outgoing packet list of the security API
+bool SilkroadConnection::InjectToSend(uint16_t opcode, StreamUtility & p, bool encrypted) {
+  if (security) {
     security->Send(opcode, p, encrypted ? 1 : 0, 0);
     return true;
   }
@@ -99,9 +99,9 @@ bool SilkroadConnection::Inject(uint16_t opcode, StreamUtility & p, bool encrypt
   return false;
 }
 
-//Hands packets off to the security API
-bool SilkroadConnection::Inject(uint16_t opcode, bool encrypted) {
-  if(security) {
+// Insert packet into the outgoing packet list of the security API
+bool SilkroadConnection::InjectToSend(uint16_t opcode, bool encrypted) {
+  if (security) {
     security->Send(opcode, 0, 0, encrypted ? 1 : 0, 0);
     return true;
   }
@@ -109,10 +109,20 @@ bool SilkroadConnection::Inject(uint16_t opcode, bool encrypted) {
   return false;
 }
 
-//Hands packets off to the security API
-bool SilkroadConnection::Inject(const PacketContainer &container) {
-  if(security) {
+// Insert packet into the outgoing packet list of the security API
+bool SilkroadConnection::InjectToSend(const PacketContainer &container) {
+  if (security) {
     security->Send(container.opcode, container.data, container.encrypted, container.massive);
+    return true;
+  }
+
+  return false;
+}
+
+// Insert packet into the incoming packet list of the security API
+bool SilkroadConnection::InjectAsReceived(const PacketContainer &container) {
+  if (security) {
+    security->Recv(container);
     return true;
   }
 

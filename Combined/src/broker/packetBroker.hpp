@@ -11,6 +11,9 @@
 namespace broker {
 
 /// PacketBroker
+/// Does not have its own thread.
+///   Proxy's thread calls packetReceived.
+///   Proxy's thread or Bot's thread calls injectPacket (ideally only Bot's thread)
 /// TODO: Maybe the PacketHandleFunctions should take a polymorphic type which is a wrapper around the packet that provides lazy evaluation for the data that's parsed
 /// TODO: Unsubscription from opcodes
 /// TODO: Allow registration of multiple events in one call if necessary

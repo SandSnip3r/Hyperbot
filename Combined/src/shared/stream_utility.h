@@ -43,7 +43,7 @@ public:
 	bool WasReadError();
 	void ClearReadError();
 	void ClearWriteError();
-	const std::vector< uint8_t > & GetStreamVector();
+	const std::vector<uint8_t>& GetStreamVector() const;
 	const uint8_t * GetStreamPtr();
 	int32_t GetStreamSize();
 	int32_t GetWriteIndex();

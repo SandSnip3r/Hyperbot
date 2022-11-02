@@ -34,7 +34,7 @@ public:
 private:
   uint16_t ourListeningPort_;
   const pk2::DivisionInfo divisionInfo_;
-  broker::PacketBroker &broker_;
+  broker::PacketBroker &packetBroker_;
   std::string gatewayAddress_;
   std::string agentIP_;
   uint16_t agentPort_{0};

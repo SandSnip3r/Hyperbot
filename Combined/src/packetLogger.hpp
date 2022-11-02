@@ -12,8 +12,6 @@
 #include <string>
 
 class PacketLogger {
-public:
-	enum class Direction { kClientToServer, kServerToClient, kBotToServer, kBotToClient };
 private:
 	const std::string directoryPath;
 	std::string filePath;
@@ -22,11 +20,11 @@ private:
 	bool logToConsole{false};
 	int64_t getMsSinceEpoch() const;
 	bool isPrintable(uint8_t data) const;
-	void logPacketToFile(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, Direction direction);
-	void logPacketToConsole(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, Direction direction);
+	void logPacketToFile(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, PacketContainer::Direction direction);
+	void logPacketToConsole(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, PacketContainer::Direction direction);
 public:
 	PacketLogger(const std::string &logDirectoryPath);
-	void logPacket(const PacketContainer &packet, bool blocked, Direction direction);
+	void logPacket(const PacketContainer &packet, bool blocked, PacketContainer::Direction direction);
 };
 
 #endif

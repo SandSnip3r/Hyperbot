@@ -1,3 +1,4 @@
+#include "logging.hpp"
 #include "packetBroker.hpp"
 
 #include <stdexcept>
@@ -15,10 +16,12 @@ bool PacketBroker::packetReceived(const PacketContainer &packet, PacketContainer
   if (packetDirection == PacketContainer::Direction::kClientToServer) {
     // The packet goes on the Client->Server event bus
     subscriptionMap = &clientPacketSubscriptions_;
-  } else {
-    // packetDirection == PacketContainer::Direction::kServerToClient
+  } else if (packetDirection == PacketContainer::Direction::kServerToClient) {
     // The packet goes on the Server->Client event bus
     subscriptionMap = &serverPacketSubscriptions_;
+  } else {
+    // Injected packet, not subscribing to it yet
+    return true;
   }
   
   

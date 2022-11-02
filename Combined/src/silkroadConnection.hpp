@@ -57,14 +57,17 @@ public:
 
 	boost::system::error_code Connect(const std::string & IP, uint16_t port);
 
-	//Hands packets off to the security API
-	bool Inject(uint16_t opcode, StreamUtility & p, bool encrypted = false);
+	// Insert packet into the outgoing packet list of the security API
+	bool InjectToSend(uint16_t opcode, StreamUtility & p, bool encrypted = false);
 
-	//Hands packets off to the security API
-	bool Inject(uint16_t opcode, bool encrypted = false);
+	// Insert packet into the outgoing packet list of the security API
+	bool InjectToSend(uint16_t opcode, bool encrypted = false);
 
-	//Hands packets off to the security API
-	bool Inject(const PacketContainer &container);
+	// Insert packet into the outgoing packet list of the security API
+	bool InjectToSend(const PacketContainer &container);
+
+	// Insert packet into the incoming packet list of the security API
+	bool InjectAsReceived(const PacketContainer &container);
 
 	//Sends a formatted packet
 	bool Send(const std::vector<uint8_t> & packet);

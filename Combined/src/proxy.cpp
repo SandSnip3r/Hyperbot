@@ -3,7 +3,7 @@
 
 Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port) :
       divisionInfo_(gameData.divisionInfo()),
-      broker_(broker),
+      packetBroker_(broker),
       acceptor(ioService_, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
       timer(boost::make_shared<boost::asio::deadline_timer>(ioService_)) {
   // Get the port that the OS gave us to listen on
@@ -24,7 +24,7 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
   }
   gatewayAddress_ = divisionInfo_.divisions[0].gatewayIpAddresses[0];
 
-  broker_.setInjectionFunction(std::bind(&Proxy::inject, this, std::placeholders::_1, std::placeholders::_2));
+  packetBroker_.setInjectionFunction(std::bind(&Proxy::inject, this, std::placeholders::_1, std::placeholders::_2));
   std::cout << "Proxy constructed, listening on port " << ourListeningPort_ << '\n';
   //Start accepting connections
   PostAccept();
@@ -35,21 +35,20 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
 }
 
 Proxy::~Proxy() {
-  //Stop everything (shutting down)
+  // Stop everything (shutting down)
   Stop();
 }
 
 void Proxy::inject(const PacketContainer &packet, const PacketContainer::Direction direction) {
-  // TODO: Consider what it would mean to broadcast this packet through the bot as if it were actually coming from the client or server
+  // Inject into the incoming stream of the source, rather than the outgoing stream for the destination.
+  //  This allows us to run injected packets through the same pipeline as normal packets, i.e. we can subscribe to our own injected packets.
   if (direction == PacketContainer::Direction::kClientToServer) {
-    if (serverConnection.security) {
-      packetLogger.logPacket(packet, false, PacketLogger::Direction::kBotToServer);
-      serverConnection.Inject(packet);
+    if (clientConnection.security) {
+      clientConnection.InjectAsReceived(packet);
     }
   } else if (direction == PacketContainer::Direction::kServerToClient) {
-    if (clientConnection.security) {
-      packetLogger.logPacket(packet, false, PacketLogger::Direction::kBotToClient);
-      clientConnection.Inject(packet);
+    if (serverConnection.security) {
+      serverConnection.InjectAsReceived(packet);
     }
   }
 }
@@ -102,8 +101,7 @@ void Proxy::blockOpcode(packet::Opcode opcode) {
 }
 
 void Proxy::unblockOpcode(packet::Opcode opcode) {
-  auto it = blockedOpcodes_.find(static_cast<std::underlying_type_t<packet::Opcode>>(opcode));
-  if (it != blockedOpcodes_.end()) {
+  if (auto it = blockedOpcodes_.find(static_cast<std::underlying_type_t<packet::Opcode>>(opcode)); it != blockedOpcodes_.end()) {
     blockedOpcodes_.erase(it);
   }
 }
@@ -114,7 +112,7 @@ bool Proxy::blockingOpcode(packet::Opcode opcode) const {
 
 // Starts accepting new connections
 void Proxy::PostAccept(uint32_t count) {
-  for(uint32_t x = 0; x < count; ++x) {
+  for (uint32_t x = 0; x < count; ++x) {
     //The newly created socket will be used when something connects
     boost::shared_ptr<boost::asio::ip::tcp::socket> s(boost::make_shared<boost::asio::ip::tcp::socket>(ioService_));
     acceptor.async_accept(*s, boost::bind(&Proxy::HandleAccept, this, s, boost::asio::placeholders::error));
@@ -125,7 +123,7 @@ void Proxy::PostAccept(uint32_t count) {
 void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, const boost::system::error_code & error) {
   std::cout << "Proxy received new connection\n";
   //Error check
-  if(!error) {
+  if (!error) {
     //Close active connections
     clientConnection.Close();
     serverConnection.Close();
@@ -170,63 +168,69 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
 }
 
 void Proxy::ProcessPackets(const boost::system::error_code & error) {
-  if(!error) {
-    if(clientConnection.security) {
-      while(clientConnection.security->HasPacketToRecv()) {
+  if (!error) {
+    if (clientConnection.security) {
+      while (clientConnection.security->HasPacketToRecv()) {
         // Client sent a packet
         bool forward = true;
 
         //Retrieve the packet out of the security api
-        PacketContainer p = clientConnection.security->GetPacketToRecv();
+        const auto [packet, wasInjected] = clientConnection.security->GetPacketToRecv();
+        const auto direction = (wasInjected ? PacketContainer::Direction::kBotToServer : PacketContainer::Direction::kClientToServer);
 
-        //Check the blocked list
-        if(blockedOpcodes_.find(p.opcode) != blockedOpcodes_.end()) {
+        // Check the blocked list
+        // Don't block injected packets
+        if (!wasInjected && blockedOpcodes_.find(packet.opcode) != blockedOpcodes_.end()) {
           forward = false;
         }
 
         //Log packet
-        packetLogger.logPacket(p, !forward, PacketLogger::Direction::kClientToServer);
+        packetLogger.logPacket(packet, !forward, direction);
 
-        if(p.opcode == 0x2001) {
+        if (packet.opcode == 0x2001) {
           forward = false;
         }
 
         // Run packet through bot, regardless if it's blocked
-        const bool botWantsPacketForwarded = broker_.packetReceived(p, PacketContainer::Direction::kClientToServer);
+        const bool botWantsPacketForwarded = packetBroker_.packetReceived(packet, direction);
         forward &= botWantsPacketForwarded;
 
         //Forward the packet to Joymax
-        if(forward && serverConnection.security) {
-          serverConnection.Inject(p);
+        if (forward && serverConnection.security) {
+          serverConnection.InjectToSend(packet);
         }
       }
 
       //Send packets that are currently in the security api
-      while(clientConnection.security->HasPacketToSend()) {
-        if(!clientConnection.Send(clientConnection.security->GetPacketToSend()))
+      while (clientConnection.security->HasPacketToSend()) {
+        if (!clientConnection.Send(clientConnection.security->GetPacketToSend())) {
+          LOG() << "Client connection Send error" << std::endl;
           break;
+        }
       }
     }
 
-    if(serverConnection.security) {
-      while(serverConnection.security->HasPacketToRecv()) {
+    if (serverConnection.security) {
+      while (serverConnection.security->HasPacketToRecv()) {
         // Server sent a packet
         bool forward = true;
 
         //Retrieve the packet out of the security api
-        PacketContainer p = serverConnection.security->GetPacketToRecv();
+        const auto [packet, wasInjected] = serverConnection.security->GetPacketToRecv();
+        const auto direction = (wasInjected ? PacketContainer::Direction::kBotToClient : PacketContainer::Direction::kServerToClient);
 
-        //Check the blocked list
-        if (blockedOpcodes_.find(p.opcode) != blockedOpcodes_.end()) {
+        // Check the blocked list
+        // Don't block injected packets
+        if (!wasInjected && blockedOpcodes_.find(packet.opcode) != blockedOpcodes_.end()) {
           forward = false;
         }
 
         //Log packet
-        packetLogger.logPacket(p, !forward, PacketLogger::Direction::kServerToClient);
+        packetLogger.logPacket(packet, !forward, direction);
 
-        if(p.opcode == 0xA102) {
-          StreamUtility r = p.data;
-          if(r.Read<uint8_t>() == 1) {            
+        if (packet.opcode == 0xA102) {
+          StreamUtility r = packet.data;
+          if (r.Read<uint8_t>() == 1) {
             //The next connection will go to the agent server
             connectToAgent = true;
 
@@ -242,25 +246,26 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             w.Write<uint16_t>(ourListeningPort_);				//Port
 
             //Inject the packet
-            clientConnection.Inject(p.opcode, w);
+            clientConnection.InjectToSend(packet.opcode, w);
 
-            //Inject the packet immediately
-            while(clientConnection.security->HasPacketToSend())
+            // Inject the packet immediately
+            while (clientConnection.security->HasPacketToSend()) {
               clientConnection.Send(clientConnection.security->GetPacketToSend());
+            }
 
             //Close active connections
             clientConnection.Close();
             serverConnection.Close();
 
             //Want to forward this to the bot so it can grab the token
-            broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
+            packetBroker_.packetReceived(packet, direction);
             //Security pointer is now valid so skip to the end
             // Skipping to "Post" wont forward this packet to the client
             goto Post;
           }
         }
 
-        const auto opcodeAsEnum = static_cast<packet::Opcode>(p.opcode);
+        const auto opcodeAsEnum = static_cast<packet::Opcode>(packet.opcode);
         if (opcodeAsEnum == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN) {
           // Initialize data/container
           if (characterInfoPacketContainer_) {
@@ -268,7 +273,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             std::cout << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
-          characterInfoPacketContainer_.emplace(p);
+          characterInfoPacketContainer_.emplace(packet);
           // Update opcode to reflect "data"
           characterInfoPacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentCharacterData);
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentEntityGroupspawnBegin) {
@@ -278,7 +283,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             std::cout << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
-          groupSpawnPacketContainer_.emplace(p);
+          groupSpawnPacketContainer_.emplace(packet);
           // Update opcode to reflect "data"
           groupSpawnPacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentEntityGroupspawnData);
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageBegin) {
@@ -288,7 +293,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             std::cout << "[@@@] Wait, we got a storage begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
-          storagePacketContainer_.emplace(p);
+          storagePacketContainer_.emplace(packet);
           // Update opcode to reflect "data"
           storagePacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentInventoryStorageData);
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentGuildStorageBegin) {
@@ -298,21 +303,21 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             std::cout << "[@@@] Wait, we got a guild storage begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
-          guildStoragePacketContainer_.emplace(p);
+          guildStoragePacketContainer_.emplace(packet);
           // Update opcode to reflect "data"
           guildStoragePacketContainer_->opcode = static_cast<uint16_t>(packet::Opcode::kServerAgentGuildStorageData);
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentCharacterData) {
           // Append all data to container
-          characterInfoPacketContainer_->data.Write(p.data.GetStreamVector());
+          characterInfoPacketContainer_->data.Write(packet.data.GetStreamVector());
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentEntityGroupspawnData) {
           // Append all data to container
-          groupSpawnPacketContainer_->data.Write(p.data.GetStreamVector());
+          groupSpawnPacketContainer_->data.Write(packet.data.GetStreamVector());
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageData) {
           // Append all data to container
-          storagePacketContainer_->data.Write(p.data.GetStreamVector());
+          storagePacketContainer_->data.Write(packet.data.GetStreamVector());
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentGuildStorageData) {
           // Append all data to container
-          guildStoragePacketContainer_->data.Write(p.data.GetStreamVector());
+          guildStoragePacketContainer_->data.Write(packet.data.GetStreamVector());
         }
 
         // Run packet through bot, regardless if it's blocked
@@ -320,22 +325,22 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         // Handle "begin", "data", and "end" pieces of split packets
         if (opcodeAsEnum == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_END) {
           // Send packet to broker
-          botWantsPacketForwarded = broker_.packetReceived(*characterInfoPacketContainer_, PacketContainer::Direction::kServerToClient);
+          botWantsPacketForwarded = packetBroker_.packetReceived(*characterInfoPacketContainer_, direction);
           // Reset data
           characterInfoPacketContainer_.reset();
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentEntityGroupspawnEnd) {
           // Send packet to broker
-          botWantsPacketForwarded = broker_.packetReceived(*groupSpawnPacketContainer_, PacketContainer::Direction::kServerToClient);
+          botWantsPacketForwarded = packetBroker_.packetReceived(*groupSpawnPacketContainer_, direction);
           // Reset data
           groupSpawnPacketContainer_.reset();
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageEnd) {
           // Send packet to broker
-          botWantsPacketForwarded = broker_.packetReceived(*storagePacketContainer_, PacketContainer::Direction::kServerToClient);
+          botWantsPacketForwarded = packetBroker_.packetReceived(*storagePacketContainer_, direction);
           // Reset data
           storagePacketContainer_.reset();
         } else if (opcodeAsEnum == packet::Opcode::kServerAgentGuildStorageEnd) {
           // Send packet to broker
-          botWantsPacketForwarded = broker_.packetReceived(*guildStoragePacketContainer_, PacketContainer::Direction::kServerToClient);
+          botWantsPacketForwarded = packetBroker_.packetReceived(*guildStoragePacketContainer_, direction);
           // Reset data
           guildStoragePacketContainer_.reset();
         } else if (opcodeAsEnum != packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN &&
@@ -347,20 +352,22 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
                     opcodeAsEnum != packet::Opcode::kServerAgentGuildStorageBegin &&
                     opcodeAsEnum != packet::Opcode::kServerAgentGuildStorageData) {
           // In all other cases, if its not "begin" or "data", send it
-          botWantsPacketForwarded = broker_.packetReceived(p, PacketContainer::Direction::kServerToClient);
+          botWantsPacketForwarded = packetBroker_.packetReceived(packet, direction);
         }
         forward &= botWantsPacketForwarded;
 
         //Forward the packet to the Silkroad server
         if (forward && clientConnection.security) {
-          clientConnection.Inject(p);
+          clientConnection.InjectToSend(packet);
         }
       }
 
       //Send packets that are currently in the security api
-      while(serverConnection.security->HasPacketToSend()) {
-        if(!serverConnection.Send(serverConnection.security->GetPacketToSend()))
+      while (serverConnection.security->HasPacketToSend()) {
+        if (!serverConnection.Send(serverConnection.security->GetPacketToSend())) {
+          LOG() << "Server connection Send error" << std::endl;
           break;
+        }
       }
     }
 

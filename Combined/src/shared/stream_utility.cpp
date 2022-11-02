@@ -77,8 +77,7 @@ void StreamUtility::ClearWriteError()
 	m_write_error = false;
 }
 
-const std::vector< uint8_t > & StreamUtility::GetStreamVector()
-{
+const std::vector<uint8_t>& StreamUtility::GetStreamVector() const {
 	return m_stream;
 }
 

@@ -16,7 +16,9 @@ struct PacketContainer
 {
 	enum class Direction {
 		kClientToServer,
-		kServerToClient
+		kBotToServer,
+		kServerToClient,
+		kBotToClient
 	};
 	uint16_t opcode;
 	StreamUtility data;
@@ -29,6 +31,8 @@ struct PacketContainer
 	PacketContainer & operator =( const PacketContainer & rhs );
 	~PacketContainer();
 };
+
+using PacketContainerAndInjected = std::pair<PacketContainer, bool>;
 
 //-----------------------------------------------------------------------------
 
@@ -64,6 +68,7 @@ public:
 	// only be called within a serialized network thread. Can throw.
 	void Recv( const uint8_t * stream, int32_t count );
 	void Recv( const std::vector< uint8_t > & stream );
+	void Recv(const PacketContainer &packet);
 
 	// Returns true if there are any packets ready to be processed. This function
 	// should be called after Recv or at some regular interval depending 
@@ -75,7 +80,7 @@ public:
 	// in a usable form. For example: 0x600D packets are handled internally and the
 	// data they contain is returned through this function. You will never get a
 	// a 0x600D packet to process. Can throw.
-	PacketContainer GetPacketToRecv();
+	PacketContainerAndInjected GetPacketToRecv();
 
 	// Transfers formatted outgoing data into the security object. A packet
 	// is then queued internally and will be processed when the GetPacketToSend

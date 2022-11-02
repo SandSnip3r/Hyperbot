@@ -10,7 +10,7 @@ bool PacketLogger::isPrintable(uint8_t data) const {
   return (data >= ' ' && data <= '~');
 }
 
-void PacketLogger::logPacketToFile(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, Direction direction) {
+void PacketLogger::logPacketToFile(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, PacketContainer::Direction direction) {
   if (!logfile) {
     throw std::runtime_error("Log file \""+filePath+"\" problem");
   }
@@ -19,13 +19,13 @@ void PacketLogger::logPacketToFile(int64_t msSinceEpoch, const PacketContainer &
   ss << blocked << ',';
   ss << (int)packet.encrypted << ',';
   ss << (int)packet.massive << ',';
-  if (direction == Direction::kClientToServer) {
+  if (direction == PacketContainer::Direction::kClientToServer) {
     ss << "C,";
-  } else if (direction == Direction::kServerToClient) {
+  } else if (direction == PacketContainer::Direction::kServerToClient) {
     ss << "S,";
-  } else if (direction == Direction::kBotToServer) {
+  } else if (direction == PacketContainer::Direction::kBotToServer) {
     ss << "B,";
-  } else if (direction == Direction::kBotToClient) {
+  } else if (direction == PacketContainer::Direction::kBotToClient) {
     ss << "b,";
   }
   ss << (int)packet.opcode;
@@ -38,18 +38,18 @@ void PacketLogger::logPacketToFile(int64_t msSinceEpoch, const PacketContainer &
   logfile << ss.str() << std::flush;
 }
 
-void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, Direction direction) {
+void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, PacketContainer::Direction direction) {
   const int kBytesPerLine{20};
 
   std::stringstream ss;
   ss << '[' << msSinceEpoch << "] ";
-  if (direction == Direction::kClientToServer) {
+  if (direction == PacketContainer::Direction::kClientToServer) {
     ss << " (C->S)";
-  } else if (direction == Direction::kServerToClient) {
+  } else if (direction == PacketContainer::Direction::kServerToClient) {
     ss << " (S->C)";
-  } else if (direction == Direction::kBotToServer) {
+  } else if (direction == PacketContainer::Direction::kBotToServer) {
     ss << " (B->S)";
-  } else if (direction == Direction::kBotToClient) {
+  } else if (direction == PacketContainer::Direction::kBotToClient) {
     ss << " (B->C)";
   }
   ss << (int)blocked << ',';
@@ -106,7 +106,7 @@ PacketLogger::PacketLogger(const std::string &logDirectoryPath) : directoryPath(
   }
 }
 
-void PacketLogger::logPacket(const PacketContainer &packet, bool blocked, Direction direction) {
+void PacketLogger::logPacket(const PacketContainer &packet, bool blocked, PacketContainer::Direction direction) {
   int64_t msSinceEpoch = getMsSinceEpoch();
   if (logToFile) {
     logPacketToFile(msSinceEpoch, packet, blocked, direction);
