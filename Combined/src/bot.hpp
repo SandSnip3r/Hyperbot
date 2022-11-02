@@ -83,6 +83,7 @@ private:
   void handleStateShardIdUpdated() const;
   void handleStateConnectedToAgentServerUpdated();
   void handleStateReceivedCaptchaPromptUpdated() const;
+  void handleLoggedIn();
   void handleStateCharacterListUpdated() const;
   // Movement events
   void handleMovementTimerEnded();

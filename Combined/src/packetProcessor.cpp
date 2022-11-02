@@ -194,15 +194,7 @@ bool PacketProcessor::loginClientInfoReceived(const packet::parsing::ParsedLogin
 }
 
 bool PacketProcessor::unknownPacketReceived(const packet::parsing::ParsedUnknown &packet) const {
-  if (packet.opcode() == packet::Opcode::kClientAgentAuthRequest) {
-    // The client is trying to authenticate
-    if (selfState_.loggingIn) {
-      // TODO: This could instead be resolved by setting/unsetting blocked opcodes
-      // We're the ones logging in, the client is not in the correct state, so this packet will break the login process
-      // Block this from the server
-      return false;
-    }
-  } else if (packet.opcode() == packet::Opcode::kServerGatewayLoginIbuvChallenge) {
+  if (packet.opcode() == packet::Opcode::kServerGatewayLoginIbuvChallenge) {
     // Got the captcha prompt, respond with an answer
     selfState_.receivedCaptchaPrompt = true;
     eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStateReceivedCaptchaPromptUpdated));
@@ -213,7 +205,7 @@ bool PacketProcessor::unknownPacketReceived(const packet::parsing::ParsedUnknown
 bool PacketProcessor::serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet) const {
   if (packet.result() == 0x01) {
     // Successful login
-    selfState_.loggingIn = false;
+    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kLoggedIn));
     // Client will automatically request the character listing
     // TODO: For clientless, we will need to do this ourself
   }

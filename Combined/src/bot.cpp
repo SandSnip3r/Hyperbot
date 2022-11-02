@@ -58,6 +58,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kStateShardIdUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStateConnectedToAgentServerUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStateReceivedCaptchaPromptUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kLoggedIn, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStateCharacterListUpdated, eventHandleFunction);
   // Movement events
   eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementEnded, eventHandleFunction);
@@ -139,6 +140,9 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       case event::EventCode::kStateReceivedCaptchaPromptUpdated:
         handleStateReceivedCaptchaPromptUpdated();
+        break;
+      case event::EventCode::kLoggedIn:
+        handleLoggedIn();
         break;
       case event::EventCode::kStateCharacterListUpdated:
         handleStateCharacterListUpdated();
@@ -429,10 +433,25 @@ void Bot::handleStateShardIdUpdated() const {
 }
 
 void Bot::handleStateConnectedToAgentServerUpdated() {
+  // Client will try to send auth request, block it
+  if (proxy_.blockingOpcode(packet::Opcode::kClientAgentAuthRequest)) {
+    throw std::runtime_error("Just connected to AgentServer, but something else blocked client auth packets");
+  }
+  proxy_.blockOpcode(packet::Opcode::kClientAgentAuthRequest);
+  // Send our auth packet
   const auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(selfState_.token, loginData_.id, loginData_.password, gameData_.divisionInfo().locale, selfState_.kMacAddress);
   broker_.injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
   // Set our state to logging in so that we'll know to block packets from the client if it tries to also login
   selfState_.loggingIn = true;
+}
+
+void Bot::handleLoggedIn() {
+  selfState_.loggingIn = false;
+  // Unblock packet
+  if (!proxy_.blockingOpcode(packet::Opcode::kClientAgentAuthRequest)) {
+    throw std::runtime_error("Just logged in, but we werent blocking the client's auth request");
+  }
+  proxy_.unblockOpcode(packet::Opcode::kClientAgentAuthRequest);
 }
 
 void Bot::handleStateReceivedCaptchaPromptUpdated() const {

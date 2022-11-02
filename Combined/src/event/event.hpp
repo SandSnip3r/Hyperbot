@@ -10,6 +10,7 @@
 namespace event {
 
 enum class EventCode {
+  kLoggedIn,
   kSpawned,
   kCosSpawned,
   kHpPotionCooldownEnded,
