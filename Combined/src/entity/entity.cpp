@@ -60,7 +60,6 @@ void MobileEntity::initializeAsMoving(sro::Angle destinationAngle) {
 
 void MobileEntity::registerGeometryBoundary(std::unique_ptr<Geometry> geometry, broker::EventBroker &eventBroker) {
   std::lock_guard<std::mutex> lock(mutex_);
-  LOG() << "Registered geometry for entity" << std::endl;
   if (geometry_) {
     throw std::runtime_error("MobileEntity already holds geometry");
   }
@@ -406,6 +405,53 @@ void Character::setLifeState(sro::entity::LifeState newLifeState, broker::EventB
   if (changed) {
     eventBroker.publishEvent(std::make_unique<event::EntityLifeStateChanged>(globalId));
   }
+}
+
+bool Character::knowCurrentHp() const {
+  return currentHp_.has_value();
+}
+
+uint32_t Character::currentHp() const {
+  if (!currentHp_) {
+    throw std::runtime_error("Trying to get character's unknown hp");
+  }
+  return *currentHp_;
+}
+
+void Character::setCurrentHp(uint32_t hp, broker::EventBroker &eventBroker) {
+  currentHp_ = hp;
+  eventBroker.publishEvent(std::make_unique<event::EntityHpChanged>(globalId));
+}
+
+// ============================================================================================================================================
+
+uint32_t Monster::getMaxHp(const pk2::CharacterData &characterData) const {
+  if (!characterData.haveCharacterWithId(refObjId)) {
+    throw std::runtime_error("Don't have character data to get max HP");
+  }
+  const auto &data = characterData.getCharacterById(refObjId);
+  uint32_t hp = data.maxHp;
+  using RarityRawType = std::underlying_type_t<decltype(rarity)>;
+  const auto partylessRarity = static_cast<sro::entity::MonsterRarity>(static_cast<RarityRawType>(rarity) & (static_cast<RarityRawType>(sro::entity::MonsterRarity::kPartyFlag)-1));
+  switch (partylessRarity) {
+    case sro::entity::MonsterRarity::kChampion:
+      hp *= 2;
+      break;
+    case sro::entity::MonsterRarity::kGiant:
+      hp *= 20;
+      break;
+    case sro::entity::MonsterRarity::kElite:
+      hp *= 30;
+      break;
+    default:
+      LOG() << "Asking for max HP of an unknown monster rarity" << std::endl;
+      break;
+  }
+  if (flags::isSet(rarity, sro::entity::MonsterRarity::kPartyFlag)) {
+    // Party monsters have a flat x10 across the base
+    hp *= 10;
+  }
+  return hp;
 }
 
 // ============================================================================================================================================

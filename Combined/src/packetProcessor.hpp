@@ -5,13 +5,19 @@
 #include "broker/packetBroker.hpp"
 // #include "packet/parsing/clientAgentActionDeselectRequest.hpp"
 // #include "packet/parsing/clientAgentActionSelectRequest.hpp"
+#include "packet/parsing/clientAgentActionCommandRequest.hpp"
 #include "packet/parsing/clientAgentActionTalkRequest.hpp"
 #include "packet/parsing/serverAgentActionCommandResponse.hpp"
 #include "packet/parsing/serverAgentActionDeselectResponse.hpp"
 #include "packet/parsing/serverAgentActionSelectResponse.hpp"
 #include "packet/parsing/serverAgentActionTalkResponse.hpp"
+#include "packet/parsing/serverAgentBuffAdd.hpp"
+#include "packet/parsing/serverAgentBuffRemove.hpp"
 #include "packet/parsing/serverAgentCharacterData.hpp"
 #include "packet/parsing/serverAgentCosData.hpp"
+#include "packet/parsing/serverAgentEntityDespawn.hpp"
+#include "packet/parsing/serverAgentEntityGroupSpawnData.hpp"
+#include "packet/parsing/serverAgentEntitySpawn.hpp"
 #include "packet/parsing/serverAgentEntitySyncPosition.hpp"
 #include "packet/parsing/serverAgentEntityUpdateAngle.hpp"
 #include "packet/parsing/serverAgentEntityUpdateExperience.hpp"
@@ -20,6 +26,7 @@
 #include "packet/parsing/serverAgentEntityUpdatePoints.hpp"
 #include "packet/parsing/serverAgentEntityUpdatePosition.hpp"
 #include "packet/parsing/serverAgentEntityUpdateState.hpp"
+#include "packet/parsing/serverAgentEntityUpdateStatus.hpp"
 #include "packet/parsing/serverAgentGuildStorageData.hpp"
 #include "packet/parsing/serverAgentInventoryOperationResponse.hpp"
 #include "packet/parsing/serverAgentInventoryRepairResponse.hpp"
@@ -30,9 +37,7 @@
 #include "packet/parsing/serverAgentSkillEnd.hpp"
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
-#include "state/entityTracker.hpp"
-#include "state/self.hpp"
-#include "ui/userInterface.hpp"
+#include "state/worldState.hpp"
 
 #define ENFORCE_PURIFICATION_PILL_COOLDOWN
 
@@ -41,23 +46,18 @@
  */
 class PacketProcessor {
 public:
-  PacketProcessor(state::EntityTracker &entityTracker,
-                  state::Self &selfState,
+  PacketProcessor(state::WorldState &worldState,
                   broker::PacketBroker &brokerSystem,
                   broker::EventBroker &eventBroker,
-                  ui::UserInterface &userInterface,
-                  const packet::parsing::PacketParser &packetParser,
                   const pk2::GameData &gameData);
 
   void handlePacket(const PacketContainer &packet) const;
 private:
-  state::EntityTracker &entityTracker_;
-  state::Self &selfState_;
-  broker::PacketBroker &broker_;
+  state::WorldState &worldState_;
+  broker::PacketBroker &packetBroker_;
   broker::EventBroker &eventBroker_;
-  ui::UserInterface &userInterface_;
-  const packet::parsing::PacketParser &packetParser_;
   const pk2::GameData &gameData_;
+  packet::parsing::PacketParser packetParser_{worldState_.entityTracker(), gameData_};
 
   // TODO: We should move this to a more global configuration area for general bot mechanics configuration
   //       Maybe we could try to improve this value based on item use results
@@ -118,23 +118,9 @@ private:
   void serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const;
   void serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const;
   void serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const;
-
   void handleSkillAction(const packet::structures::SkillAction &action, std::optional<sro::scalar_types::EntityGlobalId> globalId = std::nullopt) const;
-
-  // Helpers
-  template<typename EntityType>
-  EntityType& getEntity(sro::scalar_types::EntityGlobalId globalId) const {
-    if (globalId == selfState_.globalId) {
-      if (dynamic_cast<const EntityType*>(&selfState_) == nullptr) {
-        throw std::runtime_error("Trying to get self entity as an invalid type");
-      }
-      return selfState_;
-    } else if (entityTracker_.trackingEntity(globalId)) {
-      return entityTracker_.getEntity<EntityType>(globalId);
-    } else {
-      throw std::runtime_error("Trying to get untracked entity");
-    }
-  }
+  void serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const;
+  void serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const;
 };
 
 #endif // PACKETPROCESSOR_HPP_

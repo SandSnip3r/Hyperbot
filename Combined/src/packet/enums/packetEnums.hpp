@@ -2,6 +2,18 @@
 #define PACKET_ENUMS_HPP
 
 #include <cstdint>
+#include <ostream>
+#include <type_traits>
+
+namespace flags {
+
+template<typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+bool isSet(const T &bitmask, const T &flag) {
+  using Type = std::underlying_type_t<T>;
+  return static_cast<Type>(bitmask) & static_cast<Type>(flag);
+}
+
+}
 
 namespace packet::enums {
 
@@ -56,12 +68,11 @@ enum class UpdateFlag : uint16_t {
   kMurderBurn =    0x200
 };
 
-enum class VitalInfoFlag : uint8_t
-{
-    kVitalInfoHp =       1,
-    kVitalInfoMp =       2,
-    kVitalInfoAbnormal = 4,
-    kVitalInfoHgp =      8
+enum class VitalInfoFlag : uint8_t {
+  kVitalInfoHp =       1,
+  kVitalInfoMp =       2,
+  kVitalInfoAbnormal = 4,
+  kVitalInfoHgp =      8
 };
 
 enum class AbnormalStateFlag : uint32_t {
@@ -174,6 +185,12 @@ enum class BodyState : uint8_t {
 enum class CommandType : uint8_t {
   kExecute = 1,
   kCancel = 2
+};
+
+enum ActionState : uint8_t {
+  kQueued = 1,
+  kEnd = 2,
+  kError = 3
 };
 
 enum class ActionType : uint8_t {
@@ -334,6 +351,65 @@ enum class ItemUpdateFlag : uint8_t {
   kState = 64,
   kUnknown128 = 128,
 };
+
+enum class GroupSpawnType {
+  kSpawn=1,
+  kDespawn=2
+};
+
+enum class FreePvpMode : uint8_t {
+  kNone = 0,
+  kRed = 1,
+  kBlack = 2,
+  kBlue = 3,
+  kWhite = 4,
+  kYellow = 5
+};
+
+enum class OperatorCommand : uint16_t {
+  kFindUser = 1,
+  kGoTown = 2,
+  kToTown = 3,
+  kWorldStatus = 4,
+  kStat = 5,
+  kLoadMonster = 6,
+  kMakeItem = 7,
+  kMoveToUser = 8,
+  //9,    /tranquilize?
+  kSetTime = 10,
+  kZoe = 12,
+  kBan = 13,
+  kInvisible = 14,
+  kInvincible = 15,
+  kWarpPoint = 16, // also posto
+  kRecallUser = 17,
+  kRecallGuild = 18,
+  kInstance = 19,
+  kMobKill = 20,
+  //21,   /EVENTON?
+  //22,   /EVENTOFF?
+  //23,   /BLOCKLOGOUT?
+  //24,   /ALLOWLOGOUT?
+  kLieName = 25,
+  kRealName = 26,
+  kInitQ = 27,
+  kResetQ = 28,
+  kCompQ = 29,
+  kRemoveQ = 30,
+  kMoveToNPC = 31,
+  kSiege = 33,
+  kMakeRentItem = 38,
+  kSpawnUniqueLoc = 42,
+  kSpawnUniqueAll = 43,
+  kBattleArena = 50,
+  kTriggerAction = 55,
+};
+
+std::ostream& operator<<(std::ostream &stream, const ActionState &enumVal);
+std::ostream& operator<<(std::ostream &stream, const CommandType &enumVal);
+std::ostream& operator<<(std::ostream &stream, const ActionType &enumVal);
+std::ostream& operator<<(std::ostream &stream, const TargetType &enumVal);
+std::ostream& operator<<(std::ostream &stream, const AbnormalStateFlag &enumVal);
 
 } // namespace packet::enums
 

@@ -15,6 +15,9 @@
 #include "serverAgentCharacterData.hpp"
 #include "serverAgentChatUpdate.hpp"
 #include "serverAgentCosData.hpp"
+#include "serverAgentEntityDespawn.hpp"
+#include "serverAgentEntityGroupSpawnData.hpp"
+#include "serverAgentEntitySpawn.hpp"
 #include "serverAgentEntitySyncPosition.hpp"
 #include "serverAgentEntityUpdateAngle.hpp"
 #include "serverAgentEntityUpdateExperience.hpp"
@@ -23,6 +26,7 @@
 #include "serverAgentEntityUpdatePoints.hpp"
 #include "serverAgentEntityUpdatePosition.hpp"
 #include "serverAgentEntityUpdateState.hpp"
+#include "serverAgentEntityUpdateStatus.hpp"
 #include "serverAgentGuildStorageData.hpp"
 #include "serverAgentInventoryOperationResponse.hpp"
 #include "serverAgentInventoryRepairResponse.hpp"
@@ -38,7 +42,8 @@
 
 namespace packet::parsing {
 
-PacketParser::PacketParser(const pk2::GameData &gameData) :
+PacketParser::PacketParser(const state::EntityTracker &entityTracker, const pk2::GameData &gameData) :
+      entityTracker_(entityTracker),
       gameData_(gameData) {
   //
 }
@@ -74,17 +79,17 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       case Opcode::kServerAgentCharacterData:
         return std::make_unique<ParsedServerAgentCharacterData>(packet, gameData_.itemData(), gameData_.skillData());
       case Opcode::kServerAgentEntityGroupspawnData:
-        return std::make_unique<ParsedServerAgentEntityGroupSpawnData>(packet, gameData_.characterData(), gameData_.itemData(), gameData_.skillData(), gameData_.teleportData());
+        return std::make_unique<ServerAgentEntityGroupSpawnData>(packet, gameData_.characterData(), gameData_.itemData(), gameData_.skillData(), gameData_.teleportData());
       case Opcode::kServerAgentInventoryStorageData:
         return std::make_unique<ParsedServerAgentInventoryStorageData>(packet, gameData_.itemData());
       case Opcode::kServerAgentGuildStorageData:
         return std::make_unique<ServerAgentGuildStorageData>(packet, gameData_.itemData());
       case Opcode::kServerAgentEntitySpawn:
-        return std::make_unique<ParsedServerAgentSpawn>(packet, gameData_.characterData(), gameData_.itemData(), gameData_.skillData(), gameData_.teleportData());
+        return std::make_unique<ServerAgentEntitySpawn>(packet, gameData_.characterData(), gameData_.itemData(), gameData_.skillData(), gameData_.teleportData());
       case Opcode::kServerAgentEntityDespawn:
-        return std::make_unique<ParsedServerAgentDespawn>(packet);
+        return std::make_unique<ServerAgentEntityDespawn>(packet);
       case Opcode::kServerAgentEntityUpdateStatus:
-        return std::make_unique<ParsedServerAgentEntityUpdateStatus>(packet);
+        return std::make_unique<ServerAgentEntityUpdateStatus>(packet);
       case Opcode::kServerAgentEntityUpdateExperience:
         return std::make_unique<ServerAgentEntityUpdateExperience>(packet);
       case Opcode::kServerAgentAbnormalInfo:
@@ -110,7 +115,7 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       case Opcode::kServerAgentActionDeselectResponse:
         return std::make_unique<ServerAgentActionDeselectResponse>(packet);
       case Opcode::kServerAgentActionSelectResponse:
-        return std::make_unique<ServerAgentActionSelectResponse>(packet);
+        return std::make_unique<ServerAgentActionSelectResponse>(packet, entityTracker_);
       case Opcode::kServerAgentActionTalkResponse:
         return std::make_unique<ServerAgentActionTalkResponse>(packet);
       case Opcode::kServerAgentEntityUpdateState:

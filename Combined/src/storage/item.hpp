@@ -2,6 +2,7 @@
 #define ITEM_HPP__
 
 #include "pk2/gameData.hpp"
+#include "type_id/typeCategory.hpp"
 #include "../../../common/pk2/ref/item.hpp"
 
 #include <cstdint>
@@ -26,7 +27,9 @@ public:
   uint32_t refItemId;
   const ItemType type;
   const pk2::ref::Item *itemInfo{nullptr};
-  uint16_t typeData() const;
+  type_id::TypeId typeData() const;
+  bool isA(const type_id::TypeCategory &typeCategory) const;
+  bool isOneOf(const std::vector<type_id::TypeCategory> &typeCategories) const;
   virtual ~Item() = 0; // Make base type polymorphic and uninstantiable
 protected:
   Item(ItemType t);

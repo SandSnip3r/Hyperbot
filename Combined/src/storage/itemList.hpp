@@ -2,6 +2,7 @@
 #define STORAGE_ITEMLIST_HPP_
 
 #include "item.hpp"
+#include "type_id/typeCategory.hpp"
 
 #include <memory>
 #include <optional>
@@ -17,7 +18,8 @@ public:
   Item* getItem(uint8_t slot);
   const Item* getItem(uint8_t slot) const;
   uint8_t size() const;
-  std::vector<uint8_t> findItemsWithTypeId(uint16_t typeId) const;
+  std::vector<uint8_t> findItemsOfCategory(const std::vector<type_id::TypeCategory> &categories) const;
+  std::vector<uint8_t> findItemsWithTypeId(type_id::TypeId typeId) const;
   std::vector<uint8_t> findItemsWithRefId(uint32_t refId) const;
   std::optional<uint8_t> firstFreeSlot() const;
 

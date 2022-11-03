@@ -47,6 +47,8 @@ public:
   Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData);
   virtual ~Self() = default;
   void initialize(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId);
+
+  void initializeCurrentHp(uint32_t hp);
                   
   // Setters
   void setCurrentLevel(uint8_t currentLevel);
@@ -70,7 +72,6 @@ public:
   void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) override;
   void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) override;
 
-  void setHp(uint32_t hp);
   void setMp(uint32_t mp);
   void setMaxHpMp(uint32_t maxHp, uint32_t maxMp);
   void updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels);
@@ -115,7 +116,6 @@ public:
   float hwanSpeed() const;
   packet::enums::BodyState bodyState() const;
   
-  uint32_t hp() const;
   uint32_t mp() const;
   std::optional<uint32_t> maxHp() const;
   std::optional<uint32_t> maxMp() const;
@@ -135,20 +135,21 @@ public:
 
   // =================Packets-in-flight state=================
   struct UsedItem {
-    UsedItem(uint8_t s, uint16_t i) : inventorySlotNum(s), itemTypeId(i) {}
+    UsedItem(uint8_t s, type_id::TypeId i) : inventorySlotNum(s), typeId(i) {}
     uint8_t inventorySlotNum;
-    uint16_t itemTypeId;
+    type_id::TypeId typeId;
   };
   // Setters
   void popItemFromUsedItemQueueIfNotEmpty();
   void clearUsedItemQueue();
-  void pushItemToUsedItemQueue(uint8_t inventorySlotNum, uint16_t itemTypeId);
+  void pushItemToUsedItemQueue(uint8_t inventorySlotNum, type_id::TypeId typeId);
 
   void setUserPurchaseRequest(const packet::structures::ItemMovement &itemMovement);
   void resetUserPurchaseRequest();
   // Getters
   bool usedItemQueueIsEmpty() const;
-  bool itemIsInUsedItemQueue(uint16_t itemTypeId) const;
+  bool itemIsInUsedItemQueue(type_id::TypeId typeId) const;
+  void removedItemFromUsedItemQueue(uint8_t inventorySlotNum, type_id::TypeId typeId);
   UsedItem getUsedItemQueueFront() const;
 
   bool haveUserPurchaseRequest() const;
@@ -198,7 +199,6 @@ public:
 
   // Health
 private:
-  uint32_t hp_;
   uint32_t mp_;
   std::optional<uint32_t> maxHp_;
   std::optional<uint32_t> maxMp_;
@@ -246,7 +246,25 @@ public:
   void resetTrainingAreaGeometry();
   // ################################################################################
   // Skill state
-  std::map<uint32_t, sro::scalar_types::EntityGlobalId> skillCastIdCasterIdMap;
+  struct SkillInfo {
+    SkillInfo(sro::scalar_types::EntityGlobalId a, sro::scalar_types::ReferenceObjectId b) : casterGlobalId(a), skillRefId(b) {}
+    sro::scalar_types::EntityGlobalId casterGlobalId;
+    sro::scalar_types::ReferenceObjectId skillRefId;
+  };
+  std::map<uint32_t, SkillInfo> skillCastIdMap;
+  std::vector<packet::structures::ActionCommand> pendingCommandQueue;
+  std::vector<packet::structures::ActionCommand> acceptedCommandQueue;
+  std::set<sro::scalar_types::ReferenceObjectId> skillsOnCooldown;
+  std::set<sro::scalar_types::ReferenceObjectId> buffs;
+  void addBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker);
+  void removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker);
+
+  // ################################################################################
+  // misc
+  // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.
+  double estimatedVisibilityRange{842.574};
+  // TODO: Refactor this whole itemUsedTimeout concept
+  std::optional<broker::TimerManager::TimerId> itemUsedTimeoutTimer;
   // ################################################################################
 
 private:

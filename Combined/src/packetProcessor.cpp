@@ -3,6 +3,12 @@
 #include "entity/entity.hpp"
 #include "helpers.hpp"
 #include "logging.hpp"
+// TODO: <remove>
+// For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
+#include "packet/building/clientAgentFreePvpUpdateRequest.hpp"
+#include "packet/building/clientAgentOperatorRequest.hpp"
+// </remove>
+#include "packet/building/clientAgentActionCommandRequest.hpp"
 #include "packet/opcode.hpp"
 
 #include <silkroad_lib/position.h>
@@ -16,19 +22,13 @@
   } \
 }
 
-PacketProcessor::PacketProcessor(state::EntityTracker &entityTracker,
-                                 state::Self &selfState,
+PacketProcessor::PacketProcessor(state::WorldState &worldState,
                                  broker::PacketBroker &brokerSystem,
                                  broker::EventBroker &eventBroker,
-                                 ui::UserInterface &userInterface,
-                                 const packet::parsing::PacketParser &packetParser,
                                  const pk2::GameData &gameData) :
-      entityTracker_(entityTracker),
-      selfState_(selfState),
-      broker_(brokerSystem),
+      worldState_(worldState),
+      packetBroker_(brokerSystem),
       eventBroker_(eventBroker),
-      userInterface_(userInterface),
-      packetParser_(packetParser),
       gameData_(gameData) {
   subscribeToPackets();
 }
@@ -48,43 +48,46 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayLoginIbuvChallenge, packetHandleFunction);
   // packetBroker_.subscribeToServerPacket(static_cast<packet::Opcode>(0x6005), packetHandleFunction);
   //   Movement packets
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateAngle, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMovement, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePosition, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySyncPosition, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateAngle, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMovement, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePosition, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySyncPosition, packetHandleFunction);
   //   Character info packets
-  broker_.subscribeToClientPacket(packet::Opcode::kClientAgentInventoryOperationRequest, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterData, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentCosData, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryStorageData, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateState, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateStatus, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentAbnormalInfo, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterUpdateStats, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryItemUseResponse, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryOperationResponse, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMoveSpeed, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityGroupspawnData, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySpawn, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityDespawn, packetHandleFunction);
+  packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentInventoryOperationRequest, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterData, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCosData, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryStorageData, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateState, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateStatus, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAbnormalInfo, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterUpdateStats, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryItemUseResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryOperationResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMoveSpeed, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityGroupspawnData, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySpawn, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityDespawn, packetHandleFunction);
 
   //   Misc. packets
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionDeselectResponse, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionSelectResponse, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionTalkResponse, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryRepairResponse, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryUpdateDurability, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryUpdateItem, packetHandleFunction);
-  // broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionDeselectRequest, packetHandleFunction);
-  // broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionSelectRequest, packetHandleFunction);
-  broker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionTalkRequest, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePoints, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateExperience, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentGuildStorageData, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionDeselectResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionSelectResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionTalkResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryRepairResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryUpdateDurability, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryUpdateItem, packetHandleFunction);
+  // packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionDeselectRequest, packetHandleFunction);
+  // packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionSelectRequest, packetHandleFunction);
+  packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionTalkRequest, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePoints, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateExperience, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentGuildStorageData, packetHandleFunction);
 
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionCommandResponse, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillBegin, packetHandleFunction);
-  broker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillEnd, packetHandleFunction);
+  packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionCommandRequest, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionCommandResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillBegin, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillEnd, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffAdd, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffRemove, packetHandleFunction);
 }
 
 void PacketProcessor::handlePacket(const PacketContainer &packet) const {
@@ -101,7 +104,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     return;
   }
 
-  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
+  std::unique_lock<std::mutex> selfStateLock(worldState_.selfState().selfMutex);
 
   try {
     // Login packet handlers
@@ -126,14 +129,14 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentInventoryStorageData, serverAgentInventoryStorageDataReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateState, serverAgentEntityUpdateStateReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateMoveSpeed, serverAgentEntityUpdateMoveSpeedReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentEntityUpdateStatus, serverAgentEntityUpdateStatusReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateStatus, serverAgentEntityUpdateStatusReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentAbnormalInfo, serverAgentAbnormalInfoReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterUpdateStats, serverAgentCharacterUpdateStatsReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentInventoryItemUseResponse, serverAgentInventoryItemUseResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryOperationResponse, serverAgentInventoryOperationResponseReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentEntityGroupSpawnData, serverAgentEntityGroupSpawnDataReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentSpawn, serverAgentSpawnReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentDespawn, serverAgentDespawnReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityGroupSpawnData, serverAgentEntityGroupSpawnDataReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntitySpawn, serverAgentEntitySpawnReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityDespawn, serverAgentEntityDespawnReceived);
 
     // Misc. packets
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionDeselectResponse, serverAgentDeselectResponseReceived);
@@ -149,9 +152,12 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateExperience, serverAgentEntityUpdateExperienceReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentGuildStorageData, serverAgentGuildStorageDataReceived);
 
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentActionCommandRequest, clientAgentActionCommandRequestReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionCommandResponse, serverAgentActionCommandResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentSkillBegin, serverAgentSkillBeginReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentSkillEnd, serverAgentSkillEndReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffAdd, serverAgentBuffAddReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffRemove, serverAgentBuffRemoveReceived);
   } catch (std::exception &ex) {
     LOG() << "Error while handling packet!\n  " << ex.what() << std::endl;
   }
@@ -162,7 +168,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
 
 void PacketProcessor::resetDataBecauseCharacterSpawned() const {
   // On teleport, COS will have different globaIds
-  selfState_.cosInventoryMap.clear();
+  worldState_.selfState().cosInventoryMap.clear();
 }
 
 // ============================================================================================================================
@@ -170,13 +176,13 @@ void PacketProcessor::resetDataBecauseCharacterSpawned() const {
 // ============================================================================================================================
 
 void PacketProcessor::serverListReceived(const packet::parsing::ParsedLoginServerList &packet) const {
-  selfState_.shardId = packet.shardId();
+  worldState_.selfState().shardId = packet.shardId();
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStateShardIdUpdated));
 }
 
 void PacketProcessor::loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) const {
   if (packet.result() == packet::enums::LoginResult::kSuccess) {
-    selfState_.token = packet.token();
+    worldState_.selfState().token = packet.token();
   } else {
     LOG() << " Login failed\n";
   }
@@ -186,7 +192,7 @@ void PacketProcessor::loginClientInfoReceived(const packet::parsing::ParsedLogin
   // This packet is a response to the client sending 0x2001 where the client indicates that it is the "SR_Client"
   if (packet.serviceName() == "AgentServer") {
     // Connected to agentserver, send client auth packet
-    selfState_.connectedToAgentServer = true;
+    worldState_.selfState().connectedToAgentServer = true;
     eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStateConnectedToAgentServerUpdated));
   }
 }
@@ -194,7 +200,7 @@ void PacketProcessor::loginClientInfoReceived(const packet::parsing::ParsedLogin
 void PacketProcessor::unknownPacketReceived(const packet::parsing::ParsedUnknown &packet) const {
   if (packet.opcode() == packet::Opcode::kServerGatewayLoginIbuvChallenge) {
     // Got the captcha prompt, respond with an answer
-    selfState_.receivedCaptchaPrompt = true;
+    worldState_.selfState().receivedCaptchaPrompt = true;
     eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStateReceivedCaptchaPromptUpdated));
   }
 }
@@ -209,7 +215,7 @@ void PacketProcessor::serverAuthReceived(const packet::parsing::ParsedServerAuth
 }
 
 void PacketProcessor::charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet) const {
-  selfState_.characterList = packet.characters();
+  worldState_.selfState().characterList = packet.characters();
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStateCharacterListUpdated));
 }
 
@@ -227,7 +233,7 @@ void PacketProcessor::charSelectionJoinResponseReceived(const packet::parsing::P
 // ============================================================================================================================
 
 void PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::ServerAgentEntityUpdateAngle &packet) const {
-  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
+  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
   if (mobileEntity.moving()) {
     if (mobileEntity.destinationPosition) {
       throw std::runtime_error("Got angle update, but we're running to a destination");
@@ -242,17 +248,17 @@ void PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::Serv
 }
 
 void PacketProcessor::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const {
-  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
+  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
   mobileEntity.syncPosition(packet.position(), eventBroker_);
 }
 
 void PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const {
-  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
+  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
   mobileEntity.setStationaryAtPosition(packet.position(), eventBroker_);
 }
 
 void PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const {
-  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
+  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
   std::optional<sro::Position> sourcePosition;
   if (packet.hasSource()) {
     // Server is telling us our source position
@@ -273,54 +279,58 @@ void PacketProcessor::clientItemMoveReceived(const packet::parsing::ParsedClient
   const auto itemMovement = packet.movement();
   if (itemMovement.type == packet::enums::ItemMovementType::kBuyItem) {
     // User is buying something from the store
-    selfState_.setUserPurchaseRequest(itemMovement);
+    worldState_.selfState().setUserPurchaseRequest(itemMovement);
   }
 }
 
 void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) const {
   resetDataBecauseCharacterSpawned();
 
-  selfState_.initialize(packet.entityUniqueId(), packet.refObjId());
-  selfState_.setHp(packet.hp());
-  selfState_.setMp(packet.mp());
-  selfState_.setCurrentLevel(packet.curLevel());
-  selfState_.setSkillPoints(packet.skillPoints());
-  selfState_.setCurrentExpAndSpExp(packet.currentExperience(), packet.currentSpExperience());
-  selfState_.setMasteriesAndSkills(packet.masteries(), packet.skills());
+  worldState_.selfState().initialize(packet.entityUniqueId(), packet.refObjId());
+  worldState_.selfState().initializeCurrentHp(packet.hp());
+  worldState_.selfState().setMp(packet.mp());
+  worldState_.selfState().setCurrentLevel(packet.curLevel());
+  worldState_.selfState().setSkillPoints(packet.skillPoints());
+  worldState_.selfState().setCurrentExpAndSpExp(packet.currentExperience(), packet.currentSpExperience());
+  worldState_.selfState().setMasteriesAndSkills(packet.masteries(), packet.skills());
 
   // Position
   // TODO: Handle the case when the character spawns in a moving state
-  selfState_.setStationaryAtPosition(packet.position(), eventBroker_);
-  selfState_.initializeAngle(packet.angle());
+  worldState_.selfState().setStationaryAtPosition(packet.position(), eventBroker_);
+  worldState_.selfState().initializeAngle(packet.angle());
 
   // State
-  selfState_.setLifeState(packet.lifeState(), eventBroker_);
-  selfState_.setMotionState(packet.motionState(), eventBroker_);
-  selfState_.setBodyState(packet.bodyState());
+  worldState_.selfState().setLifeState(packet.lifeState(), eventBroker_);
+  worldState_.selfState().setMotionState(packet.motionState(), eventBroker_);
+  worldState_.selfState().setBodyState(packet.bodyState());
+
+  // Buffs
+  // TODO: Not sure why I commented this out...
+  // worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken());
 
   // Speed
-  selfState_.setSpeed(packet.walkSpeed(), packet.runSpeed(), eventBroker_);
-  selfState_.setHwanSpeed(packet.hwanSpeed());
-  selfState_.name = packet.characterName();
-  selfState_.setGold(packet.gold());
+  worldState_.selfState().setSpeed(packet.walkSpeed(), packet.runSpeed(), eventBroker_);
+  worldState_.selfState().setHwanSpeed(packet.hwanSpeed());
+  worldState_.selfState().name = packet.characterName();
+  worldState_.selfState().setGold(packet.gold());
   const auto inventorySize = packet.inventorySize();
   const auto &inventoryItemMap = packet.inventoryItemMap();
-  helpers::initializeInventory(selfState_.inventory, inventorySize, inventoryItemMap);
+  helpers::initializeInventory(worldState_.selfState().inventory, inventorySize, inventoryItemMap);
   const auto avatarInventorySize = packet.avatarInventorySize();
   const auto &avatarInventoryItemMap = packet.avatarInventoryItemMap();
-  helpers::initializeInventory(selfState_.avatarInventory, avatarInventorySize, avatarInventoryItemMap);
+  helpers::initializeInventory(worldState_.selfState().avatarInventory, avatarInventorySize, avatarInventoryItemMap);
 
-  LOG() << "GID:" << selfState_.globalId << ", and we have " << selfState_.hp() << " hp and " << selfState_.mp() << " mp\n";
+  LOG() << "GID:" << worldState_.selfState().globalId << ", and we have " << worldState_.selfState().currentHp() << " hp and " << worldState_.selfState().mp() << " mp\n";
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kSpawned));
 }
 
 void PacketProcessor::serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const {
   if (packet.isAbilityPet()) {
-    if (packet.ownerGlobalId() == selfState_.globalId) {
-      auto it = selfState_.cosInventoryMap.find(packet.globalId());
-      if (it == selfState_.cosInventoryMap.end()) {
+    if (packet.ownerGlobalId() == worldState_.selfState().globalId) {
+      auto it = worldState_.selfState().cosInventoryMap.find(packet.globalId());
+      if (it == worldState_.selfState().cosInventoryMap.end()) {
         // Not yet tracking this Cos
-        auto emplaceResult = selfState_.cosInventoryMap.emplace(packet.globalId(), storage::Storage());
+        auto emplaceResult = worldState_.selfState().cosInventoryMap.emplace(packet.globalId(), storage::Storage());
         if (!emplaceResult.second) {
           throw std::runtime_error("Unable to create new Cos inventory");
         }
@@ -342,34 +352,35 @@ void PacketProcessor::serverAgentCosDataReceived(const packet::parsing::ServerAg
 }
 
 void PacketProcessor::serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInventoryStorageData &packet) const {
-  selfState_.setStorageGold(packet.gold());
-  helpers::initializeInventory(selfState_.storage, packet.storageSize(), packet.storageItemMap());
-  selfState_.haveOpenedStorageSinceTeleport = true;
+  worldState_.selfState().setStorageGold(packet.gold());
+  helpers::initializeInventory(worldState_.selfState().storage, packet.storageSize(), packet.storageItemMap());
+  worldState_.selfState().haveOpenedStorageSinceTeleport = true;
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStorageInitialized));
 }
 
 void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const {
   if (packet.stateType() == packet::parsing::StateType::kMotionState) {
-    entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
+    entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
     mobileEntity.setMotionState(static_cast<entity::MotionState>(packet.state()), eventBroker_);
   } else if (packet.stateType() == packet::parsing::StateType::kLifeState) {
-    entity::Character &characterEntity = getEntity<entity::Character>(packet.globalId());
-    if (packet.globalId() == selfState_.globalId && !selfState_.spawned()) {
+    entity::Character &characterEntity = worldState_.getEntity<entity::Character>(packet.globalId());
+    if (packet.globalId() == worldState_.selfState().globalId && !worldState_.selfState().spawned()) {
       throw std::runtime_error("Got life state update for ourself, but we are not spawned");
     }
     const auto newLifeState = static_cast<sro::entity::LifeState>(packet.state());
     characterEntity.setLifeState(newLifeState, eventBroker_);
   } else {
-    if (!selfState_.spawned()) {
+    if (!worldState_.selfState().spawned()) {
       throw std::runtime_error("Got state update for ourself, but we are not spawned");
     }
     if (packet.stateType() == packet::parsing::StateType::kBodyState) {
-      selfState_.setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
+      worldState_.selfState().setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
     }
   }
   
   // TODO: Remove
-  if (packet.globalId() == selfState_.globalId) {
+  // For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
+  if (packet.globalId() == worldState_.selfState().globalId) {
     static bool done = false;
     if (!done) {
       // Just spawned in
@@ -388,25 +399,24 @@ void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
 }
 
 void PacketProcessor::serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const {
-  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(packet.globalId());
+  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
   mobileEntity.setSpeed(packet.walkSpeed(), packet.runSpeed(), eventBroker_);
-  return true;
 }
 
 void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsing::ServerAgentEntityUpdateStatus &packet) const {
-  if (packet.entityUniqueId() == selfState_.globalId) {
+  if (packet.entityUniqueId() == worldState_.selfState().globalId) {
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoHp)) {
       // Our HP changed
-      if (selfState_.currentHp() != packet.newHpValue()) {
-        selfState_.setCurrentHp(packet.newHpValue(), eventBroker_);
+      if (worldState_.selfState().currentHp() != packet.newHpValue()) {
+        worldState_.selfState().setCurrentHp(packet.newHpValue(), eventBroker_);
       } else {
         LOG() << "Weird, says HP changed, but it didn't\n";
       }
     }
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoMp)) {
       // Our MP changed
-      if (selfState_.mp() != packet.newMpValue()) {
-        selfState_.setMp(packet.newMpValue());
+      if (worldState_.selfState().mp() != packet.newMpValue()) {
+        worldState_.selfState().setMp(packet.newMpValue());
       } else {
         LOG() << "Weird, says MP changed, but it didn't\n";
       }
@@ -416,14 +426,13 @@ void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsin
       // Our states changed
       auto stateBitmask = packet.stateBitmask();
       auto stateLevels = packet.stateLevels();
-      selfState_.updateStates(stateBitmask, stateLevels);
-      LOG() << "Updated our states\n";
+      worldState_.selfState().updateStates(stateBitmask, stateLevels);
       eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStatesChanged));
     }
   } else {
     // Not for my character
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoHp)) {
-      auto &character = getEntity<entity::Character>(packet.entityUniqueId());
+      auto &character = worldState_.getEntity<entity::Character>(packet.entityUniqueId());
       character.setCurrentHp(packet.newHpValue(), eventBroker_);
     }
   }
@@ -431,20 +440,21 @@ void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsin
 
 void PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const {
   for (int i=0; i<=helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie); ++i) {
-    selfState_.setLegacyStateEffect(helpers::fromBitNum(i), packet.states()[i].effectOrLevel);
+    worldState_.selfState().setLegacyStateEffect(helpers::fromBitNum(i), packet.states()[i].effectOrLevel);
   }
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStatesChanged));
 }
 
 void PacketProcessor::serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const {
-  selfState_.setMaxHpMp(packet.maxHp(), packet.maxMp());
+  worldState_.selfState().setMaxHpMp(packet.maxHp(), packet.maxMp());
 }
 
 void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::parsing::ParsedServerAgentInventoryItemUseResponse &packet) const {
+  LOG() << "Used item response" << std::endl;
   if (packet.result() == 1) {
     // Successfully used an item
-    if (selfState_.inventory.hasItem(packet.slotNum())) {
-      auto *itemPtr = selfState_.inventory.getItem(packet.slotNum());
+    if (worldState_.selfState().inventory.hasItem(packet.slotNum())) {
+      auto *itemPtr = worldState_.selfState().inventory.getItem(packet.slotNum());
       // Lets double check it's type data
       if (packet.itemData() == itemPtr->typeData()) {
         auto *expendableItemPtr = dynamic_cast<storage::ItemExpendable*>(itemPtr);
@@ -452,58 +462,58 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
           expendableItemPtr->quantity = packet.remainingCount();
           if (helpers::type_id::isHpPotion(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a potion
-            if (selfState_.haveHpPotionEventId()) {
+            if (worldState_.selfState().haveHpPotionEventId()) {
               LOG() << "Uhhhh, supposedly successfully used an hp potion when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(selfState_.getHpPotionEventId());
+              eventBroker_.cancelDelayedEvent(worldState_.selfState().getHpPotionEventId());
             }
             LOG() << "Successfully used a hpPotion\n";
-            const auto hpPotionDelay = selfState_.getHpPotionDelay() + kPotionDelayBufferMs_;
+            const auto hpPotionDelay = worldState_.selfState().getHpPotionDelay() + kPotionDelayBufferMs_;
             const auto hpPotionEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kHpPotionCooldownEnded), std::chrono::milliseconds(hpPotionDelay));
-            selfState_.setHpPotionEventId(hpPotionEventId);
+            worldState_.selfState().setHpPotionEventId(hpPotionEventId);
           } else if (helpers::type_id::isMpPotion(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a potion
-            if (selfState_.haveMpPotionEventId()) {
+            if (worldState_.selfState().haveMpPotionEventId()) {
               LOG() << "Uhhhh, supposedly successfully used an mp potion when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(selfState_.getMpPotionEventId());
+              eventBroker_.cancelDelayedEvent(worldState_.selfState().getMpPotionEventId());
             }
             LOG() << "Successfully used a mpPotion\n";
-            const auto mpPotionDelay = selfState_.getMpPotionDelay() + kPotionDelayBufferMs_;
+            const auto mpPotionDelay = worldState_.selfState().getMpPotionDelay() + kPotionDelayBufferMs_;
             const auto mpPotionEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMpPotionCooldownEnded), std::chrono::milliseconds(mpPotionDelay));
-            selfState_.setMpPotionEventId(mpPotionEventId);
+            worldState_.selfState().setMpPotionEventId(mpPotionEventId);
           } else if (helpers::type_id::isVigorPotion(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a potion
-            if (selfState_.haveVigorPotionEventId()) {
+            if (worldState_.selfState().haveVigorPotionEventId()) {
               LOG() << "Uhhhh, supposedly successfully used a vigor potion when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(selfState_.getVigorPotionEventId());
+              eventBroker_.cancelDelayedEvent(worldState_.selfState().getVigorPotionEventId());
             }
             LOG() << "Successfully used a vigorPotion\n";
             // TODO: Grains and regular potions have different delays, at least for Eu chars
-            const auto vigorPotionDelay = selfState_.getVigorPotionDelay() + kPotionDelayBufferMs_;
+            const auto vigorPotionDelay = worldState_.selfState().getVigorPotionDelay() + kPotionDelayBufferMs_;
             const auto vigorPotionEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kVigorPotionCooldownEnded), std::chrono::milliseconds(vigorPotionDelay));
-            selfState_.setVigorPotionEventId(vigorPotionEventId);
+            worldState_.selfState().setVigorPotionEventId(vigorPotionEventId);
           } else if (helpers::type_id::isUniversalPill(*expendableItemPtr->itemInfo)) {
             // Set a timeout for how long we must wait before retrying to use a pill
-            if (selfState_.haveUniversalPillEventId()) {
+            if (worldState_.selfState().haveUniversalPillEventId()) {
               LOG() << "Uhhhh, supposedly successfully used a universal pill when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(selfState_.getUniversalPillEventId());
+              eventBroker_.cancelDelayedEvent(worldState_.selfState().getUniversalPillEventId());
             }
-            const auto universalPillEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kUniversalPillCooldownEnded), std::chrono::milliseconds(selfState_.getUniversalPillDelay()));
-            selfState_.setUniversalPillEventId(universalPillEventId);
+            const auto universalPillEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kUniversalPillCooldownEnded), std::chrono::milliseconds(worldState_.selfState().getUniversalPillDelay()));
+            worldState_.selfState().setUniversalPillEventId(universalPillEventId);
           } else if (helpers::type_id::isPurificationPill(*expendableItemPtr->itemInfo)) {
 #ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
             // Set a timeout for how long we must wait before retrying to use a pill
-            if (selfState_.havePurificationPillEventId()) {
+            if (worldState_.selfState().havePurificationPillEventId()) {
               LOG() << "Uhhhh, supposedly successfully used a purification pill when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(selfState_.getPurificationPillEventId());
+              eventBroker_.cancelDelayedEvent(worldState_.selfState().getPurificationPillEventId());
             }
-            const auto purificationPillEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kPurificationPillCooldownEnded), std::chrono::milliseconds(selfState_.getPurificationPillDelay()));
-            selfState_.setPurificationPillEventId(purificationPillEventId);
+            const auto purificationPillEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kPurificationPillCooldownEnded), std::chrono::milliseconds(worldState_.selfState().getPurificationPillDelay()));
+            worldState_.selfState().setPurificationPillEventId(purificationPillEventId);
 #endif
           }
           if (expendableItemPtr->quantity == 0) {
             LOG() << "Used the last of this item! Delete from inventory\n";
             // TODO: Instead, delete the item upon receiving server_item_movement in the case DEL_ITEM_BY_SERVER
-            selfState_.inventory.deleteItem(packet.slotNum());
+            worldState_.selfState().inventory.deleteItem(packet.slotNum());
           }
           eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(packet.slotNum() ,std::nullopt));
         }
@@ -511,12 +521,13 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     }
   } else {
     // Failed to use item
-    if (!selfState_.usedItemQueueIsEmpty()) {
+    LOG() << "Failed to use item" << std::endl;
+    if (!worldState_.selfState().usedItemQueueIsEmpty()) {
       // This was an item that we tried to use
       if (packet.errorCode() == packet::enums::InventoryErrorCode::kWaitForReuseDelay) {
         // TODO: When we start tracking items moving in the invetory, we'll need to somehow update this used item queue
-        const auto usedItem = selfState_.getUsedItemQueueFront();
-        eventBroker_.publishEvent(std::make_unique<event::ItemWaitForReuseDelay>(usedItem.inventorySlotNum, usedItem.itemTypeId));
+        const auto usedItem = worldState_.selfState().getUsedItemQueueFront();
+        eventBroker_.publishEvent(std::make_unique<event::ItemWaitForReuseDelay>(usedItem.inventorySlotNum, usedItem.typeId));
       } else if (packet.errorCode() == packet::enums::InventoryErrorCode::kCharacterDead) {
         LOG() << "Failed to use item because we're dead\n";
       } else {
@@ -524,7 +535,17 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
       }
     }
   }
-  selfState_.popItemFromUsedItemQueueIfNotEmpty();
+  if (!worldState_.selfState().usedItemQueueIsEmpty()) {
+    // TODO: Refactor this whole itemUsedTimeout concept
+    // Received a response for our item
+    if (worldState_.selfState().itemUsedTimeoutTimer) {
+      eventBroker_.cancelDelayedEvent(*worldState_.selfState().itemUsedTimeoutTimer);
+      worldState_.selfState().itemUsedTimeoutTimer.reset();
+    } else {
+      LOG() << "Whoa, have an item in the used item queue but didnt have a timeout timer" << std::endl;
+    }
+  }
+  worldState_.selfState().popItemFromUsedItemQueueIfNotEmpty();
 }
 
 void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet::parsing::ServerAgentInventoryOperationResponse &packet) const {
@@ -565,10 +586,12 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
   };
 
   auto removeItemFromInventory = [this](const auto slotIndex) {
-    if (selfState_.inventory.hasItem(slotIndex)) {
-      auto itemPtr = selfState_.inventory.withdrawItem(slotIndex);
+    if (worldState_.selfState().inventory.hasItem(slotIndex)) {
+      auto itemPtr = worldState_.selfState().inventory.withdrawItem(slotIndex);
       eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(slotIndex, std::nullopt));
     } else {
+      // This happens when you use the last of an expendable item in that slot
+      // We already deleted the item
       LOG() << "Error: But there's no item in this inventory slot\n";
     }
   };
@@ -577,36 +600,36 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
   const std::vector<packet::structures::ItemMovement> &itemMovements = packet.itemMovements();
   for (const auto &movement : itemMovements) {
     if (movement.type == packet::enums::ItemMovementType::kUpdateSlotsInventory) {
-      selfState_.inventory.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
+      worldState_.selfState().inventory.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
       eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(movement.srcSlot, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kUpdateSlotsChest) {
-      selfState_.storage.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
+      worldState_.selfState().storage.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
       eventBroker_.publishEvent(std::make_unique<event::StorageUpdated>(movement.srcSlot, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kUpdateSlotsGuildChest) {
-      selfState_.guildStorage.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
+      worldState_.selfState().guildStorage.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
       eventBroker_.publishEvent(std::make_unique<event::GuildStorageUpdated>(movement.srcSlot, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kChestDepositItem) {
-      selfState_.storage.addItem(movement.destSlot, selfState_.inventory.withdrawItem(movement.srcSlot));
+      worldState_.selfState().storage.addItem(movement.destSlot, worldState_.selfState().inventory.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(movement.srcSlot, std::nullopt));
       eventBroker_.publishEvent(std::make_unique<event::StorageUpdated>(std::nullopt, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kChestWithdrawItem) {
-      selfState_.inventory.addItem(movement.destSlot, selfState_.storage.withdrawItem(movement.srcSlot));
+      worldState_.selfState().inventory.addItem(movement.destSlot, worldState_.selfState().storage.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent(std::make_unique<event::StorageUpdated>(movement.srcSlot, std::nullopt));
       eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kGuildChestDepositItem) {
-      selfState_.guildStorage.addItem(movement.destSlot, selfState_.inventory.withdrawItem(movement.srcSlot));
+      worldState_.selfState().guildStorage.addItem(movement.destSlot, worldState_.selfState().inventory.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(movement.srcSlot, std::nullopt));
       eventBroker_.publishEvent(std::make_unique<event::GuildStorageUpdated>(std::nullopt, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kGuildChestWithdrawItem) {
-      selfState_.inventory.addItem(movement.destSlot, selfState_.guildStorage.withdrawItem(movement.srcSlot));
+      worldState_.selfState().inventory.addItem(movement.destSlot, worldState_.selfState().guildStorage.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent(std::make_unique<event::GuildStorageUpdated>(movement.srcSlot, std::nullopt));
       eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kBuyItem) {
-      if (selfState_.haveUserPurchaseRequest()) {
-        const auto userPurchaseRequest = selfState_.getUserPurchaseRequest();
+      if (worldState_.selfState().haveUserPurchaseRequest()) {
+        const auto userPurchaseRequest = worldState_.selfState().getUserPurchaseRequest();
         // User purchased something, we saved this so that we can get the NPC's global Id
-        if (entityTracker_.trackingEntity(userPurchaseRequest.globalId)) {
-          auto object = entityTracker_.getEntity(userPurchaseRequest.globalId);
+        if (worldState_.entityTracker().trackingEntity(userPurchaseRequest.globalId)) {
+          auto object = worldState_.entityTracker().getEntity(userPurchaseRequest.globalId);
           // Found the NPC which this purchase was made with
           if (gameData_.characterData().haveCharacterWithId(object->refObjId)) {
             auto npcName = gameData_.characterData().getCharacterById(object->refObjId).codeName128;
@@ -619,27 +642,27 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
               if (itemExp != nullptr) {
                 itemExp->quantity = movement.quantity;
               }
-              selfState_.inventory.addItem(movement.destSlots[0], item);
+              worldState_.selfState().inventory.addItem(movement.destSlots[0], item);
               eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlots[0]));
             } else {
               // Multiple destination slots, must be unstackable items like equipment
               for (auto destSlot : movement.destSlots) {
                 auto item = helpers::createItemFromScrap(itemInfo, itemRef);
-                selfState_.inventory.addItem(destSlot, item);
+                worldState_.selfState().inventory.addItem(destSlot, item);
                 eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlot));
               }
             }
           }
         }
-        selfState_.resetUserPurchaseRequest();
+        worldState_.selfState().resetUserPurchaseRequest();
       } else {
         LOG() << "kBuyItem but we dont have the data from the client packet\n";
         // TODO: Introduce unknown item concept?
       }
     } else if (movement.type == packet::enums::ItemMovementType::kSellItem) {
-      if (selfState_.inventory.hasItem(movement.srcSlot)) {
+      if (worldState_.selfState().inventory.hasItem(movement.srcSlot)) {
         bool soldEntireStack = true;
-        auto item = selfState_.inventory.getItem(movement.srcSlot);
+        auto item = worldState_.selfState().inventory.getItem(movement.srcSlot);
         storage::ItemExpendable *itemExpendable;
         if ((itemExpendable = dynamic_cast<storage::ItemExpendable*>(item)) != nullptr) {
           if (itemExpendable->quantity != movement.quantity) {
@@ -648,21 +671,21 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
             itemExpendable->quantity -= movement.quantity;
             auto clonedItem = storage::cloneItem(item);
             dynamic_cast<storage::ItemExpendable*>(clonedItem.get())->quantity = movement.quantity;
-            selfState_.buybackQueue.addItem(clonedItem);
+            worldState_.selfState().buybackQueue.addItem(clonedItem);
           }
         }
         if (soldEntireStack) {
-          auto item = selfState_.inventory.withdrawItem(movement.srcSlot);
-          selfState_.buybackQueue.addItem(item);
+          auto item = worldState_.selfState().inventory.withdrawItem(movement.srcSlot);
+          worldState_.selfState().buybackQueue.addItem(item);
         }
         eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(movement.srcSlot, std::nullopt));
       } else {
         LOG() << "Sold an item from a slot that we didnt have item data for\n";
       }
     } else if (movement.type == packet::enums::ItemMovementType::kBuyback) {
-      if (selfState_.buybackQueue.hasItem(movement.srcSlot)) {
-        if (!selfState_.inventory.hasItem(movement.destSlot)) {
-          const auto itemPtr = selfState_.buybackQueue.getItem(movement.srcSlot);
+      if (worldState_.selfState().buybackQueue.hasItem(movement.srcSlot)) {
+        if (!worldState_.selfState().inventory.hasItem(movement.destSlot)) {
+          const auto itemPtr = worldState_.selfState().buybackQueue.getItem(movement.srcSlot);
           // TODO: Track gold change
           //  The amount of gold that this item costs to buyback seems to be equal to the amount that it was sold for
           bool boughtBackAll = true;
@@ -675,13 +698,13 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
                 auto clonedItem = storage::cloneItem(itemPtr);
                 itemExpendable->quantity -= movement.quantity;
                 dynamic_cast<storage::ItemExpendable*>(clonedItem.get())->quantity = movement.quantity;
-                selfState_.inventory.addItem(movement.destSlot, clonedItem);
+                worldState_.selfState().inventory.addItem(movement.destSlot, clonedItem);
                 eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlot));
               }
             }
           }
           if (boughtBackAll) {
-            selfState_.inventory.addItem(movement.destSlot, selfState_.buybackQueue.withdrawItem(movement.srcSlot));
+            worldState_.selfState().inventory.addItem(movement.destSlot, worldState_.selfState().buybackQueue.withdrawItem(movement.srcSlot));
             eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlot));
           }
         } else {
@@ -692,49 +715,49 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
       }
     } else if (movement.type == packet::enums::ItemMovementType::kPickItem) {
       if (movement.destSlot != packet::structures::ItemMovement::kGoldSlot) {
-        addItemToInventory(selfState_.inventory, movement.newItem, movement.destSlot);
+        addItemToInventory(worldState_.selfState().inventory, movement.newItem, movement.destSlot);
       }
       // This would be a good time to try to use a pill, potion, return scroll, etc.
     } else if (movement.type == packet::enums::ItemMovementType::kDropItem) {
       removeItemFromInventory(movement.srcSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kAddItemByServer) {
-      addItemToInventory(selfState_.inventory, movement.newItem, movement.destSlot);
+      addItemToInventory(worldState_.selfState().inventory, movement.newItem, movement.destSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kRemoveItemByServer) {
       removeItemFromInventory(movement.srcSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kDropGold) {
       // Another packet, ServerAgentEntityUpdatePoints, contains character gold update information
     } else if (movement.type == packet::enums::ItemMovementType::kChestWithdrawGold) {
-      selfState_.setStorageGold(selfState_.getStorageGold() - movement.goldAmount);
+      worldState_.selfState().setStorageGold(worldState_.selfState().getStorageGold() - movement.goldAmount);
     } else if (movement.type == packet::enums::ItemMovementType::kChestDepositGold) {
-      selfState_.setStorageGold(selfState_.getStorageGold() + movement.goldAmount);
+      worldState_.selfState().setStorageGold(worldState_.selfState().getStorageGold() + movement.goldAmount);
     } else if (movement.type == packet::enums::ItemMovementType::kGuildChestDepositGold) {
-      selfState_.setGuildStorageGold(selfState_.getGuildStorageGold() - movement.goldAmount);
+      worldState_.selfState().setGuildStorageGold(worldState_.selfState().getGuildStorageGold() - movement.goldAmount);
     } else if (movement.type == packet::enums::ItemMovementType::kGuildChestWithdrawGold) {
-      selfState_.setGuildStorageGold(selfState_.getGuildStorageGold() + movement.goldAmount);
+      worldState_.selfState().setGuildStorageGold(worldState_.selfState().getGuildStorageGold() + movement.goldAmount);
     } else if (movement.type == packet::enums::ItemMovementType::kMoveItemAvatarToInventory) {
-      selfState_.inventory.addItem(movement.destSlot, selfState_.avatarInventory.withdrawItem(movement.srcSlot));
+      worldState_.selfState().inventory.addItem(movement.destSlot, worldState_.selfState().avatarInventory.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent(std::make_unique<event::AvatarInventoryUpdated>(movement.srcSlot, std::nullopt));
       eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kMoveItemInventoryToAvatar) {
-      selfState_.avatarInventory.addItem(movement.destSlot, selfState_.inventory.withdrawItem(movement.srcSlot));
+      worldState_.selfState().avatarInventory.addItem(movement.destSlot, worldState_.selfState().inventory.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(movement.srcSlot, std::nullopt));
       eventBroker_.publishEvent(std::make_unique<event::AvatarInventoryUpdated>(std::nullopt, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kMoveItemCosToInventory) {
-      auto &cosInventory = selfState_.getCosInventory(movement.globalId);
-      selfState_.inventory.addItem(movement.destSlot, cosInventory.withdrawItem(movement.srcSlot));
+      auto &cosInventory = worldState_.selfState().getCosInventory(movement.globalId);
+      worldState_.selfState().inventory.addItem(movement.destSlot, cosInventory.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent(std::make_unique<event::CosInventoryUpdated>(movement.globalId, movement.srcSlot, std::nullopt));
       eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(std::nullopt, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kMoveItemInventoryToCos) {
-      auto &cosInventory = selfState_.getCosInventory(movement.globalId);
-      cosInventory.addItem(movement.destSlot, selfState_.inventory.withdrawItem(movement.srcSlot));
+      auto &cosInventory = worldState_.selfState().getCosInventory(movement.globalId);
+      cosInventory.addItem(movement.destSlot, worldState_.selfState().inventory.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(movement.srcSlot, std::nullopt));
       eventBroker_.publishEvent(std::make_unique<event::CosInventoryUpdated>(movement.globalId, std::nullopt, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kUpdateSlotsInventoryCos) {
-      auto &cosInventory = selfState_.getCosInventory(movement.globalId);
+      auto &cosInventory = worldState_.selfState().getCosInventory(movement.globalId);
       cosInventory.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
       eventBroker_.publishEvent(std::make_unique<event::CosInventoryUpdated>(movement.globalId, movement.srcSlot, movement.destSlot));
     } else if (movement.type == packet::enums::ItemMovementType::kPickItemCos) {
-      auto &cosInventory = selfState_.getCosInventory(movement.globalId);
+      auto &cosInventory = worldState_.selfState().getCosInventory(movement.globalId);
       addItemToInventory(cosInventory, movement.newItem, movement.destSlot);
       eventBroker_.publishEvent(std::make_unique<event::CosInventoryUpdated>(movement.globalId, std::nullopt, movement.destSlot));
     } else {
@@ -772,7 +795,7 @@ void PacketProcessor::serverAgentEntityDespawnReceived(const packet::parsing::Se
 }
 
 void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) const {
-  entityTracker_.trackEntity(entity);
+  worldState_.entityTracker().trackEntity(entity);
   eventBroker_.publishEvent(std::make_unique<event::EntitySpawned>(entity->globalId));
 
   // Check if the entity spawned in as already moving
@@ -792,14 +815,14 @@ void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) cons
 }
 
 void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId) const {
-  if (!entityTracker_.trackingEntity(globalId)) {
+  if (!worldState_.entityTracker().trackingEntity(globalId)) {
     // TODO: Once eventzones are handled, this check can be removed;
     //  getEntity will throw
     LOG() << "Entity despawned, but we're not tracking it" << std::endl;
     return;
   }
   // Before destroying an entity, see if we have a running movement timer to cancel
-  auto *entity = entityTracker_.getEntity(globalId);
+  auto *entity = worldState_.entityTracker().getEntity(globalId);
   auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(entity);
   if (mobileEntity != nullptr) {
     // Is a mobile entity
@@ -807,7 +830,7 @@ void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId
   }
 
   // Destroy entity
-  entityTracker_.stopTrackingEntity(globalId);
+  worldState_.entityTracker().stopTrackingEntity(globalId);
   eventBroker_.publishEvent(std::make_unique<event::EntityDespawned>(globalId));
 }
 
@@ -820,14 +843,14 @@ void PacketProcessor::serverAgentDeselectResponseReceived(const packet::parsing:
     // Successfully deselected
     // If there is a talk dialog, and we have an npc selected, it will take 2 deselects to close both dialogs
     //  First, the talk dialog is closed
-    if (selfState_.talkingGidAndOption) {
+    if (worldState_.selfState().talkingGidAndOption) {
       // This closes the talk dialog
-      selfState_.talkingGidAndOption.reset();
+      worldState_.selfState().talkingGidAndOption.reset();
       eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kEntityDeselected));
     } else {
       //  The entity is deselected
-      if (selfState_.selectedEntity) {
-        selfState_.selectedEntity.reset();
+      if (worldState_.selfState().selectedEntity) {
+        worldState_.selfState().selectedEntity.reset();
         eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kEntityDeselected));
       } else {
         LOG() << "Weird, we didnt have anything selected\n";
@@ -846,8 +869,8 @@ void PacketProcessor::serverAgentSelectResponseReceived(const packet::parsing::S
 
   // Successfully selected
   // It is possible that we already have something selected. We will just overwrite it
-  selfState_.selectedEntity = packet.globalId();
-  auto *entity = entityTracker_.getEntity(packet.globalId());
+  worldState_.selfState().selectedEntity = packet.globalId();
+  auto *entity = worldState_.entityTracker().getEntity(packet.globalId());
   if (entity == nullptr) {
     throw std::runtime_error("Selected an entity which we are not tracking");
   }
@@ -865,10 +888,10 @@ void PacketProcessor::serverAgentSelectResponseReceived(const packet::parsing::S
 void PacketProcessor::serverAgentTalkResponseReceived(const packet::parsing::ServerAgentActionTalkResponse &packet) const {
   if (packet.result() == 1) {
     // Successfully talking to an npc
-    if (selfState_.pendingTalkGid) {
+    if (worldState_.selfState().pendingTalkGid) {
       // We were waiting for this response
-      selfState_.talkingGidAndOption = std::make_pair(*selfState_.pendingTalkGid, packet.talkOption());
-      selfState_.pendingTalkGid.reset();
+      worldState_.selfState().talkingGidAndOption = std::make_pair(*worldState_.selfState().pendingTalkGid, packet.talkOption());
+      worldState_.selfState().pendingTalkGid.reset();
       eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kNpcTalkStart));
     } else {
       LOG() << "Weird, we werent expecting to be talking to anything. As a result, we dont know what we're talking to" << std::endl;
@@ -887,10 +910,10 @@ void PacketProcessor::serverAgentInventoryRepairResponseReceived(const packet::p
 }
 
 void PacketProcessor::serverAgentInventoryUpdateDurabilityReceived(const packet::parsing::ServerAgentInventoryUpdateDurability &packet) const {
-  if (!selfState_.inventory.hasItem(packet.slotIndex())) {
+  if (!worldState_.selfState().inventory.hasItem(packet.slotIndex())) {
     throw std::runtime_error("Recieved durability update for inventory slot where no item exists");
   }
-  auto *item = selfState_.inventory.getItem(packet.slotIndex());
+  auto *item = worldState_.selfState().inventory.getItem(packet.slotIndex());
   if (item == nullptr) {
     throw std::runtime_error("Recieved durability update for inventory item which is null");
   }
@@ -903,10 +926,10 @@ void PacketProcessor::serverAgentInventoryUpdateDurabilityReceived(const packet:
 }
 
 void PacketProcessor::serverAgentInventoryUpdateItemReceived(const packet::parsing::ServerAgentInventoryUpdateItem &packet) const {
-  if (!selfState_.inventory.hasItem(packet.slotIndex())) {
+  if (!worldState_.selfState().inventory.hasItem(packet.slotIndex())) {
     throw std::runtime_error("Recieved item update for inventory slot where no item exists");
   }
-  auto *item = selfState_.inventory.getItem(packet.slotIndex());
+  auto *item = worldState_.selfState().inventory.getItem(packet.slotIndex());
   if (item == nullptr) {
     throw std::runtime_error("Recieved item update for inventory item which is null");
   }
@@ -934,82 +957,95 @@ void PacketProcessor::serverAgentInventoryUpdateItemReceived(const packet::parsi
 // }
 
 void PacketProcessor::clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const {
-  if (selfState_.pendingTalkGid) {
+  if (worldState_.selfState().pendingTalkGid) {
     LOG() << "Weird, we're already waiting on a response from the server to talk to someone\n";
   } else {
-    selfState_.pendingTalkGid = packet.gId();
+    worldState_.selfState().pendingTalkGid = packet.gId();
   }
 }
 
 void PacketProcessor::serverAgentEntityUpdatePointsReceived(const packet::parsing::ServerAgentEntityUpdatePoints &packet) const {
   if (packet.updatePointsType() == packet::enums::UpdatePointsType::kGold) {
-    selfState_.setGold(packet.gold());
+    worldState_.selfState().setGold(packet.gold());
   } else if (packet.updatePointsType() == packet::enums::UpdatePointsType::kSp) {
-    selfState_.setSkillPoints(packet.skillPoints());
+    worldState_.selfState().setSkillPoints(packet.skillPoints());
   }
 }
 
 void PacketProcessor::serverAgentEntityUpdateExperienceReceived(const packet::parsing::ServerAgentEntityUpdateExperience &packet) const {
   const constexpr int kSpExperienceRequired{400}; // TODO: Move to a central location
-  const auto newExperience = selfState_.getCurrentExperience() + packet.gainedExperiencePoints();
-  const auto newSpExperience = (selfState_.getCurrentSpExperience() + packet.gainedSpExperiencePoints()) % kSpExperienceRequired;
-  selfState_.setCurrentExpAndSpExp(newExperience, newSpExperience);
+  const auto newExperience = worldState_.selfState().getCurrentExperience() + packet.gainedExperiencePoints();
+  const auto newSpExperience = (worldState_.selfState().getCurrentSpExperience() + packet.gainedSpExperiencePoints()) % kSpExperienceRequired;
+  worldState_.selfState().setCurrentExpAndSpExp(newExperience, newSpExperience);
 }
 
 void PacketProcessor::serverAgentGuildStorageDataReceived(const packet::parsing::ServerAgentGuildStorageData &packet) const {
-  selfState_.setGuildStorageGold(packet.gold());
-  helpers::initializeInventory(selfState_.guildStorage, packet.storageSize(), packet.storageItemMap());
+  worldState_.selfState().setGuildStorageGold(packet.gold());
+  helpers::initializeInventory(worldState_.selfState().guildStorage, packet.storageSize(), packet.storageItemMap());
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kGuildStorageInitialized));
 }
 
 void PacketProcessor::clientAgentActionCommandRequestReceived(const packet::parsing::ClientAgentActionCommandRequest &packet) const {
   LOG() << "Client command action received: \"" << packet.actionCommand() << "\"" << std::endl;
-  selfState_.pendingCommandQueue.push_back(packet.actionCommand());
+  worldState_.selfState().pendingCommandQueue.push_back(packet.actionCommand());
 }
 
 void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const {
+  LOG() << "Command response received" << std::endl;
   std::cout << "============================================" << packet.actionState() << "============================================" << std::endl;
-  std::cout << "Pending command Queue:" << (selfState_.pendingCommandQueue.empty() ? " <empty>" : "") << std::endl;
-  for (const auto &c : selfState_.pendingCommandQueue) {
+  std::cout << "Pending command Queue:" << (worldState_.selfState().pendingCommandQueue.empty() ? " <empty>" : "") << std::endl;
+  for (const auto &c : worldState_.selfState().pendingCommandQueue) {
     std::cout << "  " << c << std::endl;
   }
-  std::cout << "Accepted command Queue:" << (selfState_.acceptedCommandQueue.empty() ? " <empty>" : "") << std::endl;
-  for (const auto &c : selfState_.acceptedCommandQueue) {
+  std::cout << "Accepted command Queue:" << (worldState_.selfState().acceptedCommandQueue.empty() ? " <empty>" : "") << std::endl;
+  for (const auto &c : worldState_.selfState().acceptedCommandQueue) {
     std::cout << "  " << c << std::endl;
   }
   std::cout << "----------------" << std::endl;
 
   if (packet.actionState() == packet::enums::ActionState::kQueued) {
-    if (selfState_.pendingCommandQueue.empty()) {
+    if (worldState_.selfState().pendingCommandQueue.empty()) {
       throw std::runtime_error("Command queued, but pending command list is empty");
     }
-    std::cout << "Command queued: \"" << selfState_.pendingCommandQueue.front() << "\"" << std::endl;
-    selfState_.acceptedCommandQueue.push_back(selfState_.pendingCommandQueue.front());
-    selfState_.pendingCommandQueue.erase(selfState_.pendingCommandQueue.begin());
+    std::cout << "Command queued: \"" << worldState_.selfState().pendingCommandQueue.front() << "\"" << std::endl;
+    worldState_.selfState().acceptedCommandQueue.push_back(worldState_.selfState().pendingCommandQueue.front());
+    worldState_.selfState().pendingCommandQueue.erase(worldState_.selfState().pendingCommandQueue.begin());
   } else if (packet.actionState() == packet::enums::ActionState::kError) {
-    if (selfState_.pendingCommandQueue.empty()) {
+    if (worldState_.selfState().pendingCommandQueue.empty()) {
       throw std::runtime_error("Command error, but pending command list is empty");
     }
-    std::cout << "Command error " << packet.errorCode() << ": " << selfState_.pendingCommandQueue.front() << std::endl;
     // Error seems to always refer to the most recent
-    selfState_.pendingCommandQueue.erase(selfState_.pendingCommandQueue.begin());
+    const auto failedCommand = worldState_.selfState().pendingCommandQueue.front();
+    std::cout << "Command error " << packet.errorCode() << ": " << failedCommand << std::endl;
+    eventBroker_.publishEvent(std::make_unique<event::CommandError>(failedCommand));
+    worldState_.selfState().pendingCommandQueue.erase(worldState_.selfState().pendingCommandQueue.begin());
   } else {
-    if (selfState_.acceptedCommandQueue.empty()) {
-      LOG() << "WARNING: Command ended, but we had no accepted command" << std::endl;
-      // throw std::runtime_error("Command ended, but accepted command list is empty");
+    // It seems like if a skill is completed without interruption, this end will come after the SkillEnd packet
+    // If a skill is interrupted, this end will come BEFORE the SkillEnd packet
+    if (worldState_.selfState().acceptedCommandQueue.empty()) {
+      std::cout << "WARNING: Command ended, but we had no accepted command" << std::endl;
+      if (!worldState_.selfState().pendingCommandQueue.empty()) {
+        std::cout << " Pending command queue is not empty though, maybe we ought to pop that?" << std::endl;
+        if (worldState_.selfState().pendingCommandQueue.front().commandType == packet::enums::CommandType::kCancel) {
+          std::cout << "  Action is a cancel, popping" << std::endl;
+          // TODO: I am not confident in the assumption that this means that we delete the first item in the pending queue
+          worldState_.selfState().pendingCommandQueue.erase(worldState_.selfState().pendingCommandQueue.begin());
+        }
+      }
     } else {
-      std::cout << "Command ended: \"" << selfState_.acceptedCommandQueue.front() << "\"" << std::endl;
-      selfState_.acceptedCommandQueue.erase(selfState_.acceptedCommandQueue.begin());
+      // We arent told which command ended, we just assume it was the most recent
+      std::cout << "Command ended: \"" << worldState_.selfState().acceptedCommandQueue.front() << "\"" << std::endl;
+      worldState_.selfState().acceptedCommandQueue.erase(worldState_.selfState().acceptedCommandQueue.begin());
     }
   }
 
   std::cout << "----------------" << std::endl;
-  std::cout << "Pending command Queue:" << (selfState_.pendingCommandQueue.empty() ? " <empty>" : "") << std::endl;
-  for (const auto &c : selfState_.pendingCommandQueue) {
+  std::cout << "Pending command Queue:" << (worldState_.selfState().pendingCommandQueue.empty() ? " <empty>" : "") << std::endl;
+  for (const auto &c : worldState_.selfState().pendingCommandQueue) {
     std::cout << "  " << c << std::endl;
   }
-  std::cout << "Accepted command Queue:" << (selfState_.acceptedCommandQueue.empty() ? " <empty>" : "") << std::endl;
-  for (const auto &c : selfState_.acceptedCommandQueue) {
+  std::cout << "Accepted command Queue:" << (worldState_.selfState().acceptedCommandQueue.empty() ? " <empty>" : "") << std::endl;
+  for (const auto &c : worldState_.selfState().acceptedCommandQueue) {
     std::cout << "  " << c << std::endl;
   }
   std::cout << "==========================================================================================" << std::endl;
@@ -1030,6 +1066,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
   if (packet.result() == 2) {
     // Not successful?
     LOG() << "Skill unsuccessful, err " << packet.errorCode() << std::endl;
+    // 12292 Happens when trying to cast a skill and dont have enough MP
     if (packet.casterGlobalId()) {
       LOG() << "Our skill failed" << std::endl;
       eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kOurSkillFailed));
@@ -1037,7 +1074,96 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     return;
   }
 
-  // TODO: We need to save this skill to be referenced later on skill end
+  // Do some skill tracking work
+  if (packet.casterGlobalId() == worldState_.selfState().globalId) {
+    eventBroker_.publishEvent(std::make_unique<event::SkillBegan>(worldState_.selfState().globalId));
+    const auto &skillData = gameData_.skillData().getSkillById(packet.refSkillId());
+    const auto rootSkillRefId = gameData_.skillData().getRootSkillRefId(packet.refSkillId());
+    const bool isRootSkill = rootSkillRefId == packet.refSkillId();
+    const bool skillIsCommonAttack = skillData.basicCode.find("BASE") != std::string::npos; // TODO: Find a more robust way to check
+    auto skillName = [&]() -> std::string {
+      if (skillIsCommonAttack) {
+        return "Common";
+      }
+      const auto *skillName = gameData_.textItemAndSkillData().tryGetSkillName(skillData.uiSkillName);
+      if (skillName == nullptr) {
+        return "UNKNOWN";
+      }
+      return *skillName;
+    }();
+    LOG() << "SkillBegin \"" << skillName << "\" (" << packet.refSkillId() << ") with casting time: " << skillData.actionCastingTime << ", action duration: " << skillData.actionActionDuration << ", and reuse delay: " << skillData.actionReuseDelay << std::endl;
+    if (!isRootSkill) {
+      LOG() << "  Skill " << packet.refSkillId() << "'s root is " << rootSkillRefId << std::endl;
+    }
+    // We expect that were is at least one accepted command in the queue
+    const bool isFinalPieceOfChain = gameData_.skillData().getSkillById(packet.refSkillId()).basicChainCode == 0;
+    if (!worldState_.selfState().acceptedCommandQueue.empty()) {
+      // Try to find the index of this skill in the accepted command queue
+      std::optional<size_t> indexOfOurSkill;
+      int indexCounter=0;
+      for (const auto &acceptedCommand : worldState_.selfState().acceptedCommandQueue) {
+        if (acceptedCommand.refSkillId == rootSkillRefId) {
+          indexOfOurSkill = indexCounter;
+          break;
+        }
+        ++indexCounter;
+      }
+      // TODO: Common attacks will not be found, does that matter? That means that no skill cooldown will be created for one
+      if (!indexOfOurSkill) {
+        std::cout << "Couldn't find our skill in the action queue" << std::endl;
+        // This happens for common attacks
+        if (skillIsCommonAttack && !(worldState_.selfState().acceptedCommandQueue.front().commandType == packet::enums::CommandType::kExecute && worldState_.selfState().acceptedCommandQueue.front().actionType == packet::enums::ActionType::kAttack)) {
+          // First command is not a common attack
+          LOG() << "First command in the queue isnt a common attack!" << std::endl;
+        }
+      } else if (*indexOfOurSkill != 0) {
+        // Remove all commands before this one in the queue, those have probably been discarded by the server
+        LOG() << "Our skill is not the first in the action queue" << std::endl;
+        for (int i=0; i<*indexOfOurSkill; ++i) {
+          LOG() << "Command #" << i << " (" << worldState_.selfState().acceptedCommandQueue.at(i) << ") skipped" << std::endl;
+          // TODO: Should we publish an event that command has been skipped?
+        }
+        worldState_.selfState().acceptedCommandQueue.erase(worldState_.selfState().acceptedCommandQueue.begin(), worldState_.selfState().acceptedCommandQueue.begin() + *indexOfOurSkill);
+      }
+      if (indexOfOurSkill) {
+        // We cast this skill, start the cooldown
+        if (isRootSkill) {
+          // Set a timer for when the skill cooldown ends
+          worldState_.selfState().skillsOnCooldown.emplace(packet.refSkillId());
+          eventBroker_.publishDelayedEvent(std::make_unique<event::SkillCooldownEnded>(packet.refSkillId()), std::chrono::milliseconds(skillData.actionReuseDelay));
+        } else if (skillData.actionReuseDelay != 0) {
+          throw std::runtime_error("Cast a non-root-skill with a cooldown!");
+        }
+      }
+    } else {
+      // This happens when we spawn in with a speed scroll
+      LOG() << "WARNING: accepted command queue empty" << std::endl;
+    }
+    if (skillData.actionCastingTime == 0) {
+      // Skill takes no time to cast, I think there wont be an "end" coming from the server
+      // TODO: Some skills have 0 casting time, but an "end" will come from the server
+      //  Iron Skin
+      //  Mana Skin
+      //  Holy Spell
+      //  Crossbow Extreme
+
+      if (isFinalPieceOfChain) {
+        eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(worldState_.selfState().globalId));
+      } else {
+        LOG() << "Isn't final piece of chain, not going to send an \"end\" yet" << std::endl;
+      }
+    } else {
+      // We cast this skill, save the cast ID so that we can reference it later on SkillEnd
+      worldState_.selfState().skillCastIdMap.emplace(std::piecewise_construct, std::forward_as_tuple(packet.castId()), std::forward_as_tuple(packet.casterGlobalId(), packet.refSkillId()));
+      if (worldState_.selfState().skillCastIdMap.size() > 1) {
+        LOG() << "  Skill casts tracked: [ ";
+        for (const auto &i : worldState_.selfState().skillCastIdMap) {
+          std::cout << i.first << ", ";
+        }
+        std::cout << "]" << std::endl;
+      }
+    }
+  }
 
   if (!gameData_.skillData().haveSkillWithId(packet.refSkillId())) {
     throw std::runtime_error("Cast a skill which we dont have data for");
@@ -1054,7 +1180,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     case 2:
       {
         // Will stop you if you're running
-        entity::MobileEntity &casterAsMobileEntity = getEntity<entity::MobileEntity>(packet.casterGlobalId());
+        entity::MobileEntity &casterAsMobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.casterGlobalId());
         if (casterAsMobileEntity.moving()) {
           casterAsMobileEntity.setStationaryAtPosition(casterAsMobileEntity.position(), eventBroker_);
         }
@@ -1068,26 +1194,6 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
   handleSkillAction(packet.action(), packet.casterGlobalId());
 }
 
-void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &action, std::optional<sro::scalar_types::EntityGlobalId> casterGlobalId) const {
-  if (casterGlobalId &&
-     (action.actionFlag & static_cast<uint8_t>(packet::enums::ActionFlag::kTeleport) ||
-      action.actionFlag & static_cast<uint8_t>(packet::enums::ActionFlag::kSprint))) {
-    // Entity teleported or sprinted to a new position. Sprints are actually teleports on the server side, even though the skill actually has a duration. The duration is only used for animation
-    entity::MobileEntity &casterAsMobileEntity = getEntity<entity::MobileEntity>(*casterGlobalId);
-    casterAsMobileEntity.setStationaryAtPosition(action.position, eventBroker_);
-  }
-
-  for (const auto &hitObject : action.hitObjects) {
-    for (const auto &hitResult : hitObject.hits) {
-      if (static_cast<uint8_t>(hitResult.hitResultFlag) & static_cast<uint8_t>(packet::enums::HitResult::kKnockdown) ||
-          static_cast<uint8_t>(hitResult.hitResultFlag) & static_cast<uint8_t>(packet::enums::HitResult::kKnockback)) {
-        entity::MobileEntity &targetAsMobileEntity = getEntity<entity::MobileEntity>(hitObject.targetGlobalId);
-        targetAsMobileEntity.setStationaryAtPosition(hitResult.position, eventBroker_);
-      }
-    }
-  }
-}
-
 void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const {
   LOG() << "Skill end packet received" << std::endl;
   if (packet.result() == 2) {
@@ -1097,21 +1203,104 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
   handleSkillAction(packet.action());
 
   // Have we tracked this skill?
-  if (auto it = selfState_.skillCastIdMap.find(packet.castId()); it!=selfState_.skillCastIdMap.end()) {
+  if (auto it = worldState_.selfState().skillCastIdMap.find(packet.castId()); it!=worldState_.selfState().skillCastIdMap.end()) {
     auto &skillInfo = it->second;
-    if (skillInfo.casterGlobalId == selfState_.globalId) {
+    if (skillInfo.casterGlobalId == worldState_.selfState().globalId) {
+      LOG() << "  Is our skill end" << std::endl;
       // We cast this skill
       const auto &skillData = gameData_.skillData().getSkillById(skillInfo.skillRefId);
       if (skillData.basicChainCode != 0) {
         // Another piece coming
-        LOG() << " Another piece coming" << std::endl;
+        LOG() << "  Another piece coming" << std::endl;
         skillInfo.skillRefId = skillData.basicChainCode;
       } else {
-        LOG() << " Done with skill" << std::endl;
+        LOG() << "  Done with skill" << std::endl;
         // Remove it from the map
-        selfState_.skillCastIdMap.erase(it);
-        eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(selfState_.globalId));
+        worldState_.selfState().skillCastIdMap.erase(it);
+        eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(worldState_.selfState().globalId));
+      }
+    } else {
+      LOG() << "  Is NOT our skill end" << std::endl;
+    }
+  } else {
+    LOG() << "  Untracked cast" << std::endl;
+  }
+}
+
+void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &action, std::optional<sro::scalar_types::EntityGlobalId> casterGlobalId) const {
+  if (casterGlobalId &&
+     (flags::isSet(action.actionFlag, packet::enums::ActionFlag::kTeleport) ||
+      flags::isSet(action.actionFlag, packet::enums::ActionFlag::kSprint))) {
+    // Entity teleported or sprinted to a new position. Sprints are actually teleports on the server side, even though the skill actually has a duration. The duration is only used for animation
+    entity::MobileEntity &casterAsMobileEntity = worldState_.getEntity<entity::MobileEntity>(*casterGlobalId);
+    casterAsMobileEntity.setStationaryAtPosition(action.position, eventBroker_);
+  }
+
+  for (const auto &hitObject : action.hitObjects) {
+    for (const auto &hitResult : hitObject.hits) {
+      entity::Entity &targetEntity = worldState_.getEntity<entity::Entity>(hitObject.targetGlobalId);
+      if (auto *character = dynamic_cast<entity::Character*>(&targetEntity)) {
+        if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKill)) {
+          // Effectively killed it, but I don't know if it makes sense to change the life state right now
+          character->setCurrentHp(0, eventBroker_);
+        } else {
+          if (hitObject.targetGlobalId == worldState_.selfState().globalId) {
+            if (flags::isSet(hitResult.damageFlag, packet::enums::DamageFlag::kEffect) && hitResult.effect != 0) {
+              // Applied an effect to us
+              LOG() << "We have been hit with effect: " << static_cast<packet::enums::AbnormalStateFlag>(hitResult.effect) << std::endl;
+            }
+          }
+          if (character->knowCurrentHp()) {
+            // Can only update the character's hp if we know what it currently is
+            if (hitResult.damage >= character->currentHp()) {
+              character->setCurrentHp(0, eventBroker_);
+            } else {
+              character->setCurrentHp(character->currentHp() - hitResult.damage, eventBroker_);
+            }
+          }
+        }
+      }
+      if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockback) ||
+          flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
+        if (auto *targetAsMobileEntity = dynamic_cast<entity::MobileEntity*>(&targetEntity)) {
+          targetAsMobileEntity->setStationaryAtPosition(hitResult.position, eventBroker_);
+          if (hitObject.targetGlobalId == worldState_.selfState().globalId) {
+            // Is us
+            if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockback)) {
+              LOG() << "We were knocked back" << std::endl;
+            } else if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
+              LOG() << "We were knocked down" << std::endl;
+            }
+          }
+        } else {
+          throw std::runtime_error("Knockback/knockdown on non-mobile entity");
+        }
       }
     }
   }
+}
+
+void PacketProcessor::serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const {
+  if (packet.globalId() == worldState_.selfState().globalId) {
+    const auto &skillData = gameData_.skillData().getSkillById(packet.skillRefId());
+    const auto *maybeSkillName = gameData_.textItemAndSkillData().tryGetSkillName(skillData.uiSkillName);
+    const std::string skillName = (maybeSkillName ? *maybeSkillName : "UNKNOWN");
+    LOG() << "Buff \"" << skillName << "\" added to us with tokenId: " << packet.activeBuffToken() << std::endl;
+  }
+  if (packet.activeBuffToken() == 0) {
+    // No buff remove will be received when this expires
+    //  Seems to be only for debuffs
+    LOG() << "Not going to add buff to character" << std::endl;
+    return;
+  }
+  worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken());
+}
+
+void PacketProcessor::serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const {
+  LOG() << "Buff remove received. Buffs: [ ";
+  for (const auto &tokenId : packet.tokens()) {
+    std::cout << tokenId << ", ";
+  }
+  std::cout << "]" << std::endl;
+  worldState_.removeBuffs(packet.tokens());
 }

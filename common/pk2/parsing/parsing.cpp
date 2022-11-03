@@ -292,8 +292,8 @@ pk2::ref::Character parseCharacterdataLine(const std::string &line) {
   ptr = parse(ptr, character.assocFile2_128);
   ptr = parse(ptr, character.lvl);
   ptr = parse(ptr, character.charGender);
-  ptr = parse(ptr, character.maxHP);
-  ptr = parse(ptr, character.maxMP);
+  ptr = parse(ptr, character.maxHp);
+  ptr = parse(ptr, character.maxMp);
   ptr = parse(ptr, character.inventorySize);
   ptr = parse(ptr, character.canStore_TID1);
   ptr = parse(ptr, character.canStore_TID2);

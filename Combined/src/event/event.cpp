@@ -42,6 +42,14 @@ EntityEnteredGeometry::EntityEnteredGeometry(sro::scalar_types::EntityGlobalId i
 
 EntityExitedGeometry::EntityExitedGeometry(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityExitedGeometry), globalId(id) {}
 
+SkillBegan::SkillBegan(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kSkillBegan), casterGlobalId(id) {}
+
 SkillEnded::SkillEnded(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kSkillEnded), casterGlobalId(id) {}
+
+EntityHpChanged::EntityHpChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityHpChanged), globalId(id) {}
+
+CommandError::CommandError(const packet::structures::ActionCommand &cmd) : Event(EventCode::kOurCommandError), command(cmd) {}
+
+ItemUseTimeout::ItemUseTimeout(uint8_t slot, type_id::TypeId tid) : Event(EventCode::kItemUseTimeout), slotNum(slot), typeData(tid) {}
 
 } // namespace event

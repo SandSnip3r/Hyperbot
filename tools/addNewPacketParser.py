@@ -18,7 +18,7 @@ macroCaseClassName = strToMacroCase(camelCaseClassName)
 
 cmakeFilePath = '../Combined/CMakeLists.txt'
 projectFileSourceLine = '    "src/packet/parsing/{}.cpp"'
-projectFileHeaderLine = '    "src/packet/parsing/{}.cpp"'
+projectFileHeaderLine = '    "src/packet/parsing/{}.hpp"'
 
 # Append the file paths to the project file
 with open(cmakeFilePath, 'a') as projectFile:
@@ -40,10 +40,7 @@ headerFilePath = '../Combined/src/packet/parsing/{}.hpp'
 headerTemplate = '#ifndef PACKET_PARSING_{macroClassName}_HPP\n'\
                  '#define PACKET_PARSING_{macroClassName}_HPP\n'\
                  '\n'\
-                 '#include "parsedPacket.hpp"\n'\
-                 '#include "../enums/packetEnums.hpp"\n'\
-                 '\n'\
-                 '#include <cstdint>\n'\
+                 '#include "packet/parsing/parsedPacket.hpp"\n'\
                  '\n'\
                  'namespace packet::parsing {{\n'\
                  '\n'\

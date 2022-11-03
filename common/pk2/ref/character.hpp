@@ -69,8 +69,8 @@ struct Character {
 	std::string assocFile2_128;
   uint8_t lvl;
   uint8_t charGender;
-  int32_t maxHP;
-  int32_t maxMP;
+  int32_t maxHp;
+  int32_t maxMp;
   // int32_t resistFrozen;
   // int32_t resistFrostbite;
   // int32_t resistBurn;

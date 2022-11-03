@@ -1,7 +1,8 @@
+#include <ostream>
 #include <string>
 
-#ifndef OPCODE_HPP_
-#define OPCODE_HPP_
+#ifndef PACKET_OPCODE_HPP_
+#define PACKET_OPCODE_HPP_
 
 namespace packet {
 
@@ -66,7 +67,6 @@ enum class Opcode {
   kClientAgentActionDeselectRequest = 0x704B,
   kClientAgentActionSelectRequest = 0x7045,
   kClientAgentActionTalkRequest = 0x7046,
-  CLIENT_GM = 0x7010,
   kClientAgentCharacterMoveRequest = 0x7021,
   CLIENT_TRANSPORT_MOVE = 0x70C5,
   kClientAgentActionCommandRequest = 0x7074,
@@ -207,10 +207,16 @@ enum class Opcode {
 
   kServerAgentEntityUpdatePosition = 0xB023,
   kServerAgentEntityUpdateAngle = 0xB024,
+
+  kClientAgentFreePvpUpdateRequest = 0x7516,
+  kServerAgentFreePvpUpdateResponse = 0xB516,
+  kClientAgentOperatorRequest = 0x7010,
+  kServerAgentOperatorResponse = 0xB010,
 };
 
 std::string toStr(Opcode opcode);
+std::ostream& operator<<(std::ostream &stream, Opcode opcode);
 
 } // namespace packet
 
-#endif
+#endif // PACKET_OPCODE_HPP_

@@ -1,6 +1,8 @@
 #ifndef EVENT_EVENT_HPP_
 #define EVENT_EVENT_HPP_
 
+#include "packet/structures/packetInnerStructures.hpp"
+
 #include <silkroad_lib/scalar_types.h>
 
 #include <cstdint>
@@ -18,7 +20,7 @@ enum class EventCode {
   kVigorPotionCooldownEnded,
   kUniversalPillCooldownEnded,
   kPurificationPillCooldownEnded,
-  kHpChanged,
+  kEntityHpChanged,
   kMpChanged,
   kMaxHpMpChanged,
   kStatesChanged,
@@ -50,7 +52,13 @@ enum class EventCode {
   kEntityDespawned,
   kEntityMovementEnded,
 
+  kSkillBegan,
   kSkillEnded,
+  kOurSkillFailed,
+  kOurBuffRemoved,
+  kOurCommandError,
+  // TODO: Refactor this whole itemUsedTimeout concept
+  kItemUseTimeout,
 
   // Only used for sending to UI
   kEntityMovementBegan,
@@ -228,11 +236,41 @@ public:
   virtual ~EntityExitedGeometry() = default;
 };
 
+struct SkillBegan : public Event {
+public:
+  SkillBegan(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId casterGlobalId;
+  virtual ~SkillBegan() = default;
+};
+
 struct SkillEnded : public Event {
 public:
   SkillEnded(sro::scalar_types::EntityGlobalId id);
   const sro::scalar_types::EntityGlobalId casterGlobalId;
   virtual ~SkillEnded() = default;
+};
+
+struct EntityHpChanged : public Event {
+public:
+  EntityHpChanged(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityHpChanged() = default;
+};
+
+struct CommandError : public Event {
+public:
+  CommandError(const packet::structures::ActionCommand &cmd);
+  const packet::structures::ActionCommand command;
+  virtual ~CommandError() = default;
+};
+
+// TODO: Refactor this whole itemUsedTimeout concept
+struct ItemUseTimeout : public Event {
+public:
+  ItemUseTimeout(uint8_t slot, type_id::TypeId tid);
+  const uint8_t slotNum;
+  const type_id::TypeId typeData;
+  virtual ~ItemUseTimeout() = default;
 };
 
 } // namespace event

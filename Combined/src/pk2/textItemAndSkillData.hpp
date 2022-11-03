@@ -13,6 +13,8 @@ public:
   void addItem(ref::TextItemOrSkill &&itemOrSkill);
   const std::string& getItemName(const std::string &nameStrId128) const;
   const std::string& getSkillName(const std::string &uiSkillName) const;
+  const std::string* tryGetItemName(const std::string &nameStrId128) const;
+  const std::string* tryGetSkillName(const std::string &uiSkillName) const;
 private:
   std::map<std::string, std::string> itemNames_;
   std::map<std::string, std::string> skillNames_;

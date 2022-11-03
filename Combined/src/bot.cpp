@@ -13,6 +13,9 @@
 #include "packet/building/clientAgentInventoryStorageOpenRequest.hpp"
 #include "packet/building/clientGatewayLoginIbuvAnswer.hpp"
 #include "packet/building/clientGatewayLoginRequest.hpp"
+#include "type_id/categories.hpp"
+
+#include <silkroad_lib/position_math.h>
 
 Bot::Bot(const config::CharacterLoginData &loginData,
          const pk2::GameData &gameData,
@@ -21,18 +24,14 @@ Bot::Bot(const config::CharacterLoginData &loginData,
       loginData_(loginData),
       gameData_(gameData),
       proxy_(proxy),
-      broker_(broker) {
+      packetBroker_(broker) {
   eventBroker_.run();
   userInterface_.run();
   subscribeToEvents();
 }
 
-state::Self& Bot::selfState() {
-  return selfState_;
-}
-
-state::EntityTracker& Bot::entityTracker() {
-  return entityTracker_;
+const pk2::GameData& Bot::gameData() const {
+  return gameData_;
 }
 
 Proxy& Bot::proxy() const {
@@ -40,11 +39,19 @@ Proxy& Bot::proxy() const {
 }
 
 broker::PacketBroker& Bot::packetBroker() const {
-  return broker_;
+  return packetBroker_;
 }
 
 broker::EventBroker& Bot::eventBroker() {
   return eventBroker_;
+}
+
+state::EntityTracker& Bot::entityTracker() {
+  return worldState_.entityTracker();
+}
+
+state::Self& Bot::selfState() {
+  return worldState_.selfState();
 }
 
 void Bot::subscribeToEvents() {
@@ -80,7 +87,7 @@ void Bot::subscribeToEvents() {
 #ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
   eventBroker_.subscribeToEvent(event::EventCode::kPurificationPillCooldownEnded, eventHandleFunction);
 #endif
-  eventBroker_.subscribeToEvent(event::EventCode::kHpChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityHpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
@@ -107,10 +114,19 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kEntityLifeStateChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaSet, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaReset, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kItemUseTimeout, eventHandleFunction);
+
+  // Skills
+  eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kSkillEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kOurSkillFailed, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kOurBuffRemoved, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kOurCommandError, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kSkillCooldownEnded, eventHandleFunction);
 }
 
 void Bot::handleEvent(const event::Event *event) {
-  std::unique_lock<std::mutex> selfStateLock(selfState_.selfMutex);
+  std::unique_lock<std::mutex> selfStateLock(worldState_.selfState().selfMutex);
 
   try {
     const auto eventCode = event->eventCode;
@@ -181,7 +197,7 @@ void Bot::handleEvent(const event::Event *event) {
         }
       case event::EventCode::kEnteredNewRegion:
         {
-          const auto pos = selfState_.position();
+          const auto pos = worldState_.selfState().position();
           const auto &regionName = gameData_.textZoneNameData().getRegionName(pos.regionId());
           userInterface_.broadcastRegionNameUpdate(regionName);
         }
@@ -224,17 +240,21 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kPurificationPillCooldownEnded:
         handlePillCooldownEnded(eventCode);
         break;
-      case event::EventCode::kHpChanged:
-        userInterface_.broadcastCharacterHpUpdate(selfState_.hp());
-        handleVitalsChanged();
+      case event::EventCode::kEntityHpChanged: {
+        const event::EntityHpChanged &castedEvent = dynamic_cast<const event::EntityHpChanged&>(*event);
+        if (castedEvent.globalId == worldState_.selfState().globalId) {
+          userInterface_.broadcastCharacterHpUpdate(worldState_.selfState().currentHp());
+          handleVitalsChanged();
+        }
         break;
+      }
       case event::EventCode::kMpChanged:
-        userInterface_.broadcastCharacterMpUpdate(selfState_.mp());
+        userInterface_.broadcastCharacterMpUpdate(worldState_.selfState().mp());
         handleVitalsChanged();
         break;
       case event::EventCode::kMaxHpMpChanged:
-        if (selfState_.maxHp() && selfState_.maxMp()) {
-          userInterface_.broadcastCharacterMaxHpMpUpdate(*selfState_.maxHp(), *selfState_.maxMp());
+        if (worldState_.selfState().maxHp() && worldState_.selfState().maxMp()) {
+          userInterface_.broadcastCharacterMaxHpMpUpdate(*worldState_.selfState().maxHp(), *worldState_.selfState().maxMp());
         }
         handleVitalsChanged();
         break;
@@ -284,19 +304,19 @@ void Bot::handleEvent(const event::Event *event) {
           break;
         }
       case event::EventCode::kInventoryGoldUpdated:
-        userInterface_.broadcastGoldAmountUpdate(selfState_.getGold(), broadcast::ItemLocation::kCharacterInventory);
+        userInterface_.broadcastGoldAmountUpdate(worldState_.selfState().getGold(), broadcast::ItemLocation::kCharacterInventory);
         break;
       case event::EventCode::kStorageGoldUpdated:
-        userInterface_.broadcastGoldAmountUpdate(selfState_.getStorageGold(), broadcast::ItemLocation::kStorage);
+        userInterface_.broadcastGoldAmountUpdate(worldState_.selfState().getStorageGold(), broadcast::ItemLocation::kStorage);
         break;
       case event::EventCode::kGuildStorageGoldUpdated:
-        userInterface_.broadcastGoldAmountUpdate(selfState_.getGuildStorageGold(), broadcast::ItemLocation::kGuildStorage);
+        userInterface_.broadcastGoldAmountUpdate(worldState_.selfState().getGuildStorageGold(), broadcast::ItemLocation::kGuildStorage);
         break;
       case event::EventCode::kCharacterSkillPointsUpdated:
-        userInterface_.broadcastCharacterSpUpdate(selfState_.getSkillPoints());
+        userInterface_.broadcastCharacterSpUpdate(worldState_.selfState().getSkillPoints());
         break;
       case event::EventCode::kCharacterExperienceUpdated:
-        userInterface_.broadcastCharacterExperienceUpdate(selfState_.getCurrentExperience(), selfState_.getCurrentSpExperience());
+        userInterface_.broadcastCharacterExperienceUpdate(worldState_.selfState().getCurrentExperience(), worldState_.selfState().getCurrentSpExperience());
         break;
       case event::EventCode::kEntitySpawned:
         {
@@ -318,16 +338,57 @@ void Bot::handleEvent(const event::Event *event) {
         }
       case event::EventCode::kTrainingAreaSet:
         {
-          if (!selfState_.trainingAreaGeometry) {
+          if (!worldState_.selfState().trainingAreaGeometry) {
             throw std::runtime_error("Training area set, but no training geometry");
           }
-          userInterface_.broadcastTrainingAreaSet(selfState_.trainingAreaGeometry.get());
+          userInterface_.broadcastTrainingAreaSet(worldState_.selfState().trainingAreaGeometry.get());
           break;
         }
       case event::EventCode::kTrainingAreaReset:
         {
           LOG() << "Training area reset" << std::endl;
           userInterface_.broadcastTrainingAreaReset();
+          break;
+        }
+      case event::EventCode::kItemUseTimeout:
+        {
+          const auto &castedEvent = dynamic_cast<const event::ItemUseTimeout&>(*event);
+          itemUseTimedOut(castedEvent);
+          break;
+        }
+
+      // Skills
+      case event::EventCode::kSkillBegan:
+        {
+          const auto &castedEvent = dynamic_cast<const event::SkillBegan&>(*event);
+          handleSkillBegan(castedEvent);
+          break;
+        }
+      case event::EventCode::kSkillEnded:
+        {
+          const auto &castedEvent = dynamic_cast<const event::SkillEnded&>(*event);
+          handleSkillEnded(castedEvent);
+          break;
+        }
+      case event::EventCode::kOurSkillFailed:
+        {
+          onUpdate(event);
+          break;
+        }
+      case event::EventCode::kOurBuffRemoved:
+        {
+          onUpdate(event);
+          break;
+        }
+      case event::EventCode::kOurCommandError:
+        {
+          onUpdate(event);
+          break;
+        }
+      case event::EventCode::kSkillCooldownEnded:
+        {
+          const auto &castedEvent = dynamic_cast<const event::SkillCooldownEnded&>(*event);
+          handleSkillCooldownEnded(castedEvent);
           break;
         }
       default:
@@ -347,7 +408,7 @@ void Bot::onUpdate(const event::Event *event) {
   // Highest priority is our vitals, we will try to heal even if we're not training
   handleVitals();
 
-  if (!selfState_.trainingIsActive) {
+  if (!worldState_.selfState().trainingIsActive) {
     // Not training, nothing else to do
     return;
   }
@@ -377,12 +438,12 @@ void Bot::handleStopTraining() {
 }
 
 void Bot::startTraining() {
-  if (selfState_.trainingIsActive) {
+  if (worldState_.selfState().trainingIsActive) {
     LOG() << "Asked to start training, but we're already training" << std::endl;
     return;
   }
 
-  selfState_.trainingIsActive = true;
+  worldState_.selfState().trainingIsActive = true;
   // TODO: Should we stop whatever we're doing?
   //  For example, if we're running, stop where we are
 
@@ -394,11 +455,11 @@ void Bot::startTraining() {
 }
 
 void Bot::stopTraining() {
-  if (selfState_.trainingIsActive) {
+  if (worldState_.selfState().trainingIsActive) {
     // TODO: Need to cleanup current action to avoid leaving the client in a bad state
     //  Ex. Need to close a shop npc dialog
     LOG() << "Stopping training" << std::endl;
-    selfState_.trainingIsActive = false;
+    worldState_.selfState().trainingIsActive = false;
     stateMachine_.reset();
   } else {
     LOG() << "Asked to stop training, but we werent training" << std::endl;
@@ -419,7 +480,7 @@ void Bot::handleInjectPacket(const event::InjectPacket &castedEvent) {
   }
   const auto packet = PacketContainer(static_cast<uint16_t>(castedEvent.opcode), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
   LOG() << "Injecting packet" << std::endl;
-  broker_.injectPacket(packet, direction);
+  packetBroker_.injectPacket(packet, direction);
 }
 
 // ============================================================================================================================
@@ -428,8 +489,8 @@ void Bot::handleInjectPacket(const event::InjectPacket &castedEvent) {
 
 void Bot::handleStateShardIdUpdated() const {
   // We received the server list from the server, try to log in
-  const auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(gameData_.divisionInfo().locale, loginData_.id, loginData_.password, selfState_.shardId);
-  broker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
+  const auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(gameData_.divisionInfo().locale, loginData_.id, loginData_.password, worldState_.selfState().shardId);
+  packetBroker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
 }
 
 void Bot::handleStateConnectedToAgentServerUpdated() {
@@ -439,14 +500,14 @@ void Bot::handleStateConnectedToAgentServerUpdated() {
   }
   proxy_.blockOpcode(packet::Opcode::kClientAgentAuthRequest);
   // Send our auth packet
-  const auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(selfState_.token, loginData_.id, loginData_.password, gameData_.divisionInfo().locale, selfState_.kMacAddress);
-  broker_.injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
+  const auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(worldState_.selfState().token, loginData_.id, loginData_.password, gameData_.divisionInfo().locale, worldState_.selfState().kMacAddress);
+  packetBroker_.injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
   // Set our state to logging in so that we'll know to block packets from the client if it tries to also login
-  selfState_.loggingIn = true;
+  worldState_.selfState().loggingIn = true;
 }
 
 void Bot::handleLoggedIn() {
-  selfState_.loggingIn = false;
+  worldState_.selfState().loggingIn = false;
   // Unblock packet
   if (!proxy_.blockingOpcode(packet::Opcode::kClientAgentAuthRequest)) {
     throw std::runtime_error("Just logged in, but we werent blocking the client's auth request");
@@ -456,29 +517,29 @@ void Bot::handleLoggedIn() {
 
 void Bot::handleStateReceivedCaptchaPromptUpdated() const {
   LOG() << "Got captcha. Sending answer\n";
-  const auto captchaAnswerPacket = packet::building::ClientGatewayLoginIbuvAnswer::packet(selfState_.kCaptchaAnswer);
-  broker_.injectPacket(captchaAnswerPacket, PacketContainer::Direction::kClientToServer);
+  const auto captchaAnswerPacket = packet::building::ClientGatewayLoginIbuvAnswer::packet(worldState_.selfState().kCaptchaAnswer);
+  packetBroker_.injectPacket(captchaAnswerPacket, PacketContainer::Direction::kClientToServer);
 }
 
 void Bot::handleStateCharacterListUpdated() const {
   LOG() << "Char list received: [ ";
-  for (const auto &i : selfState_.characterList) {
+  for (const auto &i : worldState_.selfState().characterList) {
     std::cout << i.name << ' ';
   }
   std::cout << "]\n";
 
   // Search for our character in the character list
-  auto it = std::find_if(selfState_.characterList.begin(), selfState_.characterList.end(), [this](const packet::structures::CharacterSelection::Character &character) {
+  auto it = std::find_if(worldState_.selfState().characterList.begin(), worldState_.selfState().characterList.end(), [this](const packet::structures::CharacterSelection::Character &character) {
     return character.name == loginData_.name;
   });
-  if (it == selfState_.characterList.end()) {
+  if (it == worldState_.selfState().characterList.end()) {
     LOG() << "Unable to find character \"" << loginData_.name << "\"\n";
     return;
   }
 
   // Found our character, select it
   auto charSelectionPacket = packet::building::ClientAgentCharacterSelectionJoinRequest::packet(loginData_.name);
-  broker_.injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
+  packetBroker_.injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
 }
 
 // ============================================================================================================================
@@ -486,20 +547,20 @@ void Bot::handleStateCharacterListUpdated() const {
 // ============================================================================================================================
 
 void Bot::handleEntityMovementBegan(sro::scalar_types::EntityGlobalId globalId) {
-  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(globalId);
+  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
   if (!mobileEntity.moving()) {
     throw std::runtime_error("Got an entity movement began event, but it is not moving");
   }
   const auto currentPosition = mobileEntity.position();
   if (mobileEntity.destinationPosition) {
-    if (globalId == selfState_.globalId) {
-      userInterface_.broadcastMovementBeganUpdate(currentPosition, *selfState_.destinationPosition, selfState_.currentSpeed());
+    if (globalId == worldState_.selfState().globalId) {
+      userInterface_.broadcastMovementBeganUpdate(currentPosition, *worldState_.selfState().destinationPosition, worldState_.selfState().currentSpeed());
     } else {
       userInterface_.broadcastEntityMovementBegan(globalId, currentPosition, *mobileEntity.destinationPosition, mobileEntity.currentSpeed());
     }
   } else {
-    if (globalId == selfState_.globalId) {
-      userInterface_.broadcastMovementBeganUpdate(currentPosition, selfState_.angle(), selfState_.currentSpeed());
+    if (globalId == worldState_.selfState().globalId) {
+      userInterface_.broadcastMovementBeganUpdate(currentPosition, worldState_.selfState().angle(), worldState_.selfState().currentSpeed());
     } else {
       userInterface_.broadcastEntityMovementBegan(globalId, currentPosition, mobileEntity.angle(), mobileEntity.currentSpeed());
     }
@@ -507,9 +568,9 @@ void Bot::handleEntityMovementBegan(sro::scalar_types::EntityGlobalId globalId) 
 }
 
 void Bot::handleEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId) {
-  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(globalId);
+  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
   bool needToRunUpdate{false};
-  if (globalId == selfState_.globalId) {
+  if (globalId == worldState_.selfState().globalId) {
     // TODO: We ought to combine these two UI functions
     userInterface_.broadcastMovementEndedUpdate(mobileEntity.position());
     needToRunUpdate = true;
@@ -523,19 +584,19 @@ void Bot::handleEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId) 
 }
 
 void Bot::handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId) {
-  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(globalId);
+  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
   mobileEntity.movementTimerCompleted(eventBroker_);
 }
 
 void Bot::handleEntityPositionUpdated(sro::scalar_types::EntityGlobalId globalId) {
-  entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(globalId);
+  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
   if (mobileEntity.moving()) {
     throw std::runtime_error("Should never happen while moving");
   }
 
   // Not moving
   const auto currentPosition = mobileEntity.position();
-  if (globalId == selfState_.globalId) {
+  if (globalId == worldState_.selfState().globalId) {
     userInterface_.broadcastPositionChangedUpdate(currentPosition);
   } else {
     userInterface_.broadcastEntityPositionChanged(mobileEntity.globalId, currentPosition);
@@ -543,9 +604,9 @@ void Bot::handleEntityPositionUpdated(sro::scalar_types::EntityGlobalId globalId
 }
 
 void Bot::handleEntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId globalId) {
-  if (globalId == selfState_.globalId) {
+  if (globalId == worldState_.selfState().globalId) {
     // We only send the angle of the controlled character to the UI
-    entity::MobileEntity &mobileEntity = getEntity<entity::MobileEntity>(globalId);
+    entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
     userInterface_.broadcastNotMovingAngleChangedUpdate(mobileEntity.angle());
   }
 }
@@ -566,34 +627,34 @@ void Bot::handleEntityExitedGeometry(const event::EntityExitedGeometry &event) {
 
 void Bot::handleSpawned() {
   userInterface_.broadcastCharacterSpawn();
-  const auto &currentLevelData = gameData_.levelData().getLevel(selfState_.getCurrentLevel());
-  userInterface_.broadcastCharacterLevelUpdate(selfState_.getCurrentLevel(), currentLevelData.exp_C);
-  userInterface_.broadcastCharacterExperienceUpdate(selfState_.getCurrentExperience(), selfState_.getCurrentSpExperience());
-  userInterface_.broadcastCharacterSpUpdate(selfState_.getSkillPoints());
-  userInterface_.broadcastCharacterNameUpdate(selfState_.name);
-  userInterface_.broadcastGoldAmountUpdate(selfState_.getGold(), broadcast::ItemLocation::kCharacterInventory);
-  const auto &regionName = gameData_.textZoneNameData().getRegionName(selfState_.position().regionId());
-  userInterface_.broadcastMovementEndedUpdate(selfState_.position());
-  LOG() << "Spawned at position " << selfState_.position() << std::endl;
+  const auto &currentLevelData = gameData_.levelData().getLevel(worldState_.selfState().getCurrentLevel());
+  userInterface_.broadcastCharacterLevelUpdate(worldState_.selfState().getCurrentLevel(), currentLevelData.exp_C);
+  userInterface_.broadcastCharacterExperienceUpdate(worldState_.selfState().getCurrentExperience(), worldState_.selfState().getCurrentSpExperience());
+  userInterface_.broadcastCharacterSpUpdate(worldState_.selfState().getSkillPoints());
+  userInterface_.broadcastCharacterNameUpdate(worldState_.selfState().name);
+  userInterface_.broadcastGoldAmountUpdate(worldState_.selfState().getGold(), broadcast::ItemLocation::kCharacterInventory);
+  const auto &regionName = gameData_.textZoneNameData().getRegionName(worldState_.selfState().position().regionId());
+  userInterface_.broadcastMovementEndedUpdate(worldState_.selfState().position());
+  LOG() << "Spawned at position " << worldState_.selfState().position() << std::endl;
   userInterface_.broadcastRegionNameUpdate(regionName);
   // Send entire inventory
-  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<selfState_.inventory.size(); ++inventorySlotIndex) {
-    if (selfState_.inventory.hasItem(inventorySlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, selfState_.inventory, inventorySlotIndex);
+  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<worldState_.selfState().inventory.size(); ++inventorySlotIndex) {
+    if (worldState_.selfState().inventory.hasItem(inventorySlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_.selfState().inventory, inventorySlotIndex);
     }
   }
   // Send avatar inventory too
-  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<selfState_.avatarInventory.size(); ++inventorySlotIndex) {
-    if (selfState_.avatarInventory.hasItem(inventorySlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, selfState_.avatarInventory, inventorySlotIndex);
+  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<worldState_.selfState().avatarInventory.size(); ++inventorySlotIndex) {
+    if (worldState_.selfState().avatarInventory.hasItem(inventorySlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_.selfState().avatarInventory, inventorySlotIndex);
     }
   }
 }
 
 void Bot::handleCosSpawned(const event::CosSpawned &event) {
   // Send COS inventory
-  auto it = selfState_.cosInventoryMap.find(event.cosGlobalId);
-  if (it == selfState_.cosInventoryMap.end()) {
+  auto it = worldState_.selfState().cosInventoryMap.find(event.cosGlobalId);
+  if (it == worldState_.selfState().cosInventoryMap.end()) {
     throw std::runtime_error("Received COS Spawned event, but dont have this COS");
   }
   const auto &cosInventory = it->second;
@@ -620,11 +681,11 @@ void Bot::handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &event)
 void Bot::handlePotionCooldownEnded(const event::EventCode eventCode) {
   LOG() << "Potion cooldown ended" << std::endl;
   if (eventCode == event::EventCode::kHpPotionCooldownEnded) {
-    selfState_.resetHpPotionEventId();
+    worldState_.selfState().resetHpPotionEventId();
   } else if (eventCode == event::EventCode::kMpPotionCooldownEnded) {
-    selfState_.resetMpPotionEventId();
+    worldState_.selfState().resetMpPotionEventId();
   } else if (eventCode == event::EventCode::kVigorPotionCooldownEnded) {
-    selfState_.resetVigorPotionEventId();
+    worldState_.selfState().resetVigorPotionEventId();
   } else {
     LOG() << "Unhandled potion cooldown ended event\n";
   }
@@ -634,10 +695,10 @@ void Bot::handlePotionCooldownEnded(const event::EventCode eventCode) {
 void Bot::handlePillCooldownEnded(const event::EventCode eventCode) {
   LOG() << "Pill cooldown ended" << std::endl;
   if (eventCode == event::EventCode::kUniversalPillCooldownEnded) {
-    selfState_.resetUniversalPillEventId();
+    worldState_.selfState().resetUniversalPillEventId();
 #ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
   } else if (eventCode == event::EventCode::kPurificationPillCooldownEnded) {
-    selfState_.resetPurificationPillEventId();
+    worldState_.selfState().resetPurificationPillEventId();
 #endif
   } else {
     LOG() << "Unhandled pill cooldown ended event\n";
@@ -646,7 +707,7 @@ void Bot::handlePillCooldownEnded(const event::EventCode eventCode) {
 }
 
 void Bot::handleVitalsChanged() {
-  if (!selfState_.maxHp() || !selfState_.maxMp()) {
+  if (!worldState_.selfState().maxHp() || !worldState_.selfState().maxMp()) {
     // Dont yet know our max
     return;
   }
@@ -662,25 +723,51 @@ void Bot::handleStatesChanged() {
 // ============================================================================================================================
 
 // ============================================================================================================================
+// ===========================================================Skills===========================================================
+// ============================================================================================================================
+
+void Bot::handleSkillBegan(const event::SkillBegan &event) {
+  if (event.casterGlobalId == worldState_.selfState().globalId) {
+    LOG() << "Our skill began" << std::endl;
+    onUpdate(&event);
+  }
+}
+
+void Bot::handleSkillEnded(const event::SkillEnded &event) {
+  if (event.casterGlobalId == worldState_.selfState().globalId) {
+    LOG() << "Our skill ended" << std::endl;
+    onUpdate(&event);
+  }
+}
+
+void Bot::handleSkillCooldownEnded(const event::SkillCooldownEnded &event) {
+  const auto &skillData = gameData_.skillData().getSkillById(event.skillRefId);
+  const auto *skillName = gameData_.textItemAndSkillData().tryGetSkillName(skillData.uiSkillName);
+  LOG() << "Skill " << event.skillRefId << "(" << (skillName != nullptr ? *skillName : "UNKNOWN") << ") cooldown ended" << std::endl;
+  worldState_.selfState().skillsOnCooldown.erase(event.skillRefId);
+  onUpdate();
+}
+
+// ============================================================================================================================
 // ====================================================Actual action logic=====================================================
 // ============================================================================================================================
 
 void Bot::checkIfNeedToHeal() {
-  if (!selfState_.maxHp() || !selfState_.maxMp()) {
+  if (!worldState_.selfState().maxHp() || !worldState_.selfState().maxMp()) {
     // Dont yet know our max
     LOG() << "checkIfNeedToHeal: dont know max hp or mp\n";
     return;
   }
-  if (*selfState_.maxHp() == 0) {
+  if (*worldState_.selfState().maxHp() == 0) {
     // Dead, cant heal
     // TODO: Get from state update instead
     LOG() << "checkIfNeedToHeal: Dead, cant heal\n";
     return;
   }
-  const double hpPercentage = static_cast<double>(selfState_.hp())/(*selfState_.maxHp());
-  const double mpPercentage = static_cast<double>(selfState_.mp())/(*selfState_.maxMp());
+  const double hpPercentage = static_cast<double>(worldState_.selfState().currentHp())/(*worldState_.selfState().maxHp());
+  const double mpPercentage = static_cast<double>(worldState_.selfState().mp())/(*worldState_.selfState().maxMp());
 
-  const auto legacyStateEffects = selfState_.legacyStateEffects();
+  const auto legacyStateEffects = worldState_.selfState().legacyStateEffects();
   const bool haveZombie = (legacyStateEffects[helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie)] > 0);
 
   // TODO: Investigate if using multiple potions in one go causes issues
@@ -703,23 +790,26 @@ void Bot::checkIfNeedToHeal() {
 
 bool Bot::alreadyUsedPotion(PotionType potionType) {
   if (potionType == PotionType::kHp) {
-    if (selfState_.haveHpPotionEventId()) {
+    if (worldState_.selfState().haveHpPotionEventId()) {
+      // On cooldown
       return true;
     }
-    const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 1, 1);
-    return selfState_.itemIsInUsedItemQueue(itemTypeId);
+    const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 1, 1); // TODO: Convert to new type id categories
+    return worldState_.selfState().itemIsInUsedItemQueue(itemTypeId);
   } else if (potionType == PotionType::kMp) {
-    if (selfState_.haveMpPotionEventId()) {
+    if (worldState_.selfState().haveMpPotionEventId()) {
+      // On cooldown
       return true;
     }
-    const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 1, 2);
-    return selfState_.itemIsInUsedItemQueue(itemTypeId);
+    const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 1, 2); // TODO: Convert to new type id categories
+    return worldState_.selfState().itemIsInUsedItemQueue(itemTypeId);
   } else if (potionType == PotionType::kVigor) {
-    if (selfState_.haveVigorPotionEventId()) {
+    if (worldState_.selfState().haveVigorPotionEventId()) {
+      // On cooldown
       return true;
     }
-    const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 1, 3);
-    return selfState_.itemIsInUsedItemQueue(itemTypeId);
+    const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 1, 3); // TODO: Convert to new type id categories
+    return worldState_.selfState().itemIsInUsedItemQueue(itemTypeId);
   }
   // TODO: Handle other cases
   return false;
@@ -743,11 +833,11 @@ void Bot::usePotion(PotionType potionType) {
   }
 
   // Find potion in inventory
-  for (uint8_t slotNum=0; slotNum<selfState_.inventory.size(); ++slotNum) {
-    if (!selfState_.inventory.hasItem(slotNum)) {
+  for (uint8_t slotNum=0; slotNum<worldState_.selfState().inventory.size(); ++slotNum) {
+    if (!worldState_.selfState().inventory.hasItem(slotNum)) {
       continue;
     }
-    const storage::Item *itemPtr = selfState_.inventory.getItem(slotNum);
+    const storage::Item *itemPtr = worldState_.selfState().inventory.getItem(slotNum);
     const storage::ItemExpendable *item;
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -764,14 +854,14 @@ void Bot::usePotion(PotionType potionType) {
 }
 
 void Bot::checkIfNeedToUsePill() {
-  const auto legacyStateEffects = selfState_.legacyStateEffects();
+  const auto legacyStateEffects = worldState_.selfState().legacyStateEffects();
   if (std::any_of(legacyStateEffects.begin(), legacyStateEffects.end(), [](const uint16_t effect){ return effect > 0; })) {
     // Need to use a universal pill
     if (!alreadyUsedUniversalPill()) {
       useUniversalPill();
     }
   }
-  const auto modernStateLevels = selfState_.modernStateLevels();
+  const auto modernStateLevels = worldState_.selfState().modernStateLevels();
   if (std::any_of(modernStateLevels.begin(), modernStateLevels.end(), [](const uint8_t level){ return level > 0; })) {
     // Need to use purification pill
     if (!alreadyUsedPurificationPill()) {
@@ -781,37 +871,37 @@ void Bot::checkIfNeedToUsePill() {
 }
 
 bool Bot::alreadyUsedUniversalPill() {
-  if (selfState_.haveUniversalPillEventId()) {
+  if (worldState_.selfState().haveUniversalPillEventId()) {
     return true;
   }
   // Pill isnt on cooldown, but maybe we already queued a use of it
   const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 2, 6);
-  return selfState_.itemIsInUsedItemQueue(itemTypeId);
+  return worldState_.selfState().itemIsInUsedItemQueue(itemTypeId);
 }
 
 bool Bot::alreadyUsedPurificationPill() {
 #ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
-  if (selfState_.havePurificationPillEventId()) {
+  if (worldState_.selfState().havePurificationPillEventId()) {
     return true;
   }
 #endif
   const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 2, 1);
-  return selfState_.itemIsInUsedItemQueue(itemTypeId);
+  return worldState_.selfState().itemIsInUsedItemQueue(itemTypeId);
 }
 
 void Bot::useUniversalPill() {
   // Figure out our status with the highest effect
-  const auto legacyStateEffects = selfState_.legacyStateEffects();
+  const auto legacyStateEffects = worldState_.selfState().legacyStateEffects();
   uint16_t ourWorstStatusEffect = *std::max_element(legacyStateEffects.begin(), legacyStateEffects.end());
   int32_t bestCure = 0;
   uint8_t bestOptionSlotNum;
-  uint16_t bestOptionTypeData;
+  type_id::TypeId bestOptionTypeData;
 
-  for (uint8_t slotNum=0; slotNum<selfState_.inventory.size(); ++slotNum) {
-    if (!selfState_.inventory.hasItem(slotNum)) {
+  for (uint8_t slotNum=0; slotNum<worldState_.selfState().inventory.size(); ++slotNum) {
+    if (!worldState_.selfState().inventory.hasItem(slotNum)) {
       continue;
     }
-    const storage::Item *itemPtr = selfState_.inventory.getItem(slotNum);
+    const storage::Item *itemPtr = worldState_.selfState().inventory.getItem(slotNum);
     const storage::ItemExpendable *item;
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
@@ -849,23 +939,23 @@ void Bot::useUniversalPill() {
 }
 
 void Bot::usePurificationPill() {
-  const auto modernStateLevels = selfState_.modernStateLevels();
+  const auto modernStateLevels = worldState_.selfState().modernStateLevels();
   int32_t currentCureLevel = 0;
   uint8_t bestOptionSlotNum;
-  uint16_t bestOptionTypeData;
+  type_id::TypeId bestOptionTypeData;
 
-  for (uint8_t slotNum=0; slotNum<selfState_.inventory.size(); ++slotNum) {
-    if (!selfState_.inventory.hasItem(slotNum)) {
+  for (uint8_t slotNum=0; slotNum<worldState_.selfState().inventory.size(); ++slotNum) {
+    if (!worldState_.selfState().inventory.hasItem(slotNum)) {
       continue;
     }
-    const storage::Item *itemPtr = selfState_.inventory.getItem(slotNum);
+    const storage::Item *itemPtr = worldState_.selfState().inventory.getItem(slotNum);
     const storage::ItemExpendable *item;
     if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
       // Expendable item
       if (item->itemInfo->typeId1 == 3 && item->itemInfo->typeId2 == 3 && item->itemInfo->typeId3 == 2 && item->itemInfo->typeId4 == 1) {
         // Purification pill
         const auto pillCureStateBitmask = item->itemInfo->param1;
-        const auto curableStatesWeHave = (pillCureStateBitmask & selfState_.stateBitmask());
+        const auto curableStatesWeHave = (pillCureStateBitmask & worldState_.selfState().stateBitmask());
         if (curableStatesWeHave > 0) {
           // This pill will cure at least some of the type of state(s) that we have
           const auto pillTreatmentLevel = item->itemInfo->param2;
@@ -904,73 +994,73 @@ void Bot::usePurificationPill() {
   }
 }
 
-void Bot::useItem(uint8_t slotNum, uint16_t typeData) {
-  uint8_t typeId1 = (typeData >> 2) & 0b111;
-  uint8_t typeId2 = (typeData >> 5) & 0b11;
-  uint8_t typeId3 = (typeData >> 7) & 0b1111;
-  uint8_t typeId4 = (typeData >> 11) & 0b11111;
-  if (typeId1 == 3 && typeId2 == 3 && typeId3 == 1) {
-    // Potion
-    if (typeId4 == 1) {
+void Bot::useItem(uint8_t slotNum, type_id::TypeId typeData) {
+  if (type_id::categories::kRecoveryPotion.contains(typeData)) {
+    if (type_id::categories::kHpPotion.contains(typeData)) {
       if (alreadyUsedPotion(PotionType::kHp)) {
         // Already used an Hp potion, not going to re-queue
         return;
       }
-    } else if (typeId4 == 2) {
+    } else if (type_id::categories::kMpPotion.contains(typeData)) {
       if (alreadyUsedPotion(PotionType::kMp)) {
         // Already used an Mp potion, not going to re-queue
         return;
       }
-    } else if (typeId4 == 3) {
+    } else if (type_id::categories::kVigorPotion.contains(typeData)) {
       if (alreadyUsedPotion(PotionType::kVigor)) {
         // Already used a Vigor potion, not going to re-queue
         return;
       }
     }
   }
-  broker_.injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slotNum, typeData), PacketContainer::Direction::kClientToServer);
-  selfState_.pushItemToUsedItemQueue(slotNum, typeData);
+  packetBroker_.injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slotNum, typeData), PacketContainer::Direction::kClientToServer);
+  // TODO: Refactor everything below, maybe instead, this should go into a client packet handler
+  worldState_.selfState().pushItemToUsedItemQueue(slotNum, typeData);
+  if (worldState_.selfState().itemUsedTimeoutTimer) {
+    LOG() << "WARNING: Already have a running timer for item use" << std::endl;
+  }
+  worldState_.selfState().itemUsedTimeoutTimer = eventBroker_.publishDelayedEvent(std::make_unique<event::ItemUseTimeout>(slotNum, typeData), std::chrono::milliseconds(100)); // TODO: What timeout should we use? Probably something related to server ping
 }
 
 void Bot::storageInitialized() {
-  for (uint8_t storageSlotIndex=0; storageSlotIndex<selfState_.storage.size(); ++storageSlotIndex) {
-    if (selfState_.storage.hasItem(storageSlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, selfState_.storage, storageSlotIndex);
+  for (uint8_t storageSlotIndex=0; storageSlotIndex<worldState_.selfState().storage.size(); ++storageSlotIndex) {
+    if (worldState_.selfState().storage.hasItem(storageSlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_.selfState().storage, storageSlotIndex);
     }
   }
   onUpdate();
 }
 
 void Bot::guildStorageInitialized() {
-  for (uint8_t storageSlotIndex=0; storageSlotIndex<selfState_.guildStorage.size(); ++storageSlotIndex) {
-    if (selfState_.guildStorage.hasItem(storageSlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, selfState_.guildStorage, storageSlotIndex);
+  for (uint8_t storageSlotIndex=0; storageSlotIndex<worldState_.selfState().guildStorage.size(); ++storageSlotIndex) {
+    if (worldState_.selfState().guildStorage.hasItem(storageSlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_.selfState().guildStorage, storageSlotIndex);
     }
   }
 }
 
 void Bot::inventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent) {
   if (inventoryUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, selfState_.inventory, *inventoryUpdatedEvent.srcSlotNum);
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_.selfState().inventory, *inventoryUpdatedEvent.srcSlotNum);
   }
   if (inventoryUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, selfState_.inventory, *inventoryUpdatedEvent.destSlotNum);
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_.selfState().inventory, *inventoryUpdatedEvent.destSlotNum);
   }
   onUpdate(&inventoryUpdatedEvent);
 }
 
 void Bot::avatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent) {
   if (avatarInventoryUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, selfState_.avatarInventory, *avatarInventoryUpdatedEvent.srcSlotNum);
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_.selfState().avatarInventory, *avatarInventoryUpdatedEvent.srcSlotNum);
   }
   if (avatarInventoryUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, selfState_.avatarInventory, *avatarInventoryUpdatedEvent.destSlotNum);
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_.selfState().avatarInventory, *avatarInventoryUpdatedEvent.destSlotNum);
   }
 }
 
 void Bot::cosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent) {
-  auto it = selfState_.cosInventoryMap.find(cosInventoryUpdatedEvent.globalId);
-  if (it == selfState_.cosInventoryMap.end()) {
+  auto it = worldState_.selfState().cosInventoryMap.find(cosInventoryUpdatedEvent.globalId);
+  if (it == worldState_.selfState().cosInventoryMap.end()) {
     throw std::runtime_error("COS inventory updated, but not tracking this COS");
   }
   const auto &cosInventory = it->second;
@@ -984,20 +1074,20 @@ void Bot::cosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpda
 
 void Bot::storageUpdated(const event::StorageUpdated &storageUpdatedEvent) {
   if (storageUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, selfState_.storage, *storageUpdatedEvent.srcSlotNum);
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_.selfState().storage, *storageUpdatedEvent.srcSlotNum);
   }
   if (storageUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, selfState_.storage, *storageUpdatedEvent.destSlotNum);
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_.selfState().storage, *storageUpdatedEvent.destSlotNum);
   }
   onUpdate(&storageUpdatedEvent);
 }
 
 void Bot::guildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent) {
   if (guildStorageUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, selfState_.guildStorage, *guildStorageUpdatedEvent.srcSlotNum);
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_.selfState().guildStorage, *guildStorageUpdatedEvent.srcSlotNum);
   }
   if (guildStorageUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, selfState_.guildStorage, *guildStorageUpdatedEvent.destSlotNum);
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_.selfState().guildStorage, *guildStorageUpdatedEvent.destSlotNum);
   }
 }
 
@@ -1018,12 +1108,30 @@ void Bot::broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const
 }
 
 void Bot::entitySpawned(const event::EntitySpawned &event) {
-  const bool trackingEntity = entityTracker_.trackingEntity(event.globalId);
+  const bool trackingEntity = worldState_.entityTracker().trackingEntity(event.globalId);
   if (!trackingEntity) {
     throw std::runtime_error("Received entity spawned event, but we're not tracking this entity");
   }
-  const auto *entity = entityTracker_.getEntity(event.globalId);
+  const auto *entity = worldState_.entityTracker().getEntity(event.globalId);
+  {
+    // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.
+    // According to Daxter:
+    //  maximum possible should be around 905
+    //  given that you can at most see almost 2 blocks across
+    const auto distanceToEntity = sro::position_math::calculateDistance2d(worldState_.selfState().position(), entity->position());
+    if (distanceToEntity > worldState_.selfState().estimatedVisibilityRange) {
+      LOG() << "Bumping up estimated visibility range to " << distanceToEntity << std::endl;
+      worldState_.selfState().estimatedVisibilityRange = distanceToEntity;
+    }
+  }
   userInterface_.broadcastEntitySpawned(entity);
+  if (const auto *characterEntity = dynamic_cast<const entity::Character*>(entity)) {
+    if (characterEntity->lifeState == sro::entity::LifeState::kDead) {
+      // Entity spawned in as dead
+      // TODO: Create a more comprehensive entity proto which contains life state
+      userInterface_.broadcastEntityLifeStateChanged(characterEntity->globalId, characterEntity->lifeState);
+    }
+  }
 
   onUpdate(&event);
 }
@@ -1033,6 +1141,15 @@ void Bot::entityDespawned(const event::EntityDespawned &event) {
 }
 
 void Bot::entityLifeStateChanged(const event::EntityLifeStateChanged &event) {
-  entity::Character &characterEntity = getEntity<entity::Character>(event.globalId);
+  entity::Character &characterEntity = worldState_.getEntity<entity::Character>(event.globalId);
   userInterface_.broadcastEntityLifeStateChanged(characterEntity.globalId, characterEntity.lifeState);
+  LOG() << "Entity life state changed, calling onUpdate" << std::endl;
+  onUpdate();
+}
+
+void Bot::itemUseTimedOut(const event::ItemUseTimeout &event) {
+  // TODO: Refactor this whole itemUsedTimeout concept
+  worldState_.selfState().itemUsedTimeoutTimer.reset();
+  worldState_.selfState().removedItemFromUsedItemQueue(event.slotNum, event.typeData);
+  onUpdate();
 }

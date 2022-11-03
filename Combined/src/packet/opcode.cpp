@@ -87,8 +87,11 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kClientAgentActionSelectRequest) {
     return "kClientAgentActionSelectRequest";
   }
-  if (opcode == Opcode::CLIENT_GM) {
-    return "CLIENT_GM";
+  if (opcode == Opcode::kClientAgentOperatorRequest) {
+    return "kClientAgentOperatorRequest";
+  }
+  if (opcode == Opcode::kServerAgentOperatorResponse) {
+    return "kServerAgentOperatorResponse";
   }
   if (opcode == Opcode::kClientAgentCharacterMoveRequest) {
     return "kClientAgentCharacterMoveRequest";
@@ -433,6 +436,11 @@ std::string toStr(Opcode opcode) {
     return "kServerGatewayLoginIbuvResult";
   }
   return "UNKNOWN";
+}
+
+std::ostream& operator<<(std::ostream &stream, Opcode opcode) {
+  stream << toStr(opcode);
+  return stream;
 }
 
 } // namespace packet

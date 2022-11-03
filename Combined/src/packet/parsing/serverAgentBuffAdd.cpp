@@ -5,8 +5,8 @@ namespace packet::parsing {
 ServerAgentBuffAdd::ServerAgentBuffAdd(const PacketContainer &packet, const pk2::SkillData &skillData) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  globalId_ = stream.Read<uint32_t>();
-  skillRefId_ = stream.Read<uint32_t>();
+  globalId_ = stream.Read<sro::scalar_types::EntityGlobalId>();
+  skillRefId_ = stream.Read<sro::scalar_types::ReferenceObjectId>();
   activeBuffToken_ = stream.Read<uint32_t>();
 
   const auto &skill = skillData.getSkillById(skillRefId_);
@@ -21,11 +21,11 @@ ServerAgentBuffAdd::ServerAgentBuffAdd(const PacketContainer &packet, const pk2:
   // uint32_t continuousHoursIncreased = stream.Read<uint32_t>(); // In seconds
 }
 
-uint32_t ServerAgentBuffAdd::globalId() const {
+sro::scalar_types::EntityGlobalId ServerAgentBuffAdd::globalId() const {
   return globalId_;
 }
 
-uint32_t ServerAgentBuffAdd::skillRefId() const {
+sro::scalar_types::ReferenceObjectId ServerAgentBuffAdd::skillRefId() const {
   return skillRefId_;
 }
 

@@ -1,4 +1,5 @@
-#include "../opcode.hpp"
+#include "packet/opcode.hpp"
+#include "packet/structures/packetInnerStructures.hpp"
 #include "../../shared/silkroad_security.h"
 
 #ifndef PACKET_BUILDING_CLIENT_AGENT_ACTION_COMMAND_REQUEST_HPP
@@ -19,6 +20,7 @@ public:
   static PacketContainer cast(uint32_t refSkillId);
   static PacketContainer cast(uint32_t refSkillId, uint32_t targetGId);
   static PacketContainer dispel(uint32_t refSkillId, uint32_t targetGId);
+  static PacketContainer command(const structures::ActionCommand& actionCommand);
 };
 
 } // namespace packet::building

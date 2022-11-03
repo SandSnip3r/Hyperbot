@@ -4,20 +4,21 @@
 #include "parsedPacket.hpp"
 #include "../../pk2/skillData.hpp"
 
+#include <silkroad_lib/scalar_types.h>
+
 #include <cstdint>
-// #include <string>
 
 namespace packet::parsing {
   
 class ServerAgentBuffAdd : public ParsedPacket {
 public:
   ServerAgentBuffAdd(const PacketContainer &packet, const pk2::SkillData &skillData);
-  uint32_t globalId() const;
-  uint32_t skillRefId() const;
+  sro::scalar_types::EntityGlobalId globalId() const;
+  sro::scalar_types::ReferenceObjectId skillRefId() const;
   uint32_t activeBuffToken() const;
 private:
-  uint32_t globalId_;
-  uint32_t skillRefId_;
+  sro::scalar_types::EntityGlobalId globalId_;
+  sro::scalar_types::ReferenceObjectId skillRefId_;
   uint32_t activeBuffToken_;
 };
 

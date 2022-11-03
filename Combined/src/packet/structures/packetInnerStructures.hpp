@@ -99,7 +99,7 @@ struct SkillActionHitObject {
 };
 
 struct SkillAction {
-  uint8_t actionFlag;
+  enums::ActionFlag actionFlag;
   std::vector<SkillActionHitObject> hitObjects;
   // If teleport or sprint
   sro::Position position;
@@ -109,13 +109,10 @@ struct ActionCommand {
 public:
   enums::CommandType commandType;
   enums::ActionType actionType;
-  uint32_t refSkillId;
+  sro::scalar_types::ReferenceObjectId refSkillId;
   enums::TargetType targetType;
-  uint32_t targetGlobalId;
-  uint16_t regionId;
-  float x;
-  float y;
-  float z;
+  sro::scalar_types::EntityGlobalId targetGlobalId;
+  sro::Position position;
 };
 
 struct ItemMovement {
@@ -135,6 +132,8 @@ struct ItemMovement {
   uint8_t buybackStackSize;
   std::shared_ptr<storage::Item> newItem;
 };
+
+std::ostream& operator<<(std::ostream &stream, const ActionCommand &command);
 
 } // namespace packet::structures
 

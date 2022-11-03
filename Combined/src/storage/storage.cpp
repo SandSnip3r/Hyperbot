@@ -109,7 +109,11 @@ void Storage::moveItem(uint8_t srcSlot, uint8_t destSlot) {
   itemList_.moveItem(srcSlot, destSlot);
 }
 
-std::vector<uint8_t> Storage::findItemsWithTypeId(uint16_t typeId) const {
+std::vector<uint8_t> Storage::findItemsOfCategory(const std::vector<type_id::TypeCategory> &categories) const {
+  return itemList_.findItemsOfCategory(categories);
+}
+
+std::vector<uint8_t> Storage::findItemsWithTypeId(type_id::TypeId typeId) const {
   return itemList_.findItemsWithTypeId(typeId);
 }
 

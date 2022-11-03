@@ -77,6 +77,8 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
       primaryItemMovement.srcSlot = stream.Read<uint8_t>();
       uint8_t reason = stream.Read<uint8_t>();
       LOG() << "Remove Item By Server. Reason: " << static_cast<int>(reason) << std::endl;
+      // Reason 2 happens when you use the last expendable in a stack
+      // From Daxter: 02 = CashItemConsume, 03 = Skill Remove, 04 = Alchemy
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kMoveItemCosToInventory ||
                primaryItemMovement.type == packet::enums::ItemMovementType::kMoveItemInventoryToCos) {
       primaryItemMovement.globalId = stream.Read<uint32_t>(); // COS global ID

@@ -192,6 +192,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   hwanSpeed_ = stream.Read<float>();
   uint8_t buffCount = stream.Read<uint8_t>();
   for (int i=0; i<buffCount; ++i) {
+    // We seem to always spawn with 0 buffs
     uint32_t refSkillId = stream.Read<uint32_t>();
     uint32_t duration = stream.Read<uint32_t>();
     if (!skillData.haveSkillWithId(refSkillId)) {

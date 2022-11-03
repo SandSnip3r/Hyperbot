@@ -7,21 +7,15 @@
 #include <cstdint>
 
 namespace packet::parsing {
-
-enum ActionState : uint8_t {
-  kQueued = 1,
-  kEnd = 2,
-  kError = 3
-};
   
 class ServerAgentActionCommandResponse : public ParsedPacket {
 public:
   ServerAgentActionCommandResponse(const PacketContainer &packet);
-  ActionState actionState() const;
+  enums::ActionState actionState() const;
   bool repeatAction() const;
   uint16_t errorCode() const;
 private:
-  ActionState actionState_;
+  enums::ActionState actionState_;
   bool repeatAction_;
   uint16_t errorCode_;
 };

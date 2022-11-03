@@ -6,17 +6,30 @@
 
 namespace storage {
 
-uint16_t Item::typeData() const {
-  uint16_t itemTypeData = 0;
-  if (itemInfo != nullptr) {
-    itemTypeData |= itemInfo->cashItem;
-    itemTypeData |= (itemInfo->bionic << 1);
-    itemTypeData |= (itemInfo->typeId1 << 2);
-    itemTypeData |= (itemInfo->typeId2 << 5);
-    itemTypeData |= (itemInfo->typeId3 << 7);
-    itemTypeData |= (itemInfo->typeId4 << 11);
+type_id::TypeId Item::typeData() const {
+  if (itemInfo == nullptr) {
+    throw std::runtime_error("Dont have a pointer to our item data");
   }
-  return itemTypeData;
+  return (itemInfo->cashItem & 0b1) |
+         ((itemInfo->bionic & 0b1) << 1) |
+         ((itemInfo->typeId1 & 0b111) << 2) |
+         ((itemInfo->typeId2 & 0b11) << 5) |
+         (static_cast<type_id::TypeId>(itemInfo->typeId3 & 0b1111) << 7) |
+         (static_cast<type_id::TypeId>(itemInfo->typeId4 & 0b11111) << 11);
+}
+
+bool Item::isA(const type_id::TypeCategory &typeCategory) const {
+  return typeCategory.contains(typeData());
+}
+
+bool Item::isOneOf(const std::vector<type_id::TypeCategory> &typeCategories) const {
+  const auto thisItemTypeData = typeData();
+  for (const auto &category : typeCategories) {
+    if (category.contains(thisItemTypeData)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 Item::Item(ItemType t) : type(t) {}

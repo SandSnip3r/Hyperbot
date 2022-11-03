@@ -4,13 +4,11 @@
 #include "broker/eventBroker.hpp"
 #include "broker/packetBroker.hpp"
 #include "config/characterLoginData.hpp"
-#include "packet/parsing/packetParser.hpp"
 #include "packetProcessor.hpp"
 #include "pk2/gameData.hpp"
 #include "proxy.hpp"
-#include "state/entityTracker.hpp"
-#include "state/machine/stateMachine.hpp"
-#include "state/self.hpp"
+#include "state/machine/botting.hpp"
+#include "state/worldState.hpp"
 #include "ui/userInterface.hpp"
 
 #include <optional>
@@ -29,30 +27,24 @@ public:
       Proxy &proxy,
       broker::PacketBroker &broker);
 
-  state::Self& selfState();
-  state::EntityTracker& entityTracker();
+  const pk2::GameData& gameData() const;
   Proxy& proxy() const;
   broker::PacketBroker& packetBroker() const;
   broker::EventBroker& eventBroker();
+  state::EntityTracker& entityTracker();
+  state::Self& selfState();
 protected:
   friend class broker::EventBroker;
   void handleEvent(const event::Event *event);
 
-  friend class state::machine::StateMachine;
-  friend class state::machine::Walking;
-  friend class state::machine::TalkingToStorageNpc;
-  friend class state::machine::TalkingToShopNpc;
-  friend class state::machine::Townlooping;
   const config::CharacterLoginData &loginData_; // TODO: Move this into a configuration object
   const pk2::GameData &gameData_;
   Proxy &proxy_;
-  broker::PacketBroker &broker_;
+  broker::PacketBroker &packetBroker_;
   broker::EventBroker eventBroker_;
-  state::EntityTracker entityTracker_;
-  state::Self selfState_{eventBroker_, gameData_};
+  state::WorldState worldState_{gameData_, eventBroker_}; // TODO: For multi-character, this will move out of the bot
   ui::UserInterface userInterface_{eventBroker_};
-  packet::parsing::PacketParser packetParser_{gameData_};
-  PacketProcessor packetProcessor_{entityTracker_, selfState_, broker_, eventBroker_, userInterface_, packetParser_, gameData_};
+  PacketProcessor packetProcessor_{worldState_, packetBroker_, eventBroker_, gameData_};
 
 private:
   //******************************************************************************************
@@ -106,7 +98,10 @@ private:
   void handleVitalsChanged();
   void handleStatesChanged();
 
-  // Misc
+  // Skills
+  void handleSkillBegan(const event::SkillBegan &event);
+  void handleSkillEnded(const event::SkillEnded &event);
+  void handleSkillCooldownEnded(const event::SkillCooldownEnded &event);
 
   // Actual action logic
   void checkIfNeedToHeal();
@@ -119,7 +114,7 @@ private:
   void useUniversalPill();
   void usePurificationPill();
 
-  void useItem(uint8_t slotNum, uint16_t typeData);
+  void useItem(uint8_t slotNum, type_id::TypeId typeData);
 
   void storageInitialized();
   void guildStorageInitialized();
@@ -132,21 +127,8 @@ private:
   void entitySpawned(const event::EntitySpawned &event);
   void entityDespawned(const event::EntityDespawned &event);
   void entityLifeStateChanged(const event::EntityLifeStateChanged &event);
+  void itemUseTimedOut(const event::ItemUseTimeout &event);
 
-  // Helpers
-  template<typename EntityType>
-  EntityType& getEntity(sro::scalar_types::EntityGlobalId globalId) {
-    if (globalId == selfState_.globalId) {
-      if (dynamic_cast<const EntityType*>(&selfState_) == nullptr) {
-        throw std::runtime_error("Trying to get self entity as an invalid type");
-      }
-      return selfState_;
-    } else if (entityTracker_.trackingEntity(globalId)) {
-      return entityTracker_.getEntity<EntityType>(globalId);
-    } else {
-      throw std::runtime_error("Trying to get untracked entity");
-    }
-  }
 };
 
 #endif

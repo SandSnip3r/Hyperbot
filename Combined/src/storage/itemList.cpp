@@ -24,7 +24,19 @@ uint8_t ItemList::size() const {
   return static_cast<uint8_t>(items_.size());
 }
 
-std::vector<uint8_t> ItemList::findItemsWithTypeId(uint16_t typeId) const {
+std::vector<uint8_t> ItemList::findItemsOfCategory(const std::vector<type_id::TypeCategory> &categories) const {
+  std::vector<uint8_t> slotsWithItems;
+  for (uint8_t slotNum=0; slotNum<items_.size(); ++slotNum) {
+    const auto itemPtr = items_[slotNum];
+    if (itemPtr && itemPtr->isOneOf(categories)) {
+      // Matches one of the categories
+      slotsWithItems.emplace_back(slotNum);
+    }
+  }
+  return slotsWithItems;
+}
+
+std::vector<uint8_t> ItemList::findItemsWithTypeId(type_id::TypeId typeId) const {
   const auto [typeId1, typeId2, typeId3, typeId4] = helpers::type_id::splitTypeId(typeId);
   std::vector<uint8_t> slotsWithItem;
   for (uint8_t slotNum=0; slotNum<items_.size(); ++slotNum) {

@@ -274,8 +274,8 @@ structures::SkillAction parseSkillAction(StreamUtility &stream) {
     return sro::Position(regionId, xOffset, yOffset, zOffset);
   };
   structures::SkillAction skillAction;
-  skillAction.actionFlag = stream.Read<uint8_t>();
-  if (skillAction.actionFlag & static_cast<uint8_t>(enums::ActionFlag::kAttack)) {
+  skillAction.actionFlag = stream.Read<enums::ActionFlag>();
+  if (flags::isSet(skillAction.actionFlag, enums::ActionFlag::kAttack)) {
     uint8_t successiveHitCount = stream.Read<uint8_t>();
     uint8_t struckObjectCount = stream.Read<uint8_t>();
     for (int objNum=0; objNum<struckObjectCount; ++objNum) {
@@ -303,7 +303,7 @@ structures::SkillAction parseSkillAction(StreamUtility &stream) {
       skillAction.hitObjects.emplace_back(std::move(hitObject));
     }
   }
-  if (skillAction.actionFlag & static_cast<uint8_t>(enums::ActionFlag::kTeleport) || skillAction.actionFlag & static_cast<uint8_t>(enums::ActionFlag::kSprint)) {
+  if (flags::isSet(skillAction.actionFlag, enums::ActionFlag::kTeleport) || flags::isSet(skillAction.actionFlag, enums::ActionFlag::kSprint)) {
     skillAction.position = parseInt32Pos(stream);
   }
   return skillAction;

@@ -122,4 +122,11 @@ void writeGenericItem(StreamUtility &stream, const storage::Item &item) {
   }
 }
 
+void writePosition(StreamUtility &stream, const sro::Position &position) {
+  stream.Write(position.regionId());
+  stream.Write(position.xOffset());
+  stream.Write(position.yOffset());
+  stream.Write(position.zOffset());
+}
+
 } // namespace packet::building

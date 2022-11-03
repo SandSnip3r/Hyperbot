@@ -13,14 +13,15 @@ void PacketBroker::packetReceived(const PacketContainer &packet, PacketContainer
   // A new packet has arrived
   // First, determine which "event bus" to "put it on"
   PacketSubscriptionMap *subscriptionMap;
-  if (packetDirection == PacketContainer::Direction::kClientToServer) {
+  if (packetDirection == PacketContainer::Direction::kClientToServer || packetDirection == PacketContainer::Direction::kBotToServer) {
     // The packet goes on the Client->Server event bus
     subscriptionMap = &clientPacketSubscriptions_;
   } else if (packetDirection == PacketContainer::Direction::kServerToClient) {
     // The packet goes on the Server->Client event bus
     subscriptionMap = &serverPacketSubscriptions_;
   } else {
-    // Injected packet, not subscribing to it yet
+    // PacketContainer::Direction::kBotToClient
+    //  Not handling this case, as it's usually to spoof something in the client
     return;
   }
   

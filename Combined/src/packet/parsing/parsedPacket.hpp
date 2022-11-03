@@ -43,30 +43,6 @@ private:
 
 //=========================================================================================================================================================
 
-class ParsedServerAgentEntityUpdateStatus : public ParsedPacket {
-public:
-  ParsedServerAgentEntityUpdateStatus(const PacketContainer &packet);
-  uint32_t entityUniqueId() const;
-  packet::enums::UpdateFlag updateFlag() const;
-  uint8_t vitalBitmask() const;
-  uint32_t newHpValue() const;
-  uint32_t newMpValue() const;
-  uint16_t newHgpValue() const;
-  uint32_t stateBitmask() const;
-  const std::vector<uint8_t>& stateLevels() const;
-private:
-  uint32_t entityUniqueId_;
-  packet::enums::UpdateFlag updateFlag_;
-  uint8_t vitalBitmask_;
-  uint32_t newHpValue_;
-  uint32_t newMpValue_;
-  uint16_t newHgpValue_;
-  uint32_t stateBitmask_;
-  std::vector<uint8_t> stateLevels_;
-};
-
-//=========================================================================================================================================================
-
 class ParsedServerAgentAbnormalInfo : public ParsedPacket {
 public:
   ParsedServerAgentAbnormalInfo(const PacketContainer &packet);
@@ -103,53 +79,6 @@ public:
 private:
   uint32_t maxHp_;
   uint32_t maxMp_;
-};
-
-//=========================================================================================================================================================
-
-enum class GroupSpawnType {
-  kSpawn=1,
-  kDespawn=2
-};
-
-class ParsedServerAgentEntityGroupSpawnData : public ParsedPacket {
-public:
-  ParsedServerAgentEntityGroupSpawnData(const PacketContainer &packet,
-                              const pk2::CharacterData &characterData,
-                              const pk2::ItemData &itemData,
-                              const pk2::SkillData &skillData,
-                              const pk2::TeleportData &teleportData);
-  GroupSpawnType groupSpawnType() const;
-  const std::vector<std::shared_ptr<entity::Entity>>& entities() const;
-  const std::vector<sro::scalar_types::EntityGlobalId>& despawnGlobalIds() const;
-private:
-  GroupSpawnType groupSpawnType_;
-  std::vector<std::shared_ptr<entity::Entity>> entities_;
-  std::vector<uint32_t> despawnGlobalIds_;
-};
-
-//=========================================================================================================================================================
-
-class ParsedServerAgentSpawn : public ParsedPacket {
-public:
-  ParsedServerAgentSpawn(const PacketContainer &packet,
-                         const pk2::CharacterData &characterData,
-                         const pk2::ItemData &itemData,
-                         const pk2::SkillData &skillData,
-                         const pk2::TeleportData &teleportData);
-  std::shared_ptr<entity::Entity> entity() const;
-private:
-  std::shared_ptr<entity::Entity> entity_;
-};
-
-//=========================================================================================================================================================
-
-class ParsedServerAgentDespawn : public ParsedPacket {
-public:
-  ParsedServerAgentDespawn(const PacketContainer &packet);
-  uint32_t globalId() const;
-private:
-  uint32_t globalId_;
 };
   
 //=========================================================================================================================================================

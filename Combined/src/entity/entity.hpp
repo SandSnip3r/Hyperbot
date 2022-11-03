@@ -4,6 +4,7 @@
 #include "geometry.hpp"
 #include "broker/eventBroker.hpp"
 #include "broker/timerManager.hpp"
+#include "pk2/characterData.hpp"
 
 #include <silkroad_lib/entity.h>
 #include <silkroad_lib/position.h>
@@ -115,7 +116,13 @@ private:
 class Character : public MobileEntity {
 public:
   sro::entity::LifeState lifeState;
+  bool knowCurrentHp() const;
+  uint32_t currentHp() const;
+
   void setLifeState(sro::entity::LifeState newLifeState, broker::EventBroker &eventBroker);
+  void setCurrentHp(uint32_t hp, broker::EventBroker &eventBroker);
+protected:
+  std::optional<uint32_t> currentHp_;
 };
 
 class PlayerCharacter : public Character {
@@ -127,6 +134,7 @@ class NonplayerCharacter : public Character {};
 
 class Monster : public NonplayerCharacter {
 public:
+  uint32_t getMaxHp(const pk2::CharacterData &characterData) const;
   sro::entity::MonsterRarity rarity;
 };
 

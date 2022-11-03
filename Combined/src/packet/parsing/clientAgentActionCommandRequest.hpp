@@ -12,16 +12,7 @@ namespace packet::parsing {
 class ClientAgentActionCommandRequest : public ParsedPacket {
 public:
   ClientAgentActionCommandRequest(const PacketContainer &packet);
-  structures::ActionCommand actionCommand() const;
-  enums::CommandType commandType() const;
-  enums::ActionType actionType() const;
-  uint32_t refSkillId() const;
-  enums::TargetType targetType() const;
-  uint32_t targetGlobalId() const;
-  uint16_t regionId() const;
-  float x() const;
-  float y() const;
-  float z() const;
+  const structures::ActionCommand& actionCommand() const;
 private:
   structures::ActionCommand actionCommand_;
 };

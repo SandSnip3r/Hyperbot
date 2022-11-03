@@ -43,6 +43,10 @@ void Self::initialize(sro::scalar_types::EntityGlobalId globalId, sro::scalar_ty
   haveOpenedStorageSinceTeleport = false;
 }
 
+void Self::initializeCurrentHp(uint32_t hp) {
+  currentHp_ = hp;
+}
+
 void Self::setCurrentLevel(uint8_t currentLevel) {
   currentLevel_ = currentLevel;
 }
@@ -187,11 +191,6 @@ void Self::cancelMovement(broker::EventBroker &eventBroker) {
   }
 }
 
-void Self::setHp(uint32_t hp) {
-  hp_ = hp;
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kHpChanged));
-}
-
 void Self::setMp(uint32_t mp) {
   mp_ = mp;
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpChanged));
@@ -216,6 +215,7 @@ void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &state
       const auto kBit = static_cast<uint32_t>(1) << bitNum;
       if ((newlyReceivedStates & kBit) != 0) {
         const auto kState = static_cast<packet::enums::AbnormalStateFlag>(kBit);
+        LOG() << "We are now under " << kState << std::endl;
         if (kState <= packet::enums::AbnormalStateFlag::kZombie) {
           // Legacy state
           // We now are kState
@@ -234,6 +234,7 @@ void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &state
       const auto kBit = static_cast<uint32_t>(1) << bitNum;
       if ((expiredStates & kBit) != 0) {
         const auto kState = static_cast<packet::enums::AbnormalStateFlag>(kBit);
+        LOG() << "We are no longer under " << kState << std::endl;
         if (kState <= packet::enums::AbnormalStateFlag::kZombie) {
           // Legacy state
           // We are no longer kState
@@ -416,10 +417,6 @@ packet::enums::BodyState Self::bodyState() const {
   return bodyState_;
 }
 
-uint32_t Self::hp() const {
-  return hp_;
-}
-
 uint32_t Self::mp() const {
   return mp_;
 }
@@ -482,8 +479,8 @@ void Self::clearUsedItemQueue() {
   usedItemQueue_.clear();
 }
 
-void Self::pushItemToUsedItemQueue(uint8_t inventorySlotNum, uint16_t itemTypeId) {
-  usedItemQueue_.emplace_back(inventorySlotNum, itemTypeId);
+void Self::pushItemToUsedItemQueue(uint8_t inventorySlotNum, type_id::TypeId typeId) {
+  usedItemQueue_.emplace_back(inventorySlotNum, typeId);
 }
 
 void Self::setUserPurchaseRequest(const packet::structures::ItemMovement &itemMovement) {
@@ -499,13 +496,24 @@ bool Self::usedItemQueueIsEmpty() const {
   return usedItemQueue_.empty();
 }
 
-bool Self::itemIsInUsedItemQueue(uint16_t itemTypeId) const {
+bool Self::itemIsInUsedItemQueue(type_id::TypeId typeId) const {
+  // TODO: Convert to new TypeId stuff
   for (const auto &usedItem : usedItemQueue_) {
-    if (usedItem.itemTypeId == itemTypeId) {
+    if (usedItem.typeId == typeId) {
       return true;
     }
   }
   return false;
+}
+
+void Self::removedItemFromUsedItemQueue(uint8_t inventorySlotNum, type_id::TypeId typeId) {
+  const auto it = std::find_if(usedItemQueue_.begin(), usedItemQueue_.end(), [&inventorySlotNum, &typeId](const auto &usedItem) {
+    return usedItem.inventorySlotNum == inventorySlotNum && usedItem.typeId == typeId;
+  });
+  if (it == usedItemQueue_.end()) {
+    throw std::runtime_error("Trying to remove item from used item queue which is not present");
+  }
+  usedItemQueue_.erase(it);
 }
 
 Self::UsedItem Self::getUsedItemQueueFront() const {
@@ -536,6 +544,23 @@ void Self::setTrainingAreaGeometry(std::unique_ptr<entity::Circle> &&geometry) {
 void Self::resetTrainingAreaGeometry() {
   trainingAreaGeometry.reset();
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTrainingAreaReset));
+}
+
+// =================================================================================================
+
+void Self::addBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker) {
+  buffs.emplace(skillRefId);
+  LOG() << "Added buff " << skillRefId << " to self" << std::endl;
+}
+
+void Self::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker) {
+  auto buffIt = buffs.find(skillRefId);
+  if (buffIt == buffs.end()) {
+    throw std::runtime_error("Tracked buff for ourself, but we dont actually have this buff active");
+  }
+  buffs.erase(buffIt);
+  LOG() << "Removed buff " << skillRefId << " from self" << std::endl;
+  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kOurBuffRemoved));
 }
 
 // =================================================================================================

@@ -3,6 +3,7 @@
 
 #include "item.hpp"
 #include "itemList.hpp"
+#include "type_id/typeCategory.hpp"
 
 #include <memory>
 #include <string>
@@ -26,7 +27,8 @@ public:
   void moveItem(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
   void moveItem(uint8_t srcSlot, uint8_t destSlot);
 
-  std::vector<uint8_t> findItemsWithTypeId(uint16_t typeId) const;
+  std::vector<uint8_t> findItemsOfCategory(const std::vector<type_id::TypeCategory> &categories) const;
+  std::vector<uint8_t> findItemsWithTypeId(type_id::TypeId typeId) const;
   std::vector<uint8_t> findItemsWithRefId(uint32_t refId) const;
   std::optional<uint8_t> firstFreeSlot() const;
 private:

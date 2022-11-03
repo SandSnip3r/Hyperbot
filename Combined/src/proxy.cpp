@@ -227,22 +227,22 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         //Log packet
         packetLogger.logPacket(packet, !forward, direction);
 
-        if (packet.opcode == 0xA102) {
+        if (static_cast<packet::Opcode>(packet.opcode) == packet::Opcode::kServerGatewayLoginResponse) {
           StreamUtility r = packet.data;
           if (r.Read<uint8_t>() == 1) {
             //The next connection will go to the agent server
             connectToAgent = true;
 
-            uint32_t LoginID = r.Read<uint32_t>();				//Login ID
-            agentIP_ = r.Read_Ascii(r.Read<uint16_t>());			//Agent IP
-            agentPort_ = r.Read<uint16_t>();						//Agent port
+            uint32_t loginID = r.Read<uint32_t>();        //Login ID
+            agentIP_ = r.Read_Ascii(r.Read<uint16_t>());  //Agent IP
+            agentPort_ = r.Read<uint16_t>();              //Agent port
 
             StreamUtility w;
-            w.Write<uint8_t>(1);								//Success flag
-            w.Write<uint32_t>(LoginID);							//Login ID
-            w.Write<uint16_t>(9);								//Length of 127.0.0.1
-            w.Write_Ascii("127.0.0.1");							//IP
-            w.Write<uint16_t>(ourListeningPort_);				//Port
+            w.Write<uint8_t>(1);                    // Success flag
+            w.Write<uint32_t>(loginID);             // Login ID
+            w.Write<uint16_t>(9);                   // Length of 127.0.0.1
+            w.Write_Ascii("127.0.0.1");             // IP
+            w.Write<uint16_t>(ourListeningPort_);   // Port
 
             //Inject the packet
             clientConnection.InjectToSend(packet.opcode, w);
@@ -253,6 +253,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             }
 
             //Close active connections
+            LOG() << "Closing gateway connection, connecting to agentserver" << std::endl;
             clientConnection.Close();
             serverConnection.Close();
 

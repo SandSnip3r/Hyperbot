@@ -5,14 +5,14 @@ namespace packet::parsing {
 ServerAgentActionCommandResponse::ServerAgentActionCommandResponse(const PacketContainer &packet) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  actionState_ = static_cast<ActionState>(stream.Read<uint8_t>());
+  actionState_ = static_cast<enums::ActionState>(stream.Read<uint8_t>());
   repeatAction_ = stream.Read<uint8_t>();
-  if (actionState_ == ActionState::kError) {
+  if (actionState_ == enums::ActionState::kError) {
     errorCode_ = stream.Read<uint16_t>(); 
   }
 }
 
-ActionState ServerAgentActionCommandResponse::actionState() const {
+enums::ActionState ServerAgentActionCommandResponse::actionState() const {
   return actionState_;
 }
 

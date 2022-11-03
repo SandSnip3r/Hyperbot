@@ -4,6 +4,7 @@
 #include "parsedPacket.hpp"
 #include "../../pk2/gameData.hpp"
 #include "../../shared/silkroad_security.h"
+#include "state/entityTracker.hpp"
 
 #include <memory>
 
@@ -11,9 +12,10 @@ namespace packet::parsing {
 
 class PacketParser {
 public:
-  PacketParser(const pk2::GameData &gameData);
+  PacketParser(const state::EntityTracker &entityTracker, const pk2::GameData &gameData);
   std::unique_ptr<ParsedPacket> parsePacket(const PacketContainer &packet) const;
 private:
+  const state::EntityTracker &entityTracker_;
   const pk2::GameData &gameData_;
 };
 
