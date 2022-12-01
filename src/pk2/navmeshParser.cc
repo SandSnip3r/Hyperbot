@@ -328,7 +328,7 @@ void NavmeshParser::parseRegionObjectResources(navmesh::Region &region, navmesh:
       } catch (std::runtime_error &ex) {
         std::cout << "parseObjectResource failed: " << ex.what() << '\n';
       } catch (...) {
-        // TOOD: Handle
+        // TODO: Handle
         std::cout << "Failed to parse object resource at file \"" << objectFileInfoMap_.at(objectInstance.objectId).filePath << '\n';
       }
     }
