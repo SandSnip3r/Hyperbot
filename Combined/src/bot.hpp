@@ -7,19 +7,12 @@
 #include "packetProcessor.hpp"
 #include "pk2/gameData.hpp"
 #include "proxy.hpp"
+#include "state/machine/autoPotion.hpp"
 #include "state/machine/botting.hpp"
 #include "state/worldState.hpp"
 #include "ui/userInterface.hpp"
 
 #include <optional>
-
-// TODO: Move to a better file
-enum class PotionType {
-  kHp,
-  kMp,
-  kVigor
-};
-
 class Bot {
 public:
   Bot(const config::CharacterLoginData &loginData,
@@ -47,22 +40,13 @@ protected:
   PacketProcessor packetProcessor_{worldState_, packetBroker_, eventBroker_, gameData_};
 
 private:
-  //******************************************************************************************
-  //***************************************Configuration**************************************
-  //******************************************************************************************
-  // TODO: Move to a real configuration object
-  // Potion configuration
-  const double kHpThreshold_{0.90};
-  const double kMpThreshold_{0.80};
-  const double kVigorThreshold_{0.40};
-  //******************************************************************************************
+  state::machine::AutoPotion autoPotionStateMachine_{*this};
   state::machine::Botting stateMachine_{*this};
 
   void subscribeToEvents();
 
   // Main logic
   void onUpdate(const event::Event *event = nullptr);
-  void handleVitals();
 
   // Bot actions from UI
   void handleStartTraining();
@@ -103,19 +87,7 @@ private:
   void handleSkillEnded(const event::SkillEnded &event);
   void handleSkillCooldownEnded(const event::SkillCooldownEnded &event);
 
-  // Actual action logic
-  void checkIfNeedToHeal();
-  bool alreadyUsedPotion(PotionType potionType);
-  void usePotion(PotionType potionType);
-
-  void checkIfNeedToUsePill();
-  bool alreadyUsedUniversalPill();
-  bool alreadyUsedPurificationPill();
-  void useUniversalPill();
-  void usePurificationPill();
-
-  void useItem(uint8_t slotNum, type_id::TypeId typeData);
-
+  // Misc
   void storageInitialized();
   void guildStorageInitialized();
   void inventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent);

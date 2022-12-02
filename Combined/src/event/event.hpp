@@ -143,9 +143,9 @@ public:
 
 struct ItemWaitForReuseDelay : public Event {
 public:
-  ItemWaitForReuseDelay(uint8_t slotNum, uint16_t typeId);
+  ItemWaitForReuseDelay(uint8_t slotNum, type_id::TypeId typeId);
   uint8_t inventorySlotNum;
-  uint16_t itemTypeId;
+  type_id::TypeId itemTypeId;
   virtual ~ItemWaitForReuseDelay() = default;
 };
 

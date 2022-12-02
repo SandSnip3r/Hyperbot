@@ -1,5 +1,4 @@
 #include "bot.hpp"
-#include "helpers.hpp"
 #include "logging.hpp"
 
 #include "packet/building/clientAgentActionDeselectRequest.hpp"
@@ -8,12 +7,10 @@
 #include "packet/building/clientAgentAuthRequest.hpp"
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 #include "packet/building/clientAgentCharacterSelectionJoinRequest.hpp"
-#include "packet/building/clientAgentInventoryItemUseRequest.hpp"
 #include "packet/building/clientAgentInventoryOperationRequest.hpp"
 #include "packet/building/clientAgentInventoryStorageOpenRequest.hpp"
 #include "packet/building/clientGatewayLoginIbuvAnswer.hpp"
 #include "packet/building/clientGatewayLoginRequest.hpp"
-#include "type_id/categories.hpp"
 
 #include <silkroad_lib/position_math.h>
 
@@ -227,8 +224,7 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       case event::EventCode::kItemWaitForReuseDelay:
         {
-          const event::ItemWaitForReuseDelay &castedEvent = dynamic_cast<const event::ItemWaitForReuseDelay&>(*event);
-          handleItemWaitForReuseDelay(castedEvent);
+          onUpdate(event);
         }
         break;
       case event::EventCode::kHpPotionCooldownEnded:
@@ -406,7 +402,7 @@ void Bot::handleEvent(const event::Event *event) {
 
 void Bot::onUpdate(const event::Event *event) {
   // Highest priority is our vitals, we will try to heal even if we're not training
-  handleVitals();
+  autoPotionStateMachine_.onUpdate(event);
 
   if (!worldState_.selfState().trainingIsActive) {
     // Not training, nothing else to do
@@ -418,11 +414,6 @@ void Bot::onUpdate(const event::Event *event) {
   stateMachine_.onUpdate(event);
 }
 
-void Bot::handleVitals() {
-  // TODO: Check if we're in a state where using items is possible
-  checkIfNeedToUsePill();
-  checkIfNeedToHeal();
-}
 // ============================================================================================================================
 // =====================================================Bot actions from UI====================================================
 // ============================================================================================================================
@@ -665,19 +656,6 @@ void Bot::handleCosSpawned(const event::CosSpawned &event) {
   }
 }
 
-void Bot::handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &event) {
-  LOG() << "Failed to use ";
-  if (event.itemTypeId == helpers::type_id::makeTypeId(3, 3, 1, 1)) {
-    std::cout << "hp";
-  } else if (event.itemTypeId == helpers::type_id::makeTypeId(3, 3, 1, 2)) {
-    std::cout << "mp";
-  } else if (event.itemTypeId == helpers::type_id::makeTypeId(3, 3, 1, 3)) {
-    std::cout << "vigor";
-  }
-  std::cout << " potion because there's still a cooldown, going to retry" << std::endl;
-  useItem(event.inventorySlotNum, event.itemTypeId);
-}
-
 void Bot::handlePotionCooldownEnded(const event::EventCode eventCode) {
   LOG() << "Potion cooldown ended" << std::endl;
   if (eventCode == event::EventCode::kHpPotionCooldownEnded) {
@@ -719,10 +697,6 @@ void Bot::handleStatesChanged() {
 }
 
 // ============================================================================================================================
-// ============================================================Misc============================================================
-// ============================================================================================================================
-
-// ============================================================================================================================
 // ===========================================================Skills===========================================================
 // ============================================================================================================================
 
@@ -749,278 +723,8 @@ void Bot::handleSkillCooldownEnded(const event::SkillCooldownEnded &event) {
 }
 
 // ============================================================================================================================
-// ====================================================Actual action logic=====================================================
+// ============================================================Misc============================================================
 // ============================================================================================================================
-
-void Bot::checkIfNeedToHeal() {
-  if (!worldState_.selfState().maxHp() || !worldState_.selfState().maxMp()) {
-    // Dont yet know our max
-    LOG() << "checkIfNeedToHeal: dont know max hp or mp\n";
-    return;
-  }
-  if (*worldState_.selfState().maxHp() == 0) {
-    // Dead, cant heal
-    // TODO: Get from state update instead
-    LOG() << "checkIfNeedToHeal: Dead, cant heal\n";
-    return;
-  }
-  const double hpPercentage = static_cast<double>(worldState_.selfState().currentHp())/(*worldState_.selfState().maxHp());
-  const double mpPercentage = static_cast<double>(worldState_.selfState().mp())/(*worldState_.selfState().maxMp());
-
-  const auto legacyStateEffects = worldState_.selfState().legacyStateEffects();
-  const bool haveZombie = (legacyStateEffects[helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie)] > 0);
-
-  // TODO: Investigate if using multiple potions in one go causes issues
-  if (!alreadyUsedPotion(PotionType::kVigor)) {
-    if (!haveZombie && (hpPercentage < kVigorThreshold_ || mpPercentage < kVigorThreshold_)) {
-      usePotion(PotionType::kVigor);
-    }
-  }
-  if (!alreadyUsedPotion(PotionType::kHp)) {
-    if (!haveZombie && hpPercentage < kHpThreshold_) {
-      usePotion(PotionType::kHp);
-    }
-  }
-  if (!alreadyUsedPotion(PotionType::kMp)) {
-    if (mpPercentage < kMpThreshold_) {
-      usePotion(PotionType::kMp);
-    }
-  }
-}
-
-bool Bot::alreadyUsedPotion(PotionType potionType) {
-  if (potionType == PotionType::kHp) {
-    if (worldState_.selfState().haveHpPotionEventId()) {
-      // On cooldown
-      return true;
-    }
-    const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 1, 1); // TODO: Convert to new type id categories
-    return worldState_.selfState().itemIsInUsedItemQueue(itemTypeId);
-  } else if (potionType == PotionType::kMp) {
-    if (worldState_.selfState().haveMpPotionEventId()) {
-      // On cooldown
-      return true;
-    }
-    const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 1, 2); // TODO: Convert to new type id categories
-    return worldState_.selfState().itemIsInUsedItemQueue(itemTypeId);
-  } else if (potionType == PotionType::kVigor) {
-    if (worldState_.selfState().haveVigorPotionEventId()) {
-      // On cooldown
-      return true;
-    }
-    const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 1, 3); // TODO: Convert to new type id categories
-    return worldState_.selfState().itemIsInUsedItemQueue(itemTypeId);
-  }
-  // TODO: Handle other cases
-  return false;
-}
-
-void Bot::usePotion(PotionType potionType) {
-  // We enter this funciton assuming that:
-  //  1. The potion isnt on cooldown
-  //  2. We have the potion
-
-  uint8_t typeId4;
-  if (potionType == PotionType::kHp) {
-    typeId4 = 1;
-  } else if (potionType == PotionType::kMp) {
-    typeId4 = 2;
-  } else if (potionType == PotionType::kVigor) {
-    typeId4 = 3;
-  } else {
-    std::cout << "CharacterInfoModule::usePotion: Potion type " << static_cast<int>(potionType) << " not supported\n";
-    return;
-  }
-
-  // Find potion in inventory
-  for (uint8_t slotNum=0; slotNum<worldState_.selfState().inventory.size(); ++slotNum) {
-    if (!worldState_.selfState().inventory.hasItem(slotNum)) {
-      continue;
-    }
-    const storage::Item *itemPtr = worldState_.selfState().inventory.getItem(slotNum);
-    const storage::ItemExpendable *item;
-    if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
-      // Expendable item
-      if (item->itemInfo->typeId1 == 3 && item->itemInfo->typeId2 == 3 && item->itemInfo->typeId3 == 1 && item->itemInfo->typeId4 == typeId4) {
-        if (typeId4 == 3 || item->itemInfo->param2 == 0 && item->itemInfo->param4 == 0) {
-          // Avoid hp/mp grains
-          useItem(slotNum, itemPtr->typeData());
-          return;
-        }
-      }
-    }
-  }
-  // Dont have the item we were looking for
-}
-
-void Bot::checkIfNeedToUsePill() {
-  const auto legacyStateEffects = worldState_.selfState().legacyStateEffects();
-  if (std::any_of(legacyStateEffects.begin(), legacyStateEffects.end(), [](const uint16_t effect){ return effect > 0; })) {
-    // Need to use a universal pill
-    if (!alreadyUsedUniversalPill()) {
-      useUniversalPill();
-    }
-  }
-  const auto modernStateLevels = worldState_.selfState().modernStateLevels();
-  if (std::any_of(modernStateLevels.begin(), modernStateLevels.end(), [](const uint8_t level){ return level > 0; })) {
-    // Need to use purification pill
-    if (!alreadyUsedPurificationPill()) {
-      usePurificationPill();
-    }
-  }
-}
-
-bool Bot::alreadyUsedUniversalPill() {
-  if (worldState_.selfState().haveUniversalPillEventId()) {
-    return true;
-  }
-  // Pill isnt on cooldown, but maybe we already queued a use of it
-  const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 2, 6);
-  return worldState_.selfState().itemIsInUsedItemQueue(itemTypeId);
-}
-
-bool Bot::alreadyUsedPurificationPill() {
-#ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
-  if (worldState_.selfState().havePurificationPillEventId()) {
-    return true;
-  }
-#endif
-  const auto itemTypeId = helpers::type_id::makeTypeId(3, 3, 2, 1);
-  return worldState_.selfState().itemIsInUsedItemQueue(itemTypeId);
-}
-
-void Bot::useUniversalPill() {
-  // Figure out our status with the highest effect
-  const auto legacyStateEffects = worldState_.selfState().legacyStateEffects();
-  uint16_t ourWorstStatusEffect = *std::max_element(legacyStateEffects.begin(), legacyStateEffects.end());
-  int32_t bestCure = 0;
-  uint8_t bestOptionSlotNum;
-  type_id::TypeId bestOptionTypeData;
-
-  for (uint8_t slotNum=0; slotNum<worldState_.selfState().inventory.size(); ++slotNum) {
-    if (!worldState_.selfState().inventory.hasItem(slotNum)) {
-      continue;
-    }
-    const storage::Item *itemPtr = worldState_.selfState().inventory.getItem(slotNum);
-    const storage::ItemExpendable *item;
-    if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
-      // Expendable item
-      if (item->itemInfo->typeId1 == 3 && item->itemInfo->typeId2 == 3 && item->itemInfo->typeId3 == 2 && item->itemInfo->typeId4 == 6) {
-        // Universal pill
-        if (bestCure == 0) {
-          // First pill found, at least we can use this
-          bestCure = item->itemInfo->param1;
-          bestOptionSlotNum = slotNum;
-          bestOptionTypeData = itemPtr->typeData();
-        } else {
-          // Already have a choice, lets see if this is better
-          const auto thisPillCureEffect = item->itemInfo->param1;
-          const bool curesEverything = (thisPillCureEffect >= ourWorstStatusEffect);
-          const bool curesMoreThanPrevious = (thisPillCureEffect >= ourWorstStatusEffect && bestCure < ourWorstStatusEffect);
-          if (curesEverything && thisPillCureEffect < bestCure) {
-            // Found a smaller pill that can cure everything
-            bestCure = thisPillCureEffect;
-            bestOptionSlotNum = slotNum;
-            bestOptionTypeData = itemPtr->typeData();
-          } else if (curesMoreThanPrevious && thisPillCureEffect > bestCure) {
-            // Found a pill that can cure more without being wasteful
-            bestCure = thisPillCureEffect;
-            bestOptionSlotNum = slotNum;
-            bestOptionTypeData = itemPtr->typeData();
-          }
-        }
-      }
-    }
-  }
-  if (bestCure != 0) {
-    // Found the best pill
-    useItem(bestOptionSlotNum, bestOptionTypeData);
-  }
-}
-
-void Bot::usePurificationPill() {
-  const auto modernStateLevels = worldState_.selfState().modernStateLevels();
-  int32_t currentCureLevel = 0;
-  uint8_t bestOptionSlotNum;
-  type_id::TypeId bestOptionTypeData;
-
-  for (uint8_t slotNum=0; slotNum<worldState_.selfState().inventory.size(); ++slotNum) {
-    if (!worldState_.selfState().inventory.hasItem(slotNum)) {
-      continue;
-    }
-    const storage::Item *itemPtr = worldState_.selfState().inventory.getItem(slotNum);
-    const storage::ItemExpendable *item;
-    if ((item = dynamic_cast<const storage::ItemExpendable*>(itemPtr)) != nullptr) {
-      // Expendable item
-      if (item->itemInfo->typeId1 == 3 && item->itemInfo->typeId2 == 3 && item->itemInfo->typeId3 == 2 && item->itemInfo->typeId4 == 1) {
-        // Purification pill
-        const auto pillCureStateBitmask = item->itemInfo->param1;
-        const auto curableStatesWeHave = (pillCureStateBitmask & worldState_.selfState().stateBitmask());
-        if (curableStatesWeHave > 0) {
-          // This pill will cure at least some of the type of state(s) that we have
-          const auto pillTreatmentLevel = item->itemInfo->param2;
-          if (pillTreatmentLevel != currentCureLevel) {
-            std::vector<uint8_t> stateLevels;
-            for (uint32_t bitNum=0; bitNum<32; ++bitNum) {
-              const auto bit = 1 << bitNum;
-              if (curableStatesWeHave & bit) {
-                stateLevels.push_back(modernStateLevels[bitNum]);
-              }
-            }
-            const bool curesEverything = (*std::max_element(stateLevels.begin(), stateLevels.end()) <= pillTreatmentLevel);
-            const bool curesMoreThanPrevious = (std::find_if(stateLevels.begin(), stateLevels.end(), [&pillTreatmentLevel, &currentCureLevel](const uint8_t lvl){
-              return ((lvl > currentCureLevel) && (lvl <= pillTreatmentLevel));
-            }) != stateLevels.end());
-
-            if (pillTreatmentLevel < currentCureLevel && curesEverything) {
-              // Found a smaller pill that is completely sufficient
-              currentCureLevel = pillTreatmentLevel;
-              bestOptionSlotNum = slotNum;
-              bestOptionTypeData = itemPtr->typeData();
-            } else if (pillTreatmentLevel > currentCureLevel && curesMoreThanPrevious) {
-              // Found a bigger pill that does more than the previous
-              currentCureLevel = pillTreatmentLevel;
-              bestOptionSlotNum = slotNum;
-              bestOptionTypeData = itemPtr->typeData();
-            }
-          }
-        }
-      }
-    }
-  }
-  if (currentCureLevel != 0) {
-    // Found the best pill
-    useItem(bestOptionSlotNum, bestOptionTypeData);
-  }
-}
-
-void Bot::useItem(uint8_t slotNum, type_id::TypeId typeData) {
-  if (type_id::categories::kRecoveryPotion.contains(typeData)) {
-    if (type_id::categories::kHpPotion.contains(typeData)) {
-      if (alreadyUsedPotion(PotionType::kHp)) {
-        // Already used an Hp potion, not going to re-queue
-        return;
-      }
-    } else if (type_id::categories::kMpPotion.contains(typeData)) {
-      if (alreadyUsedPotion(PotionType::kMp)) {
-        // Already used an Mp potion, not going to re-queue
-        return;
-      }
-    } else if (type_id::categories::kVigorPotion.contains(typeData)) {
-      if (alreadyUsedPotion(PotionType::kVigor)) {
-        // Already used a Vigor potion, not going to re-queue
-        return;
-      }
-    }
-  }
-  packetBroker_.injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slotNum, typeData), PacketContainer::Direction::kClientToServer);
-  // TODO: Refactor everything below, maybe instead, this should go into a client packet handler
-  worldState_.selfState().pushItemToUsedItemQueue(slotNum, typeData);
-  if (worldState_.selfState().itemUsedTimeoutTimer) {
-    LOG() << "WARNING: Already have a running timer for item use" << std::endl;
-  }
-  worldState_.selfState().itemUsedTimeoutTimer = eventBroker_.publishDelayedEvent(std::make_unique<event::ItemUseTimeout>(slotNum, typeData), std::chrono::milliseconds(100)); // TODO: What timeout should we use? Probably something related to server ping
-}
 
 void Bot::storageInitialized() {
   for (uint8_t storageSlotIndex=0; storageSlotIndex<worldState_.selfState().storage.size(); ++storageSlotIndex) {

@@ -247,6 +247,8 @@ set(no_group_source_files
     "src/silkroadConnection.hpp"
     "src/state/entityTracker.cpp"
     "src/state/entityTracker.hpp"
+    "src/state/machine/autoPotion.cpp"
+    "src/state/machine/autoPotion.hpp"
     "src/state/machine/botting.cpp"
     "src/state/machine/botting.hpp"
     "src/state/machine/buyingItems.cpp"
