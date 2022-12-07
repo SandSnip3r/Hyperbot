@@ -163,6 +163,10 @@ message TrainingAreaSet {
   }
 }
 
+message StateMachineCreated {
+  string name = 1;
+}
+
 // Broadcast message
 
 message BroadcastMessage {
@@ -190,5 +194,7 @@ message BroadcastMessage {
     EntityLifeStateChanged entityLifeStateChanged = 21;
     TrainingAreaSet trainingAreaSet = 22;
     google.protobuf.Empty trainingAreaReset = 23;
+    StateMachineCreated stateMachineCreated = 24;
+    google.protobuf.Empty stateMachineDestroyed = 25;
   }
 }
