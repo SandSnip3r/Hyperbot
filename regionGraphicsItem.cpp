@@ -67,7 +67,7 @@ void RegionGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem
   painter->setRenderHint(QPainter::Antialiasing, true);
 
   // TODO: Somehow need to solve for the tiny gap that's shown between regions at certain zoom levels
-  QRect target(0,0,1920,1920);
+  QRect target(-1,-1,1921,1921);
   QRect src(0,0,pixmap_.width(),pixmap_.height());
   painter->drawPixmap(target, pixmap_, src);
 

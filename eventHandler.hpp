@@ -56,6 +56,8 @@ signals:
   void entityLifeStateChanged(sro::scalar_types::EntityGlobalId globalId, sro::entity::LifeState lifeState);
   void trainingAreaCircleSet(sro::Position center, float radius);
   void trainingAreaReset();
+  void stateMachineCreated(std::string name);
+  void stateMachineDestroyed();
 private:
   zmq::context_t &context_;
   std::atomic<bool> run_;

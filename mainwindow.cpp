@@ -238,10 +238,13 @@ void MainWindow::connectBotBroadcastMessages() {
   connect(&eventHandler_, &EventHandler::entityLifeStateChanged, this, &MainWindow::onEntityLifeStateChanged);
   connect(&eventHandler_, &EventHandler::trainingAreaCircleSet, this, &MainWindow::onTrainingAreaCircleSet);
   connect(&eventHandler_, &EventHandler::trainingAreaReset, this, &MainWindow::onTrainingAreaReset);
+  connect(&eventHandler_, &EventHandler::stateMachineCreated, this, &MainWindow::onStateMachineCreated);
+  connect(&eventHandler_, &EventHandler::stateMachineDestroyed, this, &MainWindow::onStateMachineDestroyed);
 }
 
 void MainWindow::connectPacketInjection() {
   // Packet injection tab
+  connect(ui->addToDataButton, &QPushButton::clicked, this, &MainWindow::addToDataButtonClicked);
   connect(ui->injectPacketButton, &QPushButton::clicked, this, &MainWindow::injectPacketButtonClicked);
   connect(ui->injectedPacketListWidget, &ReinjectablePacketListWidget::reinjectSelectedPackets, this, &MainWindow::reinjectSelectedPackets);
   connect(ui->injectedPacketListWidget, &ReinjectablePacketListWidget::clearPackets, this, &MainWindow::clearPackets);
@@ -356,9 +359,31 @@ void MainWindow::stopTrainingButtonClicked() {
   requester_.stopTraining();
   ui->startTrainingButton->setEnabled(true);
   ui->stopTrainingButton->setEnabled(false);
+
+  // TODO: How should we cleanup?
+  // Cleanup
+  ui->stateListWidget->clear();
 }
 
 // Packet injection
+void MainWindow::addToDataButtonClicked() {
+  // Get type from dropdown (typeComboBox)
+  QString dataToAddAsString = ui->addDataLineEdit->text();
+
+  // Get data from line edit (addDataLineEdit)
+  QString formattedData;
+  if (ui->typeComboBox->currentText() == "float") {
+  } else if (ui->typeComboBox->currentText() == "uint32") {
+    uint32_t num = dataToAddAsString.toLong();
+    // TODO: Check if data already ends with space
+    formattedData = QString(" %1 %2 %3 %4").arg(num & 0xFF, 2, 16, QChar('0')).arg((num>>8) & 0xFF, 2, 16, QChar('0')).arg((num>>16) & 0xFF, 2, 16, QChar('0')).arg(num>>24, 2, 16, QChar('0'));
+  } else if (ui->typeComboBox->currentText() == "string") {
+  }
+
+  // Write formatted data to data text edit (injectPacketDataTextEdit)
+  ui->injectPacketDataTextEdit->appendPlainText(formattedData);
+}
+
 void MainWindow::injectPacketButtonClicked() {
   request::PacketToInject::Direction packetDirection;
   if (ui->packetInjectionToServerRadioButton->isChecked()) {
@@ -792,6 +817,17 @@ void MainWindow::onTrainingAreaReset() {
     delete trainingAreaGraphicsItem_;
     trainingAreaGraphicsItem_= nullptr;
   }
+}
+
+void MainWindow::onStateMachineCreated(std::string name) {
+  std::cout << "State machine created: " << name << std::endl;
+  ui->stateListWidget->addItem(QString(4*ui->stateListWidget->count(), ' ')+QString::fromStdString(name));
+}
+
+void MainWindow::onStateMachineDestroyed() {
+  std::cout << "State machine destroyed" << std::endl;
+  auto *item = ui->stateListWidget->item(ui->stateListWidget->count()-1);
+  delete(item);
 }
 
 void MainWindow::updateEntityDisplayedPosition(sro::scalar_types::EntityGlobalId globalId, const sro::Position &position) {

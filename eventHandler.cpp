@@ -234,6 +234,16 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         emit trainingAreaReset();
         break;
       }
+    case broadcast::BroadcastMessage::BodyCase::kStateMachineCreated: {
+        const broadcast::StateMachineCreated &msg = message.statemachinecreated();
+        const auto name = msg.name();
+        emit stateMachineCreated(name);
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kStateMachineDestroyed: {
+        emit stateMachineDestroyed();
+        break;
+      }
     default:
       // Unknown case. Might be a malformed message
       break;

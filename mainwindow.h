@@ -101,6 +101,7 @@ private slots:
   void startTrainingButtonClicked();
   void stopTrainingButtonClicked();
 
+  void addToDataButtonClicked();
   void injectPacketButtonClicked();
   void reinjectSelectedPackets();
   void clearPackets();
@@ -140,6 +141,8 @@ public slots:
   void onEntityLifeStateChanged(sro::scalar_types::EntityGlobalId globalId, sro::entity::LifeState lifeState);
   void onTrainingAreaCircleSet(sro::Position center, float radius);
   void onTrainingAreaReset();
+  void onStateMachineCreated(std::string name);
+  void onStateMachineDestroyed();
 };
 
 #endif // MAINWINDOW_H
