@@ -22,12 +22,13 @@ public:
   void onUpdate(const event::Event *event) override;
   bool done() const override;
 private:
+  static inline std::string kName{"Training"};
   void buildBuffList();
   std::optional<sro::scalar_types::ReferenceObjectId> getNextBuffToCast() const;
   std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &skillData) const;
   std::pair<const entity::Monster*, sro::scalar_types::ReferenceObjectId> getTargetAndAttackSkill(const std::vector<const entity::Monster*> &monsters, const std::vector<sro::scalar_types::ReferenceObjectId> &attackSkills) const;
-  static constexpr double kMonsterRange_{1000};
-  static constexpr double kItemRange_{1000};
+  static constexpr double kMonsterRange_{900};
+  static constexpr double kItemRange_{900};
   sro::Position trainingSpotCenter_;
   std::vector<sro::scalar_types::ReferenceObjectId> buffsToUse_;
   std::vector<sro::scalar_types::ReferenceObjectId> skillsToUse_;

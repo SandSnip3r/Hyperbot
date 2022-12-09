@@ -3,6 +3,7 @@
 
 #include "packet/opcode.hpp"
 
+#include <string>
 #include <vector>
 
 // Forward declarations
@@ -24,6 +25,8 @@ public:
 protected:
   Bot &bot_;
   void pushBlockedOpcode(packet::Opcode opcode);
+  void stateMachineCreated(const std::string &name);
+  void stateMachineDestroyed();
 private:
   std::vector<packet::Opcode> blockedOpcodes_;
 };

@@ -4,6 +4,7 @@
 #include "broker/eventBroker.hpp"
 #include "broker/packetBroker.hpp"
 #include "config/characterLoginData.hpp"
+#include "event/event.hpp"
 #include "packetProcessor.hpp"
 #include "pk2/gameData.hpp"
 #include "proxy.hpp"
@@ -41,7 +42,7 @@ protected:
 
 private:
   state::machine::AutoPotion autoPotionStateMachine_{*this};
-  state::machine::Botting stateMachine_{*this};
+  std::unique_ptr<state::machine::StateMachine> bottingStateMachine_;
 
   void subscribeToEvents();
 
@@ -66,8 +67,8 @@ private:
   void handleSpeedUpdated();
   void handleMovementBegan();
   void handleMovementEnded();
-  void handleEntityMovementBegan(sro::scalar_types::EntityGlobalId globalId);
-  void handleEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId);
+  void handleEntityMovementBegan(const event::EntityMovementBegan &event);
+  void handleEntityMovementEnded(const event::EntityMovementEnded &event);
   void handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId);
   void handleEntityPositionUpdated(sro::scalar_types::EntityGlobalId globalId);
   void handleEntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId globalId);

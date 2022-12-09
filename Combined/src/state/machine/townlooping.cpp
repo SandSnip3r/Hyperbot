@@ -8,6 +8,7 @@
 namespace state::machine {
 
 Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
+  stateMachineCreated(kName);
   // Build a shopping list
   // TODO: This should be based on a botting config
   shoppingList_ = {
@@ -33,6 +34,10 @@ Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
   childState_ = std::make_unique<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
 }
 
+Townlooping::~Townlooping() {
+  stateMachineDestroyed();
+}
+
 void Townlooping::onUpdate(const event::Event *event) {
 TODO_REMOVE_THIS_LABEL:
   if (done()) {
@@ -44,8 +49,10 @@ TODO_REMOVE_THIS_LABEL:
     if (walkingState->done()) {
       // Done walking, advance state
       if (npcsToVisit_[currentNpcIndex_] == Npc::kStorage) {
+        childState_.reset();
         childState_ = std::make_unique<TalkingToStorageNpc>(bot_);
       } else {
+        childState_.reset();
         childState_ = std::make_unique<TalkingToShopNpc>(bot_, npcsToVisit_[currentNpcIndex_], shoppingList_);
       }
       // TODO: Go back to the top of this function
@@ -67,6 +74,7 @@ TODO_REMOVE_THIS_LABEL:
       }
 
       // Update our state to walk to the next npc
+      childState_.reset();
       childState_ = std::make_unique<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
       // TODO: Go back to the top of this function
       goto TODO_REMOVE_THIS_LABEL;

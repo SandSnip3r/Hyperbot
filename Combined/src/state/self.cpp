@@ -31,9 +31,10 @@ void Self::handleEvent(const event::Event *event) {
   }
 }
 
-void Self::initialize(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId) {
+void Self::initialize(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId) {
   this->globalId = globalId;
   this->refObjId = refObjId;
+  this->jId = jId;
   setRaceAndGender();
 
   maxHp_.reset();

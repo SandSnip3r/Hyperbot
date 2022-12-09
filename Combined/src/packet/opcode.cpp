@@ -96,8 +96,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kClientAgentCharacterMoveRequest) {
     return "kClientAgentCharacterMoveRequest";
   }
-  if (opcode == Opcode::CLIENT_TRANSPORT_MOVE) {
-    return "CLIENT_TRANSPORT_MOVE";
+  if (opcode == Opcode::kClientAgentCosCommandRequest) {
+    return "kClientAgentCosCommandRequest";
   }
   if (opcode == Opcode::kClientAgentActionCommandRequest) {
     return "kClientAgentActionCommandRequest";
@@ -285,6 +285,12 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kServerAgentEntityUpdateState) {
     return "kServerAgentEntityUpdateState";
   }
+  if (opcode == Opcode::kServerAgentEntityUpdateMoveSpeed) {
+    return "kServerAgentEntityUpdateMoveSpeed";
+  }
+  if (opcode == Opcode::kServerAgentEntityRemoveOwnership) {
+    return "kServerAgentEntityRemoveOwnership";
+  }
   if (opcode == Opcode::kServerAgentEntityUpdateStatus) {
     return "SERVER_HPMP_UPDATE";
   }
@@ -418,7 +424,7 @@ std::string toStr(Opcode opcode) {
     return "kServerAgentInventoryUpdateDurability";
   }
   if (opcode == Opcode::kServerAgentEntityUpdatePosition) {
-    return "SERVER_CHARACTER_STUCK";
+    return "kServerAgentEntityUpdatePosition";
   }
   if (opcode == Opcode::kClientAgentFreePvpUpdateRequest) {
     return "kClientAgentFreePvpUpdateRequest";

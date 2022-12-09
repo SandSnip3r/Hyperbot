@@ -673,7 +673,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
     itemPtr->initializeAngle(angle);
     bool hasOwner = stream.Read<uint8_t>();
     if (hasOwner) {
-      uint32_t ownerJId = stream.Read<uint32_t>();
+      itemPtr->ownerJId = stream.Read<uint32_t>();
     }
     itemPtr->rarity = stream.Read<sro::entity::ItemRarity>();
   } else if (teleportData.haveTeleportWithId(entity->refObjId)) {

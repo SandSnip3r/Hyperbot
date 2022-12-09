@@ -10,13 +10,13 @@
 
 namespace state::machine {
 
-// TalkingToStorageNpc::TalkingToStorageNpc(Bot &bot) : StateMachine(bot) {
-//   // Figure out what we want to deposit into storage
-//   // const uint16_t kArrowTypeId{helpers::type_id::makeTypeId(3,3,4,1)};
-//   // const uint16_t kHpPotionTypeId{helpers::type_id::makeTypeId(3,3,1,1)};
-//   // itemTypesToStore_.insert(kArrowTypeId);
-//   // itemTypesToStore_.insert(kHpPotionTypeId);
-// }
+TalkingToStorageNpc::TalkingToStorageNpc(Bot &bot) : StateMachine(bot) {
+  stateMachineCreated(kName);
+}
+
+TalkingToStorageNpc::~TalkingToStorageNpc() {
+  stateMachineDestroyed();
+}
 
 void TalkingToStorageNpc::onUpdate(const event::Event *event) {
   if (npcInteractionState_ == NpcInteractionState::kStart) {

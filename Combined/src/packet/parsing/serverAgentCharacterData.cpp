@@ -5,7 +5,7 @@
 
 namespace packet::parsing {
 
-ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData) : ParsedPacket(packet) {
+ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   uint32_t serverTime = stream.Read<uint32_t>();
   refObjId_ = stream.Read<uint32_t>();
@@ -223,7 +223,7 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
 
   uint8_t pvpFlag = stream.Read<uint8_t>(); // 0 = Red Side, 1 = Blue Side, 0xFF = None
   uint64_t guideFlag = stream.Read<uint64_t>();
-  uint32_t jId = stream.Read<uint32_t>();
+  jId_ = stream.Read<uint32_t>();
   uint8_t gmFlag = stream.Read<uint8_t>();
 
   uint8_t activationFlag = stream.Read<uint8_t>(); // ConfigType:0 --> (0 = Not activated, 7 = activated)
@@ -251,100 +251,104 @@ ParsedServerAgentCharacterData::ParsedServerAgentCharacterData(const PacketConta
   uint8_t unknownByte3 = stream.Read<uint8_t>(); //Structure changes!!!
 }
 
-uint32_t ParsedServerAgentCharacterData::refObjId() const {
+uint32_t ServerAgentCharacterData::refObjId() const {
   return refObjId_;
 }
 
-uint8_t ParsedServerAgentCharacterData::curLevel() const {
+uint8_t ServerAgentCharacterData::curLevel() const {
   return curLevel_;
 }
 
-uint64_t ParsedServerAgentCharacterData::currentExperience() const {
+uint64_t ServerAgentCharacterData::currentExperience() const {
   return currentExperience_;
 }
 
-uint32_t ParsedServerAgentCharacterData::currentSpExperience() const {
+uint32_t ServerAgentCharacterData::currentSpExperience() const {
   return currentSpExperience_;
 }
 
-uint64_t ParsedServerAgentCharacterData::gold() const {
+uint64_t ServerAgentCharacterData::gold() const {
   return gold_;
 }
 
-uint32_t ParsedServerAgentCharacterData::skillPoints() const {
+uint32_t ServerAgentCharacterData::skillPoints() const {
   return skillPoints_;
 }
 
-uint32_t ParsedServerAgentCharacterData::entityUniqueId() const {
+uint32_t ServerAgentCharacterData::entityUniqueId() const {
   return entityUniqueId_;
 }
 
-uint32_t ParsedServerAgentCharacterData::hp() const {
+uint32_t ServerAgentCharacterData::hp() const {
   return hp_;
 }
 
-uint32_t ParsedServerAgentCharacterData::mp() const {
+uint32_t ServerAgentCharacterData::mp() const {
   return mp_;
 }
 
-uint8_t ParsedServerAgentCharacterData::inventorySize() const {
+uint8_t ServerAgentCharacterData::inventorySize() const {
   return inventorySize_;
 }
 
-const std::map<uint8_t, std::shared_ptr<storage::Item>>& ParsedServerAgentCharacterData::inventoryItemMap() const {
+const std::map<uint8_t, std::shared_ptr<storage::Item>>& ServerAgentCharacterData::inventoryItemMap() const {
   return inventoryItemMap_;
 }
 
-uint8_t ParsedServerAgentCharacterData::avatarInventorySize() const {
+uint8_t ServerAgentCharacterData::avatarInventorySize() const {
   return avatarInventorySize_;
 }
 
-const std::map<uint8_t, std::shared_ptr<storage::Item>>& ParsedServerAgentCharacterData::avatarInventoryItemMap() const {
+const std::map<uint8_t, std::shared_ptr<storage::Item>>& ServerAgentCharacterData::avatarInventoryItemMap() const {
   return avatarInventoryItemMap_;
 }
 
-const std::vector<structures::Mastery>& ParsedServerAgentCharacterData::masteries() const {
+const std::vector<structures::Mastery>& ServerAgentCharacterData::masteries() const {
   return masteries_;
 }
 
-const std::vector<structures::Skill>& ParsedServerAgentCharacterData::skills() const {
+const std::vector<structures::Skill>& ServerAgentCharacterData::skills() const {
   return skills_;
 }
 
-sro::Position ParsedServerAgentCharacterData::position() const {
+sro::Position ServerAgentCharacterData::position() const {
   return position_;
 }
 
-sro::Angle ParsedServerAgentCharacterData::angle() const {
+sro::Angle ServerAgentCharacterData::angle() const {
   return angle_;
 }
 
-float ParsedServerAgentCharacterData::walkSpeed() const {
+float ServerAgentCharacterData::walkSpeed() const {
   return walkSpeed_;
 }
 
-float ParsedServerAgentCharacterData::runSpeed() const {
+float ServerAgentCharacterData::runSpeed() const {
   return runSpeed_;
 }
 
-float ParsedServerAgentCharacterData::hwanSpeed() const {
+float ServerAgentCharacterData::hwanSpeed() const {
   return hwanSpeed_;
 }
 
-std::string ParsedServerAgentCharacterData::characterName() const {
+std::string ServerAgentCharacterData::characterName() const {
   return characterName_;
 }
 
-sro::entity::LifeState ParsedServerAgentCharacterData::lifeState() const {
+sro::entity::LifeState ServerAgentCharacterData::lifeState() const {
   return lifeState_;
 }
 
-entity::MotionState ParsedServerAgentCharacterData::motionState() const {
+entity::MotionState ServerAgentCharacterData::motionState() const {
   return motionState_;
 }
 
-enums::BodyState ParsedServerAgentCharacterData::bodyState() const {
+enums::BodyState ServerAgentCharacterData::bodyState() const {
   return bodyState_;
+}
+
+uint32_t ServerAgentCharacterData::jId() const {
+  return jId_;
 }
 
 } // namespace packet::parsing

@@ -13,9 +13,11 @@ namespace state::machine {
 class TalkingToShopNpc : public StateMachine {
 public:
   TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList);
+  ~TalkingToShopNpc() override;
   void onUpdate(const event::Event *event) override;
   bool done() const override;
 private:
+  static inline std::string kName{"TalkingToShopNpc"};
   Npc npc_;
   const std::map<uint32_t, int> &shoppingList_;
   uint32_t npcGid_;

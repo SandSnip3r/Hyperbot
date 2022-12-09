@@ -17,6 +17,7 @@
 #include "serverAgentCosData.hpp"
 #include "serverAgentEntityDespawn.hpp"
 #include "serverAgentEntityGroupSpawnData.hpp"
+#include "serverAgentEntityRemoveOwnership.hpp"
 #include "serverAgentEntitySpawn.hpp"
 #include "serverAgentEntitySyncPosition.hpp"
 #include "serverAgentEntityUpdateAngle.hpp"
@@ -77,7 +78,7 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       case Opcode::kServerAgentCharacterSelectionJoinResponse:
         return std::make_unique<ParsedServerAgentCharacterSelectionJoinResponse>(packet);
       case Opcode::kServerAgentCharacterData:
-        return std::make_unique<ParsedServerAgentCharacterData>(packet, gameData_.itemData(), gameData_.skillData());
+        return std::make_unique<ServerAgentCharacterData>(packet, gameData_.itemData(), gameData_.skillData());
       case Opcode::kServerAgentEntityGroupspawnData:
         return std::make_unique<ServerAgentEntityGroupSpawnData>(packet, gameData_.characterData(), gameData_.itemData(), gameData_.skillData(), gameData_.teleportData());
       case Opcode::kServerAgentInventoryStorageData:
@@ -132,6 +133,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ServerAgentSkillEnd>(packet);
       case Opcode::kServerAgentEntityUpdateMoveSpeed:
         return std::make_unique<ServerAgentEntityUpdateMoveSpeed>(packet);
+      case Opcode::kServerAgentEntityRemoveOwnership:
+        return std::make_unique<ServerAgentEntityRemoveOwnership>(packet);
       case Opcode::kServerAgentChatUpdate:
         return std::make_unique<ServerAgentChatUpdate>(packet);
       case Opcode::kServerAgentEntityUpdatePosition:

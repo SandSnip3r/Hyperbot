@@ -10,9 +10,14 @@
 namespace state::machine {
 
 MoveItemInInventory::MoveItemInInventory(Bot &bot, uint8_t srcSlot, uint8_t destSlot) : StateMachine(bot), srcSlot_(srcSlot), destSlot_(destSlot) {
+  stateMachineCreated(kName);
   LOG() << "Constructed a move item state machine" << std::endl;
   // Prevent the human from moving anything
   pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
+}
+
+MoveItemInInventory::~MoveItemInInventory() {
+  stateMachineDestroyed();
 }
 
 void MoveItemInInventory::onUpdate(const event::Event *event) {

@@ -14,6 +14,7 @@
 namespace state::machine {
 
 TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList) : StateMachine(bot), npc_(npc), shoppingList_(shoppingList) {
+  stateMachineCreated(kName);
   // We know we are near our npc, lets find the closest npc to us
   npcGid_ = [&]{
     std::optional<uint32_t> closestNpcGId;
@@ -48,6 +49,10 @@ TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, i
   pushBlockedOpcode(packet::Opcode::kServerAgentActionSelectResponse);
   pushBlockedOpcode(packet::Opcode::kServerAgentActionTalkResponse);
   pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
+}
+
+TalkingToShopNpc::~TalkingToShopNpc() {
+  stateMachineDestroyed();
 }
 
 void TalkingToShopNpc::figureOutWhatToBuy() {

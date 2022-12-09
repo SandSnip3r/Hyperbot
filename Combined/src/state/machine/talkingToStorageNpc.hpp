@@ -10,10 +10,12 @@ namespace state::machine {
 
 class TalkingToStorageNpc : public StateMachine {
 public:
-  using StateMachine::StateMachine;
+  TalkingToStorageNpc(Bot &bot);
+  ~TalkingToStorageNpc() override;
   void onUpdate(const event::Event *event) override;
   bool done() const override;
 private:
+  static inline std::string kName{"TalkingToStorageNpc"};
   // Hard coded npc global Id
   static constexpr const uint32_t kStorageNpcGId{0x000000CF};
   std::set<uint16_t> itemTypesToStore_;

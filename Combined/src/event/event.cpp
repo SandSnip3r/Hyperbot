@@ -52,4 +52,8 @@ CommandError::CommandError(const packet::structures::ActionCommand &cmd) : Event
 
 ItemUseTimeout::ItemUseTimeout(uint8_t slot, type_id::TypeId tid) : Event(EventCode::kItemUseTimeout), slotNum(slot), typeData(tid) {}
 
+EntityOwnershipRemoved::EntityOwnershipRemoved(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityOwnershipRemoved), globalId(id) {}
+
+StateMachineCreated::StateMachineCreated(const std::string &name) : Event(EventCode::kStateMachineCreated), stateMachineName(name) {}
+
 } // namespace event

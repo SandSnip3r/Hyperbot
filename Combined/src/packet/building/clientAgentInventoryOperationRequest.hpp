@@ -1,10 +1,10 @@
-#ifndef PACKET_BUILDING_CLIENT_AGENT_INVENTORY_OPERATION_REQUEST_HPP
-#define PACKET_BUILDING_CLIENT_AGENT_INVENTORY_OPERATION_REQUEST_HPP
+#ifndef PACKET_BUILDING_CLIENT_AGENT_INVENTORY_OPERATION_REQUEST_HPP_
+#define PACKET_BUILDING_CLIENT_AGENT_INVENTORY_OPERATION_REQUEST_HPP_
 
 #include "packet/opcode.hpp"
 #include "../../shared/silkroad_security.h"
 
-#include <memory>
+#include <cstdint>
 
 namespace packet::building {
 
@@ -24,4 +24,4 @@ public:
 
 } // namespace packet::building
 
-#endif // PACKET_BUILDING_CLIENT_AGENT_INVENTORY_OPERATION_REQUEST_HPP
+#endif // PACKET_BUILDING_CLIENT_AGENT_INVENTORY_OPERATION_REQUEST_HPP_

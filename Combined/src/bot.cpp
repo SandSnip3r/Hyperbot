@@ -112,6 +112,9 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaSet, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaReset, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemUseTimeout, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityOwnershipRemoved, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStateMachineCreated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStateMachineDestroyed, eventHandleFunction);
 
   // Skills
   eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
@@ -165,13 +168,13 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kEntityMovementBegan:
         {
           const auto &castedEvent = dynamic_cast<const event::EntityMovementBegan&>(*event);
-          handleEntityMovementBegan(castedEvent.globalId);
+          handleEntityMovementBegan(castedEvent);
           break;
         }
       case event::EventCode::kEntityMovementEnded:
         {
           const auto &castedEvent = dynamic_cast<const event::EntityMovementEnded&>(*event);
-          handleEntityMovementEnded(castedEvent.globalId);
+          handleEntityMovementEnded(castedEvent);
           break;
         }
       case event::EventCode::kEntityMovementTimerEnded:
@@ -352,6 +355,23 @@ void Bot::handleEvent(const event::Event *event) {
           itemUseTimedOut(castedEvent);
           break;
         }
+      case event::EventCode::kEntityOwnershipRemoved:
+        {
+          const auto &castedEvent = dynamic_cast<const event::EntityOwnershipRemoved&>(*event);
+          onUpdate();
+          break;
+        }
+      case event::EventCode::kStateMachineCreated:
+        {
+          const auto &castedEvent = dynamic_cast<const event::StateMachineCreated&>(*event);
+          userInterface_.broadcastStateMachineCreated(castedEvent.stateMachineName);
+          break;
+        }
+      case event::EventCode::kStateMachineDestroyed:
+        {
+          userInterface_.broadcastStateMachineDestroyed();
+          break;
+        }
 
       // Skills
       case event::EventCode::kSkillBegan:
@@ -409,9 +429,9 @@ void Bot::onUpdate(const event::Event *event) {
     return;
   }
 
-  // Note: Assuming we start in the spawnpoint of Jangan
-  // Which is somewhere near position { 25000, 951.0f, -33.0f, 1372.0f }
-  stateMachine_.onUpdate(event);
+  if (bottingStateMachine_ && !bottingStateMachine_->done()) {
+    bottingStateMachine_->onUpdate(event);
+  }
 }
 
 // ============================================================================================================================
@@ -434,12 +454,16 @@ void Bot::startTraining() {
     return;
   }
 
+  if (bottingStateMachine_) {
+    throw std::runtime_error("Asked to start training, but already have a botting state machine");
+  }
+
   worldState_.selfState().trainingIsActive = true;
   // TODO: Should we stop whatever we're doing?
   //  For example, if we're running, stop where we are
 
   // Initialize state machine
-  stateMachine_.initialize();
+  bottingStateMachine_ = std::make_unique<state::machine::Botting>(*this);
 
   // Trigger onUpdate
   onUpdate();
@@ -451,7 +475,7 @@ void Bot::stopTraining() {
     //  Ex. Need to close a shop npc dialog
     LOG() << "Stopping training" << std::endl;
     worldState_.selfState().trainingIsActive = false;
-    stateMachine_.reset();
+    bottingStateMachine_.reset();
   } else {
     LOG() << "Asked to stop training, but we werent training" << std::endl;
   }
@@ -537,41 +561,39 @@ void Bot::handleStateCharacterListUpdated() const {
 // ==================================================Movement event handling===================================================
 // ============================================================================================================================
 
-void Bot::handleEntityMovementBegan(sro::scalar_types::EntityGlobalId globalId) {
-  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
+void Bot::handleEntityMovementBegan(const event::EntityMovementBegan &event) {
+  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(event.globalId);
   if (!mobileEntity.moving()) {
     throw std::runtime_error("Got an entity movement began event, but it is not moving");
   }
   const auto currentPosition = mobileEntity.position();
   if (mobileEntity.destinationPosition) {
-    if (globalId == worldState_.selfState().globalId) {
+    if (event.globalId == worldState_.selfState().globalId) {
+    // TODO: We ought to combine these two UI functions
       userInterface_.broadcastMovementBeganUpdate(currentPosition, *worldState_.selfState().destinationPosition, worldState_.selfState().currentSpeed());
     } else {
-      userInterface_.broadcastEntityMovementBegan(globalId, currentPosition, *mobileEntity.destinationPosition, mobileEntity.currentSpeed());
+      userInterface_.broadcastEntityMovementBegan(event.globalId, currentPosition, *mobileEntity.destinationPosition, mobileEntity.currentSpeed());
     }
   } else {
-    if (globalId == worldState_.selfState().globalId) {
+    if (event.globalId == worldState_.selfState().globalId) {
+    // TODO: We ought to combine these two UI functions
       userInterface_.broadcastMovementBeganUpdate(currentPosition, worldState_.selfState().angle(), worldState_.selfState().currentSpeed());
     } else {
-      userInterface_.broadcastEntityMovementBegan(globalId, currentPosition, mobileEntity.angle(), mobileEntity.currentSpeed());
+      userInterface_.broadcastEntityMovementBegan(event.globalId, currentPosition, mobileEntity.angle(), mobileEntity.currentSpeed());
     }
   }
+  onUpdate(&event);
 }
 
-void Bot::handleEntityMovementEnded(sro::scalar_types::EntityGlobalId globalId) {
-  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
-  bool needToRunUpdate{false};
-  if (globalId == worldState_.selfState().globalId) {
+void Bot::handleEntityMovementEnded(const event::EntityMovementEnded &event) {
+  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(event.globalId);
+  if (event.globalId == worldState_.selfState().globalId) {
     // TODO: We ought to combine these two UI functions
     userInterface_.broadcastMovementEndedUpdate(mobileEntity.position());
-    needToRunUpdate = true;
   } else {
-    userInterface_.broadcastEntityMovementEnded(globalId, mobileEntity.position());
+    userInterface_.broadcastEntityMovementEnded(event.globalId, mobileEntity.position());
   }
-
-  if (needToRunUpdate) {
-    onUpdate();
-  }
+  onUpdate(&event);
 }
 
 void Bot::handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId) {
@@ -842,6 +864,8 @@ void Bot::entitySpawned(const event::EntitySpawned &event) {
 
 void Bot::entityDespawned(const event::EntityDespawned &event) {
   userInterface_.broadcastEntityDespawned(event.globalId);
+
+  onUpdate(&event);
 }
 
 void Bot::entityLifeStateChanged(const event::EntityLifeStateChanged &event) {

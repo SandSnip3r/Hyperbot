@@ -37,8 +37,8 @@ with open(packetParserFilePath, 'a') as packetParserFile:
 
 sourceFilePath = '../Combined/src/packet/parsing/{}.cpp'
 headerFilePath = '../Combined/src/packet/parsing/{}.hpp'
-headerTemplate = '#ifndef PACKET_PARSING_{macroClassName}_HPP\n'\
-                 '#define PACKET_PARSING_{macroClassName}_HPP\n'\
+headerTemplate = '#ifndef PACKET_PARSING_{macroClassName}_HPP_\n'\
+                 '#define PACKET_PARSING_{macroClassName}_HPP_\n'\
                  '\n'\
                  '#include "packet/parsing/parsedPacket.hpp"\n'\
                  '\n'\
@@ -52,7 +52,7 @@ headerTemplate = '#ifndef PACKET_PARSING_{macroClassName}_HPP\n'\
                  '\n'\
                  '}} // namespace packet::parsing\n'\
                  '\n'\
-                 '#endif // PACKET_PARSING_{macroClassName}_HPP'
+                 '#endif // PACKET_PARSING_{macroClassName}_HPP_'
 sourceTemplate = '#include "{camelClassName}.hpp"\n'\
                  '\n'\
                  'namespace packet::parsing {{\n'\
@@ -66,8 +66,8 @@ sourceTemplate = '#include "{camelClassName}.hpp"\n'\
 
 with open(sourceFilePath.format(camelCaseClassName), 'w') as sourceFile:
   sourceFile.write(sourceTemplate.format(camelClassName=camelCaseClassName, pascalClassName=pascalCaseClassName))
-  print("Source file ({}) created, please double check".format(sourceFilePath))
+  print("Source file ({}) created, please double check".format(sourceFilePath.format(camelCaseClassName)))
 
 with open(headerFilePath.format(camelCaseClassName), 'w') as headerFile:
   headerFile.write(headerTemplate.format(macroClassName=macroCaseClassName, pascalClassName=pascalCaseClassName))
-  print("Header file ({}) created, please double check".format(headerFilePath))
+  print("Header file ({}) created, please double check".format(headerFilePath.format(camelCaseClassName)))

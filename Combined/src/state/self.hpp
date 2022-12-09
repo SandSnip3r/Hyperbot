@@ -46,7 +46,7 @@ class Self : public entity::PlayerCharacter {
 public:
   Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData);
   virtual ~Self() = default;
-  void initialize(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId);
+  void initialize(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId);
 
   void initializeCurrentHp(uint32_t hp);
                   
@@ -181,6 +181,7 @@ private:
   uint32_t currentSpExperience_;
   uint32_t skillPoints_;
 public:
+  uint32_t jId;
   Race race_;
   Gender gender_;
 
@@ -222,7 +223,8 @@ public:
 
   // COS
   // TODO: Create a proper COS object
-  std::unordered_map<uint32_t, storage::Storage> cosInventoryMap;
+  // Map from COS global Id to its inventory
+  std::unordered_map<sro::scalar_types::EntityGlobalId, storage::Storage> cosInventoryMap;
 
 private:
   uint64_t gold_;

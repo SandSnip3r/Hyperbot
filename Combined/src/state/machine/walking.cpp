@@ -12,13 +12,35 @@
 namespace state::machine {
 
 Walking::Walking(Bot &bot, const sro::Position &destinationPosition) : StateMachine(bot) {
+  stateMachineCreated(kName);
   waypoints_ = calculatePathToDestination(destinationPosition);
+  pushBlockedOpcode(packet::Opcode::kClientAgentCharacterMoveRequest);
+}
+
+Walking::~Walking() {
+  stateMachineDestroyed();
 }
 
 void Walking::onUpdate(const event::Event *event) {
   if (done()) {
     return;
   }
+
+  if (event) {
+    if (const auto *movementBeganEvent = dynamic_cast<const event::EntityMovementBegan*>(event); movementBeganEvent != nullptr && movementBeganEvent->globalId == bot_.selfState().globalId) {
+      // We started to move, our movement request must've been successful
+      requestedMovement_ = false;
+      // Nothing else to do here. We're now waiting for our movement to end
+      return;
+    } else if (const auto *movementEndedEvent = dynamic_cast<const event::EntityMovementEnded*>(event); movementEndedEvent != nullptr && movementEndedEvent->globalId == bot_.selfState().globalId) {
+      if (requestedMovement_) {
+        // Movement must've completely failed? We never got a begin movement
+        LOG() << "Movement must've completely failed? We never got a begin movement" << std::endl;
+        requestedMovement_ = false;
+      }
+    }
+  }
+
   if (bot_.selfState().moving()) {
     // Still moving, nothing to do
     return;
@@ -26,15 +48,13 @@ void Walking::onUpdate(const event::Event *event) {
 
   // We're not moving
   // Did we just arrive at this waypoint?
-  while (sro::position_math::calculateDistance2d(bot_.selfState().position(), waypoints_.at(currentWaypointIndex_)) < 1.0) { // TODO: Choose better measure of "close enough"
+  while (currentWaypointIndex_ < waypoints_.size() && sro::position_math::calculateDistance2d(bot_.selfState().position(), waypoints_.at(currentWaypointIndex_)) < 1.0) { // TODO: Choose better measure of "close enough"
     // Already at this waypoint, increment index
     ++currentWaypointIndex_;
-    requestedMovement_ = false;
-
-    if (done()) {
-      // Finished walking
-      return;
-    }
+  }
+  if (done()) {
+    // Finished walking
+    return;
   }
 
   // Not yet done walking

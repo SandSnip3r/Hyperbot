@@ -141,6 +141,8 @@ public:
 class Item : public Entity {
 public:
   sro::entity::ItemRarity rarity;
+  std::optional<uint32_t> ownerJId;
+  void removeOwnership(broker::EventBroker &eventBroker);
 };
 
 class Portal : public Entity {

@@ -64,6 +64,7 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryItemUseResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryOperationResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMoveSpeed, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityRemoveOwnership, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityGroupspawnData, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySpawn, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityDespawn, packetHandleFunction);
@@ -124,11 +125,12 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
 
     // Character info packet handlers
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedClientItemMove, clientItemMoveReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterData, serverAgentCharacterDataReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCharacterData, serverAgentCharacterDataReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCosData, serverAgentCosDataReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentInventoryStorageData, serverAgentInventoryStorageDataReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateState, serverAgentEntityUpdateStateReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateMoveSpeed, serverAgentEntityUpdateMoveSpeedReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityRemoveOwnership, serverAgentEntityRemoveOwnershipReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateStatus, serverAgentEntityUpdateStatusReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentAbnormalInfo, serverAgentAbnormalInfoReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterUpdateStats, serverAgentCharacterUpdateStatsReceived);
@@ -283,10 +285,10 @@ void PacketProcessor::clientItemMoveReceived(const packet::parsing::ParsedClient
   }
 }
 
-void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) const {
+void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::ServerAgentCharacterData &packet) const {
   resetDataBecauseCharacterSpawned();
 
-  worldState_.selfState().initialize(packet.entityUniqueId(), packet.refObjId());
+  worldState_.selfState().initialize(packet.entityUniqueId(), packet.refObjId(), packet.jId());
   worldState_.selfState().initializeCurrentHp(packet.hp());
   worldState_.selfState().setMp(packet.mp());
   worldState_.selfState().setCurrentLevel(packet.curLevel());
@@ -305,7 +307,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Pa
   worldState_.selfState().setBodyState(packet.bodyState());
 
   // Buffs
-  // TODO: Not sure why I commented this out...
+  // TODO: If we spawn with any active buffs, add them
   // worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken());
 
   // Speed
@@ -327,6 +329,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Pa
 void PacketProcessor::serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const {
   if (packet.isAbilityPet()) {
     if (packet.ownerGlobalId() == worldState_.selfState().globalId) {
+      // Is our pickpet
       auto it = worldState_.selfState().cosInventoryMap.find(packet.globalId());
       if (it == worldState_.selfState().cosInventoryMap.end()) {
         // Not yet tracking this Cos
@@ -389,9 +392,9 @@ void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
       const auto setVisiblePacket = packet::building::ClientAgentOperatorRequest::toggleInvisible();
       packetBroker_.injectPacket(setVisiblePacket, PacketContainer::Direction::kClientToServer);
       
-      LOG() << "Setting free pvp mode" << std::endl;
-      const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
-      packetBroker_.injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
+      // LOG() << "Setting free pvp mode" << std::endl;
+      // const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
+      // packetBroker_.injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
 
       done = true;
     }
@@ -401,6 +404,11 @@ void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
 void PacketProcessor::serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const {
   entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
   mobileEntity.setSpeed(packet.walkSpeed(), packet.runSpeed(), eventBroker_);
+}
+
+void PacketProcessor::serverAgentEntityRemoveOwnershipReceived(const packet::parsing::ServerAgentEntityRemoveOwnership &packet) const {
+  entity::Item &itemEntity = worldState_.getEntity<entity::Item>(packet.globalId());
+  itemEntity.removeOwnership(eventBroker_);
 }
 
 void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsing::ServerAgentEntityUpdateStatus &packet) const {
@@ -760,6 +768,8 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
       auto &cosInventory = worldState_.selfState().getCosInventory(movement.globalId);
       addItemToInventory(cosInventory, movement.newItem, movement.destSlot);
       eventBroker_.publishEvent(std::make_unique<event::CosInventoryUpdated>(movement.globalId, std::nullopt, movement.destSlot));
+    } else if (movement.type == packet::enums::ItemMovementType::kPickItemByOther) {
+      // Always is our COS picking gold. Gold update packet updates our state. We dont need to handle this
     } else {
       LOG() << "Unknown item movement type: " << static_cast<int>(movement.type) << std::endl;
     }
@@ -991,8 +1001,7 @@ void PacketProcessor::clientAgentActionCommandRequestReceived(const packet::pars
 }
 
 void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const {
-  LOG() << "Command response received" << std::endl;
-  std::cout << "============================================" << packet.actionState() << "============================================" << std::endl;
+  std::cout << "==========================Command response: " << packet.actionState() << "============================================" << std::endl;
   std::cout << "Pending command Queue:" << (worldState_.selfState().pendingCommandQueue.empty() ? " <empty>" : "") << std::endl;
   for (const auto &c : worldState_.selfState().pendingCommandQueue) {
     std::cout << "  " << c << std::endl;

@@ -425,6 +425,13 @@ void Character::setCurrentHp(uint32_t hp, broker::EventBroker &eventBroker) {
 
 // ============================================================================================================================================
 
+void Item::removeOwnership(broker::EventBroker &eventBroker) {
+  ownerJId.reset();
+  eventBroker.publishEvent(std::make_unique<event::EntityOwnershipRemoved>(globalId));
+}
+
+// ============================================================================================================================================
+
 uint32_t Monster::getMaxHp(const pk2::CharacterData &characterData) const {
   if (!characterData.haveCharacterWithId(refObjId)) {
     throw std::runtime_error("Don't have character data to get max HP");

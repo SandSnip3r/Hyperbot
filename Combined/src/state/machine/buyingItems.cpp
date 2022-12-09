@@ -8,11 +8,16 @@
 namespace state::machine {
 
 BuyingItems::BuyingItems(Bot &bot, const std::map<uint32_t, PurchaseRequest> &itemsToBuy) : StateMachine(bot), itemsToBuy_(itemsToBuy) {
+  stateMachineCreated(kName);
   // We must be talking to an NPC at this point
   // Prevent the client from closing the talk dialog
   pushBlockedOpcode(packet::Opcode::kClientAgentActionDeselectRequest);
   // Prevent the client from moving items in inventory
   pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
+}
+
+BuyingItems::~BuyingItems() {
+  stateMachineDestroyed();
 }
 
 void BuyingItems::onUpdate(const event::Event *event) {

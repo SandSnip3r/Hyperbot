@@ -311,6 +311,19 @@ void UserInterface::broadcastTrainingAreaReset() {
   broadcast(broadcastMessage);
 }
 
+void UserInterface::broadcastStateMachineCreated(const std::string &stateMachineName) {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcast::StateMachineCreated *stateMachineCreated = broadcastMessage.mutable_statemachinecreated();
+  stateMachineCreated->set_name(stateMachineName);
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastStateMachineDestroyed() {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcastMessage.mutable_statemachinedestroyed();
+  broadcast(broadcastMessage);
+}
+
 void UserInterface::broadcast(const broadcast::BroadcastMessage &broadcastProto) {
   zmq::message_t message;
   message.rebuild(broadcastProto.ByteSizeLong());

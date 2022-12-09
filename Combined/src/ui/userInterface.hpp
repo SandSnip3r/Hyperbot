@@ -46,6 +46,9 @@ public:
   void broadcastEntityLifeStateChanged(const sro::scalar_types::EntityGlobalId globalId, const sro::entity::LifeState lifeState);
   void broadcastTrainingAreaSet(const entity::Geometry *trainingAreaGeometry);
   void broadcastTrainingAreaReset();
+  void broadcastStateMachineCreated(const std::string &stateMachineName);
+  void broadcastStateMachineDestroyed();
+
   void broadcast(const broadcast::BroadcastMessage &broadcastProto);
 private:
   zmq::context_t context_;

@@ -17,6 +17,7 @@
 #include "packet/parsing/serverAgentCosData.hpp"
 #include "packet/parsing/serverAgentEntityDespawn.hpp"
 #include "packet/parsing/serverAgentEntityGroupSpawnData.hpp"
+#include "packet/parsing/serverAgentEntityRemoveOwnership.hpp"
 #include "packet/parsing/serverAgentEntitySpawn.hpp"
 #include "packet/parsing/serverAgentEntitySyncPosition.hpp"
 #include "packet/parsing/serverAgentEntityUpdateAngle.hpp"
@@ -84,11 +85,12 @@ private:
   void serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const;
   // From CharacterInfoModule
   void clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) const;
-  void serverAgentCharacterDataReceived(const packet::parsing::ParsedServerAgentCharacterData &packet) const;
+  void serverAgentCharacterDataReceived(const packet::parsing::ServerAgentCharacterData &packet) const;
   void serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const;
   void serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInventoryStorageData &packet) const;
   void serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const;
   void serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const;
+  void serverAgentEntityRemoveOwnershipReceived(const packet::parsing::ServerAgentEntityRemoveOwnership &packet) const;
   void serverAgentEntityUpdateStatusReceived(const packet::parsing::ServerAgentEntityUpdateStatus &packet) const;
   void serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const;
   void serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const;

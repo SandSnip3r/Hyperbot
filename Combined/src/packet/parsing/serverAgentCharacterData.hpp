@@ -17,9 +17,9 @@
 
 namespace packet::parsing {
   
-class ParsedServerAgentCharacterData : public ParsedPacket {
+class ServerAgentCharacterData : public ParsedPacket {
 public:
-  ParsedServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData);
+  ServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData);
   uint32_t refObjId() const;
   uint8_t curLevel() const;
   uint64_t currentExperience() const;
@@ -44,6 +44,7 @@ public:
   sro::entity::LifeState lifeState() const;
   entity::MotionState motionState() const;
   enums::BodyState bodyState() const;
+  uint32_t jId() const;
 private:
   uint32_t refObjId_;
   uint8_t curLevel_;
@@ -69,6 +70,7 @@ private:
   float runSpeed_;
   float hwanSpeed_;
   std::string characterName_;
+  uint32_t jId_;
 };
 
 } // namespace packet::parsing

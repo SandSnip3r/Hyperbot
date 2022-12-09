@@ -6,6 +6,8 @@
 #include "helpers.hpp"
 #include "logging.hpp"
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
+#include "state/machine/pickItem.hpp"
+#include "state/machine/pickItemWithCos.hpp"
 #include "type_id/categories.hpp"
 
 #include <silkroad_lib/position_math.h>
@@ -30,16 +32,17 @@ std::mt19937 createRandomEngine() {
 namespace state::machine {
 
 Training::Training(Bot &bot, const sro::Position &trainingSpotCenter) : StateMachine(bot), trainingSpotCenter_(trainingSpotCenter) {
+  stateMachineCreated(kName);
   buildBuffList();
   // Create a list of skills to use
   skillsToUse_ = std::vector<sro::scalar_types::ReferenceObjectId> {
       // 9612, // Distance Shot
       // 9631, // Hurricant Shot
       // 9544, // Intense Shot
-      10264, // Fire Bolt
-      // 10122, // Ice Bolt
       9587, // Rapid Shot
-      8499, // Sprint Assault
+      // 10264, // Fire Bolt
+      // 10122, // Ice Bolt
+      // 8499, // Sprint Assault
       // 11261, // Weird Chord
       // 11072, // Vampire Kiss
     };
@@ -64,16 +67,15 @@ Training::~Training() {
       }
     }
   }
+  stateMachineDestroyed();
 }
 
 void Training::onUpdate(const event::Event *event) {
 TODO_REMOVE_THIS_LABEL:
   if (childState_) {
     // Have a child state, it takes priority
-    LOG() << "Going into child state" << std::endl;
     childState_->onUpdate(event);
     if (childState_->done()) {
-      LOG() << "Child state is done" << std::endl;
       childState_.reset();
     } else {
       // Dont execute anything else in this function until the child state is done
@@ -116,6 +118,7 @@ TODO_REMOVE_THIS_LABEL:
     }
 
     LOG() << "Created child state to cast skill" << std::endl;
+    childState_.reset();
     childState_ = castSkillBuilder.create();
     goto TODO_REMOVE_THIS_LABEL;
   }
@@ -149,9 +152,37 @@ TODO_REMOVE_THIS_LABEL:
       }
     }
   }
-  LOG() << "There are " << monstersInRange.size() << " monsters in range /" << totalMonsterCount << std::endl;
-  LOG() << "There are " << itemsInRange.size() << " items in range /" << totalItemCount << std::endl;
+  if (!monstersInRange.empty()) {
+    LOG() << "There are " << monstersInRange.size() << " monsters in range /" << totalMonsterCount << std::endl;
+  }
+  if (!itemsInRange.empty()) {
+    LOG() << "There are " << itemsInRange.size() << " items in range /" << totalItemCount << std::endl;
+  }
 
+  if (!itemsInRange.empty()) {
+    // Lets see if there's anything to pick up
+    for (const auto *item : itemsInRange) {
+      if (!item->ownerJId || *item->ownerJId == bot_.selfState().jId) {
+        // No owner or it belongs to us. Pick it up
+        // TODO: Track party members' JIDs so that we know if we can pick up their items.
+        // TODO: Check if this item should be picked up, based on a configured filter
+        const auto targetItemGlobalId = itemsInRange.front()->globalId;
+        if (!bot_.selfState().cosInventoryMap.empty()) {
+          // Have a cos
+          // TODO: How do we pick which COS to use?
+          //  Maybe there can only ever be one.
+          //  For now, just use the "first"
+          const auto cosGlobalId = bot_.selfState().cosInventoryMap.begin()->first;
+          childState_.reset();
+          childState_ = std::make_unique<PickItemWithCos>(bot_, cosGlobalId, targetItemGlobalId);
+        } else {
+          childState_.reset();
+          childState_ = std::make_unique<PickItem>(bot_, targetItemGlobalId);
+        }
+        goto TODO_REMOVE_THIS_LABEL;
+      }
+    }
+  }
   if (!monstersInRange.empty()) {
     // Figure out which skills we have available to us
     std::vector<sro::scalar_types::ReferenceObjectId> availableSkills;
@@ -175,12 +206,16 @@ TODO_REMOVE_THIS_LABEL:
       if (weaponSlot) {
         castSkillBuilder.withWeapon(*weaponSlot);
       }
+      childState_.reset();
       childState_ = castSkillBuilder.create();
       goto TODO_REMOVE_THIS_LABEL;
     }
   } else {
     // Nothing to attack, lets just move to a random location inside the training area
-    // TODO: Check if we can already see the entire training area?
+    if (bot_.selfState().moving()) {
+      // Already walking somewhere, dont interrupt
+      return;
+    }
     // Pick a random point inside a square that encloses our training circle
     static auto eng = createRandomEngine();
     auto notInCircle = [](double x, double y, double radius) {
@@ -233,15 +268,6 @@ void Training::buildBuffList() {
 std::optional<sro::scalar_types::ReferenceObjectId> Training::getNextBuffToCast() const {
   // Lets evaluate our buffs and see if any need to be reactivated
   auto copyOfBuffsToUse = buffsToUse_;
-  auto printBuffs = [&copyOfBuffsToUse](const std::string &msg) {
-    LOG() << msg << ": [ ";
-    for (auto i : copyOfBuffsToUse) {
-      std::cout << i << ", ";
-    }
-    std::cout << "]" << std::endl;
-  };
-  printBuffs("List of all buffs to use");
-
   // Calculate a diff between what's active and what we want to be active
   for (const auto buff : bot_.selfState().buffs) {
     if (auto it = std::find(copyOfBuffsToUse.begin(), copyOfBuffsToUse.end(), buff); it != copyOfBuffsToUse.end()) {
@@ -249,7 +275,6 @@ std::optional<sro::scalar_types::ReferenceObjectId> Training::getNextBuffToCast(
       copyOfBuffsToUse.erase(it);
     }
   }
-  printBuffs("Buffs-to-use after already-active removed");
 
   if (copyOfBuffsToUse.empty()) {
     // No buffs need to be cast
@@ -260,12 +285,11 @@ std::optional<sro::scalar_types::ReferenceObjectId> Training::getNextBuffToCast(
   for (int i=0; i<copyOfBuffsToUse.size(); ++i) {
     const auto buff = copyOfBuffsToUse.at(i);
     if (bot_.selfState().skillsOnCooldown.find(buff) == bot_.selfState().skillsOnCooldown.end()) {
+      // Buff isnt on cooldown, use it
       return buff;
-    } else {
-      LOG() << "Buff " << buff << " is on cooldown, wont try to cast" << std::endl;
     }
   }
-  LOG() << "All buffs are still on cooldown, none to cast" << std::endl;
+  // All buffs are still on cooldown, none to cast
   return {};
 }
 

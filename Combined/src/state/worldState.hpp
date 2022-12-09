@@ -47,7 +47,7 @@ EntityType& WorldState::getEntity(sro::scalar_types::EntityGlobalId globalId) {
     if (dynamic_cast<const EntityType*>(&selfState_) == nullptr) {
       throw std::runtime_error("Trying to get self entity as an invalid type");
     }
-    return selfState_;
+    return dynamic_cast<EntityType&>(selfState_);
   } else if (entityTracker_.trackingEntity(globalId)) {
     return entityTracker_.getEntity<EntityType>(globalId);
   } else {

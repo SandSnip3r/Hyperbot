@@ -405,6 +405,14 @@ enum class OperatorCommand : uint16_t {
   kTriggerAction = 55,
 };
 
+enum class CosCommandType : uint8_t {
+  kMove = 1,
+  kAttack = 2,
+  kPick = 8,
+  kFollow = 9,
+  kCharm = 11,
+};
+
 std::ostream& operator<<(std::ostream &stream, const ActionState &enumVal);
 std::ostream& operator<<(std::ostream &stream, const CommandType &enumVal);
 std::ostream& operator<<(std::ostream &stream, const ActionType &enumVal);

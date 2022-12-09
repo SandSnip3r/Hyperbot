@@ -51,6 +51,9 @@ enum class EventCode {
   kEntitySpawned,
   kEntityDespawned,
   kEntityMovementEnded,
+  kEntityOwnershipRemoved,
+  kStateMachineCreated,
+  kStateMachineDestroyed,
 
   kSkillBegan,
   kSkillEnded,
@@ -271,6 +274,20 @@ public:
   const uint8_t slotNum;
   const type_id::TypeId typeData;
   virtual ~ItemUseTimeout() = default;
+};
+
+struct EntityOwnershipRemoved : public Event {
+public:
+  EntityOwnershipRemoved(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityOwnershipRemoved() = default;
+};
+
+struct StateMachineCreated : public Event {
+public:
+  StateMachineCreated(const std::string &name);
+  const std::string stateMachineName;
+  virtual ~StateMachineCreated() = default;
 };
 
 } // namespace event
