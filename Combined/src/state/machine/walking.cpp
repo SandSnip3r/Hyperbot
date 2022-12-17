@@ -15,6 +15,7 @@ Walking::Walking(Bot &bot, const sro::Position &destinationPosition) : StateMach
   stateMachineCreated(kName);
   waypoints_ = calculatePathToDestination(destinationPosition);
   pushBlockedOpcode(packet::Opcode::kClientAgentCharacterMoveRequest);
+  LOG() << "Walking, with " << waypoints_.size() << " waypoint(s)" << std::endl;
 }
 
 Walking::~Walking() {
@@ -22,6 +23,7 @@ Walking::~Walking() {
 }
 
 void Walking::onUpdate(const event::Event *event) {
+  LOG() << "Walking" << std::endl;
   if (done()) {
     return;
   }
@@ -29,20 +31,29 @@ void Walking::onUpdate(const event::Event *event) {
   if (event) {
     if (const auto *movementBeganEvent = dynamic_cast<const event::EntityMovementBegan*>(event); movementBeganEvent != nullptr && movementBeganEvent->globalId == bot_.selfState().globalId) {
       // We started to move, our movement request must've been successful
-      requestedMovement_ = false;
+      if (movementRequestTimeoutEventId_) {
+        bot_.eventBroker().cancelDelayedEvent(*movementRequestTimeoutEventId_);
+        movementRequestTimeoutEventId_.reset();
+      } else {
+        LOG() << "Movement began, but had no running movement request timeout timer" << std::endl;
+      }
       // Nothing else to do here. We're now waiting for our movement to end
       return;
     } else if (const auto *movementEndedEvent = dynamic_cast<const event::EntityMovementEnded*>(event); movementEndedEvent != nullptr && movementEndedEvent->globalId == bot_.selfState().globalId) {
-      if (requestedMovement_) {
-        // Movement must've completely failed? We never got a begin movement
-        LOG() << "Movement must've completely failed? We never got a begin movement" << std::endl;
-        requestedMovement_ = false;
+      // If we send a request to move, but get knocked back before the MovementBegin happens, the knockback movement will send this MovementEnded event
+      if (movementRequestTimeoutEventId_) {
+        bot_.eventBroker().cancelDelayedEvent(*movementRequestTimeoutEventId_);
+        movementRequestTimeoutEventId_.reset();
       }
+    } else if (event->eventCode == event::EventCode::kMovementRequestTimedOut) {
+      LOG() << "Movement request timed out" << std::endl;
+      movementRequestTimeoutEventId_.reset();
     }
   }
 
   if (bot_.selfState().moving()) {
     // Still moving, nothing to do
+    LOG() << "Moving" << std::endl;
     return;
   }
 
@@ -58,17 +69,25 @@ void Walking::onUpdate(const event::Event *event) {
   }
 
   // Not yet done walking
-  if (requestedMovement_) {
+  if (movementRequestTimeoutEventId_) {
     // Already asked to move, nothing to do
+    LOG() << "Waiting on requested movement" << std::endl;
+    return;
+  }
+
+  if (!canMove()) {
+    LOG() << "Can't move right now; nothing to do" << std::endl;
     return;
   }
 
   // We are not moving, we're not at the current waypoint, and there's not a pending movement request
   // Send a request to move to the current waypoint
+  LOG() << "Requesting movement" << std::endl;
   const auto &currentWaypoint = waypoints_.at(currentWaypointIndex_);
   const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint);
   bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
-  requestedMovement_ = true;
+  const int kMovementRequestTimeoutMs{333}; // TODO: Move somewhere else and make an educated guess about what this value should be
+  movementRequestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementRequestTimedOut), std::chrono::milliseconds(kMovementRequestTimeoutMs));
 }
 
 bool Walking::done() const {

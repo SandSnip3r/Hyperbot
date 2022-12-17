@@ -417,16 +417,12 @@ void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsin
       // Our HP changed
       if (worldState_.selfState().currentHp() != packet.newHpValue()) {
         worldState_.selfState().setCurrentHp(packet.newHpValue(), eventBroker_);
-      } else {
-        LOG() << "Weird, says HP changed, but it didn't\n";
       }
     }
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoMp)) {
       // Our MP changed
       if (worldState_.selfState().mp() != packet.newMpValue()) {
         worldState_.selfState().setMp(packet.newMpValue());
-      } else {
-        LOG() << "Weird, says MP changed, but it didn't\n";
       }
     }
 
@@ -996,19 +992,28 @@ void PacketProcessor::serverAgentGuildStorageDataReceived(const packet::parsing:
 }
 
 void PacketProcessor::clientAgentActionCommandRequestReceived(const packet::parsing::ClientAgentActionCommandRequest &packet) const {
-  LOG() << "Client command action received: \"" << packet.actionCommand() << "\"" << std::endl;
+  LOG() << "Client command action received: \"" << packet.actionCommand() << "\"";
+  if (packet.actionCommand().commandType == packet::enums::CommandType::kExecute &&
+      packet.actionCommand().actionType == packet::enums::ActionType::kCast) {
+    const auto skillName = gameData_.getSkillNameIfExists(packet.actionCommand().refSkillId);
+    if (skillName) {
+      std::cout << ", skillName: \"" << *skillName << "\"";
+    }
+  }
+  std::cout << std::endl;
   worldState_.selfState().pendingCommandQueue.push_back(packet.actionCommand());
 }
 
 void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const {
-  std::cout << "==========================Command response: " << packet.actionState() << "============================================" << std::endl;
+  LOG() << "Received command response" << std::endl;
+  std::cout << "=========================================== " << packet.actionState() << "============================================" << std::endl;
   std::cout << "Pending command Queue:" << (worldState_.selfState().pendingCommandQueue.empty() ? " <empty>" : "") << std::endl;
   for (const auto &c : worldState_.selfState().pendingCommandQueue) {
     std::cout << "  " << c << std::endl;
   }
   std::cout << "Accepted command Queue:" << (worldState_.selfState().acceptedCommandQueue.empty() ? " <empty>" : "") << std::endl;
   for (const auto &c : worldState_.selfState().acceptedCommandQueue) {
-    std::cout << "  " << c << std::endl;
+    std::cout << "  " << c.command << std::endl;
   }
   std::cout << "----------------" << std::endl;
 
@@ -1017,9 +1022,10 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
       throw std::runtime_error("Command queued, but pending command list is empty");
     }
     std::cout << "Command queued: \"" << worldState_.selfState().pendingCommandQueue.front() << "\"" << std::endl;
-    worldState_.selfState().acceptedCommandQueue.push_back(worldState_.selfState().pendingCommandQueue.front());
+    worldState_.selfState().acceptedCommandQueue.emplace_back(worldState_.selfState().pendingCommandQueue.front());
     worldState_.selfState().pendingCommandQueue.erase(worldState_.selfState().pendingCommandQueue.begin());
   } else if (packet.actionState() == packet::enums::ActionState::kError) {
+    // 16388 happens when the skill is on cooldown
     if (worldState_.selfState().pendingCommandQueue.empty()) {
       throw std::runtime_error("Command error, but pending command list is empty");
     }
@@ -1028,7 +1034,7 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     std::cout << "Command error " << packet.errorCode() << ": " << failedCommand << std::endl;
     eventBroker_.publishEvent(std::make_unique<event::CommandError>(failedCommand));
     worldState_.selfState().pendingCommandQueue.erase(worldState_.selfState().pendingCommandQueue.begin());
-  } else {
+  } else /*if (packet.actionState() == packet::enums::ActionState::kEnd)*/ {
     // It seems like if a skill is completed without interruption, this end will come after the SkillEnd packet
     // If a skill is interrupted, this end will come BEFORE the SkillEnd packet
     if (worldState_.selfState().acceptedCommandQueue.empty()) {
@@ -1043,7 +1049,14 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
       }
     } else {
       // We arent told which command ended, we just assume it was the most recent
-      std::cout << "Command ended: \"" << worldState_.selfState().acceptedCommandQueue.front() << "\"" << std::endl;
+      std::cout << "Command ended: \"" << worldState_.selfState().acceptedCommandQueue.front().command << "\"" << std::endl;
+      if (worldState_.selfState().acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute &&
+          worldState_.selfState().acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kCast &&
+          !worldState_.selfState().acceptedCommandQueue.front().wasExecuted) {
+        std::cout << "  this command(skill) was never executed!!" << std::endl;
+        eventBroker_.publishEvent(std::make_unique<event::CommandError>(worldState_.selfState().acceptedCommandQueue.front().command));
+        // TODO: Maybe this should be a different event than "CommandError"?
+      }
       worldState_.selfState().acceptedCommandQueue.erase(worldState_.selfState().acceptedCommandQueue.begin());
     }
   }
@@ -1055,7 +1068,7 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
   }
   std::cout << "Accepted command Queue:" << (worldState_.selfState().acceptedCommandQueue.empty() ? " <empty>" : "") << std::endl;
   for (const auto &c : worldState_.selfState().acceptedCommandQueue) {
-    std::cout << "  " << c << std::endl;
+    std::cout << "  " << c.command << std::endl;
   }
   std::cout << "==========================================================================================" << std::endl;
 }
@@ -1073,19 +1086,37 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     if ()
   };
   if (packet.result() == 2) {
-    // Not successful?
+    // Error
     LOG() << "Skill unsuccessful, err " << packet.errorCode() << std::endl;
-    // 12292 Happens when trying to cast a skill and dont have enough MP
     if (packet.casterGlobalId()) {
-      LOG() << "Our skill failed" << std::endl;
-      eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kOurSkillFailed));
+      // Which skill is this? It must be the first item in the pendingCommandQueue
+      if (!worldState_.selfState().pendingCommandQueue.empty()) {
+        const auto nextCommand = worldState_.selfState().pendingCommandQueue.front();
+        if (nextCommand.commandType == packet::enums::CommandType::kExecute) {
+          if (nextCommand.actionType == packet::enums::ActionType::kCast) {
+            const auto skillRefId = nextCommand.refSkillId;
+            LOG() << "Our skill failed (" << skillRefId << ')' << std::endl;
+            eventBroker_.publishEvent(std::make_unique<event::OurSkillFailed>(skillRefId, packet.errorCode()));
+          } else {
+            LOG() << "Out skill failed, but the most recent pending command isnt a \"Cast\"" << std::endl;
+          }
+        } else {
+          LOG() << "Our skill failed, but the most recent pending command isnt an \"Execute\"" << std::endl;
+        }
+      } else {
+        LOG() << "Our skill failed, but we dont know which one!" << std::endl;
+      }
     }
     return;
   }
 
+  // Update world state based on action
+  handleSkillAction(packet.action(), packet.casterGlobalId());
+
   // Do some skill tracking work
   if (packet.casterGlobalId() == worldState_.selfState().globalId) {
-    eventBroker_.publishEvent(std::make_unique<event::SkillBegan>(worldState_.selfState().globalId));
+    // Only tracking our own skills for now
+    eventBroker_.publishEvent(std::make_unique<event::SkillBegan>(worldState_.selfState().globalId, packet.refSkillId()));
     const auto &skillData = gameData_.skillData().getSkillById(packet.refSkillId());
     const auto rootSkillRefId = gameData_.skillData().getRootSkillRefId(packet.refSkillId());
     const bool isRootSkill = rootSkillRefId == packet.refSkillId();
@@ -1094,8 +1125,8 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       if (skillIsCommonAttack) {
         return "Common";
       }
-      const auto *skillName = gameData_.textItemAndSkillData().tryGetSkillName(skillData.uiSkillName);
-      if (skillName == nullptr) {
+      const auto skillName = gameData_.textItemAndSkillData().getSkillNameIfExists(skillData.uiSkillName);
+      if (!skillName) {
         return "UNKNOWN";
       }
       return *skillName;
@@ -1111,7 +1142,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       std::optional<size_t> indexOfOurSkill;
       int indexCounter=0;
       for (const auto &acceptedCommand : worldState_.selfState().acceptedCommandQueue) {
-        if (acceptedCommand.refSkillId == rootSkillRefId) {
+        if (acceptedCommand.command.refSkillId == rootSkillRefId) {
           indexOfOurSkill = indexCounter;
           break;
         }
@@ -1119,23 +1150,27 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       }
       // TODO: Common attacks will not be found, does that matter? That means that no skill cooldown will be created for one
       if (!indexOfOurSkill) {
-        std::cout << "Couldn't find our skill in the action queue" << std::endl;
+        std::cout << "Couldn't find our skill in the accepted command queue" << std::endl;
         // This happens for common attacks
-        if (skillIsCommonAttack && !(worldState_.selfState().acceptedCommandQueue.front().commandType == packet::enums::CommandType::kExecute && worldState_.selfState().acceptedCommandQueue.front().actionType == packet::enums::ActionType::kAttack)) {
+        if (skillIsCommonAttack && !(worldState_.selfState().acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute && worldState_.selfState().acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kAttack)) {
           // First command is not a common attack
           LOG() << "First command in the queue isnt a common attack!" << std::endl;
         }
       } else if (*indexOfOurSkill != 0) {
         // Remove all commands before this one in the queue, those have probably been discarded by the server
-        LOG() << "Our skill is not the first in the action queue" << std::endl;
+        LOG() << "Our skill is not the first in the accepted command queue" << std::endl;
         for (int i=0; i<*indexOfOurSkill; ++i) {
-          LOG() << "Command #" << i << " (" << worldState_.selfState().acceptedCommandQueue.at(i) << ") skipped" << std::endl;
+          LOG() << "Command #" << i << " (" << worldState_.selfState().acceptedCommandQueue.at(i).command << ") skipped" << std::endl;
           // TODO: Should we publish an event that command has been skipped?
         }
         worldState_.selfState().acceptedCommandQueue.erase(worldState_.selfState().acceptedCommandQueue.begin(), worldState_.selfState().acceptedCommandQueue.begin() + *indexOfOurSkill);
+        indexOfOurSkill = 0;
       }
       if (indexOfOurSkill) {
-        // We cast this skill, start the cooldown
+        // We cast this skill
+        // Assumption (90% certain of): A skill always has a begin, but might not have an end
+        //  Marking this skill as executed here is sufficient
+        worldState_.selfState().acceptedCommandQueue.at(*indexOfOurSkill).wasExecuted = true;
         if (isRootSkill) {
           // Set a timer for when the skill cooldown ends
           worldState_.selfState().skillsOnCooldown.emplace(packet.refSkillId());
@@ -1157,7 +1192,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       //  Crossbow Extreme
 
       if (isFinalPieceOfChain) {
-        eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(worldState_.selfState().globalId));
+        eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(worldState_.selfState().globalId, packet.refSkillId()));
       } else {
         LOG() << "Isn't final piece of chain, not going to send an \"end\" yet" << std::endl;
       }
@@ -1171,6 +1206,12 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         }
         std::cout << "]" << std::endl;
       }
+    }
+  } else {
+    // Caster is not us
+    if (auto *monster = dynamic_cast<entity::Monster*>(worldState_.entityTracker().getEntity(packet.casterGlobalId()))) {
+      // Caster is a monster, track who the monster is targetting
+      monster->targetGlobalId = packet.targetGlobalId();
     }
   }
 
@@ -1199,8 +1240,6 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       throw std::runtime_error("Cast a skill with unknown basic activity == "+std::to_string(skill.basicActivity));
       break;
   }
-
-  handleSkillAction(packet.action(), packet.casterGlobalId());
 }
 
 void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const {
@@ -1214,19 +1253,30 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
   // Have we tracked this skill?
   if (auto it = worldState_.selfState().skillCastIdMap.find(packet.castId()); it!=worldState_.selfState().skillCastIdMap.end()) {
     auto &skillInfo = it->second;
+    const auto thisSkillId = skillInfo.skillRefId;
     if (skillInfo.casterGlobalId == worldState_.selfState().globalId) {
-      LOG() << "  Is our skill end" << std::endl;
       // We cast this skill
-      const auto &skillData = gameData_.skillData().getSkillById(skillInfo.skillRefId);
+      const auto &skillData = gameData_.skillData().getSkillById(thisSkillId);
+      const auto maybeSkillName = gameData_.textItemAndSkillData().getSkillNameIfExists(skillData.uiSkillName);
+      LOG() << "  Is our \"" << (maybeSkillName ? *maybeSkillName : "UNKNOWN") << "\" end" << std::endl;
+      bool doneWithSkill{true};
       if (skillData.basicChainCode != 0) {
-        // Another piece coming
-        LOG() << "  Another piece coming" << std::endl;
+        // There are more pieces to this skill
         skillInfo.skillRefId = skillData.basicChainCode;
-      } else {
+        const auto &nextSkillPiece = gameData_.skillData().getSkillById(skillInfo.skillRefId);
+        if (nextSkillPiece.actionCastingTime != 0) {
+          doneWithSkill = false;
+          LOG() << "  Another piece of skill is coming, basic chain code=" << skillData.basicChainCode << ". This skill has non-zero cast time: " << nextSkillPiece.actionCastingTime << std::endl;
+        } else {
+          LOG() << "  Skill has another piece, but has 0 casting time." << std::endl;
+          // TODO: Check if there is ANOTHER piece coming...
+        }
+      }
+      if (doneWithSkill) {
         LOG() << "  Done with skill" << std::endl;
+        eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(worldState_.selfState().globalId, thisSkillId));
         // Remove it from the map
         worldState_.selfState().skillCastIdMap.erase(it);
-        eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(worldState_.selfState().globalId));
       }
     } else {
       LOG() << "  Is NOT our skill end" << std::endl;
@@ -1253,6 +1303,10 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
           // Effectively killed it, but I don't know if it makes sense to change the life state right now
           character->setCurrentHp(0, eventBroker_);
         } else {
+          if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
+            LOG() << "Entity has been knocked down" << std::endl;
+            // TODO: Update entity state, publish knocked down event(?), publish delayed stood up event
+          }
           if (hitObject.targetGlobalId == worldState_.selfState().globalId) {
             if (flags::isSet(hitResult.damageFlag, packet::enums::DamageFlag::kEffect) && hitResult.effect != 0) {
               // Applied an effect to us
@@ -1274,11 +1328,31 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
         if (auto *targetAsMobileEntity = dynamic_cast<entity::MobileEntity*>(&targetEntity)) {
           targetAsMobileEntity->setStationaryAtPosition(hitResult.position, eventBroker_);
           if (hitObject.targetGlobalId == worldState_.selfState().globalId) {
-            // Is us
+            // We are the target
+            bool knockedBackOrKnockedDown{false};
             if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockback)) {
-              LOG() << "We were knocked back" << std::endl;
+              constexpr const int kKnockbackStunDuration{2000};
+              LOG() << "We were knocked back " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockbackStunDuration << "ms" << std::endl;
+              worldState_.selfState().stunnedFromKnockback = true;
+              knockedBackOrKnockedDown = true;
+              // Publish knocked back event
+              eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kKnockedBack));
+              // Publish delayed knocked back stun completed event
+              eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kKnockbackStunEnded), std::chrono::milliseconds(kKnockbackStunDuration));
             } else if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
-              LOG() << "We were knocked down" << std::endl;
+              constexpr const int kKnockdownStunDuration{6000};
+              LOG() << "We were knocked down " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockdownStunDuration << "ms" << std::endl;
+              worldState_.selfState().stunnedFromKnockdown = true;
+              knockedBackOrKnockedDown = true;
+              // Publish knocked down event
+              eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kKnockedDown));
+              // Publish delayed knocked down stun completed event
+              eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kKnockdownStunEnded), std::chrono::milliseconds(kKnockdownStunDuration));
+            }
+            if (knockedBackOrKnockedDown) {
+              // Whatever commands we had queued should probably be cleared
+              // Whatever skills were casting should probably be cancelled
+              handleKnockedBackOrKnockedDown();
             }
           }
         } else {
@@ -1289,12 +1363,27 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
   }
 }
 
+void PacketProcessor::handleKnockedBackOrKnockedDown() const {
+  // When knocked back or knocked down, all accepted commands are not going to execute
+  worldState_.selfState().acceptedCommandQueue.clear();
+  // It doesn't make sense to remove all pending commands as those have not even been acknowledge by the server yet
+  //  The server will likely respond with an error response for them
+  if (!worldState_.selfState().skillCastIdMap.empty()) {
+    LOG() << "KB/KD with active casts: ";
+    for (const auto &i : worldState_.selfState().skillCastIdMap) {
+      std::cout << i.first << ", ";
+    }
+    std::cout << ". Clearing" << std::endl;
+    // TODO: Verify if it makes sense to clear this
+    //  It certainly seems like all started casts will be interrupted
+    worldState_.selfState().skillCastIdMap.clear();
+  }
+}
+
 void PacketProcessor::serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const {
   if (packet.globalId() == worldState_.selfState().globalId) {
-    const auto &skillData = gameData_.skillData().getSkillById(packet.skillRefId());
-    const auto *maybeSkillName = gameData_.textItemAndSkillData().tryGetSkillName(skillData.uiSkillName);
-    const std::string skillName = (maybeSkillName ? *maybeSkillName : "UNKNOWN");
-    LOG() << "Buff \"" << skillName << "\" added to us with tokenId: " << packet.activeBuffToken() << std::endl;
+    const auto skillName = gameData_.getSkillNameIfExists(packet.skillRefId());
+    LOG() << "Buff \"" << (skillName ? *skillName : "UNKNOWN") << "\" added to us with tokenId: " << packet.activeBuffToken() << std::endl;
   }
   if (packet.activeBuffToken() == 0) {
     // No buff remove will be received when this expires

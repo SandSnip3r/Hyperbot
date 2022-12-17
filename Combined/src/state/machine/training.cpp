@@ -36,12 +36,19 @@ Training::Training(Bot &bot, const sro::Position &trainingSpotCenter) : StateMac
   buildBuffList();
   // Create a list of skills to use
   skillsToUse_ = std::vector<sro::scalar_types::ReferenceObjectId> {
-      // 9612, // Distance Shot
-      // 9631, // Hurricant Shot
-      // 9544, // Intense Shot
+    // TODO: Why do i get a Handle Read Error when I send an invalid skill?
+      9612, // Distance Shot
+      9940, // Prick
+      // 9798, // Mortal Wounds
+      // 9623, // Blast Shot
+      // 9631, // Hurricane Shot
+      9544, // Intense Shot
+      9868, // Screw
+      9528, // Power Shot
       9587, // Rapid Shot
       // 10264, // Fire Bolt
-      // 10122, // Ice Bolt
+      // 10122, // Ice Bolt (very low level)
+      // 10135, // Frozen Spear
       // 8499, // Sprint Assault
       // 11261, // Weird Chord
       // 11072, // Vampire Kiss
@@ -71,7 +78,6 @@ Training::~Training() {
 }
 
 void Training::onUpdate(const event::Event *event) {
-TODO_REMOVE_THIS_LABEL:
   if (childState_) {
     // Have a child state, it takes priority
     childState_->onUpdate(event);
@@ -92,6 +98,10 @@ TODO_REMOVE_THIS_LABEL:
         mobileEntity->registerGeometryBoundary(bot_.selfState().trainingAreaGeometry->clone(), bot_.eventBroker());
       }
     }
+  }
+
+  if (bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown) {
+    LOG() << "In Training and stunned from KB/KD" << std::endl;
   }
 
   // Try to cast buffs before even looking at what's around us
@@ -120,7 +130,8 @@ TODO_REMOVE_THIS_LABEL:
     LOG() << "Created child state to cast skill" << std::endl;
     childState_.reset();
     childState_ = castSkillBuilder.create();
-    goto TODO_REMOVE_THIS_LABEL;
+    onUpdate(event);
+    return;
   }
 
   // What's in the area?
@@ -140,8 +151,7 @@ TODO_REMOVE_THIS_LABEL:
         continue;
       }
       ++totalMonsterCount;
-      const auto distance = sro::position_math::calculateDistance2d(trainingSpotCenter_, monster->position());
-      if (distance < kMonsterRange_) {
+      if (wantToAttackMonster(*monster)) {
         monstersInRange.push_back(monster);
       }
     } else if (const auto *item = dynamic_cast<const entity::Item*>(entityIdPtrPair.second.get())) {
@@ -160,44 +170,61 @@ TODO_REMOVE_THIS_LABEL:
   }
 
   if (!itemsInRange.empty()) {
-    // Lets see if there's anything to pick up
-    for (const auto *item : itemsInRange) {
-      if (!item->ownerJId || *item->ownerJId == bot_.selfState().jId) {
-        // No owner or it belongs to us. Pick it up
-        // TODO: Track party members' JIDs so that we know if we can pick up their items.
-        // TODO: Check if this item should be picked up, based on a configured filter
-        const auto targetItemGlobalId = itemsInRange.front()->globalId;
-        if (!bot_.selfState().cosInventoryMap.empty()) {
-          // Have a cos
-          // TODO: How do we pick which COS to use?
-          //  Maybe there can only ever be one.
-          //  For now, just use the "first"
-          const auto cosGlobalId = bot_.selfState().cosInventoryMap.begin()->first;
-          childState_.reset();
-          childState_ = std::make_unique<PickItemWithCos>(bot_, cosGlobalId, targetItemGlobalId);
-        } else {
-          childState_.reset();
-          childState_ = std::make_unique<PickItem>(bot_, targetItemGlobalId);
+    // Maybe going to pick up an item, check if we're even in a state to be picking up items
+    std::optional<sro::scalar_types::EntityGlobalId> cosGlobalId;
+    if (!bot_.selfState().cosInventoryMap.empty()) {
+      // Have a cos
+      // TODO: How do we pick which COS to use?
+      //  Maybe there can only ever be one.
+      //  For now, just use the "first"
+      cosGlobalId = bot_.selfState().cosInventoryMap.begin()->first;
+    }
+    auto wantItem = [](const entity::Item *item) {
+      // TODO: Check if this item should be picked up, based on a configured filter
+      return item->refObjId != 62; // Dont pick arrows
+    };
+    if (cosGlobalId || canMove()) {
+      // Have some option to pick item
+      // Lets see if there's anything to pick up
+      for (const auto *item : itemsInRange) {
+        if (!item->ownerJId || *item->ownerJId == bot_.selfState().jId) {
+          // No owner or it belongs to us. Pick it up
+          // TODO: Track party members' JIDs so that we know if we can pick up their items.
+          if (!wantItem(item)) {
+            // Skipping item
+            continue;
+          }
+          const auto targetItemGlobalId = item->globalId;
+          if (cosGlobalId) {
+            childState_.reset();
+            childState_ = std::make_unique<PickItemWithCos>(bot_, *cosGlobalId, targetItemGlobalId);
+          } else {
+            childState_.reset();
+            LOG() << "Going to pick item" << std::endl;
+            childState_ = std::make_unique<PickItem>(bot_, targetItemGlobalId);
+          }
+          onUpdate(event);
+          return;
         }
-        goto TODO_REMOVE_THIS_LABEL;
       }
+    } else {
+      LOG() << "No way to pick up items. No pickpet and cant move" << std::endl;
     }
   }
+
   if (!monstersInRange.empty()) {
     // Figure out which skills we have available to us
     std::vector<sro::scalar_types::ReferenceObjectId> availableSkills;
     for (const auto skillId : skillsToUse_) {
-      if (bot_.selfState().skillsOnCooldown.find(skillId) == bot_.selfState().skillsOnCooldown.end()) {
-        // Skill is not on cooldown
+      if (canCastSkill(skillId)) {
         availableSkills.push_back(skillId);
       }
     }
-    LOG() << "Trying to attack one monster" << std::endl;
-    LOG() << "We have " << availableSkills.size() << " skill(s) not on cooldown" << std::endl;
+    LOG() << "Trying to attack a monster; we have " << availableSkills.size() << " available skill(s)" << std::endl;
     PacketContainer attackPacket;
     if (availableSkills.empty()) {
       // No available skills
-      LOG() << "No available skills, not using common attacks" << std::endl;
+      LOG() << "No available skills" << std::endl;
     } else {
       const auto [target, attackRefId] = getTargetAndAttackSkill(monstersInRange, availableSkills);
       auto castSkillBuilder = CastSkillStateMachineBuilder(bot_, attackRefId).withTarget(target->globalId);
@@ -207,10 +234,12 @@ TODO_REMOVE_THIS_LABEL:
         castSkillBuilder.withWeapon(*weaponSlot);
       }
       childState_.reset();
+      LOG() << "Going to cast skill" << std::endl;
       childState_ = castSkillBuilder.create();
-      goto TODO_REMOVE_THIS_LABEL;
+      onUpdate(event);
+      return;
     }
-  } else {
+  } else if (canMove()) {
     // Nothing to attack, lets just move to a random location inside the training area
     if (bot_.selfState().moving()) {
       // Already walking somewhere, dont interrupt
@@ -233,11 +262,27 @@ TODO_REMOVE_THIS_LABEL:
     const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(destPos);
     bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
     LOG() << "Walking to random pos " << sro::position_math::calculateDistance2d(trainingSpotCenter_, destPos) << "m from center of training area" << std::endl;
+  } else {
+    LOG() << "Nothing to attack and we cant move right now" << std::endl;
   }
 }
 
 bool Training::done() const {
   return false;
+}
+
+bool Training::wantToAttackMonster(const entity::Monster &monster) const {
+  const auto &characterData = bot_.gameData().characterData().getCharacterById(monster.refObjId);
+  if (std::abs(characterData.lvl - bot_.selfState().getCurrentLevel()) > 10) {
+    // Dont attack anything 10 levels above or below us
+    return false;
+  }
+  const auto distance = sro::position_math::calculateDistance2d(trainingSpotCenter_, monster.position());
+  if (distance > kMonsterRange_) {
+    // Too far away
+    return false;
+  }
+  return true;
 }
 
 void Training::buildBuffList() {
@@ -284,13 +329,25 @@ std::optional<sro::scalar_types::ReferenceObjectId> Training::getNextBuffToCast(
   // Choose one that isnt on cooldown
   for (int i=0; i<copyOfBuffsToUse.size(); ++i) {
     const auto buff = copyOfBuffsToUse.at(i);
-    if (bot_.selfState().skillsOnCooldown.find(buff) == bot_.selfState().skillsOnCooldown.end()) {
-      // Buff isnt on cooldown, use it
+    if (canCastSkill(buff)) {
       return buff;
     }
   }
   // All buffs are still on cooldown, none to cast
   return {};
+}
+
+bool Training::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
+  if (bot_.selfState().skillsOnCooldown.find(skillRefId) != bot_.selfState().skillsOnCooldown.end()) {
+    // Skill is on cooldown
+    return false;
+  }
+  if (bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown) {
+    // Stunned from KB or KD, cannot use this skill
+    // TODO: Maybe there are some skills which can be used while knocked down
+    return false;
+  }
+  return true;
 }
 
 std::optional<uint8_t> Training::getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &skillData) const {
@@ -347,7 +404,76 @@ std::pair<const entity::Monster*, sro::scalar_types::ReferenceObjectId> Training
   if (attackSkills.empty()) {
     throw std::runtime_error("attackSkills empty");
   }
-  return {monsters.front(), attackSkills.front()};
+  struct RarityAndAttacking {
+    // RarityAndAttacking(sro::entity::MonsterRarity r, bool a) : rarity(r), isAttacking(a) {}
+    sro::entity::MonsterRarity rarity;
+    bool isAttacking;
+  };
+
+  // Lower number is higher priority
+  auto getPriority = [this](const entity::Monster *monster) {
+    // Earlier in the list is a higher priority
+    // 1. Prefer the smallest thing attacking us
+    // 2. Prefer the largest thing if nothing attacking us
+    static const std::vector<RarityAndAttacking> monsterPriorities {
+      {sro::entity::MonsterRarity::kGeneral, true},
+      {sro::entity::MonsterRarity::kChampion, true},
+      {sro::entity::MonsterRarity::kElite, true},
+      {sro::entity::MonsterRarity::kGeneralParty, true},
+      {sro::entity::MonsterRarity::kGiant, true},
+      {sro::entity::MonsterRarity::kTitan, true},
+      {sro::entity::MonsterRarity::kEliteStrong, true},
+      {sro::entity::MonsterRarity::kChampionParty, true},
+      {sro::entity::MonsterRarity::kGiantParty, true},
+      {sro::entity::MonsterRarity::kTitanParty, true},
+      {sro::entity::MonsterRarity::kEliteParty, true},
+      {sro::entity::MonsterRarity::kUnique, true},
+      {sro::entity::MonsterRarity::kUnique2, true},
+      {sro::entity::MonsterRarity::kUniqueParty, true},
+      {sro::entity::MonsterRarity::kUnique2Party, true},
+
+      {sro::entity::MonsterRarity::kUnique2Party, false},
+      {sro::entity::MonsterRarity::kUniqueParty, false},
+      {sro::entity::MonsterRarity::kUnique2, false},
+      {sro::entity::MonsterRarity::kUnique, false},
+      {sro::entity::MonsterRarity::kGiantParty, false},
+      {sro::entity::MonsterRarity::kEliteParty, false},
+      {sro::entity::MonsterRarity::kTitanParty, false},
+      {sro::entity::MonsterRarity::kChampionParty, false},
+      {sro::entity::MonsterRarity::kGeneralParty, false},
+      {sro::entity::MonsterRarity::kEliteStrong, false},
+      {sro::entity::MonsterRarity::kElite, false},
+      {sro::entity::MonsterRarity::kTitan, false},
+      {sro::entity::MonsterRarity::kGiant, false},
+      {sro::entity::MonsterRarity::kChampion, false},
+      {sro::entity::MonsterRarity::kGeneral, false},
+    };
+    bool isAttackingUs = (monster->targetGlobalId && *monster->targetGlobalId == bot_.selfState().globalId);
+    int index=0;
+    for (const auto &i : monsterPriorities) {
+      if (i.rarity == monster->rarity && i.isAttacking == isAttackingUs) {
+        return index;
+      }
+      ++index;
+    }
+    LOG() << "Dont know prioritiy of this monster!" << std::endl;
+    return 100;
+  };
+
+  // Choose the highest priority monster (lowest priority value, tiebreak with which is closer)
+  const auto currentPosition = bot_.selfState().position();
+  auto min_it = std::min_element(monsters.begin(), monsters.end(), [&currentPosition, &getPriority](const entity::Monster *lhs, const entity::Monster *rhs) {
+    const auto lhsPriority = getPriority(lhs);
+    const auto rhsPriority = getPriority(rhs);
+    if (lhsPriority == rhsPriority) {
+      // If same priority, closer is better
+      return sro::position_math::calculateDistance2d(currentPosition, lhs->position()) < sro::position_math::calculateDistance2d(currentPosition, rhs->position());
+    } else {
+      return lhsPriority < rhsPriority;
+    }
+  });
+  // Choose the first attack
+  return {*min_it, attackSkills.front()};
 }
 
 } // namespace state::machine

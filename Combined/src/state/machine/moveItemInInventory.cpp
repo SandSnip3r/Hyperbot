@@ -11,7 +11,6 @@ namespace state::machine {
 
 MoveItemInInventory::MoveItemInInventory(Bot &bot, uint8_t srcSlot, uint8_t destSlot) : StateMachine(bot), srcSlot_(srcSlot), destSlot_(destSlot) {
   stateMachineCreated(kName);
-  LOG() << "Constructed a move item state machine" << std::endl;
   // Prevent the human from moving anything
   pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
 }
@@ -21,11 +20,9 @@ MoveItemInInventory::~MoveItemInInventory() {
 }
 
 void MoveItemInInventory::onUpdate(const event::Event *event) {
-  LOG() << "OnUpdate" << std::endl;
   if (event != nullptr) {
     if (const auto *inventoryUpdatedEvent = reinterpret_cast<const event::InventoryUpdated*>(event)) {
       if (inventoryUpdatedEvent->srcSlotNum && *inventoryUpdatedEvent->srcSlotNum == srcSlot_) {
-        LOG() << "Got inventory update event for our item" << std::endl;
         // The target item moved
         waitingForItemToMove_ = false;
         if (!inventoryUpdatedEvent->destSlotNum) {
@@ -33,7 +30,6 @@ void MoveItemInInventory::onUpdate(const event::Event *event) {
         }
         if (*inventoryUpdatedEvent->destSlotNum == destSlot_) {
           // Item was successfully moved
-          LOG() << "Item was successfully moved" << std::endl;
           done_ = true;
           return;
         } else {
@@ -51,7 +47,6 @@ void MoveItemInInventory::onUpdate(const event::Event *event) {
     return;
   }
 
-  LOG() << "Need to move item, injecting packet" << std::endl;
   const auto moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::withinInventoryPacket(srcSlot_, destSlot_, 1); // TODO: Figure out quantity, for now, we assume it's an equipment
   bot_.packetBroker().injectPacket(moveItemPacket, PacketContainer::Direction::kClientToServer);
   waitingForItemToMove_ = true;

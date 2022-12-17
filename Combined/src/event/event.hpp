@@ -31,7 +31,6 @@ enum class EventCode {
   kStorageUpdated,
   kGuildStorageUpdated,
   kSkillCastAboutToEnd,
-  kKnockbackStatusEnded,
   kItemWaitForReuseDelay,
   kInjectPacket,
   kStartTraining,
@@ -78,6 +77,13 @@ enum class EventCode {
   kEntityExitedGeometry,
   kTrainingAreaSet,
   kTrainingAreaReset,
+
+  kKnockedBack,
+  kKnockedDown,
+  kKnockbackStunEnded,
+  kKnockdownStunEnded,
+
+  kMovementRequestTimedOut,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -241,16 +247,26 @@ public:
 
 struct SkillBegan : public Event {
 public:
-  SkillBegan(sro::scalar_types::EntityGlobalId id);
+  SkillBegan(sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId);
   const sro::scalar_types::EntityGlobalId casterGlobalId;
+  const sro::scalar_types::ReferenceObjectId skillRefId;
   virtual ~SkillBegan() = default;
 };
 
 struct SkillEnded : public Event {
 public:
-  SkillEnded(sro::scalar_types::EntityGlobalId id);
+  SkillEnded(sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId);
   const sro::scalar_types::EntityGlobalId casterGlobalId;
+  const sro::scalar_types::ReferenceObjectId skillRefId;
   virtual ~SkillEnded() = default;
+};
+
+struct OurSkillFailed : public Event {
+public:
+  OurSkillFailed(sro::scalar_types::ReferenceObjectId id, uint16_t err);
+  const sro::scalar_types::ReferenceObjectId skillRefId;
+  const uint16_t errorCode;
+  virtual ~OurSkillFailed() = default;
 };
 
 struct EntityHpChanged : public Event {

@@ -115,6 +115,11 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kEntityOwnershipRemoved, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStateMachineCreated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStateMachineDestroyed, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kKnockedBack, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kKnockedDown, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kKnockbackStunEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kKnockdownStunEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kMovementRequestTimedOut, eventHandleFunction);
 
   // Skills
   eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
@@ -370,6 +375,31 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kStateMachineDestroyed:
         {
           userInterface_.broadcastStateMachineDestroyed();
+          break;
+        }
+      case event::EventCode::kKnockedBack:
+        {
+          onUpdate(event);
+          break;
+        }
+      case event::EventCode::kKnockedDown:
+        {
+          onUpdate(event);
+          break;
+        }
+      case event::EventCode::kKnockbackStunEnded:
+        {
+          handleKnockbackStunEnded();
+          break;
+        }
+      case event::EventCode::kKnockdownStunEnded:
+        {
+          handleKnockdownStunEnded();
+          break;
+        }
+      case event::EventCode::kMovementRequestTimedOut:
+        {
+          onUpdate(event);
           break;
         }
 
@@ -679,7 +709,7 @@ void Bot::handleCosSpawned(const event::CosSpawned &event) {
 }
 
 void Bot::handlePotionCooldownEnded(const event::EventCode eventCode) {
-  LOG() << "Potion cooldown ended" << std::endl;
+  // TODO: Move to a generic item cooldown map
   if (eventCode == event::EventCode::kHpPotionCooldownEnded) {
     worldState_.selfState().resetHpPotionEventId();
   } else if (eventCode == event::EventCode::kMpPotionCooldownEnded) {
@@ -724,22 +754,23 @@ void Bot::handleStatesChanged() {
 
 void Bot::handleSkillBegan(const event::SkillBegan &event) {
   if (event.casterGlobalId == worldState_.selfState().globalId) {
-    LOG() << "Our skill began" << std::endl;
+    const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
+    LOG() << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" began" << std::endl;
     onUpdate(&event);
   }
 }
 
 void Bot::handleSkillEnded(const event::SkillEnded &event) {
   if (event.casterGlobalId == worldState_.selfState().globalId) {
-    LOG() << "Our skill ended" << std::endl;
+    const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
+    LOG() << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" ended" << std::endl;
     onUpdate(&event);
   }
 }
 
 void Bot::handleSkillCooldownEnded(const event::SkillCooldownEnded &event) {
-  const auto &skillData = gameData_.skillData().getSkillById(event.skillRefId);
-  const auto *skillName = gameData_.textItemAndSkillData().tryGetSkillName(skillData.uiSkillName);
-  LOG() << "Skill " << event.skillRefId << "(" << (skillName != nullptr ? *skillName : "UNKNOWN") << ") cooldown ended" << std::endl;
+  const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
+  LOG() << "Skill " << event.skillRefId << "(" << (skillName ? *skillName : "UNKNOWN") << ") cooldown ended" << std::endl;
   worldState_.selfState().skillsOnCooldown.erase(event.skillRefId);
   onUpdate();
 }
@@ -871,7 +902,6 @@ void Bot::entityDespawned(const event::EntityDespawned &event) {
 void Bot::entityLifeStateChanged(const event::EntityLifeStateChanged &event) {
   entity::Character &characterEntity = worldState_.getEntity<entity::Character>(event.globalId);
   userInterface_.broadcastEntityLifeStateChanged(characterEntity.globalId, characterEntity.lifeState);
-  LOG() << "Entity life state changed, calling onUpdate" << std::endl;
   onUpdate();
 }
 
@@ -879,5 +909,15 @@ void Bot::itemUseTimedOut(const event::ItemUseTimeout &event) {
   // TODO: Refactor this whole itemUsedTimeout concept
   worldState_.selfState().itemUsedTimeoutTimer.reset();
   worldState_.selfState().removedItemFromUsedItemQueue(event.slotNum, event.typeData);
+  onUpdate();
+}
+
+void Bot::handleKnockbackStunEnded() {
+  selfState().stunnedFromKnockback = false;
+  onUpdate();
+}
+
+void Bot::handleKnockdownStunEnded() {
+  selfState().stunnedFromKnockdown = false;
   onUpdate();
 }

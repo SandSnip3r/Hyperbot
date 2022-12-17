@@ -255,7 +255,12 @@ public:
   };
   std::map<uint32_t, SkillInfo> skillCastIdMap;
   std::vector<packet::structures::ActionCommand> pendingCommandQueue;
-  std::vector<packet::structures::ActionCommand> acceptedCommandQueue;
+  struct AcceptedCommandAndWasExecuted {
+    AcceptedCommandAndWasExecuted(const packet::structures::ActionCommand &cmd) : command(cmd) {}
+    packet::structures::ActionCommand command;
+    bool wasExecuted{false};
+  };
+  std::vector<AcceptedCommandAndWasExecuted> acceptedCommandQueue;
   std::set<sro::scalar_types::ReferenceObjectId> skillsOnCooldown;
   std::set<sro::scalar_types::ReferenceObjectId> buffs;
   void addBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker);
@@ -267,6 +272,8 @@ public:
   double estimatedVisibilityRange{842.574};
   // TODO: Refactor this whole itemUsedTimeout concept
   std::optional<broker::TimerManager::TimerId> itemUsedTimeoutTimer;
+  bool stunnedFromKnockdown{false};
+  bool stunnedFromKnockback{false};
   // ################################################################################
 
 private:

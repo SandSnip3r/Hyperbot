@@ -136,6 +136,7 @@ class Monster : public NonplayerCharacter {
 public:
   uint32_t getMaxHp(const pk2::CharacterData &characterData) const;
   sro::entity::MonsterRarity rarity;
+  std::optional<sro::scalar_types::EntityGlobalId> targetGlobalId;
 };
 
 class Item : public Entity {

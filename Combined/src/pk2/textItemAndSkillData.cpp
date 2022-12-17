@@ -51,20 +51,20 @@ const std::string& TextItemAndSkillData::getSkillName(const std::string &uiSkill
   return it->second;
 }
 
-const std::string* TextItemAndSkillData::tryGetItemName(const std::string &nameStrId128) const {
+std::optional<std::string> TextItemAndSkillData::getItemNameIfExists(const std::string &nameStrId128) const {
   const auto it = itemNames_.find(nameStrId128);
   if (it == itemNames_.end()) {
-    return nullptr;
+    return std::nullopt;
   }
-  return &(it->second);
+  return it->second;
 }
 
-const std::string* TextItemAndSkillData::tryGetSkillName(const std::string &uiSkillName) const {
+std::optional<std::string> TextItemAndSkillData::getSkillNameIfExists(const std::string &uiSkillName) const {
   const auto it = skillNames_.find(uiSkillName);
   if (it == skillNames_.end()) {
-    return nullptr;
+    return std::nullopt;
   }
-  return &(it->second);
+  return it->second;
 }
 
 } // namespace pk2

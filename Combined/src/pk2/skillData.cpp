@@ -37,6 +37,8 @@ const SkillData::SkillMap::size_type SkillData::size() const {
 }
 
 sro::scalar_types::ReferenceObjectId SkillData::getRootSkillRefId(sro::scalar_types::ReferenceObjectId id) const {
+  // basicChainCode tells us which skill in a chain comes next, there is no equivalent for going backwards. We need to search over all skills to find if another skill references this one as the next skill in the chain.
+  // TODO: (Optimization) Precompute the reverse chain codes
   // Try to find a skill which has this skill's id as its basic chain code
   bool foundRoot{false};
   while (!foundRoot) {

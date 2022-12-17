@@ -101,6 +101,8 @@ private:
   void entityDespawned(const event::EntityDespawned &event);
   void entityLifeStateChanged(const event::EntityLifeStateChanged &event);
   void itemUseTimedOut(const event::ItemUseTimeout &event);
+  void handleKnockbackStunEnded();
+  void handleKnockdownStunEnded();
 
 };
 

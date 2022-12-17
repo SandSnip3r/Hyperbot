@@ -39,6 +39,8 @@ public:
   const TextZoneNameData& textZoneNameData() const;
   const TeleportData& teleportData() const;
   const navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
+
+  std::optional<std::string> getSkillNameIfExists(sro::scalar_types::ReferenceObjectId skillRefId) const;
 private:
   std::mutex printMutex_;
   const std::filesystem::path kSilkroadPath_;

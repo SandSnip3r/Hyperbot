@@ -100,6 +100,11 @@ const navmesh::triangulation::NavmeshTriangulation& GameData::navmeshTriangulati
   return navmeshTriangulation_.value();
 }
 
+std::optional<std::string> GameData::getSkillNameIfExists(sro::scalar_types::ReferenceObjectId skillRefId) const {
+  const auto skill = skillData_.getSkillById(skillRefId);
+  return textItemAndSkillData_.getSkillNameIfExists(skill.uiSkillName);
+}
+
 void GameData::parseDivisionInfo(Pk2ReaderModern &pk2Reader) {
   const std::string kDivisionInfoEntryName = "DIVISIONINFO.TXT";
   PK2Entry divisionInfoEntry = pk2Reader.getEntry(kDivisionInfoEntryName);

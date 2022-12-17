@@ -31,6 +31,7 @@ broadcast::EntityType getBroadcastEntityType(const entity::Entity *entity) {
       case sro::entity::MonsterRarity::kGiant:
         return broadcast::EntityType::kMonsterGiant;
       case sro::entity::MonsterRarity::kUnique:
+      case sro::entity::MonsterRarity::kUnique2:
         return broadcast::EntityType::kMonsterUnique;
       case sro::entity::MonsterRarity::kElite:
         return broadcast::EntityType::kMonsterElite;
@@ -42,13 +43,12 @@ broadcast::EntityType getBroadcastEntityType(const entity::Entity *entity) {
         return broadcast::EntityType::kMonsterPartyGiant;
       case sro::entity::MonsterRarity::kTitan:
       case sro::entity::MonsterRarity::kEliteStrong:
-      case sro::entity::MonsterRarity::kUnique2:
       case sro::entity::MonsterRarity::kUniqueParty:
       case sro::entity::MonsterRarity::kTitanParty:
       case sro::entity::MonsterRarity::kEliteParty:
       case sro::entity::MonsterRarity::kUnique2Party:
       default:
-        LOG() << "Sending unhandled monster rarity to UI as \"general\"" << std::endl;
+        LOG() << "Sending unhandled monster rarity (" << entityAsMonster->rarity << ") to UI as \"general\"" << std::endl;
         return broadcast::EntityType::kMonsterGeneral;
         break;
     }

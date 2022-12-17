@@ -42,9 +42,11 @@ EntityEnteredGeometry::EntityEnteredGeometry(sro::scalar_types::EntityGlobalId i
 
 EntityExitedGeometry::EntityExitedGeometry(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityExitedGeometry), globalId(id) {}
 
-SkillBegan::SkillBegan(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kSkillBegan), casterGlobalId(id) {}
+SkillBegan::SkillBegan(sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId) : Event(EventCode::kSkillBegan), casterGlobalId(casterId), skillRefId(skillId) {}
 
-SkillEnded::SkillEnded(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kSkillEnded), casterGlobalId(id) {}
+SkillEnded::SkillEnded(sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId) : Event(EventCode::kSkillEnded), casterGlobalId(casterId), skillRefId(skillId) {}
+
+OurSkillFailed::OurSkillFailed(sro::scalar_types::ReferenceObjectId id, uint16_t err) : Event(EventCode::kOurSkillFailed), skillRefId(id), errorCode(err) {}
 
 EntityHpChanged::EntityHpChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityHpChanged), globalId(id) {}
 

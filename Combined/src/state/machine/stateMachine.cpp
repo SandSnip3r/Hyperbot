@@ -28,6 +28,10 @@ void StateMachine::stateMachineDestroyed() {
   bot_.eventBroker().publishEvent(std::make_unique<event::Event>(event::EventCode::kStateMachineDestroyed));
 }
 
+bool StateMachine::canMove() const {
+  return !(bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown);
+}
+
 std::ostream& operator<<(std::ostream &stream, Npc npc) {
   switch (npc) {
     case Npc::kStorage:

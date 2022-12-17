@@ -2,9 +2,11 @@
 #define STATE_MACHINE_WALKING_HPP_
 
 #include "stateMachine.hpp"
+#include "broker/eventBroker.hpp"
 
 #include <silkroad_lib/position.h>
 
+#include <optional>
 #include <vector>
 
 namespace state::machine {
@@ -19,7 +21,7 @@ private:
   static inline std::string kName{"Walking"};
   std::vector<sro::Position> waypoints_;
   size_t currentWaypointIndex_{0};
-  bool requestedMovement_{false};
+  std::optional<broker::EventBroker::DelayedEventId> movementRequestTimeoutEventId_;
   std::vector<sro::Position> calculatePathToDestination(const sro::Position &destinationPosition) const;
 };
 

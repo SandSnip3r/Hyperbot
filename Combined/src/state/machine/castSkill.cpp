@@ -49,21 +49,16 @@ CastSkill::~CastSkill() {
 }
 
 void CastSkill::onUpdate(const event::Event *event) {
-  LOG() << "Castskill on update" << std::endl;
-TODO_REMOVE_THIS_LABEL:
   if (childState_) {
-    LOG() << "Descending into child on update" << std::endl;
     // Have a child state, it takes priority
     childState_->onUpdate(event);
     if (childState_->done()) {
-      LOG() << "Child state is done" << std::endl;
       childState_.reset();
     } else {
       // Dont execute anything else in this function until the child state is done
       return;
     }
   }
-  LOG() << "No child state" << std::endl;
 
   if (event) {
     if (waitingForSkillToCast_ || waitingForSkillToEnd_) {
@@ -71,19 +66,70 @@ TODO_REMOVE_THIS_LABEL:
       if (const auto *skillBeganEvent = dynamic_cast<const event::SkillBegan*>(event)) {
         if (skillBeganEvent->casterGlobalId == bot_.selfState().globalId) {
           // We cast this skill
-          // TODO: Check that this is the skill that we tried to cast
+          const auto rootSkillId = bot_.gameData().skillData().getRootSkillRefId(skillBeganEvent->skillRefId);
+          if (rootSkillId != skillRefId_) {
+            LOG() << "This isnt the skill we thought we were casting!!!" << std::endl;
+            // TODO: How should we actually handle this error?
+            // Note: This happens if our skill was queued too slowly and a common attack slipped between the cracks
+            //  Lets just skip this
+            return;
+          }
           //  Should this data be stored inside "selfState"? "CurrentlyCastingSkill"? What about "instant" skills?
           //    Probably not, I think it should be in the event
           waitingForSkillToCast_ = false;
           waitingForSkillToEnd_ = true;
         }
       } else if (const auto *skillEndedEvent = dynamic_cast<const event::SkillEnded*>(event)) {
-        if (skillEndedEvent->casterGlobalId == bot_.selfState().globalId) {
+        if (skillEndedEvent->casterGlobalId == bot_.selfState().globalId && waitingForSkillToEnd_) {
           // We cast this skill
-          // TODO: Check that this is the skill that we cast
-          waitingForSkillToEnd_ = false; // Do we need to set this if we're "done"?
-          done_ = true;
-          return;
+          const auto rootSkillId = bot_.gameData().skillData().getRootSkillRefId(skillEndedEvent->skillRefId);
+          if (rootSkillId != skillRefId_) {
+            LOG() << "This isnt the skill we thought we were casting!!! Thought we were casting " << skillRefId_ << " but this skill is " << skillEndedEvent->skillRefId << ", with root skill id " << rootSkillId << std::endl;
+            // TODO: How should we actually handle this error?
+            //  Probably ignore?
+            return;
+          }
+          // This "skill" ended, but maybe it is only one piece of a chain. Figure out if more are coming
+          LOG() << "End! " << skillEndedEvent->skillRefId << std::endl;
+          bool wasLastPieceOfSkill{false};
+          const auto &thisSkillData = bot_.gameData().skillData().getSkillById(skillEndedEvent->skillRefId);
+          const bool isFinalPieceOfChain = (thisSkillData.basicChainCode == 0);
+          if (isFinalPieceOfChain) {
+            // There couldn't possibly be another piece
+            LOG() << "Final piece of chain" << std::endl;
+            wasLastPieceOfSkill = true;
+          } else {
+            LOG() << "Not final piece of chain " << thisSkillData.basicChainCode << std::endl;
+            // This isn't the last piece of the chain, but maybe this piece did enough damage to kill the target
+            // In this case, no other skill begin/ends will come
+            // TODO: This block makes an assumption that this is an attack on another entity
+            if (targetGlobalId_) {
+              if (*targetGlobalId_ == bot_.selfState().globalId) {
+                LOG() << "This skill is cast by us, on us" << std::endl;
+              }
+              if (const auto *characterEntity = dynamic_cast<const entity::Character*>(bot_.entityTracker().getEntity(*targetGlobalId_))) {
+                if (characterEntity->knowCurrentHp()) {
+                  if (characterEntity->currentHp() == 0) {
+                    // Entity is dead
+                    LOG() << "Entity is dead" << std::endl;
+                    wasLastPieceOfSkill = true;
+                  } else {
+                    LOG() << "Entity has more HP" << std::endl;
+                  }
+                } else {
+                  LOG() << "Dont know entity's HP" << std::endl;
+                }
+              }
+            }
+          }
+          if (wasLastPieceOfSkill) {
+            LOG() << "Is last piece of skill" << std::endl;
+            waitingForSkillToEnd_ = false; // Do we need to set this if we're "done"?
+            done_ = true;
+            return;
+          } else {
+            LOG() << "This isnt the last piece of the skill; waiting" << std::endl;
+          }
           // Note: There is a chance that this skill killed the target, but we dont know that it's dead yet
           //  We will try to cast a skill on it, but it will fail
         }
@@ -92,61 +138,70 @@ TODO_REMOVE_THIS_LABEL:
           if (commandError->command.actionType == packet::enums::ActionType::kCast) {
             if (commandError->command.refSkillId == skillRefId_) {
               LOG() << "Our command to cast this skill failed" << std::endl;
-              waitingForSkillToCast_ = false;
-              if (waitingForSkillToEnd_) {
-                throw std::runtime_error("Waiting for skill to cast, command failed, but we were waiting for the skill to end (which means it must have started)");
-              }
-              ++failCount_;
-              if (failCount_ == kMaxFails_) {
-                LOG() << "Reached max failure count, not going to try again!" << std::endl;
+              if (expectingSkillCommandFailure_) {
+                LOG() << "Expecting this; not acting on it" << std::endl;
+                expectingSkillCommandFailure_ = false;
+              } else {
+                waitingForSkillToCast_ = false;
+                if (waitingForSkillToEnd_) {
+                  throw std::runtime_error("Waiting for skill to cast, command failed, but we were waiting for the skill to end (which means it must have started)");
+                }
               }
             }
           }
         }
-      } else if (event->eventCode == event::EventCode::kOurSkillFailed) {
-        LOG() << "Our skill failed to cast" << std::endl;
+      } else if (const auto *skillFailedEvent = dynamic_cast<const event::OurSkillFailed*>(event)) {
+        if (skillFailedEvent->skillRefId != skillRefId_) {
+          LOG() << "Received skill failed event for a skill we're not trying to cast (" << skillFailedEvent->skillRefId << ')' << std::endl;
+        } else {
+          LOG() << "Our skill (" << skillFailedEvent->skillRefId << "," << bot_.gameData().textItemAndSkillData().getSkillName(bot_.gameData().skillData().getSkillById(skillFailedEvent->skillRefId).uiSkillName) << ") failed to cast" << std::endl;
+          expectingSkillCommandFailure_ = true;
+          waitingForSkillToCast_ = false;
+          if (waitingForSkillToEnd_) {
+            LOG() << "Weird, skill started, but failed?" << std::endl;
+            waitingForSkillToEnd_ = false;
+          }
+        }
+      } else if (event->eventCode == event::EventCode::kKnockedBack || event->eventCode == event::EventCode::kKnockedDown) {
+        // We've been completely interruped, yield
+        LOG() << "We've been knocked back while trying to cast a skill. Aborting state" << std::endl;
+        done_ = true;
+        return;
+        // TODO: I think instead it makes sense to return a status, which says something like "Interrupted", then the parent can choose to destroy us
+        // We were waiting for a skill to cast or finish, this cancelled our skill
         waitingForSkillToCast_ = false;
-        if (waitingForSkillToEnd_) {
-          LOG() << "Weird, skill started, but failed?" << std::endl;
-          waitingForSkillToEnd_ = false;
-        }
-        ++failCount_;
-        if (failCount_ == kMaxFails_) {
-          LOG() << "Reached max failure count, not going to try again!" << std::endl;
-        }
+        waitingForSkillToEnd_ = false;
       }
     }
   }
 
+  if (bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown) {
+    // Cannot cast a skill right now
+    return;
+  }
+
   if (weaponSlot_) {
     // Need to move weapon, create child state to do so
-    LOG() << "make_unique<MoveItemInInventory" << std::endl;
     childState_ = std::make_unique<MoveItemInInventory>(bot_, *weaponSlot_, kWeaponInventorySlot_);
-    LOG() << "Created" << std::endl;
     // We assume that the child state will complete successfully, so we will reset the weaponSlot_ here
     weaponSlot_.reset();
-    goto TODO_REMOVE_THIS_LABEL;
+    onUpdate(event);
+    return;
   }
 
   if (shieldSlot_) {
     // Need to move shield, create child state to do so
-    LOG() << "make_unique<MoveItemInInventory" << std::endl;
     childState_ = std::make_unique<MoveItemInInventory>(bot_, *shieldSlot_, kShieldInventorySlot_);
-    LOG() << "Created" << std::endl;
     // We assume that the child state will complete successfully, so we will reset the shieldSlot_ here
     shieldSlot_.reset();
-    goto TODO_REMOVE_THIS_LABEL;
+    onUpdate(event);
+    return;
   }
 
   // At this point, the required equipment is equipped
   if (waitingForSkillToCast_ || waitingForSkillToEnd_) {
+    // Still waiting on skill
     return;
-  }
-
-  if (failCount_ >= kMaxFails_) {
-    // Failed too many times, not going to try again
-    // return; // For now, infinite retry is ok
-    // TODO: Fix. The fact that it fails is a problem, ideally, we don't want to get here
   }
 
   // Cast skill

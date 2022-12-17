@@ -12,9 +12,9 @@ Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
   // Build a shopping list
   // TODO: This should be based on a botting config
   shoppingList_ = {
-    { 8, 50 }, //ITEM_ETC_HP_POTION_05 (XL hp potion)
+    { 8, 400 }, //ITEM_ETC_HP_POTION_05 (XL hp potion)
     { 15, 200 }, //ITEM_ETC_MP_POTION_05 (XL mp potion)
-    { 59, 100 }, //ITEM_ETC_CURE_ALL_05 (M special universal pill)
+    { 59, 50 }, //ITEM_ETC_CURE_ALL_05 (M special universal pill)
     { 10377, 50 }, //ITEM_ETC_CURE_RANDOM_04 (XL purification pill)
     // { 2198, 50 }, //ITEM_ETC_SCROLL_RETURN_02 (Special Return Scroll)
     // { 62, 1000 }, //ITEM_ETC_AMMO_ARROW_01 (Arrow)
@@ -39,7 +39,6 @@ Townlooping::~Townlooping() {
 }
 
 void Townlooping::onUpdate(const event::Event *event) {
-TODO_REMOVE_THIS_LABEL:
   if (done()) {
     return;
   }
@@ -56,7 +55,8 @@ TODO_REMOVE_THIS_LABEL:
         childState_ = std::make_unique<TalkingToShopNpc>(bot_, npcsToVisit_[currentNpcIndex_], shoppingList_);
       }
       // TODO: Go back to the top of this function
-      goto TODO_REMOVE_THIS_LABEL;
+      onUpdate(event);
+      return;
     }
   } else {
     if (!childState_) {
@@ -77,7 +77,8 @@ TODO_REMOVE_THIS_LABEL:
       childState_.reset();
       childState_ = std::make_unique<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
       // TODO: Go back to the top of this function
-      goto TODO_REMOVE_THIS_LABEL;
+      onUpdate(event);
+      return;
     }
   }
 }

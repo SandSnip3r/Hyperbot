@@ -10,7 +10,8 @@ namespace flags {
 template<typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
 bool isSet(const T &bitmask, const T &flag) {
   using Type = std::underlying_type_t<T>;
-  return static_cast<Type>(bitmask) & static_cast<Type>(flag);
+  const auto flagAsType = static_cast<Type>(flag);
+  return (static_cast<Type>(bitmask) & flagAsType) == flagAsType;
 }
 
 }

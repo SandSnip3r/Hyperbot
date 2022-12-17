@@ -27,6 +27,8 @@ protected:
   void pushBlockedOpcode(packet::Opcode opcode);
   void stateMachineCreated(const std::string &name);
   void stateMachineDestroyed();
+
+  bool canMove() const;
 private:
   std::vector<packet::Opcode> blockedOpcodes_;
 };

@@ -41,11 +41,10 @@ private:
   std::optional<uint8_t> weaponSlot_;
   std::optional<uint8_t> shieldSlot_;
   std::unique_ptr<StateMachine> childState_;
+  bool expectingSkillCommandFailure_{false};
   bool waitingForSkillToCast_{false};
   bool waitingForSkillToEnd_{false};
   bool done_{false};
-  static constexpr int kMaxFails_{5};
-  int failCount_{0};
 };
 
 } // namespace state::machine

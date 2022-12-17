@@ -121,6 +121,7 @@ private:
   void serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const;
   void serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const;
   void handleSkillAction(const packet::structures::SkillAction &action, std::optional<sro::scalar_types::EntityGlobalId> globalId = std::nullopt) const;
+  void handleKnockedBackOrKnockedDown() const;
   void serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const;
   void serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const;
 };
