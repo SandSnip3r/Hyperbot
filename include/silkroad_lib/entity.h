@@ -6,22 +6,23 @@
 namespace sro::entity {
 
 enum class MonsterRarity : uint8_t {
-  kGeneral = 0,
-  kChampion = 1,
-  kUnique = 3,
-  kGiant = 4,
-  kTitan = 5,
-  kElite = 6,
-  kEliteStrong = 7,
-  kUnique2 = 8,
-  kPartyFlag = 16,
-  kGeneralParty = 16,
-  kChampionParty = 17,
-  kUniqueParty = 19,
-  kGiantParty = 20,
-  kTitanParty = 21,
-  kEliteParty = 22,
-  kUnique2Party = 24
+  kGeneral          = 0,
+  kChampion         = 1,
+  kUnique           = 3,
+  kGiant            = 4,
+  kTitan            = 5,
+  kElite            = 6,
+  kEliteStrong      = 7,
+  kUnique2          = 8,
+  kPartyFlag        = 16,
+  kGeneralParty     = kPartyFlag | kGeneral,
+  kChampionParty    = kPartyFlag | kChampion,
+  kUniqueParty      = kPartyFlag | kUnique,
+  kGiantParty       = kPartyFlag | kGiant,
+  kTitanParty       = kPartyFlag | kTitan,
+  kEliteParty       = kPartyFlag | kElite,
+  kEliteStrongParty = kPartyFlag | kEliteStrong,
+  kUnique2Party     = kPartyFlag | kUnique2
 };
 
 enum class ItemRarity : uint8_t {
