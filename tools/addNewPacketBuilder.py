@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 
 def strToMacroCase(str):
@@ -9,7 +10,7 @@ def strToMacroCase(str):
   return result.upper()
 
 if len(sys.argv) < 2:
-  print("Usage: {} <Pascal Case Class Name>".format(sys.argv[0]))
+  print("Usage: {} <PascalCaseClassName>".format(sys.argv[0]))
   exit(0)
 
 pascalCaseClassName = sys.argv[1]
