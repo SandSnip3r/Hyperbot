@@ -151,20 +151,27 @@ uint64_t percentToVal(double percent) {
 class Item {
 public:
   Item(int degree);
+  uint8_t getPlus() const;
   uint64_t getVariance() const;
   const std::vector<uint64_t>& getMagicOptions() const;
   string getUpdateQuery() const;
   void addBlue(MagOpt opt, uint64_t value);
   virtual ~Item() {}
 protected:
+  void setPlus(int plus);
   void addWhite(uint8_t index, double targetPercent);
 private:
   const int degree_;
+  uint8_t plus_{0};
   uint64_t variance_{0};
   std::vector<uint64_t> magicOptions_;
 };
 
 Item::Item(int degree) : degree_(degree) {}
+
+uint8_t Item::getPlus() const {
+  return plus_;
+}
 
 uint64_t Item::getVariance() const {
   return variance_;
@@ -180,12 +187,17 @@ void printMagicOptionsAsQuery(const std::vector<uint64_t> &magicOptions) {
 
 string Item::getUpdateQuery() const {
   stringstream ss;
-  ss << "Variance=" << to_string(variance_);
+  ss << "OptLevel=" << to_string(plus_);
+  ss << ", Variance=" << to_string(variance_);
   ss << ", MagParamNum=" << magicOptions_.size();
   for (int i=0; i<magicOptions_.size(); ++i) {
     ss << ", MagParam" << i+1 << "=" << magicOptions_.at(i);
   }
   return ss.str();
+}
+
+void Item::setPlus(int plus) {
+  plus_ = plus;
 }
 
 void Item::addBlue(MagOpt opt, uint64_t value) {
@@ -214,8 +226,9 @@ public:
   void addWhite(Stat stat, double percent) {
     Item::addWhite(static_cast<uint8_t>(stat), percent);
   }
-  static Weapon createFullBlue(double whitePercent, int degree) {
+  static Weapon createFullBlue(int plus, double whitePercent, int degree) {
     Weapon weapon(degree);
+    weapon.setPlus(plus);
     weapon.addWhite(Weapon::Stat::kDurability, whitePercent);
     weapon.addWhite(Weapon::Stat::kPhysicalReinforce, whitePercent);
     weapon.addWhite(Weapon::Stat::kMagicalReinforce, whitePercent);
@@ -246,8 +259,9 @@ public:
   void addWhite(Stat stat, double percent) {
     Item::addWhite(static_cast<uint8_t>(stat), percent);
   }
-  static Armor createFullBlue(double whitePercent, int degree, bool isCore) {
+  static Armor createFullBlue(int plus, double whitePercent, int degree, bool isCore) {
     Armor armor(degree);
+    armor.setPlus(plus);
     armor.addWhite(Armor::Stat::kDurability, whitePercent);
     armor.addWhite(Armor::Stat::kPhysicalReinforce, whitePercent);
     armor.addWhite(Armor::Stat::kMagicalReinforce, whitePercent);
@@ -280,8 +294,9 @@ public:
   void addWhite(Stat stat, double percent) {
     Item::addWhite(static_cast<uint8_t>(stat), percent);
   }
-  static Shield createFullBlue(double whitePercent, int degree) {
+  static Shield createFullBlue(int plus, double whitePercent, int degree) {
     Shield shield(degree);
+    shield.setPlus(plus);
     shield.addWhite(Shield::Stat::kDurability, whitePercent);
     shield.addWhite(Shield::Stat::kPhysicalReinforce, whitePercent);
     shield.addWhite(Shield::Stat::kMagicalReinforce, whitePercent);
@@ -306,8 +321,9 @@ public:
   void addWhite(Stat stat, double percent) {
     Item::addWhite(static_cast<uint8_t>(stat), percent);
   }
-  static Accessory createFullBlue(double whitePercent, int degree) {
+  static Accessory createFullBlue(int plus, double whitePercent, int degree) {
     Accessory accessory(degree);
+    accessory.setPlus(plus);
     accessory.addWhite(Accessory::Stat::kPhysicalAbsorption, whitePercent);
     accessory.addWhite(Accessory::Stat::kMagicalAbsorption, whitePercent);
     accessory.addBlue(MagOpt::kResistBurn, 20);
@@ -325,6 +341,9 @@ class SetBuilder {
 public:
   SetBuilder(int charId, int degree) : charId_(charId), degree_(degree) {}
   void setTargetStatPercent(double percent) { statPercent_ = percent; }
+  void setWeaponPlus(int plus) { weaponPlus_ = plus; }
+  void setShieldPlus(int plus) { shieldPlus_ = plus; }
+  void setSetPlus(int plus) { setPlus_ = plus; }
   void setWeaponSlots(const std::vector<int> &slots) { weaponSlots_ = slots; }
   void setArmorCoreSlots(const std::vector<int> &slots) { armorCoreSlots_ = slots; }
   void setArmorLimbSlots(const std::vector<int> &slots) { armorLimbSlots_ = slots; }
@@ -357,6 +376,9 @@ private:
   const int charId_;
   const int degree_;
   double statPercent_{0.0};
+  int weaponPlus_{0};
+  int shieldPlus_{0};
+  int setPlus_{0};
   std::vector<int> weaponSlots_;
   std::vector<int> armorCoreSlots_;
   std::vector<int> armorLimbSlots_;
@@ -368,42 +390,48 @@ void SetBuilder::build() const {
   // Assuming full blue
   if (!weaponSlots_.empty()) {
     cout << "-- weapon:" << endl;
-    auto weapon = Weapon::createFullBlue(statPercent_, degree_);
+    auto weapon = Weapon::createFullBlue(weaponPlus_, statPercent_, degree_);
     cout << getTypeQuery(&weapon, weaponSlots_) << endl;
   }
   if (!armorCoreSlots_.empty()) {
     cout << "-- armor core:" << endl;
-    auto armor = Armor::createFullBlue(statPercent_, degree_,true);
+    auto armor = Armor::createFullBlue(setPlus_, statPercent_, degree_, true);
     cout << getTypeQuery(&armor, armorCoreSlots_) << endl;
   }
   if (!armorLimbSlots_.empty()) {
     cout << "-- armor limb:" << endl;
-    auto armor = Armor::createFullBlue(statPercent_, degree_,false);
+    auto armor = Armor::createFullBlue(setPlus_, statPercent_, degree_, false);
     cout << getTypeQuery(&armor, armorLimbSlots_) << endl;
   }
   if (!shieldSlots_.empty()) {
     cout << "-- shield:" << endl;
-    auto shield = Shield::createFullBlue(statPercent_, degree_);
+    auto shield = Shield::createFullBlue(shieldPlus_, statPercent_, degree_);
     cout << getTypeQuery(&shield, shieldSlots_) << endl;
   }
   if (!accessorySlots_.empty()) {
     cout << "-- accessory:" << endl;
-    auto accessory = Accessory::createFullBlue(statPercent_, degree_);
+    auto accessory = Accessory::createFullBlue(setPlus_, statPercent_, degree_);
     cout << getTypeQuery(&accessory, accessorySlots_) << endl;
   }
 }
 
 int main() {
-  const double targetPercent = 100;
-  const int kCharId = 6725;
+  const double targetPercent = 81;
+  const int kWeaponPlus = 15;
+  const int kShieldPlus = 15;
+  const int kSetPlus = 12;
+  const int kCharId = 6728;
   const int kDegree{11};
   SetBuilder setBuilder(kCharId, kDegree);
   setBuilder.setTargetStatPercent(targetPercent);
-  setBuilder.setWeaponSlots({17});
-  setBuilder.setArmorCoreSlots({0,1,4});
-  setBuilder.setArmorLimbSlots({2,3,5});
-  setBuilder.setShieldSlots({22});
-  setBuilder.setAccessorySlots({9,10,11,12});
+  setBuilder.setWeaponPlus(kWeaponPlus);
+  setBuilder.setShieldPlus(kShieldPlus);
+  setBuilder.setSetPlus(kSetPlus);
+  setBuilder.setWeaponSlots({17,18,19});
+  setBuilder.setArmorCoreSlots({29,30,31});
+  setBuilder.setArmorLimbSlots({25,26,27});
+  setBuilder.setShieldSlots({24});
+  setBuilder.setAccessorySlots({20,21,22,23});
   setBuilder.build();
   return 0;
 }
