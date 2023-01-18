@@ -265,3 +265,4 @@ __pycache__/
 .vscode/
 
 tools/paramIdNumToName/main
+tools/whites-and-blues/main
