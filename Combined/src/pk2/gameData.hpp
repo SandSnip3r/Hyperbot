@@ -28,6 +28,7 @@ public:
   // Opens Media.PK2 and Data.PK2, parses game data into memory, then closes Media.pk2 and Data.PK2
   GameData(const std::filesystem::path &kSilkroadPath);
 
+  const uint16_t gatewayPort() const;
   const DivisionInfo& divisionInfo() const;
   const CharacterData& characterData() const;
   const ItemData& itemData() const;
@@ -44,6 +45,7 @@ public:
 private:
   std::mutex printMutex_;
   const std::filesystem::path kSilkroadPath_;
+  uint16_t gatewayPort_;
   DivisionInfo divisionInfo_;
   CharacterData characterData_;
   ItemData itemData_;
@@ -61,6 +63,7 @@ private:
   void parseNavmeshData(Pk2ReaderModern &pk2Reader);
 
   void parseMedia(Pk2ReaderModern &pk2Reader);
+  void parseGatewayPort(Pk2ReaderModern &pk2Reader);
   void parseDivisionInfo(Pk2ReaderModern &pk2Reader);
   void parseCharacterData(Pk2ReaderModern &pk2Reader);
   void parseItemData(Pk2ReaderModern &pk2Reader);

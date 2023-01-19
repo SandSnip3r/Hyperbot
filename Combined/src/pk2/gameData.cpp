@@ -39,6 +39,7 @@ void GameData::parseData(Pk2ReaderModern &pk2Reader) {
 
 void GameData::parseMedia(Pk2ReaderModern &pk2Reader) {
   std::vector<std::thread> thrs;
+  parseGatewayPort(pk2Reader);
   parseDivisionInfo(pk2Reader);
   parseShopData(pk2Reader);
   parseMagicOptionData(pk2Reader);
@@ -51,6 +52,10 @@ void GameData::parseMedia(Pk2ReaderModern &pk2Reader) {
   for (auto &thr : thrs) {
     thr.join();
   }
+}
+
+const uint16_t GameData::gatewayPort() const {
+  return gatewayPort_;
 }
 
 const DivisionInfo& GameData::divisionInfo() const {
@@ -103,6 +108,13 @@ const navmesh::triangulation::NavmeshTriangulation& GameData::navmeshTriangulati
 std::optional<std::string> GameData::getSkillNameIfExists(sro::scalar_types::ReferenceObjectId skillRefId) const {
   const auto skill = skillData_.getSkillById(skillRefId);
   return textItemAndSkillData_.getSkillNameIfExists(skill.uiSkillName);
+}
+
+void GameData::parseGatewayPort(Pk2ReaderModern &pk2Reader) {
+  const std::string kGatePortEntryName = "GATEPORT.TXT";
+  PK2Entry gatePortEntry = pk2Reader.getEntry(kGatePortEntryName);
+  auto gatePortData = pk2Reader.getEntryData(gatePortEntry);
+  gatewayPort_ = parsing::parseGatePort(gatePortData);
 }
 
 void GameData::parseDivisionInfo(Pk2ReaderModern &pk2Reader) {

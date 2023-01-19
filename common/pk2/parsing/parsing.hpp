@@ -199,9 +199,15 @@ pk2::ref::TextZoneName parseTextZoneNameLine(const std::string &line);
 // [return]       A populated TextItemOrSkill object
 pk2::ref::TextItemOrSkill parseTextItemOrSkillLine(const std::string &line);
 
+// Parses raw pk2 data into a gateway server port
+//
+// [param] data   Data from the GATEWAYPORT.TXT PK2Entry
+// [return]       uint16_t gateway server port
+uint16_t parseGatePort(const std::vector<uint8_t> &data);
+
 // Parses raw pk2 data into DivisionInfo object
 //
-// [param] data   Data from the DIVISIONINFO.txt PK2Entry
+// [param] data   Data from the DIVISIONINFO.TXT PK2Entry
 // [return]       Populated DivisionInfo object
 DivisionInfo parseDivisionInfo(const std::vector<uint8_t> &data);
 

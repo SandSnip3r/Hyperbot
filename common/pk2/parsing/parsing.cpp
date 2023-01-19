@@ -913,6 +913,25 @@ pk2::ref::TextItemOrSkill parseTextItemOrSkillLine(const std::string &line) {
   return textItemOrSkill;
 }
 
+uint16_t parseGatePort(const std::vector<uint8_t> &data) {
+  // This file contains a fixed size (8) ascii string representing the gateway server port
+  // Port most-significant-digit starts in pos 0, unused characters are nulls
+  if (data.size() != 8) {
+    throw std::runtime_error("Expecting GATEINFO.TXT to have 8 bytes");
+  }
+  int port = 0;
+  int index = 0;
+  while (index < data.size() && data[index] != 0) {
+    port *= 10;
+    port += data[index] - '0';
+    ++index;
+  }
+  if (port > std::numeric_limits<uint16_t>::max()) {
+    throw std::runtime_error("GATEINFO.TXT parsed a port that does not fit in a uint16_t");
+  }
+  return static_cast<uint16_t>(port);
+}
+
 DivisionInfo parseDivisionInfo(const std::vector<uint8_t> &data) {
   DivisionInfo divisionInfo;
   int readIndex=0;

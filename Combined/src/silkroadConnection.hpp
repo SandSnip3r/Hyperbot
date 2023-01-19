@@ -10,20 +10,10 @@
 #ifndef SILKROAD_CONNECTION_HPP_
 #define SILKROAD_CONNECTION_HPP_
 
-namespace Config {
-	//Gateway server info
-	extern std::string GatewayIP;	//Gateway server IP/hostname to connect to
-	extern uint16_t GatewayPort;											//Gateway server port
-	//Listen info
-	extern uint16_t BindPort;													//Gateway server bind port
-	extern uint16_t BotBind;													//The port the bot will connect to
-	//Data
-	extern uint32_t DataMaxSize;											//The maximum number of bytes to receive in one packet
-};
-
 //Silkroad connection class
 class SilkroadConnection {
 private:
+  static const uint32_t kMaxPacketRecvSizeBytes{16384}; //The maximum number of bytes to receive in one packet
   boost::asio::io_service &ioService_;
 
 	//Socket

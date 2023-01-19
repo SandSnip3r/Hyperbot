@@ -2,6 +2,7 @@
 #include "proxy.hpp"
 
 Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port) :
+      gatewayPort_(gameData.gatewayPort()),
       divisionInfo_(gameData.divisionInfo()),
       packetBroker_(broker),
       acceptor(ioService_, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
@@ -137,17 +138,17 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
     boost::system::error_code ec;
     if (connectToAgent) {
       //Connect to the agent server
-      std::cout << "Connecting to " << agentIP_ << ":" << agentPort_ << std::endl;
+      std::cout << "Connecting to agent server at " << agentIP_ << ":" << agentPort_ << std::endl;
       ec = serverConnection.Connect(agentIP_, agentPort_);
     } else {
       //Connect to the gateway server
-      std::cout << "Connecting to " << gatewayAddress_ << ":" << Config::GatewayPort << std::endl;
-      ec = serverConnection.Connect(gatewayAddress_, Config::GatewayPort);
+      std::cout << "Connecting to gateway server at " << gatewayAddress_ << ":" << gatewayPort_ << std::endl;
+      ec = serverConnection.Connect(gatewayAddress_, gatewayPort_);
     }
 
     //Error check
     if(ec) {
-      std::cout << "[Error] Unable to connect to " << (connectToAgent ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent ? agentPort_ : Config::GatewayPort) << std::endl;
+      std::cout << "[Error] Unable to connect to " << (connectToAgent ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent ? agentPort_ : gatewayPort_) << std::endl;
       std::cout << ec.message() << std::endl;
 
       //Silkroad connection is no longer needed

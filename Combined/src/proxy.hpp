@@ -33,6 +33,7 @@ public:
 	void Stop();
 private:
   uint16_t ourListeningPort_;
+  uint16_t gatewayPort_;
   const pk2::DivisionInfo divisionInfo_;
   broker::PacketBroker &packetBroker_;
   std::string gatewayAddress_;

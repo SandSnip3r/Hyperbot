@@ -86,7 +86,6 @@ void Loader::startClient(uint16_t proxyListeningPort) {
     std::ofstream portInfoFile(portInfoFilename);
     if (portInfoFile) {
       portInfoFile << proxyListeningPort << '\n';
-      std::cout << "Created file with port info\n";
     } else {
       throw std::runtime_error("Unable to open file \"" + portInfoFilename.string() + "\" to communicate port to DLL\n");
     }

@@ -2,11 +2,6 @@
 
 #include <iostream>
 
-std::string Config::GatewayIP{"93.158.239.40"};	//Gateway server IP/hostname to connect to
-uint16_t Config::GatewayPort{15779};											//Gateway server port
-uint16_t Config::BotBind{22580};													//The port the bot will connect to
-uint32_t Config::DataMaxSize{16384};											//The maximum number of bytes to receive in one packet
-
 //Handles incoming packets
 void SilkroadConnection::HandleRead(size_t bytes_transferred, const boost::system::error_code & error) {
   if(!error && s && security) {
@@ -19,7 +14,7 @@ void SilkroadConnection::HandleRead(size_t bytes_transferred, const boost::syste
 
 //Constructor
 SilkroadConnection::SilkroadConnection(boost::asio::io_service &ioService) : ioService_(ioService) {
-  data.resize(Config::DataMaxSize + 1);
+  data.resize(kMaxPacketRecvSizeBytes + 1);
 }
 
 //Destructor
@@ -36,7 +31,7 @@ void SilkroadConnection::Initialize(boost::shared_ptr<boost::asio::ip::tcp::sock
 //Starts receiving data
 void SilkroadConnection::PostRead() {
   if(s && security) {
-    s->async_read_some(boost::asio::buffer(&data[0], Config::DataMaxSize), boost::bind(&SilkroadConnection::HandleRead, this, boost::asio::placeholders::bytes_transferred, boost::asio::placeholders::error));
+    s->async_read_some(boost::asio::buffer(&data[0], kMaxPacketRecvSizeBytes), boost::bind(&SilkroadConnection::HandleRead, this, boost::asio::placeholders::bytes_transferred, boost::asio::placeholders::error));
   }
 }
 
