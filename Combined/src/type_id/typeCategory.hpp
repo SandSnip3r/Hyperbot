@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
+#include <string>
 
 namespace type_id {
 
@@ -20,6 +21,8 @@ public:
   TypeCategory subCategory(uint8_t nextTypeId) const;
   bool contains(TypeId typeId) const;
   bool contains(const TypeCategory typeCategory) const;
+  bool isConcreteItem() const;
+  TypeId getTypeId() const;
 private:
   static constexpr TypeId kTypeId1Mask{0b11100};
   static constexpr TypeId kTypeId2Mask{0b1111100};
@@ -29,6 +32,8 @@ private:
   const TypeId typeIdMask_{kTypeId1Mask};
   TypeCategory(TypeId typeIdData, TypeId typeIdMask);
 };
+
+std::string toString(TypeId typeId);
 
 } // namespace type_id
 

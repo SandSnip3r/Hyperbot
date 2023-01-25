@@ -78,8 +78,6 @@ private:
   void handleSpawned();
   void handleCosSpawned(const event::CosSpawned &event);
   void handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &event);
-  void handlePotionCooldownEnded(const event::EventCode eventCode);
-  void handlePillCooldownEnded(const event::EventCode eventCode);
   void handleVitalsChanged();
   void handleStatesChanged();
 
@@ -103,6 +101,7 @@ private:
   void itemUseTimedOut(const event::ItemUseTimeout &event);
   void handleKnockbackStunEnded();
   void handleKnockdownStunEnded();
+  void handleItemCooldownEnded(const event::ItemCooldownEnded &event);
 
 };
 

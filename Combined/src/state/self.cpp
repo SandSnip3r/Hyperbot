@@ -2,6 +2,8 @@
 #include "logging.hpp"
 #include "self.hpp"
 
+#include "type_id/categories.hpp"
+
 // From Pathfinder
 #include "math_helpers.h"
 
@@ -61,46 +63,6 @@ void Self::setCurrentExpAndSpExp(uint32_t currentExperience, uint32_t currentSpE
   currentExperience_ = currentExperience;
   currentSpExperience_ = currentSpExperience;
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kCharacterExperienceUpdated));
-}
-
-void Self::resetHpPotionEventId() {
-  hpPotionEventId_.reset();
-}
-
-void Self::resetMpPotionEventId() {
-  mpPotionEventId_.reset();
-}
-
-void Self::resetVigorPotionEventId() {
-  vigorPotionEventId_.reset();
-}
-
-void Self::resetUniversalPillEventId() {
-  universalPillEventId_.reset();
-}
-
-void Self::resetPurificationPillEventId() {
-  purificationPillEventId_.reset();
-}
-
-void Self::setHpPotionEventId(const broker::TimerManager::TimerId &timerId) {
-  hpPotionEventId_ = timerId;
-}
-
-void Self::setMpPotionEventId(const broker::TimerManager::TimerId &timerId) {
-  mpPotionEventId_ = timerId;
-}
-
-void Self::setVigorPotionEventId(const broker::TimerManager::TimerId &timerId) {
-  vigorPotionEventId_ = timerId;
-}
-
-void Self::setUniversalPillEventId(const broker::TimerManager::TimerId &timerId) {
-  universalPillEventId_ = timerId;
-}
-
-void Self::setPurificationPillEventId(const broker::TimerManager::TimerId &timerId) {
-  purificationPillEventId_ = timerId;
 }
 
 void Self::setHwanSpeed(float hwanSpeed) {
@@ -284,6 +246,48 @@ void Self::setGuildStorageGold(uint64_t goldAmount) {
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kGuildStorageGoldUpdated));
 }
 
+void Self::usedAnItem(type_id::TypeId typeData, broker::EventBroker &eventBroker) {
+  // For now, we figure out the cooldown duration right here. Maybe in the future, it should be passed into this function
+  if (itemCooldownEventIdMap_.find(typeData) != itemCooldownEventIdMap_.end()) {
+    throw std::runtime_error("Trying to use an item, but it's already on cooldown");
+  }
+
+  // TODO: We should move this to a more global configuration area for general bot mechanics configuration
+  //       Maybe we could try to improve this value based on item use results
+  static const int kPotionDelayBufferMs_ = 0; //200 too fast sometimes, 300 seems always good, had 225
+
+  std::optional<int> cooldownMilliseconds;
+  if (type_id::categories::kHpPotion.contains(typeData)) {
+    cooldownMilliseconds = getHpPotionDelay() + kPotionDelayBufferMs_;
+  } else if (type_id::categories::kMpPotion.contains(typeData)) {
+    cooldownMilliseconds = getMpPotionDelay() + kPotionDelayBufferMs_;
+  } else if (type_id::categories::kVigorPotion.contains(typeData)) {
+    cooldownMilliseconds = getVigorPotionDelay() + kPotionDelayBufferMs_;
+  } else if (type_id::categories::kUniversalPill.contains(typeData)) {
+    cooldownMilliseconds = getUniversalPillDelay();
+  } else if (type_id::categories::kPurificationPill.contains(typeData)) {
+    cooldownMilliseconds = getPurificationPillDelay();
+  }
+
+  if (!cooldownMilliseconds) {
+    LOG() << "Used an item (" << type_id::toString(typeData) << "), but we don't know its cooldown time." << std::endl;
+    return;
+  }
+
+  // Publish a delayed event
+  const auto itemCooldownDelayedEventId = eventBroker.publishDelayedEvent(std::make_unique<event::ItemCooldownEnded>(typeData), std::chrono::milliseconds(*cooldownMilliseconds));
+  itemCooldownEventIdMap_.emplace(typeData, itemCooldownDelayedEventId);
+}
+
+void Self::itemCooldownEnded(type_id::TypeId itemTypeData) {
+  auto it = itemCooldownEventIdMap_.find(itemTypeData);
+  if (it != itemCooldownEventIdMap_.end()) {
+    itemCooldownEventIdMap_.erase(it);
+  } else {
+    LOG() << "Item cooldown ended, but we're not tracking it!?" << std::endl;
+  }
+}
+
 // =========================================================================================================
 // =================================================Getters=================================================
 // =========================================================================================================
@@ -320,61 +324,6 @@ uint32_t Self::getCurrentSpExperience() const {
   return currentSpExperience_;
 }
 
-bool Self::haveHpPotionEventId() const {
-  return hpPotionEventId_.has_value();
-}
-
-bool Self::haveMpPotionEventId() const {
-  return mpPotionEventId_.has_value();
-}
-
-bool Self::haveVigorPotionEventId() const {
-  return vigorPotionEventId_.has_value();
-}
-
-bool Self::haveUniversalPillEventId() const {
-  return universalPillEventId_.has_value();
-}
-
-bool Self::havePurificationPillEventId() const {
-  return purificationPillEventId_.has_value();
-}
-
-broker::TimerManager::TimerId Self::getHpPotionEventId() const {
-  if (!hpPotionEventId_.has_value()) {
-    throw std::runtime_error("Self: Asking for hp potion event id, but we dont have one");
-  }
-  return hpPotionEventId_.value();
-}
-
-broker::TimerManager::TimerId Self::getMpPotionEventId() const {
-  if (!mpPotionEventId_.has_value()) {
-    throw std::runtime_error("Self: Asking for mp potion event id, but we dont have one");
-  }
-  return mpPotionEventId_.value();
-}
-
-broker::TimerManager::TimerId Self::getVigorPotionEventId() const {
-  if (!vigorPotionEventId_.has_value()) {
-    throw std::runtime_error("Self: Asking for vigor potion event id, but we dont have one");
-  }
-  return vigorPotionEventId_.value();
-}
-
-broker::TimerManager::TimerId Self::getUniversalPillEventId() const {
-  if (!universalPillEventId_.has_value()) {
-    throw std::runtime_error("Self: Asking for universal pill event id, but we dont have one");
-  }
-  return universalPillEventId_.value();
-}
-
-broker::TimerManager::TimerId Self::getPurificationPillEventId() const {
-  if (!purificationPillEventId_.has_value()) {
-    throw std::runtime_error("Self: Asking for purification pill event id, but we dont have one");
-  }
-  return purificationPillEventId_.value();
-}
-
 int Self::getHpPotionDelay() const {
   const bool havePanic = (modernStateLevels_[helpers::toBitNum(packet::enums::AbnormalStateFlag::kPanic)] > 0);
   int delay = potionDelayMs_;
@@ -406,8 +355,10 @@ int Self::getUniversalPillDelay() const {
 }
 
 int Self::getPurificationPillDelay() const {
-  // TODO: This is wrong
-  return 20000;
+  // TODO: Here is where we should handle if we choose at abuse the pill cooldown bug
+  return 50; // TODO: (is this too hacky?) Add a tiny cooldown just so that we don't spam the pill before we even get our next status update
+  // TODO: This is wrong (after-the-fact-comment: then why did i use it and where did i get it from? and how did i know it was wrong?)
+  //  return 20000;
 }
 
 float Self::hwanSpeed() const {
@@ -418,7 +369,7 @@ packet::enums::BodyState Self::bodyState() const {
   return bodyState_;
 }
 
-uint32_t Self::mp() const {
+uint32_t Self::currentMp() const {
   return mp_;
 }
 
@@ -468,6 +419,25 @@ std::vector<packet::structures::Skill> Self::skills() const {
   return skills_;
 }
 
+bool Self::canUseItems() const {
+  // TODO
+  //  Are we in a state where we cant use items?
+  if (!spawned_) {
+    // Cannot use items if we're not spawned
+    return false;
+  }
+  return true;
+}
+
+bool Self::canUseItem(type_id::TypeCategory itemType) const {
+  const bool itemIsOnCooldown = (itemCooldownEventIdMap_.find(itemType.getTypeId()) != itemCooldownEventIdMap_.end());
+  if (itemIsOnCooldown) {
+    return false;
+  }
+  // TODO: Other reasons?
+  return true;
+}
+
 // =====================================Packets-in-flight state=====================================
 // Setters
 void Self::popItemFromUsedItemQueueIfNotEmpty() {
@@ -480,7 +450,7 @@ void Self::clearUsedItemQueue() {
   usedItemQueue_.clear();
 }
 
-void Self::pushItemToUsedItemQueue(uint8_t inventorySlotNum, type_id::TypeId typeId) {
+void Self::pushItemToUsedItemQueue(sro::scalar_types::StorageIndexType inventorySlotNum, type_id::TypeId typeId) {
   usedItemQueue_.emplace_back(inventorySlotNum, typeId);
 }
 
@@ -507,7 +477,7 @@ bool Self::itemIsInUsedItemQueue(type_id::TypeId typeId) const {
   return false;
 }
 
-void Self::removedItemFromUsedItemQueue(uint8_t inventorySlotNum, type_id::TypeId typeId) {
+void Self::removedItemFromUsedItemQueue(sro::scalar_types::StorageIndexType inventorySlotNum, type_id::TypeId typeId) {
   const auto it = std::find_if(usedItemQueue_.begin(), usedItemQueue_.end(), [&inventorySlotNum, &typeId](const auto &usedItem) {
     return usedItem.inventorySlotNum == inventorySlotNum && usedItem.typeId == typeId;
   });
@@ -567,17 +537,17 @@ void Self::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::E
 // =================================================================================================
 
 void Self::setRaceAndGender() {
-  const auto &gameCharacterData = gameData_.characterData();
-  if (!gameCharacterData.haveCharacterWithId(refObjId)) {
-    std::cout << "Unable to determine race or gender. No \"item\" data for id: " << refObjId << '\n';
-    return;
-  }
-  const auto &character = gameCharacterData.getCharacterById(refObjId);
+  const auto &character = gameData_.characterData().getCharacterById(refObjId);
+
+  // Set race based on country code 0 is chinese, 1 is european, not sure what 3 is
   if (character.country == 0) {
     race_ = Race::kChinese;
-  } else {
+  } else if (character.country == 1) {
     race_ = Race::kEuropean;
+  } else {
+    throw std::runtime_error("Unknown country character code");
   }
+
   if (character.charGender == 1) {
     gender_ = Gender::kMale;
   } else {
@@ -588,6 +558,8 @@ void Self::setRaceAndGender() {
     potionDelayMs_ = kChPotionDefaultDelayMs_;
   } else if (race_ == Race::kEuropean) {
     potionDelayMs_ = kEuPotionDefaultDelayMs_;
+  } else {
+    throw std::runtime_error("Unknown race");
   }
 }
 

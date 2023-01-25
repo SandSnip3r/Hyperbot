@@ -1,18 +1,14 @@
 #ifndef STATE_MACHINE_AUTO_POTION_HPP_
 #define STATE_MACHINE_AUTO_POTION_HPP_
 
-#include "event/event.hpp"
 #include "stateMachine.hpp"
 #include "type_id/typeCategory.hpp"
 
-namespace state::machine {
+#include <silkroad_lib/scalar_types.h>
 
-// TODO: Move to a better file
-enum class PotionType {
-  kHp,
-  kMp,
-  kVigor
-};
+#include <memory>
+
+namespace state::machine {
 
 class AutoPotion : public StateMachine {
 public:
@@ -20,25 +16,23 @@ public:
   void onUpdate(const event::Event *event) override;
   bool done() const override;
 private:
-  //******************************************************************************************
-  //***************************************Configuration**************************************
-  //******************************************************************************************
   // TODO: Move to a real configuration object
   // Potion configuration
   const double kHpThreshold_{0.90};
-  const double kMpThreshold_{0.80};
-  const double kVigorThreshold_{0.40};
-  //******************************************************************************************
-  void checkIfNeedToHeal();
-  bool alreadyUsedPotion(PotionType potionType);
-  void usePotion(PotionType potionType);
-  void checkIfNeedToUsePill();
-  bool alreadyUsedUniversalPill();
-  bool alreadyUsedPurificationPill();
-  void useUniversalPill();
-  void usePurificationPill();
-  void useItem(uint8_t slotNum, type_id::TypeId typeData);
-  void handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &event);
+  const double kMpThreshold_{0.90};
+  const double kVigorHpThreshold_{0.45};
+  const double kVigorMpThreshold_{0.30};
+
+  std::unique_ptr<StateMachine> childState_;
+
+  // These functions return `true` if an item was used, `false` otherwise.
+  bool tryUsePurificationPill();
+  bool tryUseHpPotion();
+  bool tryUseMpPotion();
+  bool tryUseUniversalPill();
+  bool usePotion(const type_id::TypeCategory &potionType);
+
+  void useItem(sro::scalar_types::StorageIndexType itemIndex);
 };
 
 } // namespace state::machine

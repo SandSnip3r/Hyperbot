@@ -15,11 +15,7 @@ enum class EventCode {
   kLoggedIn,
   kSpawned,
   kCosSpawned,
-  kHpPotionCooldownEnded,
-  kMpPotionCooldownEnded,
-  kVigorPotionCooldownEnded,
-  kUniversalPillCooldownEnded,
-  kPurificationPillCooldownEnded,
+  kItemCooldownEnded,
   kEntityHpChanged,
   kMpChanged,
   kMaxHpMpChanged,
@@ -304,6 +300,13 @@ public:
   StateMachineCreated(const std::string &name);
   const std::string stateMachineName;
   virtual ~StateMachineCreated() = default;
+};
+
+struct ItemCooldownEnded : public Event {
+public:
+  ItemCooldownEnded(type_id::TypeId tId);
+  const type_id::TypeId typeId;
+  virtual ~ItemCooldownEnded() = default;
 };
 
 } // namespace event

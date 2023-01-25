@@ -43,14 +43,18 @@ Proxy::~Proxy() {
 void Proxy::inject(const PacketContainer &packet, const PacketContainer::Direction direction) {
   // Inject into the incoming stream of the source, rather than the outgoing stream for the destination.
   //  This allows us to run injected packets through the same pipeline as normal packets, i.e. we can subscribe to our own injected packets.
-  if (direction == PacketContainer::Direction::kClientToServer) {
+  if (direction == PacketContainer::Direction::kClientToServer ||
+      direction == PacketContainer::Direction::kBotToServer) {
     if (clientConnection.security) {
       clientConnection.InjectAsReceived(packet);
     }
-  } else if (direction == PacketContainer::Direction::kServerToClient) {
+  } else if (direction == PacketContainer::Direction::kServerToClient ||
+             direction == PacketContainer::Direction::kBotToClient) {
     if (serverConnection.security) {
       serverConnection.InjectAsReceived(packet);
     }
+  } else {
+    throw std::runtime_error("Packet inject with unhandled direction: " + std::to_string(static_cast<int>(direction)));
   }
 }
 

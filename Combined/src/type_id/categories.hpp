@@ -27,9 +27,9 @@ extern const TypeCategory kItem;
       extern const TypeCategory kHpPotion;
       extern const TypeCategory kMpPotion;
       extern const TypeCategory kVigorPotion;
-//     extern const TypeCategory kCurePotion;
-//       extern const TypeCategory kPurificationPill;
-//       extern const TypeCategory kUniversalPill;
+    extern const TypeCategory kCurePotion;
+      extern const TypeCategory kPurificationPill;
+      extern const TypeCategory kUniversalPill;
 
 } // namespace type_id::categories
 

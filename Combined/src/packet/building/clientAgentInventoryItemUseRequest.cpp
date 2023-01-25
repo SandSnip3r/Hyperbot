@@ -2,12 +2,13 @@
 
 namespace packet::building {
 
-PacketContainer ClientAgentInventoryItemUseRequest::packet(uint8_t slotNum, uint16_t itemData) {
+PacketContainer ClientAgentInventoryItemUseRequest::packet(sro::scalar_types::StorageIndexType inventoryIndex, type_id::TypeId typeId) {
   StreamUtility stream;
-  stream.Write<uint8_t>(slotNum);
-  stream.Write<uint16_t>(itemData);
+  stream.Write(inventoryIndex);
+  stream.Write(typeId);
   return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
   /*
+  // TODO:
   //TID1 | TID2 | TID3 | TID4 | Name
   //3    | 3    | 1    | 4    | ITEM_ETC_POTION_COS_HP
   //3    | 3    | 1    | 9    | ITEM_ETC_POTION_COS_HGP

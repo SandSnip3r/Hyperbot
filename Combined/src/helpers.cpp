@@ -132,26 +132,6 @@ std::tuple<uint8_t,uint8_t,uint8_t,uint8_t> splitTypeId(const uint16_t typeId) {
   return {typeId1, typeId2, typeId3, typeId4};
 }
 
-bool isUniversalPill(const pk2::ref::Item &itemInfo) {
-  return (isPill(itemInfo) && itemInfo.typeId4 == 6);
-}
-
-bool isPurificationPill(const pk2::ref::Item &itemInfo) {
-  return (isPill(itemInfo) && itemInfo.typeId4 == 1);
-}
-
-bool isHpPotion(const pk2::ref::Item &itemInfo) {
-  return (isPotion(itemInfo) && itemInfo.typeId4 == 1);
-}
-
-bool isMpPotion(const pk2::ref::Item &itemInfo) {
-  return (isPotion(itemInfo) && itemInfo.typeId4 == 2);
-}
-
-bool isVigorPotion(const pk2::ref::Item &itemInfo) {
-  return (isPotion(itemInfo) && itemInfo.typeId4 == 3);
-}
-
 } // namespace type_id
 
 } // namespace helpers

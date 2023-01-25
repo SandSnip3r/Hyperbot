@@ -7,6 +7,7 @@
 // #include "packet/parsing/clientAgentActionSelectRequest.hpp"
 #include "packet/parsing/clientAgentActionCommandRequest.hpp"
 #include "packet/parsing/clientAgentActionTalkRequest.hpp"
+#include "packet/parsing/clientAgentInventoryItemUseRequest.hpp"
 #include "packet/parsing/serverAgentActionCommandResponse.hpp"
 #include "packet/parsing/serverAgentActionDeselectResponse.hpp"
 #include "packet/parsing/serverAgentActionSelectResponse.hpp"
@@ -29,6 +30,7 @@
 #include "packet/parsing/serverAgentEntityUpdateState.hpp"
 #include "packet/parsing/serverAgentEntityUpdateStatus.hpp"
 #include "packet/parsing/serverAgentGuildStorageData.hpp"
+#include "packet/parsing/serverAgentInventoryItemUseResponse.hpp"
 #include "packet/parsing/serverAgentInventoryOperationResponse.hpp"
 #include "packet/parsing/serverAgentInventoryRepairResponse.hpp"
 #include "packet/parsing/serverAgentInventoryStorageData.hpp"
@@ -60,10 +62,6 @@ private:
   const pk2::GameData &gameData_;
   packet::parsing::PacketParser packetParser_{worldState_.entityTracker(), gameData_};
 
-  // TODO: We should move this to a more global configuration area for general bot mechanics configuration
-  //       Maybe we could try to improve this value based on item use results
-  static const int kPotionDelayBufferMs_ = 225; //200 too fast sometimes, 300 seems always good
-
   void subscribeToPackets();
   void resetDataBecauseCharacterSpawned() const;
 
@@ -94,7 +92,7 @@ private:
   void serverAgentEntityUpdateStatusReceived(const packet::parsing::ServerAgentEntityUpdateStatus &packet) const;
   void serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const;
   void serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const;
-  void serverAgentInventoryItemUseResponseReceived(const packet::parsing::ParsedServerAgentInventoryItemUseResponse &packet) const;
+  void serverAgentInventoryItemUseResponseReceived(const packet::parsing::ServerAgentInventoryItemUseResponse &packet) const;
   void serverAgentInventoryOperationResponseReceived(const packet::parsing::ServerAgentInventoryOperationResponse &packet) const;
   void serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ServerAgentEntityGroupSpawnData &packet) const;
   void serverAgentEntitySpawnReceived(const packet::parsing::ServerAgentEntitySpawn &packet) const;
@@ -115,7 +113,6 @@ private:
   void serverAgentEntityUpdatePointsReceived(const packet::parsing::ServerAgentEntityUpdatePoints &packet) const;
   void serverAgentEntityUpdateExperienceReceived(const packet::parsing::ServerAgentEntityUpdateExperience &packet) const;
   void serverAgentGuildStorageDataReceived(const packet::parsing::ServerAgentGuildStorageData &packet) const;
-
   void clientAgentActionCommandRequestReceived(const packet::parsing::ClientAgentActionCommandRequest &packet) const;
   void serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const;
   void serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const;
@@ -124,6 +121,7 @@ private:
   void handleKnockedBackOrKnockedDown() const;
   void serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const;
   void serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const;
+  void clientAgentInventoryItemUseRequestReceived(const packet::parsing::ClientAgentInventoryItemUseRequest &packet) const;
 };
 
 #endif // PACKETPROCESSOR_HPP_

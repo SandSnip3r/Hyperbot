@@ -68,7 +68,7 @@ public:
 
 	template <typename type>
 	type Read( bool peek = false ) {
-		type val{0};
+		type val{0}; // TODO: Why did I add this zero-initialization?
 		Read< type >( &val, 1, peek );
 		return val;
 	}
@@ -93,6 +93,12 @@ public:
 			}
 		}
 	}
+
+  template <typename T>
+  void Read(T &out, bool peek=false) {
+    // TODO: Replace most uses of the value-returning Read with this one
+    Read<T>(&out, 1, peek);
+  }
 
 	template <typename type>
 	void Write( const std::vector< type > & val )

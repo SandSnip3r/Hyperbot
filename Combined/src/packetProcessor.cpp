@@ -82,13 +82,13 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePoints, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateExperience, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentGuildStorageData, packetHandleFunction);
-
   packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionCommandRequest, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionCommandResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillBegin, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillEnd, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffAdd, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffRemove, packetHandleFunction);
+  packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentInventoryItemUseRequest, packetHandleFunction);
 }
 
 void PacketProcessor::handlePacket(const PacketContainer &packet) const {
@@ -134,7 +134,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateStatus, serverAgentEntityUpdateStatusReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentAbnormalInfo, serverAgentAbnormalInfoReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterUpdateStats, serverAgentCharacterUpdateStatsReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentInventoryItemUseResponse, serverAgentInventoryItemUseResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryItemUseResponse, serverAgentInventoryItemUseResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryOperationResponse, serverAgentInventoryOperationResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityGroupSpawnData, serverAgentEntityGroupSpawnDataReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntitySpawn, serverAgentEntitySpawnReceived);
@@ -160,6 +160,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentSkillEnd, serverAgentSkillEndReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffAdd, serverAgentBuffAddReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffRemove, serverAgentBuffRemoveReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentInventoryItemUseRequest, clientAgentInventoryItemUseRequestReceived);
   } catch (std::exception &ex) {
     LOG() << "Error while handling packet!\n  " << ex.what() << std::endl;
   }
@@ -322,7 +323,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   const auto &avatarInventoryItemMap = packet.avatarInventoryItemMap();
   helpers::initializeInventory(worldState_.selfState().avatarInventory, avatarInventorySize, avatarInventoryItemMap);
 
-  LOG() << "GID:" << worldState_.selfState().globalId << ", and we have " << worldState_.selfState().currentHp() << " hp and " << worldState_.selfState().mp() << " mp\n";
+  LOG() << "GID:" << worldState_.selfState().globalId << ", and we have " << worldState_.selfState().currentHp() << " hp and " << worldState_.selfState().currentMp() << " mp\n";
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kSpawned));
 }
 
@@ -421,7 +422,7 @@ void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsin
     }
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoMp)) {
       // Our MP changed
-      if (worldState_.selfState().mp() != packet.newMpValue()) {
+      if (worldState_.selfState().currentMp() != packet.newMpValue()) {
         worldState_.selfState().setMp(packet.newMpValue());
       }
     }
@@ -453,76 +454,30 @@ void PacketProcessor::serverAgentCharacterUpdateStatsReceived(const packet::pars
   worldState_.selfState().setMaxHpMp(packet.maxHp(), packet.maxMp());
 }
 
-void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::parsing::ParsedServerAgentInventoryItemUseResponse &packet) const {
+void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::parsing::ServerAgentInventoryItemUseResponse &packet) const {
   LOG() << "Used item response" << std::endl;
   if (packet.result() == 1) {
     // Successfully used an item
-    if (worldState_.selfState().inventory.hasItem(packet.slotNum())) {
-      auto *itemPtr = worldState_.selfState().inventory.getItem(packet.slotNum());
-      // Lets double check it's type data
-      if (packet.itemData() == itemPtr->typeData()) {
-        auto *expendableItemPtr = dynamic_cast<storage::ItemExpendable*>(itemPtr);
-        if (expendableItemPtr != nullptr) {
-          expendableItemPtr->quantity = packet.remainingCount();
-          if (helpers::type_id::isHpPotion(*expendableItemPtr->itemInfo)) {
-            // Set a timeout for how long we must wait before retrying to use a potion
-            if (worldState_.selfState().haveHpPotionEventId()) {
-              LOG() << "Uhhhh, supposedly successfully used an hp potion when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(worldState_.selfState().getHpPotionEventId());
-            }
-            LOG() << "Successfully used a hpPotion\n";
-            const auto hpPotionDelay = worldState_.selfState().getHpPotionDelay() + kPotionDelayBufferMs_;
-            const auto hpPotionEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kHpPotionCooldownEnded), std::chrono::milliseconds(hpPotionDelay));
-            worldState_.selfState().setHpPotionEventId(hpPotionEventId);
-          } else if (helpers::type_id::isMpPotion(*expendableItemPtr->itemInfo)) {
-            // Set a timeout for how long we must wait before retrying to use a potion
-            if (worldState_.selfState().haveMpPotionEventId()) {
-              LOG() << "Uhhhh, supposedly successfully used an mp potion when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(worldState_.selfState().getMpPotionEventId());
-            }
-            LOG() << "Successfully used a mpPotion\n";
-            const auto mpPotionDelay = worldState_.selfState().getMpPotionDelay() + kPotionDelayBufferMs_;
-            const auto mpPotionEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMpPotionCooldownEnded), std::chrono::milliseconds(mpPotionDelay));
-            worldState_.selfState().setMpPotionEventId(mpPotionEventId);
-          } else if (helpers::type_id::isVigorPotion(*expendableItemPtr->itemInfo)) {
-            // Set a timeout for how long we must wait before retrying to use a potion
-            if (worldState_.selfState().haveVigorPotionEventId()) {
-              LOG() << "Uhhhh, supposedly successfully used a vigor potion when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(worldState_.selfState().getVigorPotionEventId());
-            }
-            LOG() << "Successfully used a vigorPotion\n";
-            // TODO: Grains and regular potions have different delays, at least for Eu chars
-            const auto vigorPotionDelay = worldState_.selfState().getVigorPotionDelay() + kPotionDelayBufferMs_;
-            const auto vigorPotionEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kVigorPotionCooldownEnded), std::chrono::milliseconds(vigorPotionDelay));
-            worldState_.selfState().setVigorPotionEventId(vigorPotionEventId);
-          } else if (helpers::type_id::isUniversalPill(*expendableItemPtr->itemInfo)) {
-            // Set a timeout for how long we must wait before retrying to use a pill
-            if (worldState_.selfState().haveUniversalPillEventId()) {
-              LOG() << "Uhhhh, supposedly successfully used a universal pill when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(worldState_.selfState().getUniversalPillEventId());
-            }
-            const auto universalPillEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kUniversalPillCooldownEnded), std::chrono::milliseconds(worldState_.selfState().getUniversalPillDelay()));
-            worldState_.selfState().setUniversalPillEventId(universalPillEventId);
-          } else if (helpers::type_id::isPurificationPill(*expendableItemPtr->itemInfo)) {
-#ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
-            // Set a timeout for how long we must wait before retrying to use a pill
-            if (worldState_.selfState().havePurificationPillEventId()) {
-              LOG() << "Uhhhh, supposedly successfully used a purification pill when there's still a cooldown... Cancelling timer\n";
-              eventBroker_.cancelDelayedEvent(worldState_.selfState().getPurificationPillEventId());
-            }
-            const auto purificationPillEventId = eventBroker_.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kPurificationPillCooldownEnded), std::chrono::milliseconds(worldState_.selfState().getPurificationPillDelay()));
-            worldState_.selfState().setPurificationPillEventId(purificationPillEventId);
-#endif
-          }
-          if (expendableItemPtr->quantity == 0) {
-            LOG() << "Used the last of this item! Delete from inventory\n";
-            // TODO: Instead, delete the item upon receiving server_item_movement in the case DEL_ITEM_BY_SERVER
-            worldState_.selfState().inventory.deleteItem(packet.slotNum());
-          }
-          eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(packet.slotNum() ,std::nullopt));
-        }
-      }
+    // Make sure we have the item
+    if (!worldState_.selfState().inventory.hasItem(packet.slotNum())) {
+      throw std::runtime_error("Used an item, but it's not in our inventory");
     }
+
+    auto *itemPtr = worldState_.selfState().inventory.getItem(packet.slotNum());
+    // Lets double check its type data
+    if (packet.typeData() != itemPtr->typeData()) {
+      throw std::runtime_error("Used an item, but the stored typeData doesn't match what came in the packet");
+    }
+
+    auto *expendableItemPtr = dynamic_cast<storage::ItemExpendable*>(itemPtr);
+    // Make sure that the item is an expendable
+    if (expendableItemPtr == nullptr) {
+      throw std::runtime_error("Used an item, but it wasn't an expendable");
+    }
+
+    expendableItemPtr->quantity = packet.remainingCount();
+    worldState_.selfState().usedAnItem(packet.typeData(), eventBroker_);
+    eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(packet.slotNum(), std::nullopt));
   } else {
     // Failed to use item
     LOG() << "Failed to use item" << std::endl;
@@ -534,9 +489,13 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
         eventBroker_.publishEvent(std::make_unique<event::ItemWaitForReuseDelay>(usedItem.inventorySlotNum, usedItem.typeId));
       } else if (packet.errorCode() == packet::enums::InventoryErrorCode::kCharacterDead) {
         LOG() << "Failed to use item because we're dead\n";
+        // TODO: Make a generic ItemUseFail event with reason as a piece of it
       } else {
         LOG() << "Unknown error while trying to use an item: " << static_cast<int>(packet.errorCode()) << '\n';
       }
+    } else {
+      // We subscribe to the client item use packet to fill the used item queue. If there isnt an item here, something is weird
+      LOG() << "SHOULDNT HAPPEN. Used item queue is empty!" << std::endl;
     }
   }
   if (!worldState_.selfState().usedItemQueueIsEmpty()) {
@@ -545,9 +504,9 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     if (worldState_.selfState().itemUsedTimeoutTimer) {
       eventBroker_.cancelDelayedEvent(*worldState_.selfState().itemUsedTimeoutTimer);
       worldState_.selfState().itemUsedTimeoutTimer.reset();
-    } else {
-      LOG() << "Whoa, have an item in the used item queue but didnt have a timeout timer" << std::endl;
     }
+  } else {
+    LOG() << "SHOULDNT HAPPEN. Used item queue be empty!" << std::endl;
   }
   worldState_.selfState().popItemFromUsedItemQueueIfNotEmpty();
 }
@@ -591,12 +550,10 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
 
   auto removeItemFromInventory = [this](const auto slotIndex) {
     if (worldState_.selfState().inventory.hasItem(slotIndex)) {
-      auto itemPtr = worldState_.selfState().inventory.withdrawItem(slotIndex);
+      worldState_.selfState().inventory.deleteItem(slotIndex);
       eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(slotIndex, std::nullopt));
     } else {
-      // This happens when you use the last of an expendable item in that slot
-      // We already deleted the item
-      LOG() << "Error: But there's no item in this inventory slot\n";
+      LOG() << "RemoveItemFromInventory(): There's no item in this inventory slot\n";
     }
   };
 
@@ -1087,7 +1044,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
   };
   if (packet.result() == 2) {
     // Error
-    LOG() << "Skill unsuccessful, err " << packet.errorCode() << std::endl;
+    // LOG() << "Skill unsuccessful, err " << packet.errorCode() << std::endl;
     if (packet.casterGlobalId()) {
       // Which skill is this? It must be the first item in the pendingCommandQueue
       if (!worldState_.selfState().pendingCommandQueue.empty()) {
@@ -1095,16 +1052,16 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         if (nextCommand.commandType == packet::enums::CommandType::kExecute) {
           if (nextCommand.actionType == packet::enums::ActionType::kCast) {
             const auto skillRefId = nextCommand.refSkillId;
-            LOG() << "Our skill failed (" << skillRefId << ')' << std::endl;
+            // LOG() << "Our skill failed (" << skillRefId << ')' << std::endl;
             eventBroker_.publishEvent(std::make_unique<event::OurSkillFailed>(skillRefId, packet.errorCode()));
           } else {
-            LOG() << "Out skill failed, but the most recent pending command isnt a \"Cast\"" << std::endl;
+            // LOG() << "Out skill failed, but the most recent pending command isnt a \"Cast\"" << std::endl;
           }
         } else {
-          LOG() << "Our skill failed, but the most recent pending command isnt an \"Execute\"" << std::endl;
+          // LOG() << "Our skill failed, but the most recent pending command isnt an \"Execute\"" << std::endl;
         }
       } else {
-        LOG() << "Our skill failed, but we dont know which one!" << std::endl;
+        // LOG() << "Our skill failed, but we dont know which one!" << std::endl;
       }
     }
     return;
@@ -1131,9 +1088,9 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       }
       return *skillName;
     }();
-    LOG() << "SkillBegin \"" << skillName << "\" (" << packet.refSkillId() << ") with casting time: " << skillData.actionCastingTime << ", action duration: " << skillData.actionActionDuration << ", and reuse delay: " << skillData.actionReuseDelay << std::endl;
+    // LOG() << "SkillBegin \"" << skillName << "\" (" << packet.refSkillId() << ") with casting time: " << skillData.actionCastingTime << ", action duration: " << skillData.actionActionDuration << ", and reuse delay: " << skillData.actionReuseDelay << std::endl;
     if (!isRootSkill) {
-      LOG() << "  Skill " << packet.refSkillId() << "'s root is " << rootSkillRefId << std::endl;
+      // LOG() << "  Skill " << packet.refSkillId() << "'s root is " << rootSkillRefId << std::endl;
     }
     // We expect that were is at least one accepted command in the queue
     const bool isFinalPieceOfChain = gameData_.skillData().getSkillById(packet.refSkillId()).basicChainCode == 0;
@@ -1154,13 +1111,13 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         // This happens for common attacks
         if (skillIsCommonAttack && !(worldState_.selfState().acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute && worldState_.selfState().acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kAttack)) {
           // First command is not a common attack
-          LOG() << "First command in the queue isnt a common attack!" << std::endl;
+          // LOG() << "First command in the queue isnt a common attack!" << std::endl;
         }
       } else if (*indexOfOurSkill != 0) {
         // Remove all commands before this one in the queue, those have probably been discarded by the server
-        LOG() << "Our skill is not the first in the accepted command queue" << std::endl;
+        // LOG() << "Our skill is not the first in the accepted command queue" << std::endl;
         for (int i=0; i<*indexOfOurSkill; ++i) {
-          LOG() << "Command #" << i << " (" << worldState_.selfState().acceptedCommandQueue.at(i).command << ") skipped" << std::endl;
+          // LOG() << "Command #" << i << " (" << worldState_.selfState().acceptedCommandQueue.at(i).command << ") skipped" << std::endl;
           // TODO: Should we publish an event that command has been skipped?
         }
         worldState_.selfState().acceptedCommandQueue.erase(worldState_.selfState().acceptedCommandQueue.begin(), worldState_.selfState().acceptedCommandQueue.begin() + *indexOfOurSkill);
@@ -1181,7 +1138,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       }
     } else {
       // This happens when we spawn in with a speed scroll
-      LOG() << "WARNING: accepted command queue empty" << std::endl;
+      // LOG() << "WARNING: accepted command queue empty" << std::endl;
     }
     if (skillData.actionCastingTime == 0) {
       // Skill takes no time to cast, I think there wont be an "end" coming from the server
@@ -1194,17 +1151,17 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       if (isFinalPieceOfChain) {
         eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(worldState_.selfState().globalId, packet.refSkillId()));
       } else {
-        LOG() << "Isn't final piece of chain, not going to send an \"end\" yet" << std::endl;
+        // LOG() << "Isn't final piece of chain, not going to send an \"end\" yet" << std::endl;
       }
     } else {
       // We cast this skill, save the cast ID so that we can reference it later on SkillEnd
       worldState_.selfState().skillCastIdMap.emplace(std::piecewise_construct, std::forward_as_tuple(packet.castId()), std::forward_as_tuple(packet.casterGlobalId(), packet.refSkillId()));
       if (worldState_.selfState().skillCastIdMap.size() > 1) {
-        LOG() << "  Skill casts tracked: [ ";
-        for (const auto &i : worldState_.selfState().skillCastIdMap) {
-          std::cout << i.first << ", ";
-        }
-        std::cout << "]" << std::endl;
+        // LOG() << "  Skill casts tracked: [ ";
+        // for (const auto &i : worldState_.selfState().skillCastIdMap) {
+        //   std::cout << i.first << ", ";
+        // }
+        // std::cout << "]" << std::endl;
       }
     }
   } else {
@@ -1222,7 +1179,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
   switch (skill.basicActivity) {
     case 0:
       // Seems to be passives
-      LOG() << "Cast a skill with basic activity == 0" << std::endl;
+      // LOG() << "Cast a skill with basic activity == 0" << std::endl;
       break;
     case 1:
       // Dont stop while running. Can be cast while something else is being case
@@ -1243,7 +1200,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
 }
 
 void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const {
-  LOG() << "Skill end packet received" << std::endl;
+  // LOG() << "Skill end packet received" << std::endl;
   if (packet.result() == 2) {
     // Not successful?
     return;
@@ -1258,7 +1215,7 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
       // We cast this skill
       const auto &skillData = gameData_.skillData().getSkillById(thisSkillId);
       const auto maybeSkillName = gameData_.textItemAndSkillData().getSkillNameIfExists(skillData.uiSkillName);
-      LOG() << "  Is our \"" << (maybeSkillName ? *maybeSkillName : "UNKNOWN") << "\" end" << std::endl;
+      // LOG() << "  Is our \"" << (maybeSkillName ? *maybeSkillName : "UNKNOWN") << "\" end" << std::endl;
       bool doneWithSkill{true};
       if (skillData.basicChainCode != 0) {
         // There are more pieces to this skill
@@ -1266,23 +1223,23 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
         const auto &nextSkillPiece = gameData_.skillData().getSkillById(skillInfo.skillRefId);
         if (nextSkillPiece.actionCastingTime != 0) {
           doneWithSkill = false;
-          LOG() << "  Another piece of skill is coming, basic chain code=" << skillData.basicChainCode << ". This skill has non-zero cast time: " << nextSkillPiece.actionCastingTime << std::endl;
+          // LOG() << "  Another piece of skill is coming, basic chain code=" << skillData.basicChainCode << ". This skill has non-zero cast time: " << nextSkillPiece.actionCastingTime << std::endl;
         } else {
-          LOG() << "  Skill has another piece, but has 0 casting time." << std::endl;
+          // LOG() << "  Skill has another piece, but has 0 casting time." << std::endl;
           // TODO: Check if there is ANOTHER piece coming...
         }
       }
       if (doneWithSkill) {
-        LOG() << "  Done with skill" << std::endl;
+        // LOG() << "  Done with skill" << std::endl;
         eventBroker_.publishEvent(std::make_unique<event::SkillEnded>(worldState_.selfState().globalId, thisSkillId));
         // Remove it from the map
         worldState_.selfState().skillCastIdMap.erase(it);
       }
     } else {
-      LOG() << "  Is NOT our skill end" << std::endl;
+      // LOG() << "  Is NOT our skill end" << std::endl;
     }
   } else {
-    LOG() << "  Untracked cast" << std::endl;
+    // LOG() << "  Untracked cast" << std::endl;
   }
 }
 
@@ -1381,15 +1338,14 @@ void PacketProcessor::handleKnockedBackOrKnockedDown() const {
 }
 
 void PacketProcessor::serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const {
-  if (packet.globalId() == worldState_.selfState().globalId) {
-    const auto skillName = gameData_.getSkillNameIfExists(packet.skillRefId());
-    LOG() << "Buff \"" << (skillName ? *skillName : "UNKNOWN") << "\" added to us with tokenId: " << packet.activeBuffToken() << std::endl;
-  }
   if (packet.activeBuffToken() == 0) {
     // No buff remove will be received when this expires
     //  Seems to be only for debuffs
-    LOG() << "Not going to add buff to character" << std::endl;
     return;
+  }
+  if (packet.globalId() == worldState_.selfState().globalId) {
+    const auto skillName = gameData_.getSkillNameIfExists(packet.skillRefId());
+    LOG() << "Buff \"" << (skillName ? *skillName : "UNKNOWN") << "\" added to us with tokenId: " << packet.activeBuffToken() << std::endl;
   }
   worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken());
 }
@@ -1401,4 +1357,8 @@ void PacketProcessor::serverAgentBuffRemoveReceived(const packet::parsing::Serve
   }
   std::cout << "]" << std::endl;
   worldState_.removeBuffs(packet.tokens());
+}
+
+void PacketProcessor::clientAgentInventoryItemUseRequestReceived(const packet::parsing::ClientAgentInventoryItemUseRequest &packet) const {
+  worldState_.selfState().pushItemToUsedItemQueue(packet.inventoryIndex(), packet.itemTypeId());
 }

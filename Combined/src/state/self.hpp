@@ -19,6 +19,7 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -55,11 +56,6 @@ public:
   void setSkillPoints(uint64_t skillPoints);
   void setCurrentExpAndSpExp(uint32_t currentExperience, uint32_t currentSpExperience);
 
-  void resetHpPotionEventId();
-  void resetMpPotionEventId();
-  void resetVigorPotionEventId();
-  void resetUniversalPillEventId();
-  void resetPurificationPillEventId();
   void setHpPotionEventId(const broker::TimerManager::TimerId &timerId);
   void setMpPotionEventId(const broker::TimerManager::TimerId &timerId);
   void setVigorPotionEventId(const broker::TimerManager::TimerId &timerId);
@@ -84,6 +80,9 @@ public:
   void setGold(uint64_t goldAmount);
   void setStorageGold(uint64_t goldAmount);
   void setGuildStorageGold(uint64_t goldAmount);
+
+  void usedAnItem(type_id::TypeId typeData, broker::EventBroker &eventBroker);
+  void itemCooldownEnded(type_id::TypeId itemTypeData);
 
   // Getters
   entity::EntityType entityType() const override;
@@ -116,7 +115,7 @@ public:
   float hwanSpeed() const;
   packet::enums::BodyState bodyState() const;
   
-  uint32_t mp() const;
+  uint32_t currentMp() const;
   std::optional<uint32_t> maxHp() const;
   std::optional<uint32_t> maxMp() const;
   
@@ -133,23 +132,26 @@ public:
   std::vector<packet::structures::Mastery> masteries() const;
   std::vector<packet::structures::Skill> skills() const;
 
+  bool canUseItems() const;
+  bool canUseItem(type_id::TypeCategory itemType) const;
+
   // =================Packets-in-flight state=================
   struct UsedItem {
-    UsedItem(uint8_t s, type_id::TypeId i) : inventorySlotNum(s), typeId(i) {}
-    uint8_t inventorySlotNum;
+    UsedItem(sro::scalar_types::StorageIndexType s, type_id::TypeId i) : inventorySlotNum(s), typeId(i) {}
+    sro::scalar_types::StorageIndexType inventorySlotNum;
     type_id::TypeId typeId;
   };
   // Setters
   void popItemFromUsedItemQueueIfNotEmpty();
   void clearUsedItemQueue();
-  void pushItemToUsedItemQueue(uint8_t inventorySlotNum, type_id::TypeId typeId);
+  void pushItemToUsedItemQueue(sro::scalar_types::StorageIndexType inventorySlotNum, type_id::TypeId typeId);
 
   void setUserPurchaseRequest(const packet::structures::ItemMovement &itemMovement);
   void resetUserPurchaseRequest();
   // Getters
   bool usedItemQueueIsEmpty() const;
   bool itemIsInUsedItemQueue(type_id::TypeId typeId) const;
-  void removedItemFromUsedItemQueue(uint8_t inventorySlotNum, type_id::TypeId typeId);
+  void removedItemFromUsedItemQueue(sro::scalar_types::StorageIndexType inventorySlotNum, type_id::TypeId typeId);
   UsedItem getUsedItemQueueFront() const;
 
   bool haveUserPurchaseRequest() const;
@@ -185,9 +187,10 @@ public:
   Race race_;
   Gender gender_;
 
+private:
   // Item use cooldowns
-  std::optional<broker::TimerManager::TimerId> hpPotionEventId_, mpPotionEventId_, vigorPotionEventId_;
-  std::optional<broker::TimerManager::TimerId> universalPillEventId_, purificationPillEventId_;
+  std::map<type_id::TypeId, broker::EventBroker::DelayedEventId> itemCooldownEventIdMap_;
+public:
 
   // Speeds
   float hwanSpeed_;

@@ -24,8 +24,8 @@ const TypeCategory kItem{3};
       const TypeCategory kHpPotion{kRecoveryPotion.subCategory(1)};
       const TypeCategory kMpPotion{kRecoveryPotion.subCategory(2)};
       const TypeCategory kVigorPotion{kRecoveryPotion.subCategory(3)};
-//     const TypeCategory kCurePotion{kExpendable.subCategory(2)};
-//       const TypeCategory kPurificationPill{kCurePotion.subCategory(1)};
-//       const TypeCategory kUniversalPill{kCurePotion.subCategory(7)};
+    const TypeCategory kCurePotion{kExpendable.subCategory(2)};
+      const TypeCategory kPurificationPill{kCurePotion.subCategory(1)};
+      const TypeCategory kUniversalPill{kCurePotion.subCategory(6)};
 
 } // namespace type_id::categories

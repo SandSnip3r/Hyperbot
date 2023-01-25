@@ -30,11 +30,6 @@ namespace type_id {
 // TODO: Move uses of this type Id stuff to use the new type id categories system
 uint16_t makeTypeId(const uint16_t typeId1, const uint16_t typeId2, const uint16_t typeId3, const uint16_t typeId4);
 std::tuple<uint8_t,uint8_t,uint8_t,uint8_t> splitTypeId(const uint16_t typeId);
-bool isUniversalPill(const pk2::ref::Item &itemInfo);
-bool isPurificationPill(const pk2::ref::Item &itemInfo);
-bool isHpPotion(const pk2::ref::Item &itemInfo);
-bool isMpPotion(const pk2::ref::Item &itemInfo);
-bool isVigorPotion(const pk2::ref::Item &itemInfo);
 
 } // namespace type_id
 

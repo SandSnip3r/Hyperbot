@@ -58,4 +58,6 @@ EntityOwnershipRemoved::EntityOwnershipRemoved(sro::scalar_types::EntityGlobalId
 
 StateMachineCreated::StateMachineCreated(const std::string &name) : Event(EventCode::kStateMachineCreated), stateMachineName(name) {}
 
+ItemCooldownEnded::ItemCooldownEnded(type_id::TypeId tId) : Event(EventCode::kItemCooldownEnded), typeId(tId) {}
+
 } // namespace event

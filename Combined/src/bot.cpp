@@ -77,13 +77,6 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCosSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemWaitForReuseDelay, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kHpPotionCooldownEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kMpPotionCooldownEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kVigorPotionCooldownEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kUniversalPillCooldownEnded, eventHandleFunction);
-#ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
-  eventBroker_.subscribeToEvent(event::EventCode::kPurificationPillCooldownEnded, eventHandleFunction);
-#endif
   eventBroker_.subscribeToEvent(event::EventCode::kEntityHpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
@@ -120,6 +113,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kKnockbackStunEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kKnockdownStunEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMovementRequestTimedOut, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kItemCooldownEnded, eventHandleFunction);
 
   // Skills
   eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
@@ -235,15 +229,6 @@ void Bot::handleEvent(const event::Event *event) {
           onUpdate(event);
         }
         break;
-      case event::EventCode::kHpPotionCooldownEnded:
-      case event::EventCode::kMpPotionCooldownEnded:
-      case event::EventCode::kVigorPotionCooldownEnded:
-        handlePotionCooldownEnded(eventCode);
-        break;
-      case event::EventCode::kUniversalPillCooldownEnded:
-      case event::EventCode::kPurificationPillCooldownEnded:
-        handlePillCooldownEnded(eventCode);
-        break;
       case event::EventCode::kEntityHpChanged: {
         const event::EntityHpChanged &castedEvent = dynamic_cast<const event::EntityHpChanged&>(*event);
         if (castedEvent.globalId == worldState_.selfState().globalId) {
@@ -253,7 +238,7 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
       case event::EventCode::kMpChanged:
-        userInterface_.broadcastCharacterMpUpdate(worldState_.selfState().mp());
+        userInterface_.broadcastCharacterMpUpdate(worldState_.selfState().currentMp());
         handleVitalsChanged();
         break;
       case event::EventCode::kMaxHpMpChanged:
@@ -400,6 +385,12 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kMovementRequestTimedOut:
         {
           onUpdate(event);
+          break;
+        }
+      case event::EventCode::kItemCooldownEnded:
+        {
+          const auto &castedEvent = dynamic_cast<const event::ItemCooldownEnded&>(*event);
+          handleItemCooldownEnded(castedEvent);
           break;
         }
 
@@ -708,34 +699,6 @@ void Bot::handleCosSpawned(const event::CosSpawned &event) {
   }
 }
 
-void Bot::handlePotionCooldownEnded(const event::EventCode eventCode) {
-  // TODO: Move to a generic item cooldown map
-  if (eventCode == event::EventCode::kHpPotionCooldownEnded) {
-    worldState_.selfState().resetHpPotionEventId();
-  } else if (eventCode == event::EventCode::kMpPotionCooldownEnded) {
-    worldState_.selfState().resetMpPotionEventId();
-  } else if (eventCode == event::EventCode::kVigorPotionCooldownEnded) {
-    worldState_.selfState().resetVigorPotionEventId();
-  } else {
-    LOG() << "Unhandled potion cooldown ended event\n";
-  }
-  onUpdate();
-}
-
-void Bot::handlePillCooldownEnded(const event::EventCode eventCode) {
-  LOG() << "Pill cooldown ended" << std::endl;
-  if (eventCode == event::EventCode::kUniversalPillCooldownEnded) {
-    worldState_.selfState().resetUniversalPillEventId();
-#ifdef ENFORCE_PURIFICATION_PILL_COOLDOWN
-  } else if (eventCode == event::EventCode::kPurificationPillCooldownEnded) {
-    worldState_.selfState().resetPurificationPillEventId();
-#endif
-  } else {
-    LOG() << "Unhandled pill cooldown ended event\n";
-  }
-  onUpdate();
-}
-
 void Bot::handleVitalsChanged() {
   if (!worldState_.selfState().maxHp() || !worldState_.selfState().maxMp()) {
     // Dont yet know our max
@@ -920,4 +883,9 @@ void Bot::handleKnockbackStunEnded() {
 void Bot::handleKnockdownStunEnded() {
   selfState().stunnedFromKnockdown = false;
   onUpdate();
+}
+
+void Bot::handleItemCooldownEnded(const event::ItemCooldownEnded &event) {
+  selfState().itemCooldownEnded(event.typeId);
+  onUpdate(&event);
 }

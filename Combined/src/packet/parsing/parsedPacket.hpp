@@ -55,22 +55,6 @@ private:
 
 //=========================================================================================================================================================
 
-class ParsedServerAgentInventoryItemUseResponse : public ParsedPacket {
-public:
-  ParsedServerAgentInventoryItemUseResponse(const PacketContainer &packet);
-  uint8_t result() const;
-  uint8_t slotNum() const;
-  uint16_t remainingCount() const;
-  uint16_t itemData() const;
-  packet::enums::InventoryErrorCode errorCode() const;
-private:
-  uint8_t result_;
-  uint8_t slotNum_;
-  uint16_t remainingCount_;
-  uint16_t itemData_;
-  packet::enums::InventoryErrorCode errorCode_;
-};
-
 class ParsedServerAgentCharacterUpdateStats : public ParsedPacket {
 public:
   ParsedServerAgentCharacterUpdateStats(const PacketContainer &packet);

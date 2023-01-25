@@ -1,5 +1,8 @@
 #include "typeCategory.hpp"
 
+#include "helpers.hpp"
+
+#include <sstream>
 #include <stdexcept>
 
 namespace type_id {
@@ -33,6 +36,24 @@ bool TypeCategory::contains(const TypeCategory typeCategory) const {
     return false;
   }
   return contains(typeCategory.typeIdData_);
+}
+
+bool TypeCategory::isConcreteItem() const {
+  return kTypeId4Mask == typeIdMask_;
+}
+
+TypeId TypeCategory::getTypeId() const {
+  if (!isConcreteItem()) {
+    throw std::runtime_error("Cannot get TypeId for non-concrete item");
+  }
+  return typeIdData_;
+}
+
+std::string toString(TypeId typeId) {
+  std::stringstream ss;
+  const auto [tId1, tId2, tId3, tId4] = helpers::type_id::splitTypeId(typeId);
+  ss << static_cast<int>(tId1) << ',' << static_cast<int>(tId2) << ',' << static_cast<int>(tId3) << ',' << static_cast<int>(tId4);
+  return ss.str();
 }
 
 } // namespace type_id

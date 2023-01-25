@@ -54,42 +54,6 @@ ParsedServerAgentAbnormalInfo::ParsedServerAgentAbnormalInfo(const PacketContain
 
 //=========================================================================================================================================================
 
-uint8_t ParsedServerAgentInventoryItemUseResponse::result() const {
-  return result_;
-}
-
-uint8_t ParsedServerAgentInventoryItemUseResponse::slotNum() const {
-  return slotNum_;
-}
-
-uint16_t ParsedServerAgentInventoryItemUseResponse::remainingCount() const {
-  return remainingCount_;
-}
-
-uint16_t ParsedServerAgentInventoryItemUseResponse::itemData() const {
-  return itemData_;
-}
-
-packet::enums::InventoryErrorCode ParsedServerAgentInventoryItemUseResponse::errorCode() const {
-  return errorCode_;
-}
-
-ParsedServerAgentInventoryItemUseResponse::ParsedServerAgentInventoryItemUseResponse(const PacketContainer &packet) : ParsedPacket(packet) {
-  StreamUtility stream = packet.data;
-
-  result_ = stream.Read<uint8_t>();
-  if (result_ == 1) {
-    // Success
-    slotNum_ = stream.Read<uint8_t>();
-    remainingCount_ = stream.Read<uint16_t>();
-    itemData_ = stream.Read<uint16_t>();
-  } else {
-    errorCode_ = static_cast<packet::enums::InventoryErrorCode>(stream.Read<uint16_t>());
-  }
-}
-
-//=========================================================================================================================================================
-
 uint32_t ParsedServerAgentCharacterUpdateStats::maxHp() const {
   return maxHp_;
 }
