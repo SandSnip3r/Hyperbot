@@ -2,9 +2,12 @@
 
 #include "session.hpp"
 #include "silkroadConnection.hpp"
+
+#include "broker/eventBroker.hpp"
 #include "config/configData.hpp"
 #include "config/iniReader.hpp"
 #include "pk2/gameData.hpp"
+
 #include "../../common/pk2/divisionInfo.hpp"
 #include "../../common/pk2/parsing/parsing.hpp"
 #include "../../common/pk2/pk2ReaderModern.hpp"
@@ -18,7 +21,7 @@ namespace fs = std::filesystem;
 void generateBlankConfig(const fs::path &path);
 
 int main(int argc, char* argv[]) {
-	const fs::path kConfigFilePath{"config.ini"};
+  const fs::path kConfigFilePath{"config.ini"};
   if (!fs::exists(kConfigFilePath)) {
     cerr << "Cannot find config file at path \"" << kConfigFilePath << "\". Generating template at this path. Please open and edit it.\n";
     generateBlankConfig(kConfigFilePath);
@@ -28,13 +31,15 @@ int main(int argc, char* argv[]) {
     config::IniReader configReader{kConfigFilePath};
     config::ConfigData configData(configReader);
     pk2::GameData gameData(configData.silkroadDirectory());
-	  Session session{gameData, configData.silkroadDirectory(), configData.characterLoginData()};
-	  session.run();
+    broker::EventBroker eventBroker;
+    Session session{gameData, configData.silkroadDirectory(), configData.characterLoginData(), eventBroker};
+    eventBroker.runAsync();
+    session.run();
   } catch (std::exception &ex) {
     cerr << ex.what() << '\n';
     return 2;
   }
-	return 0;
+  return 0;
 }
 
 void generateBlankConfig(const fs::path &path) {

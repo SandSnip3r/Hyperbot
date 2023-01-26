@@ -1,7 +1,6 @@
 #ifndef BOT_HPP_
 #define BOT_HPP_
 
-#include "broker/eventBroker.hpp"
 #include "broker/packetBroker.hpp"
 #include "config/characterLoginData.hpp"
 #include "event/event.hpp"

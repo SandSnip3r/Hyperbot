@@ -2,11 +2,12 @@
 
 Session::Session(const pk2::GameData &gameData,
                  const std::filesystem::path &kSilkroadDirectoryPath,
-                 const config::CharacterLoginData &loginData) :
+                 const config::CharacterLoginData &loginData,
+                 broker::EventBroker &eventBroker) :
     gameData_(gameData),
     kSilkroadDirectoryPath_(kSilkroadDirectoryPath),
-    loginData_(loginData)/* ,
-    pathfinder_() */ {
+    loginData_(loginData),
+    eventBroker_(eventBroker) {
   //
 }
 
@@ -16,7 +17,6 @@ Session::~Session() {
 }
 
 void Session::run() {
-  eventBroker_.runAsync();
   auto port = proxy_.getOurListeningPort();
   loader_.startClient(port); //throws if problem starting client & injecting
   proxy_.run(); //throws if socket issues, blocks
