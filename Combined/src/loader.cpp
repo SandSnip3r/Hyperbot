@@ -1,4 +1,6 @@
 #include "loader.hpp"
+#include "logging.hpp"
+
 #include "../../common/Common.h"
 
 #include <csignal>
@@ -6,9 +8,6 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-// Silkroad path
-// locale
-// Gateway port
 
 void createAppDataDirectoryIfNecessary(const std::filesystem::path &appDataDirectoryPath) {
   const std::string kAppDataSubdirName = "Hyperbot"; // TODO: Move to a shared location since this is used in the DLL too
@@ -32,6 +31,8 @@ Loader::Loader(const std::filesystem::path &kSilkroadDirectoryPath, const pk2::D
   std::cout << " Silkroad client path: \"" << clientPath_ << "\"\n";
   std::cout << " DLL path: \"" << dllPath_ << "\"\n";
 }
+
+namespace {
 
 class Murderer {
 public:
@@ -59,6 +60,8 @@ public:
 };
 std::vector<int> Murderer::processIds_;
 
+} // anonymous namespace
+
 void Loader::startClient(uint16_t proxyListeningPort) {
   WSADATA wsaData = { 0 };
   WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -70,8 +73,8 @@ void Loader::startClient(uint16_t proxyListeningPort) {
   if (result == false) {
     throw std::runtime_error("Could not start \""+clientPath_+"\"");
   }
-  std::cout << "Client (PID:" << pi.dwProcessId << ") launched with arguments \"" << arguments_ << "\"\n";
-  std::cout << "The client should connect to port " << proxyListeningPort << '\n';
+  LOG() << "Client (PID:" << pi.dwProcessId << ") launched with arguments \"" << arguments_ << '"' << std::endl;
+  LOG() << "The client should connect to port " << proxyListeningPort << std::endl;
   {
     // Write to a file (<Client PID>.txt) the port that the client should connect to
     // TODO: Replace %APPDATA% with %TEMP% to prevent stray file buildup
@@ -97,7 +100,7 @@ void Loader::startClient(uint16_t proxyListeningPort) {
     TerminateThread(pi.hThread, 0);
     throw std::runtime_error("Could not inject into the Silkroad client process");
   }
-  std::cout << "Successfully injected DLL\n";
+  LOG() << "Successfully injected DLL" << std::endl;
 
   // Finally resume the client.
   ResumeThread(pi.hThread);

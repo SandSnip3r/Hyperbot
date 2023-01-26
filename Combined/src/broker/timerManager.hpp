@@ -13,7 +13,7 @@ namespace broker {
 class TimerManager {
 public:
   using TimerId = uint32_t;
-  void run();
+  void runAsync();
   TimerId registerTimer(std::chrono::milliseconds timerDuration, std::function<void()> timerCompletedFunction);
   void triggerInstantTimer(std::function<void()> callback);
   bool cancelTimer(TimerId id);
@@ -38,7 +38,7 @@ private:
   std::mutex timerDataMutex_;
   std::thread thr_;
   void waitForData();
-  void internalRun();
+  void run();
   void pruneTimers();
   void timerFinished(const Timer &timer);
   bool mostRecentTimerIsFinished();

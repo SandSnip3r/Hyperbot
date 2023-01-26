@@ -17,12 +17,13 @@
 Bot::Bot(const config::CharacterLoginData &loginData,
          const pk2::GameData &gameData,
          Proxy &proxy,
-         broker::PacketBroker &broker) :
+         broker::PacketBroker &packetBroker,
+         broker::EventBroker &eventBroker) :
       loginData_(loginData),
       gameData_(gameData),
       proxy_(proxy),
-      packetBroker_(broker) {
-  eventBroker_.run();
+      packetBroker_(packetBroker),
+      eventBroker_(eventBroker) {
   userInterface_.run();
   subscribeToEvents();
 }

@@ -34,7 +34,7 @@ private:
   };
   using PacketSubscriptionMap = std::unordered_map<event::EventCode, std::vector<EventSubscription>>;
 public:
-  void run();
+  void runAsync();
   void publishEvent(std::unique_ptr<event::Event> event);
   DelayedEventId publishDelayedEvent(std::unique_ptr<event::Event> event, std::chrono::milliseconds delay);
   bool cancelDelayedEvent(DelayedEventId id);

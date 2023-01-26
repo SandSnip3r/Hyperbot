@@ -11,12 +11,13 @@ Session::Session(const pk2::GameData &gameData,
 }
 
 Session::~Session() {
-  proxy_.Stop();
+  proxy_.stop();
   // loader_.killClient();
 }
 
-void Session::start() {
+void Session::run() {
+  eventBroker_.runAsync();
   auto port = proxy_.getOurListeningPort();
   loader_.startClient(port); //throws if problem starting client & injecting
-  proxy_.start(); //throws if socket issues, blocks
+  proxy_.run(); //throws if socket issues, blocks
 }

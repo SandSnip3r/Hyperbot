@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
     config::ConfigData configData(configReader);
     pk2::GameData gameData(configData.silkroadDirectory());
 	  Session session{gameData, configData.silkroadDirectory(), configData.characterLoginData()};
-	  session.start();
+	  session.run();
   } catch (std::exception &ex) {
     cerr << ex.what() << '\n';
     return 2;

@@ -23,14 +23,14 @@ public:
 	Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port=0);
 	~Proxy();
 	void inject(const PacketContainer &packet, const PacketContainer::Direction direction);
-  void start();
+  void run();
   uint16_t getOurListeningPort() const;
   void blockOpcode(packet::Opcode opcode);
   void unblockOpcode(packet::Opcode opcode);
   bool blockingOpcode(packet::Opcode opcode) const;
 
 	//Stops all networking objects
-	void Stop();
+	void stop();
 private:
   uint16_t ourListeningPort_;
   uint16_t gatewayPort_;

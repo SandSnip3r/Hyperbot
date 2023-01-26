@@ -37,7 +37,7 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
 
 Proxy::~Proxy() {
   // Stop everything (shutting down)
-  Stop();
+  stop();
 }
 
 void Proxy::inject(const PacketContainer &packet, const PacketContainer::Direction direction) {
@@ -58,7 +58,7 @@ void Proxy::inject(const PacketContainer &packet, const PacketContainer::Directi
   }
 }
 
-void Proxy::start() {
+void Proxy::run() {
   //Start processing network events
   std::cout << "Proxy starting\n";
   while(true) {
@@ -88,7 +88,7 @@ uint16_t Proxy::getOurListeningPort() const {
 }
 
 // Stops all networking objects
-void Proxy::Stop() {
+void Proxy::stop() {
   boost::system::error_code ec;
   acceptor.close(ec);
   acceptor.cancel(ec);

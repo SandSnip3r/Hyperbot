@@ -5,8 +5,8 @@
 
 namespace broker {
 
-void EventBroker::run() {
-  timerManager_.run();
+void EventBroker::runAsync() {
+  timerManager_.runAsync();
 }
 
 void EventBroker::publishEvent(std::unique_ptr<event::Event> event) {

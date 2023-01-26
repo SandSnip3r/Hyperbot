@@ -4,8 +4,8 @@
 
 namespace broker {
 
-void TimerManager::run() {
-  thr_ = std::thread(&TimerManager::internalRun, this);
+void TimerManager::runAsync() {
+  thr_ = std::thread(&TimerManager::run, this);
 }
 
 bool TimerManager::cancelTimer(TimerId id) {
@@ -95,7 +95,7 @@ bool TimerManager::mostRecentTimerIsFinished() {
   return false;
 }
 
-void TimerManager::internalRun() {
+void TimerManager::run() {
   while (keepRunning_) {
     if (timerDataHeap_.empty()) {
       waitForData();

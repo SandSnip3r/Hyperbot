@@ -19,7 +19,8 @@ public:
   Bot(const config::CharacterLoginData &loginData,
       const pk2::GameData &gameData,
       Proxy &proxy,
-      broker::PacketBroker &broker);
+      broker::PacketBroker &packetBroker,
+      broker::EventBroker &eventBroker);
 
   const pk2::GameData& gameData() const;
   Proxy& proxy() const;
@@ -35,7 +36,7 @@ protected:
   const pk2::GameData &gameData_;
   Proxy &proxy_;
   broker::PacketBroker &packetBroker_;
-  broker::EventBroker eventBroker_;
+  broker::EventBroker &eventBroker_;
   state::WorldState worldState_{gameData_, eventBroker_}; // TODO: For multi-character, this will move out of the bot
   ui::UserInterface userInterface_{eventBroker_};
   PacketProcessor packetProcessor_{worldState_, packetBroker_, eventBroker_, gameData_};

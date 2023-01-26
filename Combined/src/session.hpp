@@ -5,6 +5,7 @@
 #include "loader.hpp"
 
 #include "proxy.hpp"
+#include "broker/eventBroker.hpp"
 #include "broker/packetBroker.hpp"
 #include "config/configData.hpp"
 #include "pk2/gameData.hpp"
@@ -23,15 +24,16 @@ public:
           const std::filesystem::path &kSilkroadDirectoryPath,
           const config::CharacterLoginData &loginData);
   ~Session();
-  void start();
+  void run();
 private:
   const pk2::GameData &gameData_;
   const std::filesystem::path &kSilkroadDirectoryPath_;
   const config::CharacterLoginData &loginData_;
   Loader loader_{kSilkroadDirectoryPath_, gameData_.divisionInfo()};
-  broker::PacketBroker broker_;
-  Proxy proxy_{gameData_, broker_};
-  Bot bot_{loginData_, gameData_, proxy_, broker_};
+  broker::PacketBroker packetBroker_;
+  broker::EventBroker eventBroker_;
+  Proxy proxy_{gameData_, packetBroker_};
+  Bot bot_{loginData_, gameData_, proxy_, packetBroker_, eventBroker_};
 };
 
 #endif
