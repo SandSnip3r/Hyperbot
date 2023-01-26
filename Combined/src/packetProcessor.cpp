@@ -482,7 +482,8 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     if (!worldState_.selfState().usedItemQueueIsEmpty()) {
       // This was an item that we tried to use
       if (packet.errorCode() != packet::enums::InventoryErrorCode::kWaitForReuseDelay &&
-          packet.errorCode() != packet::enums::InventoryErrorCode::kCharacterDead) {
+          packet.errorCode() != packet::enums::InventoryErrorCode::kCharacterDead &&
+          packet.errorCode() != packet::enums::InventoryErrorCode::kItemDoesNotExist) {
         LOG() << "Unknown error while trying to use an item: " << static_cast<int>(packet.errorCode()) << '\n';
       }
       const auto usedItem = worldState_.selfState().getUsedItemQueueFront();

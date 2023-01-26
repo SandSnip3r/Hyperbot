@@ -22,6 +22,7 @@ void AutoPotion::onUpdate(const event::Event *event) {
       // If we eventually try to use the same item again later in this function, the given event is very likely no longer relevant
       //  In such a case, the event is probably an inventory update for the item that was successfully used
       //  UseItem tracks the item count of the used item, so it won't be fooled by a reused "Item Used" event
+      event = nullptr;
     } else {
       // Still using an item, nothing to do
       return;
@@ -75,7 +76,7 @@ bool AutoPotion::tryUsePurificationPill() {
     return false;
   }
 
-  int32_t currentCureLevel = 0;
+  uint8_t currentCureLevel = 0;
   std::set<int32_t> processedCureLevels;
   sro::scalar_types::StorageIndexType bestOptionSlotNum;
   const auto &inventory = bot_.selfState().inventory;
@@ -93,6 +94,10 @@ bool AutoPotion::tryUsePurificationPill() {
     if (itemAsExpendable == nullptr) {
       throw std::runtime_error("Item is a purification pill but is not an expendable");
     }
+    if (itemAsExpendable->quantity == 0) {
+      // Last one was used in this stack, skip
+      continue;
+    }
     const auto pillCureStateBitmask = itemAsExpendable->itemInfo->param1;
     const auto curableStatesWeHave = (pillCureStateBitmask & bot_.selfState().stateBitmask());
     if (curableStatesWeHave == 0) {
@@ -105,29 +110,36 @@ bool AutoPotion::tryUsePurificationPill() {
       // We've already processed a pill which cures at this level
       continue;
     }
-    std::vector<uint8_t> stateLevels;
+
+    // Figure out what our highest level state is, this will determine which pill we use
+    uint8_t maxStateLevel = 0;
     for (uint32_t bitNum=0; bitNum<32; ++bitNum) {
       const auto bit = 1 << bitNum;
       if (curableStatesWeHave & bit) {
-        stateLevels.push_back(modernStateLevels[bitNum]);
+        maxStateLevel = std::max(maxStateLevel, modernStateLevels[bitNum]);
       }
     }
-    const bool canCureAnything = (*std::max_element(stateLevels.begin(), stateLevels.end()) <= pillTreatmentLevel);
-    const bool curesAHigherLevelStatus = (std::find_if(stateLevels.begin(), stateLevels.end(), [&pillTreatmentLevel, &currentCureLevel](const uint8_t lvl){
-      return ((lvl > currentCureLevel) && (lvl <= pillTreatmentLevel));
-    }) != stateLevels.end());
 
-    // TODO: Pills lower level than a status have a chance to completely cure it.
-    if (pillTreatmentLevel < currentCureLevel && canCureAnything) {
-      // Found a smaller pill that is completely sufficient
-      bestOptionSlotNum = slotNum;
-      currentCureLevel = pillTreatmentLevel;
-      processedCureLevels.emplace(currentCureLevel);
-    } else if (pillTreatmentLevel > currentCureLevel && curesAHigherLevelStatus) {
-      // Found a bigger pill that does more than the previous
-      bestOptionSlotNum = slotNum;
-      currentCureLevel = pillTreatmentLevel;
-      processedCureLevels.emplace(currentCureLevel);
+    // Choose the biggest pill which isn't wasteful
+    if (pillTreatmentLevel > currentCureLevel) {
+      // Found a larger pill than we've seen before (or our first pill)
+      // Was the previous pill already larger than our worst status?
+      if (currentCureLevel >= maxStateLevel) {
+        // The new pill is overkill, the last one was big enough
+      } else {
+        // The previous pill wasn't large enough, lets use this one instead
+        bestOptionSlotNum = slotNum;
+        currentCureLevel = pillTreatmentLevel;
+        processedCureLevels.emplace(currentCureLevel);
+      }
+    } else {
+      // Is a smaller pill, maybe it's more efficient?
+      if (pillTreatmentLevel >= maxStateLevel) {
+        // Is enough, choose this one instead
+        bestOptionSlotNum = slotNum;
+        currentCureLevel = pillTreatmentLevel;
+        processedCureLevels.emplace(currentCureLevel);
+      }
     }
   }
 

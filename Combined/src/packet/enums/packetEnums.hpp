@@ -117,7 +117,9 @@ enum class InventoryErrorCode : uint16_t {
   // Still have time to reuse the item.
   kWaitForReuseDelay = 0x185B,
   // Cannot the use selected item while dead.
-  kCharacterDead = 0x1889
+  kCharacterDead = 0x1889,
+  // Encountered when we try to use the last item in the stack and it was already used
+  kItemDoesNotExist = 0x1809
 };
 
 enum class ItemMovementType : uint8_t {

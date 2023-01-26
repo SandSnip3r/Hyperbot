@@ -71,12 +71,10 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kAddItemByServer) {
       primaryItemMovement.destSlot = stream.Read<uint8_t>();
       uint8_t reason = stream.Read<uint8_t>();
-      LOG() << "Add Item By Server. Reason: " << static_cast<int>(reason) << std::endl;
       primaryItemMovement.newItem = parseGenericItem(stream, itemData);
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kRemoveItemByServer) {
       primaryItemMovement.srcSlot = stream.Read<uint8_t>();
       uint8_t reason = stream.Read<uint8_t>();
-      LOG() << "Remove Item By Server. Reason: " << static_cast<int>(reason) << std::endl;
       // Reason 2 happens when you use the last expendable in a stack
       // From Daxter: 02 = CashItemConsume, 03 = Skill Remove, 04 = Alchemy
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kMoveItemCosToInventory ||
