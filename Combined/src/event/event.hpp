@@ -27,7 +27,7 @@ enum class EventCode {
   kStorageUpdated,
   kGuildStorageUpdated,
   kSkillCastAboutToEnd,
-  kItemWaitForReuseDelay,
+  kItemUseFailed,
   kInjectPacket,
   kStartTraining,
   kStopTraining,
@@ -146,12 +146,13 @@ public:
   virtual ~GuildStorageUpdated() = default;
 };
 
-struct ItemWaitForReuseDelay : public Event {
+struct ItemUseFailed : public Event {
 public:
-  ItemWaitForReuseDelay(uint8_t slotNum, type_id::TypeId typeId);
+  ItemUseFailed(uint8_t slotNum, type_id::TypeId typeId, packet::enums::InventoryErrorCode reason_param);
   uint8_t inventorySlotNum;
   type_id::TypeId itemTypeId;
-  virtual ~ItemWaitForReuseDelay() = default;
+  packet::enums::InventoryErrorCode reason;
+  virtual ~ItemUseFailed() = default;
 };
 
 struct InjectPacket : public Event {

@@ -249,7 +249,11 @@ void Self::setGuildStorageGold(uint64_t goldAmount) {
 void Self::usedAnItem(type_id::TypeId typeData, broker::EventBroker &eventBroker) {
   // For now, we figure out the cooldown duration right here. Maybe in the future, it should be passed into this function
   if (itemCooldownEventIdMap_.find(typeData) != itemCooldownEventIdMap_.end()) {
-    throw std::runtime_error("Trying to use an item, but it's already on cooldown");
+    // This should never happen if all cooldowns are accurate.
+    //  However, in the case of purification pills, which are maybe the only item with no real cooldown, if we create an artificial cooldown in the bot and use multiple through the client, this can trigger.
+    // throw std::runtime_error("Trying to use an item (" + type_id::toString(typeData) + "), but it's already on cooldown");
+    LOG() << "Trying to use an item (" << type_id::toString(typeData) << "), but it's already on cooldown" << std::endl;
+    return;
   }
 
   // TODO: We should move this to a more global configuration area for general bot mechanics configuration

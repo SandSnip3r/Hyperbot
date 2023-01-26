@@ -32,9 +32,13 @@ UseItem::~UseItem() {
 
 void UseItem::onUpdate(const event::Event *event) {
   if (event) {
-    if (const auto *itemReuseDelayEvent = dynamic_cast<const event::ItemWaitForReuseDelay*>(event)) {
-      // LOG() << "ItemWaitForReuseDelay" << std::string(400,'$') << std::endl;
-      waitingForItemToBeUsed_ = false;
+    if (const auto *itemUseFailedEvent = dynamic_cast<const event::ItemUseFailed*>(event)) {
+      if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kWaitForReuseDelay) {
+        // LOG() << "ItemUseFailed" << std::string(400,'$') << std::endl;
+        waitingForItemToBeUsed_ = false;
+      } else {
+        // TODO: Handle other cases
+      }
     } else if (const auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
       if (inventoryUpdatedEvent->srcSlotNum && *inventoryUpdatedEvent->srcSlotNum == inventoryIndex_) {
         // This is our item

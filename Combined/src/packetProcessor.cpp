@@ -455,7 +455,6 @@ void PacketProcessor::serverAgentCharacterUpdateStatsReceived(const packet::pars
 }
 
 void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::parsing::ServerAgentInventoryItemUseResponse &packet) const {
-  LOG() << "Used item response" << std::endl;
   if (packet.result() == 1) {
     // Successfully used an item
     // Make sure we have the item
@@ -480,19 +479,14 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(packet.slotNum(), std::nullopt));
   } else {
     // Failed to use item
-    LOG() << "Failed to use item" << std::endl;
     if (!worldState_.selfState().usedItemQueueIsEmpty()) {
       // This was an item that we tried to use
-      if (packet.errorCode() == packet::enums::InventoryErrorCode::kWaitForReuseDelay) {
-        // TODO: When we start tracking items moving in the invetory, we'll need to somehow update this used item queue
-        const auto usedItem = worldState_.selfState().getUsedItemQueueFront();
-        eventBroker_.publishEvent(std::make_unique<event::ItemWaitForReuseDelay>(usedItem.inventorySlotNum, usedItem.typeId));
-      } else if (packet.errorCode() == packet::enums::InventoryErrorCode::kCharacterDead) {
-        LOG() << "Failed to use item because we're dead\n";
-        // TODO: Make a generic ItemUseFail event with reason as a piece of it
-      } else {
+      if (packet.errorCode() != packet::enums::InventoryErrorCode::kWaitForReuseDelay &&
+          packet.errorCode() != packet::enums::InventoryErrorCode::kCharacterDead) {
         LOG() << "Unknown error while trying to use an item: " << static_cast<int>(packet.errorCode()) << '\n';
       }
+      const auto usedItem = worldState_.selfState().getUsedItemQueueFront();
+      eventBroker_.publishEvent(std::make_unique<event::ItemUseFailed>(usedItem.inventorySlotNum, usedItem.typeId, packet.errorCode()));
     } else {
       // We subscribe to the client item use packet to fill the used item queue. If there isnt an item here, something is weird
       LOG() << "SHOULDNT HAPPEN. Used item queue is empty!" << std::endl;

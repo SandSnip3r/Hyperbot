@@ -298,6 +298,7 @@ private:
   //  TODO: It could be a good idea to separate this out somehow
 
   // usedItemQueue_ is a list of items that we sent a packet to use but havent yet heard back from the server on their success or failure
+  // TODO: When we start tracking items moving in the invetory, we'll need to update this used item queue
   std::deque<UsedItem> usedItemQueue_;
 
   // User purchasing tracking

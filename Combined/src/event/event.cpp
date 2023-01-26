@@ -16,7 +16,7 @@ StorageUpdated::StorageUpdated(const std::optional<int8_t> &srcSlot, const std::
 
 GuildStorageUpdated::GuildStorageUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) : Event(EventCode::kGuildStorageUpdated), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
 
-ItemWaitForReuseDelay::ItemWaitForReuseDelay(uint8_t slotNum, type_id::TypeId typeId) : Event(EventCode::kItemWaitForReuseDelay), inventorySlotNum(slotNum), itemTypeId(typeId) {}
+ItemUseFailed::ItemUseFailed(uint8_t slotNum, type_id::TypeId typeId, packet::enums::InventoryErrorCode reason_param) : Event(EventCode::kItemUseFailed), inventorySlotNum(slotNum), itemTypeId(typeId), reason(reason_param) {}
 
 InjectPacket::InjectPacket(InjectPacket::Direction dir, uint16_t op, const std::string &d) : Event(EventCode::kInjectPacket), direction(dir), opcode(op), data(d) {}
 

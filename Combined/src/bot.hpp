@@ -77,7 +77,6 @@ private:
   // Character info events
   void handleSpawned();
   void handleCosSpawned(const event::CosSpawned &event);
-  void handleItemWaitForReuseDelay(const event::ItemWaitForReuseDelay &event);
   void handleVitalsChanged();
   void handleStatesChanged();
 

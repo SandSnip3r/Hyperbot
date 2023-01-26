@@ -76,7 +76,7 @@ void Bot::subscribeToEvents() {
   // Character info events
   eventBroker_.subscribeToEvent(event::EventCode::kSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCosSpawned, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kItemWaitForReuseDelay, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kItemUseFailed, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityHpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
@@ -224,7 +224,7 @@ void Bot::handleEvent(const event::Event *event) {
           handleCosSpawned(castedEvent);
         }
         break;
-      case event::EventCode::kItemWaitForReuseDelay:
+      case event::EventCode::kItemUseFailed:
         {
           onUpdate(event);
         }
