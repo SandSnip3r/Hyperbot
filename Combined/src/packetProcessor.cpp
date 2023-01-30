@@ -96,12 +96,13 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
   try {
     parsedPacket = packetParser_.parsePacket(packet);
   } catch (std::exception &ex) {
-    std::cerr << "[PacketProcessor] Failed to parse packet " << std::hex << packet.opcode << std::dec << "\n  Error: \"" << ex.what() << "\"\n";
+    LOG() << "Failed to parse packet " << std::hex << packet.opcode << std::dec << ". \"" << ex.what() << '"' << std::endl;
     return;
   }
 
   if (!parsedPacket) {
     // Not yet parsing this packet
+    LOG() << "Subscribed to a packet which we're not yet parsing " << std::hex << packet.opcode << std::dec << std::endl;
     return;
   }
 
@@ -165,7 +166,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     LOG() << "Error while handling packet!\n  " << ex.what() << std::endl;
   }
 
-  LOG() << "Unhandled packet subscribed to\n";
+  LOG() << "Unhandled packet subscribed to " << std::hex << packet.opcode << std::dec << std::endl;
   return;
 }
 

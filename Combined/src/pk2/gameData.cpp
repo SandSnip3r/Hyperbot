@@ -16,20 +16,24 @@ namespace pk2 {
 
 namespace fs = std::filesystem;
 
-GameData::GameData(const fs::path &kSilkroadPath) : kSilkroadPath_(kSilkroadPath) {
+GameData::GameData(const fs::path &silkroadPath) : silkroadPath_(silkroadPath) {
+  //
+}
+
+void GameData::parseSilkroadFiles() {
   try {
-    auto kDataPath = kSilkroadPath_ / "Data.pk2";
+    auto kDataPath = silkroadPath_ / "Data.pk2";
     Pk2ReaderModern pk2Reader{kDataPath};
     parseData(pk2Reader);
   } catch (std::exception &ex) {
-    throw std::runtime_error(std::string("Failed to parse Data.Pk2 at path \""+kSilkroadPath_.string()+"\". Error: \"")+ex.what()+"\"");
+    throw std::runtime_error(std::string("Failed to parse Data.Pk2 at path \""+silkroadPath_.string()+"\". Error: \"")+ex.what()+"\"");
   }
   try {
-    auto kMediaPath = kSilkroadPath_ / "Media.pk2";
+    auto kMediaPath = silkroadPath_ / "Media.pk2";
     Pk2ReaderModern pk2Reader{kMediaPath};
     parseMedia(pk2Reader);
   } catch (std::exception &ex) {
-    throw std::runtime_error(std::string("Failed to parse Media.Pk2 at path \""+kSilkroadPath_.string()+"\". Error: \"")+ex.what()+"\"");
+    throw std::runtime_error(std::string("Failed to parse Media.Pk2 at path \""+silkroadPath_.string()+"\". Error: \"")+ex.what()+"\"");
   }
 }
 

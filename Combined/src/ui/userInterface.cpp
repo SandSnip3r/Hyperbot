@@ -1,6 +1,8 @@
+#include "logging.hpp"
 #include "userInterface.hpp"
 
-#include "logging.hpp"
+#include "pk2/gameData.hpp"
+#include "state/worldState.hpp"
 
 #include "ui-proto/request.pb.h"
 
@@ -94,18 +96,485 @@ broadcast::LifeState lifeStateToProto(sro::entity::LifeState lifeState) {
 
 namespace ui {
 
-UserInterface::UserInterface(broker::EventBroker &eventBroker) : eventBroker_(eventBroker) {}
+UserInterface::UserInterface(const pk2::GameData &gameData, broker::EventBroker &eventBroker) : gameData_(gameData), eventBroker_(eventBroker) {
+  //
+}
 
 UserInterface::~UserInterface() {
   thr_.join();
 }
 
-void UserInterface::run() {
+void UserInterface::initialize() {
+  subscribeToEvents();
+}
+
+void UserInterface::setWorldState(const state::WorldState &worldState) {
+  worldState_ = &worldState;
+}
+
+void UserInterface::runAsync() {
   // Set up publisher
   publisher_.bind("tcp://*:5556");
 
   // Run the request receiver in another thread
-  thr_ = std::thread(&UserInterface::privateRun, this);
+  thr_ = std::thread(&UserInterface::run, this);
+}
+
+void UserInterface::subscribeToEvents() {
+  auto eventHandleFunction = std::bind(&UserInterface::handleEvent, this, std::placeholders::_1);
+
+  eventBroker_.subscribeToEvent(event::EventCode::kSpawned, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCosSpawned, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntitySpawned, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityDespawned, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityLifeStateChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityHpChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kInventoryGoldUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStorageGoldUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageGoldUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCharacterSkillPointsUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCharacterExperienceUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaSet, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaReset, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStateMachineCreated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStateMachineDestroyed, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementBegan, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityPositionUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityNotMovingAngleChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStorageInitialized, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageInitialized, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kAvatarInventoryUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCosInventoryUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageUpdated, eventHandleFunction);
+}
+
+void UserInterface::handleEvent(const event::Event *event) {
+  try {
+    const auto eventCode = event->eventCode;
+
+    if (eventCode == event::EventCode::kSpawned) {
+      handleSelfSpawned();
+      return;
+    }
+
+    if (eventCode == event::EventCode::kCosSpawned) {
+      const event::CosSpawned &castedEvent = dynamic_cast<const event::CosSpawned&>(*event);
+      handleCosSpawned(castedEvent);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kEntitySpawned) {
+      const auto &castedEvent = dynamic_cast<const event::EntitySpawned&>(*event);
+      handleEntitySpawned(castedEvent);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kEntityDespawned) {
+      const auto &castedEvent = dynamic_cast<const event::EntityDespawned&>(*event);
+      broadcastEntityDespawned(castedEvent.globalId);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kEntityLifeStateChanged) {
+      const auto &castedEvent = dynamic_cast<const event::EntityLifeStateChanged&>(*event);
+      const entity::Character &characterEntity = worldState_->getEntity<entity::Character>(castedEvent.globalId);
+      broadcastEntityLifeStateChanged(characterEntity.globalId, characterEntity.lifeState);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kEnteredNewRegion) {
+      const auto pos = worldState_->selfState().position();
+      const auto &regionName = gameData_.textZoneNameData().getRegionName(pos.regionId());
+      broadcastRegionNameUpdate(regionName);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kEntityHpChanged) {
+      const event::EntityHpChanged &castedEvent = dynamic_cast<const event::EntityHpChanged&>(*event);
+      if (castedEvent.globalId == worldState_->selfState().globalId) {
+        broadcastCharacterHpUpdate(worldState_->selfState().currentHp());
+      }
+      return;
+    }
+
+    if (eventCode == event::EventCode::kMpChanged) {
+      broadcastCharacterMpUpdate(worldState_->selfState().currentMp());
+      return;
+    }
+
+    if (eventCode == event::EventCode::kMaxHpMpChanged) {
+      if (worldState_->selfState().maxHp() && worldState_->selfState().maxMp()) {
+        broadcastCharacterMaxHpMpUpdate(*worldState_->selfState().maxHp(), *worldState_->selfState().maxMp());
+      }
+      return;
+    }
+    if (eventCode == event::EventCode::kInventoryGoldUpdated) {
+      broadcastGoldAmountUpdate(worldState_->selfState().getGold(), broadcast::ItemLocation::kCharacterInventory);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kStorageGoldUpdated) {
+      broadcastGoldAmountUpdate(worldState_->selfState().getStorageGold(), broadcast::ItemLocation::kStorage);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kGuildStorageGoldUpdated) {
+      broadcastGoldAmountUpdate(worldState_->selfState().getGuildStorageGold(), broadcast::ItemLocation::kGuildStorage);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kCharacterSkillPointsUpdated) {
+      broadcastCharacterSpUpdate(worldState_->selfState().getSkillPoints());
+      return;
+    }
+
+    if (eventCode == event::EventCode::kCharacterExperienceUpdated) {
+      broadcastCharacterExperienceUpdate(worldState_->selfState().getCurrentExperience(), worldState_->selfState().getCurrentSpExperience());
+      return;
+    }
+
+    if (eventCode == event::EventCode::kTrainingAreaSet) {
+      if (!worldState_->selfState().trainingAreaGeometry) {
+        throw std::runtime_error("Training area set, but no training geometry");
+      }
+      broadcastTrainingAreaSet(worldState_->selfState().trainingAreaGeometry.get());
+      return;
+    }
+
+    if (eventCode == event::EventCode::kTrainingAreaReset) {
+      broadcastTrainingAreaReset();
+      return;
+    }
+
+    if (eventCode == event::EventCode::kStateMachineCreated) {
+      const auto &castedEvent = dynamic_cast<const event::StateMachineCreated&>(*event);
+      broadcastStateMachineCreated(castedEvent.stateMachineName);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kStateMachineDestroyed) {
+      broadcastStateMachineDestroyed();
+      return;
+    }
+
+    if (eventCode == event::EventCode::kEntityMovementBegan) {
+      const auto &castedEvent = dynamic_cast<const event::EntityMovementBegan&>(*event);
+      handleEntityMovementBegan(castedEvent);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kEntityMovementEnded) {
+      const auto &castedEvent = dynamic_cast<const event::EntityMovementEnded&>(*event);
+      handleEntityMovementEnded(castedEvent);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kEntityPositionUpdated) {
+      const auto &castedEvent = dynamic_cast<const event::EntityPositionUpdated&>(*event);
+      handleEntityPositionUpdated(castedEvent.globalId);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kEntityNotMovingAngleChanged) {
+      const auto &castedEvent = dynamic_cast<const event::EntityNotMovingAngleChanged&>(*event);
+      handleEntityNotMovingAngleChanged(castedEvent.globalId);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kStorageInitialized) {
+      handleStorageInitialized();
+      return;
+    }
+
+    if (eventCode == event::EventCode::kGuildStorageInitialized) {
+      handleGuildStorageInitialized();
+      return;
+    }
+
+    if (eventCode == event::EventCode::kInventoryUpdated) {
+      const event::InventoryUpdated &castedEvent = dynamic_cast<const event::InventoryUpdated&>(*event);
+      handleInventoryUpdated(castedEvent);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kAvatarInventoryUpdated) {
+      const event::AvatarInventoryUpdated &castedEvent = dynamic_cast<const event::AvatarInventoryUpdated&>(*event);
+      handleAvatarInventoryUpdated(castedEvent);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kCosInventoryUpdated) {
+      const event::CosInventoryUpdated &castedEvent = dynamic_cast<const event::CosInventoryUpdated&>(*event);
+      handleCosInventoryUpdated(castedEvent);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kStorageUpdated) {
+      const event::StorageUpdated &castedEvent = dynamic_cast<const event::StorageUpdated&>(*event);
+      handleStorageUpdated(castedEvent);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kGuildStorageUpdated) {
+      const event::GuildStorageUpdated &castedEvent = dynamic_cast<const event::GuildStorageUpdated&>(*event);
+      handleGuildStorageUpdated(castedEvent);
+      return;
+    }
+    LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
+  } catch (std::exception &ex) {
+    LOG() << "Error while handling event!\n  " << ex.what() << std::endl;
+  }
+}
+
+void UserInterface::run() {
+  // Run request receiver
+  zmq::socket_t socket(context_, zmq::socket_type::rep);
+  socket.bind("tcp://*:5555");
+  while (1) {
+    // Wait for a request
+    zmq::message_t request;
+    socket.recv(request, zmq::recv_flags::none);
+
+    handle(request);
+
+    // Immediately respond with an acknowledgement
+    const std::string response{"ack"};
+    socket.send(zmq::buffer(response), zmq::send_flags::none);
+  }
+}
+
+void UserInterface::handle(const zmq::message_t &request) {
+  // Parse the request
+  request::RequestMessage requestMsg;
+  requestMsg.ParseFromArray(request.data(), request.size());
+  switch (requestMsg.body_case()) {
+    case request::RequestMessage::BodyCase::kPacketData: {
+        const request::PacketToInject &packet = requestMsg.packetdata();
+        const event::InjectPacket::Direction dir = (packet.direction() == request::PacketToInject::kClientToServer) ? event::InjectPacket::Direction::kClientToServer : event::InjectPacket::Direction::kServerToClient;
+        eventBroker_.publishEvent(std::make_unique<event::InjectPacket>(dir, packet.opcode(), packet.data()));
+        break;
+      }
+    case request::RequestMessage::BodyCase::kDoAction: {
+        const request::DoAction &doActionMsg = requestMsg.doaction();
+        if (doActionMsg.action() == request::DoAction::kStartTraining) {
+          eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStartTraining));
+        } else if (doActionMsg.action() == request::DoAction::kStopTraining) {
+          eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStopTraining));
+        }
+        break;
+      }
+    default:
+      std::cout << "Unknown request type" << std::endl;
+      break;
+  }
+}
+
+void UserInterface::handleSelfSpawned() {
+  const auto &currentLevelData = gameData_.levelData().getLevel(worldState_->selfState().getCurrentLevel());
+  const auto &regionName = gameData_.textZoneNameData().getRegionName(worldState_->selfState().position().regionId());
+
+  broadcastCharacterSpawn();
+  broadcastCharacterLevelUpdate(worldState_->selfState().getCurrentLevel(), currentLevelData.exp_C);
+  broadcastCharacterExperienceUpdate(worldState_->selfState().getCurrentExperience(), worldState_->selfState().getCurrentSpExperience());
+  broadcastCharacterSpUpdate(worldState_->selfState().getSkillPoints());
+  broadcastCharacterNameUpdate(worldState_->selfState().name);
+  broadcastGoldAmountUpdate(worldState_->selfState().getGold(), broadcast::ItemLocation::kCharacterInventory);
+  broadcastMovementEndedUpdate(worldState_->selfState().position());
+  broadcastRegionNameUpdate(regionName);
+
+  // Send entire inventory
+  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<worldState_->selfState().inventory.size(); ++inventorySlotIndex) {
+    if (worldState_->selfState().inventory.hasItem(inventorySlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, inventorySlotIndex);
+    }
+  }
+
+  // Send avatar inventory too
+  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<worldState_->selfState().avatarInventory.size(); ++inventorySlotIndex) {
+    if (worldState_->selfState().avatarInventory.hasItem(inventorySlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, inventorySlotIndex);
+    }
+  }
+}
+
+void UserInterface::handleCosSpawned(const event::CosSpawned &event) {
+  // Send COS inventory
+  auto it = worldState_->selfState().cosInventoryMap.find(event.cosGlobalId);
+  if (it == worldState_->selfState().cosInventoryMap.end()) {
+    // Received COS Spawned event, but dont have this COS
+    return;
+  }
+  const auto &cosInventory = it->second;
+  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<cosInventory.size(); ++inventorySlotIndex) {
+    if (cosInventory.hasItem(inventorySlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, inventorySlotIndex);
+    }
+  }
+}
+
+void UserInterface::handleEntitySpawned(const event::EntitySpawned &event) {
+  const bool trackingEntity = worldState_->entityTracker().trackingEntity(event.globalId);
+  if (!trackingEntity) {
+    // Received entity spawned event, but we're not tracking this entity
+    return;
+  }
+  const auto &entity = worldState_->getEntity<entity::Entity>(event.globalId);
+  broadcastEntitySpawned(&entity);
+  if (const auto *characterEntity = dynamic_cast<const entity::Character*>(&entity)) {
+    if (characterEntity->lifeState == sro::entity::LifeState::kDead) {
+      // Entity spawned in as dead
+      // TODO: Create a more comprehensive entity proto which contains life state
+      broadcastEntityLifeStateChanged(characterEntity->globalId, characterEntity->lifeState);
+    }
+  }
+
+}
+
+void UserInterface::handleEntityMovementBegan(const event::EntityMovementBegan &event) {
+  const entity::MobileEntity &mobileEntity = worldState_->getEntity<entity::MobileEntity>(event.globalId);
+  if (!mobileEntity.moving()) {
+    // Got an entity movement began event, but it is not moving
+    return;
+  }
+  const auto currentPosition = mobileEntity.position();
+  if (mobileEntity.destinationPosition) {
+    if (event.globalId == worldState_->selfState().globalId) {
+      // TODO: We ought to combine these two UI functions
+      broadcastMovementBeganUpdate(currentPosition, *worldState_->selfState().destinationPosition, worldState_->selfState().currentSpeed());
+    } else {
+      broadcastEntityMovementBegan(event.globalId, currentPosition, *mobileEntity.destinationPosition, mobileEntity.currentSpeed());
+    }
+  } else {
+    if (event.globalId == worldState_->selfState().globalId) {
+      // TODO: We ought to combine these two UI functions
+      broadcastMovementBeganUpdate(currentPosition, worldState_->selfState().angle(), worldState_->selfState().currentSpeed());
+    } else {
+      broadcastEntityMovementBegan(event.globalId, currentPosition, mobileEntity.angle(), mobileEntity.currentSpeed());
+    }
+  }
+}
+
+void UserInterface::handleEntityMovementEnded(const event::EntityMovementEnded &event) {
+  const entity::MobileEntity &mobileEntity = worldState_->getEntity<entity::MobileEntity>(event.globalId);
+  if (event.globalId == worldState_->selfState().globalId) {
+    // TODO: We ought to combine these two UI functions
+    broadcastMovementEndedUpdate(mobileEntity.position());
+  } else {
+    broadcastEntityMovementEnded(event.globalId, mobileEntity.position());
+  }
+}
+
+void UserInterface::handleEntityPositionUpdated(sro::scalar_types::EntityGlobalId globalId) {
+  const entity::MobileEntity &mobileEntity = worldState_->getEntity<entity::MobileEntity>(globalId);
+  if (mobileEntity.moving()) {
+    // Should never happen while moving
+    return;
+  }
+
+  // Not moving
+  const auto currentPosition = mobileEntity.position();
+  if (globalId == worldState_->selfState().globalId) {
+    broadcastPositionChangedUpdate(currentPosition);
+  } else {
+    broadcastEntityPositionChanged(mobileEntity.globalId, currentPosition);
+  }
+}
+
+void UserInterface::handleEntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId globalId) {
+  if (globalId == worldState_->selfState().globalId) {
+    // We only send the angle of the controlled character to the UI
+    const entity::MobileEntity &mobileEntity = worldState_->getEntity<entity::MobileEntity>(globalId);
+    broadcastNotMovingAngleChangedUpdate(mobileEntity.angle());
+  }
+}
+
+void UserInterface::handleStorageInitialized() {
+  for (sro::scalar_types::StorageIndexType storageSlotIndex=0; storageSlotIndex<worldState_->selfState().storage.size(); ++storageSlotIndex) {
+    if (worldState_->selfState().storage.hasItem(storageSlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_->selfState().storage, storageSlotIndex);
+    }
+  }
+}
+
+void UserInterface::handleGuildStorageInitialized() {
+  for (sro::scalar_types::StorageIndexType storageSlotIndex=0; storageSlotIndex<worldState_->selfState().guildStorage.size(); ++storageSlotIndex) {
+    if (worldState_->selfState().guildStorage.hasItem(storageSlotIndex)) {
+      broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, storageSlotIndex);
+    }
+  }
+}
+
+void UserInterface::handleInventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent) {
+  if (inventoryUpdatedEvent.srcSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.srcSlotNum);
+  }
+  if (inventoryUpdatedEvent.destSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.destSlotNum);
+  }
+}
+
+void UserInterface::handleAvatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent) {
+  if (avatarInventoryUpdatedEvent.srcSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.srcSlotNum);
+  }
+  if (avatarInventoryUpdatedEvent.destSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.destSlotNum);
+  }
+}
+
+void UserInterface::handleCosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent) {
+  auto it = worldState_->selfState().cosInventoryMap.find(cosInventoryUpdatedEvent.globalId);
+  if (it == worldState_->selfState().cosInventoryMap.end()) {
+    // COS inventory updated, but not tracking this COS
+    return;
+  }
+  const auto &cosInventory = it->second;
+  if (cosInventoryUpdatedEvent.srcSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.srcSlotNum);
+  }
+  if (cosInventoryUpdatedEvent.destSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.destSlotNum);
+  }
+}
+
+void UserInterface::handleStorageUpdated(const event::StorageUpdated &storageUpdatedEvent) {
+  if (storageUpdatedEvent.srcSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.srcSlotNum);
+  }
+  if (storageUpdatedEvent.destSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.destSlotNum);
+  }
+}
+
+void UserInterface::handleGuildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent) {
+  if (guildStorageUpdatedEvent.srcSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.srcSlotNum);
+  }
+  if (guildStorageUpdatedEvent.destSlotNum) {
+    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.destSlotNum);
+  }
+}
+
+void UserInterface::broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex) {
+  uint16_t quantity{0};
+  std::optional<std::string> itemName;
+  if (itemStorage.hasItem(slotIndex)) {
+    const auto *item = itemStorage.getItem(slotIndex);
+    if (const auto *itemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(item)) {
+      quantity = itemAsExpendable->quantity;
+    } else {
+      // Not an expendable, only 1
+      quantity = 1;
+    }
+    itemName = gameData_.textItemAndSkillData().getItemName(item->itemInfo->nameStrID128);
+  }
+  broadcastItemUpdate(itemLocation, slotIndex, quantity, itemName);
 }
 
 void UserInterface::broadcastCharacterSpawn() {
@@ -337,49 +806,6 @@ void UserInterface::broadcast(const broadcast::BroadcastMessage &broadcastProto)
   // broadcastMessage.SerializeToString(&str);
   // msg.rebuild(str.data(), str.size());
   // auto res = publisher_.send(msg, zmq::send_flags::none);
-}
-
-void UserInterface::privateRun() {
-  // Run request receiver
-  zmq::socket_t socket(context_, zmq::socket_type::rep);
-  socket.bind("tcp://*:5555");
-  while (1) {
-    // Wait for a request
-    zmq::message_t request;
-    socket.recv(request, zmq::recv_flags::none);
-
-    handle(request);
-    
-    // Immediately respond with an acknowledgement
-    const std::string response{"ack"};
-    socket.send(zmq::buffer(response), zmq::send_flags::none);
-  }
-}
-
-void UserInterface::handle(const zmq::message_t &request) {
-  // Parse the request
-  request::RequestMessage requestMsg;
-  requestMsg.ParseFromArray(request.data(), request.size());
-  switch (requestMsg.body_case()) {
-    case request::RequestMessage::BodyCase::kPacketData: {
-        const request::PacketToInject &packet = requestMsg.packetdata();
-        const event::InjectPacket::Direction dir = (packet.direction() == request::PacketToInject::kClientToServer) ? event::InjectPacket::Direction::kClientToServer : event::InjectPacket::Direction::kServerToClient;
-        eventBroker_.publishEvent(std::make_unique<event::InjectPacket>(dir, packet.opcode(), packet.data()));
-        break;
-      }
-    case request::RequestMessage::BodyCase::kDoAction: {
-        const request::DoAction &doActionMsg = requestMsg.doaction();
-        if (doActionMsg.action() == request::DoAction::kStartTraining) {
-          eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStartTraining));
-        } else if (doActionMsg.action() == request::DoAction::kStopTraining) {
-          eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStopTraining));
-        }
-        break;
-      }
-    default:
-      std::cout << "Unknown request type" << std::endl;
-      break;
-  }
 }
 
 void UserInterface::setPosition(broadcast::Position *msg, const sro::Position &pos) const {

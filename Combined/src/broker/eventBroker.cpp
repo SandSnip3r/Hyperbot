@@ -32,7 +32,7 @@ EventBroker::SubscriptionId EventBroker::subscribeToEvent(event::EventCode event
       subscriptionIt = itBoolResult.first;
     }
   } else {
-    LOG() << "Already subscribed to this event!" << std::endl;
+    // Already subscribed to this event
     // TODO: Check if this handler is one of the ones already subscribed
     // const auto thisAddr = getAddress(handleFunc);
     // for (const auto &i : subscriptionIt->second) {

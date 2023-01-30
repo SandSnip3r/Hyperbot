@@ -24,7 +24,9 @@ public:
           const config::CharacterLoginData &loginData,
           broker::EventBroker &eventBroker);
   ~Session();
+  void initialize();
   void run();
+  const state::WorldState& getWorldState() const;
 private:
   const pk2::GameData &gameData_;
   const std::filesystem::path &kSilkroadDirectoryPath_;

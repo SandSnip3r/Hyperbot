@@ -10,7 +10,6 @@
 #include "state/machine/autoPotion.hpp"
 #include "state/machine/botting.hpp"
 #include "state/worldState.hpp"
-#include "ui/userInterface.hpp"
 
 #include <optional>
 class Bot {
@@ -21,10 +20,12 @@ public:
       broker::PacketBroker &packetBroker,
       broker::EventBroker &eventBroker);
 
+  void initialize();
   const pk2::GameData& gameData() const;
   Proxy& proxy() const;
   broker::PacketBroker& packetBroker() const;
   broker::EventBroker& eventBroker();
+  const state::WorldState& worldState() const;
   state::EntityTracker& entityTracker();
   state::Self& selfState();
 protected:
@@ -37,7 +38,6 @@ protected:
   broker::PacketBroker &packetBroker_;
   broker::EventBroker &eventBroker_;
   state::WorldState worldState_{gameData_, eventBroker_}; // TODO: For multi-character, this will move out of the bot
-  ui::UserInterface userInterface_{eventBroker_};
   PacketProcessor packetProcessor_{worldState_, packetBroker_, eventBroker_, gameData_};
 
 private:
@@ -68,10 +68,7 @@ private:
   void handleMovementBegan();
   void handleMovementEnded();
   void handleEntityMovementBegan(const event::EntityMovementBegan &event);
-  void handleEntityMovementEnded(const event::EntityMovementEnded &event);
   void handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId);
-  void handleEntityPositionUpdated(sro::scalar_types::EntityGlobalId globalId);
-  void handleEntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId globalId);
   void handleEntityEnteredGeometry(const event::EntityEnteredGeometry &event);
   void handleEntityExitedGeometry(const event::EntityExitedGeometry &event);
   // Character info events
@@ -86,17 +83,7 @@ private:
   void handleSkillCooldownEnded(const event::SkillCooldownEnded &event);
 
   // Misc
-  void storageInitialized();
-  void guildStorageInitialized();
-  void inventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent);
-  void avatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent);
-  void cosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent);
-  void storageUpdated(const event::StorageUpdated &storageUpdatedEvent);
-  void guildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent);
-  void broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex);
   void entitySpawned(const event::EntitySpawned &event);
-  void entityDespawned(const event::EntityDespawned &event);
-  void entityLifeStateChanged(const event::EntityLifeStateChanged &event);
   void itemUseTimedOut(const event::ItemUseTimeout &event);
   void handleKnockbackStunEnded();
   void handleKnockdownStunEnded();

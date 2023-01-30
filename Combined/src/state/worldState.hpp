@@ -26,6 +26,8 @@ public:
 
   template<typename EntityType>
   EntityType& getEntity(sro::scalar_types::EntityGlobalId globalId);
+  template<typename EntityType>
+  const EntityType& getEntity(sro::scalar_types::EntityGlobalId globalId) const;
 private:
   const pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
@@ -48,6 +50,20 @@ EntityType& WorldState::getEntity(sro::scalar_types::EntityGlobalId globalId) {
       throw std::runtime_error("Trying to get self entity as an invalid type");
     }
     return dynamic_cast<EntityType&>(selfState_);
+  } else if (entityTracker_.trackingEntity(globalId)) {
+    return entityTracker_.getEntity<EntityType>(globalId);
+  } else {
+    throw std::runtime_error("Trying to get untracked entity");
+  }
+}
+
+template<typename EntityType>
+const EntityType& WorldState::getEntity(sro::scalar_types::EntityGlobalId globalId) const {
+  if (globalId == selfState_.globalId) {
+    if (dynamic_cast<const EntityType*>(&selfState_) == nullptr) {
+      throw std::runtime_error("Trying to get self entity as an invalid type");
+    }
+    return dynamic_cast<const EntityType&>(selfState_);
   } else if (entityTracker_.trackingEntity(globalId)) {
     return entityTracker_.getEntity<EntityType>(globalId);
   } else {

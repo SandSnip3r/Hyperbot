@@ -158,7 +158,6 @@ ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet
 
   uint8_t hasDestination = stream.Read<uint8_t>();
   uint8_t movementType = stream.Read<uint8_t>();
-  std::cout << "movementType: " << (int)movementType << '\n';
 
   if (hasDestination) {
     uint16_t destinationRegion = stream.Read<uint16_t>();

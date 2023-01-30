@@ -19,10 +19,6 @@ void AutoPotion::onUpdate(const event::Event *event) {
     if (childState_->done()) {
       // Must be done using an item
       childState_.reset();
-      // If we eventually try to use the same item again later in this function, the given event is very likely no longer relevant
-      //  In such a case, the event is probably an inventory update for the item that was successfully used
-      //  UseItem tracks the item count of the used item, so it won't be fooled by a reused "Item Used" event
-      event = nullptr;
     } else {
       // Still using an item, nothing to do
       return;

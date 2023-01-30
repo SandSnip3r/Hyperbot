@@ -26,8 +26,9 @@ namespace pk2 {
 class GameData {
 public:
   // Opens Media.PK2 and Data.PK2, parses game data into memory, then closes Media.pk2 and Data.PK2
-  GameData(const std::filesystem::path &kSilkroadPath);
+  GameData(const std::filesystem::path &silkroadPath);
 
+  void parseSilkroadFiles();
   const uint16_t gatewayPort() const;
   const DivisionInfo& divisionInfo() const;
   const CharacterData& characterData() const;
@@ -44,7 +45,7 @@ public:
   std::optional<std::string> getSkillNameIfExists(sro::scalar_types::ReferenceObjectId skillRefId) const;
 private:
   std::mutex printMutex_;
-  const std::filesystem::path kSilkroadPath_;
+  const std::filesystem::path silkroadPath_;
   uint16_t gatewayPort_;
   DivisionInfo divisionInfo_;
   CharacterData characterData_;

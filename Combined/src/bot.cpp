@@ -24,7 +24,10 @@ Bot::Bot(const config::CharacterLoginData &loginData,
       proxy_(proxy),
       packetBroker_(packetBroker),
       eventBroker_(eventBroker) {
-  userInterface_.run();
+  //
+}
+
+void Bot::initialize() {
   subscribeToEvents();
 }
 
@@ -42,6 +45,10 @@ broker::PacketBroker& Bot::packetBroker() const {
 
 broker::EventBroker& Bot::eventBroker() {
   return eventBroker_;
+}
+
+const state::WorldState& Bot::worldState() const {
+  return worldState_;
 }
 
 state::EntityTracker& Bot::entityTracker() {
@@ -69,14 +76,10 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementBegan, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementTimerEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityPositionUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityNotMovingAngleChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityEnteredGeometry, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityExitedGeometry, eventHandleFunction);
   // Character info events
   eventBroker_.subscribeToEvent(event::EventCode::kSpawned, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCosSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemUseFailed, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityHpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
@@ -88,27 +91,14 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kEntitySelected, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kNpcTalkStart, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kAvatarInventoryUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCosInventoryUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStorageInitialized, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageInitialized, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRepairSuccessful, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kInventoryGoldUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStorageGoldUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageGoldUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCharacterSkillPointsUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCharacterExperienceUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntitySpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityDespawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityLifeStateChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaSet, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaReset, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemUseTimeout, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityOwnershipRemoved, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStateMachineCreated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStateMachineDestroyed, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kKnockedBack, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kKnockedDown, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kKnockbackStunEnded, eventHandleFunction);
@@ -173,8 +163,7 @@ void Bot::handleEvent(const event::Event *event) {
         }
       case event::EventCode::kEntityMovementEnded:
         {
-          const auto &castedEvent = dynamic_cast<const event::EntityMovementEnded&>(*event);
-          handleEntityMovementEnded(castedEvent);
+          onUpdate(event);
           break;
         }
       case event::EventCode::kEntityMovementTimerEnded:
@@ -183,25 +172,6 @@ void Bot::handleEvent(const event::Event *event) {
           handleEntityMovementTimerEnded(castedEvent.globalId);
           break;
         }
-      case event::EventCode::kEntityPositionUpdated:
-        {
-          const auto &castedEvent = dynamic_cast<const event::EntityPositionUpdated&>(*event);
-          handleEntityPositionUpdated(castedEvent.globalId);
-          break;
-        }
-      case event::EventCode::kEntityNotMovingAngleChanged:
-        {
-          const auto &castedEvent = dynamic_cast<const event::EntityNotMovingAngleChanged&>(*event);
-          handleEntityNotMovingAngleChanged(castedEvent.globalId);
-          break;
-        }
-      case event::EventCode::kEnteredNewRegion:
-        {
-          const auto pos = worldState_.selfState().position();
-          const auto &regionName = gameData_.textZoneNameData().getRegionName(pos.regionId());
-          userInterface_.broadcastRegionNameUpdate(regionName);
-        }
-        break;
       case event::EventCode::kEntityEnteredGeometry:
         {
           const auto &castedEvent = dynamic_cast<const event::EntityEnteredGeometry&>(*event);
@@ -219,12 +189,6 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kSpawned:
         handleSpawned();
         break;
-      case event::EventCode::kCosSpawned:
-        {
-          const event::CosSpawned &castedEvent = dynamic_cast<const event::CosSpawned&>(*event);
-          handleCosSpawned(castedEvent);
-        }
-        break;
       case event::EventCode::kItemUseFailed:
         {
           onUpdate(event);
@@ -233,19 +197,12 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kEntityHpChanged: {
         const event::EntityHpChanged &castedEvent = dynamic_cast<const event::EntityHpChanged&>(*event);
         if (castedEvent.globalId == worldState_.selfState().globalId) {
-          userInterface_.broadcastCharacterHpUpdate(worldState_.selfState().currentHp());
           handleVitalsChanged();
         }
         break;
       }
       case event::EventCode::kMpChanged:
-        userInterface_.broadcastCharacterMpUpdate(worldState_.selfState().currentMp());
-        handleVitalsChanged();
-        break;
       case event::EventCode::kMaxHpMpChanged:
-        if (worldState_.selfState().maxHp() && worldState_.selfState().maxMp()) {
-          userInterface_.broadcastCharacterMaxHpMpUpdate(*worldState_.selfState().maxHp(), *worldState_.selfState().maxMp());
-        }
         handleVitalsChanged();
         break;
       case event::EventCode::kStatesChanged:
@@ -254,9 +211,6 @@ void Bot::handleEvent(const event::Event *event) {
 
       // Misc
       case event::EventCode::kStorageInitialized:
-        storageInitialized();
-      case event::EventCode::kGuildStorageInitialized:
-        guildStorageInitialized();
       case event::EventCode::kEntityDeselected:
       case event::EventCode::kEntitySelected:
       case event::EventCode::kNpcTalkStart:
@@ -265,49 +219,14 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       case event::EventCode::kInventoryUpdated:
         {
-          const event::InventoryUpdated &castedEvent = dynamic_cast<const event::InventoryUpdated&>(*event);
-          inventoryUpdated(castedEvent);
-          break;
-        }
-      case event::EventCode::kAvatarInventoryUpdated:
-        {
-          const event::AvatarInventoryUpdated &castedEvent = dynamic_cast<const event::AvatarInventoryUpdated&>(*event);
-          avatarInventoryUpdated(castedEvent);
-          break;
-        }
-      case event::EventCode::kCosInventoryUpdated:
-        {
-          const event::CosInventoryUpdated &castedEvent = dynamic_cast<const event::CosInventoryUpdated&>(*event);
-          cosInventoryUpdated(castedEvent);
+          onUpdate(event);
           break;
         }
       case event::EventCode::kStorageUpdated:
         {
-          const event::StorageUpdated &castedEvent = dynamic_cast<const event::StorageUpdated&>(*event);
-          storageUpdated(castedEvent);
+          onUpdate(event);
           break;
         }
-      case event::EventCode::kGuildStorageUpdated:
-        {
-          const event::GuildStorageUpdated &castedEvent = dynamic_cast<const event::GuildStorageUpdated&>(*event);
-          guildStorageUpdated(castedEvent);
-          break;
-        }
-      case event::EventCode::kInventoryGoldUpdated:
-        userInterface_.broadcastGoldAmountUpdate(worldState_.selfState().getGold(), broadcast::ItemLocation::kCharacterInventory);
-        break;
-      case event::EventCode::kStorageGoldUpdated:
-        userInterface_.broadcastGoldAmountUpdate(worldState_.selfState().getStorageGold(), broadcast::ItemLocation::kStorage);
-        break;
-      case event::EventCode::kGuildStorageGoldUpdated:
-        userInterface_.broadcastGoldAmountUpdate(worldState_.selfState().getGuildStorageGold(), broadcast::ItemLocation::kGuildStorage);
-        break;
-      case event::EventCode::kCharacterSkillPointsUpdated:
-        userInterface_.broadcastCharacterSpUpdate(worldState_.selfState().getSkillPoints());
-        break;
-      case event::EventCode::kCharacterExperienceUpdated:
-        userInterface_.broadcastCharacterExperienceUpdate(worldState_.selfState().getCurrentExperience(), worldState_.selfState().getCurrentSpExperience());
-        break;
       case event::EventCode::kEntitySpawned:
         {
           const auto &castedEvent = dynamic_cast<const event::EntitySpawned&>(*event);
@@ -316,28 +235,12 @@ void Bot::handleEvent(const event::Event *event) {
         }
       case event::EventCode::kEntityDespawned:
         {
-          const auto &castedEvent = dynamic_cast<const event::EntityDespawned&>(*event);
-          entityDespawned(castedEvent);
+          onUpdate(event);
           break;
         }
       case event::EventCode::kEntityLifeStateChanged:
         {
-          const auto &castedEvent = dynamic_cast<const event::EntityLifeStateChanged&>(*event);
-          entityLifeStateChanged(castedEvent);
-          break;
-        }
-      case event::EventCode::kTrainingAreaSet:
-        {
-          if (!worldState_.selfState().trainingAreaGeometry) {
-            throw std::runtime_error("Training area set, but no training geometry");
-          }
-          userInterface_.broadcastTrainingAreaSet(worldState_.selfState().trainingAreaGeometry.get());
-          break;
-        }
-      case event::EventCode::kTrainingAreaReset:
-        {
-          LOG() << "Training area reset" << std::endl;
-          userInterface_.broadcastTrainingAreaReset();
+          onUpdate();
           break;
         }
       case event::EventCode::kItemUseTimeout:
@@ -350,17 +253,6 @@ void Bot::handleEvent(const event::Event *event) {
         {
           const auto &castedEvent = dynamic_cast<const event::EntityOwnershipRemoved&>(*event);
           onUpdate();
-          break;
-        }
-      case event::EventCode::kStateMachineCreated:
-        {
-          const auto &castedEvent = dynamic_cast<const event::StateMachineCreated&>(*event);
-          userInterface_.broadcastStateMachineCreated(castedEvent.stateMachineName);
-          break;
-        }
-      case event::EventCode::kStateMachineDestroyed:
-        {
-          userInterface_.broadcastStateMachineDestroyed();
           break;
         }
       case event::EventCode::kKnockedBack:
@@ -586,34 +478,8 @@ void Bot::handleStateCharacterListUpdated() const {
 void Bot::handleEntityMovementBegan(const event::EntityMovementBegan &event) {
   entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(event.globalId);
   if (!mobileEntity.moving()) {
+    // TODO: Maybe we ought to move this check at the source of the event and get rid of this
     throw std::runtime_error("Got an entity movement began event, but it is not moving");
-  }
-  const auto currentPosition = mobileEntity.position();
-  if (mobileEntity.destinationPosition) {
-    if (event.globalId == worldState_.selfState().globalId) {
-    // TODO: We ought to combine these two UI functions
-      userInterface_.broadcastMovementBeganUpdate(currentPosition, *worldState_.selfState().destinationPosition, worldState_.selfState().currentSpeed());
-    } else {
-      userInterface_.broadcastEntityMovementBegan(event.globalId, currentPosition, *mobileEntity.destinationPosition, mobileEntity.currentSpeed());
-    }
-  } else {
-    if (event.globalId == worldState_.selfState().globalId) {
-    // TODO: We ought to combine these two UI functions
-      userInterface_.broadcastMovementBeganUpdate(currentPosition, worldState_.selfState().angle(), worldState_.selfState().currentSpeed());
-    } else {
-      userInterface_.broadcastEntityMovementBegan(event.globalId, currentPosition, mobileEntity.angle(), mobileEntity.currentSpeed());
-    }
-  }
-  onUpdate(&event);
-}
-
-void Bot::handleEntityMovementEnded(const event::EntityMovementEnded &event) {
-  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(event.globalId);
-  if (event.globalId == worldState_.selfState().globalId) {
-    // TODO: We ought to combine these two UI functions
-    userInterface_.broadcastMovementEndedUpdate(mobileEntity.position());
-  } else {
-    userInterface_.broadcastEntityMovementEnded(event.globalId, mobileEntity.position());
   }
   onUpdate(&event);
 }
@@ -621,29 +487,6 @@ void Bot::handleEntityMovementEnded(const event::EntityMovementEnded &event) {
 void Bot::handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId) {
   entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
   mobileEntity.movementTimerCompleted(eventBroker_);
-}
-
-void Bot::handleEntityPositionUpdated(sro::scalar_types::EntityGlobalId globalId) {
-  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
-  if (mobileEntity.moving()) {
-    throw std::runtime_error("Should never happen while moving");
-  }
-
-  // Not moving
-  const auto currentPosition = mobileEntity.position();
-  if (globalId == worldState_.selfState().globalId) {
-    userInterface_.broadcastPositionChangedUpdate(currentPosition);
-  } else {
-    userInterface_.broadcastEntityPositionChanged(mobileEntity.globalId, currentPosition);
-  }
-}
-
-void Bot::handleEntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId globalId) {
-  if (globalId == worldState_.selfState().globalId) {
-    // We only send the angle of the controlled character to the UI
-    entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
-    userInterface_.broadcastNotMovingAngleChangedUpdate(mobileEntity.angle());
-  }
 }
 
 void Bot::handleEntityEnteredGeometry(const event::EntityEnteredGeometry &event) {
@@ -661,43 +504,7 @@ void Bot::handleEntityExitedGeometry(const event::EntityExitedGeometry &event) {
 // ============================================================================================================================
 
 void Bot::handleSpawned() {
-  userInterface_.broadcastCharacterSpawn();
-  const auto &currentLevelData = gameData_.levelData().getLevel(worldState_.selfState().getCurrentLevel());
-  userInterface_.broadcastCharacterLevelUpdate(worldState_.selfState().getCurrentLevel(), currentLevelData.exp_C);
-  userInterface_.broadcastCharacterExperienceUpdate(worldState_.selfState().getCurrentExperience(), worldState_.selfState().getCurrentSpExperience());
-  userInterface_.broadcastCharacterSpUpdate(worldState_.selfState().getSkillPoints());
-  userInterface_.broadcastCharacterNameUpdate(worldState_.selfState().name);
-  userInterface_.broadcastGoldAmountUpdate(worldState_.selfState().getGold(), broadcast::ItemLocation::kCharacterInventory);
-  const auto &regionName = gameData_.textZoneNameData().getRegionName(worldState_.selfState().position().regionId());
-  userInterface_.broadcastMovementEndedUpdate(worldState_.selfState().position());
   LOG() << "Spawned at position " << worldState_.selfState().position() << std::endl;
-  userInterface_.broadcastRegionNameUpdate(regionName);
-  // Send entire inventory
-  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<worldState_.selfState().inventory.size(); ++inventorySlotIndex) {
-    if (worldState_.selfState().inventory.hasItem(inventorySlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_.selfState().inventory, inventorySlotIndex);
-    }
-  }
-  // Send avatar inventory too
-  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<worldState_.selfState().avatarInventory.size(); ++inventorySlotIndex) {
-    if (worldState_.selfState().avatarInventory.hasItem(inventorySlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_.selfState().avatarInventory, inventorySlotIndex);
-    }
-  }
-}
-
-void Bot::handleCosSpawned(const event::CosSpawned &event) {
-  // Send COS inventory
-  auto it = worldState_.selfState().cosInventoryMap.find(event.cosGlobalId);
-  if (it == worldState_.selfState().cosInventoryMap.end()) {
-    throw std::runtime_error("Received COS Spawned event, but dont have this COS");
-  }
-  const auto &cosInventory = it->second;
-  for (uint8_t inventorySlotIndex=0; inventorySlotIndex<cosInventory.size(); ++inventorySlotIndex) {
-    if (cosInventory.hasItem(inventorySlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, inventorySlotIndex);
-    }
-  }
 }
 
 void Bot::handleVitalsChanged() {
@@ -743,130 +550,25 @@ void Bot::handleSkillCooldownEnded(const event::SkillCooldownEnded &event) {
 // ============================================================Misc============================================================
 // ============================================================================================================================
 
-void Bot::storageInitialized() {
-  for (uint8_t storageSlotIndex=0; storageSlotIndex<worldState_.selfState().storage.size(); ++storageSlotIndex) {
-    if (worldState_.selfState().storage.hasItem(storageSlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_.selfState().storage, storageSlotIndex);
-    }
-  }
-  onUpdate();
-}
-
-void Bot::guildStorageInitialized() {
-  for (uint8_t storageSlotIndex=0; storageSlotIndex<worldState_.selfState().guildStorage.size(); ++storageSlotIndex) {
-    if (worldState_.selfState().guildStorage.hasItem(storageSlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_.selfState().guildStorage, storageSlotIndex);
-    }
-  }
-}
-
-void Bot::inventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent) {
-  if (inventoryUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_.selfState().inventory, *inventoryUpdatedEvent.srcSlotNum);
-  }
-  if (inventoryUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_.selfState().inventory, *inventoryUpdatedEvent.destSlotNum);
-  }
-  onUpdate(&inventoryUpdatedEvent);
-}
-
-void Bot::avatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent) {
-  if (avatarInventoryUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_.selfState().avatarInventory, *avatarInventoryUpdatedEvent.srcSlotNum);
-  }
-  if (avatarInventoryUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_.selfState().avatarInventory, *avatarInventoryUpdatedEvent.destSlotNum);
-  }
-}
-
-void Bot::cosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent) {
-  auto it = worldState_.selfState().cosInventoryMap.find(cosInventoryUpdatedEvent.globalId);
-  if (it == worldState_.selfState().cosInventoryMap.end()) {
-    throw std::runtime_error("COS inventory updated, but not tracking this COS");
-  }
-  const auto &cosInventory = it->second;
-  if (cosInventoryUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.srcSlotNum);
-  }
-  if (cosInventoryUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.destSlotNum);
-  }
-}
-
-void Bot::storageUpdated(const event::StorageUpdated &storageUpdatedEvent) {
-  if (storageUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_.selfState().storage, *storageUpdatedEvent.srcSlotNum);
-  }
-  if (storageUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_.selfState().storage, *storageUpdatedEvent.destSlotNum);
-  }
-  onUpdate(&storageUpdatedEvent);
-}
-
-void Bot::guildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent) {
-  if (guildStorageUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_.selfState().guildStorage, *guildStorageUpdatedEvent.srcSlotNum);
-  }
-  if (guildStorageUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_.selfState().guildStorage, *guildStorageUpdatedEvent.destSlotNum);
-  }
-}
-
-void Bot::broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex) {
-  uint16_t quantity{0};
-  std::optional<std::string> itemName;
-  if (itemStorage.hasItem(slotIndex)) {
-    const auto *item = itemStorage.getItem(slotIndex);
-    if (const auto *itemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(item)) {
-      quantity = itemAsExpendable->quantity;
-    } else {
-      // Not an expendable, only 1
-      quantity = 1;
-    }
-    itemName = gameData_.textItemAndSkillData().getItemName(item->itemInfo->nameStrID128);
-  }
-  userInterface_.broadcastItemUpdate(itemLocation, slotIndex, quantity, itemName);
-}
-
 void Bot::entitySpawned(const event::EntitySpawned &event) {
   const bool trackingEntity = worldState_.entityTracker().trackingEntity(event.globalId);
   if (!trackingEntity) {
+    // TODO: Maybe we ought to move this check at the source of the event and get rid of this
     throw std::runtime_error("Received entity spawned event, but we're not tracking this entity");
   }
-  const auto *entity = worldState_.entityTracker().getEntity(event.globalId);
   {
     // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.
     // According to Daxter:
     //  maximum possible should be around 905
     //  given that you can at most see almost 2 blocks across
-    const auto distanceToEntity = sro::position_math::calculateDistance2d(worldState_.selfState().position(), entity->position());
+    const auto &entity = worldState_.getEntity<entity::Entity>(event.globalId);
+    const auto distanceToEntity = sro::position_math::calculateDistance2d(worldState_.selfState().position(), entity.position());
     if (distanceToEntity > worldState_.selfState().estimatedVisibilityRange) {
       LOG() << "Bumping up estimated visibility range to " << distanceToEntity << std::endl;
       worldState_.selfState().estimatedVisibilityRange = distanceToEntity;
     }
   }
-  userInterface_.broadcastEntitySpawned(entity);
-  if (const auto *characterEntity = dynamic_cast<const entity::Character*>(entity)) {
-    if (characterEntity->lifeState == sro::entity::LifeState::kDead) {
-      // Entity spawned in as dead
-      // TODO: Create a more comprehensive entity proto which contains life state
-      userInterface_.broadcastEntityLifeStateChanged(characterEntity->globalId, characterEntity->lifeState);
-    }
-  }
-
   onUpdate(&event);
-}
-
-void Bot::entityDespawned(const event::EntityDespawned &event) {
-  userInterface_.broadcastEntityDespawned(event.globalId);
-
-  onUpdate(&event);
-}
-
-void Bot::entityLifeStateChanged(const event::EntityLifeStateChanged &event) {
-  entity::Character &characterEntity = worldState_.getEntity<entity::Character>(event.globalId);
-  userInterface_.broadcastEntityLifeStateChanged(characterEntity.globalId, characterEntity.lifeState);
-  onUpdate();
 }
 
 void Bot::itemUseTimedOut(const event::ItemUseTimeout &event) {

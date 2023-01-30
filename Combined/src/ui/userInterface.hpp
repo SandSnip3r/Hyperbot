@@ -4,6 +4,7 @@
 #include "entity/entity.hpp"
 #include "broker/eventBroker.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
+#include "storage/storage.hpp"
 
 #include "ui-proto/broadcast.pb.h"
 #include <silkroad_lib/position.h>
@@ -13,14 +14,54 @@
 #include <optional>
 #include <string_view>
 
+namespace pk2 {
+class GameData;
+} // namespace pk2
+
+namespace state {
+class WorldState;
+} // namespace state
+
 namespace ui {
 
 class UserInterface {
 // TODO: std::string vs std::string_view. Might need to compile protobuf with c++17?
 public:
-  UserInterface(broker::EventBroker &eventBroker);
+  UserInterface(const pk2::GameData &gameData, broker::EventBroker &eventBroker);
   ~UserInterface();
+  void initialize();
+  void setWorldState(const state::WorldState &worldState);
+  void runAsync();
+private:
+  zmq::context_t context_;
+  zmq::socket_t publisher_{context_, zmq::socket_type::pub};
+  const pk2::GameData &gameData_;
+  broker::EventBroker &eventBroker_;
+  const state::WorldState *worldState_;
+  std::thread thr_;
+
+  void subscribeToEvents();
+  void handleEvent(const event::Event *event);
+
   void run();
+  void handle(const zmq::message_t &request);
+
+  void handleSelfSpawned();
+  void handleCosSpawned(const event::CosSpawned &event);
+  void handleEntitySpawned(const event::EntitySpawned &event);
+  void handleEntityMovementBegan(const event::EntityMovementBegan &event);
+  void handleEntityMovementEnded(const event::EntityMovementEnded &event);
+  void handleEntityPositionUpdated(sro::scalar_types::EntityGlobalId globalId);
+  void handleEntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId globalId);
+  void handleStorageInitialized();
+  void handleGuildStorageInitialized();
+  void handleInventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent);
+  void handleAvatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent);
+  void handleCosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent);
+  void handleStorageUpdated(const event::StorageUpdated &storageUpdatedEvent);
+  void handleGuildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent);
+
+  void broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex);
   void broadcastCharacterSpawn();
   void broadcastCharacterHpUpdate(uint32_t currentHp);
   void broadcastCharacterMpUpdate(uint32_t currentMp);
@@ -50,18 +91,12 @@ public:
   void broadcastStateMachineDestroyed();
 
   void broadcast(const broadcast::BroadcastMessage &broadcastProto);
-private:
-  zmq::context_t context_;
-  zmq::socket_t publisher_{context_, zmq::socket_type::pub};
-  broker::EventBroker &eventBroker_;
-  std::thread thr_;
-  void privateRun();
-  void handle(const zmq::message_t &request);
 
   void setPosition(broadcast::Position *msg, const sro::Position &pos) const;
   void setCharacterMovementBegan(broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Position &destPosition, const float speed) const;
   void setCharacterMovementBegan(broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Angle angle, const float speed) const;
   void setCharacterMovementEnded(broadcast::CharacterMovementEnded *msg, const sro::Position &currentPosition) const;
+
 };
 
 } // namespace ui

@@ -31,7 +31,8 @@ UseItem::~UseItem() {
 }
 
 void UseItem::onUpdate(const event::Event *event) {
-  if (event) {
+  if (waitingForItemToBeUsed_ && event) {
+    // We don't care about any event if we haven't yet used an item
     if (const auto *itemUseFailedEvent = dynamic_cast<const event::ItemUseFailed*>(event)) {
       // TODO: Maybe behave differently for different errors
       if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kItemDoesNotExist) {
