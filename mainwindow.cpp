@@ -268,7 +268,7 @@ void MainWindow::timerTriggered() {
   const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-selfData_.movement->startTime).count();
   sro::Position currentPosition;
   if (const auto *destPosPtr = std::get_if<entity_data::Movement::kToDestination>(&selfData_.movement->destPosOrAngle)) {
-    const auto totalDistanceToTravel = sro::position_math::calculateDistance2D(selfData_.movement->srcPos, *destPosPtr);
+    const auto totalDistanceToTravel = sro::position_math::calculateDistance2d(selfData_.movement->srcPos, *destPosPtr);
     const auto totalSecondsToTravel = totalDistanceToTravel/selfData_.movement->speed;
     const double fractionTraveled = std::min(1.0, elapsedTimeMs / (totalSecondsToTravel*1000.0));
     currentPosition = sro::position_math::interpolateBetweenPoints(selfData_.movement->srcPos, *destPosPtr, fractionTraveled);
@@ -304,7 +304,7 @@ void MainWindow::entityMovementTimerTriggered() {
     const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-movement.startTime).count();
     sro::Position currentPosition;
     if (const auto *destPosPtr = std::get_if<entity_data::Movement::kToDestination>(&movement.destPosOrAngle)) {
-      const auto totalDistanceToTravel = sro::position_math::calculateDistance2D(movement.srcPos, *destPosPtr);
+      const auto totalDistanceToTravel = sro::position_math::calculateDistance2d(movement.srcPos, *destPosPtr);
       const auto totalSecondsToTravel = totalDistanceToTravel/movement.speed;
       const double fractionTraveled = std::min(1.0, elapsedTimeMs / (totalSecondsToTravel*1000.0));
       currentPosition = sro::position_math::interpolateBetweenPoints(movement.srcPos, *destPosPtr, fractionTraveled);
