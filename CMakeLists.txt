@@ -4,6 +4,7 @@ include_directories(${Protobuf_INCLUDE_DIRS})
 
 set(MESSAGE_SOURCES
   broadcast.proto
+  config.proto
   request.proto
 )
 
