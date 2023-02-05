@@ -8,6 +8,12 @@ void Requester::connect() {
   socket_.connect("tcp://localhost:5555");
 }
 
+void Requester::sendConfig(const proto::config::Config &config) {
+  request::RequestMessage requestMessage;
+  *requestMessage.mutable_config() = config;
+  serializeSendAndRecvAck(requestMessage);
+}
+
 void Requester::injectPacket(request::PacketToInject::Direction packetDirection, uint16_t opcode, const std::string &rawBytes) {
   request::PacketToInject packet;
   packet.set_direction(packetDirection);

@@ -6,6 +6,8 @@
 #include "regionGraphicsItem.hpp"
 #include "./ui_mainwindow.h"
 
+#include "proto/config.pb.h"
+
 #include <silkroad_lib/game_constants.h>
 #include <silkroad_lib/position_math.h>
 #include <silkroad_lib/pk2/pk2ReaderModern.h>
@@ -43,6 +45,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
   // Requester is a req/rep socket to the bot to cause actions
   requester_.connect();
+  temp();
 
   // TODO: Reorganize
   // Start timer to update entities positions
@@ -50,6 +53,25 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
   connect(entityMovementUpdateTimer_, &QTimer::timeout, this, &MainWindow::entityMovementTimerTriggered);
   entityMovementUpdateTimer_->setInterval(1000/60.0);
   entityMovementUpdateTimer_->start();
+}
+
+void MainWindow::temp() {
+  const std::string kCharacterName{"MrPoop"};
+  const std::string kUsername{"5"};
+  const std::string kPassword{"0"};
+  proto::config::Config config;
+  config.set_client_path("C:\\Users\\Victor\\Documents\\Development\\Daxter Silkroad server files\\Silkroad Client");
+  config.set_character_to_login(kCharacterName);
+  proto::config::CharacterConfig characterConfig;
+  characterConfig.set_username(kUsername);
+  characterConfig.set_password(kPassword);
+  proto::config::AutopotionConfig &autopotionConfig = *characterConfig.mutable_autopotion_config();
+  autopotionConfig.set_hp_threshold(0.90);
+  autopotionConfig.set_mp_threshold(0.90);
+  autopotionConfig.set_vigor_hp_threshold(0.45);
+  autopotionConfig.set_vigor_mp_threshold(0.30);
+  (*config.mutable_character_configs())[kCharacterName] = characterConfig;
+  requester_.sendConfig(config);
 }
 
 MainWindow::~MainWindow() {

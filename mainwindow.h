@@ -56,6 +56,8 @@ private:
 
   QTimer *entityMovementUpdateTimer_{nullptr};
 
+  void temp();
+
   void initializeUi();
   std::optional<QPixmap> parseRegionMinimapPixmapFromPk2(sro::pk2::Pk2ReaderModern &pk2Reader, sro::Sector xSector, sro::Sector ySector);
   void initializeMap();
