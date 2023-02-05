@@ -16,13 +16,6 @@ public:
   void onUpdate(const event::Event *event) override;
   bool done() const override;
 private:
-  // TODO: Move to a real configuration object
-  // Potion configuration
-  const double kHpThreshold_{0.90};
-  const double kMpThreshold_{0.90};
-  const double kVigorHpThreshold_{0.45};
-  const double kVigorMpThreshold_{0.30};
-
   std::unique_ptr<StateMachine> childState_;
 
   // These functions return `true` if an item was used, `false` otherwise.

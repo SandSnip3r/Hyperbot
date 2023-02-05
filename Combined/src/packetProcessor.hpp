@@ -54,6 +54,7 @@ public:
                   broker::EventBroker &eventBroker,
                   const pk2::GameData &gameData);
 
+  void initialize();
   void handlePacket(const PacketContainer &packet) const;
 private:
   state::WorldState &worldState_;

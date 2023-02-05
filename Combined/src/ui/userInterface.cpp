@@ -341,7 +341,7 @@ void UserInterface::run() {
     zmq::message_t request;
     socket.recv(request, zmq::recv_flags::none);
 
-    handle(request);
+    handleRequest(request);
 
     // Immediately respond with an acknowledgement
     const std::string response{"ack"};
@@ -349,7 +349,7 @@ void UserInterface::run() {
   }
 }
 
-void UserInterface::handle(const zmq::message_t &request) {
+void UserInterface::handleRequest(const zmq::message_t &request) {
   // Parse the request
   request::RequestMessage requestMsg;
   requestMsg.ParseFromArray(request.data(), request.size());
@@ -367,6 +367,11 @@ void UserInterface::handle(const zmq::message_t &request) {
         } else if (doActionMsg.action() == request::DoAction::kStopTraining) {
           eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStopTraining));
         }
+        break;
+      }
+    case request::RequestMessage::BodyCase::kConfig: {
+        const proto::config::Config &config = requestMsg.config();
+        eventBroker_.publishEvent(std::make_unique<event::NewConfigReceived>(config));
         break;
       }
     default:

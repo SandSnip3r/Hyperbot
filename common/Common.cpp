@@ -30,7 +30,9 @@ std::filesystem::path getAppDataPath() {
   path = pathTmp;
   // Free memory
   CoTaskMemFree(pathTmp);
-  return path;
+
+  const std::string kAppDataSubdirName = "Hyperbot";
+  return {path / kAppDataSubdirName};
 }
 
 namespace edxLabs
@@ -595,16 +597,6 @@ namespace edxLabs
 			addr = inet_addr(address);
 			return gethostbyaddr((char *)&addr, sizeof(addr), AF_INET);
 		}
-	}
-
-	// Returns the absolute directory path of the executable
-	std::string GetAbsoluteDirectoryPath()
-	{
-		char tmpDirectory1[MAX_PATH + 1] = {0};
-		char tmpDirectory2[MAX_PATH + 1] = {0};
-		GetCurrentDirectoryA(MAX_PATH, tmpDirectory1);
-		GetFullPathNameA(tmpDirectory1, MAX_PATH, tmpDirectory2, 0);
-		return (std::string(tmpDirectory2) + std::string("\\"));
 	}
 
 	// Creates a suspended process

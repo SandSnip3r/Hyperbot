@@ -272,7 +272,7 @@ public:
   // ################################################################################
   // misc
   // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.
-  double estimatedVisibilityRange{842.574};
+  double estimatedVisibilityRange{872.689};
   // TODO: Refactor this whole itemUsedTimeout concept
   std::optional<broker::TimerManager::TimerId> itemUsedTimeoutTimer;
   bool stunnedFromKnockdown{false};

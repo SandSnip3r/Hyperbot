@@ -3,6 +3,8 @@
 
 #include "../../common/pk2/divisionInfo.hpp"
 
+#include "config/config.hpp"
+
 #include <filesystem>
 #include <string>
 
@@ -10,7 +12,7 @@ class Loader {
 public:
 	// Construct a Loader with the given silkroad directory
 	// The Loader is now ready to start a client
-	Loader(const std::filesystem::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo);
+	Loader(const config::Config &config, const pk2::DivisionInfo &divisionInfo);
 	
 	// Starts the Silkroad client process and injects the DLL
 	void startClient(uint16_t proxyListeningPort);
@@ -18,11 +20,10 @@ public:
 	// TODO
   // void killClient();
 private:
-	const std::filesystem::path kSilkroadDirectoryPath_;
   const pk2::DivisionInfo &kDivisionInfo_;
-	std::string dllPath_;
+	std::filesystem::path dllPath_;
+	std::filesystem::path clientPath_;
 	std::string arguments_;
-	std::string clientPath_;
 };
 
 #endif

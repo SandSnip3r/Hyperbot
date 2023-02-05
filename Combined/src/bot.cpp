@@ -14,21 +14,43 @@
 
 #include <silkroad_lib/position_math.h>
 
-Bot::Bot(const config::CharacterLoginData &loginData,
+Bot::Bot(const config::Config &config,
          const pk2::GameData &gameData,
          Proxy &proxy,
          broker::PacketBroker &packetBroker,
          broker::EventBroker &eventBroker) :
-      loginData_(loginData),
+      config_(config),
       gameData_(gameData),
       proxy_(proxy),
       packetBroker_(packetBroker),
       eventBroker_(eventBroker) {
-  //
+  // Check that the config has all the data we need
+  std::unique_lock<std::mutex> configLock(config_.mutex());
+  const auto &configProto = config_.configProto();
+  if (!configProto.has_character_to_login()) {
+    throw std::runtime_error("Config does not contain a character to login");
+  }
+  const std::string characterToLogin = configProto.character_to_login();
+  const auto it = configProto.character_configs().find(characterToLogin);
+  if (it == configProto.character_configs().cend()) {
+    throw std::runtime_error("Config does not contain character config for character to login");
+  }
 }
 
 void Bot::initialize() {
   subscribeToEvents();
+  packetProcessor_.initialize();
+}
+
+const config::Config& Bot::config() const {
+  return config_;
+}
+
+const proto::config::CharacterConfig& Bot::currentCharacterConfig() const {
+  if (!worldState_.selfState().spawned()) {
+    throw std::runtime_error("Not yet spawned, don't know which character config to fetch");
+  }
+  return config_.configProto().character_configs().at(worldState_.selfState().name);
 }
 
 const pk2::GameData& Bot::gameData() const {
@@ -416,20 +438,33 @@ void Bot::handleInjectPacket(const event::InjectPacket &castedEvent) {
 // ================================================Login process event handling================================================
 // ============================================================================================================================
 
+namespace {
+
+std::pair<std::string, std::string> getLoginInfoFromConfig(const config::Config &config) {
+  std::unique_lock<std::mutex> configLock(config.mutex());
+  const auto &characterName = config.configProto().character_to_login();
+  const auto &characterConfig = config.configProto().character_configs().at(characterName);
+  return {characterConfig.username(), characterConfig.password()};
+}
+
+} // anonymous namespace
+
 void Bot::handleStateShardIdUpdated() const {
+  const auto [username, password] = getLoginInfoFromConfig(config_);
   // We received the server list from the server, try to log in
-  const auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(gameData_.divisionInfo().locale, loginData_.id, loginData_.password, worldState_.selfState().shardId);
+  const auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(gameData_.divisionInfo().locale, username, password, worldState_.selfState().shardId);
   packetBroker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
 }
 
 void Bot::handleStateConnectedToAgentServerUpdated() {
+  const auto [username, password] = getLoginInfoFromConfig(config_);
   // Client will try to send auth request, block it
   if (proxy_.blockingOpcode(packet::Opcode::kClientAgentAuthRequest)) {
     throw std::runtime_error("Just connected to AgentServer, but something else blocked client auth packets");
   }
   proxy_.blockOpcode(packet::Opcode::kClientAgentAuthRequest);
   // Send our auth packet
-  const auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(worldState_.selfState().token, loginData_.id, loginData_.password, gameData_.divisionInfo().locale, worldState_.selfState().kMacAddress);
+  const auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(worldState_.selfState().token, username, password, gameData_.divisionInfo().locale, worldState_.selfState().kMacAddress);
   packetBroker_.injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
   // Set our state to logging in so that we'll know to block packets from the client if it tries to also login
   worldState_.selfState().loggingIn = true;
@@ -451,6 +486,11 @@ void Bot::handleStateReceivedCaptchaPromptUpdated() const {
 }
 
 void Bot::handleStateCharacterListUpdated() const {
+  std::string characterName;
+  {
+    std::unique_lock<std::mutex> configLock(config_.mutex());
+    characterName = config_.configProto().character_to_login();
+  }
   LOG() << "Char list received: [ ";
   for (const auto &i : worldState_.selfState().characterList) {
     std::cout << i.name << ' ';
@@ -458,16 +498,16 @@ void Bot::handleStateCharacterListUpdated() const {
   std::cout << "]\n";
 
   // Search for our character in the character list
-  auto it = std::find_if(worldState_.selfState().characterList.begin(), worldState_.selfState().characterList.end(), [this](const packet::structures::CharacterSelection::Character &character) {
-    return character.name == loginData_.name;
+  auto it = std::find_if(worldState_.selfState().characterList.begin(), worldState_.selfState().characterList.end(), [&characterName](const packet::structures::CharacterSelection::Character &character) {
+    return character.name == characterName;
   });
   if (it == worldState_.selfState().characterList.end()) {
-    LOG() << "Unable to find character \"" << loginData_.name << "\"\n";
+    LOG() << "Unable to find character \"" << characterName << "\"\n";
     return;
   }
 
   // Found our character, select it
-  auto charSelectionPacket = packet::building::ClientAgentCharacterSelectionJoinRequest::packet(loginData_.name);
+  auto charSelectionPacket = packet::building::ClientAgentCharacterSelectionJoinRequest::packet(characterName);
   packetBroker_.injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
 }
 

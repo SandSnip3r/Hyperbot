@@ -3,10 +3,10 @@
 
 #include "bot.hpp"
 #include "loader.hpp"
-
 #include "proxy.hpp"
+
 #include "broker/packetBroker.hpp"
-#include "config/configData.hpp"
+#include "config/config.hpp"
 #include "pk2/gameData.hpp"
 
 #include <functional>
@@ -20,8 +20,7 @@
 class Session {
 public:
   Session(const pk2::GameData &gameData,
-          const std::filesystem::path &kSilkroadDirectoryPath,
-          const config::CharacterLoginData &loginData,
+          const config::Config &config,
           broker::EventBroker &eventBroker);
   ~Session();
   void initialize();
@@ -29,13 +28,12 @@ public:
   const state::WorldState& getWorldState() const;
 private:
   const pk2::GameData &gameData_;
-  const std::filesystem::path &kSilkroadDirectoryPath_;
-  const config::CharacterLoginData &loginData_;
+  const config::Config &config_;
   broker::EventBroker &eventBroker_;
-  Loader loader_{kSilkroadDirectoryPath_, gameData_.divisionInfo()};
+  Loader loader_{config_, gameData_.divisionInfo()};
   broker::PacketBroker packetBroker_;
   Proxy proxy_{gameData_, packetBroker_};
-  Bot bot_{loginData_, gameData_, proxy_, packetBroker_, eventBroker_};
+  Bot bot_{config_, gameData_, proxy_, packetBroker_, eventBroker_};
 };
 
 #endif

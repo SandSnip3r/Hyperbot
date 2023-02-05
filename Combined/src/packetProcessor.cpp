@@ -30,6 +30,9 @@ PacketProcessor::PacketProcessor(state::WorldState &worldState,
       packetBroker_(brokerSystem),
       eventBroker_(eventBroker),
       gameData_(gameData) {
+}
+
+void PacketProcessor::initialize() {
   subscribeToPackets();
 }
 
@@ -471,13 +474,14 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
 
     auto *expendableItemPtr = dynamic_cast<storage::ItemExpendable*>(itemPtr);
     // Make sure that the item is an expendable
-    if (expendableItemPtr == nullptr) {
-      throw std::runtime_error("Used an item, but it wasn't an expendable");
+    if (expendableItemPtr != nullptr) {
+      expendableItemPtr->quantity = packet.remainingCount();
+      worldState_.selfState().usedAnItem(packet.typeData(), eventBroker_);
+      eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(packet.slotNum(), std::nullopt));
+    } else if (dynamic_cast<const storage::ItemCosAbilitySummoner*>(itemPtr) == nullptr && 
+               dynamic_cast<const storage::ItemCosGrowthSummoner*>(itemPtr) == nullptr) {
+      throw std::runtime_error("Used an item, but it wasn't an expendable or COS summon");
     }
-
-    expendableItemPtr->quantity = packet.remainingCount();
-    worldState_.selfState().usedAnItem(packet.typeData(), eventBroker_);
-    eventBroker_.publishEvent(std::make_unique<event::InventoryUpdated>(packet.slotNum(), std::nullopt));
   } else {
     // Failed to use item
     if (!worldState_.selfState().usedItemQueueIsEmpty()) {

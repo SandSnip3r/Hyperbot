@@ -1,14 +1,12 @@
+#include "logging.hpp"
 #include "session.hpp"
 
 Session::Session(const pk2::GameData &gameData,
-                 const std::filesystem::path &kSilkroadDirectoryPath,
-                 const config::CharacterLoginData &loginData,
+                 const config::Config &config,
                  broker::EventBroker &eventBroker) :
     gameData_(gameData),
-    kSilkroadDirectoryPath_(kSilkroadDirectoryPath),
-    loginData_(loginData),
+    config_(config),
     eventBroker_(eventBroker) {
-  //
 }
 
 Session::~Session() {

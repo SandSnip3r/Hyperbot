@@ -3,6 +3,8 @@
 
 #include "packet/structures/packetInnerStructures.hpp"
 
+#include "ui-proto/config.pb.h"
+
 #include <silkroad_lib/scalar_types.h>
 
 #include <cstdint>
@@ -80,6 +82,9 @@ enum class EventCode {
   kKnockdownStunEnded,
 
   kMovementRequestTimedOut,
+
+  kNewConfigReceived,
+  kConfigUpdated,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -308,6 +313,13 @@ public:
   ItemCooldownEnded(type_id::TypeId tId);
   const type_id::TypeId typeId;
   virtual ~ItemCooldownEnded() = default;
+};
+
+struct NewConfigReceived : public Event {
+public:
+  NewConfigReceived(const proto::config::Config &config_param);
+  const proto::config::Config config;
+  virtual ~NewConfigReceived() = default;
 };
 
 } // namespace event

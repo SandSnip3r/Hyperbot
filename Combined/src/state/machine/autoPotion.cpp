@@ -162,7 +162,7 @@ bool AutoPotion::tryUseHpPotion() {
   }
 
   bool usedAnItem = false;
-  if (hpPercentage < kHpThreshold_ && bot_.selfState().canUseItem(type_id::categories::kHpPotion)) {
+  if (hpPercentage < bot_.currentCharacterConfig().autopotion_config().hp_threshold() && bot_.selfState().canUseItem(type_id::categories::kHpPotion)) {
     // Use health potion
     usedAnItem = usePotion(type_id::categories::kHpPotion);
   }
@@ -172,7 +172,7 @@ bool AutoPotion::tryUseHpPotion() {
     return true;
   }
 
-  if (hpPercentage < kVigorHpThreshold_ &&
+  if (hpPercentage < bot_.currentCharacterConfig().autopotion_config().vigor_hp_threshold() &&
       bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
     // Use vigor potion
     usedAnItem = usePotion(type_id::categories::kVigorPotion);
@@ -188,7 +188,7 @@ bool AutoPotion::tryUseMpPotion() {
   const double mpPercentage = static_cast<double>(bot_.selfState().currentMp()) / *bot_.selfState().maxMp();
 
   bool usedAnItem = false;
-  if (mpPercentage < kMpThreshold_ && bot_.selfState().canUseItem(type_id::categories::kMpPotion)) {
+  if (mpPercentage < bot_.currentCharacterConfig().autopotion_config().mp_threshold() && bot_.selfState().canUseItem(type_id::categories::kMpPotion)) {
     // Use mana potion
     usedAnItem = usePotion(type_id::categories::kMpPotion);
   }
@@ -205,7 +205,7 @@ bool AutoPotion::tryUseMpPotion() {
     return false;
   }
 
-  if (mpPercentage < kVigorMpThreshold_ &&
+  if (mpPercentage < bot_.currentCharacterConfig().autopotion_config().vigor_mp_threshold() &&
       bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
     // Use vigor potion
     usedAnItem = usePotion(type_id::categories::kVigorPotion);

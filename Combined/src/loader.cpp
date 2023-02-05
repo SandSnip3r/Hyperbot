@@ -4,32 +4,29 @@
 #include "../../common/Common.h"
 
 #include <csignal>
-#include <functional>
+#include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <sstream>
 
-void createAppDataDirectoryIfNecessary(const std::filesystem::path &appDataDirectoryPath) {
-  const std::string kAppDataSubdirName = "Hyperbot"; // TODO: Move to a shared location since this is used in the DLL too
-  if (!std::filesystem::exists(appDataDirectoryPath / kAppDataSubdirName)) {
-    std::filesystem::create_directory(appDataDirectoryPath / kAppDataSubdirName);
+Loader::Loader(const config::Config &config, const pk2::DivisionInfo &divisionInfo) : kDivisionInfo_(divisionInfo) {
+  if (!config.configProto().has_client_path()) {
+    throw std::runtime_error("The config does not contain the client path");
   }
-}
-
-Loader::Loader(const std::filesystem::path &kSilkroadDirectoryPath, const pk2::DivisionInfo &divisionInfo) : kSilkroadDirectoryPath_(kSilkroadDirectoryPath), kDivisionInfo_(divisionInfo) {
   // TODO: Ensure this dll path is updated for release builds
-  // Note: Assuming that the DLL is in our current directory
-  // TODO: Replace edx directory helper with std::fs
-  dllPath_ = edxLabs::GetAbsoluteDirectoryPath() + "/loaderDll.dll";
+  // Note: We assume that the DLL is in our current directory
+  dllPath_ = std::filesystem::current_path() / "loaderDll.dll";
+  if (!std::filesystem::exists(dllPath_)) {
+    throw std::runtime_error("loaderDll.dll does not exist next to executable");
+  }
+  clientPath_ = std::filesystem::path(config.configProto().client_path()) / "sro_client.exe";
   std::stringstream args;
   args << "0 /" << (int)kDivisionInfo_.locale << " " << 0 << " " << 0;
   arguments_ = args.str();
-  //TODO: Use a better filesystem utility
-  clientPath_ = (kSilkroadDirectoryPath_ / "sro_client.exe").string();
-  //TODO: Check this exists
-  std::cout << "Loader constructed\n";
-  std::cout << " Silkroad client path: \"" << clientPath_ << "\"\n";
-  std::cout << " DLL path: \"" << dllPath_ << "\"\n";
+  if (!std::filesystem::exists(clientPath_)) {
+    throw std::runtime_error("sro_client.exe does not exist");
+  }
 }
 
 namespace {
@@ -69,11 +66,11 @@ void Loader::startClient(uint16_t proxyListeningPort) {
   PROCESS_INFORMATION pi = { 0 };
 
   // Launch the client in a suspended state so we can patch it
-  bool result = edxLabs::CreateSuspendedProcess(clientPath_, arguments_, si, pi);
+  bool result = edxLabs::CreateSuspendedProcess(clientPath_.string(), arguments_, si, pi);
   if (result == false) {
-    throw std::runtime_error("Could not start \""+clientPath_+"\"");
+    throw std::runtime_error("Could not start \""+clientPath_.string()+"\"");
   }
-  LOG() << "Client (PID:" << pi.dwProcessId << ") launched with arguments \"" << arguments_ << '"' << std::endl;
+  LOG() << "Client " << clientPath_ << " (PID:" << pi.dwProcessId << ") launched with arguments \"" << arguments_ << '"' << std::endl;
   LOG() << "The client should connect to port " << proxyListeningPort << std::endl;
   {
     // Write to a file (<Client PID>.txt) the port that the client should connect to
@@ -82,10 +79,7 @@ void Loader::startClient(uint16_t proxyListeningPort) {
     if (appDataDirectoryPath.empty()) {
       throw std::runtime_error("Unable to find %APPDATA%\n");
     }
-    // Make sure the output directory exists
-    createAppDataDirectoryIfNecessary(appDataDirectoryPath);
-    const std::string kAppDataSubdirName = "Hyperbot"; // TODO: Move to a shared location since this is used in the DLL too
-    const std::filesystem::path portInfoFilename = appDataDirectoryPath / kAppDataSubdirName / (std::to_string(pi.dwProcessId)+".txt");
+    const std::filesystem::path portInfoFilename = appDataDirectoryPath / (std::to_string(pi.dwProcessId)+".txt");
     std::ofstream portInfoFile(portInfoFilename);
     if (portInfoFile) {
       portInfoFile << proxyListeningPort << '\n';
@@ -95,12 +89,11 @@ void Loader::startClient(uint16_t proxyListeningPort) {
   }
 
   // Inject the DLL so we can have some fun
-  result = (FALSE != edxLabs::InjectDLL(pi.hProcess, dllPath_.c_str(), "OnInject", static_cast<DWORD>(edxLabs::GetEntryPoint(clientPath_.c_str())), false));
+  result = (FALSE != edxLabs::InjectDLL(pi.hProcess, dllPath_.string().c_str(), "OnInject", static_cast<DWORD>(edxLabs::GetEntryPoint(clientPath_.string().c_str())), false));
   if (result == false) {
     TerminateThread(pi.hThread, 0);
     throw std::runtime_error("Could not inject into the Silkroad client process");
   }
-  LOG() << "Successfully injected DLL" << std::endl;
 
   // Finally resume the client.
   ResumeThread(pi.hThread);

@@ -26,7 +26,7 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
   gatewayAddress_ = divisionInfo_.divisions[0].gatewayIpAddresses[0];
 
   packetBroker_.setInjectionFunction(std::bind(&Proxy::inject, this, std::placeholders::_1, std::placeholders::_2));
-  std::cout << "Proxy constructed, listening on port " << ourListeningPort_ << '\n';
+
   //Start accepting connections
   PostAccept();
 
@@ -60,15 +60,14 @@ void Proxy::inject(const PacketContainer &packet, const PacketContainer::Directi
 
 void Proxy::run() {
   //Start processing network events
-  std::cout << "Proxy starting\n";
   while(true) {
     try {
       //Run
       boost::system::error_code ec;
       ioService_.run(ec);
 
-      if(ec) {
-        std::cout << "[" << __FUNCTION__ << "]" << "[" << __LINE__ << "] " << ec.message() << std::endl;
+      if (ec) {
+        LOG() << "Error running io_service: \"" << ec.message() << '"' << std::endl;
       } else {
         //No more work
         break;
@@ -76,9 +75,8 @@ void Proxy::run() {
       
       //Prevent high CPU usage
       boost::this_thread::sleep(boost::posix_time::milliseconds(1));
-    }
-    catch(std::exception & e) {
-      std::cout << "[" << __FUNCTION__ << "]" << "[" << __LINE__ << "] " << e.what() << std::endl;
+    } catch (const std::exception &ex) {
+      std::cout << "Exception while running io_service \"" << ex.what() << '"' << std::endl;
     }
   }
 }
@@ -118,7 +116,7 @@ bool Proxy::blockingOpcode(packet::Opcode opcode) const {
 // Starts accepting new connections
 void Proxy::PostAccept(uint32_t count) {
   for (uint32_t x = 0; x < count; ++x) {
-    //The newly created socket will be used when something connects
+    // The newly created socket will be used when something connects
     boost::shared_ptr<boost::asio::ip::tcp::socket> s(boost::make_shared<boost::asio::ip::tcp::socket>(ioService_));
     acceptor.async_accept(*s, boost::bind(&Proxy::HandleAccept, this, s, boost::asio::placeholders::error));
   }
@@ -126,10 +124,9 @@ void Proxy::PostAccept(uint32_t count) {
 
 // Handles new connections
 void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, const boost::system::error_code & error) {
-  std::cout << "Proxy received new connection\n";
-  //Error check
+  // Error check
   if (!error) {
-    //Close active connections
+    // Close active connections
     clientConnection.Close();
     serverConnection.Close();
 
@@ -141,21 +138,18 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
 
     boost::system::error_code ec;
     if (connectToAgent) {
-      //Connect to the agent server
-      std::cout << "Connecting to agent server at " << agentIP_ << ":" << agentPort_ << std::endl;
+      // Connect to the agent server
       ec = serverConnection.Connect(agentIP_, agentPort_);
     } else {
-      //Connect to the gateway server
-      std::cout << "Connecting to gateway server at " << gatewayAddress_ << ":" << gatewayPort_ << std::endl;
+      // Connect to the gateway server
       ec = serverConnection.Connect(gatewayAddress_, gatewayPort_);
     }
 
     //Error check
-    if(ec) {
-      std::cout << "[Error] Unable to connect to " << (connectToAgent ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent ? agentPort_ : gatewayPort_) << std::endl;
-      std::cout << ec.message() << std::endl;
+    if (ec) {
+      LOG() << "Unable to connect to " << (connectToAgent ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent ? agentPort_ : gatewayPort_) << ": \"" << ec.message() << '"' << std::endl;
 
-      //Silkroad connection is no longer needed
+      // Silkroad connection is no longer needed
       clientConnection.Close();
     } else {
       clientConnection.PostRead();
@@ -168,7 +162,7 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
     //Post another accept
     PostAccept();
   } else {
-    std::cout << "Proxy::HandleAccept error" << std::endl;
+    LOG() << "Error accepting new connection: \"" << error.message() << '"' << std::endl;
   }
 }
 
@@ -235,7 +229,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         if (static_cast<packet::Opcode>(packet.opcode) == packet::Opcode::kServerGatewayLoginResponse) {
           StreamUtility r = packet.data;
           if (r.Read<uint8_t>() == 1) {
-            //The next connection will go to the agent server
+            // The next connection will go to the agent server
             connectToAgent = true;
 
             uint32_t loginID = r.Read<uint32_t>();        //Login ID
@@ -249,7 +243,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             w.Write_Ascii("127.0.0.1");             // IP
             w.Write<uint16_t>(ourListeningPort_);   // Port
 
-            //Inject the packet
+            // Inject the packet
             clientConnection.InjectToSend(packet.opcode, w);
 
             // Inject the packet immediately
@@ -275,7 +269,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           // Initialize data/container
           if (characterInfoPacketContainer_) {
             // What? There's already one?
-            std::cout << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
+            LOG() << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
           characterInfoPacketContainer_.emplace(packet);
@@ -285,7 +279,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           // Initialize data/container
           if (groupSpawnPacketContainer_) {
             // What? There's already one?
-            std::cout << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
+            LOG() << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
           groupSpawnPacketContainer_.emplace(packet);
@@ -295,7 +289,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           // Initialize data/container
           if (storagePacketContainer_) {
             // What? There's already one?
-            std::cout << "[@@@] Wait, we got a storage begin packet, but we've already initialized the data\n";
+            LOG() << "[@@@] Wait, we got a storage begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
           storagePacketContainer_.emplace(packet);
@@ -305,7 +299,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           // Initialize data/container
           if (guildStoragePacketContainer_) {
             // What? There's already one?
-            std::cout << "[@@@] Wait, we got a guild storage begin packet, but we've already initialized the data\n";
+            LOG() << "[@@@] Wait, we got a guild storage begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
           guildStoragePacketContainer_.emplace(packet);
@@ -378,5 +372,7 @@ Post:
     //Repost the timer
     timer->expires_from_now(boost::posix_time::milliseconds(kPacketProcessDelayMs));
     timer->async_wait(boost::bind(&Proxy::ProcessPackets, this, boost::asio::placeholders::error));
+  } else {
+    LOG() << "Error: \"" << error.message() << '"' << std::endl;
   }
 }

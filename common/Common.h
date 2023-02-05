@@ -18,9 +18,6 @@ namespace edxLabs
 	// Returns a pointer to a hostent object for the specified address
 	hostent * GetHost(const char * address);
 
-	// Returns the absolute directory path of the executable
-	std::string GetAbsoluteDirectoryPath();
-
 	// Creates a suspended process
 	bool CreateSuspendedProcess(const std::string & filename, const std::string & fileargs, STARTUPINFOA & si, PROCESS_INFORMATION & pi);
 

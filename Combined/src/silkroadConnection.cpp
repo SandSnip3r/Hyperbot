@@ -1,14 +1,18 @@
+#include "logging.hpp"
 #include "silkroadConnection.hpp"
 
-#include <iostream>
+#define CHECK_ERROR(error) \
+if (error) { \
+  LOG() << "Error: \"" << error.message() << '"' << std::endl; \
+}
 
 //Handles incoming packets
 void SilkroadConnection::HandleRead(size_t bytes_transferred, const boost::system::error_code & error) {
-  if(!error && s && security) {
+  if (!error && s && security) {
     security->Recv(&data[0], bytes_transferred);
     PostRead();
-  } else if (error) {
-    std::cout << "SilkroadConnection::HandleRead error" << std::endl;
+  } else if (!closingConnection_) {
+    CHECK_ERROR(error);
   }
 }
 
@@ -37,10 +41,14 @@ void SilkroadConnection::PostRead() {
 
 //Closes the socket
 void SilkroadConnection::Close() {
-  if(s) {
+  closingConnection_ = true;
+
+  if (s) {
     boost::system::error_code ec;
     s->shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    CHECK_ERROR(ec);
     s->close(ec);
+    CHECK_ERROR(ec);
     s.reset();
   }
 
@@ -48,6 +56,8 @@ void SilkroadConnection::Close() {
 }
 
 boost::system::error_code SilkroadConnection::Connect(const std::string & IP, uint16_t port) {
+  closingConnection_ = false;
+
   //Create the socket
   s = boost::make_shared<boost::asio::ip::tcp::socket>(ioService_);
 
@@ -57,23 +67,25 @@ boost::system::error_code SilkroadConnection::Connect(const std::string & IP, ui
   for(uint8_t x = 0; x < 3; ++x) {
     //Connect
     s->connect(boost::asio::ip::tcp::endpoint(boost::asio::ip::address::from_string(IP, resolve_ec), port), ec);
+    CHECK_ERROR(ec);
 
     //Probably not a valid IP so it's a hostname
-    if(resolve_ec) {
+    if (resolve_ec) {
       boost::asio::ip::tcp::resolver resolver(ioService_);
       boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), IP, boost::lexical_cast<std::string>(port));
       boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);
       s->connect(*iterator, ec);
+      CHECK_ERROR(ec);
     }
 
     //See if there was an error
-    if(!ec) break;
+    if (!ec) break;
 
     //Error occurred so wait
     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
   }
 
-  if(!ec) {
+  if (!ec) {
     //Create new Silkroad security
     security = boost::make_shared<SilkroadSecurity>();
 
@@ -131,9 +143,10 @@ bool SilkroadConnection::Send(const std::vector<uint8_t> & packet) {
   //Send the packet all at once
   boost::system::error_code ec;
   boost::asio::write(*s, boost::asio::buffer(&packet[0], packet.size()), boost::asio::transfer_all(), ec);
+  CHECK_ERROR(ec);
   
   //See if there was an error
-  if(ec) {
+  if (ec) {
     Close();
     return false;
   }

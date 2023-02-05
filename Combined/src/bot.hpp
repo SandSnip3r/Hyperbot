@@ -2,7 +2,7 @@
 #define BOT_HPP_
 
 #include "broker/packetBroker.hpp"
-#include "config/characterLoginData.hpp"
+#include "config/config.hpp"
 #include "event/event.hpp"
 #include "packetProcessor.hpp"
 #include "pk2/gameData.hpp"
@@ -14,13 +14,15 @@
 #include <optional>
 class Bot {
 public:
-  Bot(const config::CharacterLoginData &loginData,
+  Bot(const config::Config &config,
       const pk2::GameData &gameData,
       Proxy &proxy,
       broker::PacketBroker &packetBroker,
       broker::EventBroker &eventBroker);
 
   void initialize();
+  const config::Config& config() const;
+  const proto::config::CharacterConfig& currentCharacterConfig() const;
   const pk2::GameData& gameData() const;
   Proxy& proxy() const;
   broker::PacketBroker& packetBroker() const;
@@ -32,7 +34,7 @@ protected:
   friend class broker::EventBroker;
   void handleEvent(const event::Event *event);
 
-  const config::CharacterLoginData &loginData_; // TODO: Move this into a configuration object
+  const config::Config &config_;
   const pk2::GameData &gameData_;
   Proxy &proxy_;
   broker::PacketBroker &packetBroker_;

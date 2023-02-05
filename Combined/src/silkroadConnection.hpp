@@ -16,6 +16,8 @@ private:
   static const uint32_t kMaxPacketRecvSizeBytes{16384}; //The maximum number of bytes to receive in one packet
   boost::asio::io_service &ioService_;
 
+  bool closingConnection_{false};
+
 	//Socket
 	boost::shared_ptr<boost::asio::ip::tcp::socket> s;
 

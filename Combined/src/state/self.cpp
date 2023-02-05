@@ -16,6 +16,7 @@
 namespace state {
 
 Self::Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData) : eventBroker_(eventBroker), gameData_(gameData) {
+  // TODO: Move this out of here. Move it into the Bot
   auto eventHandleFunction = std::bind(&Self::handleEvent, this, std::placeholders::_1);
   eventBroker_.subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
 }

@@ -359,8 +359,7 @@ bool modifyRoutelist() {
   uint16_t botPort;
   {
     const auto appDataDirectoryPath = getAppDataPath();
-    const std::string kAppDataSubdirName = "Hyperbot"; // TODO: Move to a shared location since this is used in the DLL too
-    auto portInfoFilePath = appDataDirectoryPath / kAppDataSubdirName / (std::to_string(GetCurrentProcessId())+".txt");
+    auto portInfoFilePath = appDataDirectoryPath / (std::to_string(GetCurrentProcessId())+".txt");
     {
       std::ifstream portInfoFile(portInfoFilePath);
       if (!portInfoFile) {
