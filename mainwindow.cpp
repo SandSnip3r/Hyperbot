@@ -45,7 +45,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
   // Requester is a req/rep socket to the bot to cause actions
   requester_.connect();
-  temp();
+  // temp();
 
   // TODO: Reorganize
   // Start timer to update entities positions
@@ -56,7 +56,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 }
 
 void MainWindow::temp() {
-  const std::string kCharacterName{"MrPoop"};
+  const std::string kCharacterName{"IP_Man"};
   const std::string kUsername{"5"};
   const std::string kPassword{"0"};
   proto::config::Config config;

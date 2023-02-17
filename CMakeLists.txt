@@ -54,6 +54,14 @@ set(PROJECT_SOURCES
   noScaleLabel.hpp
   packetListWidgetItem.cpp
   packetListWidgetItem.hpp
+  protobuf_editor/builtInTypeWidget.cpp
+  protobuf_editor/builtInTypeWidget.hpp
+  protobuf_editor/messageTypeWidget.cpp
+  protobuf_editor/messageTypeWidget.hpp
+  protobuf_editor/protobufEditor.cpp
+  protobuf_editor/protobufEditor.hpp
+  protobuf_editor/protobufFieldWidget.cpp
+  protobuf_editor/protobufFieldWidget.hpp
   reinjectablePacketListWidget.cpp
   reinjectablePacketListWidget.hpp
   regionGraphicsItem.cpp
