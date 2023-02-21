@@ -117,13 +117,6 @@ bool isPotion(const pk2::ref::Item &itemInfo) {
 
 } // anonymous namespace
 
-uint16_t makeTypeId(const uint16_t typeId1, const uint16_t typeId2, const uint16_t typeId3, const uint16_t typeId4) {
-  return (typeId1 << 2) |
-         (typeId2 << 5) |
-         (typeId3 << 7) |
-         (typeId4 << 11);
-}
-
 std::tuple<uint8_t,uint8_t,uint8_t,uint8_t> splitTypeId(const uint16_t typeId) {
   const uint8_t typeId1 = (typeId >> 2) & 0b111;
   const uint8_t typeId2 = (typeId >> 5) & 0b11;

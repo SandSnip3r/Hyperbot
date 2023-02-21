@@ -1,6 +1,10 @@
 #ifndef TYPE_ID_TYPE_CATEGORY_HPP_
 #define TYPE_ID_TYPE_CATEGORY_HPP_
 
+#include "../../common/pk2/ref/character.hpp"
+#include "../../common/pk2/ref/item.hpp"
+#include "../../common/pk2/ref/teleport.hpp"
+
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
@@ -34,6 +38,12 @@ private:
 };
 
 std::string toString(TypeId typeId);
+
+uint16_t makeTypeId(const uint16_t typeId1, const uint16_t typeId2, const uint16_t typeId3, const uint16_t typeId4);
+
+TypeId getTypeId(const pk2::ref::Character &character);
+TypeId getTypeId(const pk2::ref::Item &item);
+TypeId getTypeId(const pk2::ref::Teleport &teleport);
 
 } // namespace type_id
 

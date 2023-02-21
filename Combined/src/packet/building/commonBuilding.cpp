@@ -129,4 +129,38 @@ void writePosition(StreamUtility &stream, const sro::Position &position) {
   stream.Write(position.zOffset());
 }
 
+void writeSkillAction(StreamUtility &stream, const structures::SkillAction &action) {
+  stream.Write<>(action.actionFlag);
+  if (flags::isSet(action.actionFlag, enums::ActionFlag::kAttack)) {
+    const uint8_t hitObjectsCount = action.hitObjects.size();
+    uint8_t successiveHitCount = 0;
+    if (hitObjectsCount != 0) {
+      successiveHitCount = action.hitObjects.front().hits.size();
+    }
+    stream.Write<>(successiveHitCount);
+    stream.Write<>(hitObjectsCount);
+
+    for (int i=0; i<action.hitObjects.size(); ++i) {
+      writeHitObject(stream, action.hitObjects.at(i));
+    }
+  }
+}
+
+void writeHitObject(StreamUtility &stream, const structures::SkillActionHitObject &hitObject) {
+  stream.Write<>(hitObject.targetGlobalId);
+  for (int i=0; i<hitObject.hits.size(); ++i) {
+    writeHit(stream, hitObject.hits.at(i));
+  }
+}
+
+void writeHit(StreamUtility &stream, const structures::SkillActionHitResult &hit) {
+  stream.Write<>(hit.hitResultFlag);
+
+  // TODO: Move to setter function for SkillActionHitResult object
+  uint32_t damageData = (hit.damage << 8) | static_cast<uint8_t>(hit.damageFlag);
+  stream.Write<>(damageData);
+
+  stream.Write<uint32_t>(hit.effect);
+}
+
 } // namespace packet::building

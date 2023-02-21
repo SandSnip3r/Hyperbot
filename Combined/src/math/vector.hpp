@@ -14,6 +14,7 @@ public:
   Vector& operator=(const Vector &other);
 
   float length() const;
+  friend Vector operator-(const Vector &v);
 };
 
 bool operator==(const Vector &v1, const Vector &v2);

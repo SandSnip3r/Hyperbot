@@ -1,6 +1,7 @@
 #include "commonParsing.hpp"
-
 #include "logging.hpp"
+#include "type_id/categories.hpp"
+#include "type_id/typeCategory.hpp"
 
 #include <silkroad_lib/position_math.h>
 
@@ -322,6 +323,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
                                            const pk2::ItemData &itemData,
                                            const pk2::SkillData &skillData,
                                            const pk2::TeleportData &teleportData) {
+  using namespace type_id;
   const auto refObjId = stream.Read<sro::scalar_types::ReferenceObjectId>();
   if (refObjId == std::numeric_limits<sro::scalar_types::ReferenceObjectId>::max()) {
     // Special case, refObjId == -1
@@ -347,23 +349,16 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
 
   if (characterData.haveCharacterWithId(entity->refObjId)) {
     const auto &character = characterData.getCharacterById(entity->refObjId);
-    if (character.typeId1 != 1) {
-      throw std::runtime_error("Have a character, but type Id 1 is not 1");
+    const auto characterTypeId = type_id::getTypeId(character);
+    if (!categories::kCharacter.contains(characterTypeId)) {
+      throw std::runtime_error("Have a character, but type id does not match");
     }
     entity::Character *characterPtr = dynamic_cast<entity::Character*>(entity.get());
     if (characterPtr == nullptr) {
       throw std::runtime_error("parseSpawn, have a character, but the entity pointer cannot be cast to a Character");
     }
-    bool characterHasJobEquipmentInInventory = false; // TODO: Create better mechanism
-    // BIONIC:
-    //  CHARACTER
-    //  NPC
-    //   NPC_FORTRESS_STRUCT
-    //   NPC_MOB
-    //   NPC_COS
-    //   NPC_FORTRESS_COS
-    if (character.typeId2 == 1) {
-      // CHARACTER
+    bool characterHasJobEquipmentInInventory = false;
+    if (categories::kPlayerCharacter.contains(characterTypeId)) {
       uint8_t scale = stream.Read<uint8_t>();
       uint8_t hwanLevel = stream.Read<uint8_t>();
       uint8_t pvpCape = stream.Read<uint8_t>();         //0 = None, 1 = Red, 2 = Gray, 3 = Blue, 4 = White, 5 = Orange
@@ -378,15 +373,13 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
           throw std::runtime_error("Parsing ServerAgentGroupSpawn, found item in character's inventory which we have no data on");
         }
         const auto &item = itemData.getItemById(itemRefId);
-        if (item.typeId1 == 3 && item.typeId2 == 1) {
+        const auto itemTypeId = type_id::getTypeId(item);
+        if (categories::kEquipment.contains(itemTypeId)) {
           uint8_t optLevel = stream.Read<uint8_t>();
         }
-        if (item.typeId1 == 3 && item.typeId2 == 1 && item.typeId3 == 7 && item.typeId4 < 4) {
-          // TypeId4 values:
-          //  1,2,3 are normal job
-          //  3 Santa
-          //  4 Free PVP
-          //  6,7 new job
+        if (categories::kTraderSuit.contains(itemTypeId) ||
+            categories::kThiefSuit.contains(itemTypeId) ||
+            categories::kHunterSuit.contains(itemTypeId)) {
           characterHasJobEquipmentInInventory = true;
         }
       }
@@ -400,7 +393,8 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
           throw std::runtime_error("Parsing ServerAgentGroupSpawn, found item in character's avatar inventory which we have no data on");
         }
         const auto &item = itemData.getItemById(itemRefId);
-        if (item.typeId1 == 3 && item.typeId2 == 1) {
+        const auto itemTypeId = type_id::getTypeId(item);
+        if (categories::kEquipment.contains(itemTypeId)) {
           uint8_t optLevel = stream.Read<uint8_t>();
         }
       }
@@ -423,8 +417,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
           }
         }
       }
-    } else if (character.typeId2 == 2 && character.typeId3 == 5) {
-      //NPC_FORTRESS_STRUCT
+    } else if (categories::kSiegeStruct.contains(characterTypeId)) {
       uint32_t structureHp = stream.Read<uint32_t>();
       uint32_t structureRefEventStructId = stream.Read<uint32_t>();
       uint16_t structureState = stream.Read<uint16_t>();
@@ -503,8 +496,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
       }
     }
 
-    if (character.typeId2 == 1) {
-      // CHARACTER
+    if (categories::kPlayerCharacter.contains(characterTypeId)) {
       entity::PlayerCharacter *playerCharacterPtr = dynamic_cast<entity::PlayerCharacter*>(entity.get());
       if (playerCharacterPtr == nullptr) {
         throw std::runtime_error("parseSpawn, have a player character, but the entity pointer cannot be cast to a PlayerCharacter");
@@ -548,8 +540,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
 
       uint8_t equipmentCooldown = stream.Read<uint8_t>(); // Yellow bar when equipping or unequipping
       uint8_t pkFlag = stream.Read<uint8_t>();
-    } else if (character.typeId2 == 2) {
-      // NPC
+    } else if (categories::kNonPlayerCharacter.contains(characterTypeId)) {
       uint8_t talkFlag = stream.Read<uint8_t>();
       if (talkFlag == 2) {
         uint8_t talkOptionCount = stream.Read<uint8_t>();
@@ -559,53 +550,52 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
         }
       }
 
-      if (character.typeId3 == 1) {
-        // NPC_MOB
+      if (categories::kMonster.contains(characterTypeId)) {
         entity::Monster *monsterPtr = dynamic_cast<entity::Monster*>(entity.get());
         if (monsterPtr == nullptr) {
           throw std::runtime_error("parseSpawn, have a monster, but the entity pointer cannot be cast to a Monster");
         }
         monsterPtr->rarity = stream.Read<sro::entity::MonsterRarity>();
-        if (character.typeId4 == 2 || character.typeId4 == 3) {
-          // NPC_MOB_THIEF, NPC_MOB_HUNTER
+        if (categories::kThiefMonster.contains(characterTypeId) ||
+            categories::kHunterMonster.contains(characterTypeId)) {
           uint8_t appearance = stream.Read<uint8_t>();
         }
-      } else if (character.typeId3 == 3) {
-        // NPC_COS
-        if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
-            character.typeId4 == 3 || // NPC_COS_P_GROWTH
-            character.typeId4 == 4 || // NPC_COS_P_ABILITY
-            character.typeId4 == 5 || // NPC_COS_GUILD
-            character.typeId4 == 6 || // NPC_COS_CAPTURED
-            character.typeId4 == 7 || // NPC_COS_QUEST
-            character.typeId4 == 8) { // NPC_COS_QUEST
-          if (character.typeId4 == 3 || character.typeId4 == 4) { // NPC_COS_P_GROWTH, NPC_COS_P_ABILITY
+      } else if (categories::kCos.contains(characterTypeId)) {
+        if (categories::kTransport.contains(characterTypeId) ||
+            categories::kSilkPet.contains(characterTypeId) ||
+            categories::kGoldPet.contains(characterTypeId) ||
+            categories::kMercenary.contains(characterTypeId) ||
+            categories::kCaptured.contains(characterTypeId) ||
+            categories::kFollower.contains(characterTypeId) ||
+            categories::kAssaulter.contains(characterTypeId)) {
+          if (categories::kSilkPet.contains(characterTypeId) ||
+              categories::kGoldPet.contains(characterTypeId)) {
             uint16_t nameLength = stream.Read<uint16_t>();
             std::string name = stream.Read_Ascii(nameLength);
-          } else if (character.typeId4 == 5) { // NPC_COS_GUILD
+          } else if (categories::kMercenary.contains(characterTypeId)) {
             uint16_t guildNameLength = stream.Read<uint16_t>();
             std::string guildName = stream.Read_Ascii(guildNameLength);
           }
 
-          if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
-              character.typeId4 == 3 || // NPC_COS_P_GROWTH
-              character.typeId4 == 4 || // NPC_COS_P_ABILITY
-              character.typeId4 == 5 || // NPC_COS_GUILD
-              character.typeId4 == 6) { // NPC_COS_CAPTURED
+          if (categories::kTransport.contains(characterTypeId) ||
+              categories::kSilkPet.contains(characterTypeId) ||
+              categories::kGoldPet.contains(characterTypeId) ||
+              categories::kMercenary.contains(characterTypeId) ||
+              categories::kCaptured.contains(characterTypeId)) {
             uint16_t ownerNameLength = stream.Read<uint16_t>();
             std::string ownerName = stream.Read_Ascii(ownerNameLength);
 
-            if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
-                character.typeId4 == 3 || // NPC_COS_P_GROWTH
-                character.typeId4 == 4 || // NPC_COS_P_ABILITY
-                character.typeId4 == 5) { // NPC_COS_GUILD
+            if (categories::kTransport.contains(characterTypeId) ||
+                categories::kSilkPet.contains(characterTypeId) ||
+                categories::kGoldPet.contains(characterTypeId) ||
+                categories::kMercenary.contains(characterTypeId)) {
               uint8_t ownerJobType = stream.Read<uint8_t>();
 
-              if (character.typeId4 == 2 || // NPC_COS_TRANSPORT
-                  character.typeId4 == 3 || // NPC_COS_P_GROWTH
-                  character.typeId4 == 5) { // NPC_COS_GUILD
+              if (categories::kTransport.contains(characterTypeId) ||
+                  categories::kSilkPet.contains(characterTypeId) ||
+                  categories::kMercenary.contains(characterTypeId)) {
                 uint8_t ownerPvpState = stream.Read<uint8_t>();
-                if (character.typeId4 == 5) { //NPC_COS_GUILD
+                if (categories::kMercenary.contains(characterTypeId)) {
                   uint32_t ownerRefId = stream.Read<uint32_t>();
                 }
               }
@@ -613,13 +603,11 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
           }
           uint32_t ownerUniqueId = stream.Read<uint32_t>();
         }
-      } else if (character.typeId3 == 4) {
-        // GObjSiegeObject
-        // NPC_FORTRESS_COS
+      } else if (categories::kSiegeObject.contains(characterTypeId)) {
         uint32_t guildId = stream.Read<uint32_t>();
         uint16_t guildNameLength = stream.Read<uint16_t>();
         std::string guildName = stream.Read_Ascii(guildNameLength);
-      } else if (character.typeId3 == 5) {
+      } else if (categories::kSiegeStruct.contains(characterTypeId)) {
         LOG() << "CGObjSiegeStruct encountered in parseSpawn, but unhandled" << std::endl;
       //   // CGObjSiegeStruct
       //   uint32_t unk0 = stream.Read<uint32_t>(); // 0xFFFFFFFF
@@ -638,30 +626,21 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
     }
   } else if (itemData.haveItemWithId(entity->refObjId)) {
     const auto &item = itemData.getItemById(entity->refObjId);
-    if (item.typeId1 != 3) {
-      throw std::runtime_error("Have an item, but type Id 1 is not 3");
+    const auto itemTypeId = type_id::getTypeId(item);
+    if (!categories::kItem.contains(itemTypeId)) {
+      throw std::runtime_error("Have an item, but type id does not match");
     }
     entity::Item *itemPtr = dynamic_cast<entity::Item*>(entity.get());
     if (itemPtr == nullptr) {
       throw std::runtime_error("parseSpawn, have an item, but the entity pointer cannot be cast to a Item");
     }
-    // ITEM
-    //  ITEM_EQUIP
-    //  ITEM_ETC
-    //   ITEM_ETC_MONEY_GOLD
-    //   ITEM_ETC_TRADE
-    //   ITEM_ETC_QUEST
-    if (item.typeId2 == 1) {
-      // ITEM_EQUIP
+    if (categories::kEquipment.contains(itemTypeId)) {
       uint8_t optLevel = stream.Read<uint8_t>();
-    } else if (item.typeId2 == 3) {
-      // ITEM_ETC
-      if (item.typeId3 == 5 && item.typeId4 == 0) {
-        // ITEM_ETC_MONEY_GOLD
+    } else if (categories::kExpendable.contains(itemTypeId)) {
+      if (categories::kGold.contains(itemTypeId)) {
         uint32_t goldAmount = stream.Read<uint32_t>();
-      } else if (item.typeId3 == 8 || item.typeId3 == 9) {
-        // ITEM_ETC_TRADE
-        // ITEM_ETC_QUEST
+      } else if (categories::kSpecialGoods.contains(itemTypeId) ||
+                 categories::kQuestAndEvent.contains(itemTypeId)) {
         uint16_t ownerNameLength = stream.Read<uint16_t>();
         std::string ownerName = stream.Read_Ascii(ownerNameLength);
         std::cout << "Item is a quest item belonging to " << ownerName << '\n';
@@ -678,8 +657,9 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
     itemPtr->rarity = stream.Read<sro::entity::ItemRarity>();
   } else if (teleportData.haveTeleportWithId(entity->refObjId)) {
     const auto &teleport = teleportData.getTeleportById(entity->refObjId);
-    if (teleport.typeId1 != 4) {
-      throw std::runtime_error("Have a structure, but type Id 1 is not 4");
+    const auto teleportTypeId = type_id::getTypeId(teleport);
+    if (!categories::kStructure.contains(teleportTypeId)) {
+      throw std::runtime_error("Have a structure, but type id does not match");
     }
     entity::Portal *portalPtr = dynamic_cast<entity::Portal*>(entity.get());
     if (portalPtr == nullptr) {

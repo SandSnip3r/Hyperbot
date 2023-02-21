@@ -10,16 +10,6 @@
 
 namespace packet::parsing {
 
-enum class StateType : uint8_t {
-  kLifeState = 0,
-  kMotionState = 1,
-  //2, 3, 5, 6, 9, 10
-  kBodyState = 4,
-  kPVPState = 7,
-  kBattleState = 8,
-  kScrollState = 11
-};
-
 enum class PvpState : uint8_t {
   kNeutral = 0, // White
   kAssaulter = 1, // Pink
@@ -41,12 +31,12 @@ class ServerAgentEntityUpdateState : public ParsedPacket {
 public:
   ServerAgentEntityUpdateState(const PacketContainer &packet);
   sro::scalar_types::EntityGlobalId globalId() const;
-  StateType stateType() const;
+  enums::StateType stateType() const;
   uint8_t state() const;
   bool isEnhanced() const;
 private:
   sro::scalar_types::EntityGlobalId globalId_;
-  StateType stateType_;
+  enums::StateType stateType_;
   uint8_t state_;
   bool isEnhanced_;
 };

@@ -367,10 +367,10 @@ void PacketProcessor::serverAgentInventoryStorageDataReceived(const packet::pars
 }
 
 void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const {
-  if (packet.stateType() == packet::parsing::StateType::kMotionState) {
+  if (packet.stateType() == packet::enums::StateType::kMotionState) {
     entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
     mobileEntity.setMotionState(static_cast<entity::MotionState>(packet.state()), eventBroker_);
-  } else if (packet.stateType() == packet::parsing::StateType::kLifeState) {
+  } else if (packet.stateType() == packet::enums::StateType::kLifeState) {
     entity::Character &characterEntity = worldState_.getEntity<entity::Character>(packet.globalId());
     if (packet.globalId() == worldState_.selfState().globalId && !worldState_.selfState().spawned()) {
       throw std::runtime_error("Got life state update for ourself, but we are not spawned");
@@ -381,7 +381,7 @@ void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
     if (!worldState_.selfState().spawned()) {
       throw std::runtime_error("Got state update for ourself, but we are not spawned");
     }
-    if (packet.stateType() == packet::parsing::StateType::kBodyState) {
+    if (packet.stateType() == packet::enums::StateType::kBodyState) {
       worldState_.selfState().setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
     }
   }

@@ -56,4 +56,23 @@ std::string toString(TypeId typeId) {
   return ss.str();
 }
 
+uint16_t makeTypeId(const uint16_t typeId1, const uint16_t typeId2, const uint16_t typeId3, const uint16_t typeId4) {
+  return (typeId1 << 2) |
+         (typeId2 << 5) |
+         (typeId3 << 7) |
+         (typeId4 << 11);
+}
+
+TypeId getTypeId(const pk2::ref::Character &character) {
+  return makeTypeId(character.typeId1, character.typeId2, character.typeId3, character.typeId4);
+}
+
+TypeId getTypeId(const pk2::ref::Item &item) {
+  return makeTypeId(item.typeId1, item.typeId2, item.typeId3, item.typeId4);
+}
+
+TypeId getTypeId(const pk2::ref::Teleport &teleport) {
+  return makeTypeId(teleport.typeId1, teleport.typeId2, teleport.typeId3, teleport.typeId4);
+}
+
 } // namespace type_id

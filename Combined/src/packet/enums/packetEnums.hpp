@@ -174,6 +174,16 @@ enum class ItemMovementType : uint8_t {
   kPickSpecialItemByOther =    54,
 };
 
+enum class StateType : uint8_t {
+  kLifeState = 0,
+  kMotionState = 1,
+  //2, 3, 5, 6, 9, 10
+  kBodyState = 4,
+  kPVPState = 7,
+  kBattleState = 8,
+  kScrollState = 11
+};
+
 enum class BodyState : uint8_t {
   kNormal = 0,
   kHwan = 1,
@@ -211,12 +221,14 @@ enum class TargetType : uint8_t {
 };
 
 enum class ActionFlag : uint8_t {
+  kNone = 0,
   kAttack = 1,
   kTeleport = 2,
   kSprint = 8
 };
 
 enum class HitResult : uint8_t {
+  kNone = 0,
   kBlocked = 2,
   kKnockdown = 4,
   kKnockback = 5,

@@ -6,9 +6,9 @@ ServerAgentEntityUpdateState::ServerAgentEntityUpdateState(const PacketContainer
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   globalId_ = stream.Read<sro::scalar_types::EntityGlobalId>();
-  stateType_ = stream.Read<StateType>();
+  stateType_ = stream.Read<enums::StateType>();
   state_ = stream.Read<uint8_t>();
-  if (stateType_ == StateType::kBodyState) {
+  if (stateType_ == enums::StateType::kBodyState) {
     if (static_cast<enums::BodyState>(state_) == enums::BodyState::kHwan) {
       isEnhanced_ = stream.Read<uint8_t>();
     }
@@ -19,7 +19,7 @@ sro::scalar_types::EntityGlobalId ServerAgentEntityUpdateState::globalId() const
   return globalId_;
 }
 
-StateType ServerAgentEntityUpdateState::stateType() const {
+enums::StateType ServerAgentEntityUpdateState::stateType() const {
   return stateType_;
 }
 

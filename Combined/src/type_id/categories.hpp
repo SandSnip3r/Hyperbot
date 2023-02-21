@@ -5,12 +5,26 @@
 
 namespace type_id::categories {
 
-// extern const TypeCategory kCharacter;
-//   extern const TypeCategory kPlayerCharacter;
-//   extern const TypeCategory kNonPlayerCharacter;
-//     extern const TypeCategory kMonster;
+extern const TypeCategory kCharacter;
+  extern const TypeCategory kPlayerCharacter;
+  extern const TypeCategory kNonPlayerCharacter;
+    extern const TypeCategory kMonster;
 //       extern const TypeCategory kStandardMonster;
+      extern const TypeCategory kThiefMonster;
+      extern const TypeCategory kHunterMonster;
 //       extern const TypeCategory kQuestMonster;
+    extern const TypeCategory kCos;
+      extern const TypeCategory kCart;
+      extern const TypeCategory kTransport;
+      extern const TypeCategory kSilkPet;
+      extern const TypeCategory kGoldPet;
+      extern const TypeCategory kMercenary;
+      extern const TypeCategory kCaptured;
+      extern const TypeCategory kFollower;
+      extern const TypeCategory kAssaulter;
+      extern const TypeCategory kPet2; // Also Siege (Ram) and Siege (Catapult)
+    extern const TypeCategory kSiegeObject;
+    extern const TypeCategory kSiegeStruct;
 
 extern const TypeCategory kItem;
   extern const TypeCategory kEquipment;
@@ -18,6 +32,10 @@ extern const TypeCategory kItem;
 //     extern const TypeCategory kProtector;
 //     extern const TypeCategory kArmor;
     extern const TypeCategory kWeapon;
+    extern const TypeCategory kEquipmentExtra;
+      extern const TypeCategory kTraderSuit;
+      extern const TypeCategory kThiefSuit;
+      extern const TypeCategory kHunterSuit;
 //     extern const TypeCategory kSword;
 //       extern const TypeCategory kOneHandedSword;
 //       extern const TypeCategory kTwoHandedSword;
@@ -30,6 +48,12 @@ extern const TypeCategory kItem;
     extern const TypeCategory kCurePotion;
       extern const TypeCategory kPurificationPill;
       extern const TypeCategory kUniversalPill;
+    extern const TypeCategory kCurrency;
+      extern const TypeCategory kGold;
+    extern const TypeCategory kSpecialGoods;
+    extern const TypeCategory kQuestAndEvent;
+
+extern const TypeCategory kStructure;
 
 } // namespace type_id::categories
 
