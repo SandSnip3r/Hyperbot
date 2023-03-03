@@ -832,11 +832,6 @@
        <attribute name="title">
         <string>Config</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_20">
-        <item row="0" column="0">
-         <widget class="ProtobufEditor" name="widget" native="true"/>
-        </item>
-       </layout>
       </widget>
      </widget>
     </item>
@@ -958,12 +953,6 @@
    <class>NavmeshView</class>
    <extends>QFrame</extends>
    <header>navmeshView.hpp</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ProtobufEditor</class>
-   <extends>QWidget</extends>
-   <header>protobuf_editor/protobufEditor.hpp</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

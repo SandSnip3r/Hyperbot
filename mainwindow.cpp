@@ -62,15 +62,15 @@ void MainWindow::temp() {
   proto::config::Config config;
   config.set_client_path("C:\\Users\\Victor\\Documents\\Development\\Daxter Silkroad server files\\Silkroad Client");
   config.set_character_to_login(kCharacterName);
-  proto::config::CharacterConfig characterConfig;
-  characterConfig.set_username(kUsername);
-  characterConfig.set_password(kPassword);
-  proto::config::AutopotionConfig &autopotionConfig = *characterConfig.mutable_autopotion_config();
-  autopotionConfig.set_hp_threshold(0.90);
-  autopotionConfig.set_mp_threshold(0.90);
-  autopotionConfig.set_vigor_hp_threshold(0.45);
-  autopotionConfig.set_vigor_mp_threshold(0.30);
-  (*config.mutable_character_configs())[kCharacterName] = characterConfig;
+  proto::config::CharacterConfig *characterConfig = config.add_character_configs();
+  characterConfig->set_character_name(kCharacterName);
+  characterConfig->set_username(kUsername);
+  characterConfig->set_password(kPassword);
+  proto::config::AutopotionConfig *autopotionConfig = characterConfig->mutable_autopotion_config();
+  autopotionConfig->set_hp_threshold(0.90);
+  autopotionConfig->set_mp_threshold(0.90);
+  autopotionConfig->set_vigor_hp_threshold(0.45);
+  autopotionConfig->set_vigor_mp_threshold(0.30);
   requester_.sendConfig(config);
 }
 
