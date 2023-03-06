@@ -15,8 +15,12 @@ public:
   void overwriteConfigProto(const proto::config::Config &configProto);
   proto::config::Config& configProto();
   const proto::config::Config& configProto() const;
+  bool haveCharacterConfig(const std::string &characterName) const;
+  proto::config::CharacterConfig& getCharacterConfig(const std::string &characterName);
+  const proto::config::CharacterConfig& getCharacterConfig(const std::string &characterName) const;
   std::mutex& mutex() const;
 private:
+  static constexpr const bool kProtobufSavedAsBinary_{false};
   inline static const std::string kConfigFileFilename{"config"};
   std::filesystem::path configFileFilePath_;
   mutable std::mutex mutex_;

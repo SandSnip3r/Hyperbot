@@ -31,8 +31,7 @@ Bot::Bot(const config::Config &config,
     throw std::runtime_error("Config does not contain a character to login");
   }
   const std::string characterToLogin = configProto.character_to_login();
-  const auto it = configProto.character_configs().find(characterToLogin);
-  if (it == configProto.character_configs().cend()) {
+  if (!config_.haveCharacterConfig(characterToLogin)) {
     throw std::runtime_error("Config does not contain character config for character to login");
   }
 }
@@ -50,7 +49,7 @@ const proto::config::CharacterConfig& Bot::currentCharacterConfig() const {
   if (!worldState_.selfState().spawned()) {
     throw std::runtime_error("Not yet spawned, don't know which character config to fetch");
   }
-  return config_.configProto().character_configs().at(worldState_.selfState().name);
+  return config_.getCharacterConfig(worldState_.selfState().name);
 }
 
 const pk2::GameData& Bot::gameData() const {
@@ -443,7 +442,7 @@ namespace {
 std::pair<std::string, std::string> getLoginInfoFromConfig(const config::Config &config) {
   std::unique_lock<std::mutex> configLock(config.mutex());
   const auto &characterName = config.configProto().character_to_login();
-  const auto &characterConfig = config.configProto().character_configs().at(characterName);
+  const auto &characterConfig = config.getCharacterConfig(characterName);
   return {characterConfig.username(), characterConfig.password()};
 }
 
