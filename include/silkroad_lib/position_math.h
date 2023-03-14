@@ -16,6 +16,9 @@ Position createNewPositionWith2dOffset(const Position &startingPos, const float 
 RegionId worldRegionIdFromSectors(const Sector xSector, const Sector zSector);
 std::pair<Sector,Sector> sectorsFromWorldRegionId(const RegionId regionId);
 bool regionIsDungeon(const RegionId regionId);
+bool pointIsInRect2d(const Position &point, const Position &rectStart, const Position &rectEnd);
+// Returns the x and z offset of `point` based on the region of `other`
+std::pair<float,float> calculateOffsetInOtherRegion(const Position &point, const Position &other);
 
 } // namespace sro::position_math
 

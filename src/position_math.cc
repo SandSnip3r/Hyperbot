@@ -98,4 +98,22 @@ bool regionIsDungeon(const RegionId regionId) {
   return regionId & 0x8000;
 }
 
+bool pointIsInRect2d(const Position &point, const Position &rectStart, const Position &rectEnd) {
+  // Normalize everything to `point`'s region
+  const auto [rectStartX, rectStartZ] = calculateOffsetInOtherRegion(rectStart, point);
+  const auto [rectEndX, rectEndZ] = calculateOffsetInOtherRegion(rectEnd, point);
+  return point.xOffset() >= rectStartX &&
+         point.zOffset() >= rectStartZ &&
+         point.xOffset() <= rectEndX &&
+         point.zOffset() <= rectEndZ;
+}
+
+std::pair<float,float> calculateOffsetInOtherRegion(const Position &point, const Position &other) {
+  if (point.isDungeon() != other.isDungeon()) {
+    throw std::runtime_error("Cannot calculate offset between point in dungeon and point not in dungeon");
+  }
+  return { point.xOffset() + sro::game_constants::kRegionWidth * (static_cast<int>(point.xSector()) - other.xSector()),
+           point.zOffset() + sro::game_constants::kRegionHeight * (static_cast<int>(point.zSector()) - other.zSector()) };
+}
+
 } // namespace sro::position_math
