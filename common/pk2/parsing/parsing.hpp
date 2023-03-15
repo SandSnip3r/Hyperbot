@@ -8,6 +8,7 @@
 #include "../ref/magicOption.hpp"
 #include "../ref/mappingShopGroup.hpp"
 #include "../ref/mappingShopWithTab.hpp"
+#include "../ref/region.hpp"
 #include "../ref/scrapOfPackageItem.hpp"
 #include "../ref/shopGood.hpp"
 #include "../ref/shopGroup.hpp"
@@ -65,6 +66,12 @@ bool isValidMagicOptionDataLine(const std::string &line);
 // [param] line   Line from PK2 file representing level data
 // [return]       Whether the line is valid or not
 bool isValidLevelDataLine(const std::string &line);
+
+// Validates if the line of refRegion is valid
+//
+// [param] line   Line from PK2 file representing a ref region
+// [return]       Whether the line is valid or not
+bool isValidRefRegionLine(const std::string &line);
 
 // Validates if the line of teleport building data is valid
 //
@@ -144,6 +151,12 @@ pk2::ref::MagicOption parseMagicOptionDataLine(const std::string &line);
 // [return]       A populated Level object
 pk2::ref::Level parseLevelDataLine(const std::string &line);
 
+// Parses string representing a line of text from refregion.txt in the Media.pk2 into a Region object
+//
+// [param] line   A line of text
+// [return]       A populated Region object
+pk2::ref::Region parseRefRegionLine(const std::string &line);
+
 // Parses string representing a line of text from teleportbuilding.txt in the Media.pk2 into a Teleport object
 //
 // [param] line   A line of text
@@ -211,7 +224,7 @@ uint16_t parseGatePort(const std::vector<uint8_t> &data);
 // [return]       Populated DivisionInfo object
 DivisionInfo parseDivisionInfo(const std::vector<uint8_t> &data);
 
-// Splits a string into pieces
+// Splits a string into pieces which do not contain the delimiter
 //
 // [param] str    string to split
 // [param] delim  delimiter to split the string `str` on

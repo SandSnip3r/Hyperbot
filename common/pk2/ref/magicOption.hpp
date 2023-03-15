@@ -1,6 +1,7 @@
 #ifndef PK2_REF_MAGIC_OPTION_HPP_
 #define PK2_REF_MAGIC_OPTION_HPP_
 
+#include <cstdint>
 #include <string>
 #include <ostream>
 

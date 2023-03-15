@@ -2,6 +2,7 @@
 
 #include "logging.hpp"
 #include "pk2/parsing/navmeshParser.hpp"
+#include "pk2/parsing/regionInfoParser.hpp"
 #include "../../../common/pk2/pk2.h"
 #include "../../../common/pk2/parsing/parsing.hpp"
 
@@ -33,6 +34,7 @@ void GameData::parseSilkroadFiles(const std::filesystem::path &clientPath) {
 
 void GameData::parseData(Pk2ReaderModern &pk2Reader) {
   parseNavmeshData(pk2Reader);
+  parseRegionInfo(pk2Reader);
 }
 
 void GameData::parseMedia(Pk2ReaderModern &pk2Reader) {
@@ -42,6 +44,7 @@ void GameData::parseMedia(Pk2ReaderModern &pk2Reader) {
   parseShopData(pk2Reader);
   parseMagicOptionData(pk2Reader);
   parseLevelData(pk2Reader);
+  parseRefRegion(pk2Reader);
   parseTextData(pk2Reader);
   thrs.emplace_back(&GameData::parseCharacterData, this, std::ref(pk2Reader));
   thrs.emplace_back(&GameData::parseItemData, this, std::ref(pk2Reader));
@@ -84,6 +87,10 @@ const LevelData& GameData::levelData() const {
   return levelData_;
 }
 
+const RefRegion& GameData::refRegion() const {
+  return refRegion_;
+}
+
 const TextItemAndSkillData& GameData::textItemAndSkillData() const {
   return textItemAndSkillData_;
 }
@@ -101,6 +108,10 @@ const navmesh::triangulation::NavmeshTriangulation& GameData::navmeshTriangulati
     throw std::runtime_error("Asking for navmesh triangulation which does not exist");
   }
   return navmeshTriangulation_.value();
+}
+
+const RegionInfo& GameData::regionInfo() const {
+  return regionInfo_;
 }
 
 std::optional<std::string> GameData::getSkillNameIfExists(sro::scalar_types::ReferenceObjectId skillRefId) const {
@@ -474,6 +485,12 @@ void GameData::parseLevelData(Pk2ReaderModern &pk2Reader) {
   parseDataFile<ref::Level>(levelDataStr, parsing::isValidLevelDataLine, parsing::parseLevelDataLine, std::bind(&LevelData::addLevelItem, &levelData_, std::placeholders::_1));
 }
 
+void GameData::parseRefRegion(Pk2ReaderModern &pk2Reader) {
+  const std::string kRefRegionPath = "server_dep\\silkroad\\textdata\\refregion.txt";
+  auto refRegionStr = getFileDataAsString(pk2Reader, kRefRegionPath);
+  parseDataFile<ref::Region>(refRegionStr, parsing::isValidRefRegionLine, parsing::parseRefRegionLine, std::bind(&RefRegion::addRegion, &refRegion_, std::placeholders::_1));
+}
+
 void GameData::parseTextData(Pk2ReaderModern &pk2Reader) {
   parseTextZoneName(pk2Reader);
   parseTextItemAndSkill(pk2Reader);
@@ -533,5 +550,12 @@ void GameData::parseNavmeshData(Pk2ReaderModern &pk2Reader) {
 //   }
 //   return *(it->second.get());
 // }
+
+void GameData::parseRegionInfo(Pk2ReaderModern &pk2Reader) {
+  const std::string kRegionInfoEntryName = "regioninfo.txt";
+  PK2Entry regionInfoEntry = pk2Reader.getEntry(kRegionInfoEntryName);
+  auto regionInfoData = pk2Reader.getEntryData(regionInfoEntry);
+  regionInfo_ = parsing::parseRegionInfo(regionInfoData);
+}
 
 } // namespace pk2

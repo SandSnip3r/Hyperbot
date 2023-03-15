@@ -5,6 +5,8 @@
 #include "itemData.hpp"
 #include "levelData.hpp"
 #include "magicOptionData.hpp"
+#include "refRegion.hpp"
+#include "regionInfo.hpp"
 #include "shopData.hpp"
 #include "skillData.hpp"
 #include "teleportData.hpp"
@@ -35,10 +37,12 @@ public:
   const SkillData& skillData() const;
   const MagicOptionData& magicOptionData() const;
   const LevelData& levelData() const;
+  const RefRegion& refRegion() const;
   const TextItemAndSkillData& textItemAndSkillData() const;
   const TextZoneNameData& textZoneNameData() const;
   const TeleportData& teleportData() const;
   const navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
+  const RegionInfo& regionInfo() const;
 
   std::optional<std::string> getSkillNameIfExists(sro::scalar_types::ReferenceObjectId skillRefId) const;
 private:
@@ -51,14 +55,19 @@ private:
   SkillData skillData_;
   MagicOptionData magicOptionData_;
   LevelData levelData_;
+  RefRegion refRegion_;
   TextItemAndSkillData textItemAndSkillData_;
   TextZoneNameData textZoneNameData_;
   TeleportData teleportData_;
+
   std::optional<navmesh::Navmesh> navmesh_;
   std::optional<navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
 
+  RegionInfo regionInfo_;
+
   void parseData(Pk2ReaderModern &pk2Reader);
   void parseNavmeshData(Pk2ReaderModern &pk2Reader);
+  void parseRegionInfo(Pk2ReaderModern &pk2Reader);
 
   void parseMedia(Pk2ReaderModern &pk2Reader);
   void parseGatewayPort(Pk2ReaderModern &pk2Reader);
@@ -70,6 +79,7 @@ private:
   void parseShopData(Pk2ReaderModern &pk2Reader);
   void parseMagicOptionData(Pk2ReaderModern &pk2Reader);
   void parseLevelData(Pk2ReaderModern &pk2Reader);
+  void parseRefRegion(Pk2ReaderModern &pk2Reader);
   void parseTextData(Pk2ReaderModern &pk2Reader);
   void parseTextZoneName(Pk2ReaderModern &pk2Reader);
   void parseTextItemAndSkill(Pk2ReaderModern &pk2Reader);

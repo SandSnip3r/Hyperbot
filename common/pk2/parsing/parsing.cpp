@@ -186,6 +186,11 @@ bool isValidLevelDataLine(const std::string &line) {
   return isValidLine(kDataCount, line);
 }
 
+bool isValidRefRegionLine(const std::string &line) {
+  constexpr int kDataCount = 21;
+  return isValidLine(kDataCount, line);
+}
+
 bool isValidSkilldataLine(const std::string &line) {
   constexpr int kDataCount = 117;
   return isValidLine(kDataCount, line);
@@ -574,6 +579,33 @@ pk2::ref::Level parseLevelDataLine(const std::string &line) {
   ptr = parse(ptr, level.jobExp_Robber);
   parse(ptr, level.jobExp_Hunter);
   return level;
+}
+
+pk2::ref::Region parseRefRegionLine(const std::string &line) {
+  pk2::ref::Region region;
+  const char *ptr = line.data();
+  ptr = parse(ptr, region.wRegionID);
+  ptr = parse(ptr, region.x);
+  ptr = parse(ptr, region.z);
+  ptr = parse(ptr, region.continentName);
+  ptr = parse(ptr, region.areaName);
+  ptr = parse(ptr, region.isBattleField);
+  ptr = parse(ptr, region.climate);
+  ptr = parse(ptr, region.maxCapacity);
+  ptr = parse(ptr, region.assocObjID);
+  ptr = parse(ptr, region.assocServer);
+  ptr = parse(ptr, region.assocFile256);
+  ptr = parse(ptr, region.linkedRegion_1);
+  ptr = parse(ptr, region.linkedRegion_2);
+  ptr = parse(ptr, region.linkedRegion_3);
+  ptr = parse(ptr, region.linkedRegion_4);
+  ptr = parse(ptr, region.linkedRegion_5);
+  ptr = parse(ptr, region.linkedRegion_6);
+  ptr = parse(ptr, region.linkedRegion_7);
+  ptr = parse(ptr, region.linkedRegion_8);
+  ptr = parse(ptr, region.linkedRegion_9);
+  parse(ptr, region.linkedRegion_10);
+  return region;
 }
 
 pk2::ref::Skill parseSkilldataLine(const std::string &line) {
