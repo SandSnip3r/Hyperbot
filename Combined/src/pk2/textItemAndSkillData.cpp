@@ -2,6 +2,24 @@
 
 #include "logging.hpp"
 
+namespace {
+
+std::string removeCarriageReturnAndLineFeed(std::string str) {
+  uint32_t charIndex=0;
+  while (charIndex < str.size()) {
+    if (str.at(charIndex) == '\r' ||
+        str.at(charIndex) == '\n') {
+      str.erase(charIndex);
+    } else {
+      // Valid character
+      ++charIndex;
+    }
+  }
+  return str;
+}
+
+} // anonymous namespace
+
 namespace pk2 {
 
 void TextItemAndSkillData::addItem(ref::TextItemOrSkill &&itemOrSkill) {
@@ -15,17 +33,42 @@ void TextItemAndSkillData::addItem(ref::TextItemOrSkill &&itemOrSkill) {
     if (str.size() < kPrefix.size()) {
       return false;
     }
-    for (int i=0; i<kPrefix.size(); ++i) {
+    for (uint32_t i=0; i<kPrefix.size(); ++i) {
       if (str[i] != kPrefix[i]) {
         return false;
       }
     }
     return true;
   };
-  if (startsWithPrefix(itemOrSkill.key, kItemPrefix))  {
-    itemNames_.emplace(itemOrSkill.key, itemOrSkill.english);
-  } else if (startsWithPrefix(itemOrSkill.key, kSkillPrefix)) {
-    skillNames_.emplace(itemOrSkill.key, itemOrSkill.english);
+
+  // We will want to filter out items which end with _DESC or _STUDY.
+  auto isStudyOrDesc = [](const std::string &str) {
+    if (str.size() >= 5) {
+      if (str.at(str.size()-1) == 'C' &&
+          str.at(str.size()-2) == 'S' &&
+          str.at(str.size()-3) == 'E' &&
+          str.at(str.size()-4) == 'D' &&
+          str.at(str.size()-5) == '_') {
+        return true;
+      }
+      if (str.size() >= 6) {
+        if (str.at(str.size()-1) == 'Y' &&
+            str.at(str.size()-2) == 'D' &&
+            str.at(str.size()-3) == 'U' &&
+            str.at(str.size()-4) == 'T' &&
+            str.at(str.size()-5) == 'S' &&
+            str.at(str.size()-6) == '_') {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  if (startsWithPrefix(itemOrSkill.key, kItemPrefix) && !isStudyOrDesc(itemOrSkill.key))  {
+    itemNames_.emplace(itemOrSkill.key, removeCarriageReturnAndLineFeed(itemOrSkill.english));
+  } else if (startsWithPrefix(itemOrSkill.key, kSkillPrefix) && !isStudyOrDesc(itemOrSkill.key)) {
+    skillNames_.emplace(itemOrSkill.key, removeCarriageReturnAndLineFeed(itemOrSkill.english));
   } else {
     // TODO: Other types can be added
     //  All possible types: SN_COS, SN_EU, SN_EVENT, SN_FORTRESS,

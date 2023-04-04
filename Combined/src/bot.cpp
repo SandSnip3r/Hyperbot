@@ -126,11 +126,13 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kKnockdownStunEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMovementRequestTimedOut, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemCooldownEnded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kInventoryItemUpdated, eventHandleFunction);
 
   // Skills
   eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kSkillEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kOurSkillFailed, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kOurBuffAdded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kOurBuffRemoved, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kOurCommandError, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kSkillCooldownEnded, eventHandleFunction);
@@ -143,78 +145,79 @@ void Bot::handleEvent(const event::Event *event) {
     const auto eventCode = event->eventCode;
     switch (eventCode) {
       // Bot actions from UI
-      case event::EventCode::kStartTraining:
+      case event::EventCode::kStartTraining: {
         handleStartTraining();
         break;
-      case event::EventCode::kStopTraining:
+      }
+      case event::EventCode::kStopTraining: {
         handleStopTraining();
         break;
+      }
 
       // Debug help
-      case event::EventCode::kInjectPacket:
-        {
-          const event::InjectPacket &castedEvent = dynamic_cast<const event::InjectPacket&>(*event);
-          handleInjectPacket(castedEvent);
-        }
+      case event::EventCode::kInjectPacket: {
+        const event::InjectPacket &castedEvent = dynamic_cast<const event::InjectPacket&>(*event);
+        handleInjectPacket(castedEvent);
         break;
+      }
 
       // Login events
-      case event::EventCode::kStateShardIdUpdated:
+      case event::EventCode::kStateShardIdUpdated: {
         handleStateShardIdUpdated();
         break;
-      case event::EventCode::kStateConnectedToAgentServerUpdated:
+      }
+      case event::EventCode::kStateConnectedToAgentServerUpdated: {
         handleStateConnectedToAgentServerUpdated();
         break;
-      case event::EventCode::kStateReceivedCaptchaPromptUpdated:
+      }
+      case event::EventCode::kStateReceivedCaptchaPromptUpdated: {
         handleStateReceivedCaptchaPromptUpdated();
         break;
-      case event::EventCode::kLoggedIn:
+      }
+      case event::EventCode::kLoggedIn: {
         handleLoggedIn();
         break;
-      case event::EventCode::kStateCharacterListUpdated:
+      }
+      case event::EventCode::kStateCharacterListUpdated: {
         handleStateCharacterListUpdated();
         break;
+      }
 
       // Movement events
-      case event::EventCode::kEntityMovementBegan:
-        {
-          const auto &castedEvent = dynamic_cast<const event::EntityMovementBegan&>(*event);
-          handleEntityMovementBegan(castedEvent);
-          break;
-        }
-      case event::EventCode::kEntityMovementEnded:
-        {
-          onUpdate(event);
-          break;
-        }
-      case event::EventCode::kEntityMovementTimerEnded:
-        {
-          const auto &castedEvent = dynamic_cast<const event::EntityMovementTimerEnded&>(*event);
-          handleEntityMovementTimerEnded(castedEvent.globalId);
-          break;
-        }
-      case event::EventCode::kEntityEnteredGeometry:
-        {
-          const auto &castedEvent = dynamic_cast<const event::EntityEnteredGeometry&>(*event);
-          handleEntityEnteredGeometry(castedEvent);
-        }
+      case event::EventCode::kEntityMovementBegan: {
+        const auto &castedEvent = dynamic_cast<const event::EntityMovementBegan&>(*event);
+        handleEntityMovementBegan(castedEvent);
         break;
-      case event::EventCode::kEntityExitedGeometry:
-        {
-          const auto &castedEvent = dynamic_cast<const event::EntityExitedGeometry&>(*event);
-          handleEntityExitedGeometry(castedEvent);
-        }
+      }
+      case event::EventCode::kEntityMovementEnded: {
+        onUpdate(event);
         break;
+      }
+      case event::EventCode::kEntityMovementTimerEnded: {
+        const auto &castedEvent = dynamic_cast<const event::EntityMovementTimerEnded&>(*event);
+        handleEntityMovementTimerEnded(castedEvent.globalId);
+        break;
+      }
+      case event::EventCode::kEntityEnteredGeometry: {
+        const auto &castedEvent = dynamic_cast<const event::EntityEnteredGeometry&>(*event);
+        handleEntityEnteredGeometry(castedEvent);
+        break;
+      }
+      case event::EventCode::kEntityExitedGeometry: {
+        const auto &castedEvent = dynamic_cast<const event::EntityExitedGeometry&>(*event);
+        handleEntityExitedGeometry(castedEvent);
+        break;
+      }
 
       // Character info events
-      case event::EventCode::kSpawned:
+      case event::EventCode::kSpawned: {
         handleSpawned();
         break;
-      case event::EventCode::kItemUseFailed:
-        {
-          onUpdate(event);
-        }
+      }
+      case event::EventCode::kItemUseFailed: {
+        onUpdate(event);
         break;
+      }
       case event::EventCode::kEntityHpChanged: {
         const event::EntityHpChanged &castedEvent = dynamic_cast<const event::EntityHpChanged&>(*event);
         if (castedEvent.globalId == worldState_.selfState().globalId) {
@@ -223,128 +226,121 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
       case event::EventCode::kMpChanged:
-      case event::EventCode::kMaxHpMpChanged:
+      case event::EventCode::kMaxHpMpChanged: {
         handleVitalsChanged();
         break;
-      case event::EventCode::kStatesChanged:
+      }
+      case event::EventCode::kStatesChanged: {
         handleStatesChanged();
         break;
+      }
 
       // Misc
       case event::EventCode::kStorageInitialized:
       case event::EventCode::kEntityDeselected:
       case event::EventCode::kEntitySelected:
       case event::EventCode::kNpcTalkStart:
-      case event::EventCode::kRepairSuccessful:
+      case event::EventCode::kRepairSuccessful: {
         onUpdate();
         break;
-      case event::EventCode::kInventoryUpdated:
-        {
-          onUpdate(event);
-          break;
-        }
-      case event::EventCode::kStorageUpdated:
-        {
-          onUpdate(event);
-          break;
-        }
-      case event::EventCode::kEntitySpawned:
-        {
-          const auto &castedEvent = dynamic_cast<const event::EntitySpawned&>(*event);
-          entitySpawned(castedEvent);
-          break;
-        }
-      case event::EventCode::kEntityDespawned:
-        {
-          onUpdate(event);
-          break;
-        }
-      case event::EventCode::kEntityLifeStateChanged:
-        {
-          onUpdate();
-          break;
-        }
-      case event::EventCode::kItemUseTimeout:
-        {
-          const auto &castedEvent = dynamic_cast<const event::ItemUseTimeout&>(*event);
-          itemUseTimedOut(castedEvent);
-          break;
-        }
-      case event::EventCode::kEntityOwnershipRemoved:
-        {
-          const auto &castedEvent = dynamic_cast<const event::EntityOwnershipRemoved&>(*event);
-          onUpdate();
-          break;
-        }
-      case event::EventCode::kKnockedBack:
-        {
-          onUpdate(event);
-          break;
-        }
-      case event::EventCode::kKnockedDown:
-        {
-          onUpdate(event);
-          break;
-        }
-      case event::EventCode::kKnockbackStunEnded:
-        {
-          handleKnockbackStunEnded();
-          break;
-        }
-      case event::EventCode::kKnockdownStunEnded:
-        {
-          handleKnockdownStunEnded();
-          break;
-        }
-      case event::EventCode::kMovementRequestTimedOut:
-        {
-          onUpdate(event);
-          break;
-        }
-      case event::EventCode::kItemCooldownEnded:
-        {
-          const auto &castedEvent = dynamic_cast<const event::ItemCooldownEnded&>(*event);
-          handleItemCooldownEnded(castedEvent);
-          break;
-        }
+      }
+      case event::EventCode::kInventoryUpdated: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kStorageUpdated: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kEntitySpawned: {
+        const auto &castedEvent = dynamic_cast<const event::EntitySpawned&>(*event);
+        entitySpawned(castedEvent);
+        break;
+      }
+      case event::EventCode::kEntityDespawned: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kEntityLifeStateChanged: {
+        onUpdate();
+        break;
+      }
+      case event::EventCode::kItemUseTimeout: {
+        const auto &castedEvent = dynamic_cast<const event::ItemUseTimeout&>(*event);
+        itemUseTimedOut(castedEvent);
+        break;
+      }
+      case event::EventCode::kEntityOwnershipRemoved: {
+        const auto &castedEvent = dynamic_cast<const event::EntityOwnershipRemoved&>(*event);
+        onUpdate();
+        break;
+      }
+      case event::EventCode::kKnockedBack: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kKnockedDown: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kKnockbackStunEnded: {
+        handleKnockbackStunEnded();
+        break;
+      }
+      case event::EventCode::kKnockdownStunEnded: {
+        handleKnockdownStunEnded();
+        break;
+      }
+      case event::EventCode::kMovementRequestTimedOut: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kItemCooldownEnded: {
+        const auto &castedEvent = dynamic_cast<const event::ItemCooldownEnded&>(*event);
+        handleItemCooldownEnded(castedEvent);
+        break;
+      }
+      case event::EventCode::kInventoryItemUpdated: {
+        onUpdate(event);
+        break;
+      }
 
       // Skills
-      case event::EventCode::kSkillBegan:
-        {
-          const auto &castedEvent = dynamic_cast<const event::SkillBegan&>(*event);
-          handleSkillBegan(castedEvent);
-          break;
-        }
-      case event::EventCode::kSkillEnded:
-        {
-          const auto &castedEvent = dynamic_cast<const event::SkillEnded&>(*event);
-          handleSkillEnded(castedEvent);
-          break;
-        }
-      case event::EventCode::kOurSkillFailed:
-        {
-          onUpdate(event);
-          break;
-        }
-      case event::EventCode::kOurBuffRemoved:
-        {
-          onUpdate(event);
-          break;
-        }
-      case event::EventCode::kOurCommandError:
-        {
-          onUpdate(event);
-          break;
-        }
-      case event::EventCode::kSkillCooldownEnded:
-        {
-          const auto &castedEvent = dynamic_cast<const event::SkillCooldownEnded&>(*event);
-          handleSkillCooldownEnded(castedEvent);
-          break;
-        }
-      default:
+      case event::EventCode::kSkillBegan: {
+        const auto &castedEvent = dynamic_cast<const event::SkillBegan&>(*event);
+        handleSkillBegan(castedEvent);
+        break;
+      }
+      case event::EventCode::kSkillEnded: {
+        const auto &castedEvent = dynamic_cast<const event::SkillEnded&>(*event);
+        handleSkillEnded(castedEvent);
+        break;
+      }
+      case event::EventCode::kOurSkillFailed: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kOurBuffAdded: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kOurBuffRemoved: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kOurCommandError: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kSkillCooldownEnded: {
+        const auto &castedEvent = dynamic_cast<const event::SkillCooldownEnded&>(*event);
+        handleSkillCooldownEnded(castedEvent);
+        break;
+      }
+      default: {
         LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
         break;
+      }
     }
   } catch (std::exception &ex) {
     LOG() << "Error while handling event!\n  " << ex.what() << std::endl;

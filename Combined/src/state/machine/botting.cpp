@@ -3,18 +3,34 @@
 #include "training.hpp"
 #include "walking.hpp"
 
+#include "bot.hpp"
 #include "logging.hpp"
 
 namespace state::machine {
+
+const sro::Position Botting::kCenterOfJangan_{25000, 951.0f, -33.0f, 1372.0f};
 
 Botting::Botting(Bot &bot) : StateMachine(bot) {
   stateMachineCreated(kName);
   trainingSpotCenter_ = sro::Position{24742, 1114.48f, 47.0569f, 898.176f }; // TODO: Need to get from botting config
 
-  // TODO: Figure out what we should initialize our childState_ as
-  //  For development, we assume we want to be training, so first walk to the training spot
-  childState_ = std::make_unique<Walking>(bot_, trainingSpotCenter_);
-  // childState_ = std::make_unique<Townlooping>(bot_);
+  // TODO: Maybe this training area belongs somewhere else
+  constexpr double kMonsterRange{650};
+  trainingAreaGeometry_ = std::make_unique<entity::Circle>(trainingSpotCenter_, kMonsterRange);
+
+  initializeChildState();
+}
+
+void Botting::initializeChildState() {
+  // if we're out of supplies, we must go to town
+  //  there must already be some logic somewhere to determine if we need to go to town, reuse that
+  // if we're already in town, initialize as Townlooping
+  //  there's a chance we have everything we need, then Townlooping will immediately finish and we'll move onto the next state as per the normal flow
+  if (bot_.selfState().inTown() || needToGoToTown()) {
+    childState_ = std::make_unique<Townlooping>(bot_);
+  } else {
+    childState_ = std::make_unique<Training>(bot_, trainingAreaGeometry_->clone());
+  }
 }
 
 Botting::~Botting() {
@@ -30,23 +46,17 @@ void Botting::onUpdate(const event::Event *event) {
   if (childState_->done()) {
     // Move on to the next thing
     if (dynamic_cast<Townlooping*>(childState_.get())) {
-      // After the townloop, we will walk to the training area
+      // Done with the townloop, start training
       childState_.reset();
-      childState_ = std::make_unique<Walking>(bot_, trainingSpotCenter_);
-    } else if (dynamic_cast<Walking*>(childState_.get())) {
-      // We either just walked to town or walked to our training spot
-      //  For now, we assume that we walked to our training spot
-      childState_.reset();
-      childState_ = std::make_unique<Training>(bot_, trainingSpotCenter_);
+      childState_ = std::make_unique<Training>(bot_, trainingAreaGeometry_->clone());
     } else if (dynamic_cast<Training*>(childState_.get())) {
-      // Done training, need to go back to town
-      static const sro::Position kCenterOfJangan{25000, 951.0f, -33.0f, 1372.0f}; // TODO: Instead, navigate to first NPC of townloop
+      // Done training, go back to town
       childState_.reset();
-      childState_ = std::make_unique<Walking>(bot_, kCenterOfJangan);
+      childState_ = std::make_unique<Townlooping>(bot_);
     } else {
       throw std::runtime_error("Botting's child state is not valid");
     }
-    // Recurse so that we start the next state
+    // We switched to a new child state; recurse so that we call onUpdate on the new state machine
     // TODO: Might not be ideal
     onUpdate(event);
   }
@@ -54,6 +64,11 @@ void Botting::onUpdate(const event::Event *event) {
 
 bool Botting::done() const {
   // Botting is never done
+  return false;
+}
+
+bool Botting::needToGoToTown() const {
+  // TODO
   return false;
 }
 

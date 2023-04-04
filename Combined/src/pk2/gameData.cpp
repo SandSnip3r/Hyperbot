@@ -513,7 +513,7 @@ void GameData::parseTextItemAndSkill(Pk2ReaderModern &pk2Reader) {
     auto textDataPath = kTextdataDirectory + textDataFilename;
     PK2Entry textItemAndSkillEntry = pk2Reader.getEntry(textDataPath);
     auto textItemAndSkillData = pk2Reader.getEntryData(textItemAndSkillEntry);
-    auto textItemAndSkillLines = parsing::fileDataToStringLines(textItemAndSkillData);
+    auto textItemAndSkillLines = parsing::fileDataToStringLines2(textItemAndSkillData);
     parseDataFile2<ref::TextItemOrSkill>(textItemAndSkillLines, parsing::isValidTextDataLine, parsing::parseTextItemOrSkillLine, std::bind(&TextItemAndSkillData::addItem, &textItemAndSkillData_, std::placeholders::_1));
   }
 }

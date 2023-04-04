@@ -247,7 +247,7 @@ public:
 
   // Training area
   std::unique_ptr<entity::Geometry> trainingAreaGeometry;
-  void setTrainingAreaGeometry(std::unique_ptr<entity::Circle> &&geometry);
+  void setTrainingAreaGeometry(std::unique_ptr<entity::Geometry> &&geometry);
   void resetTrainingAreaGeometry();
   // ################################################################################
   // Skill state
@@ -278,6 +278,8 @@ public:
   bool stunnedFromKnockdown{false};
   bool stunnedFromKnockback{false};
   // ################################################################################
+
+  bool inTown() const;
 
 private:
   broker::EventBroker &eventBroker_;

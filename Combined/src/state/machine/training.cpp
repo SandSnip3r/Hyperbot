@@ -27,34 +27,68 @@ std::mt19937 createRandomEngine() {
   return std::mt19937(seq);
 }
 
+sro::Position randomPointInGeometry(const entity::Geometry *geometry) {
+  const auto *circle = dynamic_cast<const entity::Circle*>(geometry);
+  if (circle == nullptr) {
+    throw std::runtime_error("Not yet generating random points in non-circle geometries");
+  }
+  // Pick a random point inside a square that encloses our training circle
+  static auto eng = createRandomEngine();
+  auto notInCircle = [](double x, double y, double radius) {
+    return sqrt(x*x+y*y) > radius;
+  };
+  std::uniform_real_distribution<double> dist(-circle->radius(), circle->radius());
+  auto x = dist(eng);
+  auto y = dist(eng);
+  while (notInCircle(x, y, circle->radius())) {
+    x = dist(eng);
+    y = dist(eng);
+  }
+  // Transform x,y to sro coordinate
+  return sro::position_math::createNewPositionWith2dOffset(circle->center(), x, y);
+}
+
 } // anonymous namespace
 
 namespace state::machine {
 
-Training::Training(Bot &bot, const sro::Position &trainingSpotCenter) : StateMachine(bot), trainingSpotCenter_(trainingSpotCenter) {
+Training::Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeometry) : StateMachine(bot), trainingAreaGeometry_(std::move(trainingAreaGeometry)) {
   stateMachineCreated(kName);
   buildBuffList();
   // Create a list of skills to use
   skillsToUse_ = std::vector<sro::scalar_types::ReferenceObjectId> {
     // TODO: Why do i get a Handle Read Error when I send an invalid skill?
-      9612, // Distance Shot
-      9940, // Prick
-      // 9798, // Mortal Wounds
-      // 9623, // Blast Shot
-      // 9631, // Hurricane Shot
-      9544, // Intense Shot
-      9868, // Screw
-      9528, // Power Shot
-      9587, // Rapid Shot
+      8204, // Crane's Thunderbolt
+      7805, // Flying Dragon - Flash
+      8195, // Horse's Thunderbolt
+
+      // Rogue
+      // 9612, // Distance Shot
+      // 9940, // Prick
+      // // 9798, // Mortal Wounds
+      // // 9623, // Blast Shot
+      // // 9631, // Hurricane Shot
+      // 9544, // Intense Shot
+      // 9868, // Screw
+      // 9528, // Power Shot
+      // 9587, // Rapid Shot
+
+      // Wizard
       // 10264, // Fire Bolt
       // 10122, // Ice Bolt (very low level)
       // 10135, // Frozen Spear
+
+      // Warrior
       // 8499, // Sprint Assault
+
+      // Bard
       // 11261, // Weird Chord
+
+      // Warlock
       // 11072, // Vampire Kiss
     };
 
-  bot_.selfState().setTrainingAreaGeometry(std::make_unique<entity::Circle>(trainingSpotCenter_, kMonsterRange_));
+  bot_.selfState().setTrainingAreaGeometry(trainingAreaGeometry_->clone());
   // Register training area geometry with all entities
   for (const auto &idPtrPair : bot_.entityTracker().getEntityMap()) {
     if (idPtrPair.second) {
@@ -78,17 +112,22 @@ Training::~Training() {
 }
 
 void Training::onUpdate(const event::Event *event) {
-  if (childState_) {
-    // Have a child state, it takes priority
-    childState_->onUpdate(event);
-    if (childState_->done()) {
-      childState_.reset();
-    } else {
-      // Dont execute anything else in this function until the child state is done
-      return;
-    }
-  }
+  // Observe incoming events, regardless if we have a child
 
+  // Did something just change that will trigger us to go back to town?
+  //  What are the possible reasons that we'd want to go to town?
+  //    Durability is too low
+  //    Too few HP potions remaining
+  //    Too few MP potions remaining
+  //    Too few <misc expendable item> remaining
+  //    Quest completed
+  //    Inventory full (or close)
+  //    Collected a sufficient number of some item (? cannot think of concrete example that is different from quest items)
+  //    Dead
+  //  This boils down to the following events:
+  //    Durability of item changed
+  //    Inventory item updated (quantity decreased or new item picked)
+  //    Died
   if (event != nullptr) {
     // Received some specific event info
     if (const auto *entitySpawnedEvent = dynamic_cast<const event::EntitySpawned*>(event)) {
@@ -97,6 +136,30 @@ void Training::onUpdate(const event::Event *event) {
         // Register our training region boundary with the entity so that we will get events if they enter/exit
         mobileEntity->registerGeometryBoundary(bot_.selfState().trainingAreaGeometry->clone(), bot_.eventBroker());
       }
+    } else if (const auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
+      // Maybe we have too few items now?
+    } else if (const auto *inventoryItemUpdatedEvent = dynamic_cast<const event::InventoryItemUpdated*>(event)) {
+      // Maybe durability is too low?
+    } else if (const auto *entityLifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event)) {
+      // Maybe we died?
+    } else if (const auto *buffAdded = dynamic_cast<const event::BuffAdded*>(event)) {
+      if (buffAdded->entityGlobalId == bot_.selfState().globalId) {
+        if (buffsCastButNotYetActive_.find(buffAdded->buffRefId) != buffsCastButNotYetActive_.end()) {
+          // We were waiting on this
+          buffsCastButNotYetActive_.erase(buffAdded->buffRefId);
+        }
+      }
+    }
+  }
+
+  if (childState_) {
+    // Have a child state, it takes priority
+    childState_->onUpdate(event);
+    if (childState_->done()) {
+      childState_.reset();
+    } else {
+      // Dont execute anything else in this function until the child state is done
+      return;
     }
   }
 
@@ -109,6 +172,7 @@ void Training::onUpdate(const event::Event *event) {
   if (nextBuffToCast) {
     auto castSkillBuilder = CastSkillStateMachineBuilder(bot_, *nextBuffToCast);
     LOG() << "Next buff to cast is " << *nextBuffToCast << std::endl;
+    buffsCastButNotYetActive_.emplace(*nextBuffToCast);
     const auto &buffData = bot_.gameData().skillData().getSkillById(*nextBuffToCast);
 
     // Does the buff require a specific weapon to be equipped to cast?
@@ -156,8 +220,7 @@ void Training::onUpdate(const event::Event *event) {
       }
     } else if (const auto *item = dynamic_cast<const entity::Item*>(entityIdPtrPair.second.get())) {
       ++totalItemCount;
-      const auto distance = sro::position_math::calculateDistance2d(trainingSpotCenter_, item->position());
-      if (distance < kItemRange_) {
+      if (trainingAreaGeometry_->pointIsInside(item->position())) {
         itemsInRange.push_back(item);
       }
     }
@@ -245,23 +308,9 @@ void Training::onUpdate(const event::Event *event) {
       // Already walking somewhere, dont interrupt
       return;
     }
-    // Pick a random point inside a square that encloses our training circle
-    static auto eng = createRandomEngine();
-    auto notInCircle = [](double x, double y, double radius) {
-      return sqrt(x*x+y*y) > radius;
-    };
-    std::uniform_real_distribution<double> dist(-kMonsterRange_, kMonsterRange_);
-    auto x = dist(eng);
-    auto y = dist(eng);
-    while (notInCircle(x, y, kMonsterRange_)) {
-      x = dist(eng);
-      y = dist(eng);
-    }
-    // Transform x,y to sro coordinate
-    const auto destPos = sro::position_math::createNewPositionWith2dOffset(trainingSpotCenter_, x, y);
+    const auto destPos = randomPointInGeometry(trainingAreaGeometry_.get());
     const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(destPos);
     bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
-    LOG() << "Walking to random pos " << sro::position_math::calculateDistance2d(trainingSpotCenter_, destPos) << "m from center of training area" << std::endl;
   } else {
     LOG() << "Nothing to attack and we cant move right now" << std::endl;
   }
@@ -274,24 +323,27 @@ bool Training::done() const {
 bool Training::wantToAttackMonster(const entity::Monster &monster) const {
   const auto &characterData = bot_.gameData().characterData().getCharacterById(monster.refObjId);
   if (std::abs(characterData.lvl - bot_.selfState().getCurrentLevel()) > 10) {
-    // Dont attack anything 10 levels above or below us
+    // Don't attack anything 10 levels above or below us
     return false;
   }
-  const auto distance = sro::position_math::calculateDistance2d(trainingSpotCenter_, monster.position());
-  if (distance > kMonsterRange_) {
-    // Too far away
-    return false;
-  }
-  return true;
+  return trainingAreaGeometry_->pointIsInside(monster.position());
 }
 
 void Training::buildBuffList() {
   // TODO: This data should come from some config
   // Create a list of buffs to use
   buffsToUse_ = std::vector<sro::scalar_types::ReferenceObjectId> {
-       11795, // Holy Recovery Division
-       11934, // Holy Spell
-      //  9516, // Crossbow Extreme
+      8150, // Ghost Walk - God
+      8133, // God - Piercing Force
+      7980, // Final Guard of Ice
+      8183, // Concentration - 4th
+
+      // Cleric
+      // 11795, // Holy Recovery Division
+      // 11934, // Holy Spell
+
+      // Rogue
+      // 9516, // Crossbow Extreme
     };
 
   // Move all buffs which require a weapon at all times to the end
@@ -329,11 +381,14 @@ std::optional<sro::scalar_types::ReferenceObjectId> Training::getNextBuffToCast(
   // Choose one that isnt on cooldown
   for (int i=0; i<copyOfBuffsToUse.size(); ++i) {
     const auto buff = copyOfBuffsToUse.at(i);
-    if (canCastSkill(buff)) {
-      return buff;
+    // Check if we already cast this skill but it isn't yet active
+    if (buffsCastButNotYetActive_.find(buff) == buffsCastButNotYetActive_.end()) {
+      if (canCastSkill(buff)) {
+        return buff;
+      }
     }
   }
-  // All buffs are still on cooldown, none to cast
+  // Didn't find a buff that we need to cast.
   return {};
 }
 
@@ -365,6 +420,11 @@ std::optional<uint8_t> Training::getInventorySlotOfWeaponForSkill(const pk2::ref
   }
   if (skillData.reqCastWeapon2 != 255) {
     possibleWeapons.push_back(type_id::categories::kWeapon.subCategory(skillData.reqCastWeapon2));
+  }
+  if (possibleWeapons.empty()) {
+    // Does not require a weapon
+    LOG() << "Skill does not require a weapon" << std::endl;
+    return {};
   }
 
   // First, check if the currently equipped weapon is valid for this skill

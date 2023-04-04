@@ -512,7 +512,7 @@ packet::structures::ItemMovement Self::getUserPurchaseRequest() const {
 
 // =================================================================================================
 
-void Self::setTrainingAreaGeometry(std::unique_ptr<entity::Circle> &&geometry) {
+void Self::setTrainingAreaGeometry(std::unique_ptr<entity::Geometry> &&geometry) {
   trainingAreaGeometry = std::move(geometry);
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTrainingAreaSet));
 }
@@ -527,6 +527,7 @@ void Self::resetTrainingAreaGeometry() {
 void Self::addBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker) {
   buffs.emplace(skillRefId);
   LOG() << "Added buff " << skillRefId << " to self" << std::endl;
+  eventBroker_.publishEvent(std::make_unique<event::BuffAdded>(globalId, skillRefId));
 }
 
 void Self::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker) {
@@ -537,6 +538,13 @@ void Self::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::E
   buffs.erase(buffIt);
   LOG() << "Removed buff " << skillRefId << " from self" << std::endl;
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kOurBuffRemoved));
+}
+
+// =================================================================================================
+
+bool Self::inTown() const {
+  const auto &ourRegion = gameData_.refRegion().getRegion(position().regionId());
+  return !ourRegion.isBattleField;
 }
 
 // =================================================================================================

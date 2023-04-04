@@ -50,6 +50,8 @@ OurSkillFailed::OurSkillFailed(sro::scalar_types::ReferenceObjectId id, uint16_t
 
 EntityHpChanged::EntityHpChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityHpChanged), globalId(id) {}
 
+BuffAdded::BuffAdded(sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId) : Event(EventCode::kOurBuffAdded), entityGlobalId(entityId), buffRefId(buffId) {}
+
 CommandError::CommandError(const packet::structures::ActionCommand &cmd) : Event(EventCode::kOurCommandError), command(cmd) {}
 
 ItemUseTimeout::ItemUseTimeout(uint8_t slot, type_id::TypeId tid) : Event(EventCode::kItemUseTimeout), slotNum(slot), typeData(tid) {}
@@ -61,5 +63,7 @@ StateMachineCreated::StateMachineCreated(const std::string &name) : Event(EventC
 ItemCooldownEnded::ItemCooldownEnded(type_id::TypeId tId) : Event(EventCode::kItemCooldownEnded), typeId(tId) {}
 
 NewConfigReceived::NewConfigReceived(const proto::config::Config &config_param) : Event(EventCode::kNewConfigReceived), config(config_param) {}
+
+InventoryItemUpdated::InventoryItemUpdated(const uint8_t &slot) : Event(EventCode::kInventoryItemUpdated), slotIndex(slot) {}
 
 } // namespace event

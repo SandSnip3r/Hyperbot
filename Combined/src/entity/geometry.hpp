@@ -15,6 +15,7 @@ public:
   virtual std::optional<double> timeUntilExit(const sro::Position &srcPos, const sro::Position &destPos, float movementSpeed) const = 0;
   virtual std::optional<double> timeUntilExit(const sro::Position &srcPos, sro::Angle movementAngle, float movementSpeed) const = 0;
   virtual std::unique_ptr<Geometry> clone() const = 0;
+  virtual bool pointIsInside(const sro::Position &point) const = 0;
 };
 
 class Circle : public Geometry {
@@ -25,13 +26,13 @@ public:
   virtual std::optional<double> timeUntilExit(const sro::Position &srcPos, const sro::Position &destPos, float movementSpeed) const override;
   virtual std::optional<double> timeUntilExit(const sro::Position &srcPos, sro::Angle movementAngle, float movementSpeed) const override;
   virtual std::unique_ptr<Geometry> clone() const override;
+  virtual bool pointIsInside(const sro::Position &point) const override;
 
   const sro::Position& center() const;
   double radius() const;
 private:
   const sro::Position center_;
   const double radius_;
-  bool pointIsInside(const sro::Position &point) const;
 };
 
 class Rectangle : public Geometry {
@@ -42,12 +43,12 @@ public:
   virtual std::optional<double> timeUntilExit(const sro::Position &srcPos, const sro::Position &destPos, float movementSpeed) const override;
   virtual std::optional<double> timeUntilExit(const sro::Position &srcPos, sro::Angle movementAngle, float movementSpeed) const override;
   virtual std::unique_ptr<Geometry> clone() const override;
+  virtual bool pointIsInside(const sro::Position &point) const override;
 private:
   const sro::Position topLeft_;
   const sro::Position topRight_;
   const sro::Position bottomRight_;
   const sro::Position bottomLeft_;
-  bool pointIsInside(const sro::Position &point) const;
 };
 
 } // namespace entity

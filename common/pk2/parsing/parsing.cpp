@@ -62,6 +62,19 @@ std::vector<std::string> fileDataToStringLines(const std::vector<uint8_t> &data)
   return lines;
 }
 
+std::vector<std::string> fileDataToStringLines2(const std::vector<uint8_t> &data) {
+  // Convert data to std::wstring
+  std::wstring wstr;
+  wstr.resize(data.size()/2-1);
+  std::memcpy(wstr.data(), data.data()+2, data.size()-2);
+
+  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter;
+  std::string result;
+  result = converter.to_bytes(wstr);
+  auto lines = split(result, "\r\n");
+  return lines;
+}
+
 namespace {
 class Decryptor {
 public:

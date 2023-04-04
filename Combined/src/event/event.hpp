@@ -55,6 +55,7 @@ enum class EventCode {
   kSkillBegan,
   kSkillEnded,
   kOurSkillFailed,
+  kOurBuffAdded,
   kOurBuffRemoved,
   kOurCommandError,
   // TODO: Refactor this whole itemUsedTimeout concept
@@ -85,6 +86,8 @@ enum class EventCode {
 
   kNewConfigReceived,
   kConfigUpdated,
+
+  kInventoryItemUpdated,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -278,6 +281,14 @@ public:
   virtual ~EntityHpChanged() = default;
 };
 
+struct BuffAdded : public Event {
+public:
+  BuffAdded(sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId);
+  const sro::scalar_types::EntityGlobalId entityGlobalId;
+  const sro::scalar_types::ReferenceObjectId buffRefId;
+  virtual ~BuffAdded() = default;
+};
+
 struct CommandError : public Event {
 public:
   CommandError(const packet::structures::ActionCommand &cmd);
@@ -320,6 +331,13 @@ public:
   NewConfigReceived(const proto::config::Config &config_param);
   const proto::config::Config config;
   virtual ~NewConfigReceived() = default;
+};
+
+struct InventoryItemUpdated : public Event {
+public:
+  InventoryItemUpdated(const uint8_t &slot);
+  const uint8_t slotIndex;
+  virtual ~InventoryItemUpdated() = default;
 };
 
 } // namespace event

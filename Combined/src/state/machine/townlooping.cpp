@@ -88,7 +88,7 @@ bool Townlooping::done() const {
 }
 
 sro::Position Townlooping::positionOfNpc(Npc npc) const {
-  // Hard code the NPCs' locations, for now
+  // Hard code the Jangan NPCs' locations, for now
   static const auto npcPositionMap = []{
     std::map<Npc, sro::Position> npcPositions;
     npcPositions[Npc::kStorage]    = { 25000,  981.0f, 0.0f, 1032.0f };

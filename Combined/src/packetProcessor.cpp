@@ -373,6 +373,7 @@ void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
   } else if (packet.stateType() == packet::enums::StateType::kLifeState) {
     entity::Character &characterEntity = worldState_.getEntity<entity::Character>(packet.globalId());
     if (packet.globalId() == worldState_.selfState().globalId && !worldState_.selfState().spawned()) {
+      // TODO: Maybe I ought to move this check into getEntity?
       throw std::runtime_error("Got life state update for ourself, but we are not spawned");
     }
     const auto newLifeState = static_cast<sro::entity::LifeState>(packet.state());
@@ -886,6 +887,7 @@ void PacketProcessor::serverAgentInventoryUpdateDurabilityReceived(const packet:
   }
   // Update item's durability
   itemAsEquip->durability = packet.durability();
+  eventBroker_.publishEvent(std::make_unique<event::InventoryItemUpdated>(packet.slotIndex()));
 }
 
 void PacketProcessor::serverAgentInventoryUpdateItemReceived(const packet::parsing::ServerAgentInventoryUpdateItem &packet) const {
