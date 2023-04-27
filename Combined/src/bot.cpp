@@ -144,8 +144,8 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kSkillEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kOurSkillFailed, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kOurBuffAdded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kOurBuffRemoved, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kPlayerCharacterBuffAdded, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kPlayerCharacterBuffRemoved, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kOurCommandError, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kSkillCooldownEnded, eventHandleFunction);
 }
@@ -337,10 +337,10 @@ void Bot::handleEvent(const event::Event *event) {
         onUpdate(event);
         break;
       }
-      case event::EventCode::kOurBuffAdded: {
+      case event::EventCode::kPlayerCharacterBuffAdded: {
         break;
       }
-      case event::EventCode::kOurBuffRemoved: {
+      case event::EventCode::kPlayerCharacterBuffRemoved: {
         onUpdate(event);
         break;
       }
@@ -594,7 +594,7 @@ void Bot::handleSkillEnded(const event::SkillEnded &event) {
 void Bot::handleSkillCooldownEnded(const event::SkillCooldownEnded &event) {
   const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
   LOG() << "Skill " << event.skillRefId << "(" << (skillName ? *skillName : "UNKNOWN") << ") cooldown ended" << std::endl;
-  worldState_.selfState().skillsOnCooldown.erase(event.skillRefId);
+  worldState_.selfState().skillEngine.skillCooldownEnded(event.skillRefId);
   onUpdate();
 }
 
@@ -684,8 +684,7 @@ bool Bot::similarSkillIsAlreadyActive(sro::scalar_types::ReferenceObjectId skill
 }
 
 bool Bot::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
-  if (selfState().skillsOnCooldown.find(skillRefId) != selfState().skillsOnCooldown.end()) {
-    // Skill is on cooldown
+  if (selfState().skillEngine.skillIsOnCooldown(skillRefId)) {
     return false;
   }
   if (selfState().stunnedFromKnockback || selfState().stunnedFromKnockdown) {

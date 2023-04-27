@@ -23,11 +23,12 @@ const state::Self& WorldState::selfState() const {
 }
 
 void WorldState::addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId) {
-  // For now, we only care about ourself
+  // For now, we only care about PlayerCharacters
   // TODO: add buffs for others
-  if (globalId == selfState_.globalId) {
+  entity::Entity *entity = getEntity(globalId);
+  if (auto *playerCharacter = dynamic_cast<entity::PlayerCharacter*>(entity)) {
     buffTokenToEntityAndSkillIdMap_.emplace(std::piecewise_construct, std::forward_as_tuple(tokenId), std::forward_as_tuple(globalId, skillRefId));
-    selfState_.addBuff(skillRefId, eventBroker_);
+    playerCharacter->addBuff(skillRefId, eventBroker_);
   }
 }
 
@@ -38,11 +39,21 @@ void WorldState::removeBuffs(const std::vector<uint32_t> &tokenIds) {
       LOG() << "Asked to remove a buff, but we are not tracking it" << std::endl;
       continue;
     }
-    if (buffTokenDataIt->second.globalId != selfState_.globalId) {
-      throw std::runtime_error("Only tracking buffs for ourself, how did this get here?");
+    entity::Entity *entity = getEntity(buffTokenDataIt->second.globalId);
+    auto *playerCharacter = dynamic_cast<entity::PlayerCharacter*>(entity);
+    if (playerCharacter == nullptr) {
+      throw std::runtime_error("Only tracking buffs for PlayerCharacters, how did this get here?");
     }
-    selfState_.removeBuff(buffTokenDataIt->second.skillRefId, eventBroker_);
+    playerCharacter->removeBuff(buffTokenDataIt->second.skillRefId, eventBroker_);
     buffTokenToEntityAndSkillIdMap_.erase(buffTokenDataIt);
+  }
+}
+
+entity::Entity* WorldState::getEntity(sro::scalar_types::EntityGlobalId globalId) {
+  if (globalId == selfState_.globalId) {
+    return &selfState_;
+  } else if (entityTracker_.trackingEntity(globalId)) {
+    return entityTracker_.getEntity(globalId);
   }
 }
 

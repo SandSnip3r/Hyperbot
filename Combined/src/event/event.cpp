@@ -52,7 +52,9 @@ OurSkillFailed::OurSkillFailed(sro::scalar_types::ReferenceObjectId id, uint16_t
 
 EntityHpChanged::EntityHpChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityHpChanged), globalId(id) {}
 
-BuffAdded::BuffAdded(sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId) : Event(EventCode::kOurBuffAdded), entityGlobalId(entityId), buffRefId(buffId) {}
+BuffAdded::BuffAdded(sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId) : Event(EventCode::kPlayerCharacterBuffAdded), entityGlobalId(entityId), buffRefId(buffId) {}
+
+BuffRemoved::BuffRemoved(sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId) : Event(EventCode::kPlayerCharacterBuffRemoved), entityGlobalId(entityId), buffRefId(buffId) {}
 
 CommandError::CommandError(const packet::structures::ActionCommand &cmd) : Event(EventCode::kOurCommandError), command(cmd) {}
 

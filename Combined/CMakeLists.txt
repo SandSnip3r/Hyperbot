@@ -309,6 +309,8 @@ set(no_group_source_files
     "src/state/machine/walking.hpp"
     "src/state/self.cpp"
     "src/state/self.hpp"
+    "src/state/skillEngine.cpp"
+    "src/state/skillEngine.hpp"
     "src/state/worldState.cpp"
     "src/state/worldState.hpp"
     "src/storage/buybackQueue.cpp"

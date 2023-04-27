@@ -324,7 +324,7 @@ void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Positi
   // Start timer
   const auto seconds = helpers::secondsToTravel(position_, *this->destinationPosition, privateCurrentSpeed());
   eventBroker.publishEvent(std::make_unique<event::EntityMovementBegan>(globalId));
-  movingEventId = eventBroker.publishDelayedEvent(std::make_unique<event::EntityMovementTimerEnded>(globalId), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+  movingEventId = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)), std::make_unique<event::EntityMovementTimerEnded>(globalId));
   checkIfWillCrossGeometryBoundary(eventBroker);
 }
 
@@ -359,25 +359,25 @@ void MobileEntity::checkIfWillCrossGeometryBoundary(broker::EventBroker &eventBr
     if (maybeTimeUntilEnter) {
       LOG() << " Entity will enter the geometry boundary in " << *maybeTimeUntilEnter << " second(s)" << std::endl;
       // TODO: Need some way to reference the geometry from the event
-      enterGeometryEventId_ = eventBroker.publishDelayedEvent(std::make_unique<event::EntityEnteredGeometry>(globalId), std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilEnter)*1000)));
+      enterGeometryEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilEnter)*1000)), std::make_unique<event::EntityEnteredGeometry>(globalId));
     }
     auto maybeTimeUntilExit = geometry_->timeUntilExit(currentPosition, *destinationPosition, privateCurrentSpeed());
     if (maybeTimeUntilExit) {
       LOG() << " Entity will exit the geometry boundary in " << *maybeTimeUntilExit << " second(s)" << std::endl;
       // TODO: Need some way to reference the geometry from the event
-      exitGeometryEventId_ = eventBroker.publishDelayedEvent(std::make_unique<event::EntityExitedGeometry>(globalId), std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilExit)*1000)));
+      exitGeometryEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilExit)*1000)), std::make_unique<event::EntityExitedGeometry>(globalId));
     }
   } else {
     // Moving towards some angle
     auto maybeTimeUntilEnter = geometry_->timeUntilEnter(currentPosition, angle_, privateCurrentSpeed());
     if (maybeTimeUntilEnter) {
       // TODO: Need some way to reference the geometry from the event
-      enterGeometryEventId_ = eventBroker.publishDelayedEvent(std::make_unique<event::EntityEnteredGeometry>(globalId), std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilEnter)*1000)));
+      enterGeometryEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilEnter)*1000)), std::make_unique<event::EntityEnteredGeometry>(globalId));
     }
     auto maybeTimeUntilExit = geometry_->timeUntilExit(currentPosition, angle_, privateCurrentSpeed());
     if (maybeTimeUntilExit) {
       // TODO: Need some way to reference the geometry from the event
-      exitGeometryEventId_ = eventBroker.publishDelayedEvent(std::make_unique<event::EntityExitedGeometry>(globalId), std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilExit)*1000)));
+      exitGeometryEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilExit)*1000)), std::make_unique<event::EntityExitedGeometry>(globalId));
     }
   }
 }
@@ -421,6 +421,22 @@ uint32_t Character::currentHp() const {
 void Character::setCurrentHp(uint32_t hp, broker::EventBroker &eventBroker) {
   currentHp_ = hp;
   eventBroker.publishEvent(std::make_unique<event::EntityHpChanged>(globalId));
+}
+
+// ============================================================================================================================================
+
+void PlayerCharacter::addBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker) {
+  buffs.emplace(skillRefId);
+  eventBroker.publishEvent<event::BuffAdded>(globalId, skillRefId);
+}
+
+void PlayerCharacter::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker) {
+  auto buffIt = buffs.find(skillRefId);
+  if (buffIt == buffs.end()) {
+    throw std::runtime_error("Trying to remove buff from entity, but cannot find it");
+  }
+  buffs.erase(buffIt);
+  eventBroker.publishEvent<event::BuffRemoved>(globalId, skillRefId);
 }
 
 // ============================================================================================================================================

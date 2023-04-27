@@ -135,7 +135,7 @@ void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(c
   sro::Position intersectionPos(currentPosition.regionId(), intersectionPoint->x(), 0.0f, intersectionPoint->y());
   // Start timer
   const auto seconds = helpers::secondsToTravel(currentPosition, intersectionPos, currentSpeed());
-  enteredNewRegionEventId_ = eventBroker.publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kEnteredNewRegion), std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)));
+  enteredNewRegionEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)), std::make_unique<event::Event>(event::EventCode::kEnteredNewRegion));
 }
 
 void Self::enteredRegion() {
@@ -281,7 +281,7 @@ void Self::usedAnItem(type_id::TypeId typeData, broker::EventBroker &eventBroker
   }
 
   // Publish a delayed event
-  const auto itemCooldownDelayedEventId = eventBroker.publishDelayedEvent(std::make_unique<event::ItemCooldownEnded>(typeData), std::chrono::milliseconds(*cooldownMilliseconds));
+  const auto itemCooldownDelayedEventId = eventBroker.publishDelayedEvent(std::chrono::milliseconds(*cooldownMilliseconds), std::make_unique<event::ItemCooldownEnded>(typeData));
   itemCooldownEventIdMap_.emplace(typeData, itemCooldownDelayedEventId);
 }
 
@@ -521,45 +521,6 @@ void Self::setTrainingAreaGeometry(std::unique_ptr<entity::Geometry> &&geometry)
 void Self::resetTrainingAreaGeometry() {
   trainingAreaGeometry.reset();
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTrainingAreaReset));
-}
-
-// =================================================================================================
-
-void Self::addBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker) {
-  buffs.emplace(skillRefId);
-  LOG() << "Added buff " << skillRefId << " to self" << std::endl;
-  eventBroker_.publishEvent(std::make_unique<event::BuffAdded>(globalId, skillRefId));
-}
-
-void Self::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker) {
-  auto buffIt = buffs.find(skillRefId);
-  if (buffIt == buffs.end()) {
-    throw std::runtime_error("Tracked buff for ourself, but we dont actually have this buff active");
-  }
-  buffs.erase(buffIt);
-  LOG() << "Removed buff " << skillRefId << " from self" << std::endl;
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kOurBuffRemoved));
-}
-
-bool Self::alreadyTriedToCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
-  auto commandIsCastingThisSkill = [&](const packet::structures::ActionCommand &command) {
-    return command.commandType == packet::enums::CommandType::kExecute &&
-           command.actionType == packet::enums::ActionType::kCast &&
-           command.refSkillId == skillRefId;
-  };
-  for (const auto &pendingCommand : pendingCommandQueue) {
-    if (commandIsCastingThisSkill(pendingCommand)) {
-      // Skill is already in our pending queue
-      return true;
-    }
-  }
-  for (const auto &acceptedCommand : acceptedCommandQueue) {
-    if (commandIsCastingThisSkill(acceptedCommand.command)) {
-      // Skill is already in our accepted queue
-      return true;
-    }
-  }
-  return false;
 }
 
 // =================================================================================================

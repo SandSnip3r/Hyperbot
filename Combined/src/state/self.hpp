@@ -9,6 +9,7 @@
 #include "packet/enums/packetEnums.hpp"
 #include "packet/parsing/parsedPacket.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
+#include "skillEngine.hpp"
 #include "storage/buybackQueue.hpp"
 #include "storage/storage.hpp"
 
@@ -234,8 +235,6 @@ private:
   uint64_t storageGold_;
   uint64_t guildStorageGold_;
 public:
-
-  // ################################################################################
   // Training state
   bool trainingIsActive{false};
 
@@ -249,36 +248,17 @@ public:
   std::unique_ptr<entity::Geometry> trainingAreaGeometry;
   void setTrainingAreaGeometry(std::unique_ptr<entity::Geometry> &&geometry);
   void resetTrainingAreaGeometry();
-  // ################################################################################
-  // Skill state
-  struct SkillInfo {
-    SkillInfo(sro::scalar_types::EntityGlobalId a, sro::scalar_types::ReferenceObjectId b) : casterGlobalId(a), skillRefId(b) {}
-    sro::scalar_types::EntityGlobalId casterGlobalId;
-    sro::scalar_types::ReferenceObjectId skillRefId;
-  };
-  std::map<uint32_t, SkillInfo> skillCastIdMap;
-  std::vector<packet::structures::ActionCommand> pendingCommandQueue;
-  struct AcceptedCommandAndWasExecuted {
-    AcceptedCommandAndWasExecuted(const packet::structures::ActionCommand &cmd) : command(cmd) {}
-    packet::structures::ActionCommand command;
-    bool wasExecuted{false};
-  };
-  std::vector<AcceptedCommandAndWasExecuted> acceptedCommandQueue;
-  std::set<sro::scalar_types::ReferenceObjectId> skillsOnCooldown;
-  std::set<sro::scalar_types::ReferenceObjectId> buffs;
-  void addBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker);
-  void removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker);
-  bool alreadyTriedToCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const;
 
-  // ################################################################################
-  // misc
+  // Skills
+  SkillEngine skillEngine;
+
+  // Misc
   // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.
   double estimatedVisibilityRange{872.689};
   // TODO: Refactor this whole itemUsedTimeout concept
   std::optional<broker::TimerManager::TimerId> itemUsedTimeoutTimer;
   bool stunnedFromKnockdown{false};
   bool stunnedFromKnockback{false};
-  // ################################################################################
 
   bool inTown() const;
 

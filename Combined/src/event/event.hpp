@@ -55,8 +55,8 @@ enum class EventCode {
   kSkillBegan,
   kSkillEnded,
   kOurSkillFailed,
-  kOurBuffAdded,
-  kOurBuffRemoved,
+  kPlayerCharacterBuffAdded,
+  kPlayerCharacterBuffRemoved,
   kOurCommandError,
   // TODO: Refactor this whole itemUsedTimeout concept
   kItemUseTimeout,
@@ -295,6 +295,14 @@ public:
   const sro::scalar_types::EntityGlobalId entityGlobalId;
   const sro::scalar_types::ReferenceObjectId buffRefId;
   virtual ~BuffAdded() = default;
+};
+
+struct BuffRemoved : public Event {
+public:
+  BuffRemoved(sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId);
+  const sro::scalar_types::EntityGlobalId entityGlobalId;
+  const sro::scalar_types::ReferenceObjectId buffRefId;
+  virtual ~BuffRemoved() = default;
 };
 
 struct CommandError : public Event {

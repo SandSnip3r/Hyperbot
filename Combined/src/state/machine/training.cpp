@@ -425,7 +425,7 @@ std::optional<sro::scalar_types::ReferenceObjectId> Training::getNextBuffToCast(
   // Choose one that isnt active, on cooldown, or already used
   for (int i=0; i<copyOfBuffsToUse.size(); ++i) {
     const auto buff = copyOfBuffsToUse.at(i);
-    if (bot_.selfState().alreadyTriedToCastSkill(buff)) {
+    if (bot_.selfState().skillEngine.alreadyTriedToCastSkill(buff)) {
       continue;
     }
     if (bot_.similarSkillIsAlreadyActive(buff)) {

@@ -128,6 +128,9 @@ protected:
 class PlayerCharacter : public Character {
 public:
   std::string name;
+  std::set<sro::scalar_types::ReferenceObjectId> buffs;
+  void addBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker);
+  void removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker);
 };
 
 class NonplayerCharacter : public Character {};

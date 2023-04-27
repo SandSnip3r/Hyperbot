@@ -35,8 +35,22 @@ private:
   using PacketSubscriptionMap = std::unordered_map<event::EventCode, std::vector<EventSubscription>>;
 public:
   void runAsync();
+
+  template<typename EventType, typename... Args>
+  void publishEvent(Args&&... args) {
+    publishEvent(std::make_unique<EventType>(std::forward<Args>(args)...));
+  }
+  void publishEvent(event::EventCode eventCode);
+
+  template<typename EventType, typename... Args>
+  EventBroker::DelayedEventId publishDelayedEvent(std::chrono::milliseconds delay, Args&&... args) {
+    publishDelayedEvent(delay, std::make_unique<EventType>(std::forward<Args>(args)...));
+  }
+  EventBroker::DelayedEventId publishDelayedEvent(std::chrono::milliseconds delay, event::EventCode eventCode);
+
   void publishEvent(std::unique_ptr<event::Event> event);
-  DelayedEventId publishDelayedEvent(std::unique_ptr<event::Event> event, std::chrono::milliseconds delay);
+  DelayedEventId publishDelayedEvent(std::chrono::milliseconds delay, std::unique_ptr<event::Event> event);
+
   bool cancelDelayedEvent(DelayedEventId id);
   SubscriptionId subscribeToEvent(event::EventCode eventCode, EventHandleFunction &&handleFunc);
   void unsubscribeFromEvent(SubscriptionId id);
