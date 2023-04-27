@@ -1,5 +1,7 @@
 #include "castSkill.hpp"
+#include "castSkillOnEntity.hpp"
 #include "training.hpp"
+#include "walking.hpp"
 
 #include "entity/geometry.hpp"
 #include "bot.hpp"
@@ -28,6 +30,7 @@ std::mt19937 createRandomEngine() {
 }
 
 sro::Position randomPointInGeometry(const entity::Geometry *geometry) {
+  // TODO: This could end up giving us a position outside of the geometry because of the way positions are converted when sent over the network
   const auto *circle = dynamic_cast<const entity::Circle*>(geometry);
   if (circle == nullptr) {
     throw std::runtime_error("Not yet generating random points in non-circle geometries");
@@ -128,7 +131,29 @@ void Training::onUpdate(const event::Event *event) {
   //    Durability of item changed
   //    Inventory item updated (quantity decreased or new item picked)
   //    Died
-  if (event != nullptr) {
+
+  // TODO: Improve on this mechanism
+  // When we recurse, we do not want to handle the same event again.
+  // If we passed nullptr as our event, we would solve this problem, but we do want to pass that event to the presumably newly created child state machine.
+  // So, instead, we keep track of the events we've already handled, and only handle the event if we havent yet handled it.
+  // This problem is currently only unique to this state machine because this is the only one which does some event processing before forwarding the event to the child state machine.
+  struct RAII {
+    RAII(std::set<const event::Event*> &handledEvents) : handledEvents_(handledEvents) {}
+    std::set<const event::Event*> &handledEvents_;
+    const event::Event *event_{nullptr};
+    void setEvent(const event::Event *event) {
+      event_ = event;
+      handledEvents_.emplace(event_);
+    }
+    ~RAII() {
+      if (event_ != nullptr) {
+        handledEvents_.erase(event_);
+      }
+    }
+  };
+  RAII raii(handledEvents_);
+
+  if (event != nullptr && (handledEvents_.find(event) == handledEvents_.end())) {
     // Received some specific event info
     if (const auto *entitySpawnedEvent = dynamic_cast<const event::EntitySpawned*>(event)) {
       auto *entity = bot_.entityTracker().getEntity(entitySpawnedEvent->globalId);
@@ -142,14 +167,10 @@ void Training::onUpdate(const event::Event *event) {
       // Maybe durability is too low?
     } else if (const auto *entityLifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event)) {
       // Maybe we died?
-    } else if (const auto *buffAdded = dynamic_cast<const event::BuffAdded*>(event)) {
-      if (buffAdded->entityGlobalId == bot_.selfState().globalId) {
-        if (buffsCastButNotYetActive_.find(buffAdded->buffRefId) != buffsCastButNotYetActive_.end()) {
-          // We were waiting on this
-          buffsCastButNotYetActive_.erase(buffAdded->buffRefId);
-        }
-      }
     }
+
+    // Mark this event as handled, so that if we recurse, we dont handle it again
+    raii.setEvent(event);
   }
 
   if (childState_) {
@@ -163,6 +184,15 @@ void Training::onUpdate(const event::Event *event) {
     }
   }
 
+  if (!bot_.selfState().spawned()) {
+    LOG() << "We are not spawned, nothing to do" << std::endl;
+  }
+
+  if (bot_.needToGoToTown()) {
+    done_ = true;
+    return;
+  }
+
   if (bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown) {
     LOG() << "In Training and stunned from KB/KD" << std::endl;
   }
@@ -172,11 +202,10 @@ void Training::onUpdate(const event::Event *event) {
   if (nextBuffToCast) {
     auto castSkillBuilder = CastSkillStateMachineBuilder(bot_, *nextBuffToCast);
     LOG() << "Next buff to cast is " << *nextBuffToCast << std::endl;
-    buffsCastButNotYetActive_.emplace(*nextBuffToCast);
     const auto &buffData = bot_.gameData().skillData().getSkillById(*nextBuffToCast);
 
     // Does the buff require a specific weapon to be equipped to cast?
-    const auto weaponSlot = getInventorySlotOfWeaponForSkill(buffData);
+    const auto weaponSlot = getInventorySlotOfWeaponForSkill(buffData, bot_);
     // Note: It is also possible that a skill requires a shield (shield bash)
     if (weaponSlot) {
       LOG() << "Inventory slot of weapon for skill is " << static_cast<int>(*weaponSlot) << std::endl;
@@ -192,8 +221,21 @@ void Training::onUpdate(const event::Event *event) {
     }
 
     LOG() << "Created child state to cast skill" << std::endl;
-    childState_.reset();
-    childState_ = castSkillBuilder.create();
+    setChildStateMachine(castSkillBuilder.create());
+    onUpdate(event);
+    return;
+  }
+
+  // All buffs are active.
+  // TODO: Differentiate between buffs used while walking to the training area vs buffs used while training.
+  // If we're not in the training area, go there.
+  if (!trainingAreaGeometry_->pointIsInside(bot_.selfState().position())) {
+    const auto *trainingAreaCircle = dynamic_cast<const entity::Circle*>(trainingAreaGeometry_.get());
+    if (trainingAreaCircle == nullptr) {
+      throw std::runtime_error("Not sure where to navigate to for other shapes");
+    }
+    LOG() << "Not in training area, navigating to the center of the training area circle: " << trainingAreaCircle->center() << std::endl;
+    setChildStateMachine<Walking>(bot_, trainingAreaCircle->center());
     onUpdate(event);
     return;
   }
@@ -259,12 +301,10 @@ void Training::onUpdate(const event::Event *event) {
           }
           const auto targetItemGlobalId = item->globalId;
           if (cosGlobalId) {
-            childState_.reset();
-            childState_ = std::make_unique<PickItemWithCos>(bot_, *cosGlobalId, targetItemGlobalId);
+            setChildStateMachine<PickItemWithCos>(bot_, *cosGlobalId, targetItemGlobalId);
           } else {
-            childState_.reset();
             LOG() << "Going to pick item" << std::endl;
-            childState_ = std::make_unique<PickItem>(bot_, targetItemGlobalId);
+            setChildStateMachine<PickItem>(bot_, targetItemGlobalId);
           }
           onUpdate(event);
           return;
@@ -279,7 +319,7 @@ void Training::onUpdate(const event::Event *event) {
     // Figure out which skills we have available to us
     std::vector<sro::scalar_types::ReferenceObjectId> availableSkills;
     for (const auto skillId : skillsToUse_) {
-      if (canCastSkill(skillId)) {
+      if (bot_.canCastSkill(skillId)) {
         availableSkills.push_back(skillId);
       }
     }
@@ -290,15 +330,9 @@ void Training::onUpdate(const event::Event *event) {
       LOG() << "No available skills" << std::endl;
     } else {
       const auto [target, attackRefId] = getTargetAndAttackSkill(monstersInRange, availableSkills);
-      auto castSkillBuilder = CastSkillStateMachineBuilder(bot_, attackRefId).withTarget(target->globalId);
-      const auto &skillData = bot_.gameData().skillData().getSkillById(attackRefId);
-      const auto weaponSlot = getInventorySlotOfWeaponForSkill(skillData);
-      if (weaponSlot) {
-        castSkillBuilder.withWeapon(*weaponSlot);
-      }
-      childState_.reset();
-      LOG() << "Going to cast skill" << std::endl;
-      childState_ = castSkillBuilder.create();
+      // TODO: This calculation of finding where to walk is duplicated. When CastSkillOnEntity is constructed, it will calculate the same.
+      const auto destinationPosition = calculateWhereToWalkToAttackEntityWithSkill(target, attackRefId);
+      setChildStateMachine<CastSkillOnEntity>(bot_, attackRefId, target->globalId, destinationPosition);
       onUpdate(event);
       return;
     }
@@ -308,7 +342,8 @@ void Training::onUpdate(const event::Event *event) {
       // Already walking somewhere, dont interrupt
       return;
     }
-    const auto destPos = randomPointInGeometry(trainingAreaGeometry_.get());
+    const auto destPos = packet::building::NetworkReadyPosition(randomPointInGeometry(trainingAreaGeometry_.get()));
+    LOG() << "Walking to random point. From " << bot_.selfState().position() << " to " << destPos.asSroPosition() << std::endl;
     const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(destPos);
     bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
   } else {
@@ -316,16 +351,25 @@ void Training::onUpdate(const event::Event *event) {
   }
 }
 
+sro::Position Training::calculateWhereToWalkToAttackEntityWithSkill(const entity::MobileEntity *entity, sro::scalar_types::ReferenceObjectId attackRefId) {
+  // TODO: We're walking to the wrong spot
+  const auto res = calculatePathToDestination(entity->position(), bot_);
+  return entity->position();
+}
+
 bool Training::done() const {
-  return false;
+  return done_;
 }
 
 bool Training::wantToAttackMonster(const entity::Monster &monster) const {
   const auto &characterData = bot_.gameData().characterData().getCharacterById(monster.refObjId);
-  if (std::abs(characterData.lvl - bot_.selfState().getCurrentLevel()) > 10) {
-    // Don't attack anything 10 levels above or below us
-    return false;
-  }
+
+  // TODO: Move this to the config, or determine at runtime.
+  // if (std::abs(characterData.lvl - bot_.selfState().getCurrentLevel()) > 10) {
+  //   // Don't attack anything 10 levels above or below us
+  //   return false;
+  // }
+
   return trainingAreaGeometry_->pointIsInside(monster.position());
 }
 
@@ -368,7 +412,7 @@ std::optional<sro::scalar_types::ReferenceObjectId> Training::getNextBuffToCast(
   // Calculate a diff between what's active and what we want to be active
   for (const auto buff : bot_.selfState().buffs) {
     if (auto it = std::find(copyOfBuffsToUse.begin(), copyOfBuffsToUse.end(), buff); it != copyOfBuffsToUse.end()) {
-      // This buff is already active, remove
+      // This buff is already active, remove from list
       copyOfBuffsToUse.erase(it);
     }
   }
@@ -378,85 +422,26 @@ std::optional<sro::scalar_types::ReferenceObjectId> Training::getNextBuffToCast(
     return {};
   }
 
-  // Choose one that isnt on cooldown
+  // Choose one that isnt active, on cooldown, or already used
   for (int i=0; i<copyOfBuffsToUse.size(); ++i) {
     const auto buff = copyOfBuffsToUse.at(i);
-    // Check if we already cast this skill but it isn't yet active
-    if (buffsCastButNotYetActive_.find(buff) == buffsCastButNotYetActive_.end()) {
-      if (canCastSkill(buff)) {
-        return buff;
-      }
+    if (bot_.selfState().alreadyTriedToCastSkill(buff)) {
+      continue;
     }
+    if (bot_.similarSkillIsAlreadyActive(buff)) {
+      continue;
+    }
+    if (!bot_.canCastSkill(buff)) {
+      // Cannot cast this skill right now. Maybe we're stunned, or it's on cooldown.
+      continue;
+    }
+    return buff;
   }
   // Didn't find a buff that we need to cast.
   return {};
 }
 
-bool Training::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
-  if (bot_.selfState().skillsOnCooldown.find(skillRefId) != bot_.selfState().skillsOnCooldown.end()) {
-    // Skill is on cooldown
-    return false;
-  }
-  if (bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown) {
-    // Stunned from KB or KD, cannot use this skill
-    // TODO: Maybe there are some skills which can be used while knocked down
-    return false;
-  }
-  return true;
-}
-
-std::optional<uint8_t> Training::getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &skillData) const {
-  // TODO: Skill might not require a weapon
-  const uint8_t kWeaponInventorySlot{6};
-  std::vector<type_id::TypeCategory> possibleWeapons;
-  for (auto i : skillData.reqi()) {
-    if (i.typeId3 != 6) {
-      LOG() << "reqi asks for non-weapon (typeId3: " << static_cast<int>(i.typeId3) << ")" << std::endl;
-    }
-    possibleWeapons.push_back(type_id::categories::kEquipment.subCategory(i.typeId3).subCategory(i.typeId4));
-  }
-  if (skillData.reqCastWeapon1 != 255) {
-    possibleWeapons.push_back(type_id::categories::kWeapon.subCategory(skillData.reqCastWeapon1));
-  }
-  if (skillData.reqCastWeapon2 != 255) {
-    possibleWeapons.push_back(type_id::categories::kWeapon.subCategory(skillData.reqCastWeapon2));
-  }
-  if (possibleWeapons.empty()) {
-    // Does not require a weapon
-    LOG() << "Skill does not require a weapon" << std::endl;
-    return {};
-  }
-
-  // First, check if the currently equipped weapon is valid for this skill
-  if (bot_.selfState().inventory.hasItem(kWeaponInventorySlot)) {
-    const auto *item = bot_.selfState().inventory.getItem(kWeaponInventorySlot);
-    if (!item) {
-      throw std::runtime_error("Have an item, but got null");
-    }
-    if (!type_id::categories::kWeapon.contains(item->typeData())) {
-      throw std::runtime_error("Equipped \"weapon\" isnt a weapon");
-    }
-    if (item->isOneOf(possibleWeapons)) {
-      // Currently equipped weapon can cast this skill
-      return kWeaponInventorySlot;
-    }
-  }
-  // Currently equipped weapon (if any) cannot cast this skill, search through our inventory for a weapon which can cast this skill
-  std::vector<uint8_t> possibleWeaponSlots = bot_.selfState().inventory.findItemsOfCategory(possibleWeapons);
-  LOG() << "Possible slots with weapon for skill: [ ";
-  for (const auto slot : possibleWeaponSlots) {
-    std::cout << static_cast<int>(slot) << ", ";
-  }
-  std::cout << "]" << std::endl;
-  if (possibleWeaponSlots.empty()) {
-    throw std::runtime_error("We have no weapon that can cast this skill");
-  }
-
-  // TODO: Pick best option
-  // For now, pick the first option
-  return possibleWeaponSlots.front();
-}
-
+// TODO: Also return the position to move to, to cast the skill on the target
 std::pair<const entity::Monster*, sro::scalar_types::ReferenceObjectId> Training::getTargetAndAttackSkill(const std::vector<const entity::Monster*> &monsters, const std::vector<sro::scalar_types::ReferenceObjectId> &attackSkills) const {
   if (monsters.empty()) {
     throw std::runtime_error("monsters empty");

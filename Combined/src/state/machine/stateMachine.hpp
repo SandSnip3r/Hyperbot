@@ -3,6 +3,7 @@
 
 #include "packet/opcode.hpp"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -29,6 +30,14 @@ protected:
   void stateMachineDestroyed();
 
   bool canMove() const;
+
+  template<typename StateMachineType, typename... Args>
+  void setChildStateMachine(Args&&... args) {
+    childState_.reset();
+    childState_ = std::unique_ptr<StateMachineType>(new StateMachineType(std::forward<Args>(args)...));
+  }
+  void setChildStateMachine(std::unique_ptr<StateMachine> &&newChildStateMachine);
+  std::unique_ptr<StateMachine> childState_;
 private:
   std::vector<packet::Opcode> blockedOpcodes_;
 };

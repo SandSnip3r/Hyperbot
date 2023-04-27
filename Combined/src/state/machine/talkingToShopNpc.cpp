@@ -121,7 +121,7 @@ bool TalkingToShopNpc::doneBuyingItems() const {
   if (itemsToBuy_.empty()) {
     return true;
   }
-  return buyingItemsChildState_ && buyingItemsChildState_->done();
+  return childState_ && childState_->done();
 }
 
 bool TalkingToShopNpc::needToRepair() const {
@@ -177,15 +177,15 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
     if (waitingForTalkResponse_) {
       // Successfully began talking to Npc
       waitingForTalkResponse_ = false;
-      buyingItemsChildState_ = std::make_unique<BuyingItems>(bot_, itemsToBuy_);
+      setChildStateMachine<BuyingItems>(bot_, itemsToBuy_);
     }
 
     // Now that we are talking to the npc, start buying items
-    if (!buyingItemsChildState_) {
+    if (!childState_) {
       throw std::runtime_error("If we reach this point, the state must be BuyingItems");
     }
-    buyingItemsChildState_->onUpdate(event);
-    if (!buyingItemsChildState_->done()) {
+    childState_->onUpdate(event);
+    if (!childState_->done()) {
       // Still buying items, do not continue
       return;
     }

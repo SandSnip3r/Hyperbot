@@ -11,6 +11,13 @@
 #include "packet/building/clientAgentInventoryStorageOpenRequest.hpp"
 #include "packet/building/clientGatewayLoginIbuvAnswer.hpp"
 #include "packet/building/clientGatewayLoginRequest.hpp"
+// TODO: <remove>
+// For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
+#include "packet/building/clientAgentFreePvpUpdateRequest.hpp"
+#include "packet/building/clientAgentOperatorRequest.hpp"
+// </remove>
+#include "type_id/categories.hpp"
+
 
 #include <silkroad_lib/position_math.h>
 
@@ -80,6 +87,10 @@ state::Self& Bot::selfState() {
   return worldState_.selfState();
 }
 
+const state::Self& Bot::selfState() const {
+  return worldState_.selfState();
+}
+
 void Bot::subscribeToEvents() {
   auto eventHandleFunction = std::bind(&Bot::handleEvent, this, std::placeholders::_1);
   // Bot actions from UI
@@ -117,6 +128,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kRepairSuccessful, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntitySpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityDespawned, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kEntityBodyStateChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityLifeStateChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemUseTimeout, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityOwnershipRemoved, eventHandleFunction);
@@ -211,7 +223,7 @@ void Bot::handleEvent(const event::Event *event) {
 
       // Character info events
       case event::EventCode::kSpawned: {
-        handleSpawned();
+        handleSpawned(event);
         break;
       }
       case event::EventCode::kItemUseFailed: {
@@ -259,6 +271,11 @@ void Bot::handleEvent(const event::Event *event) {
       }
       case event::EventCode::kEntityDespawned: {
         onUpdate(event);
+        break;
+      }
+      case event::EventCode::kEntityBodyStateChanged: {
+        const auto &castedEvent = dynamic_cast<const event::EntityBodyStateChanged&>(*event);
+        handleBodyStateChanged(castedEvent);
         break;
       }
       case event::EventCode::kEntityLifeStateChanged: {
@@ -321,7 +338,6 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
       case event::EventCode::kOurBuffAdded: {
-        onUpdate(event);
         break;
       }
       case event::EventCode::kOurBuffRemoved: {
@@ -538,8 +554,9 @@ void Bot::handleEntityExitedGeometry(const event::EntityExitedGeometry &event) {
 // ===============================================Character info packet handling===============================================
 // ============================================================================================================================
 
-void Bot::handleSpawned() {
+void Bot::handleSpawned(const event::Event *event) {
   LOG() << "Spawned at position " << worldState_.selfState().position() << std::endl;
+  onUpdate(event);
 }
 
 void Bot::handleVitalsChanged() {
@@ -606,6 +623,23 @@ void Bot::entitySpawned(const event::EntitySpawned &event) {
   onUpdate(&event);
 }
 
+void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
+  if (event.globalId == selfState().globalId) {
+    // Our body state changed
+    if (selfState().bodyState() == packet::enums::BodyState::kInvisibleGm) {
+      // For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
+      // Set self as visible
+      LOG() << "Setting self as visible" << std::endl;
+      const auto setVisiblePacket = packet::building::ClientAgentOperatorRequest::toggleInvisible();
+      packetBroker_.injectPacket(setVisiblePacket, PacketContainer::Direction::kClientToServer);
+
+      // LOG() << "Setting free pvp mode" << std::endl;
+      // const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
+      // packetBroker_.injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
+    }
+  }
+}
+
 void Bot::itemUseTimedOut(const event::ItemUseTimeout &event) {
   // TODO: Refactor this whole itemUsedTimeout concept
   worldState_.selfState().itemUsedTimeoutTimer.reset();
@@ -626,4 +660,38 @@ void Bot::handleKnockdownStunEnded() {
 void Bot::handleItemCooldownEnded(const event::ItemCooldownEnded &event) {
   selfState().itemCooldownEnded(event.typeId);
   onUpdate(&event);
+}
+
+bool Bot::needToGoToTown() const {
+  const auto mpPotionSlots = selfState().inventory.findItemsOfCategory({type_id::categories::kMpPotion});
+  if (mpPotionSlots.empty()) {
+    LOG() << "Checking if we need to go to town. Have no MP potions" << std::endl;
+    return true;
+  }
+  return false;
+}
+
+bool Bot::similarSkillIsAlreadyActive(sro::scalar_types::ReferenceObjectId skillRefId) const {
+  const auto &skill = gameData_.skillData().getSkillById(skillRefId);
+  for (const auto currentBuffId : selfState().buffs) {
+    const auto &currentBuff = gameData_.skillData().getSkillById(currentBuffId);
+    if (skill.actionOverlap == currentBuff.actionOverlap) {
+      // These two cannot be active at the same time
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Bot::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
+  if (selfState().skillsOnCooldown.find(skillRefId) != selfState().skillsOnCooldown.end()) {
+    // Skill is on cooldown
+    return false;
+  }
+  if (selfState().stunnedFromKnockback || selfState().stunnedFromKnockdown) {
+    // Stunned from KB or KD, cannot use this skill
+    // TODO: Maybe there are some skills which can be used while knocked down
+    return false;
+  }
+  return true;
 }

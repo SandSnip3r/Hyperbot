@@ -5,8 +5,6 @@
 
 #include <silkroad_lib/scalar_types.h>
 
-#include <memory>
-
 namespace state::machine {
 
 class PickItem : public StateMachine {
@@ -18,7 +16,6 @@ public:
 private:
   static inline std::string kName{"PickItem"};
   const sro::scalar_types::EntityGlobalId targetGlobalId_;
-  std::unique_ptr<StateMachine> childState_;
   bool done_{false};
   bool waitingForItemToBePicked_{false};
 };

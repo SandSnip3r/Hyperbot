@@ -71,6 +71,7 @@ enum class EventCode {
   kEntityPositionUpdated,
 
   kEntityNotMovingAngleChanged,
+  kEntityBodyStateChanged,
   kEntityLifeStateChanged,
   kEntityEnteredGeometry,
   kEntityExitedGeometry,
@@ -227,6 +228,13 @@ public:
   EntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId id);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityNotMovingAngleChanged() = default;
+};
+
+struct EntityBodyStateChanged : public Event {
+public:
+  EntityBodyStateChanged(sro::scalar_types::EntityGlobalId id);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityBodyStateChanged() = default;
 };
 
 struct EntityLifeStateChanged : public Event {

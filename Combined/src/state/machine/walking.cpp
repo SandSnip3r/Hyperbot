@@ -2,7 +2,6 @@
 
 #include "bot.hpp"
 #include "logging.hpp"
-#include "packet/building/clientAgentCharacterMoveRequest.hpp"
 
 #include "pathfinder.h"
 
@@ -11,96 +10,20 @@
 
 namespace state::machine {
 
-Walking::Walking(Bot &bot, const sro::Position &destinationPosition) : StateMachine(bot) {
-  stateMachineCreated(kName);
-  waypoints_ = calculatePathToDestination(destinationPosition);
-  pushBlockedOpcode(packet::Opcode::kClientAgentCharacterMoveRequest);
-  LOG() << "Walking, with " << waypoints_.size() << " waypoint(s)" << std::endl;
-}
-
-Walking::~Walking() {
-  stateMachineDestroyed();
-}
-
-void Walking::onUpdate(const event::Event *event) {
-  LOG() << "Walking" << std::endl;
-  if (done()) {
-    return;
-  }
-
-  if (event) {
-    if (const auto *movementBeganEvent = dynamic_cast<const event::EntityMovementBegan*>(event); movementBeganEvent != nullptr && movementBeganEvent->globalId == bot_.selfState().globalId) {
-      // We started to move, our movement request must've been successful
-      if (movementRequestTimeoutEventId_) {
-        bot_.eventBroker().cancelDelayedEvent(*movementRequestTimeoutEventId_);
-        movementRequestTimeoutEventId_.reset();
-      } else {
-        LOG() << "Movement began, but had no running movement request timeout timer" << std::endl;
-      }
-      // Nothing else to do here. We're now waiting for our movement to end
-      return;
-    } else if (const auto *movementEndedEvent = dynamic_cast<const event::EntityMovementEnded*>(event); movementEndedEvent != nullptr && movementEndedEvent->globalId == bot_.selfState().globalId) {
-      // If we send a request to move, but get knocked back before the MovementBegin happens, the knockback movement will send this MovementEnded event
-      if (movementRequestTimeoutEventId_) {
-        bot_.eventBroker().cancelDelayedEvent(*movementRequestTimeoutEventId_);
-        movementRequestTimeoutEventId_.reset();
-      }
-    } else if (event->eventCode == event::EventCode::kMovementRequestTimedOut) {
-      LOG() << "Movement request timed out" << std::endl;
-      movementRequestTimeoutEventId_.reset();
-    }
-  }
-
-  if (bot_.selfState().moving()) {
-    // Still moving, nothing to do
-    LOG() << "Moving" << std::endl;
-    return;
-  }
-
-  // We're not moving
-  // Did we just arrive at this waypoint?
-  while (currentWaypointIndex_ < waypoints_.size() && sro::position_math::calculateDistance2d(bot_.selfState().position(), waypoints_.at(currentWaypointIndex_)) < 1.0) { // TODO: Choose better measure of "close enough"
-    // Already at this waypoint, increment index
-    ++currentWaypointIndex_;
-  }
-  if (done()) {
-    // Finished walking
-    return;
-  }
-
-  // Not yet done walking
-  if (movementRequestTimeoutEventId_) {
-    // Already asked to move, nothing to do
-    LOG() << "Waiting on requested movement" << std::endl;
-    return;
-  }
-
-  if (!canMove()) {
-    LOG() << "Can't move right now; nothing to do" << std::endl;
-    return;
-  }
-
-  // We are not moving, we're not at the current waypoint, and there's not a pending movement request
-  // Send a request to move to the current waypoint
-  LOG() << "Requesting movement" << std::endl;
-  const auto &currentWaypoint = waypoints_.at(currentWaypointIndex_);
-  const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint);
-  bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
-  const int kMovementRequestTimeoutMs{333}; // TODO: Move somewhere else and make an educated guess about what this value should be
-  movementRequestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementRequestTimedOut), std::chrono::milliseconds(kMovementRequestTimeoutMs));
-}
-
-bool Walking::done() const {
-  return (currentWaypointIndex_ == waypoints_.size());
-}
-
-std::vector<sro::Position> Walking::calculatePathToDestination(const sro::Position &destinationPosition) const {
-  if (sro::position_math::calculateDistance2d(bot_.selfState().position(), destinationPosition) < 1.0) {
+std::vector<packet::building::NetworkReadyPosition> calculatePathToDestination(const sro::Position &destinationPosition, const Bot &bot) {
+  auto posToNearestNetworkReadyPos = [](const sro::Position &pos){
+    const sro::Position roundedPos(pos.regionId(), std::round(pos.xOffset()), std::round(pos.yOffset()), std::round(pos.zOffset()));
+    return packet::building::NetworkReadyPosition(roundedPos);
+  };
+  // Since we can only move to positions on whole integers, find the closest possible point to the destination position while also accounting for the transformation that happens to the packet while being converted to be sent over the network
+  const auto networkReadyPos = posToNearestNetworkReadyPos(destinationPosition);
+  const auto closestDestinationPosition = networkReadyPos.asSroPosition();
+  if (sro::position_math::calculateDistance2d(bot.selfState().position(), closestDestinationPosition) <= sqrt(0.5)) {
     // Already at destination
     return {};
   }
-  auto pathfindingResultPathToVectorOfPositions = [&, this](const auto &pathfindingShortestPath) {
-    const auto &navmeshTriangulation = bot_.gameData().navmeshTriangulation();
+  auto pathfindingResultPathToVectorOfPositions = [&](const auto &pathfindingShortestPath) {
+    const auto &navmeshTriangulation = bot.gameData().navmeshTriangulation();
 
     // Get a list of all straight segments
     std::vector<pathfinder::StraightPathSegment*> straightSegments;
@@ -133,7 +56,6 @@ std::vector<sro::Position> Walking::calculatePathToDestination(const sro::Positi
     // Remove duplicates
     auto newEndIt = std::unique(waypoints.begin(), waypoints.end());
     if (newEndIt != waypoints.end()) {
-      LOG() << "Removed " << std::distance(newEndIt, waypoints.end()) << " duplicate waypoints" << std::endl;
       waypoints.erase(newEndIt, waypoints.end());
     }
     return waypoints;
@@ -172,15 +94,24 @@ std::vector<sro::Position> Walking::calculatePathToDestination(const sro::Positi
     }
   };
 
-  constexpr const double kAgentRadius{7.23};
-  pathfinder::Pathfinder<navmesh::triangulation::NavmeshTriangulation> pathfinder(bot_.gameData().navmeshTriangulation(), kAgentRadius);
-  try {
-    const auto currentPosition = bot_.selfState().position();
-    const math::Vector currentPositionPoint(currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset());
-    const auto navmeshCurrentPosition = bot_.gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(currentPositionPoint, currentPosition.regionId());
+  auto convertWaypointsToNetworkReadyPoints = [&posToNearestNetworkReadyPos](const std::vector<sro::Position> &waypoints) {
+    std::vector<packet::building::NetworkReadyPosition> result;
+    result.reserve(waypoints.size());
+    for (const auto &pos : waypoints) {
+      result.emplace_back(posToNearestNetworkReadyPos(pos));
+    }
+    return result;
+  };
 
-    const math::Vector destinationPositionPoint(destinationPosition.xOffset(), destinationPosition.yOffset(), destinationPosition.zOffset());
-    const auto navmeshDestinationPosition = bot_.gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, destinationPosition.regionId());
+  constexpr const double kAgentRadius{7.23};
+  pathfinder::Pathfinder<navmesh::triangulation::NavmeshTriangulation> pathfinder(bot.gameData().navmeshTriangulation(), kAgentRadius);
+  try {
+    const auto currentPosition = bot.selfState().position();
+    const math::Vector currentPositionPoint(currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset());
+    const auto navmeshCurrentPosition = bot.gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(currentPositionPoint, currentPosition.regionId());
+
+    const math::Vector destinationPositionPoint(closestDestinationPosition.xOffset(), closestDestinationPosition.yOffset(), closestDestinationPosition.zOffset());
+    const auto navmeshDestinationPosition = bot.gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, destinationPosition.regionId());
 
     const auto pathfindingResult = pathfinder.findShortestPath(navmeshCurrentPosition, navmeshDestinationPosition);
     const auto &path = pathfindingResult.shortestPath;
@@ -191,10 +122,91 @@ std::vector<sro::Position> Walking::calculatePathToDestination(const sro::Positi
     // Add our own position to the beginning of this list so that we can break up the distance if it's too far.
     waypoints.insert(waypoints.begin(), currentPosition);
     breakUpLongMovements(waypoints);
-    return waypoints;
+    return convertWaypointsToNetworkReadyPoints(waypoints);
   } catch (std::exception &ex) {
     throw std::runtime_error("Cannot find path with pathfinder: \""+std::string(ex.what())+"\"");
   }
+}
+
+Walking::Walking(Bot &bot, const sro::Position &destinationPosition) : StateMachine(bot) {
+  stateMachineCreated(kName);
+  waypoints_ = calculatePathToDestination(destinationPosition, bot_);
+  pushBlockedOpcode(packet::Opcode::kClientAgentCharacterMoveRequest);
+}
+
+Walking::~Walking() {
+  stateMachineDestroyed();
+}
+
+void Walking::onUpdate(const event::Event *event) {
+  if (done()) {
+    LOG() << "Walking but done" << std::endl;
+    return;
+  }
+
+  if (event) {
+    if (const auto *movementBeganEvent = dynamic_cast<const event::EntityMovementBegan*>(event); movementBeganEvent != nullptr && movementBeganEvent->globalId == bot_.selfState().globalId) {
+      // We started to move, our movement request must've been successful
+      if (movementRequestTimeoutEventId_) {
+        bot_.eventBroker().cancelDelayedEvent(*movementRequestTimeoutEventId_);
+        movementRequestTimeoutEventId_.reset();
+      } else {
+        LOG() << "Movement began, but had no running movement request timeout timer" << std::endl;
+      }
+      // Nothing else to do here. We're now waiting for our movement to end
+      return;
+    } else if (const auto *movementEndedEvent = dynamic_cast<const event::EntityMovementEnded*>(event); movementEndedEvent != nullptr && movementEndedEvent->globalId == bot_.selfState().globalId) {
+      // If we send a request to move, but get knocked back before the MovementBegin happens, the knockback movement will send this MovementEnded event
+      if (movementRequestTimeoutEventId_) {
+        bot_.eventBroker().cancelDelayedEvent(*movementRequestTimeoutEventId_);
+        movementRequestTimeoutEventId_.reset();
+      }
+    } else if (event->eventCode == event::EventCode::kMovementRequestTimedOut) {
+      LOG() << "kMovementRequestTimedOut" << std::endl;
+      LOG() << "Movement request timed out" << std::endl;
+      movementRequestTimeoutEventId_.reset();
+    }
+  }
+
+  if (tookAction_ && bot_.selfState().moving()) {
+    // Still moving, nothing to do
+    return;
+  }
+
+  // We're not moving
+  // Did we just arrive at this waypoint?
+  while (currentWaypointIndex_ < waypoints_.size() && sro::position_math::calculateDistance2d(bot_.selfState().position(), waypoints_.at(currentWaypointIndex_).asSroPosition()) < sqrt(0.5)) {
+    // Already at this waypoint, increment index
+    ++currentWaypointIndex_;
+  }
+  if (done()) {
+    // Finished walking
+    return;
+  }
+
+  // Not yet done walking
+  if (movementRequestTimeoutEventId_) {
+    // Already asked to move, nothing to do
+    return;
+  }
+
+  if (!canMove()) {
+    return;
+  }
+
+  // We are not moving, we're not at the current waypoint, and there's not a pending movement request
+  // Send a request to move to the current waypoint
+  const auto &currentWaypoint = waypoints_.at(currentWaypointIndex_);
+  // LOG() << "Requesting movement to " << currentWaypoint.asSroPosition() << ". We are currently at " << bot_.selfState().position() << " which is " << sro::position_math::calculateDistance2d(currentWaypoint.asSroPosition(), bot_.selfState().position()) << 'm' << std::endl;
+  const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint);
+  bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
+  const int kMovementRequestTimeoutMs{333}; // TODO: Move somewhere else and make an educated guess about what this value should be
+  movementRequestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::make_unique<event::Event>(event::EventCode::kMovementRequestTimedOut), std::chrono::milliseconds(kMovementRequestTimeoutMs));
+  tookAction_ = true;
+}
+
+bool Walking::done() const {
+  return (currentWaypointIndex_ == waypoints_.size());
 }
 
 } // namespace state::machine

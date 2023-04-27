@@ -6,8 +6,6 @@
 #include "entity/entity.hpp"
 #include "entity/geometry.hpp"
 
-#include "../../../common/pk2/ref/skill.hpp"
-
 #include <silkroad_lib/position.h>
 #include <silkroad_lib/scalar_types.h>
 
@@ -26,20 +24,18 @@ public:
   bool done() const override;
 private:
   static inline std::string kName{"Training"};
+  bool done_{false};
   bool wantToAttackMonster(const entity::Monster &monster) const;
   void buildBuffList();
   std::optional<sro::scalar_types::ReferenceObjectId> getNextBuffToCast() const;
-  bool canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const;
-  std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &skillData) const;
   std::pair<const entity::Monster*, sro::scalar_types::ReferenceObjectId> getTargetAndAttackSkill(const std::vector<const entity::Monster*> &monsters, const std::vector<sro::scalar_types::ReferenceObjectId> &attackSkills) const;
   const std::unique_ptr<entity::Geometry> trainingAreaGeometry_;
   std::vector<sro::scalar_types::ReferenceObjectId> buffsToUse_;
   std::vector<sro::scalar_types::ReferenceObjectId> skillsToUse_;
   bool waitingForSkillToCast_{false};
   bool waitingForSkillToEnd_{false};
-  std::unique_ptr<StateMachine> childState_;
-  // Once we successfully use a skill, there is a little bit of time before the buff gets applied to us. We want to know which buffs we're expecting to eventually come so that we dont recast them too early.
-  std::set<sro::scalar_types::ReferenceObjectId> buffsCastButNotYetActive_;
+  std::set<const event::Event*> handledEvents_;
+  sro::Position calculateWhereToWalkToAttackEntityWithSkill(const entity::MobileEntity *entity, sro::scalar_types::ReferenceObjectId attackRefId);
 };
 
 } // namespace state::machine

@@ -6,7 +6,6 @@
 
 #include <cstdint>
 #include <map>
-#include <memory>
 
 namespace state::machine {
 
@@ -22,7 +21,6 @@ private:
   const std::map<uint32_t, int> &shoppingList_;
   uint32_t npcGid_;
   std::map<uint32_t, BuyingItems::PurchaseRequest> itemsToBuy_;
-  std::unique_ptr<BuyingItems> buyingItemsChildState_;
   bool waitingForSelectionResponse_{false};
   bool waitingForTalkResponse_{false};
   bool waitingForRepairResponse_{false};

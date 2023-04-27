@@ -115,7 +115,7 @@ const RegionInfo& GameData::regionInfo() const {
 }
 
 std::optional<std::string> GameData::getSkillNameIfExists(sro::scalar_types::ReferenceObjectId skillRefId) const {
-  const auto skill = skillData_.getSkillById(skillRefId);
+  const auto &skill = skillData_.getSkillById(skillRefId);
   return textItemAndSkillData_.getSkillNameIfExists(skill.uiSkillName);
 }
 

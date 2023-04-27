@@ -3,11 +3,6 @@
 #include "entity/entity.hpp"
 #include "helpers.hpp"
 #include "logging.hpp"
-// TODO: <remove>
-// For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
-#include "packet/building/clientAgentFreePvpUpdateRequest.hpp"
-#include "packet/building/clientAgentOperatorRequest.hpp"
-// </remove>
 #include "packet/building/clientAgentActionCommandRequest.hpp"
 #include "packet/opcode.hpp"
 
@@ -378,31 +373,12 @@ void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
     }
     const auto newLifeState = static_cast<sro::entity::LifeState>(packet.state());
     characterEntity.setLifeState(newLifeState, eventBroker_);
-  } else {
+  } else if (packet.globalId() == worldState_.selfState().globalId) {
     if (!worldState_.selfState().spawned()) {
       throw std::runtime_error("Got state update for ourself, but we are not spawned");
     }
     if (packet.stateType() == packet::enums::StateType::kBodyState) {
       worldState_.selfState().setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
-    }
-  }
-  
-  // TODO: Remove
-  // For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
-  if (packet.globalId() == worldState_.selfState().globalId) {
-    static bool done = false;
-    if (!done) {
-      // Just spawned in
-      // Set self as visible
-      LOG() << "Setting self as visible" << std::endl;
-      const auto setVisiblePacket = packet::building::ClientAgentOperatorRequest::toggleInvisible();
-      packetBroker_.injectPacket(setVisiblePacket, PacketContainer::Direction::kClientToServer);
-      
-      // LOG() << "Setting free pvp mode" << std::endl;
-      // const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
-      // packetBroker_.injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
-
-      done = true;
     }
   }
 }

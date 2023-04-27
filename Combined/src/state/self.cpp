@@ -72,6 +72,7 @@ void Self::setHwanSpeed(float hwanSpeed) {
 
 void Self::setBodyState(packet::enums::BodyState bodyState) {
   bodyState_ = bodyState;
+  eventBroker_.publishEvent(std::make_unique<event::EntityBodyStateChanged>(globalId));
 }
 
 void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) {
@@ -538,6 +539,27 @@ void Self::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::E
   buffs.erase(buffIt);
   LOG() << "Removed buff " << skillRefId << " from self" << std::endl;
   eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kOurBuffRemoved));
+}
+
+bool Self::alreadyTriedToCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
+  auto commandIsCastingThisSkill = [&](const packet::structures::ActionCommand &command) {
+    return command.commandType == packet::enums::CommandType::kExecute &&
+           command.actionType == packet::enums::ActionType::kCast &&
+           command.refSkillId == skillRefId;
+  };
+  for (const auto &pendingCommand : pendingCommandQueue) {
+    if (commandIsCastingThisSkill(pendingCommand)) {
+      // Skill is already in our pending queue
+      return true;
+    }
+  }
+  for (const auto &acceptedCommand : acceptedCommandQueue) {
+    if (commandIsCastingThisSkill(acceptedCommand.command)) {
+      // Skill is already in our accepted queue
+      return true;
+    }
+  }
+  return false;
 }
 
 // =================================================================================================

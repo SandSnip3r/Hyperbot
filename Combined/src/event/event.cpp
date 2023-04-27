@@ -36,6 +36,8 @@ EntityPositionUpdated::EntityPositionUpdated(sro::scalar_types::EntityGlobalId i
 
 EntityNotMovingAngleChanged::EntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityNotMovingAngleChanged), globalId(id) {}
 
+EntityBodyStateChanged::EntityBodyStateChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityBodyStateChanged), globalId(id) {}
+
 EntityLifeStateChanged::EntityLifeStateChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityLifeStateChanged), globalId(id) {}
 
 EntityEnteredGeometry::EntityEnteredGeometry(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityEnteredGeometry), globalId(id) {}

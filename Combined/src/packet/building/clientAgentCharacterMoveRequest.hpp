@@ -9,6 +9,15 @@
 
 namespace packet::building {
 
+struct NetworkReadyPosition {
+public:
+  NetworkReadyPosition(const sro::Position &pos);
+  sro::Position asSroPosition() const;
+private:
+  sro::Position convertedPosition_;
+  static sro::Position truncateForNetwork(const sro::Position &pos);
+};
+
 class ClientAgentCharacterMoveRequest {
 private:
   static const Opcode kOpcode_ = Opcode::kClientAgentCharacterMoveRequest;
@@ -16,7 +25,7 @@ private:
   static const bool kMassive_ = false;
 public:
   static PacketContainer moveTowardAngle(uint16_t angle);
-  static PacketContainer moveToPosition(const sro::Position &newPosition);
+  static PacketContainer moveToPosition(const NetworkReadyPosition &newPosition);
 };
 
 } // namespace packet::building

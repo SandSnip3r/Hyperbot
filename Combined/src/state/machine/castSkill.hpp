@@ -3,12 +3,16 @@
 
 #include "stateMachine.hpp"
 
+#include "../../../common/pk2/ref/skill.hpp"
+
 #include <silkroad_lib/scalar_types.h>
 
-#include <memory>
 #include <optional>
 
 namespace state::machine {
+
+// TODO: This feels like a weird home for this function.
+std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &skillData, const Bot &bot);
 
 class CastSkillStateMachineBuilder {
 public:
@@ -40,7 +44,6 @@ private:
   const std::optional<sro::scalar_types::EntityGlobalId> targetGlobalId_;
   std::optional<uint8_t> weaponSlot_;
   std::optional<uint8_t> shieldSlot_;
-  std::unique_ptr<StateMachine> childState_;
   bool expectingSkillCommandFailure_{false};
   bool waitingForSkillToCast_{false};
   bool waitingForSkillToEnd_{false};

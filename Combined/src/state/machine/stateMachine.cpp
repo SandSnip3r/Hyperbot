@@ -32,6 +32,11 @@ bool StateMachine::canMove() const {
   return !(bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown);
 }
 
+void StateMachine::setChildStateMachine(std::unique_ptr<StateMachine> &&newChildStateMachine) {
+  childState_.reset();
+  childState_ = std::move(newChildStateMachine);
+}
+
 std::ostream& operator<<(std::ostream &stream, Npc npc) {
   switch (npc) {
     case Npc::kStorage:

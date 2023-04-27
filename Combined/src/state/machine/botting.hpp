@@ -7,8 +7,6 @@
 
 #include <silkroad_lib/position.h>
 
-#include <memory>
-
 namespace state::machine {
 
 class Botting : public StateMachine {
@@ -20,11 +18,9 @@ public:
 private:
   static inline std::string kName{"Botting"};
   static const sro::Position kCenterOfJangan_;
-  std::unique_ptr<StateMachine> childState_;
   sro::Position trainingSpotCenter_;
   std::unique_ptr<entity::Geometry> trainingAreaGeometry_;
   void initializeChildState();
-  bool needToGoToTown() const;
 };
 
 } // namespace state::machine

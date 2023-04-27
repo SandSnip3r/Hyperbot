@@ -5,8 +5,61 @@
 #include "event/event.hpp"
 #include "logging.hpp"
 #include "packet/building/clientAgentActionCommandRequest.hpp"
+#include "type_id/categories.hpp"
 
 namespace state::machine {
+
+std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &skillData, const Bot &bot) {
+  // TODO: Skill might not require a weapon
+  const uint8_t kWeaponInventorySlot{6};
+  std::vector<type_id::TypeCategory> possibleWeapons;
+  for (auto i : skillData.reqi()) {
+    if (i.typeId3 != 6) {
+      LOG() << "reqi asks for non-weapon (typeId3: " << static_cast<int>(i.typeId3) << ")" << std::endl;
+    }
+    possibleWeapons.push_back(type_id::categories::kEquipment.subCategory(i.typeId3).subCategory(i.typeId4));
+  }
+  if (skillData.reqCastWeapon1 != 255) {
+    possibleWeapons.push_back(type_id::categories::kWeapon.subCategory(skillData.reqCastWeapon1));
+  }
+  if (skillData.reqCastWeapon2 != 255) {
+    possibleWeapons.push_back(type_id::categories::kWeapon.subCategory(skillData.reqCastWeapon2));
+  }
+  if (possibleWeapons.empty()) {
+    // Does not require a weapon
+    LOG() << "Skill does not require a weapon" << std::endl;
+    return {};
+  }
+
+  // First, check if the currently equipped weapon is valid for this skill
+  if (bot.selfState().inventory.hasItem(kWeaponInventorySlot)) {
+    const auto *item = bot.selfState().inventory.getItem(kWeaponInventorySlot);
+    if (!item) {
+      throw std::runtime_error("Have an item, but got null");
+    }
+    if (!type_id::categories::kWeapon.contains(item->typeData())) {
+      throw std::runtime_error("Equipped \"weapon\" isnt a weapon");
+    }
+    if (item->isOneOf(possibleWeapons)) {
+      // Currently equipped weapon can cast this skill
+      return kWeaponInventorySlot;
+    }
+  }
+  // Currently equipped weapon (if any) cannot cast this skill, search through our inventory for a weapon which can cast this skill
+  std::vector<uint8_t> possibleWeaponSlots = bot.selfState().inventory.findItemsOfCategory(possibleWeapons);
+  LOG() << "Possible slots with weapon for skill: [ ";
+  for (const auto slot : possibleWeaponSlots) {
+    std::cout << static_cast<int>(slot) << ", ";
+  }
+  std::cout << "]" << std::endl;
+  if (possibleWeaponSlots.empty()) {
+    throw std::runtime_error("We have no weapon that can cast this skill");
+  }
+
+  // TODO: Pick best option
+  // For now, pick the first option
+  return possibleWeaponSlots.front();
+}
 
 CastSkillStateMachineBuilder::CastSkillStateMachineBuilder(Bot &bot, sro::scalar_types::ReferenceObjectId skillRefId) : bot_(bot), skillRefId_(skillRefId) {
 }
@@ -182,7 +235,7 @@ void CastSkill::onUpdate(const event::Event *event) {
 
   if (weaponSlot_) {
     // Need to move weapon, create child state to do so
-    childState_ = std::make_unique<MoveItemInInventory>(bot_, *weaponSlot_, kWeaponInventorySlot_);
+    setChildStateMachine<MoveItemInInventory>(bot_, *weaponSlot_, kWeaponInventorySlot_);
     // We assume that the child state will complete successfully, so we will reset the weaponSlot_ here
     weaponSlot_.reset();
     onUpdate(event);
@@ -191,7 +244,7 @@ void CastSkill::onUpdate(const event::Event *event) {
 
   if (shieldSlot_) {
     // Need to move shield, create child state to do so
-    childState_ = std::make_unique<MoveItemInInventory>(bot_, *shieldSlot_, kShieldInventorySlot_);
+    setChildStateMachine<MoveItemInInventory>(bot_, *shieldSlot_, kShieldInventorySlot_);
     // We assume that the child state will complete successfully, so we will reset the shieldSlot_ here
     shieldSlot_.reset();
     onUpdate(event);

@@ -268,6 +268,7 @@ public:
   std::set<sro::scalar_types::ReferenceObjectId> buffs;
   void addBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker);
   void removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker);
+  bool alreadyTriedToCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const;
 
   // ################################################################################
   // misc

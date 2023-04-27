@@ -6,8 +6,6 @@
 
 #include <silkroad_lib/scalar_types.h>
 
-#include <memory>
-
 namespace state::machine {
 
 class AutoPotion : public StateMachine {
@@ -16,8 +14,6 @@ public:
   void onUpdate(const event::Event *event) override;
   bool done() const override;
 private:
-  std::unique_ptr<StateMachine> childState_;
-
   // These functions return `true` if an item was used, `false` otherwise.
   bool tryUsePurificationPill();
   bool tryUseHpPotion();

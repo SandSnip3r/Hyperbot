@@ -30,6 +30,7 @@ public:
   const state::WorldState& worldState() const;
   state::EntityTracker& entityTracker();
   state::Self& selfState();
+  const state::Self& selfState() const;
 protected:
   friend class broker::EventBroker;
   void handleEvent(const event::Event *event);
@@ -74,7 +75,7 @@ private:
   void handleEntityEnteredGeometry(const event::EntityEnteredGeometry &event);
   void handleEntityExitedGeometry(const event::EntityExitedGeometry &event);
   // Character info events
-  void handleSpawned();
+  void handleSpawned(const event::Event *event);
   void handleCosSpawned(const event::CosSpawned &event);
   void handleVitalsChanged();
   void handleStatesChanged();
@@ -86,10 +87,16 @@ private:
 
   // Misc
   void entitySpawned(const event::EntitySpawned &event);
+  void handleBodyStateChanged(const event::EntityBodyStateChanged &event);
   void itemUseTimedOut(const event::ItemUseTimeout &event);
   void handleKnockbackStunEnded();
   void handleKnockdownStunEnded();
   void handleItemCooldownEnded(const event::ItemCooldownEnded &event);
+
+public:
+  bool needToGoToTown() const;
+  bool similarSkillIsAlreadyActive(sro::scalar_types::ReferenceObjectId skillRefId) const;
+  bool canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const;
 
 };
 

@@ -4,10 +4,11 @@
 #include "stateMachine.hpp"
 
 #include <silkroad_lib/position.h>
+#include <silkroad_lib/scalar_types.h>
 
 #include <cstdint>
 #include <map>
-#include <memory>
+#include <optional>
 #include <vector>
 
 namespace state::machine {
@@ -23,8 +24,10 @@ private:
   std::map<uint32_t, int> shoppingList_;
   std::vector<Npc> npcsToVisit_;
   size_t currentNpcIndex_{0};
-  std::unique_ptr<StateMachine> childState_;
+  std::vector<sro::scalar_types::ReferenceObjectId> buffsToUse_;
 
+  void buildBuffList();
+  std::optional<sro::scalar_types::ReferenceObjectId> getNextBuffToCast() const;
   sro::Position positionOfNpc(Npc npc) const;
 };
 

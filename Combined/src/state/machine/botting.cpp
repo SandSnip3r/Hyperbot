@@ -5,6 +5,7 @@
 
 #include "bot.hpp"
 #include "logging.hpp"
+#include "type_id/categories.hpp"
 
 namespace state::machine {
 
@@ -26,10 +27,12 @@ void Botting::initializeChildState() {
   //  there must already be some logic somewhere to determine if we need to go to town, reuse that
   // if we're already in town, initialize as Townlooping
   //  there's a chance we have everything we need, then Townlooping will immediately finish and we'll move onto the next state as per the normal flow
-  if (bot_.selfState().inTown() || needToGoToTown()) {
-    childState_ = std::make_unique<Townlooping>(bot_);
+  if (bot_.selfState().inTown() || bot_.needToGoToTown()) {
+    LOG() << "Initializing state as Townlooping" << std::endl;
+    setChildStateMachine<Townlooping>(bot_);
   } else {
-    childState_ = std::make_unique<Training>(bot_, trainingAreaGeometry_->clone());
+    LOG() << "Initializing state as Training" << std::endl;
+    setChildStateMachine<Training>(bot_, trainingAreaGeometry_->clone());
   }
 }
 
@@ -47,12 +50,10 @@ void Botting::onUpdate(const event::Event *event) {
     // Move on to the next thing
     if (dynamic_cast<Townlooping*>(childState_.get())) {
       // Done with the townloop, start training
-      childState_.reset();
-      childState_ = std::make_unique<Training>(bot_, trainingAreaGeometry_->clone());
+      setChildStateMachine<Training>(bot_, trainingAreaGeometry_->clone());
     } else if (dynamic_cast<Training*>(childState_.get())) {
       // Done training, go back to town
-      childState_.reset();
-      childState_ = std::make_unique<Townlooping>(bot_);
+      setChildStateMachine<Townlooping>(bot_);
     } else {
       throw std::runtime_error("Botting's child state is not valid");
     }
@@ -64,11 +65,6 @@ void Botting::onUpdate(const event::Event *event) {
 
 bool Botting::done() const {
   // Botting is never done
-  return false;
-}
-
-bool Botting::needToGoToTown() const {
-  // TODO
   return false;
 }
 
