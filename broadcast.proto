@@ -171,30 +171,31 @@ message StateMachineCreated {
 
 message BroadcastMessage {
   oneof body {
-    google.protobuf.Empty characterSpawn = 1;
-    CharacterHpUpdate characterHpUpdate = 2;
-    CharacterMpUpdate characterMpUpdate = 3;
-    CharacterMaxHpMpUpdate characterMaxHpMpUpdate = 4;
-    CharacterLevelUpdate characterLevelUpdate = 5;
-    CharacterExperienceUpdate characterExperienceUpdate = 6;
-    CharacterSpUpdate characterSpUpdate = 7;
-    CharacterNameUpdate characterNameUpdate = 8;
-    GoldAmountUpdate goldAmountUpdate = 9;
-    CharacterPositionChanged characterPositionChanged = 10;
-    CharacterMovementBegan characterMovementBegan = 11;
-    CharacterMovementEnded characterMovementEnded = 12;
-    CharacterNotMovingAngleChanged characterNotMovingAngleChanged = 13;
-    RegionNameUpdate regionNameUpdate = 14;
-    ItemUpdate itemUpdate = 15;
-    EntitySpawned entitySpawned = 16;
-    EntityDespawned entityDespawned = 17;
-    EntityPositionChanged entityPositionChanged = 18;
-    EntityMovementBegan entityMovementBegan = 19;
-    EntityMovementEnded entityMovementEnded = 20;
-    EntityLifeStateChanged entityLifeStateChanged = 21;
-    TrainingAreaSet trainingAreaSet = 22;
-    google.protobuf.Empty trainingAreaReset = 23;
-    StateMachineCreated stateMachineCreated = 24;
-    google.protobuf.Empty stateMachineDestroyed = 25;
+    google.protobuf.Empty launch = 1;
+    google.protobuf.Empty characterSpawn = 2;
+    CharacterHpUpdate characterHpUpdate = 3;
+    CharacterMpUpdate characterMpUpdate = 4;
+    CharacterMaxHpMpUpdate characterMaxHpMpUpdate = 5;
+    CharacterLevelUpdate characterLevelUpdate = 6;
+    CharacterExperienceUpdate characterExperienceUpdate = 7;
+    CharacterSpUpdate characterSpUpdate = 8;
+    CharacterNameUpdate characterNameUpdate = 9;
+    GoldAmountUpdate goldAmountUpdate = 10;
+    CharacterPositionChanged characterPositionChanged = 11;
+    CharacterMovementBegan characterMovementBegan = 12;
+    CharacterMovementEnded characterMovementEnded = 13;
+    CharacterNotMovingAngleChanged characterNotMovingAngleChanged = 14;
+    RegionNameUpdate regionNameUpdate = 15;
+    ItemUpdate itemUpdate = 16;
+    EntitySpawned entitySpawned = 17;
+    EntityDespawned entityDespawned = 18;
+    EntityPositionChanged entityPositionChanged = 19;
+    EntityMovementBegan entityMovementBegan = 20;
+    EntityMovementEnded entityMovementEnded = 21;
+    EntityLifeStateChanged entityLifeStateChanged = 22;
+    TrainingAreaSet trainingAreaSet = 23;
+    google.protobuf.Empty trainingAreaReset = 24;
+    StateMachineCreated stateMachineCreated = 25;
+    google.protobuf.Empty stateMachineDestroyed = 26;
   }
 }
