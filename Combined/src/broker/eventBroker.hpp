@@ -44,12 +44,9 @@ public:
 
   template<typename EventType, typename... Args>
   EventBroker::DelayedEventId publishDelayedEvent(std::chrono::milliseconds delay, Args&&... args) {
-    publishDelayedEvent(delay, std::make_unique<EventType>(std::forward<Args>(args)...));
+    return publishDelayedEvent(delay, std::make_unique<EventType>(std::forward<Args>(args)...));
   }
   EventBroker::DelayedEventId publishDelayedEvent(std::chrono::milliseconds delay, event::EventCode eventCode);
-
-  void publishEvent(std::unique_ptr<event::Event> event);
-  DelayedEventId publishDelayedEvent(std::chrono::milliseconds delay, std::unique_ptr<event::Event> event);
 
   bool cancelDelayedEvent(DelayedEventId id);
   SubscriptionId subscribeToEvent(event::EventCode eventCode, EventHandleFunction &&handleFunc);
@@ -59,6 +56,9 @@ private:
   PacketSubscriptionMap subscriptions_;
   std::mutex subscriptionMutex_;
   TimerManager timerManager_;
+  void publishEvent(std::unique_ptr<event::Event> event);
+  DelayedEventId publishDelayedEvent(std::chrono::milliseconds delay, std::unique_ptr<event::Event> event);
+
   void notifySubscribers(std::unique_ptr<event::Event> event);
   void timerFinished(event::Event *event);
 };

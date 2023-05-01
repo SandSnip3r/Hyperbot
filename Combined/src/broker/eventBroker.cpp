@@ -10,19 +10,11 @@ void EventBroker::runAsync() {
 }
 
 void EventBroker::publishEvent(event::EventCode eventCode) {
-  publishEvent(std::make_unique<event::Event>(eventCode));
-}
-
-void EventBroker::publishEvent(std::unique_ptr<event::Event> event) {
-  timerManager_.triggerInstantTimer(std::bind(&EventBroker::timerFinished, this, event.release()));
+  publishEvent<event::Event>(eventCode);
 }
 
 EventBroker::DelayedEventId EventBroker::publishDelayedEvent(std::chrono::milliseconds delay, event::EventCode eventCode) {
-  return publishDelayedEvent(delay, std::make_unique<event::Event>(eventCode));
-}
-
-EventBroker::DelayedEventId EventBroker::publishDelayedEvent(std::chrono::milliseconds delay, std::unique_ptr<event::Event> event) {
-  return timerManager_.registerTimer(delay, std::bind(&EventBroker::timerFinished, this, event.release()));
+  return publishDelayedEvent<event::Event>(delay, eventCode);
 }
 
 bool EventBroker::cancelDelayedEvent(DelayedEventId id) {
@@ -69,6 +61,14 @@ void EventBroker::unsubscribeFromEvent(SubscriptionId id) {
       }
     }
   }
+}
+
+void EventBroker::publishEvent(std::unique_ptr<event::Event> event) {
+  timerManager_.triggerInstantTimer(std::bind(&EventBroker::timerFinished, this, event.release()));
+}
+
+EventBroker::DelayedEventId EventBroker::publishDelayedEvent(std::chrono::milliseconds delay, std::unique_ptr<event::Event> event) {
+  return timerManager_.registerTimer(delay, std::bind(&EventBroker::timerFinished, this, event.release()));
 }
 
 void EventBroker::notifySubscribers(std::unique_ptr<event::Event> event) {

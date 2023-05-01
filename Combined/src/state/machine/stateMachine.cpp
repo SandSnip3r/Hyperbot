@@ -21,11 +21,11 @@ void StateMachine::pushBlockedOpcode(packet::Opcode opcode) {
 }
 
 void StateMachine::stateMachineCreated(const std::string &name) {
-  bot_.eventBroker().publishEvent(std::make_unique<event::StateMachineCreated>(name));
+  bot_.eventBroker().publishEvent<event::StateMachineCreated>(name);
 }
 
 void StateMachine::stateMachineDestroyed() {
-  bot_.eventBroker().publishEvent(std::make_unique<event::Event>(event::EventCode::kStateMachineDestroyed));
+  bot_.eventBroker().publishEvent(event::EventCode::kStateMachineDestroyed);
 }
 
 bool StateMachine::canMove() const {

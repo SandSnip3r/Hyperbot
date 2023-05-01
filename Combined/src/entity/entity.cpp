@@ -123,7 +123,7 @@ void MobileEntity::setAngle(sro::Angle angle, broker::EventBroker &eventBroker) 
     throw std::runtime_error("We're moving and changing our angle");
   }
   this->angle_ = angle;
-  eventBroker.publishEvent(std::make_unique<event::EntityNotMovingAngleChanged>(globalId));
+  eventBroker.publishEvent<event::EntityNotMovingAngleChanged>(globalId);
 }
 
 void MobileEntity::setMotionState(entity::MotionState motionState, broker::EventBroker &eventBroker) {
@@ -180,7 +180,7 @@ void MobileEntity::syncPosition(const sro::Position &position, broker::EventBrok
     }
   } else {
     position_ = position;
-    eventBroker.publishEvent(std::make_unique<event::EntityPositionUpdated>(globalId));
+    eventBroker.publishEvent<event::EntityPositionUpdated>(globalId);
   }
 }
 
@@ -207,7 +207,7 @@ void MobileEntity::movementTimerCompleted(broker::EventBroker &eventBroker) {
   }
   position_ = *destinationPosition;
   cancelMovement(eventBroker);
-  eventBroker.publishEvent(std::make_unique<event::EntityMovementEnded>(globalId));
+  eventBroker.publishEvent<event::EntityMovementEnded>(globalId);
 }
 
 void MobileEntity::privateCancelEvents(broker::EventBroker &eventBroker) {
@@ -297,9 +297,9 @@ void MobileEntity::privateSetStationaryAtPosition(const sro::Position &position,
     angleUpdated = true;
   }
   position_ = position;
-  eventBroker.publishEvent(std::make_unique<event::EntityMovementEnded>(globalId));
+  eventBroker.publishEvent<event::EntityMovementEnded>(globalId);
   if (angleUpdated) {
-    eventBroker.publishEvent(std::make_unique<event::EntityNotMovingAngleChanged>(globalId));
+    eventBroker.publishEvent<event::EntityNotMovingAngleChanged>(globalId);
   }
 }
 
@@ -323,8 +323,8 @@ void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Positi
 
   // Start timer
   const auto seconds = helpers::secondsToTravel(position_, *this->destinationPosition, privateCurrentSpeed());
-  eventBroker.publishEvent(std::make_unique<event::EntityMovementBegan>(globalId));
-  movingEventId = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)), std::make_unique<event::EntityMovementTimerEnded>(globalId));
+  eventBroker.publishEvent<event::EntityMovementBegan>(globalId);
+  movingEventId = eventBroker.publishDelayedEvent<event::EntityMovementTimerEnded>(std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)), globalId);
   checkIfWillCrossGeometryBoundary(eventBroker);
 }
 
@@ -341,7 +341,7 @@ void MobileEntity::privateSetMovingTowardAngle(const std::optional<sro::Position
   startedMovingTime = currentTime;
   this->angle_ = angle;
 
-  eventBroker.publishEvent(std::make_unique<event::EntityMovementBegan>(globalId));
+  eventBroker.publishEvent<event::EntityMovementBegan>(globalId);
   checkIfWillCrossGeometryBoundary(eventBroker);
 }
 
@@ -359,25 +359,25 @@ void MobileEntity::checkIfWillCrossGeometryBoundary(broker::EventBroker &eventBr
     if (maybeTimeUntilEnter) {
       LOG() << " Entity will enter the geometry boundary in " << *maybeTimeUntilEnter << " second(s)" << std::endl;
       // TODO: Need some way to reference the geometry from the event
-      enterGeometryEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilEnter)*1000)), std::make_unique<event::EntityEnteredGeometry>(globalId));
+      enterGeometryEventId_ = eventBroker.publishDelayedEvent<event::EntityEnteredGeometry>(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilEnter)*1000)), globalId);
     }
     auto maybeTimeUntilExit = geometry_->timeUntilExit(currentPosition, *destinationPosition, privateCurrentSpeed());
     if (maybeTimeUntilExit) {
       LOG() << " Entity will exit the geometry boundary in " << *maybeTimeUntilExit << " second(s)" << std::endl;
       // TODO: Need some way to reference the geometry from the event
-      exitGeometryEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilExit)*1000)), std::make_unique<event::EntityExitedGeometry>(globalId));
+      exitGeometryEventId_ = eventBroker.publishDelayedEvent<event::EntityExitedGeometry>(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilExit)*1000)), globalId);
     }
   } else {
     // Moving towards some angle
     auto maybeTimeUntilEnter = geometry_->timeUntilEnter(currentPosition, angle_, privateCurrentSpeed());
     if (maybeTimeUntilEnter) {
       // TODO: Need some way to reference the geometry from the event
-      enterGeometryEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilEnter)*1000)), std::make_unique<event::EntityEnteredGeometry>(globalId));
+      enterGeometryEventId_ = eventBroker.publishDelayedEvent<event::EntityEnteredGeometry>(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilEnter)*1000)), globalId);
     }
     auto maybeTimeUntilExit = geometry_->timeUntilExit(currentPosition, angle_, privateCurrentSpeed());
     if (maybeTimeUntilExit) {
       // TODO: Need some way to reference the geometry from the event
-      exitGeometryEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilExit)*1000)), std::make_unique<event::EntityExitedGeometry>(globalId));
+      exitGeometryEventId_ = eventBroker.publishDelayedEvent<event::EntityExitedGeometry>(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilExit)*1000)), globalId);
     }
   }
 }
@@ -403,7 +403,7 @@ void Character::setLifeState(sro::entity::LifeState newLifeState, broker::EventB
     privateSetStationaryAtPosition(interpolateCurrentPosition(currentTime), eventBroker);
   }
   if (changed) {
-    eventBroker.publishEvent(std::make_unique<event::EntityLifeStateChanged>(globalId));
+    eventBroker.publishEvent<event::EntityLifeStateChanged>(globalId);
   }
 }
 
@@ -420,7 +420,7 @@ uint32_t Character::currentHp() const {
 
 void Character::setCurrentHp(uint32_t hp, broker::EventBroker &eventBroker) {
   currentHp_ = hp;
-  eventBroker.publishEvent(std::make_unique<event::EntityHpChanged>(globalId));
+  eventBroker.publishEvent<event::EntityHpChanged>(globalId);
 }
 
 // ============================================================================================================================================
@@ -443,7 +443,7 @@ void PlayerCharacter::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId
 
 void Item::removeOwnership(broker::EventBroker &eventBroker) {
   ownerJId.reset();
-  eventBroker.publishEvent(std::make_unique<event::EntityOwnershipRemoved>(globalId));
+  eventBroker.publishEvent<event::EntityOwnershipRemoved>(globalId);
 }
 
 // ============================================================================================================================================

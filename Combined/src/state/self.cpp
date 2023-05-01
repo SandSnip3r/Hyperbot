@@ -57,13 +57,13 @@ void Self::setCurrentLevel(uint8_t currentLevel) {
 
 void Self::setSkillPoints(uint64_t skillPoints) {
   skillPoints_ = skillPoints;
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kCharacterSkillPointsUpdated));
+  eventBroker_.publishEvent(event::EventCode::kCharacterSkillPointsUpdated);
 }
 
 void Self::setCurrentExpAndSpExp(uint32_t currentExperience, uint32_t currentSpExperience) {
   currentExperience_ = currentExperience;
   currentSpExperience_ = currentSpExperience;
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kCharacterExperienceUpdated));
+  eventBroker_.publishEvent(event::EventCode::kCharacterExperienceUpdated);
 }
 
 void Self::setHwanSpeed(float hwanSpeed) {
@@ -72,7 +72,7 @@ void Self::setHwanSpeed(float hwanSpeed) {
 
 void Self::setBodyState(packet::enums::BodyState bodyState) {
   bodyState_ = bodyState;
-  eventBroker_.publishEvent(std::make_unique<event::EntityBodyStateChanged>(globalId));
+  eventBroker_.publishEvent<event::EntityBodyStateChanged>(globalId);
 }
 
 void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) {
@@ -135,7 +135,7 @@ void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(c
   sro::Position intersectionPos(currentPosition.regionId(), intersectionPoint->x(), 0.0f, intersectionPoint->y());
   // Start timer
   const auto seconds = helpers::secondsToTravel(currentPosition, intersectionPos, currentSpeed());
-  enteredNewRegionEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)), std::make_unique<event::Event>(event::EventCode::kEnteredNewRegion));
+  enteredNewRegionEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)), event::EventCode::kEnteredNewRegion);
 }
 
 void Self::enteredRegion() {
@@ -158,13 +158,13 @@ void Self::cancelMovement(broker::EventBroker &eventBroker) {
 
 void Self::setMp(uint32_t mp) {
   mp_ = mp;
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMpChanged));
+  eventBroker_.publishEvent(event::EventCode::kMpChanged);
 }
 
 void Self::setMaxHpMp(uint32_t maxHp, uint32_t maxMp) {
   maxHp_ = maxHp;
   maxMp_ = maxMp;
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kMaxHpMpChanged));
+  eventBroker_.publishEvent(event::EventCode::kMaxHpMpChanged);
 }
 
 void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels) {
@@ -235,17 +235,17 @@ void Self::setMasteriesAndSkills(const std::vector<packet::structures::Mastery> 
 
 void Self::setGold(uint64_t goldAmount) {
   gold_ = goldAmount;
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kInventoryGoldUpdated));
+  eventBroker_.publishEvent(event::EventCode::kInventoryGoldUpdated);
 }
 
 void Self::setStorageGold(uint64_t goldAmount) {
   storageGold_ = goldAmount;
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStorageGoldUpdated));
+  eventBroker_.publishEvent(event::EventCode::kStorageGoldUpdated);
 }
 
 void Self::setGuildStorageGold(uint64_t goldAmount) {
   guildStorageGold_ = goldAmount;
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kGuildStorageGoldUpdated));
+  eventBroker_.publishEvent(event::EventCode::kGuildStorageGoldUpdated);
 }
 
 void Self::usedAnItem(type_id::TypeId typeData, broker::EventBroker &eventBroker) {
@@ -281,7 +281,7 @@ void Self::usedAnItem(type_id::TypeId typeData, broker::EventBroker &eventBroker
   }
 
   // Publish a delayed event
-  const auto itemCooldownDelayedEventId = eventBroker.publishDelayedEvent(std::chrono::milliseconds(*cooldownMilliseconds), std::make_unique<event::ItemCooldownEnded>(typeData));
+  const auto itemCooldownDelayedEventId = eventBroker.publishDelayedEvent<event::ItemCooldownEnded>(std::chrono::milliseconds(*cooldownMilliseconds), typeData);
   itemCooldownEventIdMap_.emplace(typeData, itemCooldownDelayedEventId);
 }
 
@@ -515,12 +515,12 @@ packet::structures::ItemMovement Self::getUserPurchaseRequest() const {
 
 void Self::setTrainingAreaGeometry(std::unique_ptr<entity::Geometry> &&geometry) {
   trainingAreaGeometry = std::move(geometry);
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTrainingAreaSet));
+  eventBroker_.publishEvent(event::EventCode::kTrainingAreaSet);
 }
 
 void Self::resetTrainingAreaGeometry() {
   trainingAreaGeometry.reset();
-  eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kTrainingAreaReset));
+  eventBroker_.publishEvent(event::EventCode::kTrainingAreaReset);
 }
 
 // =================================================================================================

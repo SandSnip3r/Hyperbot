@@ -357,21 +357,21 @@ void UserInterface::handleRequest(const zmq::message_t &request) {
     case request::RequestMessage::BodyCase::kPacketData: {
         const request::PacketToInject &packet = requestMsg.packetdata();
         const event::InjectPacket::Direction dir = (packet.direction() == request::PacketToInject::kClientToServer) ? event::InjectPacket::Direction::kClientToServer : event::InjectPacket::Direction::kServerToClient;
-        eventBroker_.publishEvent(std::make_unique<event::InjectPacket>(dir, packet.opcode(), packet.data()));
+        eventBroker_.publishEvent<event::InjectPacket>(dir, packet.opcode(), packet.data());
         break;
       }
     case request::RequestMessage::BodyCase::kDoAction: {
         const request::DoAction &doActionMsg = requestMsg.doaction();
         if (doActionMsg.action() == request::DoAction::kStartTraining) {
-          eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStartTraining));
+          eventBroker_.publishEvent(event::EventCode::kStartTraining);
         } else if (doActionMsg.action() == request::DoAction::kStopTraining) {
-          eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kStopTraining));
+          eventBroker_.publishEvent(event::EventCode::kStopTraining);
         }
         break;
       }
     case request::RequestMessage::BodyCase::kConfig: {
         const proto::config::Config &config = requestMsg.config();
-        eventBroker_.publishEvent(std::make_unique<event::NewConfigReceived>(config));
+        eventBroker_.publishEvent<event::NewConfigReceived>(config);
         break;
       }
     default:

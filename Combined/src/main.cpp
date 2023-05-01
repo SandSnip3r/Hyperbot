@@ -85,7 +85,7 @@ private:
       std::unique_lock<std::mutex> configLock(config_.mutex());
       config_.overwriteConfigProto(event.config);
     }
-    eventBroker_.publishEvent(std::make_unique<event::Event>(event::EventCode::kConfigUpdated));
+    eventBroker_.publishEvent(event::EventCode::kConfigUpdated);
 
     bool gameDataIsAlreadyParsed{false};
     {
