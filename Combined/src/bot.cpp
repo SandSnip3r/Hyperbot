@@ -279,6 +279,12 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
       case event::EventCode::kEntityLifeStateChanged: {
+        const auto &castedEvent = dynamic_cast<const event::EntityLifeStateChanged&>(*event);
+        const auto &character = worldState_.getEntity<entity::Character>(castedEvent.globalId);
+        if (character.lifeState == sro::entity::LifeState::kDead) {
+          static int deathCount = 0;
+          LOG() << ++deathCount << " kill(s)" << std::endl;
+        }
         onUpdate();
         break;
       }

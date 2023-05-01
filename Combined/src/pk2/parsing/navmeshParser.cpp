@@ -167,7 +167,7 @@ bool NavmeshParser::regionIsEnabled(uint16_t regionId) const {
     // {106,105,4,4},  // Samarkand (16)
     // {133,101,3,3},  // Takla temple & bridges (9)
     // {126,102,5,4},  // Takla Yarkan main spawn (20)
-    {164,95,7,5},   // Jangan (25)
+    {162,93,9,5},   // Jangan (45)
     // {152,102,3,3},  // DW (9)
     // {130,87,10,10}, // Hotan (100)
     // {122,85,10,10},  // Karakoram (100)

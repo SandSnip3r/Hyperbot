@@ -13,10 +13,10 @@ const sro::Position Botting::kCenterOfJangan_{25000, 951.0f, -33.0f, 1372.0f};
 
 Botting::Botting(Bot &bot) : StateMachine(bot) {
   stateMachineCreated(kName);
-  trainingSpotCenter_ = sro::Position{24742, 1114.48f, 47.0569f, 898.176f }; // TODO: Need to get from botting config
+  trainingSpotCenter_ = sro::Position{24742, 977.0f, 56.501f, 1127.0f }; // TODO: Need to get from botting config
 
   // TODO: Maybe this training area belongs somewhere else
-  constexpr double kMonsterRange{650};
+  constexpr double kMonsterRange{800};
   trainingAreaGeometry_ = std::make_unique<entity::Circle>(trainingSpotCenter_, kMonsterRange);
 
   initializeChildState();
@@ -50,6 +50,8 @@ void Botting::onUpdate(const event::Event *event) {
     // Move on to the next thing
     if (dynamic_cast<Townlooping*>(childState_.get())) {
       // Done with the townloop, start training
+      static int townloopCount = 0;
+      LOG() << "Townloop count: " << ++townloopCount << std::endl;
       setChildStateMachine<Training>(bot_, trainingAreaGeometry_->clone());
     } else if (dynamic_cast<Training*>(childState_.get())) {
       // Done training, go back to town

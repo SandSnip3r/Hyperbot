@@ -36,12 +36,14 @@ Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
   if (!bot_.selfState().inTown()) {
     // Need to get to town
     const auto returnScrollSlots = bot_.selfState().inventory.findItemsOfCategory({type_id::categories::kReturnScroll});
+    LOG() << returnScrollSlots.size() << " option(s) for return scrolls" << std::endl;
     if (!returnScrollSlots.empty()) {
       // TODO: Make a decision of which to use; for now, we just use the first.
       setChildStateMachine<UseReturnScroll>(bot_, returnScrollSlots.front());
       return;
     } else {
       // No return scrolls, we must walk to town.
+      LOG() << "No return scrolls, we must walk to town" << std::endl;
       // TODO: This will use a set of buffs for walking outside of town.
     }
   } else {
