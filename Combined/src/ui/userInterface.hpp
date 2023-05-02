@@ -32,6 +32,8 @@ public:
   void initialize();
   void setWorldState(const state::WorldState &worldState);
   void runAsync();
+
+  void broadcastLaunch();
 private:
   zmq::context_t context_;
   zmq::socket_t publisher_{context_, zmq::socket_type::pub};

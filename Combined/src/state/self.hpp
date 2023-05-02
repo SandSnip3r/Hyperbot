@@ -159,7 +159,7 @@ public:
   packet::structures::ItemMovement getUserPurchaseRequest() const;
   // =========================================================
 
-  std::mutex selfMutex;
+  mutable std::mutex selfMutex;
   // =======================Log in state======================
   uint16_t shardId;
   bool connectedToAgentServer{false};

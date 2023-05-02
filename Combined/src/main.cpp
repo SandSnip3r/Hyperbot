@@ -53,6 +53,7 @@ public:
       Session session{gameData_, config_, eventBroker_};
       session.initialize();
       userInterface.setWorldState(session.getWorldState());
+      userInterface.broadcastLaunch();
       session.run();
     } catch (const std::exception &ex) {
       LOG() << "Error while running session: \"" << ex.what() << '"' << std::endl;

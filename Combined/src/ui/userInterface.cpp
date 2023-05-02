@@ -120,6 +120,13 @@ void UserInterface::runAsync() {
   thr_ = std::thread(&UserInterface::run, this);
 }
 
+void UserInterface::broadcastLaunch() {
+  // Broadcast that we just started. If there's a UI out there, this lets it know that we've freshly started the bot and it can reset its state.
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcastMessage.mutable_launch();
+  broadcast(broadcastMessage);
+}
+
 void UserInterface::subscribeToEvents() {
   auto eventHandleFunction = std::bind(&UserInterface::handleEvent, this, std::placeholders::_1);
 
@@ -155,6 +162,8 @@ void UserInterface::subscribeToEvents() {
 }
 
 void UserInterface::handleEvent(const event::Event *event) {
+  std::unique_lock<std::mutex> selfStateLock(worldState_->selfState().selfMutex);
+
   try {
     const auto eventCode = event->eventCode;
 
