@@ -97,6 +97,11 @@ float MobileEntity::currentSpeed() const {
   return privateCurrentSpeed();
 }
 
+sro::Position MobileEntity::positionAfterTime(float seconds) const {
+  const auto futureTime = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(static_cast<std::chrono::microseconds::rep>(seconds * 1'000'000));
+  return interpolateCurrentPosition(futureTime);
+}
+
 void MobileEntity::setSpeed(float walkSpeed, float runSpeed, broker::EventBroker &eventBroker) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
   std::lock_guard<std::mutex> lock(mutex_);
@@ -228,37 +233,32 @@ sro::Position MobileEntity::interpolateCurrentPosition(const std::chrono::high_r
   if (!moving()) {
     return position_;
   }
-  auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-startedMovingTime).count();
+  const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-startedMovingTime).count();
   if (destinationPosition) {
     auto totalDistance = sro::position_math::calculateDistance2d(position_, *destinationPosition);
     if (totalDistance < 0.0001 /* TODO: Use a double equal function */) {
       // We're at our destination
       return *destinationPosition;
     }
-    auto expectedTravelTimeSeconds = totalDistance / privateCurrentSpeed();
-    double percentTraveled = (elapsedTimeMs/1000.0) / expectedTravelTimeSeconds;
+    const auto expectedTravelTimeSeconds = totalDistance / privateCurrentSpeed();
+    const double percentTraveled = (elapsedTimeMs/1000.0) / expectedTravelTimeSeconds;
     if (percentTraveled < 0) {
       throw std::runtime_error("Self: Traveled negative distance");
     } else if (percentTraveled == 0) {
       return position_;
-    } else if (percentTraveled == 1) {
-      // TODO: I think this case should actually just be >=1
-      //  It doesnt make much sense to travel past our destination position, that just means our timer is off, i think
+    } else if (percentTraveled >= 1) {
+      //  It doesnt make much sense to travel past our destination position, that just means our timer is off. We'll truncate to the destination position.
+      if (percentTraveled == std::numeric_limits<double>::infinity()) {
+        throw std::runtime_error("Traveled an infinite distance.");
+      }
       return *destinationPosition;
     } else {
-      const auto resultPos = sro::position_math::interpolateBetweenPoints(position_, *destinationPosition, percentTraveled);
-      if (percentTraveled > 1) {
-        LOG() << "Traveled past destination (" << percentTraveled << ")" << std::endl;
-        if (percentTraveled == std::numeric_limits<double>::infinity()) {
-          throw std::runtime_error("Nooo");
-        }
-      }
-      return resultPos;
+      return sro::position_math::interpolateBetweenPoints(position_, *destinationPosition, percentTraveled);
     }
   } else {
-    float angleRadians = angle_/static_cast<float>(std::numeric_limits<std::remove_reference_t<decltype(angle_)>>::max()) * sro::constants::k2Pi;
-    float xOffset = std::cos(angleRadians) * privateCurrentSpeed() * (elapsedTimeMs/1000.0);
-    float zOffset = std::sin(angleRadians) * privateCurrentSpeed() * (elapsedTimeMs/1000.0);
+    const float angleRadians = angle_/static_cast<float>(std::numeric_limits<std::remove_reference_t<decltype(angle_)>>::max()) * sro::constants::k2Pi;
+    const float xOffset = std::cos(angleRadians) * privateCurrentSpeed() * (elapsedTimeMs/1000.0);
+    const float zOffset = std::sin(angleRadians) * privateCurrentSpeed() * (elapsedTimeMs/1000.0);
     return sro::position_math::createNewPositionWith2dOffset(position_, xOffset, zOffset);
   }
 }

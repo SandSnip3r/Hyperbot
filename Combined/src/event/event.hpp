@@ -60,8 +60,6 @@ enum class EventCode {
   kOurCommandError,
   // TODO: Refactor this whole itemUsedTimeout concept
   kItemUseTimeout,
-
-  // Only used for sending to UI
   kEntityMovementBegan,
 
   // Only used to directly update movement state of entity

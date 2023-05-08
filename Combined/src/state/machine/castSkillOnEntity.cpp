@@ -12,13 +12,6 @@ namespace state::machine {
 
 CastSkillOnEntity::CastSkillOnEntity(Bot &bot, sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::EntityGlobalId targetGlobalId, const sro::Position &positionForSkillUse) : StateMachine(bot), skillRefId_(skillRefId), targetGlobalId_(targetGlobalId), positionForSkillUse_(positionForSkillUse) {
   stateMachineCreated(kName);
-
-  if (sro::position_math::calculateDistance2d(bot_.selfState().position(), positionForSkillUse_) > bot_.gameData().skillData().getSkillById(skillRefId).actionRange) {
-    // Not close enough to cast the skill.
-    setChildStateMachine<Walking>(bot_, positionForSkillUse_);
-  } else {
-    // We are close enough to cast the skill from where we stand
-  }
 }
 
 CastSkillOnEntity::~CastSkillOnEntity() {
@@ -26,7 +19,26 @@ CastSkillOnEntity::~CastSkillOnEntity() {
 }
 
 void CastSkillOnEntity::onUpdate(const event::Event *event) {
-  // TODO: If we're walking and the target entity changes its movement, we would need to interrupt. Rather than change the navigation plan here, we should abort and delegate back to the parent to figure out what to do.
+  // If we're walking and the target entity changes its movement, we need to abort. We don't know where to navigate to anymore and we should abort and delegate back to the parent to figure out what to do.
+  if (event != nullptr) {
+    if (const auto *entityMovementBegan = dynamic_cast<const event::EntityMovementBegan*>(event)) {
+      if (entityMovementBegan->globalId == targetGlobalId_) {
+        // The target that we're going to attack has changed their movement pattern. Interrupt the child state only if we're walking. If we're already casting a skill, there's nothing to do.
+        if (childState_ && dynamic_cast<const Walking*>(childState_.get()) != nullptr) {
+          if (entityMovementBeganEventsBeforeWalking_.find(event) == entityMovementBeganEventsBeforeWalking_.end()) {
+            // This event came while we were walking, not before.
+            // We are only walking to the target, we can safely abort.
+            childState_.reset();
+            done_ = true;
+            return;
+          }
+        } else {
+          // We're not walking, save this event so that if we recurse with this event while walking, we dont mistake it for a reason to abort.
+          entityMovementBeganEventsBeforeWalking_.emplace(event);
+        }
+      }
+    }
+  }
 
   if (childState_) {
     // Have a child state, it takes priority
@@ -47,6 +59,14 @@ void CastSkillOnEntity::onUpdate(const event::Event *event) {
 
   if (done_) {
     // Nothing else to do.
+    return;
+  }
+
+  if (sro::position_math::calculateDistance2d(bot_.selfState().position(), positionForSkillUse_) > bot_.gameData().skillData().getSkillById(skillRefId_).actionRange) {
+    // TODO: This distance calculation isn't quite the same as what we use when figuring out where to walk to.
+    // Not close enough to cast the skill. First walk to the target.
+    setChildStateMachine<Walking>(bot_, positionForSkillUse_);
+    onUpdate(event);
     return;
   }
 
