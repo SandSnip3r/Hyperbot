@@ -13,9 +13,9 @@ struct NetworkReadyPosition {
 public:
   NetworkReadyPosition(const sro::Position &pos);
   sro::Position asSroPosition() const;
+  static sro::Position truncateForNetwork(const sro::Position &pos);
 private:
   sro::Position convertedPosition_;
-  static sro::Position truncateForNetwork(const sro::Position &pos);
 };
 
 class ClientAgentCharacterMoveRequest {

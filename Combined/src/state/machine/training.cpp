@@ -12,6 +12,10 @@
 #include "state/machine/pickItemWithCos.hpp"
 #include "type_id/categories.hpp"
 
+// Pathfinder
+#include "math_helpers.h"
+
+#include <silkroad_lib/constants.h>
 #include <silkroad_lib/position_math.h>
 
 #include <algorithm>
@@ -324,15 +328,27 @@ void Training::onUpdate(const event::Event *event) {
       }
     }
     LOG() << "Trying to attack a monster; we have " << availableSkills.size() << " available skill(s)" << std::endl;
-    PacketContainer attackPacket;
     if (availableSkills.empty()) {
       // No available skills
       LOG() << "No available skills" << std::endl;
     } else {
       const auto [target, attackRefId] = getTargetAndAttackSkill(monstersInRange, availableSkills);
-      // TODO: This calculation of finding where to walk is duplicated. When CastSkillOnEntity is constructed, it will calculate the same.
       const auto destinationPosition = calculateWhereToWalkToAttackEntityWithSkill(target, attackRefId);
-      setChildStateMachine<CastSkillOnEntity>(bot_, attackRefId, target->globalId, destinationPosition);
+      // TODO: Combine the two cases below.
+      if (destinationPosition) {
+        // Need to walk to cast skill on entity.
+        setChildStateMachine<CastSkillOnEntity>(bot_, attackRefId, target->globalId, *destinationPosition);
+      } else {
+        // We are within range to cast skill.
+        CastSkillStateMachineBuilder castSkillBuilder(bot_, attackRefId);
+        castSkillBuilder.withTarget(target->globalId);
+        const auto &skillData = bot_.gameData().skillData().getSkillById(attackRefId);
+        const auto weaponSlot = getInventorySlotOfWeaponForSkill(skillData, bot_);
+        if (weaponSlot) {
+          castSkillBuilder.withWeapon(*weaponSlot);
+        }
+        setChildStateMachine(castSkillBuilder.create());
+      }
       onUpdate(event);
       return;
     }
@@ -351,10 +367,90 @@ void Training::onUpdate(const event::Event *event) {
   }
 }
 
-sro::Position Training::calculateWhereToWalkToAttackEntityWithSkill(const entity::MobileEntity *entity, sro::scalar_types::ReferenceObjectId attackRefId) {
-  // TODO: We're walking to the wrong spot
-  const auto res = calculatePathToDestination(entity->position(), bot_);
-  return entity->position();
+std::optional<sro::Position> Training::calculateWhereToWalkToAttackEntityWithSkill(const entity::MobileEntity *entity, sro::scalar_types::ReferenceObjectId attackRefId) {
+  const auto selfCurrentPosition = bot_.selfState().position();
+  const auto &skill = bot_.gameData().skillData().getSkillById(attackRefId);
+  const double skillRangeMinusRounding = std::max(0.0, skill.actionRange - sro::constants::kSqrtHalf);
+  if (sro::position_math::calculateDistance2d(selfCurrentPosition, entity->position()) <= skillRangeMinusRounding) {
+    // We are already close enough.
+    return {};
+  }
+
+  auto calculateDestination = [&](const sro::Position &targetPos) {
+    // We don't need to walk completely to the position of the target, instead, we will take the path to the target, and find the earliest point on that path which is within range of the target.
+    const auto pathToDestination = calculatePathToDestination(targetPos, bot_);
+    if (pathToDestination.size() < 2) {
+      throw std::runtime_error("Path to target has fewer than two points. We expect this path to at least contain the starting pos and end pos.");
+    }
+    // Find the last point in the path which is outside of range of the target.
+    int index = -1;
+    for (int i=pathToDestination.size()-2; i>=0; --i) {
+      const auto pos = pathToDestination.at(i).asSroPosition();
+      if (sro::position_math::calculateDistance2d(targetPos, pos) > skillRangeMinusRounding) {
+        // This point is outside of range of the target.
+        index = i;
+        break;
+      }
+    }
+    if (index == -1) {
+      throw std::runtime_error("No point on the path it outside of range of the target.");
+    }
+    if (index < pathToDestination.size()-2) {
+      // There are multiple segments which are inside the radius, this probably means we're avoiding an obstacle
+      // TODO: We should pick the second to last position, since that is probably the first position which has direct line of sight to the target.
+      LOG() << std::string(600,' ') << "\nMultiple segments within range of target!!!!\n" << std::string(600,' ') << std::endl;
+    }
+    // Find where the line pathToDestination[index] -> pathToDestination[index+1] intersects with the circle defined around the target with the radius as the range of the skill.
+    // First, convert both points to pathfinder::Vectors.
+
+    const auto [res0X, res0Z] = sro::position_math::calculateOffsetInOtherRegion(pathToDestination.at(index).asSroPosition(), targetPos);
+    const auto [res1X, res1Z] = sro::position_math::calculateOffsetInOtherRegion(pathToDestination.at(index+1).asSroPosition(), targetPos);
+    const pathfinder::Vector res0Vector(res0X, res0Z), res1Vector(res1X, res1Z), centerOfCircleVector(targetPos.xOffset(), targetPos.zOffset());
+    pathfinder::Vector out0, out1;
+    const int intersectionCount = pathfinder::math::lineSegmentIntersectsWithCircle(res1Vector, res0Vector, centerOfCircleVector, skillRangeMinusRounding, &out0, &out1);
+    if (intersectionCount != 1) {
+      throw std::runtime_error("Expecting there to be exactly one intersection point");
+    }
+    auto destinationSroPos = sro::Position(targetPos.regionId(), out0.x(), targetPos.yOffset(), out0.y()); // TODO: Y is bogus.
+    return packet::building::NetworkReadyPosition::truncateForNetwork(destinationSroPos);
+  };
+
+  auto destinationPos = calculateDestination(entity->position());
+  if (entity->moving()) {
+    // Run an iterative algorithm to walk to where the target will be by the time we get there.
+    int remainingRecalculationCount = 10;
+    const float kDistanceTolerance = 0.01;
+    while (1) {
+      // We already calculated a destination that we want to walk to.
+      // First calculate how long it will take us to get there.
+      const auto distanceToDestination = sro::position_math::calculateDistance2d(selfCurrentPosition, destinationPos);
+      const auto timeToGetToCurrentDest = distanceToDestination / bot_.selfState().currentSpeed();
+
+      // Next, calculate where the target will be after that amount of time.
+      const auto targetNewPos = entity->positionAfterTime(timeToGetToCurrentDest);
+
+      // Now, check if our calculated destination is close enough to the predicted target position.
+      const auto distanceToNewTargetPos = sro::position_math::calculateDistance2d(destinationPos, targetNewPos);
+      if (std::abs(skillRangeMinusRounding-distanceToNewTargetPos) <= kDistanceTolerance) {
+        // We want to get as close as possible to the shortest distance.
+        //  If the target is running away from us, we'll calculate that we need to go farther.
+        //  If the target is running at us, we'll calculate that we dont need to go as far.
+        // We're close enough
+        break;
+      }
+
+      // Not close enough, recalculate and try to go to where the target will be
+      destinationPos = calculateDestination(targetNewPos);
+
+      // Limit the number of iterations of this algorithm.
+      --remainingRecalculationCount;
+      if (remainingRecalculationCount == 0) {
+        // Exhausted allowed computation limit
+        break;
+      }
+    }
+  }
+  return destinationPos;
 }
 
 bool Training::done() const {

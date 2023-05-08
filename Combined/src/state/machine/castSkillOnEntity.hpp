@@ -7,6 +7,7 @@
 #include <silkroad_lib/scalar_types.h>
 
 #include <optional>
+#include <set>
 
 namespace state::machine {
 
@@ -21,6 +22,7 @@ private:
   const sro::scalar_types::ReferenceObjectId skillRefId_;
   const sro::scalar_types::EntityGlobalId targetGlobalId_;
   const sro::Position positionForSkillUse_;
+  std::set<const event::Event*> entityMovementBeganEventsBeforeWalking_;
   bool done_{false};
 };
 

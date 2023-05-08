@@ -171,6 +171,8 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
 void PacketProcessor::resetDataBecauseCharacterSpawned() const {
   // On teleport, COS will have different globaIds
   worldState_.selfState().cosInventoryMap.clear();
+  // Reset existing buffs
+  worldState_.selfState().buffs.clear();
 }
 
 // ============================================================================================================================

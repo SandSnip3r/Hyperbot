@@ -644,6 +644,7 @@ void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
       // packetBroker_.injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
     }
   }
+  onUpdate(&event);
 }
 
 void Bot::itemUseTimedOut(const event::ItemUseTimeout &event) {
