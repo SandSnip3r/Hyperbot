@@ -84,6 +84,7 @@ public:
   bool moving() const;
   virtual sro::Position position() const override;
   float currentSpeed() const;
+  sro::Position positionAfterTime(float seconds) const;
 
   void setSpeed(float walkSpeed, float runSpeed, broker::EventBroker &eventBroker);
   void setAngle(sro::Angle angle, broker::EventBroker &eventBroker);

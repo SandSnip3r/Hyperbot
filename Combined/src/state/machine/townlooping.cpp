@@ -1,3 +1,4 @@
+#include "castSkill.hpp"
 #include "talkingToShopNpc.hpp"
 #include "talkingToStorageNpc.hpp"
 #include "townlooping.hpp"
@@ -12,50 +13,9 @@ namespace state::machine {
 
 Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
   stateMachineCreated(kName);
-  // Build a shopping list
-  // TODO: This should be based on a botting config
-  shoppingList_ = {
-    { 8, 5 }, //ITEM_ETC_HP_POTION_05 (XL hp potion)
-    { 15, 5 }, //ITEM_ETC_MP_POTION_05 (XL mp potion)
-    { 59, 50 }, //ITEM_ETC_CURE_ALL_05 (M special universal pill)
-    { 10377, 50 }, //ITEM_ETC_CURE_RANDOM_04 (XL purification pill)
-    // { 2198, 50 }, //ITEM_ETC_SCROLL_RETURN_02 (Special Return Scroll)
-    // { 62, 1000 }, //ITEM_ETC_AMMO_ARROW_01 (Arrow)
-    // { 3909, 1 }, //ITEM_COS_C_DHORSE1 (Ironclad Horse)
-  };
-
-  // Figure out which npcs we want to visit and in what order
-  // TODO: This list should be constructed dynamically based on what we need to do in town
-  npcsToVisit_ = { Npc::kStorage, Npc::kPotion , Npc::kGrocery, Npc::kBlacksmith, Npc::kProtector, Npc::kStable };
-
-  if (npcsToVisit_.empty()) {
-    LOG() << "No NPCs to visit in townloop" << std::endl;
-    return;
-  }
-
-  if (!bot_.selfState().inTown()) {
-    // Need to get to town
-    const auto returnScrollSlots = bot_.selfState().inventory.findItemsOfCategory({type_id::categories::kReturnScroll});
-    LOG() << returnScrollSlots.size() << " option(s) for return scrolls" << std::endl;
-    if (!returnScrollSlots.empty()) {
-      // TODO: Make a decision of which to use; for now, we just use the first.
-      setChildStateMachine<UseReturnScroll>(bot_, returnScrollSlots.front());
-      return;
-    } else {
-      // No return scrolls, we must walk to town.
-      LOG() << "No return scrolls, we must walk to town" << std::endl;
-      // TODO: This will use a set of buffs for walking outside of town.
-    }
-  } else {
-    // We are in town. Walk to the first NPC.
-    // TODO: This will use a set of buffs for walking inside of town.
-  }
-
-  // For now, we just have one set of buffs for townlooping, no matter where we are
-  // Check if we need to activate any of these buffs
-
-  // Initialize state as walking to first NPC
-  setChildStateMachine<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
+  buildBuffList();
+  buildShoppingList();
+  buildNpcList();
 }
 
 Townlooping::~Townlooping() {
@@ -66,38 +26,104 @@ void Townlooping::onUpdate(const event::Event *event) {
   if (done()) {
     return;
   }
-  if (!childState_) {
-    throw std::runtime_error("Not valid for childState_ to be empty");
-  }
-  childState_->onUpdate(event);
-  if (childState_->done()) {
-    // Figure out what to do next
+
+  if (childState_) {
+    childState_->onUpdate(event);
+    if (!childState_->done()) {
+      // Child still running, nothing to do.
+      return;
+    }
+    // Child state is done, figure out what to do next.
     if (dynamic_cast<Walking*>(childState_.get()) != nullptr) {
-      // Done walking, advance state
+      // Done walking, update state to have us now talk to the NPC we just arrived at.
+      // Doing it this way means that there's no opportunity to cast buffs before talking to the NPC, but I think that's ok.
       if (npcsToVisit_[currentNpcIndex_] == Npc::kStorage) {
         setChildStateMachine<TalkingToStorageNpc>(bot_);
       } else {
         setChildStateMachine<TalkingToShopNpc>(bot_, npcsToVisit_[currentNpcIndex_], shoppingList_);
       }
-    } else {
-      // childState_ is UseReturnScroll, TalkingToStorageNpc, or TalkingToShopNpc
-      if (dynamic_cast<UseReturnScroll*>(childState_.get()) == nullptr) {
-        // childState_ is TalkingToStorageNpc or TalkingToShopNpc
-        // We just finished with an npc, move to the next.
-        ++currentNpcIndex_;
-        if (done()) {
-          // No more Npcs, done with townloop
-          LOG() << "No more npcs to visit, done with townloop" << std::endl;
-          return;
-        }
+      onUpdate(event);
+      return;
+    } else if (dynamic_cast<TalkingToStorageNpc*>(childState_.get()) != nullptr ||
+               dynamic_cast<TalkingToShopNpc*>(childState_.get()) != nullptr) {
+      // We just finished with an npc, advance our state.
+      ++currentNpcIndex_;
+      if (done()) {
+        // No more Npcs, done with townloop
+        LOG() << "No more npcs to visit, done with townloop" << std::endl;
+        return;
       }
-
       // Update our state to walk to the next npc.
       setChildStateMachine<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
+      onUpdate(event);
+      return;
+    } else if (dynamic_cast<UseReturnScroll*>(childState_.get()) != nullptr) {
+      // Finished using a return scroll
+      waitingForSpawn_ = true;
+    } else {
+      throw std::runtime_error("Unknown child state type");
     }
+    childState_.reset();
+  }
+
+  if (event != nullptr) {
+    // Originally, I thought that once we received the Character Data packet, we were spawned and could begin to act, but It seems like we cannot do anything for a little time after that. The server wont even ack our sent packets. Instead, it seems that we consistently get a state update packet shortly after spawning. We'll use that as an indication that we've spawned and can begin taking actions. For non-GM characters, the first body state is BodyState::kUntouchable.
+    if (const auto *bodyStateChangedEvent = dynamic_cast<const event::EntityBodyStateChanged*>(event)) {
+      if (bodyStateChangedEvent->globalId == bot_.selfState().globalId) {
+        waitingForSpawn_ = false;
+      }
+    }
+  }
+
+  if (waitingForSpawn_) {
+    return;
+  }
+
+  // First, check if we're out of town and have a return scroll to use
+  if (!bot_.worldState().selfState().inTown()) {
+    // Not in town
+    const auto returnScrollSlots = bot_.selfState().inventory.findItemsOfCategory({type_id::categories::kReturnScroll});
+    if (!returnScrollSlots.empty()) {
+      if (sanityCheckUsedReturnScroll_) {
+        throw std::runtime_error("We already used a return scroll and want to use another. Something is wrong");
+      }
+      // TODO: Make a decision of which to use; for now, we just use the first.
+      setChildStateMachine<UseReturnScroll>(bot_, returnScrollSlots.front());
+      onUpdate(event);
+      sanityCheckUsedReturnScroll_ = true;
+      return;
+    }
+  }
+
+  // We're either in town, or out of town and must walk to town. In either case, make sure we're buffed up, and walk to the next NPC.
+  // First, try to cast buffs.
+  const auto nextBuffToCast = getNextBuffToCast();
+  if (nextBuffToCast) {
+    auto castSkillBuilder = CastSkillStateMachineBuilder(bot_, *nextBuffToCast);
+    const auto &buffData = bot_.gameData().skillData().getSkillById(*nextBuffToCast);
+
+    // Does the buff require a specific weapon to be equipped to cast?
+    const auto weaponSlot = getInventorySlotOfWeaponForSkill(buffData, bot_);
+    // Note: It is also possible that a skill requires a shield (shield bash)
+    if (weaponSlot) {
+      castSkillBuilder.withWeapon(*weaponSlot);
+    }
+
+    // TODO: Shield too?
+
+    if (buffData.targetRequired) {
+      // TODO: We assume this buff is for ourself
+      castSkillBuilder.withTarget(bot_.selfState().globalId);
+    }
+
+    setChildStateMachine(castSkillBuilder.create());
     onUpdate(event);
     return;
   }
+
+  // Done with buffs, walk to next NPC.
+  setChildStateMachine<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
+  onUpdate(event);
 }
 
 bool Townlooping::done() const {
@@ -131,11 +157,29 @@ void Townlooping::buildBuffList() {
     const auto buffRequiredWeapons = buffData.reqi();
     if (!buffRequiredWeapons.empty()) {
       // Buff requires a weapon at all times
-      LOG() << "Moving buffs around. Moving " << i << " to " << backIndex << std::endl;
       std::swap(buffsToUse_[i], buffsToUse_[backIndex]);
       --backIndex;
     }
   }
+}
+
+void Townlooping::buildShoppingList() {
+  // TODO: This should be based on a botting config
+  shoppingList_ = {
+    { 8, 5 }, //ITEM_ETC_HP_POTION_05 (XL hp potion)
+    { 15, 100 }, //ITEM_ETC_MP_POTION_05 (XL mp potion)
+    { 59, 50 }, //ITEM_ETC_CURE_ALL_05 (M special universal pill)
+    { 10377, 50 }, //ITEM_ETC_CURE_RANDOM_04 (XL purification pill)
+    { 2198, 1 }, //ITEM_ETC_SCROLL_RETURN_02 (Special Return Scroll)
+    // { 62, 1000 }, //ITEM_ETC_AMMO_ARROW_01 (Arrow)
+    // { 3909, 1 }, //ITEM_COS_C_DHORSE1 (Ironclad Horse)
+  };
+}
+
+void Townlooping::buildNpcList() {
+  // Figure out which npcs we want to visit and in what order
+  // TODO: This list should be constructed dynamically based on what we need to do in town
+  npcsToVisit_ = { Npc::kStorage, Npc::kPotion , Npc::kGrocery, Npc::kBlacksmith, Npc::kProtector, Npc::kStable };
 }
 
 std::optional<sro::scalar_types::ReferenceObjectId> Townlooping::getNextBuffToCast() const {

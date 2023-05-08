@@ -26,7 +26,12 @@ private:
   size_t currentNpcIndex_{0};
   std::vector<sro::scalar_types::ReferenceObjectId> buffsToUse_;
 
+  bool sanityCheckUsedReturnScroll_{false};
+  bool waitingForSpawn_{false};
+
   void buildBuffList();
+  void buildShoppingList();
+  void buildNpcList();
   std::optional<sro::scalar_types::ReferenceObjectId> getNextBuffToCast() const;
   sro::Position positionOfNpc(Npc npc) const;
 };

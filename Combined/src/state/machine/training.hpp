@@ -32,10 +32,8 @@ private:
   const std::unique_ptr<entity::Geometry> trainingAreaGeometry_;
   std::vector<sro::scalar_types::ReferenceObjectId> buffsToUse_;
   std::vector<sro::scalar_types::ReferenceObjectId> skillsToUse_;
-  bool waitingForSkillToCast_{false};
-  bool waitingForSkillToEnd_{false};
   std::set<const event::Event*> handledEvents_;
-  sro::Position calculateWhereToWalkToAttackEntityWithSkill(const entity::MobileEntity *entity, sro::scalar_types::ReferenceObjectId attackRefId);
+  std::optional<sro::Position> calculateWhereToWalkToAttackEntityWithSkill(const entity::MobileEntity *entity, sro::scalar_types::ReferenceObjectId attackRefId);
 };
 
 } // namespace state::machine
