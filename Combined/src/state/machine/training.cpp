@@ -340,11 +340,7 @@ void Training::onUpdate(const event::Event *event) {
         setChildStateMachine<CastSkillOnEntity>(bot_, attackRefId, target->globalId, *destinationPosition);
       } else {
         // We are within range to cast skill.
-<<<<<<< HEAD
         CastSkillStateMachineBuilder castSkillBuilder(bot_, attackRefId);
-=======
-        CastSkillStateMachineBuilder castSkillBuilder(attackRefId);
->>>>>>> a1a120f3f74f130270fbc95b0d2624a977ae5e8f
         castSkillBuilder.withTarget(target->globalId);
         const auto &skillData = bot_.gameData().skillData().getSkillById(attackRefId);
         const auto weaponSlot = getInventorySlotOfWeaponForSkill(skillData, bot_);
