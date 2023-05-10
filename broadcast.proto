@@ -167,6 +167,10 @@ message StateMachineCreated {
   string name = 1;
 }
 
+message WalkingPathUpdated {
+  repeated Position waypoints = 1;
+}
+
 // Broadcast message
 
 message BroadcastMessage {
@@ -197,5 +201,6 @@ message BroadcastMessage {
     google.protobuf.Empty trainingAreaReset = 24;
     StateMachineCreated stateMachineCreated = 25;
     google.protobuf.Empty stateMachineDestroyed = 26;
+    WalkingPathUpdated walkingPathUpdated = 27;
   }
 }
