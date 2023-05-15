@@ -66,6 +66,8 @@ StateMachineCreated::StateMachineCreated(const std::string &name) : Event(EventC
 
 ItemCooldownEnded::ItemCooldownEnded(type_id::TypeId tId) : Event(EventCode::kItemCooldownEnded), typeId(tId) {}
 
+WalkingPathUpdated::WalkingPathUpdated(const std::vector<packet::building::NetworkReadyPosition> &waypoints) : Event(EventCode::kWalkingPathUpdated), waypoints(waypoints) {}
+
 NewConfigReceived::NewConfigReceived(const proto::config::Config &config_param) : Event(EventCode::kNewConfigReceived), config(config_param) {}
 
 InventoryItemUpdated::InventoryItemUpdated(const uint8_t &slot) : Event(EventCode::kInventoryItemUpdated), slotIndex(slot) {}

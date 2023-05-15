@@ -148,6 +148,8 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kPlayerCharacterBuffRemoved, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kOurCommandError, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kSkillCooldownEnded, eventHandleFunction);
+
+  eventBroker_.subscribeToEvent(event::EventCode::kStateMachineActiveTooLong, eventHandleFunction);
 }
 
 void Bot::handleEvent(const event::Event *event) {
@@ -351,6 +353,10 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
       case event::EventCode::kOurCommandError: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kStateMachineActiveTooLong: {
         onUpdate(event);
         break;
       }

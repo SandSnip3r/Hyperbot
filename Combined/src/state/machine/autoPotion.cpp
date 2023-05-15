@@ -297,7 +297,7 @@ void AutoPotion::useItem(sro::scalar_types::StorageIndexType itemIndex) {
   if (childState_) {
     throw std::runtime_error("Trying to use an item, but we already have a child state");
   }
-  setChildStateMachine<UseItem>(bot_, itemIndex);
+  setChildStateMachine<UseItem>(itemIndex);
 }
 
 } // namespace state::machine

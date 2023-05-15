@@ -24,6 +24,7 @@ private:
   const sro::Position positionForSkillUse_;
   std::set<const event::Event*> entityMovementBeganEventsBeforeWalking_;
   bool done_{false};
+  bool walked_{false};
 };
 
 } // namespace state::machine

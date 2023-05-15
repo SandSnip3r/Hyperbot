@@ -159,6 +159,7 @@ void UserInterface::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kCosInventoryUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kWalkingPathUpdated, eventHandleFunction);
 }
 
 void UserInterface::handleEvent(const event::Event *event) {
@@ -335,6 +336,13 @@ void UserInterface::handleEvent(const event::Event *event) {
       handleGuildStorageUpdated(castedEvent);
       return;
     }
+
+    if (eventCode == event::EventCode::kWalkingPathUpdated) {
+      const event::WalkingPathUpdated &castedEvent = dynamic_cast<const event::WalkingPathUpdated&>(*event);
+      handleWalkingPathUpdated(castedEvent);
+      return;
+    }
+
     LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
   } catch (std::exception &ex) {
     LOG() << "Error while handling event!\n  " << ex.what() << std::endl;
@@ -575,6 +583,15 @@ void UserInterface::handleGuildStorageUpdated(const event::GuildStorageUpdated &
   }
 }
 
+void UserInterface::handleWalkingPathUpdated(const event::WalkingPathUpdated &walkingPathUpdatedEvent) {
+  std::vector<sro::Position> waypointSroPositions;
+  waypointSroPositions.reserve(walkingPathUpdatedEvent.waypoints.size());
+  for (const auto &waypoint : walkingPathUpdatedEvent.waypoints) {
+    waypointSroPositions.emplace_back(waypoint.asSroPosition());
+  }
+  broadcastWalkingPathUpdated(waypointSroPositions);
+}
+
 void UserInterface::broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex) {
   uint16_t quantity{0};
   std::optional<std::string> itemName;
@@ -804,6 +821,15 @@ void UserInterface::broadcastStateMachineCreated(const std::string &stateMachine
 void UserInterface::broadcastStateMachineDestroyed() {
   broadcast::BroadcastMessage broadcastMessage;
   broadcastMessage.mutable_statemachinedestroyed();
+  broadcast(broadcastMessage);
+}
+
+void UserInterface::broadcastWalkingPathUpdated(const std::vector<sro::Position> &waypoints) {
+  broadcast::BroadcastMessage broadcastMessage;
+  broadcast::WalkingPathUpdated *walkingPathUpdated = broadcastMessage.mutable_walkingpathupdated();
+  for (const auto &waypoint : waypoints) {
+    setPosition(walkingPathUpdated->add_waypoints(), waypoint);
+  }
   broadcast(broadcastMessage);
 }
 

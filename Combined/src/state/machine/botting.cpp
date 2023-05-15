@@ -13,10 +13,10 @@ const sro::Position Botting::kCenterOfJangan_{25000, 951.0f, -33.0f, 1372.0f};
 
 Botting::Botting(Bot &bot) : StateMachine(bot) {
   stateMachineCreated(kName);
-  trainingSpotCenter_ = sro::Position{24742, 977.0f, 56.501f, 1127.0f }; // TODO: Need to get from botting config
-
-  // TODO: Maybe this training area belongs somewhere else
-  constexpr double kMonsterRange{800};
+  // TODO: Need to get training spot from botting config.
+  trainingSpotCenter_ = sro::Position{24742, 977.0f, 56.501f, 1127.0f }; // Southwest of Jangan, no obstacles
+  // trainingSpotCenter_ = sro::Position{24744, 1406.0f, -43.0f, 203.0f }; // South of Jangan, obstacles
+  constexpr double kMonsterRange{800.0};
   trainingAreaGeometry_ = std::make_unique<entity::Circle>(trainingSpotCenter_, kMonsterRange);
 
   initializeChildState();
@@ -29,10 +29,10 @@ void Botting::initializeChildState() {
   //  there's a chance we have everything we need, then Townlooping will immediately finish and we'll move onto the next state as per the normal flow
   if (bot_.selfState().inTown() || bot_.needToGoToTown()) {
     LOG() << "Initializing state as Townlooping" << std::endl;
-    setChildStateMachine<Townlooping>(bot_);
+    setChildStateMachine<Townlooping>();
   } else {
     LOG() << "Initializing state as Training" << std::endl;
-    setChildStateMachine<Training>(bot_, trainingAreaGeometry_->clone());
+    setChildStateMachine<Training>(trainingAreaGeometry_->clone());
   }
 }
 
@@ -52,10 +52,10 @@ void Botting::onUpdate(const event::Event *event) {
       // Done with the townloop, start training
       static int townloopCount = 0;
       LOG() << "Townloop count: " << ++townloopCount << std::endl;
-      setChildStateMachine<Training>(bot_, trainingAreaGeometry_->clone());
+      setChildStateMachine<Training>(trainingAreaGeometry_->clone());
     } else if (dynamic_cast<Training*>(childState_.get())) {
       // Done training, go back to town
-      setChildStateMachine<Townlooping>(bot_);
+      setChildStateMachine<Townlooping>();
     } else {
       throw std::runtime_error("Botting's child state is not valid");
     }

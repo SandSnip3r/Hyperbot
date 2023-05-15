@@ -67,6 +67,8 @@ Training::Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeo
     // TODO: Why do i get a Handle Read Error when I send an invalid skill?
       8204, // Crane's Thunderbolt
       7805, // Flying Dragon - Flash
+      7675, // Ghost Spear - Emperor
+      // 885, // Chain Spear - Shura
       8195, // Horse's Thunderbolt
 
       // Rogue
@@ -181,15 +183,21 @@ void Training::onUpdate(const event::Event *event) {
     // Have a child state, it takes priority
     childState_->onUpdate(event);
     if (childState_->done()) {
+      if (walkingToRandomPoint_ && dynamic_cast<const Walking*>(childState_.get()) != nullptr) {
+        walkingToRandomPoint_ = false;
+      }
       childState_.reset();
     } else {
-      // Dont execute anything else in this function until the child state is done
-      return;
+      if (!walkingToRandomPoint_) {
+        // Dont execute anything else in this function until the child state is done
+        return;
+      }
     }
   }
 
   if (!bot_.selfState().spawned()) {
     LOG() << "We are not spawned, nothing to do" << std::endl;
+    return;
   }
 
   if (bot_.needToGoToTown()) {
@@ -226,6 +234,7 @@ void Training::onUpdate(const event::Event *event) {
 
     LOG() << "Created child state to cast skill" << std::endl;
     setChildStateMachine(castSkillBuilder.create());
+    walkingToRandomPoint_ = false;
     onUpdate(event);
     return;
   }
@@ -239,7 +248,8 @@ void Training::onUpdate(const event::Event *event) {
       throw std::runtime_error("Not sure where to navigate to for other shapes");
     }
     LOG() << "Not in training area, navigating to the center of the training area circle: " << trainingAreaCircle->center() << std::endl;
-    setChildStateMachine<Walking>(bot_, trainingAreaCircle->center());
+    setChildStateMachine<Walking>(trainingAreaCircle->center());
+    walkingToRandomPoint_ = false;
     onUpdate(event);
     return;
   }
@@ -271,12 +281,6 @@ void Training::onUpdate(const event::Event *event) {
       }
     }
   }
-  if (!monstersInRange.empty()) {
-    LOG() << "There are " << monstersInRange.size() << " monsters in range /" << totalMonsterCount << std::endl;
-  }
-  if (!itemsInRange.empty()) {
-    LOG() << "There are " << itemsInRange.size() << " items in range /" << totalItemCount << std::endl;
-  }
 
   if (!itemsInRange.empty()) {
     // Maybe going to pick up an item, check if we're even in a state to be picking up items
@@ -305,10 +309,12 @@ void Training::onUpdate(const event::Event *event) {
           }
           const auto targetItemGlobalId = item->globalId;
           if (cosGlobalId) {
-            setChildStateMachine<PickItemWithCos>(bot_, *cosGlobalId, targetItemGlobalId);
+            setChildStateMachine<PickItemWithCos>(*cosGlobalId, targetItemGlobalId);
+            walkingToRandomPoint_ = false;
           } else {
             LOG() << "Going to pick item" << std::endl;
-            setChildStateMachine<PickItem>(bot_, targetItemGlobalId);
+            setChildStateMachine<PickItem>(targetItemGlobalId);
+            walkingToRandomPoint_ = false;
           }
           onUpdate(event);
           return;
@@ -327,17 +333,14 @@ void Training::onUpdate(const event::Event *event) {
         availableSkills.push_back(skillId);
       }
     }
-    LOG() << "Trying to attack a monster; we have " << availableSkills.size() << " available skill(s)" << std::endl;
-    if (availableSkills.empty()) {
-      // No available skills
-      LOG() << "No available skills" << std::endl;
-    } else {
+    if (!availableSkills.empty()) {
       const auto [target, attackRefId] = getTargetAndAttackSkill(monstersInRange, availableSkills);
       const auto destinationPosition = calculateWhereToWalkToAttackEntityWithSkill(target, attackRefId);
       // TODO: Combine the two cases below.
       if (destinationPosition) {
         // Need to walk to cast skill on entity.
-        setChildStateMachine<CastSkillOnEntity>(bot_, attackRefId, target->globalId, *destinationPosition);
+        setChildStateMachine<CastSkillOnEntity>(attackRefId, target->globalId, *destinationPosition);
+        walkingToRandomPoint_ = false;
       } else {
         // We are within range to cast skill.
         CastSkillStateMachineBuilder castSkillBuilder(bot_, attackRefId);
@@ -348,22 +351,26 @@ void Training::onUpdate(const event::Event *event) {
           castSkillBuilder.withWeapon(*weaponSlot);
         }
         setChildStateMachine(castSkillBuilder.create());
+        walkingToRandomPoint_ = false;
       }
       onUpdate(event);
       return;
+    } else {
+      // No available skills
+      LOG() << "Want to attack a monster but have no available skills" << std::endl;
     }
-  } else if (canMove()) {
+  } else if (!walkingToRandomPoint_ && canMove()) {
     // Nothing to attack, lets just move to a random location inside the training area
     if (bot_.selfState().moving()) {
+      LOG() << "We're not in charge of a movement, but we're moving somewhere. What's this?" << std::endl;
       // Already walking somewhere, dont interrupt
       return;
     }
     const auto destPos = packet::building::NetworkReadyPosition(randomPointInGeometry(trainingAreaGeometry_.get()));
-    LOG() << "Walking to random point. From " << bot_.selfState().position() << " to " << destPos.asSroPosition() << std::endl;
-    const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(destPos);
-    bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
-  } else {
-    LOG() << "Nothing to attack and we cant move right now" << std::endl;
+    walkingToRandomPoint_ = true;
+    setChildStateMachine<Walking>(destPos.asSroPosition(), false);
+    onUpdate(event);
+    return;
   }
 }
 
@@ -372,6 +379,7 @@ std::optional<sro::Position> Training::calculateWhereToWalkToAttackEntityWithSki
   const auto &skill = bot_.gameData().skillData().getSkillById(attackRefId);
   const double skillRangeMinusRounding = std::max(0.0, skill.actionRange - sro::constants::kSqrtHalf);
   if (sro::position_math::calculateDistance2d(selfCurrentPosition, entity->position()) <= skillRangeMinusRounding) {
+    LOG() << "Already close enough" << std::endl;
     // We are already close enough.
     return {};
   }
@@ -382,28 +390,25 @@ std::optional<sro::Position> Training::calculateWhereToWalkToAttackEntityWithSki
     if (pathToDestination.size() < 2) {
       throw std::runtime_error("Path to target has fewer than two points. We expect this path to at least contain the starting pos and end pos.");
     }
-    // Find the last point in the path which is outside of range of the target.
-    int index = -1;
-    for (int i=pathToDestination.size()-2; i>=0; --i) {
-      const auto pos = pathToDestination.at(i).asSroPosition();
-      if (sro::position_math::calculateDistance2d(targetPos, pos) > skillRangeMinusRounding) {
-        // This point is outside of range of the target.
-        index = i;
-        break;
-      }
+
+    if (skillRangeMinusRounding == 0.0) {
+      // Need to walk to the exact position of the target.
+      return packet::building::NetworkReadyPosition::truncateForNetwork(targetPos);
     }
-    if (index == -1) {
-      throw std::runtime_error("No point on the path it outside of range of the target.");
+
+    // Find the farthest point, within range, on the last straight segment towards the target.
+    const auto index = pathToDestination.size()-2;
+    const auto indexSroPos = pathToDestination.at(index).asSroPosition();
+    if (sro::position_math::calculateDistance2d(targetPos, indexSroPos) <= skillRangeMinusRounding) {
+      // This position is within range of the target, use this.
+      // TODO: Due to the way we break up long movements, I should iterate and see if the previous line segment is in line with this one, or the one before that.
+      //  Added complication, the calculated path has already rounded waypoints to integer coordinates, so it might be hard to check if two segments are actually aligned.
+      return indexSroPos;
     }
-    if (index < pathToDestination.size()-2) {
-      // There are multiple segments which are inside the radius, this probably means we're avoiding an obstacle
-      // TODO: We should pick the second to last position, since that is probably the first position which has direct line of sight to the target.
-      LOG() << std::string(600,' ') << "\nMultiple segments within range of target!!!!\n" << std::string(600,' ') << std::endl;
-    }
+
     // Find where the line pathToDestination[index] -> pathToDestination[index+1] intersects with the circle defined around the target with the radius as the range of the skill.
     // First, convert both points to pathfinder::Vectors.
-
-    const auto [res0X, res0Z] = sro::position_math::calculateOffsetInOtherRegion(pathToDestination.at(index).asSroPosition(), targetPos);
+    const auto [res0X, res0Z] = sro::position_math::calculateOffsetInOtherRegion(indexSroPos, targetPos);
     const auto [res1X, res1Z] = sro::position_math::calculateOffsetInOtherRegion(pathToDestination.at(index+1).asSroPosition(), targetPos);
     const pathfinder::Vector res0Vector(res0X, res0Z), res1Vector(res1X, res1Z), centerOfCircleVector(targetPos.xOffset(), targetPos.zOffset());
     pathfinder::Vector out0, out1;
@@ -477,6 +482,7 @@ void Training::buildBuffList() {
       8133, // God - Piercing Force
       7980, // Final Guard of Ice
       8183, // Concentration - 4th
+      7582 // Bloody Ghost Storm
 
       // Cleric
       // 11795, // Holy Recovery Division

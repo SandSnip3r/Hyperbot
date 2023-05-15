@@ -49,6 +49,9 @@ void CastSkillOnEntity::onUpdate(const event::Event *event) {
       if (dynamic_cast<const CastSkill*>(childState_.get()) != nullptr) {
         // We were casting a skill, we are now done.
         done_ = true;
+      } else if (dynamic_cast<const Walking*>(childState_.get()) != nullptr) {
+        // We were walking.
+        walked_ = true;
       }
       childState_.reset();
     } else {
@@ -62,10 +65,9 @@ void CastSkillOnEntity::onUpdate(const event::Event *event) {
     return;
   }
 
-  if (sro::position_math::calculateDistance2d(bot_.selfState().position(), positionForSkillUse_) > bot_.gameData().skillData().getSkillById(skillRefId_).actionRange) {
-    // TODO: This distance calculation isn't quite the same as what we use when figuring out where to walk to.
-    // Not close enough to cast the skill. First walk to the target.
-    setChildStateMachine<Walking>(bot_, positionForSkillUse_);
+  // No child state at this point.
+  if (!walked_) {
+    setChildStateMachine<Walking>(positionForSkillUse_);
     onUpdate(event);
     return;
   }

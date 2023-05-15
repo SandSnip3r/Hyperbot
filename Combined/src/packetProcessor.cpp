@@ -162,6 +162,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ClientAgentInventoryItemUseRequest, clientAgentInventoryItemUseRequestReceived);
   } catch (std::exception &ex) {
     LOG() << "Error while handling packet!\n  " << ex.what() << std::endl;
+    return;
   }
 
   LOG() << "Unhandled packet subscribed to " << std::hex << packet.opcode << std::dec << std::endl;
@@ -1109,11 +1110,9 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         //  Marking this skill as executed here is sufficient
         worldState_.selfState().skillEngine.acceptedCommandQueue.at(*indexOfOurSkill).wasExecuted = true;
         if (isRootSkill) {
-          // Set a timer for when the skill cooldown ends
+          // Set a timer for when the skill cooldown ends. We only do this for the root piece of the skill. If this is a chain and later piece has a cooldown too, it is probably just the same cooldown that we already set a timer for when we cast the root.
           worldState_.selfState().skillEngine.skillCooldownBegin(packet.refSkillId());
           eventBroker_.publishDelayedEvent<event::SkillCooldownEnded>(std::chrono::milliseconds(skillData.actionReuseDelay), packet.refSkillId());
-        } else if (skillData.actionReuseDelay != 0) {
-          throw std::runtime_error("Cast a non-root-skill with a cooldown!");
         }
       }
     } else {

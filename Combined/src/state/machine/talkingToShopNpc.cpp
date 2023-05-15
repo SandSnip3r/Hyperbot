@@ -177,7 +177,7 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
     if (waitingForTalkResponse_) {
       // Successfully began talking to Npc
       waitingForTalkResponse_ = false;
-      setChildStateMachine<BuyingItems>(bot_, itemsToBuy_);
+      setChildStateMachine<BuyingItems>(itemsToBuy_);
     }
 
     // Now that we are talking to the npc, start buying items

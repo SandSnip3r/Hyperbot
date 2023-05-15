@@ -26,7 +26,7 @@ UseReturnScroll::UseReturnScroll(Bot &bot, sro::scalar_types::StorageIndexType i
   if (!type_id::categories::kReturnScroll.contains(itemAsExpendable->typeData())) {
     throw std::runtime_error("Item is not a return scroll");
   }
-  setChildStateMachine<UseItem>(bot_, inventoryIndex_);
+  setChildStateMachine<UseItem>(inventoryIndex_);
 }
 
 UseReturnScroll::~UseReturnScroll() {

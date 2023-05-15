@@ -14,7 +14,7 @@ PickItem::PickItem(Bot &bot, sro::scalar_types::EntityGlobalId targetGlobalId) :
   // Initialize our self as walking to the item
   // TODO: Might not need to walk to the item; check.
   const auto &item = bot_.entityTracker().getEntity<entity::Item>(targetGlobalId_);
-  setChildStateMachine<Walking>(bot_, item.position());
+  setChildStateMachine<Walking>(item.position());
 }
 
 PickItem::~PickItem() {

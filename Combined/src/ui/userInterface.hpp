@@ -62,6 +62,7 @@ private:
   void handleCosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent);
   void handleStorageUpdated(const event::StorageUpdated &storageUpdatedEvent);
   void handleGuildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent);
+  void handleWalkingPathUpdated(const event::WalkingPathUpdated &walkingPathUpdatedEvent);
 
   void broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex);
   void broadcastCharacterSpawn();
@@ -91,6 +92,7 @@ private:
   void broadcastTrainingAreaReset();
   void broadcastStateMachineCreated(const std::string &stateMachineName);
   void broadcastStateMachineDestroyed();
+  void broadcastWalkingPathUpdated(const std::vector<sro::Position> &waypoints);
 
   void broadcast(const broadcast::BroadcastMessage &broadcastProto);
 

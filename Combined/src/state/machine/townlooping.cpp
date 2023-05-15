@@ -38,9 +38,9 @@ void Townlooping::onUpdate(const event::Event *event) {
       // Done walking, update state to have us now talk to the NPC we just arrived at.
       // Doing it this way means that there's no opportunity to cast buffs before talking to the NPC, but I think that's ok.
       if (npcsToVisit_[currentNpcIndex_] == Npc::kStorage) {
-        setChildStateMachine<TalkingToStorageNpc>(bot_);
+        setChildStateMachine<TalkingToStorageNpc>();
       } else {
-        setChildStateMachine<TalkingToShopNpc>(bot_, npcsToVisit_[currentNpcIndex_], shoppingList_);
+        setChildStateMachine<TalkingToShopNpc>(npcsToVisit_[currentNpcIndex_], shoppingList_);
       }
       onUpdate(event);
       return;
@@ -54,14 +54,12 @@ void Townlooping::onUpdate(const event::Event *event) {
         return;
       }
       // Update our state to walk to the next npc.
-      setChildStateMachine<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
+      setChildStateMachine<Walking>(positionOfNpc(npcsToVisit_[currentNpcIndex_]));
       onUpdate(event);
       return;
     } else if (dynamic_cast<UseReturnScroll*>(childState_.get()) != nullptr) {
       // Finished using a return scroll
       waitingForSpawn_ = true;
-    } else {
-      throw std::runtime_error("Unknown child state type");
     }
     childState_.reset();
   }
@@ -88,7 +86,7 @@ void Townlooping::onUpdate(const event::Event *event) {
         throw std::runtime_error("We already used a return scroll and want to use another. Something is wrong");
       }
       // TODO: Make a decision of which to use; for now, we just use the first.
-      setChildStateMachine<UseReturnScroll>(bot_, returnScrollSlots.front());
+      setChildStateMachine<UseReturnScroll>(returnScrollSlots.front());
       onUpdate(event);
       sanityCheckUsedReturnScroll_ = true;
       return;
@@ -122,7 +120,7 @@ void Townlooping::onUpdate(const event::Event *event) {
   }
 
   // Done with buffs, walk to next NPC.
-  setChildStateMachine<Walking>(bot_, positionOfNpc(npcsToVisit_[currentNpcIndex_]));
+  setChildStateMachine<Walking>(positionOfNpc(npcsToVisit_[currentNpcIndex_]));
   onUpdate(event);
 }
 

@@ -4,6 +4,7 @@
 namespace state::machine {
 
 StateMachine::StateMachine(Bot &bot) : bot_(bot) {
+  debugEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::minutes(15), event::EventCode::kStateMachineActiveTooLong);
 }
 
 StateMachine::~StateMachine() {
@@ -11,6 +12,7 @@ StateMachine::~StateMachine() {
   for (const auto opcode : blockedOpcodes_) {
     bot_.proxy().unblockOpcode(opcode);
   }
+  bot_.eventBroker().cancelDelayedEvent(debugEventId_);
 }
 
 void StateMachine::pushBlockedOpcode(packet::Opcode opcode) {

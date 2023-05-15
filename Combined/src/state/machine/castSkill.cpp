@@ -102,6 +102,16 @@ CastSkill::~CastSkill() {
 }
 
 void CastSkill::onUpdate(const event::Event *event) {
+  bool megaDebug{false};
+  if (event != nullptr && event->eventCode == event::EventCode::kStateMachineActiveTooLong) {
+    LOG() << "We seem to be stuck." << std::endl;
+    LOG() << "expectingSkillCommandFailure_: " << expectingSkillCommandFailure_ << std::endl;
+    LOG() << "waitingForSkillToCast_: " << waitingForSkillToCast_ << std::endl;
+    LOG() << "waitingForSkillToEnd_: " << waitingForSkillToEnd_ << std::endl;
+    LOG() << "done_: " << done_ << std::endl;
+    megaDebug = true;
+  }
+
   if (childState_) {
     // Have a child state, it takes priority
     childState_->onUpdate(event);
@@ -230,12 +240,13 @@ void CastSkill::onUpdate(const event::Event *event) {
 
   if (bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown) {
     // Cannot cast a skill right now
+    if (megaDebug) LOG() << "stunned from kb or kd" << std::endl;
     return;
   }
 
   if (weaponSlot_) {
     // Need to move weapon, create child state to do so
-    setChildStateMachine<MoveItemInInventory>(bot_, *weaponSlot_, kWeaponInventorySlot_);
+    setChildStateMachine<MoveItemInInventory>(*weaponSlot_, kWeaponInventorySlot_);
     // We assume that the child state will complete successfully, so we will reset the weaponSlot_ here
     weaponSlot_.reset();
     onUpdate(event);
@@ -244,7 +255,7 @@ void CastSkill::onUpdate(const event::Event *event) {
 
   if (shieldSlot_) {
     // Need to move shield, create child state to do so
-    setChildStateMachine<MoveItemInInventory>(bot_, *shieldSlot_, kShieldInventorySlot_);
+    setChildStateMachine<MoveItemInInventory>(*shieldSlot_, kShieldInventorySlot_);
     // We assume that the child state will complete successfully, so we will reset the shieldSlot_ here
     shieldSlot_.reset();
     onUpdate(event);
@@ -254,6 +265,7 @@ void CastSkill::onUpdate(const event::Event *event) {
   // At this point, the required equipment is equipped
   if (waitingForSkillToCast_ || waitingForSkillToEnd_) {
     // Still waiting on skill
+    if (megaDebug) LOG() << "still waiting on skill" << std::endl;
     return;
   }
 

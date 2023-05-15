@@ -24,6 +24,7 @@ public:
   bool done() const override;
 private:
   static inline std::string kName{"Training"};
+  bool walkingToRandomPoint_{false};
   bool done_{false};
   bool wantToAttackMonster(const entity::Monster &monster) const;
   void buildBuffList();

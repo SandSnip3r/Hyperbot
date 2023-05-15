@@ -10,11 +10,16 @@
 
 namespace state::machine {
 
+namespace {
+
+packet::building::NetworkReadyPosition posToNearestNetworkReadyPos(const sro::Position &pos) {
+  const sro::Position roundedPos(pos.regionId(), std::round(pos.xOffset()), std::round(pos.yOffset()), std::round(pos.zOffset()));
+  return packet::building::NetworkReadyPosition(roundedPos);
+}
+
+}
+
 std::vector<packet::building::NetworkReadyPosition> calculatePathToDestination(const sro::Position &destinationPosition, const Bot &bot) {
-  auto posToNearestNetworkReadyPos = [](const sro::Position &pos){
-    const sro::Position roundedPos(pos.regionId(), std::round(pos.xOffset()), std::round(pos.yOffset()), std::round(pos.zOffset()));
-    return packet::building::NetworkReadyPosition(roundedPos);
-  };
   // Since we can only move to positions on whole integers, find the closest possible point to the destination position while also accounting for the transformation that happens to the packet while being converted to be sent over the network
   const auto networkReadyPos = posToNearestNetworkReadyPos(destinationPosition);
   const auto closestDestinationPosition = networkReadyPos.asSroPosition();
@@ -94,7 +99,7 @@ std::vector<packet::building::NetworkReadyPosition> calculatePathToDestination(c
     }
   };
 
-  auto convertWaypointsToNetworkReadyPoints = [&posToNearestNetworkReadyPos](const std::vector<sro::Position> &waypoints) {
+  auto convertWaypointsToNetworkReadyPoints = [](const std::vector<sro::Position> &waypoints) {
     std::vector<packet::building::NetworkReadyPosition> result;
     result.reserve(waypoints.size());
     for (const auto &pos : waypoints) {
@@ -128,13 +133,22 @@ std::vector<packet::building::NetworkReadyPosition> calculatePathToDestination(c
   }
 }
 
-Walking::Walking(Bot &bot, const sro::Position &destinationPosition) : StateMachine(bot) {
+Walking::Walking(Bot &bot, const sro::Position &destinationPosition, bool pathfindToDestination) : StateMachine(bot) {
   stateMachineCreated(kName);
-  waypoints_ = calculatePathToDestination(destinationPosition, bot_);
+  if (pathfindToDestination) {
+    waypoints_ = calculatePathToDestination(destinationPosition, bot_);
+  } else {
+    waypoints_ = {
+      posToNearestNetworkReadyPos(bot_.selfState().position()),
+      posToNearestNetworkReadyPos(destinationPosition)
+    };
+  }
+  bot_.eventBroker().publishEvent<event::WalkingPathUpdated>(std::vector<packet::building::NetworkReadyPosition>(waypoints_.begin(), waypoints_.end()));
   pushBlockedOpcode(packet::Opcode::kClientAgentCharacterMoveRequest);
 }
 
 Walking::~Walking() {
+  bot_.eventBroker().publishEvent<event::WalkingPathUpdated>(std::vector<packet::building::NetworkReadyPosition>());
   stateMachineDestroyed();
 }
 
@@ -144,7 +158,7 @@ void Walking::onUpdate(const event::Event *event) {
     return;
   }
 
-  if (event) {
+  if (event != nullptr) {
     if (const auto *movementBeganEvent = dynamic_cast<const event::EntityMovementBegan*>(event); movementBeganEvent != nullptr && movementBeganEvent->globalId == bot_.selfState().globalId) {
       // We started to move, our movement request must've been successful
       if (movementRequestTimeoutEventId_) {
@@ -175,13 +189,18 @@ void Walking::onUpdate(const event::Event *event) {
 
   // We're not moving
   // Did we just arrive at this waypoint?
+  bool updatedCurrentWaypoint{false};
   while (currentWaypointIndex_ < waypoints_.size() && sro::position_math::calculateDistance2d(bot_.selfState().position(), waypoints_.at(currentWaypointIndex_).asSroPosition()) < sqrt(0.5)) {
     // Already at this waypoint, increment index
     ++currentWaypointIndex_;
+    updatedCurrentWaypoint = true;
   }
   if (done()) {
     // Finished walking
     return;
+  }
+  if (updatedCurrentWaypoint) {
+    bot_.eventBroker().publishEvent<event::WalkingPathUpdated>(std::vector<packet::building::NetworkReadyPosition>(waypoints_.begin()+currentWaypointIndex_-1, waypoints_.end()));
   }
 
   // Not yet done walking

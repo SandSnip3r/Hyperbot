@@ -2,6 +2,7 @@
 #define EVENT_EVENT_HPP_
 
 #include "packet/structures/packetInnerStructures.hpp"
+#include "packet/building/clientAgentCharacterMoveRequest.hpp"
 
 #include "ui-proto/config.pb.h"
 
@@ -10,6 +11,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace event {
 
@@ -61,6 +63,7 @@ enum class EventCode {
   // TODO: Refactor this whole itemUsedTimeout concept
   kItemUseTimeout,
   kEntityMovementBegan,
+  kStateMachineActiveTooLong,
 
   // Only used to directly update movement state of entity
   kEntityMovementTimerEnded,
@@ -82,6 +85,7 @@ enum class EventCode {
   kKnockdownStunEnded,
 
   kMovementRequestTimedOut,
+  kWalkingPathUpdated,
 
   kNewConfigReceived,
   kConfigUpdated,
@@ -338,6 +342,13 @@ public:
   ItemCooldownEnded(type_id::TypeId tId);
   const type_id::TypeId typeId;
   virtual ~ItemCooldownEnded() = default;
+};
+
+struct WalkingPathUpdated : public Event {
+public:
+  WalkingPathUpdated(const std::vector<packet::building::NetworkReadyPosition> &waypoints);
+  const std::vector<packet::building::NetworkReadyPosition> waypoints;
+  virtual ~WalkingPathUpdated() = default;
 };
 
 struct NewConfigReceived : public Event {

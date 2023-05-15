@@ -1,6 +1,7 @@
 #ifndef STATE_MACHINE_STATEMACHINE_HPP_
 #define STATE_MACHINE_STATEMACHINE_HPP_
 
+#include "broker/eventBroker.hpp"
 #include "packet/opcode.hpp"
 
 #include <memory>
@@ -34,12 +35,13 @@ protected:
   template<typename StateMachineType, typename... Args>
   void setChildStateMachine(Args&&... args) {
     childState_.reset();
-    childState_ = std::unique_ptr<StateMachineType>(new StateMachineType(std::forward<Args>(args)...));
+    childState_ = std::unique_ptr<StateMachineType>(new StateMachineType(bot_, std::forward<Args>(args)...));
   }
   void setChildStateMachine(std::unique_ptr<StateMachine> &&newChildStateMachine);
   std::unique_ptr<StateMachine> childState_;
 private:
   std::vector<packet::Opcode> blockedOpcodes_;
+  broker::EventBroker::DelayedEventId debugEventId_;
 };
 
 std::ostream& operator<<(std::ostream &stream, Npc npc);

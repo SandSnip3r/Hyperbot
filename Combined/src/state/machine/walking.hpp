@@ -17,7 +17,7 @@ std::vector<packet::building::NetworkReadyPosition> calculatePathToDestination(c
 
 class Walking : public StateMachine {
 public:
-  Walking(Bot &bot, const sro::Position &destinationPosition);
+  Walking(Bot &bot, const sro::Position &destinationPosition, bool pathfindToDestination=true);
   ~Walking() override;
   void onUpdate(const event::Event *event) override;
   bool done() const override;
