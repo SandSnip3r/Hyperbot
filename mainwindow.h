@@ -26,6 +26,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -40,6 +41,7 @@ public:
 private:
   static const std::filesystem::path kSilkroadPath_;
   static constexpr int kPositionRedrawDelayMs{16};
+  static constexpr bool kShowEntityPaths_{true};
   Ui::MainWindow *ui;
   zmq::context_t context_;
   EventHandler eventHandler_{context_};
@@ -52,6 +54,9 @@ private:
   map::BotCharacterGraphicsItem *selfGraphicsItem_{nullptr};
   map::TrainingAreaGraphicsItem *trainingAreaGraphicsItem_{nullptr};
   std::map<uint32_t, QGraphicsItem*> entityGraphicsItemMap_;
+  std::map<uint32_t, QGraphicsItem*> entityMovementGraphicsItemMap_;
+  std::vector<QGraphicsLineItem*> walkingPathItems_;
+
   std::map<sro::scalar_types::EntityGlobalId, std::unique_ptr<entity_data::Entity>> entityData_;
 
   QTimer *entityMovementUpdateTimer_{nullptr};
@@ -77,7 +82,7 @@ private:
   void updateDisplayedPosition(const sro::Position &position);
   void updateDisplayedAngle(qreal angle);
   QPointF sroPositionToMapPosition(const sro::Position &position) const;
-  void updateEntityDisplayedPosition(sro::scalar_types::EntityGlobalId globalId, const sro::Position &position);
+  void updateEntityDisplayedPosition(sro::scalar_types::EntityGlobalId globalId, const sro::Position &position, const std::optional<sro::Position> destination = std::nullopt);
   bool haveEntity(sro::scalar_types::EntityGlobalId globalId);
 
   template<typename EntityType>
@@ -112,6 +117,7 @@ private slots:
 
 public slots:
   // Bot updates
+  void onLaunch();
   void onCharacterSpawn();
   void onCharacterHpUpdateChanged(uint32_t currentHp);
   void onCharacterMpUpdateChanged(uint32_t currentMp);
@@ -145,6 +151,7 @@ public slots:
   void onTrainingAreaReset();
   void onStateMachineCreated(std::string name);
   void onStateMachineDestroyed();
+  void onWalkingPathUpdated(std::vector<sro::Position> waypoints);
 };
 
 #endif // MAINWINDOW_H

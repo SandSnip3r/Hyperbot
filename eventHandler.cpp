@@ -58,6 +58,10 @@ sro::Position parsePosition(const broadcast::Position &pos) {
 
 void EventHandler::handle(const broadcast::BroadcastMessage &message) {
   switch (message.body_case()) {
+    case broadcast::BroadcastMessage::BodyCase::kLaunch: {
+        emit launch();
+        break;
+      }
     case broadcast::BroadcastMessage::BodyCase::kCharacterSpawn: {
         emit characterSpawn();
         break;
@@ -242,6 +246,16 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
       }
     case broadcast::BroadcastMessage::BodyCase::kStateMachineDestroyed: {
         emit stateMachineDestroyed();
+        break;
+      }
+    case broadcast::BroadcastMessage::BodyCase::kWalkingPathUpdated: {
+        const broadcast::WalkingPathUpdated &msg = message.walkingpathupdated();
+        std::vector<sro::Position> waypoints;
+        waypoints.reserve(msg.waypoints_size());
+        for (int i=0; i<msg.waypoints_size(); ++i) {
+          waypoints.emplace_back(parsePosition(msg.waypoints(i)));
+        }
+        emit walkingPathUpdated(waypoints);
         break;
       }
     default:

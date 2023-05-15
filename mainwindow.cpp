@@ -56,21 +56,37 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 }
 
 void MainWindow::temp() {
-  const std::string kCharacterName{"IP_Man"};
-  const std::string kUsername{"5"};
-  const std::string kPassword{"0"};
   proto::config::Config config;
   config.set_client_path("C:\\Users\\Victor\\Documents\\Development\\Daxter Silkroad server files\\Silkroad Client");
-  config.set_character_to_login(kCharacterName);
-  proto::config::CharacterConfig *characterConfig = config.add_character_configs();
-  characterConfig->set_character_name(kCharacterName);
-  characterConfig->set_username(kUsername);
-  characterConfig->set_password(kPassword);
-  proto::config::AutopotionConfig *autopotionConfig = characterConfig->mutable_autopotion_config();
-  autopotionConfig->set_hp_threshold(0.90);
-  autopotionConfig->set_mp_threshold(0.90);
-  autopotionConfig->set_vigor_hp_threshold(0.45);
-  autopotionConfig->set_vigor_mp_threshold(0.30);
+  config.set_character_to_login("IP_Man");
+  {
+    const std::string kCharacterName{"IP_Man"};
+    const std::string kUsername{"5"};
+    const std::string kPassword{"0"};
+    proto::config::CharacterConfig *characterConfig = config.add_character_configs();
+    characterConfig->set_character_name(kCharacterName);
+    characterConfig->set_username(kUsername);
+    characterConfig->set_password(kPassword);
+    proto::config::AutopotionConfig *autopotionConfig = characterConfig->mutable_autopotion_config();
+    autopotionConfig->set_hp_threshold(0.90);
+    autopotionConfig->set_mp_threshold(0.90);
+    autopotionConfig->set_vigor_hp_threshold(0.45);
+    autopotionConfig->set_vigor_mp_threshold(0.30);
+  }
+  {
+    const std::string kCharacterName{"_Nuked_"};
+    const std::string kUsername{"4"};
+    const std::string kPassword{"0"};
+    proto::config::CharacterConfig *characterConfig = config.add_character_configs();
+    characterConfig->set_character_name(kCharacterName);
+    characterConfig->set_username(kUsername);
+    characterConfig->set_password(kPassword);
+    proto::config::AutopotionConfig *autopotionConfig = characterConfig->mutable_autopotion_config();
+    autopotionConfig->set_hp_threshold(0.90);
+    autopotionConfig->set_mp_threshold(0.90);
+    autopotionConfig->set_vigor_hp_threshold(0.45);
+    autopotionConfig->set_vigor_mp_threshold(0.30);
+  }
   requester_.sendConfig(config);
 }
 
@@ -229,6 +245,7 @@ void MainWindow::connectTabWidget() {
 }
 
 void MainWindow::connectBotBroadcastMessages() {
+  connect(&eventHandler_, &EventHandler::launch, this, &MainWindow::onLaunch);
   connect(&eventHandler_, &EventHandler::characterSpawn, this, &MainWindow::onCharacterSpawn);
   connect(&eventHandler_, &EventHandler::characterHpUpdateChanged, this, &MainWindow::onCharacterHpUpdateChanged);
   connect(&eventHandler_, &EventHandler::characterMpUpdateChanged, this, &MainWindow::onCharacterMpUpdateChanged);
@@ -262,6 +279,7 @@ void MainWindow::connectBotBroadcastMessages() {
   connect(&eventHandler_, &EventHandler::trainingAreaReset, this, &MainWindow::onTrainingAreaReset);
   connect(&eventHandler_, &EventHandler::stateMachineCreated, this, &MainWindow::onStateMachineCreated);
   connect(&eventHandler_, &EventHandler::stateMachineDestroyed, this, &MainWindow::onStateMachineDestroyed);
+  connect(&eventHandler_, &EventHandler::walkingPathUpdated, this, &MainWindow::onWalkingPathUpdated);
 }
 
 void MainWindow::connectPacketInjection() {
@@ -325,18 +343,20 @@ void MainWindow::entityMovementTimerTriggered() {
     const auto currentTime = std::chrono::high_resolution_clock::now();
     const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-movement.startTime).count();
     sro::Position currentPosition;
+    std::optional<sro::Position> destinationPosition;
     if (const auto *destPosPtr = std::get_if<entity_data::Movement::kToDestination>(&movement.destPosOrAngle)) {
       const auto totalDistanceToTravel = sro::position_math::calculateDistance2d(movement.srcPos, *destPosPtr);
       const auto totalSecondsToTravel = totalDistanceToTravel/movement.speed;
       const double fractionTraveled = std::min(1.0, elapsedTimeMs / (totalSecondsToTravel*1000.0));
       currentPosition = sro::position_math::interpolateBetweenPoints(movement.srcPos, *destPosPtr, fractionTraveled);
+      destinationPosition = *destPosPtr;
     } else {
       const auto movementAngle = std::get<entity_data::Movement::kTowardAngle>(movement.destPosOrAngle);
       const auto totalDistanceTraveled = elapsedTimeMs/1000.0 * movement.speed;
       currentPosition = sro::position_math::getNewPositionGivenAngleAndDistance(movement.srcPos, movementAngle, totalDistanceTraveled);
     }
 
-    updateEntityDisplayedPosition(i.first, currentPosition);
+    updateEntityDisplayedPosition(i.first, currentPosition, destinationPosition);
   }
 }
 
@@ -489,6 +509,21 @@ qreal calculateAngleFromMovement(const entity_data::Movement &movement) {
 
 } // anonymous namespace
 
+void MainWindow::onLaunch() {
+  // Bot just started, do some cleanup
+  while (!entityData_.empty()) {
+    const auto &entityDataPair = *entityData_.begin();
+    onEntityDespawned(entityDataPair.first);
+  }
+
+  onTrainingAreaReset();
+
+  for (auto *item : walkingPathItems_) {
+    delete item;
+  }
+  walkingPathItems_.clear();
+}
+
 void MainWindow::onCharacterSpawn() {
   // Reset item list
   ui->characterInventoryListWidget->clear();
@@ -584,6 +619,8 @@ void MainWindow::onCharacterMovementBeganToDest(sro::Position currentPosition, s
 
 void MainWindow::updateDisplayedPosition(const sro::Position &position) {
   // Update label
+  ui->debugCharacterPositionLabel->setText(QString("%1 (%2,%3);\n%4\n%5\n%6").arg(position.regionId()).arg(position.xSector()).arg(position.zSector()).arg(position.xOffset()).arg(position.yOffset()).arg(position.zOffset()));
+
   const auto gameCoordinate = position.toGameCoordinate();
   ui->characterPositionLabel->setText(QString("%1,%2").arg(gameCoordinate.x).arg(gameCoordinate.y));
 
@@ -591,6 +628,7 @@ void MainWindow::updateDisplayedPosition(const sro::Position &position) {
   if (selfGraphicsItem_ == nullptr) {
     // Dont yet have a position marker for ourself
     selfGraphicsItem_ = new map::BotCharacterGraphicsItem();
+    selfGraphicsItem_->setZValue(15);
     mapScene_->addItem(selfGraphicsItem_);
   }
   auto mapPosition = sroPositionToMapPosition(position);
@@ -703,15 +741,15 @@ void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, broa
       {broadcast::EntityType::kItemRare, 4},
       {broadcast::EntityType::kItemSox, 5},
       {broadcast::EntityType::kPlayerCharacter, 6},
-      {broadcast::EntityType::kSelf, 7},
-      {broadcast::EntityType::kMonsterGeneral, 8},
-      {broadcast::EntityType::kMonsterChampion, 9},
-      {broadcast::EntityType::kMonsterPartyGeneral, 10},
-      {broadcast::EntityType::kMonsterElite, 11},
-      {broadcast::EntityType::kMonsterGiant, 12},
-      {broadcast::EntityType::kMonsterPartyChampion, 13},
-      {broadcast::EntityType::kMonsterPartyGiant, 14},
-      {broadcast::EntityType::kMonsterUnique, 15},
+      {broadcast::EntityType::kMonsterGeneral, 7},
+      {broadcast::EntityType::kMonsterChampion, 8},
+      {broadcast::EntityType::kMonsterPartyGeneral, 9},
+      {broadcast::EntityType::kMonsterElite, 10},
+      {broadcast::EntityType::kMonsterGiant, 11},
+      {broadcast::EntityType::kMonsterPartyChampion, 12},
+      {broadcast::EntityType::kMonsterPartyGiant, 13},
+      {broadcast::EntityType::kMonsterUnique, 14},
+      {broadcast::EntityType::kSelf, 15},
     };
     item->setZValue(entityZValues.at(type));
   }(item, entityType);
@@ -730,19 +768,29 @@ void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, broa
 }
 
 void MainWindow::onEntityDespawned(uint32_t globalId) {
-  auto it = entityGraphicsItemMap_.find(globalId);
-  if (it == entityGraphicsItemMap_.end()) {
-    // It's ok if we werent tracking this item, nothing to do
-    return;
+  // Delete the entity movement item.
+  if (kShowEntityPaths_) {
+    if (auto entityMovementGraphicsItemIt = entityMovementGraphicsItemMap_.find(globalId); entityMovementGraphicsItemIt != entityMovementGraphicsItemMap_.end()) {
+      if (entityMovementGraphicsItemIt->second != nullptr) {
+        delete entityMovementGraphicsItemIt->second;
+      } else {
+        throw std::runtime_error("Entity despawned, but movement graphics item already is null");
+      }
+      entityMovementGraphicsItemMap_.erase(entityMovementGraphicsItemIt);
+    }
   }
-  if (it->second != nullptr) {
-    delete it->second;
-  } else {
-    throw std::runtime_error("Entity despawned, but it already holds a nullptr");
-  }
-  entityGraphicsItemMap_.erase(it);
 
-  // Remove entity from entityData map
+  // Delete the entity item.
+  if (auto entityGraphicsItemIt = entityGraphicsItemMap_.find(globalId); entityGraphicsItemIt != entityGraphicsItemMap_.end()) {
+    if (entityGraphicsItemIt->second != nullptr) {
+      delete entityGraphicsItemIt->second;
+    } else {
+      throw std::runtime_error("Entity despawned, but graphics item already is null");
+    }
+    entityGraphicsItemMap_.erase(entityGraphicsItemIt);
+  }
+
+  // Remove entity from entityData map.
   if (auto it = entityData_.find(globalId); it != entityData_.end()) {
     entityData_.erase(it);
   }
@@ -781,7 +829,7 @@ void MainWindow::onEntityMovementBeganToDest(sro::scalar_types::EntityGlobalId g
   movement.startTime = std::chrono::high_resolution_clock::now();
   movement.srcPos = currentPosition;
   movement.destPosOrAngle = destinationPosition;
-  updateEntityDisplayedPosition(globalId, currentPosition);
+  updateEntityDisplayedPosition(globalId, currentPosition, destinationPosition);
 }
 
 void MainWindow::onEntityMovementBeganTowardAngle(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, uint16_t movementAngle, float speed) {
@@ -842,26 +890,69 @@ void MainWindow::onTrainingAreaReset() {
 }
 
 void MainWindow::onStateMachineCreated(std::string name) {
-  std::cout << "State machine created: " << name << std::endl;
   ui->stateListWidget->addItem(QString(4*ui->stateListWidget->count(), ' ')+QString::fromStdString(name));
 }
 
 void MainWindow::onStateMachineDestroyed() {
-  std::cout << "State machine destroyed" << std::endl;
   auto *item = ui->stateListWidget->item(ui->stateListWidget->count()-1);
-  delete(item);
+  delete item;
 }
 
-void MainWindow::updateEntityDisplayedPosition(sro::scalar_types::EntityGlobalId globalId, const sro::Position &position) {
-  // Update map
-  auto it = entityGraphicsItemMap_.find(globalId);
-  if (it == entityGraphicsItemMap_.end()) {
-    // No map item for this entity
-    return;
+void MainWindow::onWalkingPathUpdated(std::vector<sro::Position> waypoints) {
+  // Reset existing drawn path.
+  if (!walkingPathItems_.empty()) {
+    for (const auto *item : walkingPathItems_) {
+      delete item;
+    }
+    walkingPathItems_.clear();
   }
 
-  auto mapPosition = sroPositionToMapPosition(position);
-  it->second->setPos(mapPosition);
+  for (int i=1; i<waypoints.size(); ++i) {
+    const auto srcPos = sroPositionToMapPosition(waypoints.at(i-1));
+    const auto destPos = sroPositionToMapPosition(waypoints.at(i));
+    const QPointF shiftedDest(destPos.x()-srcPos.x(), destPos.y()-srcPos.y());
+    QGraphicsLineItem *item = new QGraphicsLineItem(QLineF(QPointF(0.0, 0.0), shiftedDest));
+    walkingPathItems_.push_back(item);
+    auto pen = QPen(Qt::green);
+    pen.setWidth(0);
+    item->setPen(pen);
+    item->setZValue(101);
+    mapScene_->addItem(item);
+    item->setPos(srcPos);
+  }
+}
+
+void MainWindow::updateEntityDisplayedPosition(sro::scalar_types::EntityGlobalId globalId, const sro::Position &position, const std::optional<sro::Position> destination) {
+  // Update entity item.
+  if (auto entityIt = entityGraphicsItemMap_.find(globalId); entityIt != entityGraphicsItemMap_.end()) {
+    auto mapPosition = sroPositionToMapPosition(position);
+    entityIt->second->setPos(mapPosition);
+  }
+
+  // Update entity movement item.
+  if (kShowEntityPaths_) {
+    // Always start by deleing the existing movement graphics item.
+    auto it = entityMovementGraphicsItemMap_.find(globalId);
+    if (it != entityMovementGraphicsItemMap_.end()) {
+      delete it->second;
+      entityMovementGraphicsItemMap_.erase(it);
+    }
+
+    if (destination) {
+      // We have a destination; create a new movement item.
+      const auto mapSrcPosition = sroPositionToMapPosition(position);
+      const auto mapDestPosition = sroPositionToMapPosition(*destination);
+      const QPointF shiftedDest(mapDestPosition.x()-mapSrcPosition.x(), mapDestPosition.y()-mapSrcPosition.y());
+      QGraphicsLineItem *item = new QGraphicsLineItem(QLineF(QPointF(0.0, 0.0), shiftedDest));
+      auto pen = QPen(Qt::red);
+      pen.setWidth(0);
+      item->setPen(pen);
+      item->setZValue(100);
+      mapScene_->addItem(item);
+      item->setPos(mapSrcPosition);
+      entityMovementGraphicsItemMap_.emplace(globalId, item);
+    }
+  }
 }
 
 bool MainWindow::haveEntity(sro::scalar_types::EntityGlobalId globalId) {

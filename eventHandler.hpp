@@ -25,6 +25,7 @@ public:
   void runAsync();
 signals:
   void connected();
+  void launch();
   void characterSpawn();
   void characterHpUpdateChanged(uint32_t currentHp);
   void characterMpUpdateChanged(uint32_t currentMp);
@@ -58,6 +59,7 @@ signals:
   void trainingAreaReset();
   void stateMachineCreated(std::string name);
   void stateMachineDestroyed();
+  void walkingPathUpdated(std::vector<sro::Position> waypoints);
 private:
   zmq::context_t &context_;
   std::atomic<bool> run_;
