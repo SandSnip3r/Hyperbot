@@ -19,7 +19,11 @@ NavmeshTriangulation::NavmeshTriangulation(const Navmesh &navmesh) {
   // Triangulate every region in the navmesh
   const auto &regionMap = navmesh.getRegionMap();
   for (const auto &regionIdRegionPair : regionMap) {
-    buildNavmeshForRegion(navmesh, regionIdRegionPair.second);
+    try {
+      buildNavmeshForRegion(navmesh, regionIdRegionPair.second);
+    } catch (...) {
+      std::cout << "No" << std::endl;
+    }
   }
   postProcess(navmesh);
 }
