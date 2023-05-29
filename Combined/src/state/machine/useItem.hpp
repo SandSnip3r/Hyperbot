@@ -1,11 +1,15 @@
 #ifndef STATE_MACHINE_USE_ITEM_HPP_
 #define STATE_MACHINE_USE_ITEM_HPP_
 
+#include "broker/eventBroker.hpp"
 #include "stateMachine.hpp"
 
 #include "type_id/typeCategory.hpp"
 
 #include <silkroad_lib/scalar_types.h>
+
+#include <optional>
+#include <string>
 
 namespace state::machine {
 
@@ -20,8 +24,13 @@ private:
   sro::scalar_types::StorageIndexType inventoryIndex_;
   type_id::TypeId itemTypeId_;
   uint16_t lastKnownQuantity_;
-  bool waitingForItemToBeUsed_{false};
+  std::string itemName_;
   bool done_{false};
+  void cleanupAndExit();
+
+  // Item use timeout tracking
+  std::optional<broker::EventBroker::DelayedEventId> itemUseTimeoutEventId_;
+  static constexpr const int kItemUseTimeoutMs{200};
 };
 
 } // namespace state::machine

@@ -24,6 +24,7 @@ namespace broker {
 class EventBroker {
 public:
   using DelayedEventId = TimerManager::TimerId;
+  using TimerEndTimePoint = TimerManager::TimePoint;
   using SubscriptionId = int;
 private:
   using EventHandleFunction = std::function<void(const event::Event*)>;
@@ -46,9 +47,17 @@ public:
   EventBroker::DelayedEventId publishDelayedEvent(std::chrono::milliseconds delay, Args&&... args) {
     return publishDelayedEvent(delay, std::make_unique<EventType>(std::forward<Args>(args)...));
   }
+
+  template<typename EventType, typename... Args>
+  EventBroker::DelayedEventId publishDelayedEvent(TimerEndTimePoint endTime, Args&&... args) {
+    return publishDelayedEvent(endTime, std::make_unique<EventType>(std::forward<Args>(args)...));
+  }
   EventBroker::DelayedEventId publishDelayedEvent(std::chrono::milliseconds delay, event::EventCode eventCode);
+  EventBroker::DelayedEventId publishDelayedEvent(TimerEndTimePoint endTime, event::EventCode eventCode);
 
   bool cancelDelayedEvent(DelayedEventId id);
+  std::optional<std::chrono::milliseconds> timeRemainingOnDelayedEvent(DelayedEventId id) const;
+  std::optional<TimerEndTimePoint> delayedEventEndTime(DelayedEventId id) const;
   SubscriptionId subscribeToEvent(event::EventCode eventCode, EventHandleFunction &&handleFunc);
   void unsubscribeFromEvent(SubscriptionId id);
 private:
@@ -58,6 +67,7 @@ private:
   TimerManager timerManager_;
   void publishEvent(std::unique_ptr<event::Event> event);
   DelayedEventId publishDelayedEvent(std::chrono::milliseconds delay, std::unique_ptr<event::Event> event);
+  DelayedEventId publishDelayedEvent(TimerEndTimePoint endTime, std::unique_ptr<event::Event> event);
 
   void notifySubscribers(std::unique_ptr<event::Event> event);
   void timerFinished(event::Event *event);

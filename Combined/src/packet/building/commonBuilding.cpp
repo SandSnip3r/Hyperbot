@@ -2,6 +2,37 @@
 
 namespace packet::building {
 
+NetworkReadyPosition::NetworkReadyPosition(const sro::Position &pos) : convertedPosition_(truncateForNetwork(pos)) {
+}
+
+NetworkReadyPosition NetworkReadyPosition::roundToNearest(const sro::Position &pos) {
+  const sro::Position roundedPos(pos.regionId(), std::round(pos.xOffset()), std::round(pos.yOffset()), std::round(pos.zOffset()));
+  return NetworkReadyPosition(roundedPos);
+}
+
+sro::Position NetworkReadyPosition::asSroPosition() const {
+  return convertedPosition_;
+}
+
+sro::Position NetworkReadyPosition::truncateForNetwork(const sro::Position &pos) {
+  // x,y,z are truncated, not rounded
+  if (pos.isDungeon()) {
+    return {
+              pos.regionId(),
+              static_cast<float>(static_cast<uint32_t>(pos.xOffset())),
+              static_cast<float>(static_cast<uint32_t>(pos.yOffset())),
+              static_cast<float>(static_cast<uint32_t>(pos.zOffset()))
+           };
+  } else {
+    return {
+              pos.regionId(),
+              static_cast<float>(static_cast<uint16_t>(pos.xOffset())),
+              static_cast<float>(static_cast<uint16_t>(pos.yOffset())),
+              static_cast<float>(static_cast<uint16_t>(pos.zOffset()))
+           };
+  }
+}
+
 void writeGenericItem(StreamUtility &stream, const storage::Item &item) {
   if (!item.itemInfo) {
     throw std::runtime_error("Trying to build item, but item info is null");

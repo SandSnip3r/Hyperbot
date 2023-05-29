@@ -21,7 +21,7 @@ public:
   state::Self& selfState();
   const state::Self& selfState() const;
 
-  void addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId);
+  void addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, int32_t durationMs);
   void removeBuffs(const std::vector<uint32_t> &tokenIds);
 
   entity::Entity* getEntity(sro::scalar_types::EntityGlobalId globalId);

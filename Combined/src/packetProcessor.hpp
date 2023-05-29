@@ -7,7 +7,6 @@
 // #include "packet/parsing/clientAgentActionSelectRequest.hpp"
 #include "packet/parsing/clientAgentActionCommandRequest.hpp"
 #include "packet/parsing/clientAgentActionTalkRequest.hpp"
-#include "packet/parsing/clientAgentInventoryItemUseRequest.hpp"
 #include "packet/parsing/serverAgentActionCommandResponse.hpp"
 #include "packet/parsing/serverAgentActionDeselectResponse.hpp"
 #include "packet/parsing/serverAgentActionSelectResponse.hpp"
@@ -122,7 +121,9 @@ private:
   void handleKnockedBackOrKnockedDown() const;
   void serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const;
   void serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const;
-  void clientAgentInventoryItemUseRequestReceived(const packet::parsing::ClientAgentInventoryItemUseRequest &packet) const;
+
+  std::optional<std::chrono::milliseconds> getItemCooldownMs(const storage::ItemExpendable &item) const;
+  void printCommandQueues() const;
 };
 
 #endif // PACKETPROCESSOR_HPP_

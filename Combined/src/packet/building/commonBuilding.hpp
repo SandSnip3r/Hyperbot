@@ -9,6 +9,16 @@
 
 namespace packet::building {
 
+struct NetworkReadyPosition {
+public:
+  NetworkReadyPosition(const sro::Position &pos);
+  static NetworkReadyPosition roundToNearest(const sro::Position &pos);
+  sro::Position asSroPosition() const;
+  static sro::Position truncateForNetwork(const sro::Position &pos);
+private:
+  sro::Position convertedPosition_;
+};
+
 void writeGenericItem(StreamUtility &stream, const storage::Item &item);
 void writePosition(StreamUtility &stream, const sro::Position &position);
 

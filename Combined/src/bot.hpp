@@ -4,6 +4,7 @@
 #include "broker/packetBroker.hpp"
 #include "config/config.hpp"
 #include "event/event.hpp"
+#include "packet/building/commonBuilding.hpp"
 #include "packetProcessor.hpp"
 #include "pk2/gameData.hpp"
 #include "proxy.hpp"
@@ -12,6 +13,8 @@
 #include "state/worldState.hpp"
 
 #include <optional>
+#include <vector>
+
 class Bot {
 public:
   Bot(const config::Config &config,
@@ -46,6 +49,7 @@ protected:
 private:
   state::machine::AutoPotion autoPotionStateMachine_{*this};
   std::unique_ptr<state::machine::StateMachine> bottingStateMachine_;
+  inline static const std::string kEstVisRangeFilename{"estimatedVisibilityRange.txt"};
 
   void subscribeToEvents();
 
@@ -97,6 +101,7 @@ public:
   bool needToGoToTown() const;
   bool similarSkillIsAlreadyActive(sro::scalar_types::ReferenceObjectId skillRefId) const;
   bool canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const;
+  std::vector<packet::building::NetworkReadyPosition> calculatePathToDestination(const sro::Position &destinationPosition) const;
 
 };
 

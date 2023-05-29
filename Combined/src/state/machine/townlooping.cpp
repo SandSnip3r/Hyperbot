@@ -164,10 +164,10 @@ void Townlooping::buildBuffList() {
 void Townlooping::buildShoppingList() {
   // TODO: This should be based on a botting config
   shoppingList_ = {
-    { 8, 5 }, //ITEM_ETC_HP_POTION_05 (XL hp potion)
-    { 15, 100 }, //ITEM_ETC_MP_POTION_05 (XL mp potion)
+    { 8, 300 }, //ITEM_ETC_HP_POTION_05 (XL hp potion)
+    { 15, 700 }, //ITEM_ETC_MP_POTION_05 (XL mp potion)
     { 59, 50 }, //ITEM_ETC_CURE_ALL_05 (M special universal pill)
-    { 10377, 50 }, //ITEM_ETC_CURE_RANDOM_04 (XL purification pill)
+    { 10377, 150 }, //ITEM_ETC_CURE_RANDOM_04 (XL purification pill)
     { 2198, 1 }, //ITEM_ETC_SCROLL_RETURN_02 (Special Return Scroll)
     // { 62, 1000 }, //ITEM_ETC_AMMO_ARROW_01 (Arrow)
     // { 3909, 1 }, //ITEM_COS_C_DHORSE1 (Ironclad Horse)
@@ -183,13 +183,10 @@ void Townlooping::buildNpcList() {
 std::optional<sro::scalar_types::ReferenceObjectId> Townlooping::getNextBuffToCast() const {
   // Lets evaluate our buffs and see if any need to be reactivated
   auto copyOfBuffsToUse = buffsToUse_;
-  // Calculate a diff between what's active and what we want to be active
-  for (const auto buff : bot_.selfState().buffs) {
-    if (auto it = std::find(copyOfBuffsToUse.begin(), copyOfBuffsToUse.end(), buff); it != copyOfBuffsToUse.end()) {
-      // This buff is already active, remove from list
-      copyOfBuffsToUse.erase(it);
-    }
-  }
+  // Remove all buffs which are currently active.
+  copyOfBuffsToUse.erase(std::remove_if(copyOfBuffsToUse.begin(), copyOfBuffsToUse.end(), [&](const auto &buff) {
+    return bot_.selfState().buffIsActive(buff);
+  }), copyOfBuffsToUse.end());
 
   if (copyOfBuffsToUse.empty()) {
     // No buffs need to be cast

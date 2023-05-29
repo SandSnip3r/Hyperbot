@@ -91,6 +91,17 @@ struct Skill {
   bool isInstant() const;
   bool isTele() const;
   bool isPseudoinstant() const;
+  int32_t duration() const;
+
+  enum class Param1Type {
+    kMelee = 0,
+    kRanged = 1,
+    // 2 is unknown
+    kBuff = 3,
+    kPassive = 4
+  };
+
+  Param1Type param1Type() const;
 };
 
 } // namespace pk2::ref

@@ -55,6 +55,8 @@ extern const TypeCategory kItem;
       extern const TypeCategory kGold;
     extern const TypeCategory kSpecialGoods;
     extern const TypeCategory kQuestAndEvent;
+    extern const TypeCategory kSpecial;
+      extern const TypeCategory kResurrection;
 
 extern const TypeCategory kStructure;
 

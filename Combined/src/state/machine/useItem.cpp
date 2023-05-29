@@ -24,24 +24,45 @@ UseItem::UseItem(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex) :
   }
   itemTypeId_ = itemAsExpendable->typeData();
   lastKnownQuantity_ = itemAsExpendable->quantity;
+
+  const auto maybeName = bot_.gameData().textItemAndSkillData().getItemNameIfExists(item->itemInfo->nameStrID128);
+  if (maybeName) {
+    itemName_ = *maybeName;
+  } else {
+    itemName_ = "UNKNOWN";;
+  }
 }
 
 UseItem::~UseItem() {
+  if (itemUseTimeoutEventId_) {
+    bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
+    itemUseTimeoutEventId_.reset();
+  }
   stateMachineDestroyed();
 }
 
 void UseItem::onUpdate(const event::Event *event) {
-  if (waitingForItemToBeUsed_ && event) {
+  if (event) {
     // We don't care about any event if we haven't yet used an item
     if (const auto *itemUseFailedEvent = dynamic_cast<const event::ItemUseFailed*>(event)) {
-      // TODO: Maybe behave differently for different errors
-      if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kItemDoesNotExist) {
-        LOG() << "Failed to use item because it doesnt exist" << std::endl;
-        done_ = true;
-        // TODO: "Crash" out of here
-        return;
+      if (itemUseTimeoutEventId_) {
+          bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
+          itemUseTimeoutEventId_.reset();
+        if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kItemDoesNotExist) {
+          LOG() << "Failed to use item because it doesnt exist" << std::endl;
+          done_ = true;
+          return;
+        } else if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kCharacterDead) {
+          LOG() << "Failed to use item because we're dead" << std::endl;
+          done_ = true;
+          return;
+        } else if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kWaitForReuseDelay) {
+        } else {
+          LOG() << "Failed to use item because of unknown reason" << std::endl;
+        }
+      } else {
+        // TODO: This can happen if an item use failure causes us to exit out of here, construct another UseItem, and enter this function with the same event
       }
-      waitingForItemToBeUsed_ = false;
     } else if (const auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
       if (inventoryUpdatedEvent->srcSlotNum && *inventoryUpdatedEvent->srcSlotNum == inventoryIndex_) {
         // This is our item
@@ -49,8 +70,16 @@ void UseItem::onUpdate(const event::Event *event) {
           // Item was moved to a new slot, track it
           LOG() << "Item was moved to a new slot " << static_cast<int>(inventoryIndex_) << " to " << static_cast<int>(*inventoryUpdatedEvent->destSlotNum) << std::endl;
           inventoryIndex_ = *inventoryUpdatedEvent->destSlotNum;
-          // TODO: If we were waiting for this item to be used, it will probably fail now. Will we find out via some other mechanism in the future?
-        } else {
+          if (itemUseTimeoutEventId_) {
+            // We need to cancel the existing timeout event (because it has the wrong inventory slot) and send a new item use timeout event with the updated inventory slot.
+            const auto eventEndTime = bot_.eventBroker().delayedEventEndTime(*itemUseTimeoutEventId_);
+            if (!eventEndTime) {
+              throw std::runtime_error("This item use timeout event does not exist");
+            }
+            bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
+            itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(*eventEndTime, inventoryIndex_, itemTypeId_);
+          }
+        } else if (itemUseTimeoutEventId_) {
           // Check that item at this inventory slot decreased
           bool looksGood{false};
           const auto *item = bot_.selfState().inventory.getItem(*inventoryUpdatedEvent->srcSlotNum);
@@ -68,32 +97,70 @@ void UseItem::onUpdate(const event::Event *event) {
               // The last item disappeared, that's a successful use
               looksGood = true;
             } else {
-              // More than 1 (or 0) items disappeared, that's unusual
+              // More than 1 (or could have been 0) items disappeared, that's unusual
               LOG() << "Item is null, and there were " << lastKnownQuantity_ << " remaining" << std::endl;
             }
           }
           if (looksGood) {
-            waitingForItemToBeUsed_ = false;
-            done_ = true;
+            LOG() << "Successfully used item" << std::endl;
+            if (!itemUseTimeoutEventId_) {
+              throw std::runtime_error("Didn't have a item use timeout event");
+            }
+            cleanupAndExit();
             return;
+          }
+        }
+      }
+    } else if (const auto *itemUseTimeout = dynamic_cast<const event::ItemUseTimeout*>(event)) {
+      if (itemUseTimeoutEventId_) {
+        if (itemUseTimeout->slotNum == inventoryIndex_ && itemUseTimeout->typeData == itemTypeId_) {
+          itemUseTimeoutEventId_.reset();
+          LOG() << "Item use timed out, going to try again" << std::endl;
+        } else {
+          LOG() << "Item use timed out, but it's not for the item that we're waiting on" << std::endl;
+          if (itemUseTimeout->slotNum != inventoryIndex_) {
+            LOG() << "  wrong inventory slot" << std::endl;
+          }
+          if (itemUseTimeout->typeData != itemTypeId_)  {
+            LOG() << "  wrong type id" << std::endl;
           }
         }
       }
     }
   }
+
+  try {
+    if (!bot_.selfState().canUseItem(itemTypeId_)) {
+      LOG() << "Huh, cannot use item. How did we get here?" << std::endl;
+      return;
+    }
+  } catch (std::exception &ex) {
+    LOG() << "Hmm, exception. " << ex.what() << std::endl;
+  }
   
-  if (waitingForItemToBeUsed_) {
+  if (itemUseTimeoutEventId_) {
     return;
   }
 
   // Use item
+  LOG() << "Using item at slot " << static_cast<int>(inventoryIndex_) << ", " << itemName_ << std::endl;
   const auto itemUsePacket = packet::building::ClientAgentInventoryItemUseRequest::packet(inventoryIndex_, itemTypeId_);
   bot_.packetBroker().injectPacket(itemUsePacket, PacketContainer::Direction::kClientToServer);
-  waitingForItemToBeUsed_ = true;
+
+  // Create a delayed event that will trigger if our item never gets used.
+  itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(std::chrono::milliseconds(kItemUseTimeoutMs), inventoryIndex_, itemTypeId_);
 }
 
 bool UseItem::done() const {
   return done_;
+}
+
+void UseItem::cleanupAndExit() {
+  if (itemUseTimeoutEventId_) {
+    bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
+    itemUseTimeoutEventId_.reset();
+  }
+  done_ = true;
 }
 
 } // namespace state::machine

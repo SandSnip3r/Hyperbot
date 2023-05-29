@@ -43,16 +43,41 @@ bool TimerManager::cancelTimer(TimerId id) {
   return true;
 }
 
+std::optional<std::chrono::milliseconds> TimerManager::timeRemainingOnTimer(TimerId id) const {
+  const auto currentTime = std::chrono::high_resolution_clock::now();
+  std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
+  for (auto it=timerDataHeap_.begin(), end=timerDataHeap_.end(); it!=end; ++it) {
+    if (it->id == id) {
+      return std::chrono::duration_cast<std::chrono::milliseconds>(it->endTime - currentTime);
+    }
+  }
+  return {};
+}
+
+std::optional<TimerManager::TimePoint> TimerManager::timerEndTime(TimerId id) const {
+  std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
+  for (auto it=timerDataHeap_.begin(), end=timerDataHeap_.end(); it!=end; ++it) {
+    if (it->id == id) {
+      return it->endTime;
+    }
+  }
+  return {};
+}
+
 TimerManager::TimerId TimerManager::registerTimer(std::chrono::milliseconds timerDuration, std::function<void()> timerCompletedFunction) {
+  const auto timerEndTimePoint = std::chrono::high_resolution_clock::now() + timerDuration;
+  return registerTimer(timerEndTimePoint, timerCompletedFunction);
+}
+
+TimerManager::TimerId TimerManager::registerTimer(TimePoint timeEnd, std::function<void()> timerCompletedFunction) {
   // Creating a new timer
-  auto timerEndTimePoint = std::chrono::high_resolution_clock::now() + timerDuration;
   bool shouldNotify=false;
   TimerId thisTimerId;
   {
     std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
     TimePoint prevTime = (timerDataHeap_.empty() ? TimePoint::max() : timerDataHeap_.front().endTime);
     // Add the new timer on the "heap"
-    timerDataHeap_.emplace_back(timerIdCounter_, timerEndTimePoint, timerCompletedFunction);
+    timerDataHeap_.emplace_back(timerIdCounter_, timeEnd, timerCompletedFunction);
     std::push_heap(timerDataHeap_.begin(), timerDataHeap_.end(), std::greater<Timer>());
     if (timerDataHeap_.front().endTime < prevTime) {
       // New timer ends sooner than the previous soonest

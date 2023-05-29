@@ -156,7 +156,7 @@ void Self::cancelMovement(broker::EventBroker &eventBroker) {
   }
 }
 
-void Self::setMp(uint32_t mp) {
+void Self::setCurrentMp(uint32_t mp) {
   mp_ = mp;
   eventBroker_.publishEvent(event::EventCode::kMpChanged);
 }
@@ -248,40 +248,23 @@ void Self::setGuildStorageGold(uint64_t goldAmount) {
   eventBroker_.publishEvent(event::EventCode::kGuildStorageGoldUpdated);
 }
 
-void Self::usedAnItem(type_id::TypeId typeData, broker::EventBroker &eventBroker) {
-  // For now, we figure out the cooldown duration right here. Maybe in the future, it should be passed into this function
+void Self::usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milliseconds> cooldown, broker::EventBroker &eventBroker) {
+  // For now, we figure out the cooldown duration right here. Maybe in the future, it should be passed into this function.
   if (itemCooldownEventIdMap_.find(typeData) != itemCooldownEventIdMap_.end()) {
     // This should never happen if all cooldowns are accurate.
     //  However, in the case of purification pills, which are maybe the only item with no real cooldown, if we create an artificial cooldown in the bot and use multiple through the client, this can trigger.
-    // throw std::runtime_error("Trying to use an item (" + type_id::toString(typeData) + "), but it's already on cooldown");
-    LOG() << "Trying to use an item (" << type_id::toString(typeData) << "), but it's already on cooldown" << std::endl;
+    // throw std::runtime_error("Used an item (" + type_id::toString(typeData) + "), but it's already on cooldown");
+    LOG() << "Used an item (" << type_id::toString(typeData) << "), but it's already on cooldown" << std::endl;
     return;
   }
 
-  // TODO: We should move this to a more global configuration area for general bot mechanics configuration
-  //       Maybe we could try to improve this value based on item use results
-  static const int kPotionDelayBufferMs_ = 0; //200 too fast sometimes, 300 seems always good, had 225
-
-  std::optional<int> cooldownMilliseconds;
-  if (type_id::categories::kHpPotion.contains(typeData)) {
-    cooldownMilliseconds = getHpPotionDelay() + kPotionDelayBufferMs_;
-  } else if (type_id::categories::kMpPotion.contains(typeData)) {
-    cooldownMilliseconds = getMpPotionDelay() + kPotionDelayBufferMs_;
-  } else if (type_id::categories::kVigorPotion.contains(typeData)) {
-    cooldownMilliseconds = getVigorPotionDelay() + kPotionDelayBufferMs_;
-  } else if (type_id::categories::kUniversalPill.contains(typeData)) {
-    cooldownMilliseconds = getUniversalPillDelay();
-  } else if (type_id::categories::kPurificationPill.contains(typeData)) {
-    cooldownMilliseconds = getPurificationPillDelay();
-  }
-
-  if (!cooldownMilliseconds) {
+  if (!cooldown) {
     LOG() << "Used an item (" << type_id::toString(typeData) << "), but we don't know its cooldown time." << std::endl;
     return;
   }
 
-  // Publish a delayed event
-  const auto itemCooldownDelayedEventId = eventBroker.publishDelayedEvent<event::ItemCooldownEnded>(std::chrono::milliseconds(*cooldownMilliseconds), typeData);
+  // Publish a delayed event for when the cooldown ends.
+  const auto itemCooldownDelayedEventId = eventBroker.publishDelayedEvent<event::ItemCooldownEnded>(*cooldown, typeData);
   itemCooldownEventIdMap_.emplace(typeData, itemCooldownDelayedEventId);
 }
 
@@ -332,28 +315,32 @@ uint32_t Self::getCurrentSpExperience() const {
 
 int Self::getHpPotionDelay() const {
   const bool havePanic = (modernStateLevels_[helpers::toBitNum(packet::enums::AbnormalStateFlag::kPanic)] > 0);
-  int delay = potionDelayMs_;
-  if (havePanic) {
-    delay += 4000;
-  }
-  return delay;
+  return potionDelayMs_ + (havePanic ? kPanicPotionDelayIncreaseMs_ : 0);
 }
 
 int Self::getMpPotionDelay() const {
   const bool haveCombustion = (modernStateLevels_[helpers::toBitNum(packet::enums::AbnormalStateFlag::kCombustion)] > 0);
-  int delay = potionDelayMs_;
-  if (haveCombustion) {
-    delay += 4000;
-  }
-  return delay;
+  return potionDelayMs_ + (haveCombustion ? kCombustionPotionDelayIncreaseMs_ : 0);
 }
 
 int Self::getVigorPotionDelay() const {
+  // Vigors are not affected by panic or combustion.
   return potionDelayMs_;
 }
 
-int Self::getGrainDelay() const {
-  return 4000;
+int Self::getHpGrainDelay() const {
+  const bool havePanic = (modernStateLevels_[helpers::toBitNum(packet::enums::AbnormalStateFlag::kPanic)] > 0);
+  return kGrainDelayMs_ + (havePanic ? kPanicPotionDelayIncreaseMs_ : 0);
+}
+
+int Self::getMpGrainDelay() const {
+  const bool haveCombustion = (modernStateLevels_[helpers::toBitNum(packet::enums::AbnormalStateFlag::kCombustion)] > 0);
+  return kGrainDelayMs_ + (haveCombustion ? kCombustionPotionDelayIncreaseMs_ : 0);
+}
+
+int Self::getVigorGrainDelay() const {
+  // Vigors are not affected by panic or combustion.
+  return kGrainDelayMs_;
 }
 
 int Self::getUniversalPillDelay() const {
@@ -435,7 +422,24 @@ bool Self::canUseItems() const {
   return true;
 }
 
+bool Self::canUseItem(type_id::TypeId itemTypeId) const {
+  return canUseItem(type_id::TypeCategory(itemTypeId));
+}
+
 bool Self::canUseItem(type_id::TypeCategory itemType) const {
+  if (lifeState == sro::entity::LifeState::kDead) {
+    // When dead, what types of items can we use?
+    if (type_id::categories::kResurrection.contains(itemType)) {
+      // This is ok.
+    } else {
+      // So far, the only item I know that we can use while dead is a resurrection scroll.
+      return false;
+    }
+  } else if (lifeState == sro::entity::LifeState::kGone) {
+    // Cannot use anything while unspawned
+    return false;
+  }
+  // Other states are Alive or Embryo. Alive is obvious. Embryo seems to be the life state given to an entity upon first spawning into the world, but it never gets changed to Alive. Until we have good reason to do otherwise, we'll treat Embryo as Alive.
   const bool itemIsOnCooldown = (itemCooldownEventIdMap_.find(itemType.getTypeId()) != itemCooldownEventIdMap_.end());
   if (itemIsOnCooldown) {
     return false;
@@ -445,61 +449,7 @@ bool Self::canUseItem(type_id::TypeCategory itemType) const {
 }
 
 // =====================================Packets-in-flight state=====================================
-// Setters
-void Self::popItemFromUsedItemQueueIfNotEmpty() {
-  if (!usedItemQueue_.empty()) {
-    usedItemQueue_.pop_front();
-  }
-}
-
-void Self::clearUsedItemQueue() {
-  usedItemQueue_.clear();
-}
-
-void Self::pushItemToUsedItemQueue(sro::scalar_types::StorageIndexType inventorySlotNum, type_id::TypeId typeId) {
-  usedItemQueue_.emplace_back(inventorySlotNum, typeId);
-}
-
-void Self::setUserPurchaseRequest(const packet::structures::ItemMovement &itemMovement) {
-  userPurchaseRequest_ = itemMovement;
-}
-
-void Self::resetUserPurchaseRequest() {
-  userPurchaseRequest_.reset();
-}
-
 // Getters
-bool Self::usedItemQueueIsEmpty() const {
-  return usedItemQueue_.empty();
-}
-
-bool Self::itemIsInUsedItemQueue(type_id::TypeId typeId) const {
-  // TODO: Convert to new TypeId stuff
-  for (const auto &usedItem : usedItemQueue_) {
-    if (usedItem.typeId == typeId) {
-      return true;
-    }
-  }
-  return false;
-}
-
-void Self::removedItemFromUsedItemQueue(sro::scalar_types::StorageIndexType inventorySlotNum, type_id::TypeId typeId) {
-  const auto it = std::find_if(usedItemQueue_.begin(), usedItemQueue_.end(), [&inventorySlotNum, &typeId](const auto &usedItem) {
-    return usedItem.inventorySlotNum == inventorySlotNum && usedItem.typeId == typeId;
-  });
-  if (it == usedItemQueue_.end()) {
-    throw std::runtime_error("Trying to remove item from used item queue which is not present");
-  }
-  usedItemQueue_.erase(it);
-}
-
-Self::UsedItem Self::getUsedItemQueueFront() const {
-  if (usedItemQueue_.empty()) {
-    throw std::runtime_error("Self: Trying to get front of used item queue that is empty");
-  }
-  return usedItemQueue_.front();
-}
-
 bool Self::haveUserPurchaseRequest() const {
   return userPurchaseRequest_.has_value();
 }
@@ -509,6 +459,15 @@ packet::structures::ItemMovement Self::getUserPurchaseRequest() const {
     throw std::runtime_error("Self: Trying to get user purchase request that does not exist");
   }
   return userPurchaseRequest_.value();
+}
+
+// Setters
+void Self::setUserPurchaseRequest(const packet::structures::ItemMovement &itemMovement) {
+  userPurchaseRequest_ = itemMovement;
+}
+
+void Self::resetUserPurchaseRequest() {
+  userPurchaseRequest_.reset();
 }
 
 // =================================================================================================

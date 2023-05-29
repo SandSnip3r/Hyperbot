@@ -13,6 +13,20 @@ AutoPotion::AutoPotion(Bot &bot) : StateMachine(bot) {
 }
 
 void AutoPotion::onUpdate(const event::Event *event) {
+  if (event) {
+    if (const auto *lifeStateUpdateEvent = dynamic_cast<const event::EntityLifeStateChanged*>(event)) {
+      if (lifeStateUpdateEvent->globalId == bot_.selfState().globalId) {
+        if (bot_.selfState().lifeState == sro::entity::LifeState::kDead) {
+          // We died!
+          if (childState_) {
+            // We should destroy this child state.
+            childState_.reset();
+          }
+        }
+      }
+    }
+  }
+
   // First, prefer to defer to child state
   if (childState_) {
     childState_->onUpdate(event);
@@ -162,9 +176,12 @@ bool AutoPotion::tryUseHpPotion() {
   }
 
   bool usedAnItem = false;
-  if (hpPercentage < bot_.currentCharacterConfig().autopotion_config().hp_threshold() && bot_.selfState().canUseItem(type_id::categories::kHpPotion)) {
-    // Use health potion
-    usedAnItem = usePotion(type_id::categories::kHpPotion);
+
+  // Prioritize vigors since they're generally used in more dire situations.
+  if (hpPercentage < bot_.currentCharacterConfig().autopotion_config().vigor_hp_threshold() &&
+      bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
+    // Use vigor potion
+    usedAnItem = usePotion(type_id::categories::kVigorPotion);
   }
 
   if (usedAnItem) {
@@ -172,10 +189,9 @@ bool AutoPotion::tryUseHpPotion() {
     return true;
   }
 
-  if (hpPercentage < bot_.currentCharacterConfig().autopotion_config().vigor_hp_threshold() &&
-      bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
-    // Use vigor potion
-    usedAnItem = usePotion(type_id::categories::kVigorPotion);
+  if (hpPercentage < bot_.currentCharacterConfig().autopotion_config().hp_threshold() && bot_.selfState().canUseItem(type_id::categories::kHpPotion)) {
+    // Use health potion
+    usedAnItem = usePotion(type_id::categories::kHpPotion);
   }
   return usedAnItem;
 }
@@ -188,9 +204,15 @@ bool AutoPotion::tryUseMpPotion() {
   const double mpPercentage = static_cast<double>(bot_.selfState().currentMp()) / *bot_.selfState().maxMp();
 
   bool usedAnItem = false;
-  if (mpPercentage < bot_.currentCharacterConfig().autopotion_config().mp_threshold() && bot_.selfState().canUseItem(type_id::categories::kMpPotion)) {
-    // Use mana potion
-    usedAnItem = usePotion(type_id::categories::kMpPotion);
+  const auto legacyStateEffects = bot_.selfState().legacyStateEffects();
+  const bool haveZombie = (legacyStateEffects[helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie)] > 0);
+
+  // Prioritize vigors since they're generally used in more dire situations.
+  // Don't use vigors when we have zombie.
+  if (!haveZombie && mpPercentage < bot_.currentCharacterConfig().autopotion_config().vigor_mp_threshold() &&
+      bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
+    // Use vigor potion
+    usedAnItem = usePotion(type_id::categories::kVigorPotion);
   }
 
   if (usedAnItem) {
@@ -198,17 +220,9 @@ bool AutoPotion::tryUseMpPotion() {
     return true;
   }
 
-  const auto legacyStateEffects = bot_.selfState().legacyStateEffects();
-  const bool haveZombie = (legacyStateEffects[helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie)] > 0);
-  if (haveZombie) {
-    // Don't use vigors when we have zombie
-    return false;
-  }
-
-  if (mpPercentage < bot_.currentCharacterConfig().autopotion_config().vigor_mp_threshold() &&
-      bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
-    // Use vigor potion
-    usedAnItem = usePotion(type_id::categories::kVigorPotion);
+  if (mpPercentage < bot_.currentCharacterConfig().autopotion_config().mp_threshold() && bot_.selfState().canUseItem(type_id::categories::kMpPotion)) {
+    // Use mana potion
+    usedAnItem = usePotion(type_id::categories::kMpPotion);
   }
   return usedAnItem;
 }

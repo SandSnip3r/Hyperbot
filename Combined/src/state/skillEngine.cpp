@@ -1,23 +1,34 @@
+#include "logging.hpp"
 #include "skillEngine.hpp"
 
 namespace state {
 
-void SkillEngine::skillCooldownBegin(sro::scalar_types::ReferenceObjectId skillRefId) {
-  if (skillsOnCooldown_.find(skillRefId) != skillsOnCooldown_.end()) {
+void SkillEngine::skillCooldownBegin(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker::DelayedEventId cooldownEndEventId) {
+  if (skillCooldownEventIdMap_.find(skillRefId) != skillCooldownEventIdMap_.end()) {
     throw std::runtime_error("Skill cooldown began, but this skill is already on cooldown");
   }
-  skillsOnCooldown_.emplace(skillRefId);
+  skillCooldownEventIdMap_[skillRefId] = cooldownEndEventId;
 }
 
 void SkillEngine::skillCooldownEnded(sro::scalar_types::ReferenceObjectId skillRefId) {
-  if (skillsOnCooldown_.find(skillRefId) == skillsOnCooldown_.end()) {
+  const auto it = skillCooldownEventIdMap_.find(skillRefId);
+  if (it == skillCooldownEventIdMap_.end()) {
     throw std::runtime_error("Skill cooldown ended, but we weren't tracking this skill's cooldown");
   }
-  skillsOnCooldown_.erase(skillRefId);
+  skillCooldownEventIdMap_.erase(it);
 }
 
 bool SkillEngine::skillIsOnCooldown(sro::scalar_types::ReferenceObjectId skillRefId) const {
-  return skillsOnCooldown_.find(skillRefId) != skillsOnCooldown_.end();
+  return skillCooldownEventIdMap_.find(skillRefId) != skillCooldownEventIdMap_.end();
+}
+
+std::optional<std::chrono::milliseconds> SkillEngine::skillRemainingCooldown(sro::scalar_types::ReferenceObjectId skillRefId, const broker::EventBroker &eventBroker) const {
+  const auto it = skillCooldownEventIdMap_.find(skillRefId);
+  if (it == skillCooldownEventIdMap_.end()) {
+    LOG() << "Asking for time remaining on skill cooldown, but dont have skill cooldown data" << std::endl;
+    return {};
+  }
+  return eventBroker.timeRemainingOnDelayedEvent(it->second);
 }
 
 bool SkillEngine::alreadyTriedToCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
@@ -39,6 +50,12 @@ bool SkillEngine::alreadyTriedToCastSkill(sro::scalar_types::ReferenceObjectId s
     }
   }
   return false;
+}
+
+void SkillEngine::reset() {
+  skillCastIdMap.clear();
+  pendingCommandQueue.clear();
+  acceptedCommandQueue.clear();
 }
 
 } // namespace state

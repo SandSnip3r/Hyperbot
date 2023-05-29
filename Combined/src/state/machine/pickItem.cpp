@@ -10,7 +10,6 @@ namespace state::machine {
 
 PickItem::PickItem(Bot &bot, sro::scalar_types::EntityGlobalId targetGlobalId) : StateMachine(bot), targetGlobalId_(targetGlobalId) {
   stateMachineCreated(kName);
-  LOG() << "Picking item" << std::endl;
   // Initialize our self as walking to the item
   // TODO: Might not need to walk to the item; check.
   const auto &item = bot_.entityTracker().getEntity<entity::Item>(targetGlobalId_);
@@ -23,10 +22,8 @@ PickItem::~PickItem() {
 
 void PickItem::onUpdate(const event::Event *event) {
   if (childState_) {
-    LOG() << "Have child state" << std::endl;
     childState_->onUpdate(event);
     if (childState_->done()) {
-      LOG() << "Child state is done" << std::endl;
       // Was walking, no other state machine to initialize
       childState_.reset();
     } else {

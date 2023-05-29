@@ -2,6 +2,7 @@
 #define STATE_MACHINE_TRAINING_HPP_
 
 #include "stateMachine.hpp"
+#include "walking.hpp"
 
 #include "entity/entity.hpp"
 #include "entity/geometry.hpp"
@@ -24,17 +25,43 @@ public:
   bool done() const override;
 private:
   static inline std::string kName{"Training"};
-  bool walkingToRandomPoint_{false};
   bool done_{false};
   bool wantToAttackMonster(const entity::Monster &monster) const;
   void buildBuffList();
-  std::optional<sro::scalar_types::ReferenceObjectId> getNextBuffToCast() const;
-  std::pair<const entity::Monster*, sro::scalar_types::ReferenceObjectId> getTargetAndAttackSkill(const std::vector<const entity::Monster*> &monsters, const std::vector<sro::scalar_types::ReferenceObjectId> &attackSkills) const;
+  using SkillList = std::vector<sro::scalar_types::ReferenceObjectId>;
+  using ItemList = std::vector<const entity::Item*>;
+  using MonsterList = std::vector<const entity::Monster*>;
+  std::optional<sro::scalar_types::ReferenceObjectId> getNextBuffToCast(const SkillList &buffList) const;
+
+  struct TargetAndAttackSkill {
+    sro::scalar_types::EntityGlobalId targetId;
+    sro::scalar_types::ReferenceObjectId skillId;
+  };
+  std::optional<TargetAndAttackSkill> getTargetAndAttackSkill(const MonsterList &monsters) const;
   const std::unique_ptr<entity::Geometry> trainingAreaGeometry_;
-  std::vector<sro::scalar_types::ReferenceObjectId> buffsToUse_;
-  std::vector<sro::scalar_types::ReferenceObjectId> skillsToUse_;
+  SkillList trainingBuffs_;
+  SkillList nonTrainingBuffs_;
+  SkillList skillsToUse_;
+  std::optional<sro::scalar_types::ReferenceObjectId> imbueRefId_;
   std::set<const event::Event*> handledEvents_;
-  std::optional<sro::Position> calculateWhereToWalkToAttackEntityWithSkill(const entity::MobileEntity *entity, sro::scalar_types::ReferenceObjectId attackRefId);
+  std::optional<TargetAndAttackSkill> walkingTargetAndAttack_;
+  std::optional<sro::Position> calculateWhereToWalkToAttackEntityWithSkill(const entity::MobileEntity &entity, sro::scalar_types::ReferenceObjectId attackRefId);
+  bool checkBuffs(const SkillList &buffList);
+  void possiblyOverwriteChildStateMachine(std::unique_ptr<StateMachine> newChildStateMachine);
+
+  template<typename StateMachineType, typename ...Args>
+  void possiblyOverwriteChildStateMachine(Args&& ...args) {
+    if (childState_ && dynamic_cast<Walking*>(childState_.get()) == nullptr) {
+      throw std::runtime_error("Cannot overwrite a child state which is not Walking");
+    }
+    walkingTargetAndAttack_.reset();
+    setChildStateMachine<StateMachineType>(std::forward<Args>(args)...);
+  }
+
+  std::tuple<ItemList, MonsterList> getItemsAndMonstersInRange() const;
+  bool tryPickItem(const ItemList &itemList);
+  bool tryAttackMonster(const MonsterList &monsterList);
+  bool walkToRandomPoint();
 };
 
 } // namespace state::machine

@@ -17,8 +17,20 @@ EventBroker::DelayedEventId EventBroker::publishDelayedEvent(std::chrono::millis
   return publishDelayedEvent<event::Event>(delay, eventCode);
 }
 
+EventBroker::DelayedEventId EventBroker::publishDelayedEvent(TimerEndTimePoint endTime, event::EventCode eventCode) {
+  return publishDelayedEvent<event::Event>(endTime, eventCode);
+}
+
 bool EventBroker::cancelDelayedEvent(DelayedEventId id) {
   return timerManager_.cancelTimer(id);
+}
+
+std::optional<std::chrono::milliseconds> EventBroker::timeRemainingOnDelayedEvent(DelayedEventId id) const {
+ return timerManager_.timeRemainingOnTimer(id);
+}
+
+std::optional<EventBroker::TimerEndTimePoint> EventBroker::delayedEventEndTime(DelayedEventId id) const {
+ return timerManager_.timerEndTime(id);
 }
 
 EventBroker::SubscriptionId EventBroker::subscribeToEvent(event::EventCode eventCode, EventHandleFunction &&handleFunc) {
@@ -69,6 +81,10 @@ void EventBroker::publishEvent(std::unique_ptr<event::Event> event) {
 
 EventBroker::DelayedEventId EventBroker::publishDelayedEvent(std::chrono::milliseconds delay, std::unique_ptr<event::Event> event) {
   return timerManager_.registerTimer(delay, std::bind(&EventBroker::timerFinished, this, event.release()));
+}
+
+EventBroker::DelayedEventId EventBroker::publishDelayedEvent(TimerEndTimePoint endTime, std::unique_ptr<event::Event> event) {
+  return timerManager_.registerTimer(endTime, std::bind(&EventBroker::timerFinished, this, event.release()));
 }
 
 void EventBroker::notifySubscribers(std::unique_ptr<event::Event> event) {

@@ -20,21 +20,22 @@ namespace type_id {
 using TypeId = uint16_t;
 
 class TypeCategory {
+private:
+  static constexpr TypeId kTypeId1Mask{0b11100};
+  static constexpr TypeId kTypeId2Mask{0b1111100};
+  static constexpr TypeId kTypeId3Mask{0b11111111100};
+  static constexpr TypeId kTypeId4Mask{0b1111111111111100};
 public:
-  TypeCategory(uint8_t typeId1);
+  explicit TypeCategory(uint8_t typeId1);
+  explicit TypeCategory(TypeId typeIdData, TypeId typeIdMask = kTypeId4Mask);
   TypeCategory subCategory(uint8_t nextTypeId) const;
   bool contains(TypeId typeId) const;
   bool contains(const TypeCategory typeCategory) const;
   bool isConcreteItem() const;
   TypeId getTypeId() const;
 private:
-  static constexpr TypeId kTypeId1Mask{0b11100};
-  static constexpr TypeId kTypeId2Mask{0b1111100};
-  static constexpr TypeId kTypeId3Mask{0b11111111100};
-  static constexpr TypeId kTypeId4Mask{0b1111111111111100};
   const TypeId typeIdData_{0};
   const TypeId typeIdMask_{kTypeId1Mask};
-  TypeCategory(TypeId typeIdData, TypeId typeIdMask);
 };
 
 std::string toString(TypeId typeId);

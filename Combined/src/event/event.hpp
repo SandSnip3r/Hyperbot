@@ -1,8 +1,8 @@
 #ifndef EVENT_EVENT_HPP_
 #define EVENT_EVENT_HPP_
 
+#include "packet/building/commonBuilding.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
-#include "packet/building/clientAgentCharacterMoveRequest.hpp"
 
 #include "ui-proto/config.pb.h"
 
@@ -60,8 +60,8 @@ enum class EventCode {
   kPlayerCharacterBuffAdded,
   kPlayerCharacterBuffRemoved,
   kOurCommandError,
-  // TODO: Refactor this whole itemUsedTimeout concept
   kItemUseTimeout,
+  kSkillCastTimeout,
   kEntityMovementBegan,
   kStateMachineActiveTooLong,
 
@@ -313,14 +313,19 @@ public:
   const packet::structures::ActionCommand command;
   virtual ~CommandError() = default;
 };
-
-// TODO: Refactor this whole itemUsedTimeout concept
 struct ItemUseTimeout : public Event {
 public:
   ItemUseTimeout(uint8_t slot, type_id::TypeId tid);
   const uint8_t slotNum;
   const type_id::TypeId typeData;
   virtual ~ItemUseTimeout() = default;
+};
+
+struct SkillCastTimeout : public Event {
+public:
+  SkillCastTimeout(sro::scalar_types::ReferenceObjectId skillId);
+  const sro::scalar_types::ReferenceObjectId skillId;
+  virtual ~SkillCastTimeout() = default;
 };
 
 struct EntityOwnershipRemoved : public Event {

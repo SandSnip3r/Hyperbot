@@ -1,6 +1,7 @@
 #ifndef STATE_SKILL_ENGINE_HPP_
 #define STATE_SKILL_ENGINE_HPP_
 
+#include "broker/eventBroker.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 
 #include <silkroad_lib/scalar_types.h>
@@ -12,13 +13,15 @@ namespace state {
 
 class SkillEngine {
 public:
-  void skillCooldownBegin(sro::scalar_types::ReferenceObjectId skillRefId);
+  void skillCooldownBegin(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker::DelayedEventId cooldownEndEventId);
   void skillCooldownEnded(sro::scalar_types::ReferenceObjectId skillRefId);
   bool skillIsOnCooldown(sro::scalar_types::ReferenceObjectId skillRefId) const;
+  std::optional<std::chrono::milliseconds> skillRemainingCooldown(sro::scalar_types::ReferenceObjectId skillRefId, const broker::EventBroker &eventBroker) const;
   bool alreadyTriedToCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const;
+  void reset();
 
 private:
-  std::set<sro::scalar_types::ReferenceObjectId> skillsOnCooldown_;
+  std::map<sro::scalar_types::ReferenceObjectId, broker::EventBroker::DelayedEventId> skillCooldownEventIdMap_;
 
 public:
   struct SkillInfo {

@@ -18,7 +18,9 @@
 // </remove>
 #include "type_id/categories.hpp"
 
+#include "pathfinder.h"
 
+#include <silkroad_lib/game_constants.h>
 #include <silkroad_lib/position_math.h>
 
 Bot::Bot(const config::Config &config,
@@ -40,6 +42,12 @@ Bot::Bot(const config::Config &config,
   const std::string characterToLogin = configProto.character_to_login();
   if (!config_.haveCharacterConfig(characterToLogin)) {
     throw std::runtime_error("Config does not contain character config for character to login");
+  }
+
+  std::ifstream estVisRangeFile{kEstVisRangeFilename};
+  if (estVisRangeFile) {
+    estVisRangeFile >> worldState_.selfState().estimatedVisibilityRange;
+    LOG() << "Parsed estimated visibility range from file as " << worldState_.selfState().estimatedVisibilityRange << std::endl;
   }
 }
 
@@ -131,6 +139,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kEntityBodyStateChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityLifeStateChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemUseTimeout, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kSkillCastTimeout, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityOwnershipRemoved, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kKnockedBack, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kKnockedDown, eventHandleFunction);
@@ -283,16 +292,20 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kEntityLifeStateChanged: {
         const auto &castedEvent = dynamic_cast<const event::EntityLifeStateChanged&>(*event);
         const auto &character = worldState_.getEntity<entity::Character>(castedEvent.globalId);
-        if (character.lifeState == sro::entity::LifeState::kDead) {
+        if (character.globalId != selfState().globalId && character.lifeState == sro::entity::LifeState::kDead) {
           static int deathCount = 0;
           LOG() << ++deathCount << " kill(s)" << std::endl;
         }
-        onUpdate();
+        onUpdate(event);
         break;
       }
       case event::EventCode::kItemUseTimeout: {
         const auto &castedEvent = dynamic_cast<const event::ItemUseTimeout&>(*event);
         itemUseTimedOut(castedEvent);
+        break;
+      }
+      case event::EventCode::kSkillCastTimeout: {
+        onUpdate(event);
         break;
       }
       case event::EventCode::kEntityOwnershipRemoved: {
@@ -630,6 +643,10 @@ void Bot::entitySpawned(const event::EntitySpawned &event) {
     if (distanceToEntity > worldState_.selfState().estimatedVisibilityRange) {
       LOG() << "Bumping up estimated visibility range to " << distanceToEntity << std::endl;
       worldState_.selfState().estimatedVisibilityRange = distanceToEntity;
+      std::ofstream estVisRangeFile{kEstVisRangeFilename};
+      if (estVisRangeFile) {
+        estVisRangeFile << worldState_.selfState().estimatedVisibilityRange;
+      }
     }
   }
   onUpdate(&event);
@@ -654,10 +671,8 @@ void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
 }
 
 void Bot::itemUseTimedOut(const event::ItemUseTimeout &event) {
-  // TODO: Refactor this whole itemUsedTimeout concept
-  worldState_.selfState().itemUsedTimeoutTimer.reset();
-  worldState_.selfState().removedItemFromUsedItemQueue(event.slotNum, event.typeData);
-  onUpdate();
+  LOG() << "Item use timed out!" << std::endl;
+  onUpdate(&event);
 }
 
 void Bot::handleKnockbackStunEnded() {
@@ -681,14 +696,37 @@ bool Bot::needToGoToTown() const {
     LOG() << "Checking if we need to go to town. Have no MP potions" << std::endl;
     return true;
   }
+  const auto hpPotionSlots = selfState().inventory.findItemsOfCategory({type_id::categories::kHpPotion});
+  if (hpPotionSlots.empty()) {
+    LOG() << "Checking if we need to go to town. Have no HP potions" << std::endl;
+    return true;
+  }
+  int hpPotionCount=0;
+  for (const auto slot : hpPotionSlots) {
+    const auto *item = selfState().inventory.getItem(slot);
+    if (item == nullptr) {
+      throw std::runtime_error("Expecting hp potion, but item is null");
+    }
+    const auto *itemAsExp = dynamic_cast<const storage::ItemExpendable*>(item);
+    if (itemAsExp == nullptr) {
+      throw std::runtime_error("Expecting hp potion, but expendable is null");
+    }
+    hpPotionCount += itemAsExp->quantity;
+  }
+  constexpr const int kMinHpCount{10};
+  if (hpPotionCount < kMinHpCount) {
+    LOG() << "Checking if we need to go to town. Have fewer than " << kMinHpCount << " HP potions" << std::endl;
+    return true;
+  }
   return false;
 }
 
 bool Bot::similarSkillIsAlreadyActive(sro::scalar_types::ReferenceObjectId skillRefId) const {
-  const auto &skill = gameData_.skillData().getSkillById(skillRefId);
-  for (const auto currentBuffId : selfState().buffs) {
-    const auto &currentBuff = gameData_.skillData().getSkillById(currentBuffId);
-    if (skill.actionOverlap == currentBuff.actionOverlap) {
+  const auto &givenSkillData = gameData_.skillData().getSkillById(skillRefId);
+  const auto activeBuffs = selfState().activeBuffs();
+  for (const auto activeBuffId : activeBuffs) {
+    const auto &activeBuffData = gameData_.skillData().getSkillById(activeBuffId);
+    if (givenSkillData.actionOverlap == activeBuffData.actionOverlap) {
       // These two cannot be active at the same time
       return true;
     }
@@ -697,6 +735,22 @@ bool Bot::similarSkillIsAlreadyActive(sro::scalar_types::ReferenceObjectId skill
 }
 
 bool Bot::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
+  const auto &skillData = gameData().skillData().getSkillById(skillRefId);
+  // TODO: Keep track if we're wearing a full protector or garment set and reduce the MP requirement by 10%/20% respectively.
+  const auto currentMp = selfState().currentMp();
+  if (skillData.consumeMP > currentMp ||
+      (selfState().maxMp() && skillData.consumeMPRatio > (static_cast<double>(currentMp) / *selfState().maxMp()) * 100)) {
+    // Not enough MP to cast.
+    LOG() << "Not enough MP to cast skill " << (gameData().getSkillNameIfExists(skillRefId) ? *gameData().getSkillNameIfExists(skillRefId) : std::string("unknown")) << std::endl;
+    return false;
+  }
+  const auto currentHp = selfState().currentHp();
+  if (skillData.consumeHP > currentHp ||
+      (selfState().maxHp() && skillData.consumeHPRatio > (static_cast<double>(currentHp) / *selfState().maxHp()) * 100)) {
+    // Not enough HP to cast.
+    LOG() << "Not enough HP to cast skill " << (gameData().getSkillNameIfExists(skillRefId) ? *gameData().getSkillNameIfExists(skillRefId) : std::string("unknown")) << std::endl;
+    return false;
+  }
   if (selfState().skillEngine.skillIsOnCooldown(skillRefId)) {
     return false;
   }
@@ -706,4 +760,118 @@ bool Bot::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
     return false;
   }
   return true;
+}
+
+std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestination(const sro::Position &destinationPosition) const {
+  // Since we can only move to positions on whole integers, find the closest possible point to the destination position while also accounting for the transformation that happens to the packet while being converted to be sent over the network
+  const auto networkReadyPos = packet::building::NetworkReadyPosition::roundToNearest(destinationPosition);
+  const auto closestDestinationPosition = networkReadyPos.asSroPosition();
+  if (sro::position_math::calculateDistance2d(selfState().position(), closestDestinationPosition) <= sqrt(0.5)) {
+    // Already at destination
+    return {};
+  }
+  auto pathfindingResultPathToVectorOfPositions = [&](const auto &pathfindingShortestPath) {
+    const auto &navmeshTriangulation = gameData().navmeshTriangulation();
+
+    // Get a list of all straight segments
+    std::vector<pathfinder::StraightPathSegment*> straightSegments;
+    for (const auto &segment : pathfindingShortestPath) {
+      pathfinder::StraightPathSegment *straightSegment = dynamic_cast<pathfinder::StraightPathSegment*>(segment.get());
+      if (straightSegment != nullptr) {
+        straightSegments.push_back(straightSegment);
+      }
+    }
+
+    // Turn straight segments into a list of waypoints
+    std::vector<sro::Position> waypoints;
+    // Note: We are ignoring the start of the first segment, since we assume we're already there
+    for (int i=0; i<straightSegments.size()-1; ++i) {
+      // Find the average between the end of this straight segment and the beginning of the next
+      //  Between these two is an arc, which we're ignoring
+      // TODO: There is a chance that this yields a bad path
+      const auto &point1 = straightSegments[i]->endPoint;
+      const auto &point2 = straightSegments[i+1]->startPoint;
+      const auto midpoint = pathfinder::math::extendLineSegmentToLength(point1, point2, pathfinder::math::distance(point1, point2)/2.0);
+      const auto regionAndPointPair = navmeshTriangulation.transformAbsolutePointIntoRegion({static_cast<float>(midpoint.x()), 0.0f, static_cast<float>(midpoint.y())});
+      // TODO: Rounding the position could result in an invalid path
+      waypoints.emplace_back(regionAndPointPair.first, std::round(regionAndPointPair.second.x), std::round(regionAndPointPair.second.y), std::round(regionAndPointPair.second.z));
+    }
+
+    // Additionally, add the endpoint of the final segment
+    const auto finalRegionAndPointPair = navmeshTriangulation.transformAbsolutePointIntoRegion({static_cast<float>(straightSegments.back()->endPoint.x()), 0.0f, static_cast<float>(straightSegments.back()->endPoint.y())});
+    waypoints.emplace_back(finalRegionAndPointPair.first, std::round(finalRegionAndPointPair.second.x), std::round(finalRegionAndPointPair.second.y), std::round(finalRegionAndPointPair.second.z));
+
+    // Remove duplicates
+    auto newEndIt = std::unique(waypoints.begin(), waypoints.end());
+    if (newEndIt != waypoints.end()) {
+      waypoints.erase(newEndIt, waypoints.end());
+    }
+    return waypoints;
+  };
+
+  auto breakUpLongMovements = [](std::vector<sro::Position> &waypoints) {
+    auto tooFar = [](const auto &srcWaypoint, const auto &destWaypoint) {
+      // The difference between a pair of xOffsets must be <= 1920.
+      // The difference between a pair of zOffsets must be <= 1920.
+      const auto [dx, dz] = sro::position_math::calculateOffset2d(srcWaypoint, destWaypoint);
+      return (std::abs(dx) > sro::game_constants::kRegionWidth ||
+              std::abs(dz) > sro::game_constants::kRegionHeight);
+    };
+    auto splitWaypoints = [](const auto &srcWaypoint, const auto &destWaypoint) {
+      const auto [dx, dz] = sro::position_math::calculateOffset2d(srcWaypoint, destWaypoint);
+      if (std::abs(dx) > std::abs(dz)) {
+        const double ratio = static_cast<double>(sro::game_constants::kRegionWidth) / std::abs(dx);
+        const auto newDxOffset = (dx > 0 ? 1 : -1) * sro::game_constants::kRegionWidth;
+        const double newDzOffset = dz * ratio;
+        return sro::position_math::createNewPositionWith2dOffset(destWaypoint, -newDxOffset, -newDzOffset);
+      } else {
+        const double ratio = static_cast<double>(sro::game_constants::kRegionWidth) / std::abs(dz);
+        const auto newDxOffset = dx * ratio;
+        const double newDzOffset = (dz > 0 ? 1 : -1) * sro::game_constants::kRegionWidth;
+        return sro::position_math::createNewPositionWith2dOffset(destWaypoint, -newDxOffset, -newDzOffset);
+      }
+    };
+    for (int i=waypoints.size()-1; i>0;) {
+      if (tooFar(waypoints.at(i-1), waypoints.at(i))) {
+        // Pick a point that is the maxmimum distance possible away from waypoints[i] and insert it before waypoints[i]
+        const auto newWaypoint = splitWaypoints(waypoints.at(i-1), waypoints.at(i));
+        waypoints.insert(waypoints.begin()+i, newWaypoint);
+      } else {
+        --i;
+      }
+    }
+  };
+
+  auto convertWaypointsToNetworkReadyPoints = [](const std::vector<sro::Position> &waypoints) {
+    std::vector<packet::building::NetworkReadyPosition> result;
+    result.reserve(waypoints.size());
+    for (const auto &pos : waypoints) {
+      result.emplace_back(packet::building::NetworkReadyPosition::roundToNearest(pos));
+    }
+    return result;
+  };
+
+  constexpr const double kAgentRadius{7.23};
+  pathfinder::Pathfinder<navmesh::triangulation::NavmeshTriangulation> pathfinder(gameData().navmeshTriangulation(), kAgentRadius);
+  try {
+    const auto currentPosition = selfState().position();
+    const math::Vector currentPositionPoint(currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset());
+    const auto navmeshCurrentPosition = gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(currentPositionPoint, currentPosition.regionId());
+
+    const math::Vector destinationPositionPoint(closestDestinationPosition.xOffset(), closestDestinationPosition.yOffset(), closestDestinationPosition.zOffset());
+    const auto navmeshDestinationPosition = gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, destinationPosition.regionId());
+
+    const auto pathfindingResult = pathfinder.findShortestPath(navmeshCurrentPosition, navmeshDestinationPosition);
+    const auto &path = pathfindingResult.shortestPath;
+    if (path.empty()) {
+      throw std::runtime_error("Found empty path");
+    }
+    auto waypoints = pathfindingResultPathToVectorOfPositions(path);
+    // Add our own position to the beginning of this list so that we can break up the distance if it's too far.
+    waypoints.insert(waypoints.begin(), currentPosition);
+    breakUpLongMovements(waypoints);
+    return convertWaypointsToNetworkReadyPoints(waypoints);
+  } catch (std::exception &ex) {
+    throw std::runtime_error("Cannot find path with pathfinder: \""+std::string(ex.what())+"\"");
+  }
 }

@@ -1,6 +1,7 @@
 #include "skill.hpp"
 
 #include <algorithm>
+#include <stdexcept>
 
 namespace pk2::ref {
   
@@ -60,6 +61,22 @@ bool Skill::isPseudoinstant() const {
   return (basicActivity != 1 &&
           (actionPreparingTime+actionCastingTime+actionActionDuration) == 0 &&
           std::find(params.begin(), params.end(), kDuraVal) != params.end());
+}
+
+int32_t Skill::duration() const {
+  auto it = std::find(params.begin(), params.end(), kDuraVal);
+  if (it == params.end()) {
+    throw std::runtime_error("Trying to get duration of skill which does not have a DURA param");
+  }
+  auto valueIt = std::next(it);
+  if (valueIt == params.end()) {
+    throw std::runtime_error("Trying to get duration, but there is no remaining parameter space for the value");
+  }
+  return *valueIt;
+}
+
+Skill::Param1Type Skill::param1Type() const {
+  return static_cast<Param1Type>(params.front());
 }
 
 } // namespace pk2::ref

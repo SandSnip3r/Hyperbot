@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <thread>
 #include <vector>
 
@@ -13,14 +14,19 @@ namespace broker {
 class TimerManager {
 public:
   using TimerId = uint32_t;
-  void runAsync();
-  TimerId registerTimer(std::chrono::milliseconds timerDuration, std::function<void()> timerCompletedFunction);
-  void triggerInstantTimer(std::function<void()> callback);
-  bool cancelTimer(TimerId id);
-  ~TimerManager();
-private:
   using TimePoint = std::chrono::high_resolution_clock::time_point;
 
+  void runAsync();
+  TimerId registerTimer(std::chrono::milliseconds timerDuration, std::function<void()> timerCompletedFunction);
+  TimerId registerTimer(TimePoint timeEnd, std::function<void()> timerCompletedFunction);
+  void triggerInstantTimer(std::function<void()> callback);
+  bool cancelTimer(TimerId id);
+  std::optional<std::chrono::milliseconds> timeRemainingOnTimer(TimerId id) const;
+  std::optional<TimePoint> timerEndTime(TimerId id) const;
+
+  ~TimerManager();
+
+private:
   struct Timer {
     TimerId id;
     TimePoint endTime;
@@ -35,7 +41,7 @@ private:
   TimerId timerIdCounter_{0};
   std::vector<Timer> timerDataHeap_;
   std::condition_variable cv_;
-  std::mutex timerDataMutex_;
+  mutable std::mutex timerDataMutex_;
   std::thread thr_;
   void waitForData();
   void run();

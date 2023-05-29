@@ -2,7 +2,7 @@
 
 namespace type_id::categories {
 
-const TypeCategory kCharacter{1};
+const TypeCategory kCharacter{static_cast<uint8_t>(1)};
   const TypeCategory kPlayerCharacter{kCharacter.subCategory(1)};
   const TypeCategory kNonPlayerCharacter{kCharacter.subCategory(2)};
     const TypeCategory kMonster{kNonPlayerCharacter.subCategory(1)};
@@ -23,7 +23,7 @@ const TypeCategory kCharacter{1};
     const TypeCategory kSiegeObject{kNonPlayerCharacter.subCategory(4)};
     const TypeCategory kSiegeStruct{kNonPlayerCharacter.subCategory(5)};
 
-const TypeCategory kItem{3};
+const TypeCategory kItem{static_cast<uint8_t>(3)};
   const TypeCategory kEquipment{kItem.subCategory(1)};
 //     const TypeCategory kGarment{kEquipment.subCategory(1)};
 //     const TypeCategory kProtector{kEquipment.subCategory(2)};
@@ -52,7 +52,9 @@ const TypeCategory kItem{3};
       const TypeCategory kGold{kCurrency.subCategory(0)};
     const TypeCategory kSpecialGoods{kExpendable.subCategory(8)};
     const TypeCategory kQuestAndEvent{kExpendable.subCategory(9)};
+    const TypeCategory kSpecial{kExpendable.subCategory(13)};
+      const TypeCategory kResurrection{kSpecial.subCategory(6)};
 
-const TypeCategory kStructure{4};
+const TypeCategory kStructure{static_cast<uint8_t>(4)};
 
 } // namespace type_id::categories

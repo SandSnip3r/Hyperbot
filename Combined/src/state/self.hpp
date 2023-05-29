@@ -69,7 +69,7 @@ public:
   void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) override;
   void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) override;
 
-  void setMp(uint32_t mp);
+  void setCurrentMp(uint32_t mp);
   void setMaxHpMp(uint32_t maxHp, uint32_t maxMp);
   void updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels);
   void setStateBitmask(uint32_t stateBitmask);
@@ -82,7 +82,7 @@ public:
   void setStorageGold(uint64_t goldAmount);
   void setGuildStorageGold(uint64_t goldAmount);
 
-  void usedAnItem(type_id::TypeId typeData, broker::EventBroker &eventBroker);
+  void usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milliseconds> cooldown, broker::EventBroker &eventBroker);
   void itemCooldownEnded(type_id::TypeId itemTypeData);
 
   // Getters
@@ -109,7 +109,9 @@ public:
   int getHpPotionDelay() const;
   int getMpPotionDelay() const;
   int getVigorPotionDelay() const;
-  int getGrainDelay() const;
+  int getHpGrainDelay() const;
+  int getMpGrainDelay() const;
+  int getVigorGrainDelay() const;
   int getUniversalPillDelay() const;
   int getPurificationPillDelay() const;
 
@@ -134,6 +136,7 @@ public:
   std::vector<packet::structures::Skill> skills() const;
 
   bool canUseItems() const;
+  bool canUseItem(type_id::TypeId itemTypeId) const;
   bool canUseItem(type_id::TypeCategory itemType) const;
 
   // =================Packets-in-flight state=================
@@ -143,18 +146,9 @@ public:
     type_id::TypeId typeId;
   };
   // Setters
-  void popItemFromUsedItemQueueIfNotEmpty();
-  void clearUsedItemQueue();
-  void pushItemToUsedItemQueue(sro::scalar_types::StorageIndexType inventorySlotNum, type_id::TypeId typeId);
-
   void setUserPurchaseRequest(const packet::structures::ItemMovement &itemMovement);
   void resetUserPurchaseRequest();
   // Getters
-  bool usedItemQueueIsEmpty() const;
-  bool itemIsInUsedItemQueue(type_id::TypeId typeId) const;
-  void removedItemFromUsedItemQueue(sro::scalar_types::StorageIndexType inventorySlotNum, type_id::TypeId typeId);
-  UsedItem getUsedItemQueueFront() const;
-
   bool haveUserPurchaseRequest() const;
   packet::structures::ItemMovement getUserPurchaseRequest() const;
   // =========================================================
@@ -255,8 +249,6 @@ public:
   // Misc
   // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.
   double estimatedVisibilityRange{872.689};
-  // TODO: Refactor this whole itemUsedTimeout concept
-  std::optional<broker::TimerManager::TimerId> itemUsedTimeoutTimer;
   bool stunnedFromKnockdown{false};
   bool stunnedFromKnockback{false};
 
@@ -280,10 +272,6 @@ private:
   //  It is required that we keep state of what actions are currently pending
   //  TODO: It could be a good idea to separate this out somehow
 
-  // usedItemQueue_ is a list of items that we sent a packet to use but havent yet heard back from the server on their success or failure
-  // TODO: When we start tracking items moving in the invetory, we'll need to update this used item queue
-  std::deque<UsedItem> usedItemQueue_;
-
   // User purchasing tracking
   // This is for tracking an item that was most recently purchased from an NPC by the human interacting with the client
   //  Once the BuyFromNpc item movement packet comes in, we match that item movement with this item movement
@@ -294,6 +282,9 @@ private:
   // TODO: This is general game knowledge. Consider moving to GameData.
   static const int kEuPotionDefaultDelayMs_{15000};
   static const int kChPotionDefaultDelayMs_{1000};
+  static const int kGrainDelayMs_{4000};
+  static const int kPanicPotionDelayIncreaseMs_{4000};
+  static const int kCombustionPotionDelayIncreaseMs_{4000};
 };
 
 } // namespace state

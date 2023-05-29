@@ -1,33 +1,7 @@
 #include "clientAgentCharacterMoveRequest.hpp"
-#include "../enums/packetEnums.hpp"
+#include "packet/enums/packetEnums.hpp"
 
 namespace packet::building {
-
-NetworkReadyPosition::NetworkReadyPosition(const sro::Position &pos) : convertedPosition_(truncateForNetwork(pos)) {
-}
-
-sro::Position NetworkReadyPosition::asSroPosition() const {
-  return convertedPosition_;
-}
-
-sro::Position NetworkReadyPosition::truncateForNetwork(const sro::Position &pos) {
-  // x,y,z are truncated, not rounded
-  if (pos.isDungeon()) {
-    return {
-              pos.regionId(),
-              static_cast<float>(static_cast<uint32_t>(pos.xOffset())),
-              static_cast<float>(static_cast<uint32_t>(pos.yOffset())),
-              static_cast<float>(static_cast<uint32_t>(pos.zOffset()))
-           };
-  } else {
-    return {
-              pos.regionId(),
-              static_cast<float>(static_cast<uint16_t>(pos.xOffset())),
-              static_cast<float>(static_cast<uint16_t>(pos.yOffset())),
-              static_cast<float>(static_cast<uint16_t>(pos.zOffset()))
-           };
-  }
-}
 
 enum class HasDestination : uint8_t {
   kNo = 0,

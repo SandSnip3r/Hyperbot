@@ -283,8 +283,6 @@ set(no_group_source_files
     "src/state/machine/buyingItems.hpp"
     "src/state/machine/castSkill.cpp"
     "src/state/machine/castSkill.hpp"
-    "src/state/machine/castSkillOnEntity.cpp"
-    "src/state/machine/castSkillOnEntity.hpp"
     "src/state/machine/moveItemInInventory.cpp"
     "src/state/machine/moveItemInInventory.hpp"
     "src/state/machine/pickItem.cpp"

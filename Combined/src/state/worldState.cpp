@@ -22,13 +22,13 @@ const state::Self& WorldState::selfState() const {
   return selfState_;
 }
 
-void WorldState::addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId) {
+void WorldState::addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, int32_t durationMs) {
   // For now, we only care about PlayerCharacters
   // TODO: add buffs for others
   entity::Entity *entity = getEntity(globalId);
   if (auto *playerCharacter = dynamic_cast<entity::PlayerCharacter*>(entity)) {
     buffTokenToEntityAndSkillIdMap_.emplace(std::piecewise_construct, std::forward_as_tuple(tokenId), std::forward_as_tuple(globalId, skillRefId));
-    playerCharacter->addBuff(skillRefId, eventBroker_);
+    playerCharacter->addBuff(skillRefId, tokenId, durationMs, eventBroker_);
   }
 }
 
@@ -44,7 +44,7 @@ void WorldState::removeBuffs(const std::vector<uint32_t> &tokenIds) {
     if (playerCharacter == nullptr) {
       throw std::runtime_error("Only tracking buffs for PlayerCharacters, how did this get here?");
     }
-    playerCharacter->removeBuff(buffTokenDataIt->second.skillRefId, eventBroker_);
+    playerCharacter->removeBuff(buffTokenDataIt->second.skillRefId, tokenId, eventBroker_);
     buffTokenToEntityAndSkillIdMap_.erase(buffTokenDataIt);
   }
 }

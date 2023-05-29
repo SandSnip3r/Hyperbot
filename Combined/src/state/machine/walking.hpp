@@ -3,7 +3,7 @@
 
 #include "stateMachine.hpp"
 #include "broker/eventBroker.hpp"
-#include "packet/building/clientAgentCharacterMoveRequest.hpp"
+#include "packet/building/commonBuilding.hpp"
 
 #include <silkroad_lib/position.h>
 
@@ -11,9 +11,6 @@
 #include <vector>
 
 namespace state::machine {
-
-// TODO: This feels like a weird home for this function.
-std::vector<packet::building::NetworkReadyPosition> calculatePathToDestination(const sro::Position &destinationPosition, const Bot &bot);
 
 class Walking : public StateMachine {
 public:

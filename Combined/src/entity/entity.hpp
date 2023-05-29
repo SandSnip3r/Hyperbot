@@ -14,7 +14,9 @@
 #include <cstdint>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <string>
+#include <vector>
 
 namespace entity {
 
@@ -126,12 +128,22 @@ protected:
   std::optional<uint32_t> currentHp_;
 };
 
+struct BuffData {
+  sro::scalar_types::ReferenceObjectId skillRefId;
+  std::chrono::high_resolution_clock::time_point endTimePoint;
+};
+
 class PlayerCharacter : public Character {
 public:
   std::string name;
-  std::set<sro::scalar_types::ReferenceObjectId> buffs;
-  void addBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker);
-  void removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker &eventBroker);
+  // Maps TokenId to BuffData
+  std::map<uint32_t, BuffData> buffDataMap;
+  std::set<sro::scalar_types::ReferenceObjectId> activeBuffs() const;
+  bool buffIsActive(sro::scalar_types::ReferenceObjectId skillRefId) const;
+  int buffMsRemaining(sro::scalar_types::ReferenceObjectId skillRefId) const;
+  void addBuff(sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, int32_t durationMs, broker::EventBroker &eventBroker);
+  void removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, broker::EventBroker &eventBroker);
+  void clearBuffs();
 };
 
 class NonplayerCharacter : public Character {};
