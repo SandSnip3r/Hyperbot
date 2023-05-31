@@ -55,6 +55,10 @@ void Self::setCurrentLevel(uint8_t currentLevel) {
   currentLevel_ = currentLevel;
 }
 
+void Self::setHwanLevel(uint8_t hwanLevel) {
+  hwanLevel_ = hwanLevel;
+}
+
 void Self::setSkillPoints(uint64_t skillPoints) {
   skillPoints_ = skillPoints;
   eventBroker_.publishEvent(event::EventCode::kCharacterSkillPointsUpdated);
@@ -73,6 +77,10 @@ void Self::setHwanSpeed(float hwanSpeed) {
 void Self::setBodyState(packet::enums::BodyState bodyState) {
   bodyState_ = bodyState;
   eventBroker_.publishEvent<event::EntityBodyStateChanged>(globalId);
+}
+
+void Self::setHwanPoints(uint8_t hwanPoints) {
+  hwanPoints_ = hwanPoints;
 }
 
 void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) {
@@ -301,6 +309,10 @@ uint8_t Self::getCurrentLevel() const {
   return currentLevel_;
 }
 
+uint8_t Self::hwanLevel() const {
+  return hwanLevel_;
+}
+
 uint64_t Self::getSkillPoints() const {
   return skillPoints_;
 }
@@ -360,6 +372,10 @@ float Self::hwanSpeed() const {
 
 packet::enums::BodyState Self::bodyState() const {
   return bodyState_;
+}
+
+uint8_t Self::hwanPoints() const {
+  return hwanPoints_;
 }
 
 uint32_t Self::currentMp() const {

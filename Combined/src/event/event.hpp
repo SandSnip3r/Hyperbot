@@ -91,6 +91,7 @@ enum class EventCode {
   kConfigUpdated,
 
   kInventoryItemUpdated,
+  kHwanPointsUpdated,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,

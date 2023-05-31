@@ -8,18 +8,23 @@ ServerAgentEntityUpdatePoints::ServerAgentEntityUpdatePoints(const PacketContain
   StreamUtility stream = packet.data;
   updatePointsType_ = static_cast<packet::enums::UpdatePointsType>(stream.Read<uint8_t>());
   if (updatePointsType_ == packet::enums::UpdatePointsType::kGold) {
-    gold_ = stream.Read<uint64_t>();
-    isDisplayed_ = stream.Read<uint8_t>();
+    auto &goldUpdateData = updateData_.emplace<GoldUpdate>();
+    stream.Read(goldUpdateData.gold);
+    stream.Read<uint8_t>(goldUpdateData.isDisplayed);
   } else if (updatePointsType_ == packet::enums::UpdatePointsType::kSp) {
-    skillPoints_ = stream.Read<uint32_t>();
-    isDisplayed_ = stream.Read<uint8_t>();
+    auto &skillPointsUpdateData = updateData_.emplace<SkillPointsUpdate>();
+    stream.Read(skillPointsUpdateData.skillPoints);
+    stream.Read(skillPointsUpdateData.isDisplayed);
   } else if (updatePointsType_ == packet::enums::UpdatePointsType::kStatPoint) {
-    uint16_t StatPoints = stream.Read<uint16_t>();
+    auto &statPointsUpdateData = updateData_.emplace<StatPointsUpdate>();
+    stream.Read(statPointsUpdateData.statPoints);
   } else if (updatePointsType_ == packet::enums::UpdatePointsType::kHwan) {
-    uint8_t HwanCount = stream.Read<uint8_t>();
-    uint32_t Source_UniqueID = stream.Read<uint32_t>();
+    auto &hwanPointsUpdateData = updateData_.emplace<HwanPointsUpdate>();
+    stream.Read(hwanPointsUpdateData.hwanPoints);
+    stream.Read(hwanPointsUpdateData.sourceGlobalId);
   } else if (updatePointsType_ == packet::enums::UpdatePointsType::kAp) {
-    uint32_t APPoint = stream.Read<uint32_t>();
+    auto &apPointsUpdateData = updateData_.emplace<ApPointsUpdate>();
+    stream.Read(apPointsUpdateData.apPoints);
   }
 }
 
@@ -28,21 +33,35 @@ packet::enums::UpdatePointsType ServerAgentEntityUpdatePoints::updatePointsType(
 }
 
 uint64_t ServerAgentEntityUpdatePoints::gold() const {
-  if (updatePointsType_ != packet::enums::UpdatePointsType::kGold) {
-    throw std::runtime_error("Trying to get gold, but update type is not kGold");
-  }
-  return gold_;
+  return std::get<GoldUpdate>(updateData_).gold;
 }
 
 uint32_t ServerAgentEntityUpdatePoints::skillPoints() const {
-  return skillPoints_;
+  return std::get<SkillPointsUpdate>(updateData_).skillPoints;
 }
 
 bool ServerAgentEntityUpdatePoints::isDisplayed() const {
-  if (updatePointsType_ != packet::enums::UpdatePointsType::kGold) {
-    throw std::runtime_error("Trying to get isDisplayed, but update type is not kGold");
+  if (updatePointsType_ == enums::UpdatePointsType::kGold) {
+    return std::get<GoldUpdate>(updateData_).isDisplayed;
+  } else {
+    return std::get<SkillPointsUpdate>(updateData_).isDisplayed;
   }
-  return isDisplayed_;
+}
+
+uint16_t ServerAgentEntityUpdatePoints::statPoints() const {
+  return std::get<StatPointsUpdate>(updateData_).statPoints;
+}
+
+uint8_t ServerAgentEntityUpdatePoints::hwanPoints() const {
+  return std::get<HwanPointsUpdate>(updateData_).hwanPoints;
+}
+
+sro::scalar_types::EntityGlobalId ServerAgentEntityUpdatePoints::sourceGlobalId() const {
+  return std::get<HwanPointsUpdate>(updateData_).sourceGlobalId;
+}
+
+uint32_t ServerAgentEntityUpdatePoints::apPoints() const {
+  return std::get<ApPointsUpdate>(updateData_).apPoints;
 }
 
 } // namespace packet::parsing

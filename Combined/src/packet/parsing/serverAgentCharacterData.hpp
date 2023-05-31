@@ -26,9 +26,11 @@ public:
   uint32_t currentSpExperience() const;
   uint64_t gold() const;
   uint32_t skillPoints() const;
+  uint8_t hwanPoints() const;
   uint32_t entityUniqueId() const;
   uint32_t hp() const;
   uint32_t mp() const;
+  uint8_t hwanLevel() const;
   uint8_t inventorySize() const;
   const std::map<uint8_t, std::shared_ptr<storage::Item>>& inventoryItemMap() const;
   uint8_t avatarInventorySize() const;
@@ -52,9 +54,11 @@ private:
   uint32_t currentSpExperience_;
   uint64_t gold_;
   uint32_t skillPoints_;
+  uint8_t hwanPoints_;
   uint32_t entityUniqueId_;
   uint32_t hp_;
   uint32_t mp_;
+  uint8_t hwanLevel_;
   uint8_t inventorySize_;
   std::map<uint8_t, std::shared_ptr<storage::Item>> inventoryItemMap_;
   uint8_t avatarInventorySize_;

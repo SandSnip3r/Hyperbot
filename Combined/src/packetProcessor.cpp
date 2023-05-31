@@ -56,6 +56,7 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterData, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCosData, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryStorageData, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateHwanLevel, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateState, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateStatus, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAbnormalInfo, packetHandleFunction);
@@ -127,6 +128,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCharacterData, serverAgentCharacterDataReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCosData, serverAgentCosDataReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentInventoryStorageData, serverAgentInventoryStorageDataReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateHwanLevel, serverAgentEntityUpdateHwanLevelReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateState, serverAgentEntityUpdateStateReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateMoveSpeed, serverAgentEntityUpdateMoveSpeedReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityRemoveOwnership, serverAgentEntityRemoveOwnershipReceived);
@@ -294,8 +296,10 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   worldState_.selfState().initialize(packet.entityUniqueId(), packet.refObjId(), packet.jId());
   worldState_.selfState().initializeCurrentHp(packet.hp());
   worldState_.selfState().setCurrentMp(packet.mp());
+  worldState_.selfState().setHwanLevel(packet.hwanLevel());
   worldState_.selfState().setCurrentLevel(packet.curLevel());
   worldState_.selfState().setSkillPoints(packet.skillPoints());
+  worldState_.selfState().setHwanPoints(packet.hwanPoints());
   worldState_.selfState().setCurrentExpAndSpExp(packet.currentExperience(), packet.currentSpExperience());
   worldState_.selfState().setMasteriesAndSkills(packet.masteries(), packet.skills());
   // std::vector<std::pair<std::string, pk2::ref::Skill::Param1Type>> skillTypes = {
@@ -383,6 +387,12 @@ void PacketProcessor::serverAgentInventoryStorageDataReceived(const packet::pars
   helpers::initializeInventory(worldState_.selfState().storage, packet.storageSize(), packet.storageItemMap());
   worldState_.selfState().haveOpenedStorageSinceTeleport = true;
   eventBroker_.publishEvent(event::EventCode::kStorageInitialized);
+}
+
+void PacketProcessor::serverAgentEntityUpdateHwanLevelReceived(packet::parsing::ServerAgentEntityUpdateHwanLevel &packet) const {
+  if (packet.globalId() == worldState_.selfState().globalId) {
+    worldState_.selfState().setHwanLevel(packet.hwanLevel());
+  }
 }
 
 void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const {
@@ -955,6 +965,9 @@ void PacketProcessor::serverAgentEntityUpdatePointsReceived(const packet::parsin
     worldState_.selfState().setGold(packet.gold());
   } else if (packet.updatePointsType() == packet::enums::UpdatePointsType::kSp) {
     worldState_.selfState().setSkillPoints(packet.skillPoints());
+  } else if (packet.updatePointsType() == packet::enums::UpdatePointsType::kHwan) {
+    worldState_.selfState().setHwanPoints(packet.hwanPoints());
+    eventBroker_.publishEvent(event::EventCode::kHwanPointsUpdated);
   }
 }
 

@@ -186,8 +186,8 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kClientAgentInventoryRepairRequest) {
     return "kClientAgentInventoryRepairRequest";
   }
-  if (opcode == Opcode::CLIENT_USE_BERSERK) {
-    return "CLIENT_USE_BERSERK";
+  if (opcode == Opcode::kClientAgentCharacterUpdateBodyStateRequest) {
+    return "kClientAgentCharacterUpdateBodyStateRequest";
   }
   if (opcode == Opcode::SERVER_INFO) {
     return "SERVER_INFO";
@@ -243,9 +243,6 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kServerAgentInventoryOperationResponse) {
     return "kServerAgentInventoryOperationResponse";
   }
-  if (opcode == Opcode::SERVER_NEW_GOLD_AMOUNT) {
-    return "SERVER_NEW_GOLD_AMOUNT";
-  }
   if (opcode == Opcode::SERVER_ANIMATION_ITEM_PICKUP) {
     return "SERVER_ANIMATION_ITEM_PICKUP";
   }
@@ -285,6 +282,9 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kServerAgentEntityUpdateState) {
     return "kServerAgentEntityUpdateState";
   }
+  if (opcode == Opcode::kServerAgentEntityUpdateHwanLevel) {
+    return "kServerAgentEntityUpdateHwanLevel";
+  }
   if (opcode == Opcode::kServerAgentEntityUpdateMoveSpeed) {
     return "kServerAgentEntityUpdateMoveSpeed";
   }
@@ -302,9 +302,6 @@ std::string toStr(Opcode opcode) {
   }
   if (opcode == Opcode::SERVER_MASTERYUPDATE) {
     return "SERVER_MASTERYUPDATE";
-  }
-  if (opcode == Opcode::SERVER_SKILLPOINTS) {
-    return "SERVER_SKILLPOINTS";
   }
   if (opcode == Opcode::SERVER_SKILLUPDATE) {
     return "SERVER_SKILLUPDATE";

@@ -148,6 +148,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kMovementRequestTimedOut, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemCooldownEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kInventoryItemUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kHwanPointsUpdated, eventHandleFunction);
 
   // Skills
   eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
@@ -339,6 +340,10 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
       case event::EventCode::kInventoryItemUpdated: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kHwanPointsUpdated: {
         onUpdate(event);
         break;
       }

@@ -17,7 +17,7 @@ ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet
   gold_ = stream.Read<uint64_t>();
   skillPoints_ = stream.Read<uint32_t>();
   uint16_t remainStatPoint = stream.Read<uint16_t>();
-  uint8_t remainHwanCount = stream.Read<uint8_t>();
+  stream.Read(hwanPoints_);
   uint32_t gatheredExpPoint = stream.Read<uint32_t>();
   hp_ = stream.Read<uint32_t>();
   mp_ = stream.Read<uint32_t>();
@@ -25,7 +25,7 @@ ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet
   uint8_t dailyPK = stream.Read<uint8_t>();
   uint16_t totalPK = stream.Read<uint16_t>();
   uint32_t pKPenaltyPoint = stream.Read<uint32_t>();
-  uint8_t hwanLevel = stream.Read<uint8_t>();
+  stream.Read(hwanLevel_);
   uint8_t freePVP = stream.Read<uint8_t>(); // 0 = None, 1 = Red, 2 = Gray, 3 = Blue, 4 = White, 5 = Gold
 
   //=====================================================================================
@@ -274,6 +274,10 @@ uint32_t ServerAgentCharacterData::skillPoints() const {
   return skillPoints_;
 }
 
+uint8_t ServerAgentCharacterData::hwanPoints() const {
+  return hwanPoints_;
+}
+
 uint32_t ServerAgentCharacterData::entityUniqueId() const {
   return entityUniqueId_;
 }
@@ -284,6 +288,10 @@ uint32_t ServerAgentCharacterData::hp() const {
 
 uint32_t ServerAgentCharacterData::mp() const {
   return mp_;
+}
+
+uint8_t ServerAgentCharacterData::hwanLevel() const {
+  return hwanLevel_;
 }
 
 uint8_t ServerAgentCharacterData::inventorySize() const {

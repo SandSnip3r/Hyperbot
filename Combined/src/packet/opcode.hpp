@@ -96,7 +96,7 @@ enum class Opcode {
   CLIENT_TRANSPORT_DELETE = 0x70CB, // CLIENT_TRANSPORT_HOME, CLIENT_TRANSPORT_DELETE
   kClientAgentInventoryStorageOpenRequest = 0x703C,
   kClientAgentInventoryRepairRequest = 0x703E,
-  CLIENT_USE_BERSERK = 0x70A7,
+  kClientAgentCharacterUpdateBodyStateRequest = 0x70A7,
 
   
 
@@ -122,7 +122,6 @@ enum class Opcode {
   SERVER_ITEM_EQUIP = 0x3038,
   SERVER_ITEM_UNEQUIP = 0x3039,
   kServerAgentInventoryOperationResponse = 0xB034,
-  SERVER_NEW_GOLD_AMOUNT = 0x304E, // SERVER_NEW_GOLD_AMOUNT, SERVER_SKILLPOINTS
   SERVER_ANIMATION_ITEM_PICKUP = 0x3036,
   kServerAgentInventoryItemUseResponse = 0xB04C,
   SERVER_ANIMATION_ITEM_USE = 0x305C,
@@ -139,13 +138,13 @@ enum class Opcode {
   SERVER_INT_UPDATE = 0xB051,
   kServerAgentEntitySyncPosition = 0x3028,
   kServerAgentEntityUpdateState = 0x30BF,
+  kServerAgentEntityUpdateHwanLevel = 0x30DF,
   kServerAgentEntityUpdateMoveSpeed = 0x30D0,
   kServerAgentEntityRemoveOwnership = 0x304D,
   kServerAgentEntityUpdateStatus = 0x3057,
   SERVER_ANIMATION_LEVEL_UP = 0x3054,
   kServerAgentEntityUpdateExperience = 0x3056,
   SERVER_MASTERYUPDATE = 0xB0A2,
-  SERVER_SKILLPOINTS = 0x304E, // SERVER_NEW_GOLD_AMOUNT, SERVER_SKILLPOINTS
   SERVER_SKILLUPDATE = 0xB0A1,
 
   kServerAgentChatUpdate = 0x3026,

@@ -22,6 +22,7 @@
 #include "packet/parsing/serverAgentEntitySyncPosition.hpp"
 #include "packet/parsing/serverAgentEntityUpdateAngle.hpp"
 #include "packet/parsing/serverAgentEntityUpdateExperience.hpp"
+#include "packet/parsing/serverAgentEntityUpdateHwanLevel.hpp"
 #include "packet/parsing/serverAgentEntityUpdateMovement.hpp"
 #include "packet/parsing/serverAgentEntityUpdateMoveSpeed.hpp"
 #include "packet/parsing/serverAgentEntityUpdatePoints.hpp"
@@ -86,6 +87,7 @@ private:
   void serverAgentCharacterDataReceived(const packet::parsing::ServerAgentCharacterData &packet) const;
   void serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const;
   void serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInventoryStorageData &packet) const;
+  void serverAgentEntityUpdateHwanLevelReceived(packet::parsing::ServerAgentEntityUpdateHwanLevel &packet) const;
   void serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const;
   void serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const;
   void serverAgentEntityRemoveOwnershipReceived(const packet::parsing::ServerAgentEntityRemoveOwnership &packet) const;

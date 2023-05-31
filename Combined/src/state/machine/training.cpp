@@ -6,6 +6,7 @@
 #include "helpers.hpp"
 #include "logging.hpp"
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
+#include "packet/building/clientAgentCharacterUpdateBodyStateRequest.hpp"
 #include "state/machine/pickItem.hpp"
 #include "state/machine/pickItemWithCos.hpp"
 #include "type_id/categories.hpp"
@@ -65,7 +66,8 @@ Training::Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeo
     // TODO: Why do i get a Handle Read Error when I send an invalid skill?
       7805, // Flying Dragon - Flash
       8204, // Crane's Thunderbolt
-      8195, // Horse's Thunderbolt
+      8084, // Snow Storm - Multi Shot
+      // 8195, // Horse's Thunderbolt
       7675, // Ghost Spear - Emperor
       7672, // Ghost Spear - Storm Cloud
       // 885, // Chain Spear - Shura
@@ -373,6 +375,11 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
     walkingTargetAndAttack_ = targetAndAttack;
   } else {
     // We are within range to cast skill.
+    if (bot_.selfState().hwanPoints() == 5) {
+      // TODO: Use berserk in a StateMachine.
+      const auto packet = packet::building::ClientAgentCharacterUpdateBodyStateRequest::packet(packet::enums::BodyState::kHwan);
+      bot_.proxy().inject(packet, PacketContainer::Direction::kBotToServer);
+    }
     CastSkillStateMachineBuilder castSkillBuilder(bot_, attackRefId);
     castSkillBuilder.withTarget(targetEntity.globalId);
     const auto &skillData = bot_.gameData().skillData().getSkillById(attackRefId);

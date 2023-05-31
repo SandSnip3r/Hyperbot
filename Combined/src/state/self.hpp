@@ -54,6 +54,7 @@ public:
                   
   // Setters
   void setCurrentLevel(uint8_t currentLevel);
+  void setHwanLevel(uint8_t hwanLevel);
   void setSkillPoints(uint64_t skillPoints);
   void setCurrentExpAndSpExp(uint32_t currentExperience, uint32_t currentSpExperience);
 
@@ -65,6 +66,7 @@ public:
 
   void setHwanSpeed(float hwanSpeed);
   void setBodyState(packet::enums::BodyState bodyState);
+  void setHwanPoints(uint8_t hwanPoints);
 
   void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) override;
   void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) override;
@@ -92,6 +94,7 @@ public:
   Gender gender() const;
 
   uint8_t getCurrentLevel() const;
+  uint8_t hwanLevel() const;
   uint64_t getSkillPoints() const;
   uint32_t getCurrentExperience() const;
   uint32_t getCurrentSpExperience() const;
@@ -117,6 +120,7 @@ public:
 
   float hwanSpeed() const;
   packet::enums::BodyState bodyState() const;
+  uint8_t hwanPoints() const;
   
   uint32_t currentMp() const;
   std::optional<uint32_t> maxHp() const;
@@ -174,6 +178,7 @@ public:
   // Character info
 private:
   uint8_t currentLevel_;
+  uint8_t hwanLevel_;
   uint64_t currentExperience_;
   uint32_t currentSpExperience_;
   uint32_t skillPoints_;
@@ -192,6 +197,7 @@ public:
 
   // Character states
   packet::enums::BodyState bodyState_;
+  uint8_t hwanPoints_;
 
   // Movement/position
   std::optional<broker::TimerManager::TimerId> enteredNewRegionEventId_;
@@ -248,7 +254,7 @@ public:
 
   // Misc
   // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.
-  double estimatedVisibilityRange{872.689};
+  double estimatedVisibilityRange{876.879};
   bool stunnedFromKnockdown{false};
   bool stunnedFromKnockback{false};
 

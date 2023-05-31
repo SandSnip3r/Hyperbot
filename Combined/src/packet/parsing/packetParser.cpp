@@ -25,6 +25,7 @@
 #include "serverAgentEntityUpdateExperience.hpp"
 #include "serverAgentEntityUpdateMovement.hpp"
 #include "serverAgentEntityUpdateMoveSpeed.hpp"
+#include "serverAgentEntityUpdateHwanLevel.hpp"
 #include "serverAgentEntityUpdatePoints.hpp"
 #include "serverAgentEntityUpdatePosition.hpp"
 #include "serverAgentEntityUpdateState.hpp"
@@ -125,6 +126,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ServerAgentActionTalkResponse>(packet);
       case Opcode::kServerAgentEntityUpdateState:
         return std::make_unique<ServerAgentEntityUpdateState>(packet);
+      case Opcode::kServerAgentEntityUpdateHwanLevel:
+        return std::make_unique<ServerAgentEntityUpdateHwanLevel>(packet);
       case Opcode::kServerAgentBuffAdd:
         return std::make_unique<ServerAgentBuffAdd>(packet, gameData_.skillData());
       case Opcode::kServerAgentBuffRemove:
