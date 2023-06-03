@@ -8,10 +8,12 @@
 #include <windows.h>
 #include <windowsx.h>
 #include "../common/common.h"
-#include "../common/pk2/pk2ReaderModern.hpp"
 #include "../common/pk2/divisionInfo.hpp"
 #include "../common/pk2/parsing/parsing.hpp"
 #include "../Common/detours/detours.h"
+
+#include <silkroad_lib/pk2/pk2ReaderModern.h>
+
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -355,7 +357,7 @@ namespace nsEnglishCaptcha
 
 //-------------------------------------------------------------------------
 
-bool modifyRoutelist() {
+void modifyRoutelist() {
   uint16_t botPort;
   {
     const auto appDataDirectoryPath = getAppDataPath();
@@ -365,7 +367,7 @@ bool modifyRoutelist() {
       if (!portInfoFile) {
         MessageBox(0, "Unable to determine port of bot!", "Fatal Error", MB_ICONERROR);
         // TODO: Kill process or something similar?
-        return true;
+        return;
       }
       portInfoFile >> botPort;
     }
@@ -381,7 +383,7 @@ bool modifyRoutelist() {
     std::vector<std::string> tokens = TokenizeString(defaultGatewayIP, " .");
     if (tokens.size() != 4) {
       MessageBox(0, "Please enter an IP in the format 0.0.0.0", "Fatal Error", MB_ICONERROR);
-      return TRUE;
+      return;
     }
 
     for (size_t x = 0; x < routeListCount; ++x) {
@@ -432,7 +434,7 @@ bool modifyRoutelist() {
 
     if (tokens.size() != 4) {
       MessageBox(0, "Please enter an IP in the format 0.0.0.0", "Fatal Error", MB_ICONERROR);
-      return TRUE;
+      return;
     }
 
     routeArray[routeListCount].dstA = atoi(tokens[0].c_str());
@@ -466,7 +468,7 @@ void UserOnInject()
   mpk2 += "media.pk2";
 
   try {
-    pk2::Pk2ReaderModern pk2Reader(mpk2);
+    sro::pk2::Pk2ReaderModern pk2Reader(mpk2);
     auto divisionInfoEntry = pk2Reader.getEntry("DIVISIONINFO.TXT");
     auto divisionInfoData = pk2Reader.getEntryData(divisionInfoEntry);
     gDivisionInfo = pk2::parsing::parseDivisionInfo(divisionInfoData);

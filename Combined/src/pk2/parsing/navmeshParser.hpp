@@ -2,7 +2,8 @@
 #define PK2_PARSING_NAVMESHPARSER_HPP_
 
 #include "../../navmesh/navmesh.hpp"
-#include "../../../../common/pk2/pk2ReaderModern.hpp"
+
+#include <silkroad_lib/pk2/pk2ReaderModern.h>
 
 #include <array>
 #include <cstdint>
@@ -25,11 +26,11 @@ struct ObjectFileInfo {
 
 class NavmeshParser {
 public:
-  NavmeshParser(pk2::Pk2ReaderModern &pk2Reader);
+  NavmeshParser(sro::pk2::Pk2ReaderModern &pk2Reader);
   navmesh::Navmesh parseNavmesh();
 
 private:
-  pk2::Pk2ReaderModern &pk2Reader_;
+  sro::pk2::Pk2ReaderModern &pk2Reader_;
   std::map<int, ObjectFileInfo> objectFileInfoMap_;
   MapInfo mapInfo_;
 

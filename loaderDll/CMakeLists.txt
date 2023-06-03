@@ -14,11 +14,6 @@ set(Common
     "../common/pk2/divisionInfo.hpp"
     "../common/pk2/parsing/parsing.cpp"
     "../common/pk2/parsing/parsing.hpp"
-    "../common/pk2/pk2.h"
-    "../common/pk2/pk2Reader.cpp"
-    "../common/pk2/pk2Reader.h"
-    "../common/pk2/pk2ReaderModern.cpp"
-    "../common/pk2/pk2ReaderModern.hpp"
     "../common/pk2/ref/character.cpp"
     "../common/pk2/ref/character.hpp"
     "../common/pk2/ref/item.cpp"
@@ -63,6 +58,11 @@ include_directories(${Boost_INCLUDE_DIRS})
 # Target
 ################################################################################
 add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
+
+target_link_libraries(${PROJECT_NAME}
+  PRIVATE
+    SilkroadLib
+)
 
 # add_precompiled_header(${PROJECT_NAME} "stdafx.h" ".")
 

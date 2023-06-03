@@ -1,6 +1,5 @@
 #include "navmeshParser.hpp"
 
-// #include <silkroad_lib/math/vector3.h>
 #include <silkroad_lib/position_math.h>
 
 #include <array>
@@ -27,7 +26,7 @@ inline void parse(std::istringstream &inFile, T &data) {
 
 namespace pk2::parsing {
 
-NavmeshParser::NavmeshParser(pk2::Pk2ReaderModern &pk2Reader) : pk2Reader_(pk2Reader) {
+NavmeshParser::NavmeshParser(sro::pk2::Pk2ReaderModern &pk2Reader) : pk2Reader_(pk2Reader) {
 }
 
 navmesh::Navmesh NavmeshParser::parseNavmesh() { 
@@ -89,7 +88,7 @@ navmesh::Navmesh NavmeshParser::parseNavmesh() {
 
 void NavmeshParser::buildObjectFileInfoMap() {
 	const std::string kObjectFileInfoPath = "navmesh\\object.ifo";
-  pk2::PK2Entry objectFileInfoEntry = pk2Reader_.getEntry(kObjectFileInfoPath);
+  sro::pk2::PK2Entry objectFileInfoEntry = pk2Reader_.getEntry(kObjectFileInfoPath);
   auto objectFileInfoData = pk2Reader_.getEntryData(objectFileInfoEntry);
   std::string str(objectFileInfoData.begin(), objectFileInfoData.end());
   std::istringstream ss(str);
@@ -118,7 +117,7 @@ void NavmeshParser::buildObjectFileInfoMap() {
 
 void NavmeshParser::parseMapInfo() {
 	const std::string kMapInfoPath = "navmesh\\mapinfo.mfo";
-  pk2::PK2Entry mapInfoEntry = pk2Reader_.getEntry(kMapInfoPath);
+  sro::pk2::PK2Entry mapInfoEntry = pk2Reader_.getEntry(kMapInfoPath);
   auto mapInfoData = pk2Reader_.getEntryData(mapInfoEntry);
   std::string str(mapInfoData.begin(), mapInfoData.end());
   std::istringstream ss(str, std::ios::binary);
@@ -211,7 +210,7 @@ void NavmeshParser::parseRegion(uint16_t regionId, navmesh::Navmesh &navmesh) {
   std::ostringstream filePathStringstream(kNavmeshFilePathPrefix, std::ios::ate);
   filePathStringstream << std::hex << regionId << kNavmeshFilePathSuffix;
 
-  pk2::PK2Entry navmeshEntry = pk2Reader_.getEntry(filePathStringstream.str());
+  sro::pk2::PK2Entry navmeshEntry = pk2Reader_.getEntry(filePathStringstream.str());
   // Old
   // auto navmeshData = pk2Reader_.getEntryData(navmeshEntry);
   // std::string navmeshDataAsString(navmeshData.begin(), navmeshData.end());
@@ -479,7 +478,7 @@ navmesh::ObjectResource NavmeshParser::parseObjectResource(const std::string &pa
   }
 
   // Only parsing this bsr to get to the rootmesh
-  pk2::PK2Entry bsrFileEntry = pk2Reader_.getEntry(path);
+  sro::pk2::PK2Entry bsrFileEntry = pk2Reader_.getEntry(path);
   auto bsrFileData = pk2Reader_.getEntryData(bsrFileEntry);
   std::string bsrFileDataAsString(bsrFileData.begin(), bsrFileData.end());
   std::istringstream bsrFileDataAsStringstream(bsrFileDataAsString, std::ios::binary);
@@ -535,7 +534,7 @@ navmesh::ObjectResource NavmeshParser::parseObjectResource(const std::string &pa
 
 navmesh::ObjectResource NavmeshParser::parseCompoundResource(const std::string &path) {
   // Only parsing this cpd to get to the rootmesh
-  pk2::PK2Entry cpdFileEntry = pk2Reader_.getEntry(path);
+  sro::pk2::PK2Entry cpdFileEntry = pk2Reader_.getEntry(path);
   auto cpdFileData = pk2Reader_.getEntryData(cpdFileEntry);
   std::string cpdFileDataAsString(cpdFileData.begin(), cpdFileData.end());
   std::istringstream cpdFileDataAsStringstream(cpdFileDataAsString, std::ios::binary);
@@ -559,7 +558,7 @@ navmesh::ObjectResource NavmeshParser::parseCompoundResource(const std::string &
 }
 
 navmesh::ObjectResource NavmeshParser::parseObjectBms(const std::string &path) {
-  pk2::PK2Entry bmsFileEntry = pk2Reader_.getEntry(path);
+  sro::pk2::PK2Entry bmsFileEntry = pk2Reader_.getEntry(path);
   auto bmsFileData = pk2Reader_.getEntryData(bmsFileEntry);
   std::string bmsFileDataAsString(bmsFileData.begin(), bmsFileData.end());
   std::istringstream bmsFileDataAsStringstream(bmsFileDataAsString, std::ios::binary);

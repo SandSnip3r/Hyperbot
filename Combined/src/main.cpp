@@ -12,7 +12,6 @@
 #include "../../common/Common.h"
 #include "../../common/pk2/divisionInfo.hpp"
 #include "../../common/pk2/parsing/parsing.hpp"
-#include "../../common/pk2/pk2ReaderModern.hpp"
 
 #include <filesystem>
 #include <iostream>

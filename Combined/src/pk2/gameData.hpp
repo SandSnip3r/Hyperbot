@@ -15,7 +15,8 @@
 #include "navmesh/navmesh.hpp"
 #include "navmesh/triangulation/navmeshTriangulation.hpp"
 #include "../../../common/pk2/divisionInfo.hpp"
-#include "../../../common/pk2/pk2ReaderModern.hpp"
+
+#include <silkroad_lib/pk2/pk2ReaderModern.h>
 
 #include <filesystem>
 #include <memory>
@@ -65,24 +66,24 @@ private:
 
   RegionInfo regionInfo_;
 
-  void parseData(Pk2ReaderModern &pk2Reader);
-  void parseNavmeshData(Pk2ReaderModern &pk2Reader);
-  void parseRegionInfo(Pk2ReaderModern &pk2Reader);
+  void parseData(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseNavmeshData(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseRegionInfo(sro::pk2::Pk2ReaderModern &pk2Reader);
 
-  void parseMedia(Pk2ReaderModern &pk2Reader);
-  void parseGatewayPort(Pk2ReaderModern &pk2Reader);
-  void parseDivisionInfo(Pk2ReaderModern &pk2Reader);
-  void parseCharacterData(Pk2ReaderModern &pk2Reader);
-  void parseItemData(Pk2ReaderModern &pk2Reader);
-  void parseSkillData(Pk2ReaderModern &pk2Reader);
-  void parseTeleportData(Pk2ReaderModern &pk2Reader);
-  void parseShopData(Pk2ReaderModern &pk2Reader);
-  void parseMagicOptionData(Pk2ReaderModern &pk2Reader);
-  void parseLevelData(Pk2ReaderModern &pk2Reader);
-  void parseRefRegion(Pk2ReaderModern &pk2Reader);
-  void parseTextData(Pk2ReaderModern &pk2Reader);
-  void parseTextZoneName(Pk2ReaderModern &pk2Reader);
-  void parseTextItemAndSkill(Pk2ReaderModern &pk2Reader);
+  void parseMedia(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseGatewayPort(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseDivisionInfo(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseTeleportData(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseMagicOptionData(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseLevelData(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseRefRegion(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseTextData(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseTextZoneName(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseTextItemAndSkill(sro::pk2::Pk2ReaderModern &pk2Reader);
 };
 
 } // namespace pk2
