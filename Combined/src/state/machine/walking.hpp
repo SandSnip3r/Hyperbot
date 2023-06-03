@@ -14,7 +14,7 @@ namespace state::machine {
 
 class Walking : public StateMachine {
 public:
-  Walking(Bot &bot, const sro::Position &destinationPosition, bool pathfindToDestination=true);
+  Walking(Bot &bot, const std::vector<packet::building::NetworkReadyPosition> &waypoints);
   ~Walking() override;
   void onUpdate(const event::Event *event) override;
   bool done() const override;

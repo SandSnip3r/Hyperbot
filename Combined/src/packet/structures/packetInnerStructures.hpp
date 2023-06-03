@@ -133,8 +133,6 @@ struct ItemMovement {
   std::shared_ptr<storage::Item> newItem;
 };
 
-std::ostream& operator<<(std::ostream &stream, const ActionCommand &command);
-
 } // namespace packet::structures
 
 #endif // PACKET_INNER_STRUCTURES_HPP

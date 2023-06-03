@@ -18,6 +18,40 @@
   } \
 }
 
+WrappedCommand::WrappedCommand(const packet::structures::ActionCommand &command, const pk2::GameData &gameData) : actionCommand(command), gameData_(gameData) {
+
+}
+
+std::optional<std::string> WrappedCommand::skillName() const {
+  if (actionCommand.commandType == packet::enums::CommandType::kExecute) {
+    if (actionCommand.actionType == packet::enums::ActionType::kCast || actionCommand.actionType == packet::enums::ActionType::kDispel) {
+      return gameData_.getSkillNameIfExists(actionCommand.refSkillId);
+    }
+  }
+  throw std::runtime_error("Asking for skill name for ActionCommand which does not use or cancel a skill");
+}
+
+std::ostream& operator<<(std::ostream &stream, const WrappedCommand &wrappedCommand) {
+  stream << "CommandType: " << wrappedCommand.actionCommand.commandType;
+  if (wrappedCommand.actionCommand.commandType == packet::enums::CommandType::kExecute) {
+    stream << ", ActionType: " << wrappedCommand.actionCommand.actionType;
+    if (wrappedCommand.actionCommand.actionType == packet::enums::ActionType::kCast || wrappedCommand.actionCommand.actionType == packet::enums::ActionType::kDispel) {
+      stream << ", refSkillId: " << wrappedCommand.actionCommand.refSkillId;
+      const auto maybeSkillName = wrappedCommand.skillName();
+      if (maybeSkillName) {
+        stream << ", skill name: \"" << *maybeSkillName << "\"";
+      }
+    }
+    stream << ", targetType: " << wrappedCommand.actionCommand.targetType;
+    if (wrappedCommand.actionCommand.targetType == packet::enums::TargetType::kEntity) {
+      stream << ", targetGlobalId: " << wrappedCommand.actionCommand.targetGlobalId;
+    } else if (wrappedCommand.actionCommand.targetType == packet::enums::TargetType::kLand) {
+      stream << ", position: " << wrappedCommand.actionCommand.position;
+    }
+  }
+  return stream;
+}
+
 PacketProcessor::PacketProcessor(state::WorldState &worldState,
                                  broker::PacketBroker &brokerSystem,
                                  broker::EventBroker &eventBroker,
@@ -499,6 +533,9 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     expendableItemPtr->quantity = packet.remainingCount();
     // Figure out the cooldown of this item.
     const auto itemCooldown = getItemCooldownMs(*expendableItemPtr);
+    const auto &itemData = gameData_.itemData().getItemById(expendableItemPtr->refItemId);
+    const auto maybeItemName = gameData_.textItemAndSkillData().getItemNameIfExists(itemData.nameStrID128);
+    LOG() << "Used item " << (maybeItemName ? *maybeItemName : std::string("UNKNOWN")) << " with cooldown of " << (itemCooldown ? itemCooldown->count() : (long long)(-1)) << "ms" << std::endl;
     worldState_.selfState().usedAnItem(packet.typeData(), itemCooldown, eventBroker_);
     eventBroker_.publishEvent<event::InventoryUpdated>(packet.slotNum(), std::nullopt);
   } else if (dynamic_cast<const storage::ItemCosAbilitySummoner*>(itemPtr) == nullptr &&
@@ -985,29 +1022,18 @@ void PacketProcessor::serverAgentGuildStorageDataReceived(const packet::parsing:
 }
 
 void PacketProcessor::clientAgentActionCommandRequestReceived(const packet::parsing::ClientAgentActionCommandRequest &packet) const {
-  LOG() << "Client command action received: \"" << packet.actionCommand() << "\"";
-  if (packet.actionCommand().commandType == packet::enums::CommandType::kExecute &&
-      packet.actionCommand().actionType == packet::enums::ActionType::kCast) {
-    const auto skillName = gameData_.getSkillNameIfExists(packet.actionCommand().refSkillId);
-    if (skillName) {
-      std::cout << ", skillName: \"" << *skillName << "\"";
-    }
-  }
-  std::cout << std::endl;
+  LOG() << "Client command action received" << std::endl;
   worldState_.selfState().skillEngine.pendingCommandQueue.push_back(packet.actionCommand());
+  printCommandQueues();
 }
 
 void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const {
-  LOG() << "Received command response" << std::endl;
-  std::cout << "=========================================== " << packet.actionState() << "============================================" << std::endl;
-  printCommandQueues();
-  std::cout << "----------------" << std::endl;
+  LOG() << "Received command response. " << packet.actionState() << std::endl;
 
   if (packet.actionState() == packet::enums::ActionState::kQueued) {
     if (worldState_.selfState().skillEngine.pendingCommandQueue.empty()) {
       throw std::runtime_error("Command queued, but pending command list is empty");
     }
-    std::cout << "Command queued: \"" << worldState_.selfState().skillEngine.pendingCommandQueue.front() << "\"" << std::endl;
     worldState_.selfState().skillEngine.acceptedCommandQueue.emplace_back(worldState_.selfState().skillEngine.pendingCommandQueue.front());
     worldState_.selfState().skillEngine.pendingCommandQueue.erase(worldState_.selfState().skillEngine.pendingCommandQueue.begin());
   } else if (packet.actionState() == packet::enums::ActionState::kError) {
@@ -1017,7 +1043,7 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     }
     // Error seems to always refer to the most recent
     const auto failedCommand = worldState_.selfState().skillEngine.pendingCommandQueue.front();
-    std::cout << "Command error " << packet.errorCode() << ": " << failedCommand << std::endl;
+    std::cout << "Command error " << packet.errorCode() << ": " << wrapActionCommand(failedCommand) << std::endl;
     eventBroker_.publishEvent<event::CommandError>(failedCommand);
     worldState_.selfState().skillEngine.pendingCommandQueue.erase(worldState_.selfState().skillEngine.pendingCommandQueue.begin());
   } else /*if (packet.actionState() == packet::enums::ActionState::kEnd)*/ {
@@ -1035,11 +1061,10 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
       }
     } else {
       // We arent told which command ended, we just assume it was the most recent
-      std::cout << "Command ended: \"" << worldState_.selfState().skillEngine.acceptedCommandQueue.front().command << "\"" << std::endl;
       if (worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute &&
           worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kCast &&
           !worldState_.selfState().skillEngine.acceptedCommandQueue.front().wasExecuted) {
-        std::cout << "  this command(skill) was never executed!!" << std::endl;
+        LOG() << "This command(skill) was never executed!!" << std::endl;
         eventBroker_.publishEvent<event::CommandError>(worldState_.selfState().skillEngine.acceptedCommandQueue.front().command);
         // TODO: Maybe this should be a different event than "CommandError"?
       }
@@ -1047,20 +1072,24 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     }
   }
 
-  std::cout << "----------------" << std::endl;
   printCommandQueues();
-  std::cout << "==========================================================================================" << std::endl;
+}
+
+WrappedCommand PacketProcessor::wrapActionCommand(const packet::structures::ActionCommand &command) const {
+  return WrappedCommand(command, gameData_);
 }
 
 void PacketProcessor::printCommandQueues() const {
+  std::cout << "-----------------------------------------------------------" << std::endl;
   std::cout << "Pending command Queue:" << (worldState_.selfState().skillEngine.pendingCommandQueue.empty() ? " <empty>" : "") << std::endl;
   for (const auto &c : worldState_.selfState().skillEngine.pendingCommandQueue) {
-    std::cout << "  " << c << std::endl;
+    std::cout << "  " << wrapActionCommand(c) << std::endl;
   }
   std::cout << "Accepted command Queue:" << (worldState_.selfState().skillEngine.acceptedCommandQueue.empty() ? " <empty>" : "") << std::endl;
   for (const auto &c : worldState_.selfState().skillEngine.acceptedCommandQueue) {
-    std::cout << "  [" << (c.wasExecuted ? 'X' : ' ') << "] " << c.command << std::endl;
+    std::cout << "  [" << (c.wasExecuted ? 'X' : ' ') << "] " << wrapActionCommand(c.command) << std::endl;
   }
+  std::cout << "-----------------------------------------------------------" << std::endl;
 }
 
 // Skill Notes:
@@ -1110,7 +1139,8 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     const auto &skillData = gameData_.skillData().getSkillById(packet.refSkillId());
     const auto rootSkillRefId = gameData_.skillData().getRootSkillRefId(packet.refSkillId());
     const bool isRootSkill = rootSkillRefId == packet.refSkillId();
-    const bool skillIsCommonAttack = skillData.basicCode.find("BASE") != std::string::npos; // TODO: Find a more robust way to check
+    const bool skillIsCommonAttack = (skillData.basicCode.find("BASE") != std::string::npos ||
+                                      skillData.basicCode.find("PUNCH") != std::string::npos); // TODO: Find a more robust way to check
     auto skillName = [&]() -> std::string {
       if (skillIsCommonAttack) {
         return "Common";
@@ -1121,25 +1151,33 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       }
       return *skillName;
     }();
-    // LOG() << "SkillBegin \"" << skillName << "\" (" << packet.refSkillId() << ") with casting time: " << skillData.actionCastingTime << ", action duration: " << skillData.actionActionDuration << ", and reuse delay: " << skillData.actionReuseDelay << std::endl;
+    LOG() << "SkillBegin \"" << skillName << "\" (" << packet.refSkillId() << ") with casting time: " << skillData.actionCastingTime << ", action duration: " << skillData.actionActionDuration << ", and reuse delay: " << skillData.actionReuseDelay << std::endl;
     if (!isRootSkill) {
       // LOG() << "  Skill " << packet.refSkillId() << "'s root is " << rootSkillRefId << std::endl;
     }
     // We expect that were is at least one accepted command in the queue
     const bool isFinalPieceOfChain = skillData.basicChainCode == 0;
     if (!worldState_.selfState().skillEngine.acceptedCommandQueue.empty()) {
-      // Try to find the index of this skill in the accepted command queue
+      // Try to find the index of this skill in the accepted command queue.
+      // Iterate backwards, because if there are multiple occurences, the last one is probably the one that this skill begin refers to.
       std::optional<size_t> indexOfOurSkill;
-      int indexCounter=0;
-      for (const auto &acceptedCommand : worldState_.selfState().skillEngine.acceptedCommandQueue) {
-        if (acceptedCommand.command.refSkillId == rootSkillRefId) {
-          indexOfOurSkill = indexCounter;
+      const auto &acceptedCommandQueue = worldState_.selfState().skillEngine.acceptedCommandQueue;
+      for (int i=acceptedCommandQueue.size()-1; i>=0; --i) {
+        const auto &acceptedCommand = acceptedCommandQueue.at(i);
+        if (acceptedCommand.command.actionType == packet::enums::ActionType::kCast && acceptedCommand.command.refSkillId == rootSkillRefId) {
+          indexOfOurSkill = i;
           break;
+        } else if (acceptedCommand.command.actionType == packet::enums::ActionType::kAttack) {
+          // Must be a common attack.
+          if (skillIsCommonAttack) {
+            indexOfOurSkill = i;
+            break;
+          }
         }
-        ++indexCounter;
       }
       // TODO: Common attacks will not be found, does that matter? That means that no skill cooldown will be created for one
       if (!indexOfOurSkill) {
+        // TODO: Shouldn't happen now
         std::cout << "Couldn't find our skill in the accepted command queue" << std::endl;
         // This happens for common attacks
         if (skillIsCommonAttack && !(worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute &&
@@ -1152,18 +1190,39 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         if (*indexOfOurSkill != 0) {
           // Remove all commands before this one in the queue, those have probably been discarded by the server
           LOG() << "Our skill is not the first in the accepted command queue." << std::endl;
+          // TODO: Should previous items be removed?
 
-          // TODO: Maybe removing it actually isnt the right thing to do
-          // for (int i=0; i<*indexOfOurSkill; ++i) {
-          //   // TODO: Should we publish an event that command has been skipped?
-          //   LOG() << "Command #" << i << " (" << worldState_.selfState().skillEngine.acceptedCommandQueue.at(i).command << ") skipped" << std::endl;
-          // }
-          // worldState_.selfState().skillEngine.acceptedCommandQueue.erase(worldState_.selfState().skillEngine.acceptedCommandQueue.begin(), worldState_.selfState().skillEngine.acceptedCommandQueue.begin() + *indexOfOurSkill);
+          //  We should in this case:
+          //    1. Cast "Flying Dragon - Flash"
+          //    2. Get a "queued" response
+          //    3. Cast "Snow Shield - Intensify"
+          //    4. Get a "queued" response
+          //    5. Get a "SkillBegin" packet
+          //    6. The "SkillBegin" packet is for "Snow Shield - Intensify"
+
+          //  We should not in this case:
+          //    1. Cast "Snow Shield - Intensify"
+          //    2. Get a "queued" response
+          //    3. Get a "SkillBegin" packet
+          //    4. Cast "Thunder Phoenix Force"
+          //    5. Get a "queued" response
+          //    6. Get a "SkillBegin" packet (for Thunder Phoenix Force)
+
+          if (skillData.basicActivity == 1) {
+            // Can be executed before other skills in the queue. Do not delete predecessors in the queue.
+          } else {
+            for (int i=0; i<*indexOfOurSkill; ++i) {
+              // TODO: Should we publish an event that command has been skipped?
+              LOG() << "Command #" << i << " (" << wrapActionCommand(worldState_.selfState().skillEngine.acceptedCommandQueue.at(i).command) << ") skipped" << std::endl;
+            }
+            worldState_.selfState().skillEngine.acceptedCommandQueue.erase(worldState_.selfState().skillEngine.acceptedCommandQueue.begin(), worldState_.selfState().skillEngine.acceptedCommandQueue.begin() + *indexOfOurSkill);
+            indexOfOurSkill = 0;
+          }
         }
         // A skill always has a begin, but might not have an end.
         //  Marking this skill as executed here is sufficient
         worldState_.selfState().skillEngine.acceptedCommandQueue.at(*indexOfOurSkill).wasExecuted = true;
-        if (isRootSkill) {
+        if (isRootSkill && !skillIsCommonAttack) {
           // Set a timer for when the skill cooldown ends. We only do this for the root piece of the skill. If this is a chain and later piece has a cooldown too, it is probably just the same cooldown that we already set a timer for when we cast the root.
           const auto cooldownEndTimerId = eventBroker_.publishDelayedEvent<event::SkillCooldownEnded>(std::chrono::milliseconds(skillData.actionReuseDelay), packet.refSkillId());
           worldState_.selfState().skillEngine.skillCooldownBegin(packet.refSkillId(), cooldownEndTimerId);
@@ -1173,16 +1232,14 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
           LOG() << "Skill is Basic_Activity == 1, removing from accepted command queue, since no end will come" << std::endl;
           worldState_.selfState().skillEngine.acceptedCommandQueue.erase(worldState_.selfState().skillEngine.acceptedCommandQueue.begin() + *indexOfOurSkill);
         }
-        LOG() << "====Modified command queues:====" << std::endl;
         printCommandQueues();
-        std::cout << "==========================================================================================" << std::endl;
       }
     } else {
       // This happens when we spawn in with a speed scroll
       // LOG() << "WARNING: accepted command queue empty" << std::endl;
     }
     if (skillData.actionCastingTime == 0) {
-      // Skill takes no time to cast, I think there wont be an "end" coming from the server
+      // Skill takes no time to cast, I think there wont be a "skill end" coming from the server
       // TODO: Some skills have 0 casting time, but an "end" will come from the server
       //  Iron Skin
       //  Mana Skin

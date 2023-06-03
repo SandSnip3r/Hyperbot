@@ -256,7 +256,8 @@ void Training::onUpdate(const event::Event *event) {
       throw std::runtime_error("Not sure where to navigate to for other shapes");
     }
     LOG() << "Not in training area, navigating to the center of the training area circle: " << trainingAreaCircle->center() << std::endl;
-    setChildStateMachine<Walking>(trainingAreaCircle->center());
+    const auto pathToTrainingAreaCenter = bot_.calculatePathToDestination(trainingAreaCircle->center());
+    setChildStateMachine<Walking>(pathToTrainingAreaCenter);
     onUpdate(event);
     return;
   }
@@ -268,11 +269,17 @@ void Training::onUpdate(const event::Event *event) {
   if (setNewChildState) {
     onUpdate(event);
     return;
+  } else if (walkingToItemTarget_) {
+    // We didn't just create a child state machine, but we are already walking to pick up an item.
+    return;
   }
 
   setNewChildState = tryAttackMonster(monstersInRange);
   if (setNewChildState) {
     onUpdate(event);
+    return;
+  } else if (walkingTargetAndAttack_) {
+    // We didn't just create a child state machine, but we are already walking to attack a target.
     return;
   }
 
@@ -329,7 +336,34 @@ bool Training::tryPickItem(const ItemList &itemList) {
       if (cosGlobalId) {
         possiblyOverwriteChildStateMachine<PickItemWithCos>(*cosGlobalId, targetItemGlobalId);
       } else {
-        possiblyOverwriteChildStateMachine<PickItem>(targetItemGlobalId);
+        // We must pick the item ourself.
+        // First, check if we're already walking to this item.
+        bool justFinishedWalking{false};
+        if (walkingToItemTarget_ && *walkingToItemTarget_ == targetItemGlobalId) {
+          // We were/are walking to pick an item.
+          if (childState_) {
+            // Still walking to it.
+            return false;
+          } else {
+            // We just finished walking to it.
+            justFinishedWalking = true;
+            walkingToItemTarget_.reset();
+          }
+        }
+        // We are not walking to this item. We need to either start walking to it or pick it up.
+        const auto &item = bot_.entityTracker().getEntity<entity::Item>(targetItemGlobalId);
+        const auto itemPosition = item.position();
+        const auto distanceToItem = sro::position_math::calculateDistance2d(bot_.selfState().position(), itemPosition);
+        const float kMinimumDistanceToPickItem{5.0}; // TODO: Figure out more precisely what works here. Ideally this distance should be as large as possible without going over.
+        if (justFinishedWalking || distanceToItem <= kMinimumDistanceToPickItem) {
+          // Just got to the item, or within range of it; pick it up.
+          possiblyOverwriteChildStateMachine<PickItem>(targetItemGlobalId);
+        } else {
+          // Need to walk to the item.
+          const auto pathToItem = bot_.calculatePathToDestination(itemPosition);
+          possiblyOverwriteChildStateMachine<Walking>(pathToItem);
+          walkingToItemTarget_ = targetItemGlobalId;
+        }
       }
       return true;
     }
@@ -371,7 +405,8 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
   if (destinationPosition) {
     // Need to walk to cast skill on entity.
     // LOG() << "Need to walk to " << *destinationPosition << " to cast skill on entity, which is " << sro::position_math::calculateDistance2d(targetEntity.position(), *destinationPosition) << " away from the target" << std::endl;
-    possiblyOverwriteChildStateMachine<Walking>(*destinationPosition, true);
+    const auto pathToDestination = bot_.calculatePathToDestination(*destinationPosition);
+    possiblyOverwriteChildStateMachine<Walking>(pathToDestination);
     walkingTargetAndAttack_ = targetAndAttack;
   } else {
     // We are within range to cast skill.
@@ -404,9 +439,22 @@ bool Training::walkToRandomPoint() {
     LOG() << "We're not in charge of a movement, but we're moving somewhere. What's this?" << std::endl;
   }
 
-  const auto destPos = packet::building::NetworkReadyPosition(randomPointInGeometry(trainingAreaGeometry_.get()));
-  setChildStateMachine<Walking>(destPos.asSroPosition(), false);
-  return true;
+  constexpr const int kMaxTryCount{10};
+  bool success{false};
+  for (int i=0; i<kMaxTryCount; ++i) {
+    try {
+      const auto pathToRandomPoint = bot_.calculatePathToDestination(randomPointInGeometry(trainingAreaGeometry_.get()));
+      setChildStateMachine<Walking>(pathToRandomPoint);
+      success = true;
+      break;
+    } catch (std::exception &ex) {
+      LOG() << "Couldn't walk to random position. Exception: " << ex.what() << std::endl;
+    }
+  }
+  if (!success) {
+    LOG() << "Cannot walk to a random point" << std::endl;
+  }
+  return success;
 }
 
 std::tuple<Training::ItemList, Training::MonsterList> Training::getItemsAndMonstersInRange() const {
@@ -679,7 +727,7 @@ std::optional<Training::TargetAndAttackSkill> Training::getTargetAndAttackSkill(
   };
 
   // Lower number is higher priority
-  auto getPriority = [this](const entity::Monster *monster) {
+  auto getPriorityBasedOnRarity = [this](const entity::Monster *monster) {
     // Earlier in the list is a higher priority
     // 1. Prefer the smallest thing attacking us
     // 2. Prefer the largest thing if nothing attacking us
@@ -730,14 +778,24 @@ std::optional<Training::TargetAndAttackSkill> Training::getTargetAndAttackSkill(
 
   // Choose the highest priority monster (lowest priority value, tiebreak with which is closer)
   const auto currentPosition = bot_.selfState().position();
-  auto min_it = std::min_element(monsters.begin(), monsters.end(), [&currentPosition, &getPriority](const entity::Monster *lhs, const entity::Monster *rhs) {
-    const auto lhsPriority = getPriority(lhs);
-    const auto rhsPriority = getPriority(rhs);
-    if (lhsPriority == rhsPriority) {
-      // If same priority, closer is better
-      return sro::position_math::calculateDistance2d(currentPosition, lhs->position()) < sro::position_math::calculateDistance2d(currentPosition, rhs->position());
+  const auto currentLevel = bot_.selfState().getCurrentLevel();
+  auto min_it = std::min_element(monsters.begin(), monsters.end(), [&](const entity::Monster *lhs, const entity::Monster *rhs) {
+    // First, prefer something closest to our level.
+    const auto lhsLevel = bot_.gameData().characterData().getCharacterById(lhs->refObjId).lvl;
+    const auto rhsLevel = bot_.gameData().characterData().getCharacterById(rhs->refObjId).lvl;
+    const auto levelDiffLhs = std::abs(currentLevel - lhsLevel);
+    const auto levelDiffRhs = std::abs(currentLevel - rhsLevel);
+    if (levelDiffLhs == levelDiffRhs) {
+      const auto lhsPriority = getPriorityBasedOnRarity(lhs);
+      const auto rhsPriority = getPriorityBasedOnRarity(rhs);
+      if (lhsPriority == rhsPriority) {
+        // If same priority, closer is better
+        return sro::position_math::calculateDistance2d(currentPosition, lhs->position()) < sro::position_math::calculateDistance2d(currentPosition, rhs->position());
+      } else {
+        return lhsPriority < rhsPriority;
+      }
     } else {
-      return lhsPriority < rhsPriority;
+      return levelDiffLhs < levelDiffRhs;
     }
   });
   // Choose the first attack

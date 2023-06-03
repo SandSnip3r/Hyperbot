@@ -26,8 +26,7 @@ std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &s
     possibleWeapons.push_back(type_id::categories::kWeapon.subCategory(skillData.reqCastWeapon2));
   }
   if (possibleWeapons.empty()) {
-    // Does not require a weapon
-    LOG() << "Skill does not require a weapon" << std::endl;
+    // Does not require a weapon.
     return {};
   }
 
@@ -186,7 +185,7 @@ void CastSkill::onUpdate(const event::Event *event) {
             return;
           }
           // This "skill" ended, but maybe it is only one piece of a chain. Figure out if more are coming
-          LOG() << "End! " << skillEndedEvent->skillRefId << std::endl;
+          LOG() << "Skill ended: " << skillEndedEvent->skillRefId << std::endl;
           bool wasLastPieceOfSkill{false};
           const auto &thisSkillData = bot_.gameData().skillData().getSkillById(skillEndedEvent->skillRefId);
           const bool isFinalPieceOfChain = (thisSkillData.basicChainCode == 0);
@@ -284,6 +283,7 @@ void CastSkill::onUpdate(const event::Event *event) {
           }
           skillCastTimeoutEventId_.reset();
           // Relinqush control to our master.
+          LOG() << "Done casting skill because it timed out" << std::endl;
           done_ = true;
           return;
         }

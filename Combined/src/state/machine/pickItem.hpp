@@ -7,6 +7,7 @@
 
 namespace state::machine {
 
+// Pick an item off the ground. Assumes that we're already within range of the item.
 class PickItem : public StateMachine {
 public:
   PickItem(Bot &bot, sro::scalar_types::EntityGlobalId targetGlobalId);

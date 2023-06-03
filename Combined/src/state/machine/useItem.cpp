@@ -24,12 +24,10 @@ UseItem::UseItem(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex) :
   }
   itemTypeId_ = itemAsExpendable->typeData();
   lastKnownQuantity_ = itemAsExpendable->quantity;
-
-  const auto maybeName = bot_.gameData().textItemAndSkillData().getItemNameIfExists(item->itemInfo->nameStrID128);
+  const auto &itemData = bot_.gameData().itemData().getItemById(item->refItemId);
+  auto maybeName = bot_.gameData().textItemAndSkillData().getItemNameIfExists(itemData.nameStrID128);
   if (maybeName) {
     itemName_ = *maybeName;
-  } else {
-    itemName_ = "UNKNOWN";;
   }
 }
 
@@ -68,7 +66,6 @@ void UseItem::onUpdate(const event::Event *event) {
         // This is our item
         if (inventoryUpdatedEvent->destSlotNum) {
           // Item was moved to a new slot, track it
-          LOG() << "Item was moved to a new slot " << static_cast<int>(inventoryIndex_) << " to " << static_cast<int>(*inventoryUpdatedEvent->destSlotNum) << std::endl;
           inventoryIndex_ = *inventoryUpdatedEvent->destSlotNum;
           if (itemUseTimeoutEventId_) {
             // We need to cancel the existing timeout event (because it has the wrong inventory slot) and send a new item use timeout event with the updated inventory slot.
@@ -89,7 +86,13 @@ void UseItem::onUpdate(const event::Event *event) {
               looksGood = true;
             } else {
               // Item count didnt decrease by 1, not going to consider this a valid item use
-              LOG() << "Item changed count from " << lastKnownQuantity_ << " to " << itemAsExpendable->quantity << std::endl;
+              {
+                // TODO: This can happen if we send two requests before we get the first response. If we timeout and the first response was just slow.
+                // TODO:  Solve this issue and put the exception back.
+                looksGood = true;
+                LOG() << "Item changed count from " << lastKnownQuantity_ << " to " << itemAsExpendable->quantity << std::endl;
+              }
+              // throw std::runtime_error("Item changed count from " + std::to_string(lastKnownQuantity_) + " to " + std::to_string(itemAsExpendable->quantity));
             }
           } else {
             // The item is now null
@@ -98,11 +101,11 @@ void UseItem::onUpdate(const event::Event *event) {
               looksGood = true;
             } else {
               // More than 1 (or could have been 0) items disappeared, that's unusual
-              LOG() << "Item is null, and there were " << lastKnownQuantity_ << " remaining" << std::endl;
+              throw std::runtime_error("Item is null, and there were " + std::to_string(lastKnownQuantity_) + " remaining");
             }
           }
           if (looksGood) {
-            LOG() << "Successfully used item" << std::endl;
+            LOG() << "We successfully used the item" << std::endl;
             if (!itemUseTimeoutEventId_) {
               throw std::runtime_error("Didn't have a item use timeout event");
             }
@@ -115,35 +118,22 @@ void UseItem::onUpdate(const event::Event *event) {
       if (itemUseTimeoutEventId_) {
         if (itemUseTimeout->slotNum == inventoryIndex_ && itemUseTimeout->typeData == itemTypeId_) {
           itemUseTimeoutEventId_.reset();
-          LOG() << "Item use timed out, going to try again" << std::endl;
         } else {
-          LOG() << "Item use timed out, but it's not for the item that we're waiting on" << std::endl;
-          if (itemUseTimeout->slotNum != inventoryIndex_) {
-            LOG() << "  wrong inventory slot" << std::endl;
-          }
-          if (itemUseTimeout->typeData != itemTypeId_)  {
-            LOG() << "  wrong type id" << std::endl;
-          }
+          // Item use timed out, but it's not for the item that we're waiting on.
         }
       }
     }
-  }
-
-  try {
-    if (!bot_.selfState().canUseItem(itemTypeId_)) {
-      LOG() << "Huh, cannot use item. How did we get here?" << std::endl;
-      return;
-    }
-  } catch (std::exception &ex) {
-    LOG() << "Hmm, exception. " << ex.what() << std::endl;
   }
   
   if (itemUseTimeoutEventId_) {
     return;
   }
 
+  if (!bot_.selfState().canUseItem(itemTypeId_)) {
+    throw std::runtime_error("Cannot use item. How did we get here?");
+  }
+
   // Use item
-  LOG() << "Using item at slot " << static_cast<int>(inventoryIndex_) << ", " << itemName_ << std::endl;
   const auto itemUsePacket = packet::building::ClientAgentInventoryItemUseRequest::packet(inventoryIndex_, itemTypeId_);
   bot_.packetBroker().injectPacket(itemUsePacket, PacketContainer::Direction::kClientToServer);
 

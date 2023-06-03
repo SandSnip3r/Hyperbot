@@ -49,6 +49,8 @@ Bot::Bot(const config::Config &config,
     estVisRangeFile >> worldState_.selfState().estimatedVisibilityRange;
     LOG() << "Parsed estimated visibility range from file as " << worldState_.selfState().estimatedVisibilityRange << std::endl;
   }
+
+  autoPotionStateMachine_ = std::make_unique<state::machine::AutoPotion>(*this);
 }
 
 void Bot::initialize() {
@@ -389,7 +391,7 @@ void Bot::handleEvent(const event::Event *event) {
       }
     }
   } catch (std::exception &ex) {
-    LOG() << "Error while handling event!\n  " << ex.what() << std::endl;
+    LOG() << "Error while handling event " << static_cast<int>(event->eventCode) << "!\n Error: \"" << ex.what() << '"' << std::endl;
   }
 }
 
@@ -399,7 +401,9 @@ void Bot::handleEvent(const event::Event *event) {
 
 void Bot::onUpdate(const event::Event *event) {
   // Highest priority is our vitals, we will try to heal even if we're not training
-  autoPotionStateMachine_.onUpdate(event);
+  if (autoPotionStateMachine_ && !autoPotionStateMachine_->done()) {
+    autoPotionStateMachine_->onUpdate(event);
+  }
 
   if (!worldState_.selfState().trainingIsActive) {
     // Not training, nothing else to do
@@ -416,12 +420,10 @@ void Bot::onUpdate(const event::Event *event) {
 // ============================================================================================================================
 
 void Bot::handleStartTraining() {
-  LOG() << "Received message from UI! Start Training" << std::endl;
   startTraining();
 }
 
 void Bot::handleStopTraining() {
-  LOG() << "Received message from UI! Stop Training" << std::endl;
   stopTraining();
 }
 
@@ -435,9 +437,10 @@ void Bot::startTraining() {
     throw std::runtime_error("Asked to start training, but already have a botting state machine");
   }
 
+  LOG() << "Starting training" << std::endl;
   worldState_.selfState().trainingIsActive = true;
   // TODO: Should we stop whatever we're doing?
-  //  For example, if we're running, stop where we are
+  //  For example, if we're running, stop where we are.
 
   // Initialize state machine
   bottingStateMachine_ = std::make_unique<state::machine::Botting>(*this);
@@ -866,6 +869,7 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
     const math::Vector destinationPositionPoint(closestDestinationPosition.xOffset(), closestDestinationPosition.yOffset(), closestDestinationPosition.zOffset());
     const auto navmeshDestinationPosition = gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, destinationPosition.regionId());
 
+    // TODO: If the src or dest positions are overlapping with a constraint, we need to add an extra point.
     const auto pathfindingResult = pathfinder.findShortestPath(navmeshCurrentPosition, navmeshDestinationPosition);
     const auto &path = pathfindingResult.shortestPath;
     if (path.empty()) {

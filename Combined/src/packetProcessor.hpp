@@ -44,6 +44,17 @@
 
 #define ENFORCE_PURIFICATION_PILL_COOLDOWN
 
+class WrappedCommand {
+public:
+  WrappedCommand(const packet::structures::ActionCommand &command, const pk2::GameData &gameData);
+  std::optional<std::string> skillName() const;
+  const packet::structures::ActionCommand &actionCommand;
+private:
+  const pk2::GameData &gameData_;
+};
+
+std::ostream& operator<<(std::ostream &stream, const WrappedCommand &wrappedCommand);
+
 /*  PacketProcessor
  *  As packets come in, this class will update the state
  */
@@ -125,6 +136,7 @@ private:
   void serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const;
 
   std::optional<std::chrono::milliseconds> getItemCooldownMs(const storage::ItemExpendable &item) const;
+  WrappedCommand wrapActionCommand(const packet::structures::ActionCommand &command) const;
   void printCommandQueues() const;
 };
 

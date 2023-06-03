@@ -47,7 +47,7 @@ protected:
   PacketProcessor packetProcessor_{worldState_, packetBroker_, eventBroker_, gameData_};
 
 private:
-  state::machine::AutoPotion autoPotionStateMachine_{*this};
+  std::unique_ptr<state::machine::StateMachine> autoPotionStateMachine_;
   std::unique_ptr<state::machine::StateMachine> bottingStateMachine_;
   inline static const std::string kEstVisRangeFilename{"estimatedVisibilityRange.txt"};
 

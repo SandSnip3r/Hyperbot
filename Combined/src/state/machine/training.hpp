@@ -45,6 +45,7 @@ private:
   std::optional<sro::scalar_types::ReferenceObjectId> imbueRefId_;
   std::set<const event::Event*> handledEvents_;
   std::optional<TargetAndAttackSkill> walkingTargetAndAttack_;
+  std::optional<sro::scalar_types::EntityGlobalId> walkingToItemTarget_;
   std::optional<sro::Position> calculateWhereToWalkToAttackEntityWithSkill(const entity::MobileEntity &entity, sro::scalar_types::ReferenceObjectId attackRefId);
   bool checkBuffs(const SkillList &buffList);
   void possiblyOverwriteChildStateMachine(std::unique_ptr<StateMachine> newChildStateMachine);

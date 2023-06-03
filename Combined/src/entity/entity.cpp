@@ -357,13 +357,13 @@ void MobileEntity::checkIfWillCrossGeometryBoundary(broker::EventBroker &eventBr
     // Moving to some destination
     auto maybeTimeUntilEnter = geometry_->timeUntilEnter(currentPosition, *destinationPosition, privateCurrentSpeed());
     if (maybeTimeUntilEnter) {
-      LOG() << " Entity will enter the geometry boundary in " << *maybeTimeUntilEnter << " second(s)" << std::endl;
+      // Entity will enter the geometry boundary in *maybeTimeUntilEnter second(s)
       // TODO: Need some way to reference the geometry from the event
       enterGeometryEventId_ = eventBroker.publishDelayedEvent<event::EntityEnteredGeometry>(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilEnter)*1000)), globalId);
     }
     auto maybeTimeUntilExit = geometry_->timeUntilExit(currentPosition, *destinationPosition, privateCurrentSpeed());
     if (maybeTimeUntilExit) {
-      LOG() << " Entity will exit the geometry boundary in " << *maybeTimeUntilExit << " second(s)" << std::endl;
+      // Entity will exit the geometry boundary in *maybeTimeUntilExit second(s)
       // TODO: Need some way to reference the geometry from the event
       exitGeometryEventId_ = eventBroker.publishDelayedEvent<event::EntityExitedGeometry>(std::chrono::milliseconds(static_cast<uint64_t>((*maybeTimeUntilExit)*1000)), globalId);
     }

@@ -54,7 +54,8 @@ void Townlooping::onUpdate(const event::Event *event) {
         return;
       }
       // Update our state to walk to the next npc.
-      setChildStateMachine<Walking>(positionOfNpc(npcsToVisit_[currentNpcIndex_]));
+      const auto pathToNpc = bot_.calculatePathToDestination(positionOfNpc(npcsToVisit_[currentNpcIndex_]));
+      setChildStateMachine<Walking>(pathToNpc);
       onUpdate(event);
       return;
     } else if (dynamic_cast<UseReturnScroll*>(childState_.get()) != nullptr) {
@@ -120,7 +121,8 @@ void Townlooping::onUpdate(const event::Event *event) {
   }
 
   // Done with buffs, walk to next NPC.
-  setChildStateMachine<Walking>(positionOfNpc(npcsToVisit_[currentNpcIndex_]));
+  const auto pathToNpc = bot_.calculatePathToDestination(positionOfNpc(npcsToVisit_[currentNpcIndex_]));
+  setChildStateMachine<Walking>(pathToNpc);
   onUpdate(event);
 }
 

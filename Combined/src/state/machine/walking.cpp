@@ -8,16 +8,8 @@
 
 namespace state::machine {
 
-Walking::Walking(Bot &bot, const sro::Position &destinationPosition, bool pathfindToDestination) : StateMachine(bot) {
+Walking::Walking(Bot &bot, const std::vector<packet::building::NetworkReadyPosition> &waypoints) : StateMachine(bot), waypoints_(waypoints) {
   stateMachineCreated(kName);
-  if (pathfindToDestination) {
-    waypoints_ = bot_.calculatePathToDestination(destinationPosition);
-  } else {
-    waypoints_ = {
-      packet::building::NetworkReadyPosition::roundToNearest(bot_.selfState().position()),
-      packet::building::NetworkReadyPosition::roundToNearest(destinationPosition)
-    };
-  }
   bot_.eventBroker().publishEvent<event::WalkingPathUpdated>(std::vector<packet::building::NetworkReadyPosition>(waypoints_.begin(), waypoints_.end()));
   pushBlockedOpcode(packet::Opcode::kClientAgentCharacterMoveRequest);
 }
