@@ -863,10 +863,10 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
   pathfinder::Pathfinder<navmesh::triangulation::NavmeshTriangulation> pathfinder(gameData().navmeshTriangulation(), kAgentRadius);
   try {
     const auto currentPosition = selfState().position();
-    const math::Vector currentPositionPoint(currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset());
+    const sro::math::Vector3 currentPositionPoint(currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset());
     const auto navmeshCurrentPosition = gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(currentPositionPoint, currentPosition.regionId());
 
-    const math::Vector destinationPositionPoint(closestDestinationPosition.xOffset(), closestDestinationPosition.yOffset(), closestDestinationPosition.zOffset());
+    const sro::math::Vector3 destinationPositionPoint(closestDestinationPosition.xOffset(), closestDestinationPosition.yOffset(), closestDestinationPosition.zOffset());
     const auto navmeshDestinationPosition = gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, destinationPosition.regionId());
 
     // TODO: If the src or dest positions are overlapping with a constraint, we need to add an extra point.

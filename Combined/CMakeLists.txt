@@ -79,12 +79,8 @@ set(no_group_source_files
     "src/logging.cpp"
     "src/logging.hpp"
     "src/main.cpp"
-    "src/math/matrix.cpp"
-    "src/math/matrix.hpp"
     "src/math/pointTranslator.cpp"
     "src/math/pointTranslator.hpp"
-    "src/math/vector.cpp"
-    "src/math/vector.hpp"
     "src/navmesh/navmesh.cpp"
     "src/navmesh/navmesh.hpp"
     "src/navmesh/triangulation/navmeshTriangulation.cpp"
@@ -528,6 +524,7 @@ add_executable(
 target_link_libraries(
   new_test_name_todo_rename
   Pathfinder
+  SilkroadLib
   gtest_main
 )
 

@@ -1,11 +1,12 @@
 #ifndef NAVMESH_TRIANGULATION_NAVMESH_TRIANGULATION_HPP_
 #define NAVMESH_TRIANGULATION_NAVMESH_TRIANGULATION_HPP_
 
-#include "math/vector.hpp"
 #include "pk2/parsing/navmeshParser.hpp"
 #include "singleRegionNavmeshTriangulation.hpp"
 
 #include "vector.h"
+
+#include <silkroad_lib/math/vector3.h>
 
 #include <memory>
 #include <unordered_map>
@@ -17,7 +18,7 @@ namespace triangulation {
 
 namespace geometry_helpers {
 
-bool lineTrimToRegion(math::Vector &p1, math::Vector &p2, const double minX, const double minY, const double maxX, const double maxY);
+bool lineTrimToRegion(sro::math::Vector3 &p1, sro::math::Vector3 &p2, const double minX, const double minY, const double maxX, const double maxY);
 
 } // namespace geometry_helpers
 
@@ -34,13 +35,13 @@ public:
 
   void setOriginRegion(const uint16_t regionId);
   uint16_t getOriginRegion() const;
-  math::Vector transformRegionPointIntoAbsolute(const math::Vector &point, const uint16_t regionId) const;
-  std::pair<uint16_t, math::Vector> transformAbsolutePointIntoRegion(const math::Vector &point) const;
+  sro::math::Vector3 transformRegionPointIntoAbsolute(const sro::math::Vector3 &point, const uint16_t regionId) const;
+  std::pair<uint16_t, sro::math::Vector3> transformAbsolutePointIntoRegion(const sro::math::Vector3 &point) const;
 
   // Pathfinder functions
   std::optional<IndexType> findTriangleForPoint(const pathfinder::Vector &point) const;
-  State createStartState(const math::Vector &startPoint, const IndexType startTriangle) const;
-  State createGoalState(const math::Vector &goalPoint, const IndexType goalTriangle) const;
+  State createStartState(const sro::math::Vector3 &startPoint, const IndexType startTriangle) const;
+  State createGoalState(const sro::math::Vector3 &goalPoint, const IndexType goalTriangle) const;
   TriangleVertexIndicesType getTriangleVertexIndices(const IndexType triangleIndex) const;
   TriangleEdgeIndicesType getTriangleEdgeIndices(const IndexType triangleIndex) const;
   MarkerType getVertexMarker(const IndexType vertexIndex) const;
@@ -53,7 +54,7 @@ public:
   // Debug help (for Pathfinder)
   std::optional<IndexType> getVertexIndex(const pathfinder::Vector &vertex) const;
   
-  static pathfinder::Vector to2dPoint(const math::Vector &point);
+  static pathfinder::Vector to2dPoint(const sro::math::Vector3 &point);
 private:
   NavmeshTriangulationMapType navmeshTriangulationMap_;
   uint16_t originRegionId_{16512}; // Arbitrarily chose the center region of the entire map

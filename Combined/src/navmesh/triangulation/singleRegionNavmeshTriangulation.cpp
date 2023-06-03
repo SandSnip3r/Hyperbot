@@ -683,12 +683,12 @@ std::vector<SingleRegionNavmeshTriangulation::State> SingleRegionNavmeshTriangul
   return successors;
 }
 
-pathfinder::Vector SingleRegionNavmeshTriangulation::to2dPoint(const math::Vector &point) {
+pathfinder::Vector SingleRegionNavmeshTriangulation::to2dPoint(const sro::math::Vector3 &point) {
   // Convert our 3d point into the pathfinder's 2d point type
   return {point.x, point.z};
 }
 
-SingleRegionNavmeshTriangulation::State SingleRegionNavmeshTriangulation::createStateForPoint(const math::Vector &point, const IndexType triangleIndex) const {
+SingleRegionNavmeshTriangulation::State SingleRegionNavmeshTriangulation::createStateForPoint(const sro::math::Vector3 &point, const IndexType triangleIndex) const {
   State result{triangleIndex};
   const auto &objectDatas = getObjectDatasForTriangle(triangleIndex);
 
@@ -733,11 +733,11 @@ SingleRegionNavmeshTriangulation::State SingleRegionNavmeshTriangulation::create
   return result;
 }
 
-SingleRegionNavmeshTriangulation::State SingleRegionNavmeshTriangulation::createStartState(const math::Vector &point, const IndexType triangleIndex) const {
+SingleRegionNavmeshTriangulation::State SingleRegionNavmeshTriangulation::createStartState(const sro::math::Vector3 &point, const IndexType triangleIndex) const {
   return createStateForPoint(point, triangleIndex);
 }
 
-SingleRegionNavmeshTriangulation::State SingleRegionNavmeshTriangulation::createGoalState(const math::Vector &point, const IndexType triangleIndex) const {
+SingleRegionNavmeshTriangulation::State SingleRegionNavmeshTriangulation::createGoalState(const sro::math::Vector3 &point, const IndexType triangleIndex) const {
   auto state = createStateForPoint(point, triangleIndex);
   state.setIsGoal(true);
   return state;

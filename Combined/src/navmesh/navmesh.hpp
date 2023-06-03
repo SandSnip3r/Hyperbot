@@ -1,8 +1,8 @@
 #ifndef NAVMESH_NAVMESH_HPP_
 #define NAVMESH_NAVMESH_HPP_
 
-#include "math/matrix.hpp"
-#include "math/vector.hpp"
+#include <silkroad_lib/math/matrix4x4.h>
+#include <silkroad_lib/math/vector3.h>
 
 #include <array>
 #include <cstdint>
@@ -27,7 +27,7 @@ struct GlobalEdgeLink {
 
 struct ObjectInstance {
   uint32_t objectId;
-  math::Vector center;
+  sro::math::Vector3 center;
   int16_t type;
   float yaw; // Clockwise
   uint16_t localUid;
@@ -61,11 +61,11 @@ struct PrimMeshNavEdge {
 
 struct ObjectResource {
   std::string name;
-  std::vector<math::Vector> vertices;
+  std::vector<sro::math::Vector3> vertices;
   std::vector<PrimMeshNavCell> cells;
   std::vector<uint32_t> cellAreaIds;
   std::vector<PrimMeshNavEdge> outlineEdges, inlineEdges;
-  float getHeight(const math::Vector &point, const uint32_t areaId) const;
+  float getHeight(const sro::math::Vector3 &point, const uint32_t areaId) const;
 };
 
 // =========================================
@@ -99,7 +99,7 @@ enum class EdgeDirection : int8_t {
 
 struct Edge {
   // TODO: Use 2d Vector here instead
-  math::Vector min, max;
+  sro::math::Vector3 min, max;
   EdgeFlag flag;
   EdgeDirection assocDirection0, assocDirection1;
   int16_t assocCell0, assocCell1;
@@ -128,7 +128,7 @@ struct Region {
   std::array<std::array<float,97>,97> tileVertexHeights;
   std::array<std::array<SurfaceType,6>,6> surfaceTypes;
   std::array<std::array<float,6>,6> surfaceHeights;
-  float getHeightAtPoint(const math::Vector &point) const;
+  float getHeightAtPoint(const sro::math::Vector3 &point) const;
   bool sanityCheck() const;
 };
 
@@ -145,9 +145,9 @@ public:
   const Region& getRegion(const uint16_t regionId) const;
   const ObjectResource& getObjectResource(const uint16_t id) const;
   const ObjectInstance& getObjectInstance(const uint32_t id) const;
-  math::Matrix4x4 getTransformationFromObjectInstanceToWorld(const uint32_t objectInstanceId, const uint16_t regionId) const;
+  sro::math::Matrix4x4 getTransformationFromObjectInstanceToWorld(const uint32_t objectInstanceId, const uint16_t regionId) const;
   ObjectResource getTransformedObjectResourceForRegion(const uint32_t objectInstanceId, const uint16_t regionId) const;
-  math::Vector transformPointIntoObjectFrame(const math::Vector &point, const uint16_t regionId, const uint32_t objectInstanceId) const;
+  sro::math::Vector3 transformPointIntoObjectFrame(const sro::math::Vector3 &point, const uint16_t regionId, const uint32_t objectInstanceId) const;
 
   bool haveObjectResource(const uint16_t id) const;
   

@@ -2,7 +2,6 @@
 #define PK2_PARSING_NAVMESHPARSER_HPP_
 
 #include "../../navmesh/navmesh.hpp"
-#include "../../math/vector.hpp"
 #include "../../../../common/pk2/pk2ReaderModern.hpp"
 
 #include <array>

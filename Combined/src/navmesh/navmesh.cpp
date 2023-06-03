@@ -11,7 +11,7 @@
 namespace navmesh {
   
 namespace {
-bool heightInTriangle(const math::Vector &point, const math::Vector &vertex0, const math::Vector &vertex1, const math::Vector &vertex2, float &height) {
+bool heightInTriangle(const sro::math::Vector3 &point, const sro::math::Vector3 &vertex0, const sro::math::Vector3 &vertex1, const sro::math::Vector3 &vertex2, float &height) {
   const float denom = (vertex1.z-vertex2.z)*(vertex0.x-vertex2.x) + (vertex2.x-vertex1.x)*(vertex0.z-vertex2.z);
   const float w0 = ((vertex1.z-vertex2.z)*(point.x-vertex2.x) + (vertex2.x-vertex1.x)*(point.z-vertex2.z)) / denom;
   const float w1 = ((vertex2.z-vertex0.z)*(point.x-vertex2.x) + (vertex0.x-vertex2.x)*(point.z-vertex2.z)) / denom;
@@ -25,7 +25,7 @@ bool heightInTriangle(const math::Vector &point, const math::Vector &vertex0, co
 }
 } // namespace
 
-float ObjectResource::getHeight(const math::Vector &point, const uint32_t areaId) const {
+float ObjectResource::getHeight(const sro::math::Vector3 &point, const uint32_t areaId) const {
   float height;
   for (int i=0; i<cells.size(); ++i) {
     if (cellAreaIds[i] == areaId) {
@@ -87,12 +87,12 @@ const ObjectInstance& Navmesh::getObjectInstance(const uint32_t id) const {
   return it->second;
 }
 
-math::Matrix4x4 Navmesh::getTransformationFromObjectInstanceToWorld(const uint32_t objectInstanceId, const uint16_t regionId) const {
+sro::math::Matrix4x4 Navmesh::getTransformationFromObjectInstanceToWorld(const uint32_t objectInstanceId, const uint16_t regionId) const {
   const auto &objectInstance = getObjectInstance(objectInstanceId);
 
-  math::Matrix4x4 rotationMatrix;
+  sro::math::Matrix4x4 rotationMatrix;
   rotationMatrix.setRotation(-objectInstance.yaw, {0,1,0});
-  math::Matrix4x4 translationMatrix;
+  sro::math::Matrix4x4 translationMatrix;
   if (objectInstance.regionId == regionId) {
     translationMatrix.setTranslation(objectInstance.center);
   } else {
@@ -120,7 +120,7 @@ ObjectResource Navmesh::getTransformedObjectResourceForRegion(const uint32_t obj
   return objectResource;
 }
 
-math::Vector Navmesh::transformPointIntoObjectFrame(const math::Vector &point, const uint16_t regionId, const uint32_t objectInstanceId) const {
+sro::math::Vector3 Navmesh::transformPointIntoObjectFrame(const sro::math::Vector3 &point, const uint16_t regionId, const uint32_t objectInstanceId) const {
   const auto transformationMatrix = getTransformationFromObjectInstanceToWorld(objectInstanceId, regionId);
   return transformationMatrix.inverse()*point;
 }
@@ -417,7 +417,7 @@ void Navmesh::postProcess() {
 
 // ========================================== Region ==========================================
 
-float Region::getHeightAtPoint(const math::Vector &point) const {
+float Region::getHeightAtPoint(const sro::math::Vector3 &point) const {
   if (point.x < 0.0 || point.x >= 1920.0 ||
       point.z < 0.0 || point.z >= 1920.0) {
     throw std::runtime_error("Trying to get terrain height but point is out of bounds of the region");

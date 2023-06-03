@@ -2,12 +2,13 @@
 #include "math_helpers.h"
 #include "triangle/triangle_api.h"
 
-#include "math/matrix.hpp"
 #include "navmeshTriangulation.hpp"
 
+#include <silkroad_lib/math/matrix4x4.h>
 #include <silkroad_lib/position_math.h>
 
 #include <fstream>
+#include <iostream>
 #include <set>
 #include <stack>
 #include <unordered_set>
@@ -326,7 +327,7 @@ void NavmeshTriangulation::markObjectsAndAreasInCells(const Navmesh &navmesh) {
       for (auto areaIdIt = tmpAreaIds.begin(); areaIdIt != newEnd; ++areaIdIt) {
         // For each area in the object
         // Pick a point that is inside the instance, inside the area, AND within the region
-        const std::optional<math::Vector> point = [this, &regionId, &transformationFromObjectFramToWorld, &objectResource, &areaIdIt]() -> std::optional<math::Vector> {
+        const std::optional<sro::math::Vector3> point = [this, &regionId, &transformationFromObjectFramToWorld, &objectResource, &areaIdIt]() -> std::optional<sro::math::Vector3> {
           // For each cell in the object, check if the center point is in the navmesh
           for (std::size_t cellIndex=0; cellIndex<objectResource.cells.size(); ++cellIndex) {
             if (objectResource.cells[cellIndex].eventZoneData.has_value()) {
@@ -336,7 +337,7 @@ void NavmeshTriangulation::markObjectsAndAreasInCells(const Navmesh &navmesh) {
             if (objectResource.cellAreaIds[cellIndex] == *areaIdIt) {
               // This cell is for our area
               const auto &cell = objectResource.cells[cellIndex];
-              const auto centerPoint = [&objectResource, &cell]() -> math::Vector {
+              const auto centerPoint = [&objectResource, &cell]() -> sro::math::Vector3 {
                 const double avgX = (objectResource.vertices[cell.vertex0].x + objectResource.vertices[cell.vertex1].x + objectResource.vertices[cell.vertex2].x) / 3.0;
                 const double avgZ = (objectResource.vertices[cell.vertex0].z + objectResource.vertices[cell.vertex1].z + objectResource.vertices[cell.vertex2].z) / 3.0;
                 return {static_cast<float>(avgX), 0, static_cast<float>(avgZ)};
@@ -428,20 +429,20 @@ uint16_t NavmeshTriangulation::getOriginRegion() const {
   return originRegionId_;
 }
 
-math::Vector NavmeshTriangulation::transformRegionPointIntoAbsolute(const math::Vector &point, const uint16_t regionId) const {
+sro::math::Vector3 NavmeshTriangulation::transformRegionPointIntoAbsolute(const sro::math::Vector3 &point, const uint16_t regionId) const {
   const auto [regionX, regionY] = sro::position_math::sectorsFromWorldRegionId(regionId);
   const auto [originRegionX, originRegionY] = sro::position_math::sectorsFromWorldRegionId(originRegionId_);
   const auto absoluteX = point.x + (regionX-originRegionX)*1920.0f;
   const auto absoluteZ = point.z + (regionY-originRegionY)*1920.0f;
-  return math::Vector{absoluteX, point.y, absoluteZ};
+  return sro::math::Vector3{absoluteX, point.y, absoluteZ};
 }
 
-std::pair<uint16_t, math::Vector> NavmeshTriangulation::transformAbsolutePointIntoRegion(const math::Vector &point) const {
+std::pair<uint16_t, sro::math::Vector3> NavmeshTriangulation::transformAbsolutePointIntoRegion(const sro::math::Vector3 &point) const {
   const auto [originRegionX, originRegionY] = sro::position_math::sectorsFromWorldRegionId(originRegionId_);
   const int regionXOffset = static_cast<int>(std::floor(point.x/1920.0));
   const int regionYOffset = static_cast<int>(std::floor(point.z/1920.0));
   const auto newRegionId = sro::position_math::worldRegionIdFromSectors(originRegionX+regionXOffset, originRegionY+regionYOffset);
-  math::Vector newPoint{point.x-(1920.0f*regionXOffset), point.y, point.z-(1920.0f*regionYOffset)};
+  sro::math::Vector3 newPoint{point.x-(1920.0f*regionXOffset), point.y, point.z-(1920.0f*regionYOffset)};
   return {newRegionId, newPoint};
 }
 
@@ -474,7 +475,7 @@ std::optional<NavmeshTriangulation::IndexType> NavmeshTriangulation::findTriangl
   return createIndex(*triangleForPoint, regionId);
 }
 
-NavmeshTriangulation::State NavmeshTriangulation::createStartState(const math::Vector &point, const IndexType triangleIndex) const {
+NavmeshTriangulation::State NavmeshTriangulation::createStartState(const sro::math::Vector3 &point, const IndexType triangleIndex) const {
   const auto [regionId, index] = splitRegionAndIndex(triangleIndex);
   const auto &regionTriangulation = getNavmeshTriangulationForRegion(regionId);
   const auto regionIdPointPair = transformAbsolutePointIntoRegion(point);
@@ -482,7 +483,7 @@ NavmeshTriangulation::State NavmeshTriangulation::createStartState(const math::V
   return createGlobalState(regionState, regionId);
 }
 
-NavmeshTriangulation::State NavmeshTriangulation::createGoalState(const math::Vector &point, const IndexType triangleIndex) const {
+NavmeshTriangulation::State NavmeshTriangulation::createGoalState(const sro::math::Vector3 &point, const IndexType triangleIndex) const {
   const auto [regionId, index] = splitRegionAndIndex(triangleIndex);
   const auto &regionTriangulation = getNavmeshTriangulationForRegion(regionId);
   const auto regionIdPointPair = transformAbsolutePointIntoRegion(point);
@@ -809,7 +810,7 @@ NavmeshTriangulation::State NavmeshTriangulation::createGlobalState(const Single
   return globalState;
 }
 
-pathfinder::Vector NavmeshTriangulation::to2dPoint(const math::Vector &point) {
+pathfinder::Vector NavmeshTriangulation::to2dPoint(const sro::math::Vector3 &point) {
   // Convert our 3d point into the pathfinder's 2d point type
   return {point.x, point.z};
 }
@@ -913,7 +914,7 @@ void NavmeshTriangulation::buildGlobalEdgesBasedOnBlockedTerrain(const Navmesh &
     return currentState;
   };
 
-  auto addEdge = [&globalEdges](const math::Vector &p1, const math::Vector &p2, const State state) {
+  auto addEdge = [&globalEdges](const sro::math::Vector3 &p1, const sro::math::Vector3 &p2, const State state) {
     navmesh::Edge edge;
     edge.min = p1;
     edge.max = p2;
@@ -1026,7 +1027,7 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
 
   // ============================Lambdas============================
   // Now, extract data from the navmesh
-  auto addVertexAndGetIndex = [](const math::Vector &p, PointListType &points) -> size_t {
+  auto addVertexAndGetIndex = [](const sro::math::Vector3 &p, PointListType &points) -> size_t {
     // TODO: Maybe give a tiny range for precision error
     auto it = std::find_if(points.begin(), points.end(), [&p](const pathfinder::Vector &otherPoint){
       constexpr const double kReducedPrecision{1e-3};
@@ -1042,7 +1043,7 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
     return points.size()-1;
   };
 
-  auto addEdge = [&](math::Vector v1, math::Vector v2, const ConstraintData &constraint, PointListType &points, EdgeListType &edges) {
+  auto addEdge = [&](sro::math::Vector3 v1, sro::math::Vector3 v2, const ConstraintData &constraint, PointListType &points, EdgeListType &edges) {
     if (v1.x == v2.x && v1.z == v2.z) {
       // There are some edges which are strictly vertical (only differ by y-value/height)
       // We will ignore those since we are only working in 2d
@@ -1236,7 +1237,7 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
     }
   };
 
-  auto addObjEdgeWithTrim = [&addEdge](math::Vector v1, math::Vector v2, const int regionDx, const int regionDy, const ConstraintData &constraint, PointListType &points, EdgeListType &edges) {
+  auto addObjEdgeWithTrim = [&addEdge](sro::math::Vector3 v1, sro::math::Vector3 v2, const int regionDx, const int regionDy, const ConstraintData &constraint, PointListType &points, EdgeListType &edges) {
     const double regionMinX = 1920.0*regionDx;
     const double regionMinY = 1920.0*regionDy;
     const double regionMaxX = 1920.0*(regionDx+1);
@@ -1563,7 +1564,7 @@ void NavmeshTriangulation::markBlockedTerrainCells(SingleRegionNavmeshTriangulat
 
 namespace geometry_helpers {
 
-bool lineTrimToRegion(math::Vector &p1, math::Vector &p2, const double minX, const double minY, const double maxX, const double maxY) {
+bool lineTrimToRegion(sro::math::Vector3 &p1, sro::math::Vector3 &p2, const double minX, const double minY, const double maxX, const double maxY) {
   constexpr const double kPrecisionTolerance = 1e-4;
 
   struct Boundary {

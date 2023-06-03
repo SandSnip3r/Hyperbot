@@ -2,11 +2,12 @@
 #define NAVMESH_TRIANGULATION_SINGLE_REGION_NAVMESH_TRIANGULATION_HPP_
 
 #include "singleRegionNavmeshTriangulationState.hpp"
-#include "math/vector.hpp"
 #include "navmesh/navmesh.hpp"
 
 #include "triangle_lib_navmesh.h"
 #include "vector.h"
+
+#include <silkroad_lib/math/vector3.h>
 
 #include <map>
 #include <set>
@@ -72,9 +73,9 @@ public:
   
   std::vector<State> getSuccessors(const State &currentState, const std::optional<State> goalState, const double agentRadius) const;
   bool agentFitsThroughEdge(const IndexType edgeIndex, const double agentRadius) const;
-  static pathfinder::Vector to2dPoint(const math::Vector &point);
-  State createStartState(const math::Vector &point, const IndexType triangleIndex) const;
-  State createGoalState(const math::Vector &point, const IndexType triangleIndex) const;
+  static pathfinder::Vector to2dPoint(const sro::math::Vector3 &point);
+  State createStartState(const sro::math::Vector3 &point, const IndexType triangleIndex) const;
+  State createGoalState(const sro::math::Vector3 &point, const IndexType triangleIndex) const;
 private:
   const navmesh::Navmesh &navmesh_;
   const navmesh::Region &region_;
@@ -94,7 +95,7 @@ private:
   std::map<LinkIdType, LinkData> linkDataMap_;
   void buildLinkData();
 
-  State createStateForPoint(const math::Vector &point, const IndexType triangleIndex) const;
+  State createStateForPoint(const sro::math::Vector3 &point, const IndexType triangleIndex) const;
 };
   
 } // namespace pathfinder
