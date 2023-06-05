@@ -12,10 +12,10 @@
 #include "teleportData.hpp"
 #include "textItemAndSkillData.hpp"
 #include "textZoneNameData.hpp"
-#include "navmesh/navmesh.hpp"
-#include "navmesh/triangulation/navmeshTriangulation.hpp"
 #include "../../../common/pk2/divisionInfo.hpp"
 
+#include <silkroad_lib/navmesh/navmesh.h>
+#include <silkroad_lib/navmesh/triangulation/navmeshTriangulation.h>
 #include <silkroad_lib/pk2/pk2ReaderModern.h>
 
 #include <filesystem>
@@ -42,7 +42,7 @@ public:
   const TextItemAndSkillData& textItemAndSkillData() const;
   const TextZoneNameData& textZoneNameData() const;
   const TeleportData& teleportData() const;
-  const navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
+  const sro::navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
   const RegionInfo& regionInfo() const;
 
   std::optional<std::string> getSkillNameIfExists(sro::scalar_types::ReferenceObjectId skillRefId) const;
@@ -61,8 +61,8 @@ private:
   TextZoneNameData textZoneNameData_;
   TeleportData teleportData_;
 
-  std::optional<navmesh::Navmesh> navmesh_;
-  std::optional<navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
+  std::optional<sro::navmesh::Navmesh> navmesh_;
+  std::optional<sro::navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
 
   RegionInfo regionInfo_;
 

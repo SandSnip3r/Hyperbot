@@ -1,12 +1,12 @@
 #include "gameData.hpp"
 
 #include "logging.hpp"
-#include "pk2/parsing/navmeshParser.hpp"
 #include "pk2/parsing/regionInfoParser.hpp"
 #include "../../../common/pk2/parsing/parsing.hpp"
 
 #include "math_helpers.h"
 
+#include <silkroad_lib/pk2/navmeshParser.h>
 #include <silkroad_lib/pk2/pk2.h>
 
 #include <functional>
@@ -104,7 +104,7 @@ const TeleportData& GameData::teleportData() const {
   return teleportData_;
 }
 
-const navmesh::triangulation::NavmeshTriangulation& GameData::navmeshTriangulation() const {
+const sro::navmesh::triangulation::NavmeshTriangulation& GameData::navmeshTriangulation() const {
   if (!navmeshTriangulation_.has_value()) {
     throw std::runtime_error("Asking for navmesh triangulation which does not exist");
   }
@@ -521,9 +521,9 @@ void GameData::parseTextItemAndSkill(sro::pk2::Pk2ReaderModern &pk2Reader) {
 
 void GameData::parseNavmeshData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   std::cout << "Parsing navmesh data\n";
-  pk2::parsing::NavmeshParser navmeshParser(pk2Reader);
+  sro::pk2::NavmeshParser navmeshParser(pk2Reader);
   navmesh_ = navmeshParser.parseNavmesh();
-  navmeshTriangulation_ = navmesh::triangulation::NavmeshTriangulation(*navmesh_);
+  navmeshTriangulation_ = sro::navmesh::triangulation::NavmeshTriangulation(*navmesh_);
 
   // ==============OLD Below?==============
   // for (int regionX=0; regionX<255; ++regionX) {

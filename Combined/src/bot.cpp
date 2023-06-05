@@ -402,7 +402,11 @@ void Bot::handleEvent(const event::Event *event) {
 void Bot::onUpdate(const event::Event *event) {
   // Highest priority is our vitals, we will try to heal even if we're not training
   if (autoPotionStateMachine_ && !autoPotionStateMachine_->done()) {
-    autoPotionStateMachine_->onUpdate(event);
+    try {
+      autoPotionStateMachine_->onUpdate(event);
+    } catch (std::exception &ex) {
+      LOG() << "Error while running autopotion: " << ex.what() << std::endl;
+    }
   }
 
   if (!worldState_.selfState().trainingIsActive) {
@@ -860,7 +864,7 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
   };
 
   constexpr const double kAgentRadius{7.23};
-  pathfinder::Pathfinder<navmesh::triangulation::NavmeshTriangulation> pathfinder(gameData().navmeshTriangulation(), kAgentRadius);
+  pathfinder::Pathfinder<sro::navmesh::triangulation::NavmeshTriangulation> pathfinder(gameData().navmeshTriangulation(), kAgentRadius);
   try {
     const auto currentPosition = selfState().position();
     const sro::math::Vector3 currentPositionPoint(currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset());
