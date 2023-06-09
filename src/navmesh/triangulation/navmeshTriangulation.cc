@@ -418,7 +418,7 @@ void NavmeshTriangulation::addObjectDataForTriangle(const IndexType triangleInde
 const SingleRegionNavmeshTriangulation& NavmeshTriangulation::getNavmeshTriangulationForRegion(const uint16_t regionId) const {
   auto it = navmeshTriangulationMap_.find(regionId);
   if (it == navmeshTriangulationMap_.end()) {
-    throw std::runtime_error("Asking for navmesh triangulation for a non existent region");
+    throw std::runtime_error("Asking for navmesh triangulation for a non existent region "+std::to_string(regionId));
   }
   return it->second;
 }
