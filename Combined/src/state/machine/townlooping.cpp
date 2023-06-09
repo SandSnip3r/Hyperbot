@@ -16,6 +16,26 @@ Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
   buildBuffList();
   buildShoppingList();
   buildNpcList();
+
+  // Figure out which town we'll townloop in
+  const auto &regionData = bot_.gameData().refRegion().getRegion(bot_.selfState().position().regionId());
+  if (bot_.selfState().inTown()) {
+    // Which town are we in?
+    if (regionData.areaName == "Town_Cons") {
+      // Town is Constantinople
+      currentTown_ = Town::kConstantinople;
+      // Town currentTown_;
+    } else {
+      throw std::runtime_error("Unknown current town");
+    }
+  } else {
+    // TODO: Will depend on return point.
+    if (regionData.continentName == "Eu") {
+      currentTown_ = Town::kConstantinople;
+    } else {
+      throw std::runtime_error("Not in town, not sure how to determine our town");
+    }
+  }
 }
 
 Townlooping::~Townlooping() {
@@ -134,24 +154,29 @@ void Townlooping::buildBuffList() {
   // TODO: This data should come from some config
   // Create a list of buffs to use
   buffsToUse_ = std::vector<sro::scalar_types::ReferenceObjectId> {
-      8150, // Ghost Walk - God
-      // 8133, // God - Piercing Force
-      // 7980, // Final Guard of Ice
-      // 8183, // Concentration - 4th
+    8150, // Ghost Walk - God
+    // 8133, // God - Piercing Force
+    // 7980, // Final Guard of Ice
+    // 8183, // Concentration - 4th
 
-      // Cleric
-      // 11795, // Holy Recovery Division
-      // 11934, // Holy Spell
+    // Cleric
+    // 11795, // Holy Recovery Division
+    // 11934, // Holy Spell
 
-      // Rogue
-      // 9516, // Crossbow Extreme
-    };
+    // Rogue
+    // 9516, // Crossbow Extreme
+  };
+
+  // Remove skills which we don't even have.
+  buffsToUse_.erase(std::remove_if(buffsToUse_.begin(), buffsToUse_.end(), [&](const auto &skillId) {
+    return !bot_.selfState().haveSkill(skillId);
+  }), buffsToUse_.end());
 
   // Move all buffs which require a weapon at all times to the end
   // TODO: Can do better, move skills which require a weapon at all times AND have a cooldown shorter than the skill duration even further to the back of the list
   // TODO: This exact function exists in Training also, move to a common area
   int backIndex = buffsToUse_.size()-1;
-  for (int i=0; i<backIndex; ++i) {
+  for (int i=0; i<=backIndex; ++i) {
     const auto &buffRefId = buffsToUse_[i];
     const auto &buffData = bot_.gameData().skillData().getSkillById(buffRefId);
     const auto buffRequiredWeapons = buffData.reqi();
@@ -217,21 +242,35 @@ std::optional<sro::scalar_types::ReferenceObjectId> Townlooping::getNextBuffToCa
 sro::Position Townlooping::positionOfNpc(Npc npc) const {
   // Hard code the Jangan NPCs' locations, for now
   static const auto npcPositionMap = []{
-    std::map<Npc, sro::Position> npcPositions;
-    npcPositions[Npc::kStorage]    = { 25000,  981.0f, 0.0f, 1032.0f };
-    npcPositions[Npc::kPotion]     = { 25000, 1525.0f, 0.0f, 1385.0f };
-    npcPositions[Npc::kGrocery]    = { 25000, 1618.0f, 0.0f, 1078.0f };
-    npcPositions[Npc::kBlacksmith] = { 25000,  397.0f, 0.0f, 1358.0f };
-    npcPositions[Npc::kProtector]  = { 25000,  363.0f, 0.0f, 1083.0f };
-    npcPositions[Npc::kStable]     = { 25000,  390.0f, 0.0f,  493.0f };
+    std::map<Town, std::map<Npc, sro::Position>> npcPositions;
+
+    npcPositions[Town::kJangan][Npc::kStorage]    = { 25000,  981.0f, 0.0f, 1032.0f };
+    npcPositions[Town::kJangan][Npc::kPotion]     = { 25000, 1525.0f, 0.0f, 1385.0f };
+    npcPositions[Town::kJangan][Npc::kGrocery]    = { 25000, 1618.0f, 0.0f, 1078.0f };
+    npcPositions[Town::kJangan][Npc::kBlacksmith] = { 25000,  397.0f, 0.0f, 1358.0f };
+    npcPositions[Town::kJangan][Npc::kProtector]  = { 25000,  363.0f, 0.0f, 1083.0f };
+    npcPositions[Town::kJangan][Npc::kStable]     = { 25000,  390.0f, 0.0f,  493.0f };
+
+    npcPositions[Town::kConstantinople][Npc::kStorage]    = { 26959, 1218.0f, 80.0f,  865.0f };
+    npcPositions[Town::kConstantinople][Npc::kPotion]     = { 26959, 1243.0f, 80.0f, 1314.0f };
+    npcPositions[Town::kConstantinople][Npc::kGrocery]    = { 26959,  762.0f, 80.0f,  409.0f };
+    npcPositions[Town::kConstantinople][Npc::kBlacksmith] = { 26959,  791.0f, 81.0f, 1407.0f };
+    npcPositions[Town::kConstantinople][Npc::kProtector]  = { 26959,  156.0f, 79.0f, 1051.0f };
+    npcPositions[Town::kConstantinople][Npc::kStable]     = { 26959,   13.0f, 80.0f,  452.0f };
+
     return npcPositions;
   }();
 
-  const auto it = npcPositionMap.find(npc);
-  if (it == npcPositionMap.end()) {
+  const auto npcPosTownIt = npcPositionMap.find(currentTown_);
+  if (npcPosTownIt == npcPositionMap.end()) {
+    throw std::runtime_error("Trying to get position of NPC for town which we dont recognize");
+  }
+  const auto &npcPosMapForTown = npcPosTownIt->second;
+  const auto npcPosIt = npcPosMapForTown.find(npc);
+  if (npcPosIt == npcPosMapForTown.end()) {
     throw std::runtime_error("Trying to get position of NPC which does not exist");
   }
-  return it->second;
+  return npcPosIt->second;
 }
 
 } // namespace state::machine

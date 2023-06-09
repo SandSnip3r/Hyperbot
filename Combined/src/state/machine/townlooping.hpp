@@ -21,7 +21,14 @@ public:
   bool done() const override;
 private:
   static inline std::string kName{"Townlooping"};
+
+  enum class Town {
+    kJangan,
+    kConstantinople
+  };
+
   std::map<uint32_t, int> shoppingList_;
+  Town currentTown_;
   std::vector<Npc> npcsToVisit_;
   size_t currentNpcIndex_{0};
   std::vector<sro::scalar_types::ReferenceObjectId> buffsToUse_;

@@ -15,33 +15,9 @@ namespace state::machine {
 
 TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList) : StateMachine(bot), npc_(npc), shoppingList_(shoppingList) {
   stateMachineCreated(kName);
-  // We know we are near our npc, lets find the closest npc to us
-  npcGid_ = [&]{
-    std::optional<uint32_t> closestNpcGId;
-    float closestNpcDistance = std::numeric_limits<float>::max();
-    const auto &entityMap = bot_.entityTracker().getEntityMap();
-    for (const auto &entityIdObjectPair : entityMap) {
-      const auto &entityPtr = entityIdObjectPair.second;
-      if (!entityPtr) {
-        throw std::runtime_error("Entity map contains a null item");
-      }
-
-      if (entityPtr->entityType() != entity::EntityType::kNonplayerCharacter) {
-        // Not an npc, skip
-        continue;
-      }
-
-      const auto distanceToNpc = sro::position_math::calculateDistance2d(bot_.selfState().position(), entityPtr->position());
-      if (distanceToNpc < closestNpcDistance) {
-        closestNpcGId = entityIdObjectPair.first;
-        closestNpcDistance = distanceToNpc;
-      }
-    }
-    if (!closestNpcGId) {
-      throw std::runtime_error("There is no NPC within range, weird");
-    }
-    return *closestNpcGId;
-  }();
+  // We know we are near our npc, lets find the closest npc to us.
+  // TODO: This won't always work. We don't need to get very close to an npc to talk to them, we could be closer to another npc.
+  npcGid_ = bot_.getClosestNpcGlobalId();
 
   // Figure out what items to items to buy
   figureOutWhatToBuy();
@@ -56,6 +32,7 @@ TalkingToShopNpc::~TalkingToShopNpc() {
 }
 
 void TalkingToShopNpc::figureOutWhatToBuy() {
+  int remainingGold = bot_.selfState().getGold();
   for (const auto &shoppingItemIdCountPair : shoppingList_) {
     const auto itemRefId = shoppingItemIdCountPair.first;
     // Do we have enough of these in our inventory?
@@ -84,8 +61,21 @@ void TalkingToShopNpc::figureOutWhatToBuy() {
     if (!bot_.gameData().itemData().haveItemWithId(itemRefId)) {
       throw std::runtime_error("Want to buy an item for which we have no data");
     }
-    const auto &item = bot_.gameData().itemData().getItemById(itemRefId);
-    const auto &nameOfItemToBuy = item.codeName128;
+    uint16_t countToBuy = shoppingItemIdCountPair.second - ownedCountOfItem;
+    const auto &itemData = bot_.gameData().itemData().getItemById(itemRefId);
+    std::string itemName = (bot_.gameData().textItemAndSkillData().getItemNameIfExists(itemData.nameStrID128) ? *bot_.gameData().textItemAndSkillData().getItemNameIfExists(itemData.nameStrID128) : std::string("UNKNOWN"));
+    // Figure out how many we can buy based on current gold and price.
+    // TODO: Price might instead come from the _RefPricePolicyOfItem table.
+    const auto prev = countToBuy;
+    countToBuy = std::min<int32_t>(countToBuy, remainingGold / itemData.price);
+    if (countToBuy != prev) {
+      LOG() << "Wanted to buy " << prev << " " << itemName << "(s), but can only afford  " << countToBuy << std::endl;
+    }
+    if (countToBuy == 0) {
+      // Cannot afford any of these.
+      continue;
+    }
+    const auto &nameOfItemToBuy = itemData.codeName128;
     const auto *npc = bot_.entityTracker().getEntity(npcGid_);
     if (npc == nullptr) {
       throw std::runtime_error("Got entity, but it's null");
@@ -105,7 +95,10 @@ void TalkingToShopNpc::figureOutWhatToBuy() {
       const auto &packageMap = tab.getPackageMap();
       for (const auto &itemIndexAndScrapPair : packageMap) {
         if (itemIndexAndScrapPair.second.refItemCodeName == nameOfItemToBuy) {
-          itemsToBuy_[itemRefId] = BuyingItems::PurchaseRequest{ static_cast<uint8_t>(tabIndex), itemIndexAndScrapPair.first, static_cast<uint16_t>(shoppingItemIdCountPair.second - ownedCountOfItem), item.maxStack };
+          itemsToBuy_[itemRefId] = BuyingItems::PurchaseRequest{ static_cast<uint8_t>(tabIndex), itemIndexAndScrapPair.first, static_cast<uint16_t>(countToBuy), itemData.maxStack };
+          LOG() << "Going to spend " << countToBuy * itemData.price << " gold on " << itemName << ". Gold will go from " << remainingGold;
+          remainingGold -= countToBuy * itemData.price;
+          std::cout << " to " << remainingGold << std::endl;
           foundItemInShop = true;
           break;
         }

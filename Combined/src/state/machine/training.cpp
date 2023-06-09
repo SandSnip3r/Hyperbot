@@ -63,40 +63,41 @@ Training::Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeo
   buildBuffList();
   // Create a list of skills to use
   skillsToUse_ = SkillList {
-    // TODO: Why do i get a Handle Read Error when I send an invalid skill?
-      7805, // Flying Dragon - Flash
-      8204, // Crane's Thunderbolt
-      8084, // Snow Storm - Multi Shot
-      // 8195, // Horse's Thunderbolt
-      7675, // Ghost Spear - Emperor
-      7672, // Ghost Spear - Storm Cloud
-      // 885, // Chain Spear - Shura
+  // TODO: Why do i get a Handle Read Error when I send an invalid skill?
+    7805, // Flying Dragon - Flash
+    8204, // Crane's Thunderbolt
+    8084, // Snow Storm - Multi Shot
+    // 8195, // Horse's Thunderbolt
+    7675, // Ghost Spear - Emperor
+    7672, // Ghost Spear - Storm Cloud
+    // 885, // Chain Spear - Shura
 
-      // Rogue
-      // 9612, // Distance Shot
-      // 9940, // Prick
-      // // 9798, // Mortal Wounds
-      // // 9623, // Blast Shot
-      // // 9631, // Hurricane Shot
-      // 9544, // Intense Shot
-      // 9868, // Screw
-      // 9528, // Power Shot
-      // 9587, // Rapid Shot
+    // Rogue
+    // 9612, // Distance Shot
+    // 9940, // Prick
+    // // 9798, // Mortal Wounds
+    // // 9623, // Blast Shot
+    // // 9631, // Hurricane Shot
+    // 9544, // Intense Shot
+    // 9868, // Screw
+    // 9528, // Power Shot
+    // 9587, // Rapid Shot
 
-      // Wizard
-      // 10264, // Fire Bolt
-      // 10122, // Ice Bolt (very low level)
-      // 10135, // Frozen Spear
+    // Wizard
+    // 10264, // Fire Bolt
+    // 10122, // Ice Bolt (very low level)
+    // 10135, // Frozen Spear
 
-      // Warrior
-      // 8499, // Sprint Assault
+    // Warrior
+    // 8499, // Sprint Assault
 
-      // Bard
-      // 11261, // Weird Chord
+    // Bard
+    // 11261, // Weird Chord
 
-      // Warlock
-      // 11072, // Vampire Kiss
-    };
+    // Warlock
+    // 11072, // Vampire Kiss
+  };
+  removeSkillsFromListWhichWeDontHave(skillsToUse_);
 
   bot_.selfState().setTrainingAreaGeometry(trainingAreaGeometry_->clone());
   bot_.selfState().registerGeometryBoundary(bot_.selfState().trainingAreaGeometry->clone(), bot_.eventBroker());
@@ -625,29 +626,40 @@ bool Training::wantToAttackMonster(const entity::Monster &monster) const {
   return trainingAreaGeometry_->pointIsInside(monster.position());
 }
 
+void Training::removeSkillsFromListWhichWeDontHave(SkillList &skillList) {
+  auto newEndIt = std::remove_if(skillList.begin(), skillList.end(), [&](const auto &skillId) {
+    return !bot_.selfState().haveSkill(skillId);
+  });
+  for (auto it=newEndIt; it!=skillList.end(); ++it) {
+    const auto maybeSkillName = bot_.gameData().getSkillNameIfExists(*it);
+    LOG() << "Dont have skill " << (maybeSkillName ? *maybeSkillName : std::string("UNKNOWN")) << ". Removing from list" << std::endl;
+  }
+  skillList.erase(newEndIt, skillList.end());
+};
+
 void Training::buildBuffList() {
   // TODO: This data should come from some config
   imbueRefId_ = 8129; // 8129, "Thunder Phoenix Force"
 
   // Create a list of buffs to use
   trainingBuffs_ = SkillList {
-      8150, // Ghost Walk - God
-      8115, // Snow Shield - Intensify
-      8133, // God - Piercing Force
-      7980, // Final Guard of Ice
-      8183, // Concentration - 4th
+    8150, // Ghost Walk - God
+    8115, // Snow Shield - Intensify
+    8133, // God - Piercing Force
+    7980, // Final Guard of Ice
+    8183, // Concentration - 4th
 
-      // Cleric
-      // 11795, // Holy Recovery Division
-      // 11934, // Holy Spell
+    // Cleric
+    // 11795, // Holy Recovery Division
+    // 11934, // Holy Spell
 
-      // Rogue
-      // 9516, // Crossbow Extreme
-    };
+    // Rogue
+    // 9516, // Crossbow Extreme
+  };
 
   nonTrainingBuffs_ = SkillList {
-      8150, // Ghost Walk - God
-    };
+    8150, // Ghost Walk - God
+  };
 
   // Move all buffs which require a weapon at all times to the end
   // TODO: Can do better, move skills which require a weapon at all times AND have a cooldown shorter than the skill duration even further to the back of the list
@@ -665,6 +677,9 @@ void Training::buildBuffList() {
       }
     }
   };
+
+  removeSkillsFromListWhichWeDontHave(trainingBuffs_);
+  removeSkillsFromListWhichWeDontHave(nonTrainingBuffs_);
 
   sortBuffs(trainingBuffs_);
   sortBuffs(nonTrainingBuffs_);

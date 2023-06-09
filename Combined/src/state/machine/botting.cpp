@@ -9,14 +9,13 @@
 
 namespace state::machine {
 
-const sro::Position Botting::kCenterOfJangan_{25000, 951.0f, -33.0f, 1372.0f};
-
 Botting::Botting(Bot &bot) : StateMachine(bot) {
   stateMachineCreated(kName);
   // TODO: Need to get training spot from botting config.
   // trainingSpotCenter_ = sro::Position{24742, 977.0f, 56.501f, 1127.0f }; // Southwest of Jangan, no obstacles
   // trainingSpotCenter_ = sro::Position{24744, 1406.0f, -43.0f, 203.0f }; // South of Jangan, obstacles
-  trainingSpotCenter_ = sro::Position{24232, 1617.0f, 11.0f, 1369.0f }; // Farther south of Jangan, obstacles
+  // trainingSpotCenter_ = sro::Position{24232, 1617.0f, 11.0f, 1369.0f }; // Farther south of Jangan, obstacles
+  trainingSpotCenter_ = sro::Position{26955, 1753.05f, 17.1049f, 1439.8f }; // Movia's West of Constantinople
   constexpr double kMonsterRange{1800.0};
   trainingAreaGeometry_ = std::make_unique<entity::Circle>(trainingSpotCenter_, kMonsterRange);
 

@@ -428,6 +428,15 @@ std::vector<packet::structures::Skill> Self::skills() const {
   return skills_;
 }
 
+bool Self::haveSkill(sro::scalar_types::ReferenceObjectId id) const {
+  for (const auto &i : skills_) {
+    if (i.id == id) {
+      return i.enabled;
+    }
+  }
+  return false;
+}
+
 bool Self::canUseItems() const {
   // TODO
   //  Are we in a state where we cant use items?

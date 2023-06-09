@@ -32,6 +32,7 @@ public:
   broker::EventBroker& eventBroker();
   const state::WorldState& worldState() const;
   state::EntityTracker& entityTracker();
+  const state::EntityTracker& entityTracker() const;
   state::Self& selfState();
   const state::Self& selfState() const;
 protected:
@@ -102,6 +103,7 @@ public:
   bool similarSkillIsAlreadyActive(sro::scalar_types::ReferenceObjectId skillRefId) const;
   bool canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const;
   std::vector<packet::building::NetworkReadyPosition> calculatePathToDestination(const sro::Position &destinationPosition) const;
+  sro::scalar_types::EntityGlobalId getClosestNpcGlobalId() const;
 
 };
 

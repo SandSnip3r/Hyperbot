@@ -5,6 +5,7 @@
 #include "storage/item.hpp"
 
 #include <silkroad_lib/position.h>
+#include <silkroad_lib/scalar_types.h>
 
 #include <cmath>
 #include <ostream>
@@ -81,7 +82,7 @@ struct Mastery {
 
 struct Skill {
   Skill(uint32_t i, bool e) : id(i), enabled(e) {}
-  uint32_t id;
+  sro::scalar_types::ReferenceObjectId id;
   bool enabled;
 };
 

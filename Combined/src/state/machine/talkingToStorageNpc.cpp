@@ -12,6 +12,9 @@ namespace state::machine {
 
 TalkingToStorageNpc::TalkingToStorageNpc(Bot &bot) : StateMachine(bot) {
   stateMachineCreated(kName);
+  // We know we are near our npc, lets find the closest npc to us.
+  // TODO: This won't always work. We don't need to get very close to an npc to talk to them, we could be closer to another npc.
+  npcGid_ = bot_.getClosestNpcGlobalId();
 }
 
 TalkingToStorageNpc::~TalkingToStorageNpc() {
@@ -21,7 +24,7 @@ TalkingToStorageNpc::~TalkingToStorageNpc() {
 void TalkingToStorageNpc::onUpdate(const event::Event *event) {
   if (npcInteractionState_ == NpcInteractionState::kStart) {
     // Have not yet done anything. First thing is to select the Npc
-    const auto selectNpc = packet::building::ClientAgentActionSelectRequest::packet(kStorageNpcGId);
+    const auto selectNpc = packet::building::ClientAgentActionSelectRequest::packet(npcGid_);
     bot_.packetBroker().injectPacket(selectNpc, PacketContainer::Direction::kClientToServer);
     // Advance state
     npcInteractionState_ = NpcInteractionState::kSelectionRequestPending;
@@ -35,7 +38,7 @@ void TalkingToStorageNpc::onUpdate(const event::Event *event) {
       return;
     }
 
-    if (*bot_.selfState().selectedEntity != kStorageNpcGId) {
+    if (*bot_.selfState().selectedEntity != npcGid_) {
       throw std::runtime_error("We have something selected, but its not the storage npc");
     }
 
@@ -60,7 +63,7 @@ void TalkingToStorageNpc::onUpdate(const event::Event *event) {
 
   if (bot_.selfState().talkingGidAndOption) {
     // We are talking to an npc
-    if (bot_.selfState().talkingGidAndOption->first != kStorageNpcGId) {
+    if (bot_.selfState().talkingGidAndOption->first != npcGid_) {
       throw std::runtime_error("We're talking to some Npc, but it's not the storage Npc");
     }
     if (bot_.selfState().talkingGidAndOption->second != packet::enums::TalkOption::kStorage) {
@@ -168,6 +171,7 @@ void TalkingToStorageNpc::storeItems(const event::Event *event) {
 
   // At this point, we werent able to stack, move the next item
   // What should we store?
+  // TODO: Calculate what we can afford to store.
   std::vector<uint8_t> slotsWithItemsToStore;
   for (const auto itemTypeToStore : itemTypesToStore_) {
     const auto slotsWithThisItemType = bot_.selfState().inventory.findItemsWithTypeId(itemTypeToStore);

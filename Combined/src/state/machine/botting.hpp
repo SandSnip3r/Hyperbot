@@ -17,7 +17,6 @@ public:
   bool done() const override;
 private:
   static inline std::string kName{"Botting"};
-  static const sro::Position kCenterOfJangan_;
   sro::Position trainingSpotCenter_;
   std::unique_ptr<entity::Geometry> trainingAreaGeometry_;
   void initializeChildState();

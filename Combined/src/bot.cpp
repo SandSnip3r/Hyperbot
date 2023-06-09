@@ -93,6 +93,10 @@ state::EntityTracker& Bot::entityTracker() {
   return worldState_.entityTracker();
 }
 
+const state::EntityTracker& Bot::entityTracker() const {
+  return worldState_.entityTracker();
+}
+
 state::Self& Bot::selfState() {
   return worldState_.selfState();
 }
@@ -887,4 +891,32 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
   } catch (std::exception &ex) {
     throw std::runtime_error("Cannot find path with pathfinder: \""+std::string(ex.what())+"\"");
   }
+}
+
+sro::scalar_types::EntityGlobalId Bot::getClosestNpcGlobalId() const {
+  std::optional<uint32_t> closestNpcGId;
+  float closestNpcDistance = std::numeric_limits<float>::max();
+  const auto &ourCurrentPosition = selfState().position();
+  const auto &entityMap = entityTracker().getEntityMap();
+  for (const auto &entityIdObjectPair : entityMap) {
+    const auto &entityPtr = entityIdObjectPair.second;
+    if (!entityPtr) {
+      throw std::runtime_error("Entity map contains a null item");
+    }
+
+    if (entityPtr->entityType() != entity::EntityType::kNonplayerCharacter) {
+      // Not an npc, skip
+      continue;
+    }
+
+    const auto distanceToNpc = sro::position_math::calculateDistance2d(ourCurrentPosition, entityPtr->position());
+    if (distanceToNpc < closestNpcDistance) {
+      closestNpcGId = entityIdObjectPair.first;
+      closestNpcDistance = distanceToNpc;
+    }
+  }
+  if (!closestNpcGId) {
+    throw std::runtime_error("There is no NPC within range, weird");
+  }
+  return *closestNpcGId;
 }

@@ -17,7 +17,7 @@ public:
 private:
   static inline std::string kName{"TalkingToStorageNpc"};
   // Hard coded npc global Id
-  static constexpr const uint32_t kStorageNpcGId{0x000000CF};
+  uint32_t npcGid_;
   std::set<uint16_t> itemTypesToStore_;
 
   enum class NpcInteractionState { kStart, kSelectionRequestPending, kNpcSelected, kStorageOpenRequestPending, kStorageOpened, kShopOpenRequestPending, kShopOpened, kDoneStoring };
