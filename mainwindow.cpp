@@ -178,6 +178,12 @@ void MainWindow::initializeMap() {
     throw std::runtime_error("Navmesh Triangulation missing");
   }
   ui->navmeshGraphicsView->setWorldNavmesh(*navmeshTriangulation_);
+  connect(ui->navmeshGraphicsView, &NavmeshGraphicsView::setPathStart, this, [](const auto pos, const auto regionId){
+    std::cout << "Position: " << pos << " and region " << regionId << std::endl;
+  });
+  connect(ui->navmeshGraphicsView, &NavmeshGraphicsView::setPathGoal, this, [](const auto pos, const auto regionId){
+    std::cout << "Position: " << pos << " and region " << regionId << std::endl;
+  });
   // connect(navmeshGraphicsView, &NavmeshGraphicsView::setPathStart, this, &MainWindow::setPathStart);
   // connect(navmeshGraphicsView, &NavmeshGraphicsView::setPathGoal, this, &MainWindow::setPathGoal);
   // connect(navmeshGraphicsView, &NavmeshGraphicsView::resetPath, this, &MainWindow::resetPath);
@@ -522,6 +528,11 @@ void MainWindow::onLaunch() {
     delete item;
   }
   walkingPathItems_.clear();
+
+  // TODO:
+  //  1. Do these items need to be deleted?
+  //  2. This code exists in the StopTraining block
+  ui->stateListWidget->clear();
 }
 
 void MainWindow::onCharacterSpawn() {
