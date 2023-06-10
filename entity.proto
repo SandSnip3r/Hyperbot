@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package proto.entity;
+
+enum MonsterRarity {
+  kGeneral = 0;
+  kChampion = 1;
+  kUnique = 2;
+  kGiant = 3;
+  kTitan = 4;
+  kElite = 5;
+  kEliteStrong = 6;
+  kUnique2 = 7;
+  kGeneralParty = 8;
+  kChampionParty = 9;
+  kUniqueParty = 10;
+  kGiantParty = 11;
+  kTitanParty = 12;
+  kEliteParty = 13;
+  kEliteStrongParty = 14;
+  kUnique2Party = 15;
+}
+
+enum ItemRarity {
+  kWhite = 0;
+  kBlue = 1;
+  kSox = 2;
+  kSet = 3;
+  kRareSet = 4;
+  kLegend = 5;
+}
+
+message Monster {
+  MonsterRarity rarity = 1;
+}
+
+message Item {
+  ItemRarity rarity = 1;
+}
+
+message Entity {
+  uint32 reference_id = 1;
+  oneof entity_detail {
+    google.protobuf.Empty self = 2;
+    google.protobuf.Empty character = 3;
+    google.protobuf.Empty player_character = 4;
+    google.protobuf.Empty nonplayer_character = 5;
+    Monster monster = 6;
+    Item item = 7;
+    google.protobuf.Empty portal = 8;
+  }
+}

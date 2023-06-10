@@ -1,8 +1,10 @@
 syntax = "proto3";
 
+import "entity.proto";
+
 import "google/protobuf/empty.proto";
 
-package broadcast;
+package proto.broadcast;
 
 // Enums
 
@@ -13,28 +15,6 @@ enum ItemLocation {
   kStorage = 3;
   kGuildStorage = 4;
 }
-
-enum EntityType {
-  kSelf = 0;
-  kCharacter = 1;
-  kPlayerCharacter = 2;
-  kNonplayerCharacter = 3;
-
-  kMonsterGeneral = 4;
-  kMonsterChampion = 5;
-  kMonsterGiant = 6;
-  kMonsterElite = 7;
-  kMonsterUnique = 8;
-  kMonsterPartyGeneral = 9;
-  kMonsterPartyChampion = 10;
-  kMonsterPartyGiant = 11;
-
-  kItemCommon = 12;
-  kItemRare = 13;
-  kItemSox = 14;
-
-  kPortal = 15;
-};
 
 enum LifeState {
   kEmbryo = 0;
@@ -125,7 +105,7 @@ message ItemUpdate {
 message EntitySpawned {
   uint32 globalId = 1;
   Position position = 2;
-  EntityType entityType = 3;
+  entity.Entity entity = 3;
 }
 
 message EntityDespawned {

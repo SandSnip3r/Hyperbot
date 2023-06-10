@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "config.proto";
 
-package request;
+package proto.request;
 
 message PacketToInject {
   enum Direction {

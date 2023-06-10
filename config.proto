@@ -2,10 +2,11 @@ syntax = "proto3";
 
 package proto.config;
 
-message Config {
-  optional string client_path = 1;
-  optional string character_to_login = 2;
-  repeated CharacterConfig character_configs = 3;
+message AutopotionConfig {
+  double hp_threshold = 1;
+  double mp_threshold = 2;
+  double vigor_hp_threshold = 3;
+  double vigor_mp_threshold = 4;
 }
 
 message CharacterConfig {
@@ -15,9 +16,8 @@ message CharacterConfig {
   AutopotionConfig autopotion_config = 4;
 }
 
-message AutopotionConfig {
-  double hp_threshold = 1;
-  double mp_threshold = 2;
-  double vigor_hp_threshold = 3;
-  double vigor_mp_threshold = 4;
+message Config {
+  optional string client_path = 1;
+  optional string character_to_login = 2;
+  repeated CharacterConfig character_configs = 3;
 }
