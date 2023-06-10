@@ -64,7 +64,7 @@ private:
   void handleGuildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent);
   void handleWalkingPathUpdated(const event::WalkingPathUpdated &walkingPathUpdatedEvent);
 
-  void broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex);
+  void broadcastItemUpdateForSlot(proto::broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex);
   void broadcastCharacterSpawn();
   void broadcastCharacterHpUpdate(uint32_t currentHp);
   void broadcastCharacterMpUpdate(uint32_t currentMp);
@@ -73,14 +73,14 @@ private:
   void broadcastCharacterExperienceUpdate(uint64_t currentExperience, uint32_t currentSpExperience);
   void broadcastCharacterSpUpdate(uint32_t skillPoints);
   void broadcastCharacterNameUpdate(std::string_view characterName);
-  void broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::ItemLocation goldLocation);
+  void broadcastGoldAmountUpdate(uint64_t goldAmount, proto::broadcast::ItemLocation goldLocation);
   void broadcastPositionChangedUpdate(const sro::Position &currentPosition);
   void broadcastMovementBeganUpdate(const sro::Position &srcPosition, const sro::Position &destPosition, float speed);
   void broadcastMovementBeganUpdate(const sro::Position &srcPosition, sro::Angle angle, float speed);
   void broadcastMovementEndedUpdate(const sro::Position &currentPosition);
   void broadcastNotMovingAngleChangedUpdate(sro::Angle angle);
   void broadcastRegionNameUpdate(std::string_view regionName);
-  void broadcastItemUpdate(broadcast::ItemLocation itemLocation, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName={});
+  void broadcastItemUpdate(proto::broadcast::ItemLocation itemLocation, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName={});
   void broadcastEntitySpawned(const entity::Entity *entity);
   void broadcastEntityDespawned(uint32_t globalId);
   void broadcastEntityPositionChanged(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &position);
@@ -94,12 +94,13 @@ private:
   void broadcastStateMachineDestroyed();
   void broadcastWalkingPathUpdated(const std::vector<sro::Position> &waypoints);
 
-  void broadcast(const broadcast::BroadcastMessage &broadcastProto);
+  void broadcast(const proto::broadcast::BroadcastMessage &broadcastProto);
 
-  void setPosition(broadcast::Position *msg, const sro::Position &pos) const;
-  void setCharacterMovementBegan(broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Position &destPosition, const float speed) const;
-  void setCharacterMovementBegan(broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Angle angle, const float speed) const;
-  void setCharacterMovementEnded(broadcast::CharacterMovementEnded *msg, const sro::Position &currentPosition) const;
+  void setPosition(proto::broadcast::Position *msg, const sro::Position &pos) const;
+  void setCharacterMovementBegan(proto::broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Position &destPosition, const float speed) const;
+  void setCharacterMovementBegan(proto::broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Angle angle, const float speed) const;
+  void setCharacterMovementEnded(proto::broadcast::CharacterMovementEnded *msg, const sro::Position &currentPosition) const;
+  void setEntity(proto::entity::Entity *msg, const entity::Entity *entity) const;
 
 };
 

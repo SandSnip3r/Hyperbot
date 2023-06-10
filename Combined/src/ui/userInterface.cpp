@@ -8,85 +8,16 @@
 
 namespace {
 
-broadcast::EntityType getBroadcastEntityType(const entity::Entity *entity) {
-  const auto entityType = entity->entityType();
-  if (entityType == entity::EntityType::kSelf) {
-    return broadcast::EntityType::kSelf;
-  } else if (entityType == entity::EntityType::kCharacter) {
-    return broadcast::EntityType::kCharacter;
-  } else if (entityType == entity::EntityType::kPlayerCharacter) {
-    return broadcast::EntityType::kPlayerCharacter;
-  } else if (entityType == entity::EntityType::kNonplayerCharacter) {
-    return broadcast::EntityType::kNonplayerCharacter;
-  } else if (entityType == entity::EntityType::kPortal) {
-    return broadcast::EntityType::kPortal;
-  } else if (entityType == entity::EntityType::kMonster) {
-    const entity::Monster *entityAsMonster = dynamic_cast<const entity::Monster*>(entity);
-    if (entityAsMonster == nullptr) {
-      throw std::runtime_error("Entity type is monster, but cannot cast to that type");
-    }
-    switch (entityAsMonster->rarity) {
-      case sro::entity::MonsterRarity::kGeneral:
-        return broadcast::EntityType::kMonsterGeneral;
-      case sro::entity::MonsterRarity::kChampion:
-        return broadcast::EntityType::kMonsterChampion;
-      case sro::entity::MonsterRarity::kGiant:
-        return broadcast::EntityType::kMonsterGiant;
-      case sro::entity::MonsterRarity::kUnique:
-      case sro::entity::MonsterRarity::kUnique2:
-        return broadcast::EntityType::kMonsterUnique;
-      case sro::entity::MonsterRarity::kElite:
-        return broadcast::EntityType::kMonsterElite;
-      case sro::entity::MonsterRarity::kGeneralParty:
-        return broadcast::EntityType::kMonsterPartyGeneral;
-      case sro::entity::MonsterRarity::kChampionParty:
-        return broadcast::EntityType::kMonsterPartyChampion;
-      case sro::entity::MonsterRarity::kGiantParty:
-        return broadcast::EntityType::kMonsterPartyGiant;
-      case sro::entity::MonsterRarity::kTitan:
-      case sro::entity::MonsterRarity::kEliteStrong:
-      case sro::entity::MonsterRarity::kUniqueParty:
-      case sro::entity::MonsterRarity::kTitanParty:
-      case sro::entity::MonsterRarity::kEliteParty:
-      case sro::entity::MonsterRarity::kUnique2Party:
-      default:
-        LOG() << "Sending unhandled monster rarity (" << entityAsMonster->rarity << ") to UI as \"general\"" << std::endl;
-        return broadcast::EntityType::kMonsterGeneral;
-        break;
-    }
-  } else if (entityType == entity::EntityType::kItem) {
-    const entity::Item *entityAsItem = dynamic_cast<const entity::Item*>(entity);
-    if (entityAsItem == nullptr) {
-      throw std::runtime_error("Entity type is item, but cannot cast to that type");
-    }
-    switch (entityAsItem->rarity) {
-      case sro::entity::ItemRarity::kWhite:
-        return broadcast::EntityType::kItemCommon;
-      case sro::entity::ItemRarity::kBlue:
-        return broadcast::EntityType::kItemRare;
-      case sro::entity::ItemRarity::kSox:
-        return broadcast::EntityType::kItemSox;
-      case sro::entity::ItemRarity::kSet:
-      case sro::entity::ItemRarity::kRareSet:
-      case sro::entity::ItemRarity::kLegend:
-      default:
-        LOG() << "Sending unhandled item rarity to UI as \"common\"" << std::endl;
-        return broadcast::EntityType::kItemCommon;
-    }
-  }
-  throw std::runtime_error("Unknown entity type");
-}
-
-broadcast::LifeState lifeStateToProto(sro::entity::LifeState lifeState) {
+proto::broadcast::LifeState lifeStateToProto(sro::entity::LifeState lifeState) {
   switch (lifeState) {
     case sro::entity::LifeState::kEmbryo:
-      return broadcast::LifeState::kEmbryo;
+      return proto::broadcast::LifeState::kEmbryo;
     case sro::entity::LifeState::kAlive:
-      return broadcast::LifeState::kAlive;
+      return proto::broadcast::LifeState::kAlive;
     case sro::entity::LifeState::kDead:
-      return broadcast::LifeState::kDead;
+      return proto::broadcast::LifeState::kDead;
     case sro::entity::LifeState::kGone:
-      return broadcast::LifeState::kGone;
+      return proto::broadcast::LifeState::kGone;
     default:
       throw std::runtime_error("Unknown lifestate");
   }
@@ -122,7 +53,7 @@ void UserInterface::runAsync() {
 
 void UserInterface::broadcastLaunch() {
   // Broadcast that we just started. If there's a UI out there, this lets it know that we've freshly started the bot and it can reset its state.
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   broadcastMessage.mutable_launch();
   broadcast(broadcastMessage);
 }
@@ -225,17 +156,17 @@ void UserInterface::handleEvent(const event::Event *event) {
       return;
     }
     if (eventCode == event::EventCode::kInventoryGoldUpdated) {
-      broadcastGoldAmountUpdate(worldState_->selfState().getGold(), broadcast::ItemLocation::kCharacterInventory);
+      broadcastGoldAmountUpdate(worldState_->selfState().getGold(), proto::broadcast::ItemLocation::kCharacterInventory);
       return;
     }
 
     if (eventCode == event::EventCode::kStorageGoldUpdated) {
-      broadcastGoldAmountUpdate(worldState_->selfState().getStorageGold(), broadcast::ItemLocation::kStorage);
+      broadcastGoldAmountUpdate(worldState_->selfState().getStorageGold(), proto::broadcast::ItemLocation::kStorage);
       return;
     }
 
     if (eventCode == event::EventCode::kGuildStorageGoldUpdated) {
-      broadcastGoldAmountUpdate(worldState_->selfState().getGuildStorageGold(), broadcast::ItemLocation::kGuildStorage);
+      broadcastGoldAmountUpdate(worldState_->selfState().getGuildStorageGold(), proto::broadcast::ItemLocation::kGuildStorage);
       return;
     }
 
@@ -368,25 +299,25 @@ void UserInterface::run() {
 
 void UserInterface::handleRequest(const zmq::message_t &request) {
   // Parse the request
-  request::RequestMessage requestMsg;
+  proto::request::RequestMessage requestMsg;
   requestMsg.ParseFromArray(request.data(), request.size());
   switch (requestMsg.body_case()) {
-    case request::RequestMessage::BodyCase::kPacketData: {
-        const request::PacketToInject &packet = requestMsg.packetdata();
-        const event::InjectPacket::Direction dir = (packet.direction() == request::PacketToInject::kClientToServer) ? event::InjectPacket::Direction::kClientToServer : event::InjectPacket::Direction::kServerToClient;
+    case proto::request::RequestMessage::BodyCase::kPacketData: {
+        const proto::request::PacketToInject &packet = requestMsg.packetdata();
+        const event::InjectPacket::Direction dir = (packet.direction() == proto::request::PacketToInject::kClientToServer) ? event::InjectPacket::Direction::kClientToServer : event::InjectPacket::Direction::kServerToClient;
         eventBroker_.publishEvent<event::InjectPacket>(dir, packet.opcode(), packet.data());
         break;
       }
-    case request::RequestMessage::BodyCase::kDoAction: {
-        const request::DoAction &doActionMsg = requestMsg.doaction();
-        if (doActionMsg.action() == request::DoAction::kStartTraining) {
+    case proto::request::RequestMessage::BodyCase::kDoAction: {
+        const proto::request::DoAction &doActionMsg = requestMsg.doaction();
+        if (doActionMsg.action() == proto::request::DoAction::kStartTraining) {
           eventBroker_.publishEvent(event::EventCode::kStartTraining);
-        } else if (doActionMsg.action() == request::DoAction::kStopTraining) {
+        } else if (doActionMsg.action() == proto::request::DoAction::kStopTraining) {
           eventBroker_.publishEvent(event::EventCode::kStopTraining);
         }
         break;
       }
-    case request::RequestMessage::BodyCase::kConfig: {
+    case proto::request::RequestMessage::BodyCase::kConfig: {
         const proto::config::Config &config = requestMsg.config();
         eventBroker_.publishEvent<event::NewConfigReceived>(config);
         break;
@@ -406,21 +337,21 @@ void UserInterface::handleSelfSpawned() {
   broadcastCharacterExperienceUpdate(worldState_->selfState().getCurrentExperience(), worldState_->selfState().getCurrentSpExperience());
   broadcastCharacterSpUpdate(worldState_->selfState().getSkillPoints());
   broadcastCharacterNameUpdate(worldState_->selfState().name);
-  broadcastGoldAmountUpdate(worldState_->selfState().getGold(), broadcast::ItemLocation::kCharacterInventory);
+  broadcastGoldAmountUpdate(worldState_->selfState().getGold(), proto::broadcast::ItemLocation::kCharacterInventory);
   broadcastMovementEndedUpdate(worldState_->selfState().position());
   broadcastRegionNameUpdate(regionName);
 
   // Send entire inventory
   for (uint8_t inventorySlotIndex=0; inventorySlotIndex<worldState_->selfState().inventory.size(); ++inventorySlotIndex) {
     if (worldState_->selfState().inventory.hasItem(inventorySlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, inventorySlotIndex);
+      broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, inventorySlotIndex);
     }
   }
 
   // Send avatar inventory too
   for (uint8_t inventorySlotIndex=0; inventorySlotIndex<worldState_->selfState().avatarInventory.size(); ++inventorySlotIndex) {
     if (worldState_->selfState().avatarInventory.hasItem(inventorySlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, inventorySlotIndex);
+      broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, inventorySlotIndex);
     }
   }
 }
@@ -435,7 +366,7 @@ void UserInterface::handleCosSpawned(const event::CosSpawned &event) {
   const auto &cosInventory = it->second;
   for (uint8_t inventorySlotIndex=0; inventorySlotIndex<cosInventory.size(); ++inventorySlotIndex) {
     if (cosInventory.hasItem(inventorySlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, inventorySlotIndex);
+      broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCosInventory, cosInventory, inventorySlotIndex);
     }
   }
 }
@@ -519,7 +450,7 @@ void UserInterface::handleEntityNotMovingAngleChanged(sro::scalar_types::EntityG
 void UserInterface::handleStorageInitialized() {
   for (sro::scalar_types::StorageIndexType storageSlotIndex=0; storageSlotIndex<worldState_->selfState().storage.size(); ++storageSlotIndex) {
     if (worldState_->selfState().storage.hasItem(storageSlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_->selfState().storage, storageSlotIndex);
+      broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kStorage, worldState_->selfState().storage, storageSlotIndex);
     }
   }
 }
@@ -527,26 +458,26 @@ void UserInterface::handleStorageInitialized() {
 void UserInterface::handleGuildStorageInitialized() {
   for (sro::scalar_types::StorageIndexType storageSlotIndex=0; storageSlotIndex<worldState_->selfState().guildStorage.size(); ++storageSlotIndex) {
     if (worldState_->selfState().guildStorage.hasItem(storageSlotIndex)) {
-      broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, storageSlotIndex);
+      broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, storageSlotIndex);
     }
   }
 }
 
 void UserInterface::handleInventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent) {
   if (inventoryUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.srcSlotNum);
+    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.srcSlotNum);
   }
   if (inventoryUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.destSlotNum);
+    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.destSlotNum);
   }
 }
 
 void UserInterface::handleAvatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent) {
   if (avatarInventoryUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.srcSlotNum);
+    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.srcSlotNum);
   }
   if (avatarInventoryUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.destSlotNum);
+    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.destSlotNum);
   }
 }
 
@@ -558,28 +489,28 @@ void UserInterface::handleCosInventoryUpdated(const event::CosInventoryUpdated &
   }
   const auto &cosInventory = it->second;
   if (cosInventoryUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.srcSlotNum);
+    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.srcSlotNum);
   }
   if (cosInventoryUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.destSlotNum);
+    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.destSlotNum);
   }
 }
 
 void UserInterface::handleStorageUpdated(const event::StorageUpdated &storageUpdatedEvent) {
   if (storageUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.srcSlotNum);
+    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.srcSlotNum);
   }
   if (storageUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.destSlotNum);
+    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.destSlotNum);
   }
 }
 
 void UserInterface::handleGuildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent) {
   if (guildStorageUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.srcSlotNum);
+    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.srcSlotNum);
   }
   if (guildStorageUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.destSlotNum);
+    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.destSlotNum);
   }
 }
 
@@ -592,7 +523,7 @@ void UserInterface::handleWalkingPathUpdated(const event::WalkingPathUpdated &wa
   broadcastWalkingPathUpdated(waypointSroPositions);
 }
 
-void UserInterface::broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex) {
+void UserInterface::broadcastItemUpdateForSlot(proto::broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex) {
   uint16_t quantity{0};
   std::optional<std::string> itemName;
   if (itemStorage.hasItem(slotIndex)) {
@@ -609,120 +540,120 @@ void UserInterface::broadcastItemUpdateForSlot(broadcast::ItemLocation itemLocat
 }
 
 void UserInterface::broadcastCharacterSpawn() {
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   broadcastMessage.mutable_characterspawn();
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastCharacterHpUpdate(uint32_t currentHp) {
-  broadcast::CharacterHpUpdate characterHpUpdate;
+  proto::broadcast::CharacterHpUpdate characterHpUpdate;
   characterHpUpdate.set_currenthp(currentHp);
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_characterhpupdate() = characterHpUpdate;
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastCharacterMpUpdate(uint32_t currentMp) {
-  broadcast::CharacterMpUpdate characterMpUpdate;
+  proto::broadcast::CharacterMpUpdate characterMpUpdate;
   characterMpUpdate.set_currentmp(currentMp);
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_charactermpupdate() = characterMpUpdate;
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastCharacterMaxHpMpUpdate(uint32_t maxHp, uint32_t maxMp) {
-  broadcast::CharacterMaxHpMpUpdate characterMaxHpMpUpdate;
+  proto::broadcast::CharacterMaxHpMpUpdate characterMaxHpMpUpdate;
   characterMaxHpMpUpdate.set_maxhp(maxHp);
   characterMaxHpMpUpdate.set_maxmp(maxMp);
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_charactermaxhpmpupdate() = characterMaxHpMpUpdate;
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastCharacterLevelUpdate(uint8_t currentLevel, int64_t expRequired) {
-  broadcast::CharacterLevelUpdate characterLevelUpdate;
+  proto::broadcast::CharacterLevelUpdate characterLevelUpdate;
   characterLevelUpdate.set_level(currentLevel);
   characterLevelUpdate.set_exprequired(expRequired);
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_characterlevelupdate() = characterLevelUpdate;
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastCharacterExperienceUpdate(uint64_t currentExperience, uint32_t currentSpExperience) {
-  broadcast::CharacterExperienceUpdate characterExperienceUpdate;
+  proto::broadcast::CharacterExperienceUpdate characterExperienceUpdate;
   characterExperienceUpdate.set_currentexperience(currentExperience);
   characterExperienceUpdate.set_currentspexperience(currentSpExperience);
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_characterexperienceupdate() = characterExperienceUpdate;
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastCharacterSpUpdate(uint32_t skillPoints) {
-  broadcast::CharacterSpUpdate characterSpUpdate;
+  proto::broadcast::CharacterSpUpdate characterSpUpdate;
   characterSpUpdate.set_skillpoints(skillPoints);
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_characterspupdate() = characterSpUpdate;
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastCharacterNameUpdate(std::string_view characterName) {
-  broadcast::CharacterNameUpdate characterNameUpdate;
+  proto::broadcast::CharacterNameUpdate characterNameUpdate;
   characterNameUpdate.set_name(std::string(characterName));
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_characternameupdate() = characterNameUpdate;
   broadcast(broadcastMessage);
 }
 
-void UserInterface::broadcastGoldAmountUpdate(uint64_t goldAmount, broadcast::ItemLocation goldLocation) {
-  broadcast::GoldAmountUpdate goldAmountUpdate;
+void UserInterface::broadcastGoldAmountUpdate(uint64_t goldAmount, proto::broadcast::ItemLocation goldLocation) {
+  proto::broadcast::GoldAmountUpdate goldAmountUpdate;
   goldAmountUpdate.set_goldamount(goldAmount);
   goldAmountUpdate.set_goldlocation(goldLocation);
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_goldamountupdate() = goldAmountUpdate;
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastPositionChangedUpdate(const sro::Position &currentPosition) {
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   auto *msg = broadcastMessage.mutable_characterpositionchanged();
   setPosition(msg->mutable_position(), currentPosition);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastMovementBeganUpdate(const sro::Position &srcPosition, const sro::Position &destPosition, float speed) {
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   setCharacterMovementBegan(broadcastMessage.mutable_charactermovementbegan(), srcPosition, destPosition, speed);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastMovementBeganUpdate(const sro::Position &srcPosition, sro::Angle angle, float speed) {
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   setCharacterMovementBegan(broadcastMessage.mutable_charactermovementbegan(), srcPosition, angle, speed);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastMovementEndedUpdate(const sro::Position &currentPosition) {
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   setCharacterMovementEnded(broadcastMessage.mutable_charactermovementended(), currentPosition);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastNotMovingAngleChangedUpdate(sro::Angle angle) {
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   broadcastMessage.mutable_characternotmovinganglechanged()->set_angle(angle);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastRegionNameUpdate(std::string_view regionName) {
-  broadcast::RegionNameUpdate regionNameUpdate;
+  proto::broadcast::RegionNameUpdate regionNameUpdate;
   regionNameUpdate.set_name(std::string(regionName));
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_regionnameupdate() = regionNameUpdate;
   broadcast(broadcastMessage);
 }
 
-void UserInterface::broadcastItemUpdate(broadcast::ItemLocation itemLocation, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName) {
-  broadcast::BroadcastMessage broadcastMessage;
+void UserInterface::broadcastItemUpdate(proto::broadcast::ItemLocation itemLocation, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName) {
+  proto::broadcast::BroadcastMessage broadcastMessage;
   auto *itemUpdate = broadcastMessage.mutable_itemupdate();
   itemUpdate->set_itemlocation(itemLocation);
   itemUpdate->set_slotindex(slotIndex);
@@ -737,23 +668,23 @@ void UserInterface::broadcastItemUpdate(broadcast::ItemLocation itemLocation, ui
 }
 
 void UserInterface::broadcastEntitySpawned(const entity::Entity *entity) {
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   auto *entitySpawnedMsg = broadcastMessage.mutable_entityspawned();
   entitySpawnedMsg->set_globalid(entity->globalId);
   setPosition(entitySpawnedMsg->mutable_position(), entity->position());
-  entitySpawnedMsg->set_entitytype(getBroadcastEntityType(entity));
+  setEntity(entitySpawnedMsg->mutable_entity(), entity);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastEntityDespawned(uint32_t globalId) {
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   auto *entityDespawnedMsg = broadcastMessage.mutable_entitydespawned();
   entityDespawnedMsg->set_globalid(globalId);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastEntityPositionChanged(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &position) {
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   auto *entityPositionChangedMsg = broadcastMessage.mutable_entitypositionchanged();
   entityPositionChangedMsg->set_globalid(globalId);
   setPosition(entityPositionChangedMsg->mutable_position(), position);
@@ -761,42 +692,42 @@ void UserInterface::broadcastEntityPositionChanged(const sro::scalar_types::Enti
 }
 
 void UserInterface::broadcastEntityMovementBegan(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &srcPosition, const sro::Position &destPosition, float speed) {
-  broadcast::BroadcastMessage broadcastMessage;
-  broadcast::EntityMovementBegan *entityMovementBegan = broadcastMessage.mutable_entitymovementbegan();
+  proto::broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::EntityMovementBegan *entityMovementBegan = broadcastMessage.mutable_entitymovementbegan();
   entityMovementBegan->set_globalid(globalId);
   setCharacterMovementBegan(entityMovementBegan->mutable_charactermovementbegan(), srcPosition, destPosition, speed);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastEntityMovementBegan(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &srcPosition, sro::Angle angle, float speed) {
-  broadcast::BroadcastMessage broadcastMessage;
-  broadcast::EntityMovementBegan *entityMovementBegan = broadcastMessage.mutable_entitymovementbegan();
+  proto::broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::EntityMovementBegan *entityMovementBegan = broadcastMessage.mutable_entitymovementbegan();
   entityMovementBegan->set_globalid(globalId);
   setCharacterMovementBegan(entityMovementBegan->mutable_charactermovementbegan(), srcPosition, angle, speed);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastEntityMovementEnded(const sro::scalar_types::EntityGlobalId globalId, const sro::Position &currentPosition) {
-  broadcast::BroadcastMessage broadcastMessage;
-  broadcast::EntityMovementEnded *entityMovementEnded = broadcastMessage.mutable_entitymovementended();
+  proto::broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::EntityMovementEnded *entityMovementEnded = broadcastMessage.mutable_entitymovementended();
   entityMovementEnded->set_globalid(globalId);
   setCharacterMovementEnded(entityMovementEnded->mutable_charactermovementended(), currentPosition);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastEntityLifeStateChanged(const sro::scalar_types::EntityGlobalId globalId, const sro::entity::LifeState lifeState) {
-  broadcast::BroadcastMessage broadcastMessage;
-  broadcast::EntityLifeStateChanged *entityLifeStateChanged = broadcastMessage.mutable_entitylifestatechanged();
+  proto::broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::EntityLifeStateChanged *entityLifeStateChanged = broadcastMessage.mutable_entitylifestatechanged();
   entityLifeStateChanged->set_globalid(globalId);
   entityLifeStateChanged->set_lifestate(lifeStateToProto(lifeState));
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastTrainingAreaSet(const entity::Geometry *trainingAreaGeometry) {
-  broadcast::BroadcastMessage broadcastMessage;
-  broadcast::TrainingAreaSet *trainingAreaSet = broadcastMessage.mutable_trainingareaset();
+  proto::broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::TrainingAreaSet *trainingAreaSet = broadcastMessage.mutable_trainingareaset();
   if (const auto *trainingAreaCircle = dynamic_cast<const entity::Circle*>(trainingAreaGeometry)) {
-    broadcast::Circle *circle = trainingAreaSet->mutable_circle();
+    proto::broadcast::Circle *circle = trainingAreaSet->mutable_circle();
     setPosition(circle->mutable_center(), trainingAreaCircle->center());
     circle->set_radius(trainingAreaCircle->radius());
   } else {
@@ -806,34 +737,34 @@ void UserInterface::broadcastTrainingAreaSet(const entity::Geometry *trainingAre
 }
 
 void UserInterface::broadcastTrainingAreaReset() {
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   broadcastMessage.mutable_trainingareareset();
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastStateMachineCreated(const std::string &stateMachineName) {
-  broadcast::BroadcastMessage broadcastMessage;
-  broadcast::StateMachineCreated *stateMachineCreated = broadcastMessage.mutable_statemachinecreated();
+  proto::broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::StateMachineCreated *stateMachineCreated = broadcastMessage.mutable_statemachinecreated();
   stateMachineCreated->set_name(stateMachineName);
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastStateMachineDestroyed() {
-  broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::BroadcastMessage broadcastMessage;
   broadcastMessage.mutable_statemachinedestroyed();
   broadcast(broadcastMessage);
 }
 
 void UserInterface::broadcastWalkingPathUpdated(const std::vector<sro::Position> &waypoints) {
-  broadcast::BroadcastMessage broadcastMessage;
-  broadcast::WalkingPathUpdated *walkingPathUpdated = broadcastMessage.mutable_walkingpathupdated();
+  proto::broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::WalkingPathUpdated *walkingPathUpdated = broadcastMessage.mutable_walkingpathupdated();
   for (const auto &waypoint : waypoints) {
     setPosition(walkingPathUpdated->add_waypoints(), waypoint);
   }
   broadcast(broadcastMessage);
 }
 
-void UserInterface::broadcast(const broadcast::BroadcastMessage &broadcastProto) {
+void UserInterface::broadcast(const proto::broadcast::BroadcastMessage &broadcastProto) {
   zmq::message_t message;
   message.rebuild(broadcastProto.ByteSizeLong());
   broadcastProto.SerializeToArray(message.data(), message.size());
@@ -848,27 +779,129 @@ void UserInterface::broadcast(const broadcast::BroadcastMessage &broadcastProto)
   // auto res = publisher_.send(msg, zmq::send_flags::none);
 }
 
-void UserInterface::setPosition(broadcast::Position *msg, const sro::Position &pos) const {
+void UserInterface::setPosition(proto::broadcast::Position *msg, const sro::Position &pos) const {
   msg->set_regionid(pos.regionId());
   msg->set_x(pos.xOffset());
   msg->set_y(pos.yOffset());
   msg->set_z(pos.zOffset());
 }
 
-void UserInterface::setCharacterMovementBegan(broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Position &destPosition, const float speed) const {
+void UserInterface::setCharacterMovementBegan(proto::broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Position &destPosition, const float speed) const {
   setPosition(msg->mutable_currentposition(), srcPosition);
   setPosition(msg->mutable_destinationposition(), destPosition);
   msg->set_speed(speed);
 }
 
-void UserInterface::setCharacterMovementBegan(broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Angle angle, const float speed) const {
+void UserInterface::setCharacterMovementBegan(proto::broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Angle angle, const float speed) const {
   setPosition(msg->mutable_currentposition(), srcPosition);
   msg->set_destinationangle(angle);
   msg->set_speed(speed);
 }
 
-void UserInterface::setCharacterMovementEnded(broadcast::CharacterMovementEnded *msg, const sro::Position &currentPosition) const {
+void UserInterface::setCharacterMovementEnded(proto::broadcast::CharacterMovementEnded *msg, const sro::Position &currentPosition) const {
   setPosition(msg->mutable_currentposition(), currentPosition);
+}
+
+void UserInterface::setEntity(proto::entity::Entity *msg, const entity::Entity *entity) const {
+  msg->set_reference_id(entity->refObjId);
+  const auto entityType = entity->entityType();
+  if (entityType == entity::EntityType::kSelf) {
+    msg->mutable_self();
+  } else if (entityType == entity::EntityType::kCharacter) {
+    msg->mutable_character();
+  } else if (entityType == entity::EntityType::kPlayerCharacter) {
+    msg->mutable_player_character();
+  } else if (entityType == entity::EntityType::kNonplayerCharacter) {
+    msg->mutable_nonplayer_character();
+  } else if (entityType == entity::EntityType::kPortal) {
+    msg->mutable_portal();
+  } else if (entityType == entity::EntityType::kMonster) {
+    auto *monsterMsg = msg->mutable_monster();
+    const auto *entityAsMonster = dynamic_cast<const entity::Monster*>(entity);
+    if (entityAsMonster == nullptr) {
+      throw std::runtime_error("Entity type is Monster, but dynamic cast to monster failed");
+    }
+    switch (entityAsMonster->rarity) {
+      case sro::entity::MonsterRarity::kGeneral:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kGeneral);
+        break;
+      case sro::entity::MonsterRarity::kChampion:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kChampion);
+        break;
+      case sro::entity::MonsterRarity::kUnique:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kUnique);
+        break;
+      case sro::entity::MonsterRarity::kGiant:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kGiant);
+        break;
+      case sro::entity::MonsterRarity::kTitan:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kTitan);
+        break;
+      case sro::entity::MonsterRarity::kElite:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kElite);
+        break;
+      case sro::entity::MonsterRarity::kEliteStrong:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kEliteStrong);
+        break;
+      case sro::entity::MonsterRarity::kUnique2:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kUnique2);
+        break;
+      case sro::entity::MonsterRarity::kGeneralParty:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kGeneralParty);
+        break;
+      case sro::entity::MonsterRarity::kChampionParty:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kChampionParty);
+        break;
+      case sro::entity::MonsterRarity::kUniqueParty:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kUniqueParty);
+        break;
+      case sro::entity::MonsterRarity::kGiantParty:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kGiantParty);
+        break;
+      case sro::entity::MonsterRarity::kTitanParty:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kTitanParty);
+        break;
+      case sro::entity::MonsterRarity::kEliteParty:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kEliteParty);
+        break;
+      case sro::entity::MonsterRarity::kEliteStrongParty:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kEliteStrongParty);
+        break;
+      case sro::entity::MonsterRarity::kUnique2Party:
+        monsterMsg->set_rarity(proto::entity::MonsterRarity::kUnique2Party);
+        break;
+      default:
+        throw std::runtime_error("Unknown monster rarity");
+    }
+  } else if (entityType == entity::EntityType::kItem) {
+    auto *itemMsg = msg->mutable_item();
+    const auto *entityAsItem = dynamic_cast<const entity::Item*>(entity);
+    if (entityAsItem == nullptr) {
+      throw std::runtime_error("Entity type is Item, but dynamic cast to item failed");
+    }
+    switch (entityAsItem->rarity) {
+      case sro::entity::ItemRarity::kWhite:
+        itemMsg->set_rarity(proto::entity::ItemRarity::kWhite);
+        break;
+      case sro::entity::ItemRarity::kBlue:
+        itemMsg->set_rarity(proto::entity::ItemRarity::kBlue);
+        break;
+      case sro::entity::ItemRarity::kSox:
+        itemMsg->set_rarity(proto::entity::ItemRarity::kSox);
+        break;
+      case sro::entity::ItemRarity::kSet:
+        itemMsg->set_rarity(proto::entity::ItemRarity::kSet);
+        break;
+      case sro::entity::ItemRarity::kRareSet:
+        itemMsg->set_rarity(proto::entity::ItemRarity::kRareSet);
+        break;
+      case sro::entity::ItemRarity::kLegend:
+        itemMsg->set_rarity(proto::entity::ItemRarity::kLegend);
+        break;
+      default:
+        throw std::runtime_error("Unknown item rarity");
+    }
+  }
 }
 
 } // namespace ui
