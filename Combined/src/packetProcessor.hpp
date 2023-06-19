@@ -15,6 +15,7 @@
 #include "packet/parsing/serverAgentBuffRemove.hpp"
 #include "packet/parsing/serverAgentCharacterData.hpp"
 #include "packet/parsing/serverAgentCosData.hpp"
+#include "packet/parsing/serverAgentEntityDamageEffect.hpp"
 #include "packet/parsing/serverAgentEntityDespawn.hpp"
 #include "packet/parsing/serverAgentEntityGroupSpawnData.hpp"
 #include "packet/parsing/serverAgentEntityRemoveOwnership.hpp"
@@ -74,6 +75,16 @@ private:
   const pk2::GameData &gameData_;
   packet::parsing::PacketParser packetParser_{worldState_.entityTracker(), gameData_};
 
+  // BEGIN DEBUGGING SkillBegin/SkillEnd
+  struct TrackedSkill {
+    uint32_t refSkillId;
+    uint32_t casterGlobalId;
+    std::chrono::high_resolution_clock::time_point expTime;
+    bool expectEnd;
+  };
+  mutable std::map<uint32_t, TrackedSkill> tracked_;
+  // END DEBUGGING SkillBegin/SkillEnd
+
   void subscribeToPackets();
   void resetDataBecauseCharacterSpawned() const;
 
@@ -103,6 +114,7 @@ private:
   void serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const;
   void serverAgentEntityRemoveOwnershipReceived(const packet::parsing::ServerAgentEntityRemoveOwnership &packet) const;
   void serverAgentEntityUpdateStatusReceived(const packet::parsing::ServerAgentEntityUpdateStatus &packet) const;
+  void serverAgentEntityDamageEffectReceived(const packet::parsing::ServerAgentEntityDamageEffect &packet) const;
   void serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const;
   void serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const;
   void serverAgentInventoryItemUseResponseReceived(const packet::parsing::ServerAgentInventoryItemUseResponse &packet) const;

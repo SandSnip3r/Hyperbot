@@ -10,10 +10,10 @@ namespace packet::parsing {
 class ServerAgentEntityUpdateExperience : public ParsedPacket {
 public:
   ServerAgentEntityUpdateExperience(const PacketContainer &packet);
-  uint64_t gainedExperiencePoints() const;
+  int64_t gainedExperiencePoints() const;
   uint64_t gainedSpExperiencePoints() const;
 private:
-  uint64_t gainedExperiencePoints_;
+  int64_t gainedExperiencePoints_;
   uint64_t gainedSpExperiencePoints_;
 };
 

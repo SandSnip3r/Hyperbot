@@ -142,6 +142,7 @@ enum class Opcode {
   kServerAgentEntityUpdateMoveSpeed = 0x30D0,
   kServerAgentEntityRemoveOwnership = 0x304D,
   kServerAgentEntityUpdateStatus = 0x3057,
+  kServerAgentEntityDamageEffect = 0x3058,
   SERVER_ANIMATION_LEVEL_UP = 0x3054,
   kServerAgentEntityUpdateExperience = 0x3056,
   SERVER_MASTERYUPDATE = 0xB0A2,

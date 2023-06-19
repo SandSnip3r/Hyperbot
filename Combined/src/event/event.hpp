@@ -33,8 +33,10 @@ enum class EventCode {
   kSkillCastAboutToEnd,
   kItemUseFailed,
   kInjectPacket,
-  kStartTraining,
-  kStopTraining,
+  kRequestStartTraining,
+  kRequestStopTraining,
+  kTrainingStarted,
+  kTrainingStopped,
   kEntityDeselected,
   kEntitySelected,
   kNpcTalkStart,
@@ -44,6 +46,7 @@ enum class EventCode {
   kInventoryGoldUpdated,
   kStorageGoldUpdated,
   kGuildStorageGoldUpdated,
+  kCharacterLevelUpdated,
   kCharacterSkillPointsUpdated,
   kCharacterExperienceUpdated,
   kEnteredNewRegion,
@@ -56,6 +59,8 @@ enum class EventCode {
 
   kSkillBegan,
   kSkillEnded,
+  kDealtDamage,
+  kKilledEntity,
   kOurSkillFailed,
   kPlayerCharacterBuffAdded,
   kPlayerCharacterBuffRemoved,
@@ -275,6 +280,21 @@ public:
   const sro::scalar_types::EntityGlobalId casterGlobalId;
   const sro::scalar_types::ReferenceObjectId skillRefId;
   virtual ~SkillEnded() = default;
+};
+
+struct DealtDamage : public Event {
+public:
+  DealtDamage(sro::scalar_types::EntityGlobalId targetId, uint32_t damageAmount);
+  const sro::scalar_types::EntityGlobalId targetId;
+  const uint32_t damageAmount;
+  virtual ~DealtDamage() = default;
+};
+
+struct KilledEntity : public Event {
+public:
+  KilledEntity(sro::scalar_types::EntityGlobalId targetId);
+  const sro::scalar_types::EntityGlobalId targetId;
+  virtual ~KilledEntity() = default;
 };
 
 struct OurSkillFailed : public Event {

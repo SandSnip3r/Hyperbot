@@ -5,8 +5,9 @@
 #include "../enums/packetEnums.hpp"
 #include "../../pk2/skillData.hpp"
 
+#include <silkroad_lib/scalar_types.h>
+
 #include <cstdint>
-// #include <string>
 
 namespace packet::parsing {
   
@@ -15,13 +16,13 @@ public:
   ServerAgentSkillEnd(const PacketContainer &packet);
   uint8_t result() const;
   uint32_t castId() const;
-  uint32_t targetGId() const;
+  sro::scalar_types::EntityGlobalId targetGlobalId() const;
   structures::SkillAction action() const;
   uint16_t errorCode() const;
 private:
   uint8_t result_;
   uint32_t castId_;
-  uint32_t targetGId_;
+  sro::scalar_types::EntityGlobalId targetGlobalId_;
   structures::SkillAction action_;
   uint16_t errorCode_;
 };

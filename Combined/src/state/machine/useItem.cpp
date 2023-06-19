@@ -105,7 +105,7 @@ void UseItem::onUpdate(const event::Event *event) {
             }
           }
           if (looksGood) {
-            LOG() << "We successfully used the item" << std::endl;
+            // Successfully used the item.
             if (!itemUseTimeoutEventId_) {
               throw std::runtime_error("Didn't have a item use timeout event");
             }

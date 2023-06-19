@@ -53,6 +53,7 @@ void Self::initializeCurrentHp(uint32_t hp) {
 
 void Self::setCurrentLevel(uint8_t currentLevel) {
   currentLevel_ = currentLevel;
+  eventBroker_.publishEvent(event::EventCode::kCharacterLevelUpdated);
 }
 
 void Self::setHwanLevel(uint8_t hwanLevel) {

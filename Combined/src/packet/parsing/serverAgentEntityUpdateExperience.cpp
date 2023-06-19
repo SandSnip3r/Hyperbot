@@ -10,8 +10,8 @@ ServerAgentEntityUpdateExperience::ServerAgentEntityUpdateExperience(const Packe
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   uint32_t sourceGlobalId = stream.Read<uint32_t>();
-  gainedExperiencePoints_ = stream.Read<uint64_t>();
-  gainedSpExperiencePoints_ = stream.Read<uint64_t>();
+  stream.Read(gainedExperiencePoints_);
+  stream.Read(gainedSpExperiencePoints_);
   uint8_t academyBuffUpdateBitmask = stream.Read<uint8_t>();
   if (academyBuffUpdateBitmask & static_cast<std::underlying_type_t<enums::AcademyBuffUpdateFlag>>(enums::AcademyBuffUpdateFlag::kCumulatedSize)) {
     uint32_t cumulatedSize = stream.Read<uint32_t>();
@@ -24,7 +24,7 @@ ServerAgentEntityUpdateExperience::ServerAgentEntityUpdateExperience(const Packe
   // If the gained experience points are > the max experience, we need to parse in a uint16_t for the stat points
 }
 
-uint64_t ServerAgentEntityUpdateExperience::gainedExperiencePoints() const {
+int64_t ServerAgentEntityUpdateExperience::gainedExperiencePoints() const {
   return gainedExperiencePoints_;
 }
 

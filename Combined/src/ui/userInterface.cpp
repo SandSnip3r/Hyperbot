@@ -73,6 +73,7 @@ void UserInterface::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kInventoryGoldUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStorageGoldUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageGoldUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCharacterLevelUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCharacterSkillPointsUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCharacterExperienceUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaSet, eventHandleFunction);
@@ -167,6 +168,11 @@ void UserInterface::handleEvent(const event::Event *event) {
 
     if (eventCode == event::EventCode::kGuildStorageGoldUpdated) {
       broadcastGoldAmountUpdate(worldState_->selfState().getGuildStorageGold(), proto::broadcast::ItemLocation::kGuildStorage);
+      return;
+    }
+
+    if (eventCode == event::EventCode::kCharacterLevelUpdated) {
+      broadcastCharacterLevelUpdate(worldState_->selfState().getCurrentLevel());
       return;
     }
 
@@ -311,9 +317,9 @@ void UserInterface::handleRequest(const zmq::message_t &request) {
     case proto::request::RequestMessage::BodyCase::kDoAction: {
         const proto::request::DoAction &doActionMsg = requestMsg.doaction();
         if (doActionMsg.action() == proto::request::DoAction::kStartTraining) {
-          eventBroker_.publishEvent(event::EventCode::kStartTraining);
+          eventBroker_.publishEvent(event::EventCode::kRequestStartTraining);
         } else if (doActionMsg.action() == proto::request::DoAction::kStopTraining) {
-          eventBroker_.publishEvent(event::EventCode::kStopTraining);
+          eventBroker_.publishEvent(event::EventCode::kRequestStopTraining);
         }
         break;
       }
@@ -329,11 +335,10 @@ void UserInterface::handleRequest(const zmq::message_t &request) {
 }
 
 void UserInterface::handleSelfSpawned() {
-  const auto &currentLevelData = gameData_.levelData().getLevel(worldState_->selfState().getCurrentLevel());
   const auto &regionName = gameData_.textZoneNameData().getRegionName(worldState_->selfState().position().regionId());
 
   broadcastCharacterSpawn();
-  broadcastCharacterLevelUpdate(worldState_->selfState().getCurrentLevel(), currentLevelData.exp_C);
+  broadcastCharacterLevelUpdate(worldState_->selfState().getCurrentLevel());
   broadcastCharacterExperienceUpdate(worldState_->selfState().getCurrentExperience(), worldState_->selfState().getCurrentSpExperience());
   broadcastCharacterSpUpdate(worldState_->selfState().getSkillPoints());
   broadcastCharacterNameUpdate(worldState_->selfState().name);
@@ -570,9 +575,10 @@ void UserInterface::broadcastCharacterMaxHpMpUpdate(uint32_t maxHp, uint32_t max
   broadcast(broadcastMessage);
 }
 
-void UserInterface::broadcastCharacterLevelUpdate(uint8_t currentLevel, int64_t expRequired) {
+void UserInterface::broadcastCharacterLevelUpdate(uint8_t currentLevel) {
   proto::broadcast::CharacterLevelUpdate characterLevelUpdate;
   characterLevelUpdate.set_level(currentLevel);
+  int64_t expRequired = gameData_.levelData().getLevel(currentLevel).exp_C;
   characterLevelUpdate.set_exprequired(expRequired);
   proto::broadcast::BroadcastMessage broadcastMessage;
   *broadcastMessage.mutable_characterlevelupdate() = characterLevelUpdate;

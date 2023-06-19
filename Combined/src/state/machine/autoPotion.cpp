@@ -221,7 +221,6 @@ bool AutoPotion::tryUseMpPotion() {
   }
 
   if (mpPercentage < bot_.currentCharacterConfig().autopotion_config().mp_threshold() && bot_.selfState().canUseItem(type_id::categories::kMpPotion)) {
-    LOG() << "Can use mp potion" << std::endl;
     // Use mana potion
     usedAnItem = usePotion(type_id::categories::kMpPotion);
   }

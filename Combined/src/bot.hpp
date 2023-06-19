@@ -7,7 +7,9 @@
 #include "packet/building/commonBuilding.hpp"
 #include "packetProcessor.hpp"
 #include "pk2/gameData.hpp"
+#include "pk2/gameData.hpp"
 #include "proxy.hpp"
+#include "statAggregator.hpp"
 #include "state/machine/autoPotion.hpp"
 #include "state/machine/botting.hpp"
 #include "state/worldState.hpp"
@@ -46,6 +48,7 @@ protected:
   broker::EventBroker &eventBroker_;
   state::WorldState worldState_{gameData_, eventBroker_}; // TODO: For multi-character, this will move out of the bot
   PacketProcessor packetProcessor_{worldState_, packetBroker_, eventBroker_, gameData_};
+  StatAggregator statAggregator_{worldState_, eventBroker_};
 
 private:
   std::unique_ptr<state::machine::StateMachine> autoPotionStateMachine_;
@@ -58,8 +61,8 @@ private:
   void onUpdate(const event::Event *event = nullptr);
 
   // Bot actions from UI
-  void handleStartTraining();
-  void handleStopTraining();
+  void handleRequestStartTraining();
+  void handleRequestStopTraining();
   void startTraining();
   void stopTraining();
   // Debug help

@@ -108,8 +108,8 @@ const state::Self& Bot::selfState() const {
 void Bot::subscribeToEvents() {
   auto eventHandleFunction = std::bind(&Bot::handleEvent, this, std::placeholders::_1);
   // Bot actions from UI
-  eventBroker_.subscribeToEvent(event::EventCode::kStartTraining, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStopTraining, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kRequestStartTraining, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kRequestStopTraining, eventHandleFunction);
   // Debug help
   eventBroker_.subscribeToEvent(event::EventCode::kInjectPacket, eventHandleFunction);
   // Login events
@@ -175,12 +175,12 @@ void Bot::handleEvent(const event::Event *event) {
     const auto eventCode = event->eventCode;
     switch (eventCode) {
       // Bot actions from UI
-      case event::EventCode::kStartTraining: {
-        handleStartTraining();
+      case event::EventCode::kRequestStartTraining: {
+        handleRequestStartTraining();
         break;
       }
-      case event::EventCode::kStopTraining: {
-        handleStopTraining();
+      case event::EventCode::kRequestStopTraining: {
+        handleRequestStopTraining();
         break;
       }
 
@@ -297,12 +297,6 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
       case event::EventCode::kEntityLifeStateChanged: {
-        const auto &castedEvent = dynamic_cast<const event::EntityLifeStateChanged&>(*event);
-        const auto &character = worldState_.getEntity<entity::Character>(castedEvent.globalId);
-        if (character.globalId != selfState().globalId && character.lifeState == sro::entity::LifeState::kDead) {
-          static int deathCount = 0;
-          LOG() << ++deathCount << " kill(s)" << std::endl;
-        }
         onUpdate(event);
         break;
       }
@@ -427,11 +421,11 @@ void Bot::onUpdate(const event::Event *event) {
 // =====================================================Bot actions from UI====================================================
 // ============================================================================================================================
 
-void Bot::handleStartTraining() {
+void Bot::handleRequestStartTraining() {
   startTraining();
 }
 
-void Bot::handleStopTraining() {
+void Bot::handleRequestStopTraining() {
   stopTraining();
 }
 
@@ -447,6 +441,7 @@ void Bot::startTraining() {
 
   LOG() << "Starting training" << std::endl;
   worldState_.selfState().trainingIsActive = true;
+  eventBroker_.publishEvent(event::EventCode::kTrainingStarted);
   // TODO: Should we stop whatever we're doing?
   //  For example, if we're running, stop where we are.
 
@@ -463,6 +458,7 @@ void Bot::stopTraining() {
     //  Ex. Need to close a shop npc dialog
     LOG() << "Stopping training" << std::endl;
     worldState_.selfState().trainingIsActive = false;
+    eventBroker_.publishEvent(event::EventCode::kTrainingStopped);
     bottingStateMachine_.reset();
   } else {
     LOG() << "Asked to stop training, but we werent training" << std::endl;
@@ -619,7 +615,7 @@ void Bot::handleStatesChanged() {
 void Bot::handleSkillBegan(const event::SkillBegan &event) {
   if (event.casterGlobalId == worldState_.selfState().globalId) {
     const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
-    LOG() << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" began" << std::endl;
+    // LOG() << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" began" << std::endl;
     onUpdate(&event);
   }
 }
@@ -627,14 +623,14 @@ void Bot::handleSkillBegan(const event::SkillBegan &event) {
 void Bot::handleSkillEnded(const event::SkillEnded &event) {
   if (event.casterGlobalId == worldState_.selfState().globalId) {
     const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
-    LOG() << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" ended" << std::endl;
+    // LOG() << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" ended" << std::endl;
     onUpdate(&event);
   }
 }
 
 void Bot::handleSkillCooldownEnded(const event::SkillCooldownEnded &event) {
   const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
-  LOG() << "Skill " << event.skillRefId << "(" << (skillName ? *skillName : "UNKNOWN") << ") cooldown ended" << std::endl;
+  // LOG() << "Skill " << event.skillRefId << "(" << (skillName ? *skillName : "UNKNOWN") << ") cooldown ended" << std::endl;
   worldState_.selfState().skillEngine.skillCooldownEnded(event.skillRefId);
   onUpdate();
 }

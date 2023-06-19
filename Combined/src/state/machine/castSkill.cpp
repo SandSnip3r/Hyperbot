@@ -232,9 +232,9 @@ void CastSkill::onUpdate(const event::Event *event) {
         if (commandError->command.commandType == packet::enums::CommandType::kExecute) {
           if (commandError->command.actionType == packet::enums::ActionType::kCast) {
             if (commandError->command.refSkillId == skillRefId_) {
-              LOG() << "Our command to cast this skill failed" << std::endl;
+              // Our command to cast this skill failed.
               if (expectingSkillCommandFailure_) {
-                LOG() << "Expecting this; not acting on it" << std::endl;
+                // Expecting this failure; not acting on it.
                 expectingSkillCommandFailure_ = false;
               } else {
                 if (skillCastTimeoutEventId_) {

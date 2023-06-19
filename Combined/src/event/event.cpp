@@ -48,6 +48,10 @@ SkillBegan::SkillBegan(sro::scalar_types::EntityGlobalId casterId, sro::scalar_t
 
 SkillEnded::SkillEnded(sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId) : Event(EventCode::kSkillEnded), casterGlobalId(casterId), skillRefId(skillId) {}
 
+DealtDamage::DealtDamage(sro::scalar_types::EntityGlobalId targetId, uint32_t damageAmount) : Event(EventCode::kDealtDamage), targetId(targetId), damageAmount(damageAmount) {}
+
+KilledEntity::KilledEntity(sro::scalar_types::EntityGlobalId targetId) : Event(EventCode::kKilledEntity), targetId(targetId) {}
+
 OurSkillFailed::OurSkillFailed(sro::scalar_types::ReferenceObjectId id, uint16_t err) : Event(EventCode::kOurSkillFailed), skillRefId(id), errorCode(err) {}
 
 EntityHpChanged::EntityHpChanged(sro::scalar_types::EntityGlobalId id) : Event(EventCode::kEntityHpChanged), globalId(id) {}

@@ -24,7 +24,9 @@ Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
     if (regionData.areaName == "Town_Cons") {
       // Town is Constantinople
       currentTown_ = Town::kConstantinople;
-      // Town currentTown_;
+    } else if (regionData.areaName == "Town_Jangan") {
+      // Town is Jangan
+      currentTown_ = Town::kJangan;
     } else {
       throw std::runtime_error("Unknown current town");
     }
@@ -32,6 +34,8 @@ Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
     // TODO: Will depend on return point.
     if (regionData.continentName == "Eu") {
       currentTown_ = Town::kConstantinople;
+    } else if (regionData.continentName == "CHINA") {
+      currentTown_ = Town::kJangan;
     } else {
       throw std::runtime_error("Not in town, not sure how to determine our town");
     }

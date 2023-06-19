@@ -50,6 +50,10 @@ void WorldState::removeBuffs(const std::vector<uint32_t> &tokenIds) {
 }
 
 entity::Entity* WorldState::getEntity(sro::scalar_types::EntityGlobalId globalId) {
+  return const_cast<entity::Entity*>(const_cast<const WorldState*>(this)->getEntity(globalId));
+}
+
+const entity::Entity* WorldState::getEntity(sro::scalar_types::EntityGlobalId globalId) const {
   if (globalId == selfState_.globalId) {
     return &selfState_;
   } else if (entityTracker_.trackingEntity(globalId)) {

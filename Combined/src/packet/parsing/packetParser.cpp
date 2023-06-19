@@ -16,6 +16,7 @@
 #include "serverAgentCharacterData.hpp"
 #include "serverAgentChatUpdate.hpp"
 #include "serverAgentCosData.hpp"
+#include "serverAgentEntityDamageEffect.hpp"
 #include "serverAgentEntityDespawn.hpp"
 #include "serverAgentEntityGroupSpawnData.hpp"
 #include "serverAgentEntityRemoveOwnership.hpp"
@@ -94,6 +95,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ServerAgentEntityDespawn>(packet);
       case Opcode::kServerAgentEntityUpdateStatus:
         return std::make_unique<ServerAgentEntityUpdateStatus>(packet);
+      case Opcode::kServerAgentEntityDamageEffect:
+        return std::make_unique<ServerAgentEntityDamageEffect>(packet);
       case Opcode::kServerAgentEntityUpdateExperience:
         return std::make_unique<ServerAgentEntityUpdateExperience>(packet);
       case Opcode::kServerAgentAbnormalInfo:

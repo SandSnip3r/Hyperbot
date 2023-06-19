@@ -6,14 +6,14 @@ namespace packet::parsing {
 ServerAgentSkillEnd::ServerAgentSkillEnd(const PacketContainer &packet) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  result_ = stream.Read<uint8_t>();
+  stream.Read(result_);
   if (result_ == 1) {
-    castId_ = stream.Read<uint32_t>();
-    targetGId_ = stream.Read<uint32_t>();
+    stream.Read(castId_);
+    stream.Read(targetGlobalId_);
     action_ = parseSkillAction(stream);
   } else if (result_ == 2) {
-    errorCode_ = stream.Read<uint16_t>();
-    castId_ = stream.Read<uint32_t>();
+    stream.Read(errorCode_);
+    stream.Read(castId_);
   }
 }
 
@@ -25,8 +25,8 @@ uint32_t ServerAgentSkillEnd::castId() const {
   return castId_;
 }
 
-uint32_t ServerAgentSkillEnd::targetGId() const {
-  return targetGId_;
+sro::scalar_types::EntityGlobalId ServerAgentSkillEnd::targetGlobalId() const {
+  return targetGlobalId_;
 }
 
 structures::SkillAction ServerAgentSkillEnd::action() const {

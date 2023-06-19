@@ -5,8 +5,9 @@
 #include "../enums/packetEnums.hpp"
 #include "../../pk2/skillData.hpp"
 
+#include <silkroad_lib/scalar_types.h>
+
 #include <cstdint>
-// #include <string>
 
 namespace packet::parsing {
   
@@ -21,18 +22,18 @@ public:
   // 12301 Happens when the wrong item is equipped
   uint16_t errorCode() const;
 
-  uint32_t refSkillId() const;
-  uint32_t casterGlobalId() const;
+  sro::scalar_types::ReferenceObjectId refSkillId() const;
+  sro::scalar_types::EntityGlobalId casterGlobalId() const;
   uint32_t castId() const;
-  uint32_t targetGlobalId() const;
+  sro::scalar_types::EntityGlobalId targetGlobalId() const;
   structures::SkillAction action() const;
 private:
   uint8_t result_;
   uint16_t errorCode_;
-  uint32_t refSkillId_;
-  uint32_t casterGlobalId_;
+  sro::scalar_types::ReferenceObjectId refSkillId_;
+  sro::scalar_types::EntityGlobalId casterGlobalId_;
   uint32_t castId_;
-  uint32_t targetGlobalId_;
+  sro::scalar_types::EntityGlobalId targetGlobalId_;
   structures::SkillAction action_;
 };
 

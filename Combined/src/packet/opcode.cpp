@@ -292,7 +292,10 @@ std::string toStr(Opcode opcode) {
     return "kServerAgentEntityRemoveOwnership";
   }
   if (opcode == Opcode::kServerAgentEntityUpdateStatus) {
-    return "SERVER_HPMP_UPDATE";
+    return "kServerAgentEntityUpdateStatus";
+  }
+  if (opcode == Opcode::kServerAgentEntityDamageEffect) {
+    return "kServerAgentEntityDamageEffect";
   }
   if (opcode == Opcode::SERVER_ANIMATION_LEVEL_UP) {
     return "SERVER_ANIMATION_LEVEL_UP";

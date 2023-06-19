@@ -25,6 +25,7 @@ public:
   void removeBuffs(const std::vector<uint32_t> &tokenIds);
 
   entity::Entity* getEntity(sro::scalar_types::EntityGlobalId globalId);
+  const entity::Entity* getEntity(sro::scalar_types::EntityGlobalId globalId) const;
 
   template<typename EntityType>
   EntityType& getEntity(sro::scalar_types::EntityGlobalId globalId);
@@ -47,16 +48,7 @@ private:
 
 template<typename EntityType>
 EntityType& WorldState::getEntity(sro::scalar_types::EntityGlobalId globalId) {
-  if (globalId == selfState_.globalId) {
-    if (dynamic_cast<const EntityType*>(&selfState_) == nullptr) {
-      throw std::runtime_error("Trying to get self entity as an invalid type");
-    }
-    return dynamic_cast<EntityType&>(selfState_);
-  } else if (entityTracker_.trackingEntity(globalId)) {
-    return entityTracker_.getEntity<EntityType>(globalId);
-  } else {
-    throw std::runtime_error("Trying to get untracked entity");
-  }
+  return const_cast<EntityType&>(const_cast<const WorldState&>(*this).getEntity<EntityType>(globalId));
 }
 
 template<typename EntityType>

@@ -25,7 +25,7 @@ ServerAgentEntityUpdateStatus::ServerAgentEntityUpdateStatus(const PacketContain
     stateBitmask_ = stream.Read<uint32_t>();
     for (uint32_t i=0; i<32; ++i) {
       const auto bit = (1 << i);
-      if (bit > static_cast<uint32_t>(enums::AbnormalStateFlag::kZombie) && stateBitmask_ & bit) {
+      if (bit > static_cast<uint32_t>(enums::AbnormalStateFlag::kZombie) && (stateBitmask_ & bit)) {
         stateLevels_.push_back(stream.Read<uint8_t>());
       }
     }
