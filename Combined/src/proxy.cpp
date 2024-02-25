@@ -234,6 +234,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
 
             uint32_t loginID = r.Read<uint32_t>();        //Login ID
             agentIP_ = r.Read_Ascii(r.Read<uint16_t>());  //Agent IP
+            LOG() << "Gateway login response gave us Agentserver IP: \"" << agentIP_ << '"' << std::endl;
             agentPort_ = r.Read<uint16_t>();              //Agent port
 
             StreamUtility w;
