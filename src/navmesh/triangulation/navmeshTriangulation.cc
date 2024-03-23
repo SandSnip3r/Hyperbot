@@ -1467,17 +1467,27 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
   // ===============================================================================
 
   // Some data init
-	triangle::context *ctx;
-	triangle::triangleio inputStruct;
-	triangle::triangle_initialize_triangleio(&inputStruct);
+  triangle::context *ctx;
+  triangle::triangleio inputStruct;
+  triangle::triangle_initialize_triangleio(&inputStruct);
 
-	ctx = triangle::triangle_context_create();
-  *(ctx->b) = pathfinder::BehaviorBuilder{}.getBehavior();
+  // Create context
+  ctx = triangle::triangle_context_create();
+
+  // Set context's behavior
+  triangle::behavior_t behavior = pathfinder::BehaviorBuilder{}.getBehavior();
+  int behaviorSetResult = triangle::triangle_context_set_behavior(ctx, &behavior);
+  if (behaviorSetResult < 0) {
+    // Free memory
+    triangle::triangle_free_triangleio(&inputStruct);
+    triangle::triangle_context_destroy(ctx);
+    throw std::runtime_error("Error setting behavior "+std::to_string(behaviorSetResult));
+  }
 
   // fill input structure vertices
   inputStruct.numberofpoints = static_cast<int>(inVertices.size());
   inputStruct.numberofpointattributes = 0;
-	inputStruct.pointlist = (TRIANGLE_MACRO_REAL *) malloc((unsigned int) (2 * inVertices.size() * sizeof(TRIANGLE_MACRO_REAL)));
+  inputStruct.pointlist = (TRIANGLE_MACRO_REAL *) malloc((unsigned int) (2 * inVertices.size() * sizeof(TRIANGLE_MACRO_REAL)));
   int vertexIndex = 0;
   for (const auto &vertex : inVertices) {
     inputStruct.pointlist[2*vertexIndex] = vertex.x();
@@ -1486,7 +1496,7 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
   }
 
   // fill input structure edges
-	inputStruct.numberofsegments = static_cast<int>(inEdges.size());
+  inputStruct.numberofsegments = static_cast<int>(inEdges.size());
   inputStruct.segmentlist = (int *) malloc((unsigned int) (2 * inEdges.size() * sizeof(int)));
   inputStruct.segmentmarkerlist = (int *) malloc((unsigned int) (inEdges.size() * sizeof(int)));
   int edgeIndex = 0;
@@ -1511,8 +1521,8 @@ void NavmeshTriangulation::buildNavmeshForRegion(const Navmesh &navmesh, const R
 
   // Prepare data structures
   triangle::triangleio triangleData, triangleVoronoiData;
-	triangle::triangle_initialize_triangleio(&triangleData);
-	triangle::triangle_initialize_triangleio(&triangleVoronoiData);
+  triangle::triangle_initialize_triangleio(&triangleData);
+  triangle::triangle_initialize_triangleio(&triangleVoronoiData);
 
   // Extract data from the context
   int copyResult = triangle_mesh_copy(ctx, &triangleData, 1, 1, &triangleVoronoiData);

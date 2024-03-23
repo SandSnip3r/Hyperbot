@@ -92,7 +92,7 @@ bool operator<(const SingleRegionNavmeshTriangulationState<IndexType> &s1, const
 
 template<typename IndexType>
 std::ostream& operator<<(std::ostream& stream, const SingleRegionNavmeshTriangulationState<IndexType> &state) {
-  constexpr const bool kPrintIndicesAsGlobal{false};
+  constexpr const bool kPrintIndicesAsGlobal{true};
   if (state.isGoal()) {
     stream << "[GOAL]";
   } else if (!state.hasEntryEdgeIndex()) {
