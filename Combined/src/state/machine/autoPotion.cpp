@@ -96,7 +96,7 @@ bool AutoPotion::tryUsePurificationPill() {
       continue;
     }
     const storage::Item *item = inventory.getItem(slotNum);
-    if (!type_id::categories::kPurificationPill.contains(item->typeData())) {
+    if (!type_id::categories::kPurificationPill.contains(item->typeId())) {
       // Item is not a purification pill
       continue;
     }
@@ -249,7 +249,7 @@ bool AutoPotion::tryUseUniversalPill() {
       continue;
     }
     const storage::Item *item = inventory.getItem(slotNum);
-    if (!type_id::categories::kUniversalPill.contains(item->typeData())) {
+    if (!type_id::categories::kUniversalPill.contains(item->typeId())) {
       // Item is not a universal pill
       continue;
     }
@@ -294,7 +294,7 @@ bool AutoPotion::usePotion(const type_id::TypeCategory &potionType) {
       continue;
     }
     const storage::Item *item = inventory.getItem(slotNum);
-    if (!potionType.contains(item->typeData())) {
+    if (!potionType.contains(item->typeId())) {
       // This is not the desired potion type
       continue;
     }

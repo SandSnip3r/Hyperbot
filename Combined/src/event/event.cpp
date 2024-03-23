@@ -78,4 +78,7 @@ NewConfigReceived::NewConfigReceived(const proto::config::Config &config_param) 
 
 InventoryItemUpdated::InventoryItemUpdated(const uint8_t &slot) : Event(EventCode::kInventoryItemUpdated), slotIndex(slot) {}
 
+ChatReceived::ChatReceived(packet::enums::ChatType type, uint32_t senderGlobalId, const std::string &msg) : Event(EventCode::kChatReceived), chatType(type), sender(senderGlobalId), message(msg) {}
+ChatReceived::ChatReceived(packet::enums::ChatType type, const std::string &senderName, const std::string &msg) : Event(EventCode::kChatReceived), chatType(type), sender(senderName), message(msg) {}
+
 } // namespace event

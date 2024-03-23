@@ -5,7 +5,7 @@ namespace packet::parsing {
 ServerAgentChatUpdate::ServerAgentChatUpdate(const PacketContainer &packet) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  chatType_ = static_cast<packet::enums::ChatType>(stream.Read<uint8_t>());
+  stream.Read(chatType_);
   if (chatType_ == enums::ChatType::kAll ||
       chatType_ == enums::ChatType::kAllGm ||
       chatType_ == enums::ChatType::kNpc) {

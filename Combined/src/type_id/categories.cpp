@@ -52,6 +52,9 @@ const TypeCategory kItem{static_cast<uint8_t>(3)};
       const TypeCategory kGold{kCurrency.subCategory(0)};
     const TypeCategory kSpecialGoods{kExpendable.subCategory(8)};
     const TypeCategory kQuestAndEvent{kExpendable.subCategory(9)};
+    const TypeCategory kAlchemyReinforce{kExpendable.subCategory(10)};
+      const TypeCategory kElixir{kAlchemyReinforce.subCategory(1)};
+      const TypeCategory kLuckyPowder{kAlchemyReinforce.subCategory(2)};
     const TypeCategory kSpecial{kExpendable.subCategory(13)};
       const TypeCategory kResurrection{kSpecial.subCategory(6)};
 

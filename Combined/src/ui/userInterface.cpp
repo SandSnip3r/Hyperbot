@@ -45,10 +45,16 @@ void UserInterface::setWorldState(const state::WorldState &worldState) {
 
 void UserInterface::runAsync() {
   // Set up publisher
-  publisher_.bind("tcp://*:5556");
+  try {
+    publisher_.bind("tcp://*:5556");
 
-  // Run the request receiver in another thread
-  thr_ = std::thread(&UserInterface::run, this);
+    // Run the request receiver in another thread
+    thr_ = std::thread(&UserInterface::run, this);
+  } catch (const std::exception &ex) {
+    LOG() << "Exception while binding to UI: \"" << ex.what() << "\"" << std::endl;
+  } catch (...) {
+    LOG() << "Exception while binding to UI" << std::endl;
+  }
 }
 
 void UserInterface::broadcastLaunch() {

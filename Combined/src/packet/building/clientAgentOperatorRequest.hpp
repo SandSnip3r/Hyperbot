@@ -3,6 +3,7 @@
 #include "../../shared/silkroad_security.h"
 
 #include <silkroad_lib/position.h>
+#include <silkroad_lib/scalar_types.h>
 
 #ifndef PACKET_BUILDING_CLIENT_AGENT_OPERATOR_REQUEST_HPP_
 #define PACKET_BUILDING_CLIENT_AGENT_OPERATOR_REQUEST_HPP_
@@ -16,6 +17,7 @@ private:
   static const bool kMassive_ = false;
 public:
   static PacketContainer toggleInvisible();
+  static PacketContainer makeItem(sro::scalar_types::ReferenceObjectId refItemId, uint8_t optLevelOrAmount);
 };
 
 } // namespace packet::building

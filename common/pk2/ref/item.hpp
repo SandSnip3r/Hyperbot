@@ -1,8 +1,10 @@
 #ifndef PK2_MEDIA_ITEM_HPP_
 #define PK2_MEDIA_ITEM_HPP_
 
-#include <string>
+#include <cstdint>
 #include <ostream>
+#include <string>
+#include <vector>
 
 namespace pk2::ref {
 
@@ -169,6 +171,9 @@ struct Item {
 	std::string desc20_128;
 	uint8_t maxMagicOptCount;
 	uint8_t childItemCount;
+
+  // If this item is an elixir, this function returns a list of typeId3s for the items which this elixir applies to.
+  std::vector<uint8_t> elixirTargetItemTypeId3s() const;
 };
 
 std::ostream& operator<<(std::ostream &stream, const Item &item);

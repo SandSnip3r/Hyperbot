@@ -11,6 +11,8 @@
 #include "serverAgentActionDeselectResponse.hpp"
 #include "serverAgentActionSelectResponse.hpp"
 #include "serverAgentActionTalkResponse.hpp"
+#include "serverAgentAlchemyElixirResponse.hpp"
+#include "serverAgentAlchemyStoneResponse.hpp"
 #include "serverAgentBuffAdd.hpp"
 #include "serverAgentBuffRemove.hpp"
 #include "serverAgentCharacterData.hpp"
@@ -77,6 +79,10 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ParsedLoginClientInfo>(packet);
       case Opcode::kServerAgentAuthResponse:
         return std::make_unique<ParsedServerAuthResponse>(packet);
+      case Opcode::kServerAgentAlchemyElixirResponse:
+        return std::make_unique<ServerAgentAlchemyElixirResponse>(packet, gameData_.itemData());
+      case Opcode::kServerAgentAlchemyStoneResponse:
+        return std::make_unique<ServerAgentAlchemyStoneResponse>(packet, gameData_.itemData());
       case Opcode::kServerAgentCharacterSelectionActionResponse:
         return std::make_unique<ParsedServerAgentCharacterSelectionActionResponse>(packet);
       case Opcode::kServerAgentCharacterSelectionJoinResponse:

@@ -36,7 +36,7 @@ std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &s
     if (!item) {
       throw std::runtime_error("Have an item, but got null");
     }
-    if (!type_id::categories::kWeapon.contains(item->typeData())) {
+    if (!type_id::categories::kWeapon.contains(item->typeId())) {
       throw std::runtime_error("Equipped \"weapon\" isnt a weapon");
     }
     if (item->isOneOf(possibleWeapons)) {

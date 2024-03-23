@@ -11,9 +11,12 @@
 #include "packet/parsing/serverAgentActionDeselectResponse.hpp"
 #include "packet/parsing/serverAgentActionSelectResponse.hpp"
 #include "packet/parsing/serverAgentActionTalkResponse.hpp"
+#include "packet/parsing/serverAgentAlchemyElixirResponse.hpp"
+#include "packet/parsing/serverAgentAlchemyStoneResponse.hpp"
 #include "packet/parsing/serverAgentBuffAdd.hpp"
 #include "packet/parsing/serverAgentBuffRemove.hpp"
 #include "packet/parsing/serverAgentCharacterData.hpp"
+#include "packet/parsing/serverAgentChatUpdate.hpp"
 #include "packet/parsing/serverAgentCosData.hpp"
 #include "packet/parsing/serverAgentEntityDamageEffect.hpp"
 #include "packet/parsing/serverAgentEntityDespawn.hpp"
@@ -129,6 +132,8 @@ private:
   void serverAgentDeselectResponseReceived(const packet::parsing::ServerAgentActionDeselectResponse &packet) const;
   void serverAgentSelectResponseReceived(const packet::parsing::ServerAgentActionSelectResponse &packet) const;
   void serverAgentTalkResponseReceived(const packet::parsing::ServerAgentActionTalkResponse &packet) const;
+  void serverAgentAlchemyElixirResponseReceived(const packet::parsing::ServerAgentAlchemyElixirResponse &packet) const;
+  void serverAgentAlchemyStoneResponseReceived(const packet::parsing::ServerAgentAlchemyStoneResponse &packet) const;
   void serverAgentInventoryRepairResponseReceived(const packet::parsing::ServerAgentInventoryRepairResponse &packet) const;
   void serverAgentInventoryUpdateDurabilityReceived(const packet::parsing::ServerAgentInventoryUpdateDurability &packet) const;
   void serverAgentInventoryUpdateItemReceived(const packet::parsing::ServerAgentInventoryUpdateItem &packet) const;
@@ -146,6 +151,7 @@ private:
   void handleKnockedBackOrKnockedDown() const;
   void serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const;
   void serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const;
+  void serverAgentChatUpdateReceived(const packet::parsing::ServerAgentChatUpdate &packet) const;
 
   std::optional<std::chrono::milliseconds> getItemCooldownMs(const storage::ItemExpendable &item) const;
   WrappedCommand wrapActionCommand(const packet::structures::ActionCommand &command) const;

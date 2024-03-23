@@ -78,10 +78,10 @@ void TextItemAndSkillData::addItem(ref::TextItemOrSkill &&itemOrSkill) {
   }
 }
 
-const std::string& TextItemAndSkillData::getItemName(const std::string &nameStrId128) const {
-  const auto it = itemNames_.find(nameStrId128);
+const std::string& TextItemAndSkillData::getItemName(const std::string &nameStrID128) const {
+  const auto it = itemNames_.find(nameStrID128);
   if (it == itemNames_.end()) {
-    throw std::runtime_error("Could not find name for item \""+nameStrId128+"\"");
+    throw std::runtime_error("Could not find name for item \""+nameStrID128+"\"");
   }
   return it->second;
 }
@@ -94,8 +94,8 @@ const std::string& TextItemAndSkillData::getSkillName(const std::string &uiSkill
   return it->second;
 }
 
-std::optional<std::string> TextItemAndSkillData::getItemNameIfExists(const std::string &nameStrId128) const {
-  const auto it = itemNames_.find(nameStrId128);
+std::optional<std::string> TextItemAndSkillData::getItemNameIfExists(const std::string &nameStrID128) const {
+  const auto it = itemNames_.find(nameStrID128);
   if (it == itemNames_.end()) {
     return std::nullopt;
   }

@@ -16,6 +16,9 @@
 #include "packet/building/clientAgentFreePvpUpdateRequest.hpp"
 #include "packet/building/clientAgentOperatorRequest.hpp"
 // </remove>
+#include "state/machine/alchemy.hpp"
+#include "state/machine/autoPotion.hpp"
+#include "state/machine/botting.hpp"
 #include "type_id/categories.hpp"
 
 #include "pathfinder.h"
@@ -33,23 +36,13 @@ Bot::Bot(const config::Config &config,
       proxy_(proxy),
       packetBroker_(packetBroker),
       eventBroker_(eventBroker) {
-  // Check that the config has all the data we need
-  std::unique_lock<std::mutex> configLock(config_.mutex());
-  const auto &configProto = config_.configProto();
-  if (!configProto.has_character_to_login()) {
-    throw std::runtime_error("Config does not contain a character to login");
-  }
-  const std::string characterToLogin = configProto.character_to_login();
-  if (!config_.haveCharacterConfig(characterToLogin)) {
-    throw std::runtime_error("Config does not contain character config for character to login");
-  }
-
   std::ifstream estVisRangeFile{kEstVisRangeFilename};
   if (estVisRangeFile) {
     estVisRangeFile >> worldState_.selfState().estimatedVisibilityRange;
     LOG() << "Parsed estimated visibility range from file as " << worldState_.selfState().estimatedVisibilityRange << std::endl;
   }
 
+  // TODO: Don't construct autopotion state machine until character is logged in.
   autoPotionStateMachine_ = std::make_unique<state::machine::AutoPotion>(*this);
 }
 
@@ -155,6 +148,10 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kItemCooldownEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kInventoryItemUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kHwanPointsUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kAlchemyCompleted, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kAlchemyTimedOut, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kGmCommandTimedOut, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kChatReceived, eventHandleFunction);
 
   // Skills
   eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
@@ -383,6 +380,21 @@ void Bot::handleEvent(const event::Event *event) {
         handleSkillCooldownEnded(castedEvent);
         break;
       }
+      case event::EventCode::kAlchemyTimedOut:
+      case event::EventCode::kAlchemyCompleted: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kGmCommandTimedOut: {
+        onUpdate(event);
+        break;
+      }
+      case event::EventCode::kChatReceived: {
+        LOG() << 'e' << std::endl;
+        const auto &castedEvent = dynamic_cast<const event::ChatReceived&>(*event);
+        handleChatCommand(castedEvent);
+        break;
+      }
       default: {
         LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
         break;
@@ -446,7 +458,8 @@ void Bot::startTraining() {
   //  For example, if we're running, stop where we are.
 
   // Initialize state machine
-  bottingStateMachine_ = std::make_unique<state::machine::Botting>(*this);
+  // bottingStateMachine_ = std::make_unique<state::machine::Botting>(*this);
+  bottingStateMachine_ = std::make_unique<state::machine::Alchemy>(*this);
 
   // Trigger onUpdate
   onUpdate();
@@ -462,6 +475,28 @@ void Bot::stopTraining() {
     bottingStateMachine_.reset();
   } else {
     LOG() << "Asked to stop training, but we werent training" << std::endl;
+  }
+}
+
+// ============================================================================================================================
+// =======================================================Chat commands========================================================
+// ============================================================================================================================
+
+void Bot::handleChatCommand(const event::ChatReceived &event) {
+  if (event.chatType == packet::enums::ChatType::kAll ||
+      event.chatType == packet::enums::ChatType::kAllGm) {
+    // All chat
+    std::string msg = event.message;
+    std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
+    if (msg == "start") {
+      // Start training
+      LOG() << "Got chat command " << event.message << std::endl;
+      startTraining();
+    } else if (msg == "stop") {
+      // Stop training
+      LOG() << "Got chat command " << event.message << std::endl;
+      stopTraining();
+    }
   }
 }
 
@@ -497,34 +532,45 @@ std::pair<std::string, std::string> getLoginInfoFromConfig(const config::Config 
 
 } // anonymous namespace
 
+// TODO
+// TODO(TODO): Move login process to an state/machine.
+// TODO
+
 void Bot::handleStateShardIdUpdated() const {
-  const auto [username, password] = getLoginInfoFromConfig(config_);
-  // We received the server list from the server, try to log in
-  const auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(gameData_.divisionInfo().locale, username, password, worldState_.selfState().shardId);
-  packetBroker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
+  bool haveCharacterToLogin;
+  {
+    std::unique_lock<std::mutex> configLock(config_.mutex());
+    haveCharacterToLogin = config_.configProto().has_character_to_login();
+  }
+  // This should only login to a character if we're configured to do so.
+  if (haveCharacterToLogin) {
+    const auto [username, password] = getLoginInfoFromConfig(config_);
+    // We received the server list from the server, try to log in
+    const auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(gameData_.divisionInfo().locale, username, password, worldState_.selfState().shardId);
+    packetBroker_.injectPacket(loginAuthPacket, PacketContainer::Direction::kClientToServer);
+  }
 }
 
 void Bot::handleStateConnectedToAgentServerUpdated() {
-  const auto [username, password] = getLoginInfoFromConfig(config_);
-  // Client will try to send auth request, block it
-  if (proxy_.blockingOpcode(packet::Opcode::kClientAgentAuthRequest)) {
-    throw std::runtime_error("Just connected to AgentServer, but something else blocked client auth packets");
+  bool haveCharacterToLogin;
+  {
+    std::unique_lock<std::mutex> configLock(config_.mutex());
+    haveCharacterToLogin = config_.configProto().has_character_to_login();
   }
-  proxy_.blockOpcode(packet::Opcode::kClientAgentAuthRequest);
-  // Send our auth packet
-  const auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(worldState_.selfState().token, username, password, gameData_.divisionInfo().locale, worldState_.selfState().kMacAddress);
-  packetBroker_.injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
-  // Set our state to logging in so that we'll know to block packets from the client if it tries to also login
-  worldState_.selfState().loggingIn = true;
-}
-
-void Bot::handleLoggedIn() {
-  worldState_.selfState().loggingIn = false;
-  // Unblock packet
-  if (!proxy_.blockingOpcode(packet::Opcode::kClientAgentAuthRequest)) {
-    throw std::runtime_error("Just logged in, but we werent blocking the client's auth request");
+  // This should only login to a character if we're configured to do so.
+  if (haveCharacterToLogin) {
+    const auto [username, password] = getLoginInfoFromConfig(config_);
+    // Client will try to send auth request, block it
+    if (proxy_.blockingOpcode(packet::Opcode::kClientAgentAuthRequest)) {
+      throw std::runtime_error("Just connected to AgentServer, but something else blocked client auth packets");
+    }
+    proxy_.blockOpcode(packet::Opcode::kClientAgentAuthRequest);
+    // Send our auth packet
+    const auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(worldState_.selfState().token, username, password, gameData_.divisionInfo().locale, worldState_.selfState().kMacAddress);
+    packetBroker_.injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
+    // Set our state to logging in so that we'll know to block packets from the client if it tries to also login
+    worldState_.selfState().loggingIn = true;
   }
-  proxy_.unblockOpcode(packet::Opcode::kClientAgentAuthRequest);
 }
 
 void Bot::handleStateReceivedCaptchaPromptUpdated() const {
@@ -534,29 +580,44 @@ void Bot::handleStateReceivedCaptchaPromptUpdated() const {
 }
 
 void Bot::handleStateCharacterListUpdated() const {
-  std::string characterName;
+  std::optional<std::string> characterName;
   {
+    // TODO: Build a layer/abstraction which makes synchronization less verbose.
     std::unique_lock<std::mutex> configLock(config_.mutex());
-    characterName = config_.configProto().character_to_login();
+    if (config_.configProto().has_character_to_login()) {
+      characterName = config_.configProto().character_to_login();
+    }
   }
+
   LOG() << "Char list received: [ ";
   for (const auto &i : worldState_.selfState().characterList) {
     std::cout << i.name << ' ';
   }
   std::cout << "]\n";
 
-  // Search for our character in the character list
-  auto it = std::find_if(worldState_.selfState().characterList.begin(), worldState_.selfState().characterList.end(), [&characterName](const packet::structures::CharacterSelection::Character &character) {
-    return character.name == characterName;
-  });
-  if (it == worldState_.selfState().characterList.end()) {
-    LOG() << "Unable to find character \"" << characterName << "\"\n";
-    return;
-  }
+  if (characterName) {
+    // Search for our character in the character list
+    auto it = std::find_if(worldState_.selfState().characterList.begin(), worldState_.selfState().characterList.end(), [&characterName](const packet::structures::CharacterSelection::Character &character) {
+      return character.name == *characterName;
+    });
+    if (it == worldState_.selfState().characterList.end()) {
+      LOG() << "Unable to find character \"" << *characterName << "\"\n";
+      return;
+    }
 
-  // Found our character, select it
-  auto charSelectionPacket = packet::building::ClientAgentCharacterSelectionJoinRequest::packet(characterName);
-  packetBroker_.injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
+    // Found our character, select it
+    auto charSelectionPacket = packet::building::ClientAgentCharacterSelectionJoinRequest::packet(*characterName);
+    packetBroker_.injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
+  }
+}
+
+void Bot::handleLoggedIn() {
+  worldState_.selfState().loggingIn = false;
+  // Unblock packet
+  if (!proxy_.blockingOpcode(packet::Opcode::kClientAgentAuthRequest)) {
+    throw std::runtime_error("Just logged in, but we werent blocking the client's auth request");
+  }
+  proxy_.unblockOpcode(packet::Opcode::kClientAgentAuthRequest);
 }
 
 // ============================================================================================================================

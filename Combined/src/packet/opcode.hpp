@@ -90,8 +90,8 @@ enum class Opcode {
   CLIENT_PARTY_DISMISS = 0x7061,
   CLIENT_PARTY_KICK = 0x7063,
   CLIENT_ANIMATION_INVITE = 0x3080, // CLIENT_ANIMATION_INVITE, SERVER_ANIMATION_INVITE
-  CLIENT_ALCHEMY = 0x7150,
-  CLIENT_ALCHEMYSTONE = 0x7151,
+  kClientAgentAlchemyElixirRequest = 0x7150,
+  kClientAgentAlchemyStoneRequest = 0x7151,
   CLIENT_TRANSPORT_HOME = 0x70CB, // CLIENT_TRANSPORT_HOME, CLIENT_TRANSPORT_DELETE
   CLIENT_TRANSPORT_DELETE = 0x70CB, // CLIENT_TRANSPORT_HOME, CLIENT_TRANSPORT_DELETE
   kClientAgentInventoryStorageOpenRequest = 0x703C,
@@ -200,8 +200,8 @@ enum class Opcode {
   kServerAgentGuildStorageData = 0x3255,
   kServerAgentGuildStorageEnd = 0x3254,
 
-  SERVER_ALCHEMY = 0xB150,
-  SERVER_ALCHEMYSTONE = 0xB151,
+  kServerAgentAlchemyElixirResponse = 0xB150,
+  kServerAgentAlchemyStoneResponse = 0xB151,
 
   kServerAgentInventoryRepairResponse = 0xB03E,
   kServerAgentInventoryUpdateDurability = 0x3052,

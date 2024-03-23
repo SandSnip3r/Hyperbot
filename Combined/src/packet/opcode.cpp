@@ -168,11 +168,11 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::CLIENT_ANIMATION_INVITE) {
     return "CLIENT_ANIMATION_INVITE";
   }
-  if (opcode == Opcode::CLIENT_ALCHEMY) {
-    return "CLIENT_ALCHEMY";
+  if (opcode == Opcode::kClientAgentAlchemyElixirRequest) {
+    return "kClientAgentAlchemyElixirRequest";
   }
-  if (opcode == Opcode::CLIENT_ALCHEMYSTONE) {
-    return "CLIENT_ALCHEMYSTONE";
+  if (opcode == Opcode::kClientAgentAlchemyStoneRequest) {
+    return "kClientAgentAlchemyStoneRequest";
   }
   if (opcode == Opcode::CLIENT_TRANSPORT_HOME) {
     return "CLIENT_TRANSPORT_HOME";
@@ -411,11 +411,11 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kServerAgentInventoryStorageEnd) {
     return "kServerAgentInventoryStorageEnd";
   }
-  if (opcode == Opcode::SERVER_ALCHEMY) {
-    return "SERVER_ALCHEMY";
+  if (opcode == Opcode::kServerAgentAlchemyElixirResponse) {
+    return "kServerAgentAlchemyElixirResponse";
   }
-  if (opcode == Opcode::SERVER_ALCHEMYSTONE) {
-    return "SERVER_ALCHEMYSTONE";
+  if (opcode == Opcode::kServerAgentAlchemyStoneResponse) {
+    return "kServerAgentAlchemyStoneResponse";
   }
   if (opcode == Opcode::kServerAgentInventoryRepairResponse) {
     return "kServerAgentInventoryRepairResponse";

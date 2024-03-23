@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <iostream>
 #include <optional>
+#include <string>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -24,9 +25,17 @@ fs::path getAppDataDirectory();
 
 class Hyperbot {
 public:
+  Hyperbot(const std::optional<std::string> &characterToLogin) : characterToLogin_(characterToLogin) {}
   void run() {
     const auto appDataDirectory = getAppDataDirectory();
     config_.initialize(appDataDirectory);
+    if (characterToLogin_) {
+      // TODO: This will result in overwriting of the original config file if this is saved.
+      LOG() << "Given a character to log into: \"" << *characterToLogin_ << "\". Overwritting config." << std::endl;
+      config_.configProto().set_character_to_login(*characterToLogin_);
+    } else {
+      LOG() << "Using default character to login" << std::endl;
+    }
 
     subscribeToEvents();
     ui::UserInterface userInterface{gameData_, eventBroker_}; // TODO: Remove gameData_ from user interface
@@ -60,6 +69,7 @@ public:
   }
 
 private:
+  std::optional<std::string> characterToLogin_;
   config::Config config_;
   broker::EventBroker eventBroker_;
   bool waitingForClientPath_{true};
@@ -127,8 +137,13 @@ private:
   }
 };
 
-int main() {
-  Hyperbot hyperbot;
+int main(int argc, char **argv) {
+  std::optional<std::string> characterToLogin;
+  if (argc > 1) {
+    characterToLogin = argv[1];
+    LOG() << "Want to log in character \"" << *characterToLogin << "\"" << std::endl;
+  }
+  Hyperbot hyperbot(characterToLogin);
   try {
     hyperbot.run();
   } catch (const std::exception &ex) {

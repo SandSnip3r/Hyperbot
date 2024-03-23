@@ -134,7 +134,6 @@ void MobileEntity::setAngle(sro::Angle angle, broker::EventBroker &eventBroker) 
 void MobileEntity::setMotionState(entity::MotionState motionState, broker::EventBroker &eventBroker) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
   std::lock_guard<std::mutex> lock(mutex_);
-  auto prevSpeed = privateCurrentSpeed();
   bool changedSpeed{false};
   if (this->lastMotionState && *this->lastMotionState == entity::MotionState::kWalk && motionState == entity::MotionState::kRun) {
     // Entity changed from walking to running
@@ -281,7 +280,10 @@ float MobileEntity::privateCurrentSpeed() const {
       // MotionState: Stand, no previous motion state assuming that we're running
       return runSpeed;
     }
+  } else if (motionState == MotionState::kSit) {
+    throw std::runtime_error("Trying to get current speed, but entity is sitting");
   } else {
+    LOG() << "Motion state is " << static_cast<int>(motionState) << std::endl;
     // TODO: Understand what the other cases are here
     // TODO: Include zerk
     throw std::runtime_error("Trying to get speed, but not walking nor running");

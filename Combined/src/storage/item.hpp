@@ -27,7 +27,7 @@ public:
   uint32_t refItemId;
   const ItemType type;
   const pk2::ref::Item *itemInfo{nullptr};
-  type_id::TypeId typeData() const;
+  type_id::TypeId typeId() const;
   bool isA(const type_id::TypeCategory &typeCategory) const;
   bool isOneOf(const std::vector<type_id::TypeCategory> &typeCategories) const;
   virtual ~Item() = 0; // Make base type polymorphic and uninstantiable
@@ -80,6 +80,7 @@ public:
   std::vector<AdvancedElixirOptionData> advancedElixirOptions;
   bool repairInvalid(const pk2::GameData &gameData) const;
   uint32_t maxDurability(const pk2::GameData &gameData) const;
+  int degree() const;
 };
 
 // CGItemCOSSummoner, ITEM_COS_P

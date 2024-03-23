@@ -31,6 +31,10 @@ public:
   TypeCategory subCategory(uint8_t nextTypeId) const;
   bool contains(TypeId typeId) const;
   bool contains(const TypeCategory typeCategory) const;
+
+  template<typename T>
+  bool contains(T t) const = delete;
+
   bool isConcreteItem() const;
   TypeId getTypeId() const;
 private:

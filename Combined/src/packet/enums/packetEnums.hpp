@@ -28,7 +28,7 @@ enum class CharacterSelectionAction {
   kRestore = 5
 };
 
-enum class ChatType {
+enum class ChatType : uint8_t {
   kAll = 1,
   kPm = 2,
   kAllGm = 3,
@@ -426,6 +426,27 @@ enum class CosCommandType : uint8_t {
   kPick = 8,
   kFollow = 9,
   kCharm = 11,
+};
+
+enum class AlchemyAction : uint8_t {
+  kCancel = 1,
+  kFuse = 2,
+  kSocketCreate = 3,
+  kSocketRemove = 4
+};
+
+enum class AlchemyType : uint8_t {
+  kDisjoin = 1,
+  kManufacture = 2,
+  kElixir = 3,
+  kMagicStone = 4,
+  kAttributeStone = 5,
+  // 6?
+  // 7?
+  kAdvancedElixir = 8,
+  // SocketCreate = 8, //different alchemyAction
+  kSocketInsert = 9,
+  kSocketRemove = 10 //different alchemyAction
 };
 
 std::ostream& operator<<(std::ostream &stream, const ActionState &enumVal);

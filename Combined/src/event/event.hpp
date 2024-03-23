@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace event {
@@ -97,6 +98,13 @@ enum class EventCode {
 
   kInventoryItemUpdated,
   kHwanPointsUpdated,
+
+  // Alchemy
+  kAlchemyCompleted,
+  kAlchemyTimedOut,
+
+  kGmCommandTimedOut,
+  kChatReceived,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -389,6 +397,17 @@ public:
   InventoryItemUpdated(const uint8_t &slot);
   const uint8_t slotIndex;
   virtual ~InventoryItemUpdated() = default;
+};
+
+struct ChatReceived : public Event {
+public:
+  explicit ChatReceived(packet::enums::ChatType type, uint32_t senderGlobalId, const std::string &msg);
+  explicit ChatReceived(packet::enums::ChatType type, const std::string &senderName, const std::string &msg);
+  packet::enums::ChatType chatType;
+  // Sender Global Id or Sender Name.
+  std::variant<uint32_t, std::string> sender;
+  std::string message;
+  virtual ~ChatReceived() = default;
 };
 
 } // namespace event

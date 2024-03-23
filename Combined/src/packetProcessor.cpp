@@ -132,6 +132,8 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionDeselectResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionSelectResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionTalkResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAlchemyElixirResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAlchemyStoneResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryRepairResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryUpdateDurability, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryUpdateItem, packetHandleFunction);
@@ -147,6 +149,7 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillEnd, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffAdd, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffRemove, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentChatUpdate, packetHandleFunction);
 }
 
 void PacketProcessor::handlePacket(const PacketContainer &packet) const {
@@ -205,6 +208,8 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionDeselectResponse, serverAgentDeselectResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionSelectResponse, serverAgentSelectResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionTalkResponse, serverAgentTalkResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentAlchemyElixirResponse, serverAgentAlchemyElixirResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentAlchemyStoneResponse, serverAgentAlchemyStoneResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryRepairResponse, serverAgentInventoryRepairResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryUpdateDurability, serverAgentInventoryUpdateDurabilityReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryUpdateItem, serverAgentInventoryUpdateItemReceived);
@@ -221,6 +226,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentSkillEnd, serverAgentSkillEndReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffAdd, serverAgentBuffAddReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffRemove, serverAgentBuffRemoveReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentChatUpdate, serverAgentChatUpdateReceived);
   } catch (std::exception &ex) {
     LOG() << "Error while handling packet!\n  " << ex.what() << std::endl;
     return;
@@ -568,8 +574,8 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
 
   auto *itemPtr = worldState_.selfState().inventory.getItem(packet.slotNum());
   // Lets double check its type data
-  if (packet.typeData() != itemPtr->typeData()) {
-    throw std::runtime_error("Used an item, but the stored typeData doesn't match what came in the packet");
+  if (packet.typeData() != itemPtr->typeId()) {
+    throw std::runtime_error("Used an item, but the stored typeId doesn't match what came in the packet");
   }
 
   auto *expendableItemPtr = dynamic_cast<storage::ItemExpendable*>(itemPtr);
@@ -589,7 +595,7 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
 
 std::optional<std::chrono::milliseconds> PacketProcessor::getItemCooldownMs(const storage::ItemExpendable &item) const {
   std::optional<std::chrono::milliseconds> cooldownMilliseconds;
-  const auto typeData = item.typeData();
+  const auto typeData = item.typeId();
   if (type_id::categories::kRecoveryPotion.contains(typeData)) {
     // Is a potion or grain
     const auto &itemData = gameData_.itemData().getItemById(item.refItemId);
@@ -973,6 +979,35 @@ void PacketProcessor::serverAgentTalkResponseReceived(const packet::parsing::Ser
   } else {
     LOG() << "Failed to talk to NPC" << std::endl;
   }
+}
+
+void PacketProcessor::serverAgentAlchemyElixirResponseReceived(const packet::parsing::ServerAgentAlchemyElixirResponse &packet) const {
+  if (packet.result() == 1) {
+    {
+      const storage::Item *item = worldState_.selfState().inventory.getItem(packet.slot());
+      const storage::ItemEquipment *equipment = dynamic_cast<const storage::ItemEquipment*>(item);
+      std::ofstream outfile("alch-"+worldState_.selfState().name+".txt", std::ios::app);
+      outfile << static_cast<int>(equipment->optLevel)+1 << ' ' << (packet.success() ? "success" : "fail") << std::endl;
+    }
+    if (!packet.itemWasDestroyed()) {
+      // TODO: Should the inventory API allow overwriting items?
+      worldState_.selfState().inventory.deleteItem(packet.slot());
+      worldState_.selfState().inventory.addItem(packet.slot(), packet.item());
+    } else {
+      // If the item is destroyed, a server delete packet will remove the item from the inventory.
+      LOG() << "Item was destroyed!" << std::endl;
+    }
+  }
+  eventBroker_.publishEvent(event::EventCode::kAlchemyCompleted);
+}
+
+void PacketProcessor::serverAgentAlchemyStoneResponseReceived(const packet::parsing::ServerAgentAlchemyStoneResponse &packet) const {
+  if (packet.result() == 1) {
+    // TODO: Should the inventory API allow overwriting items?
+    worldState_.selfState().inventory.deleteItem(packet.slot());
+    worldState_.selfState().inventory.addItem(packet.slot(), packet.item());
+  }
+  eventBroker_.publishEvent(event::EventCode::kAlchemyCompleted);
 }
 
 void PacketProcessor::serverAgentInventoryRepairResponseReceived(const packet::parsing::ServerAgentInventoryRepairResponse &packet) const {
@@ -1646,4 +1681,14 @@ void PacketProcessor::serverAgentBuffRemoveReceived(const packet::parsing::Serve
   // }
   // std::cout << "]" << std::endl;
   worldState_.removeBuffs(packet.tokens());
+}
+
+void PacketProcessor::serverAgentChatUpdateReceived(const packet::parsing::ServerAgentChatUpdate &packet) const {
+  if (packet.chatType() == packet::enums::ChatType::kAll ||
+      packet.chatType() == packet::enums::ChatType::kAllGm ||
+      packet.chatType() == packet::enums::ChatType::kNpc) {
+    eventBroker_.publishEvent<event::ChatReceived>(packet.chatType(), packet.senderGlobalId(), packet.message());
+  } else {
+    eventBroker_.publishEvent<event::ChatReceived>(packet.chatType(), packet.senderName(), packet.message());
+  }
 }

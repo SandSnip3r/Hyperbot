@@ -5,6 +5,8 @@
 
 namespace type_id::categories {
 
+// TODO: I think this can become a lot more managable if TypeCategory was turned into a constexpr class.
+
 extern const TypeCategory kCharacter;
   extern const TypeCategory kPlayerCharacter;
   extern const TypeCategory kNonPlayerCharacter;
@@ -55,6 +57,9 @@ extern const TypeCategory kItem;
       extern const TypeCategory kGold;
     extern const TypeCategory kSpecialGoods;
     extern const TypeCategory kQuestAndEvent;
+    extern const TypeCategory kAlchemyReinforce;
+      extern const TypeCategory kElixir;
+      extern const TypeCategory kLuckyPowder;
     extern const TypeCategory kSpecial;
       extern const TypeCategory kResurrection;
 

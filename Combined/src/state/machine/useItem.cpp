@@ -22,7 +22,7 @@ UseItem::UseItem(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex) :
   if (itemAsExpendable == nullptr) {
     throw std::runtime_error("Item is not an expendable");
   }
-  itemTypeId_ = itemAsExpendable->typeData();
+  itemTypeId_ = itemAsExpendable->typeId();
   lastKnownQuantity_ = itemAsExpendable->quantity;
   const auto &itemData = bot_.gameData().itemData().getItemById(item->refItemId);
   auto maybeName = bot_.gameData().textItemAndSkillData().getItemNameIfExists(itemData.nameStrID128);

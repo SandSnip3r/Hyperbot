@@ -6,7 +6,7 @@
 
 namespace storage {
 
-type_id::TypeId Item::typeData() const {
+type_id::TypeId Item::typeId() const {
   if (itemInfo == nullptr) {
     throw std::runtime_error("Dont have a pointer to our item data");
   }
@@ -19,11 +19,11 @@ type_id::TypeId Item::typeData() const {
 }
 
 bool Item::isA(const type_id::TypeCategory &typeCategory) const {
-  return typeCategory.contains(typeData());
+  return typeCategory.contains(typeId());
 }
 
 bool Item::isOneOf(const std::vector<type_id::TypeCategory> &typeCategories) const {
-  const auto thisItemTypeData = typeData();
+  const auto thisItemTypeData = typeId();
   for (const auto &category : typeCategories) {
     if (category.contains(thisItemTypeData)) {
       return true;
@@ -76,6 +76,10 @@ uint32_t ItemEquipment::maxDurability(const pk2::GameData &gameData) const {
 
   // TODO: This calculation isn't perfect. Sometimes it's off by 1. Might be a rounding error?
   return currentDurabilityWhiteValue;
+}
+
+int ItemEquipment::degree() const {
+  return (itemInfo->itemClass-1)/3 + 1;
 }
 
 ItemCosGrowthSummoner::ItemCosGrowthSummoner() : Item(ItemType::kItemCosGrowthSummoner) {}

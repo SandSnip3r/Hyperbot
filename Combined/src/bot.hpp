@@ -10,9 +10,8 @@
 #include "pk2/gameData.hpp"
 #include "proxy.hpp"
 #include "statAggregator.hpp"
-#include "state/machine/autoPotion.hpp"
-#include "state/machine/botting.hpp"
 #include "state/worldState.hpp"
+#include "state/machine/stateMachine.hpp"
 
 #include <optional>
 #include <vector>
@@ -65,6 +64,10 @@ private:
   void handleRequestStopTraining();
   void startTraining();
   void stopTraining();
+
+  // Chat commands
+  void handleChatCommand(const event::ChatReceived &event);
+
   // Debug help
   void handleInjectPacket(const event::InjectPacket &castedEvent);
   // Login events

@@ -4,6 +4,8 @@
 #include "packet/opcode.hpp"
 #include "../../shared/silkroad_security.h"
 
+#include <silkroad_lib/scalar_types.h>
+
 #include <cstdint>
 
 namespace packet::building {
@@ -14,12 +16,13 @@ private:
   static const bool kEncrypted_ = false;
   static const bool kMassive_ = false;
 public:
-  static PacketContainer packet(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
+  static PacketContainer packet(sro::scalar_types::StorageIndexType srcSlot, sro::scalar_types::StorageIndexType destSlot, uint16_t quantity);
   static PacketContainer packet(uint64_t goldDropAmount);
-  static PacketContainer inventoryToStoragePacket(uint8_t srcSlot, uint8_t destSlot, uint32_t npcGId);
-  static PacketContainer withinInventoryPacket(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity);
-  static PacketContainer withinStoragePacket(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity, uint32_t npcGId);
+  static PacketContainer inventoryToStoragePacket(sro::scalar_types::StorageIndexType srcSlot, sro::scalar_types::StorageIndexType destSlot, uint32_t npcGId);
+  static PacketContainer withinInventoryPacket(sro::scalar_types::StorageIndexType srcSlot, sro::scalar_types::StorageIndexType destSlot, uint16_t quantity);
+  static PacketContainer withinStoragePacket(sro::scalar_types::StorageIndexType srcSlot, sro::scalar_types::StorageIndexType destSlot, uint16_t quantity, uint32_t npcGId);
   static PacketContainer buyPacket(uint8_t tabIndex, uint8_t itemIndex, uint16_t quantity, uint32_t npcGId);
+  static PacketContainer dropItem(sro::scalar_types::StorageIndexType slot);
 };
 
 } // namespace packet::building
