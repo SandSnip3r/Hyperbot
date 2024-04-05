@@ -148,6 +148,7 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillBegin, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillEnd, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffAdd, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffLink, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffRemove, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentChatUpdate, packetHandleFunction);
 }
@@ -225,6 +226,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentSkillBegin, serverAgentSkillBeginReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentSkillEnd, serverAgentSkillEndReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffAdd, serverAgentBuffAddReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffLink, serverAgentBuffLinkReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffRemove, serverAgentBuffRemoveReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentChatUpdate, serverAgentChatUpdateReceived);
   } catch (std::exception &ex) {
@@ -249,14 +251,17 @@ void PacketProcessor::resetDataBecauseCharacterSpawned() const {
 // ============================================================================================================================
 
 void PacketProcessor::serverListReceived(const packet::parsing::ParsedLoginServerList &packet) const {
+  // TODO: This data should be put into the event, rather than stored in the world state.
   worldState_.selfState().shardId = packet.shardId();
   eventBroker_.publishEvent(event::EventCode::kStateShardIdUpdated);
 }
 
 void PacketProcessor::loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) const {
+  // TODO: This data should be sent in an event, rather than stored in the world state.
   if (packet.result() == packet::enums::LoginResult::kSuccess) {
     worldState_.selfState().token = packet.token();
   } else {
+    // TODO: Send an event.
     LOG() << " Login failed\n";
   }
 }
@@ -368,6 +373,10 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   worldState_.selfState().setHwanPoints(packet.hwanPoints());
   worldState_.selfState().setCurrentExpAndSpExp(packet.currentExperience(), packet.currentSpExperience());
   worldState_.selfState().setMasteriesAndSkills(packet.masteries(), packet.skills());
+  // for (const auto &m : packet.masteries()) {
+  //   const auto &mastery = gameData_.masteryData().getMasteryById(m.id);
+  //   LOG() << "Mastery " << mastery.masteryNameCode << "(" << m.id << ") is level " << (int)m.level << std::endl;
+  // }
   // std::vector<std::pair<std::string, pk2::ref::Skill::Param1Type>> skillTypes = {
   //   {"Melee skills", pk2::ref::Skill::Param1Type::kMelee},
   //   {"Ranged skills", pk2::ref::Skill::Param1Type::kRanged},
@@ -379,12 +388,12 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   //   for (const auto &s : packet.skills()) {
   //     const auto &skillData = gameData_.skillData().getSkillById(s.id);
   //     if (skillData.param1Type() == i.second) {
-  //       constexpr const bool kLogName{false};
+  //       constexpr const bool kLogName{true};
   //       if constexpr (kLogName) {
   //         // Print name
   //         const auto maybeSkillName = gameData_.getSkillNameIfExists(s.id);
   //         if (maybeSkillName) {
-  //           std::cout << *maybeSkillName << ", ";
+  //           std::cout << *maybeSkillName << "(" << s.id << "), ";
   //         } else {
   //           std::cout << s.id << ", ";
   //         }
@@ -1661,25 +1670,31 @@ void PacketProcessor::handleKnockedBackOrKnockedDown() const {
 }
 
 void PacketProcessor::serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const {
+  const auto skillName = gameData_.getSkillNameIfExists(packet.skillRefId());
   if (packet.activeBuffToken() == 0) {
     // No buff remove will be received when this expires
     //  Seems to be only for debuffs
+    //  Weirdly, it's also sent for Sprint Assault.
+    LOG() << "Skipping buff \"" << (skillName ? *skillName : "UNKNOWN") << "\" for " << packet.globalId() << " with tokenId: " << packet.activeBuffToken() << std::endl;
     return;
   }
-  // if (packet.globalId() == worldState_.selfState().globalId) {
-  //   const auto skillName = gameData_.getSkillNameIfExists(packet.skillRefId());
-  //   LOG() << "Buff \"" << (skillName ? *skillName : "UNKNOWN") << "\" added to us with tokenId: " << packet.activeBuffToken() << std::endl;
-  // }
+  LOG() << "Buff \"" << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")\" added to " << packet.globalId() << " with tokenId: " << packet.activeBuffToken() << std::endl;
   const auto &skillData = gameData_.skillData().getSkillById(packet.skillRefId());
   worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken(), skillData.duration());
 }
 
+void PacketProcessor::serverAgentBuffLinkReceived(const packet::parsing::ServerAgentBuffLink &packet) const {
+  const auto skillName = gameData_.getSkillNameIfExists(packet.skillRefId());
+  LOG() << "Buff link received " << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")," << packet.activeBuffToken() << ',' << packet.targetGlobalId() << ',' << packet.targetName() << std::endl;
+  // TODO: Where should I track the buff link? It seems to be a duplicate of what was sent in the "BuffAdd" packet.
+}
+
 void PacketProcessor::serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const {
-  // LOG() << "Buff remove received. Buffs to remove: [ ";
-  // for (const auto &tokenId : packet.tokens()) {
-  //   std::cout << tokenId << ", ";
-  // }
-  // std::cout << "]" << std::endl;
+  LOG() << "Buff remove received. Buffs to remove: [ ";
+  for (const auto &tokenId : packet.tokens()) {
+    std::cout << tokenId << ", ";
+  }
+  std::cout << "]" << std::endl;
   worldState_.removeBuffs(packet.tokens());
 }
 

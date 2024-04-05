@@ -425,9 +425,7 @@ void Character::setCurrentHp(uint32_t hp, broker::EventBroker &eventBroker) {
   eventBroker.publishEvent<event::EntityHpChanged>(globalId);
 }
 
-// ============================================================================================================================================
-
-std::set<sro::scalar_types::ReferenceObjectId> PlayerCharacter::activeBuffs() const {
+std::set<sro::scalar_types::ReferenceObjectId> Character::activeBuffs() const {
   std::set<sro::scalar_types::ReferenceObjectId> result;
   for (const auto &buffTokenDataPair : buffDataMap) {
     result.emplace(buffTokenDataPair.second.skillRefId);
@@ -435,7 +433,7 @@ std::set<sro::scalar_types::ReferenceObjectId> PlayerCharacter::activeBuffs() co
   return result;
 }
 
-bool PlayerCharacter::buffIsActive(sro::scalar_types::ReferenceObjectId skillRefId) const {
+bool Character::buffIsActive(sro::scalar_types::ReferenceObjectId skillRefId) const {
   for (const auto &buffTokenDataPair : buffDataMap) {
     if (buffTokenDataPair.second.skillRefId == skillRefId) {
       return true;
@@ -444,7 +442,7 @@ bool PlayerCharacter::buffIsActive(sro::scalar_types::ReferenceObjectId skillRef
   return false;
 }
 
-int PlayerCharacter::buffMsRemaining(sro::scalar_types::ReferenceObjectId skillRefId) const {
+int Character::buffMsRemaining(sro::scalar_types::ReferenceObjectId skillRefId) const {
   const auto currentTime = std::chrono::high_resolution_clock::now();
   std::optional<int> maxTime;
   // Loop over all buffs we have and return the remaining time of the buff that will expire the latest.
@@ -464,7 +462,7 @@ int PlayerCharacter::buffMsRemaining(sro::scalar_types::ReferenceObjectId skillR
   return *maxTime;
 }
 
-void PlayerCharacter::addBuff(sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, int32_t durationMs, broker::EventBroker &eventBroker) {
+void Character::addBuff(sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, int32_t durationMs, broker::EventBroker &eventBroker) {
   if (buffDataMap.find(tokenId) != buffDataMap.end()) {
     throw std::runtime_error("Already tracking buff with this token ID");
   }
@@ -473,7 +471,7 @@ void PlayerCharacter::addBuff(sro::scalar_types::ReferenceObjectId skillRefId, u
   eventBroker.publishEvent<event::BuffAdded>(globalId, skillRefId);
 }
 
-void PlayerCharacter::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, broker::EventBroker &eventBroker) {
+void Character::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, broker::EventBroker &eventBroker) {
   auto buffIt = buffDataMap.find(tokenId);
   if (buffIt == buffDataMap.end()) {
     throw std::runtime_error("Trying to remove buff "+std::to_string(skillRefId)+" from entity, but cannot find buff");
@@ -482,7 +480,7 @@ void PlayerCharacter::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId
   eventBroker.publishEvent<event::BuffRemoved>(globalId, skillRefId);
 }
 
-void PlayerCharacter::clearBuffs() {
+void Character::clearBuffs() {
   buffDataMap.clear();
 }
 

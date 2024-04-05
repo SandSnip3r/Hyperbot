@@ -185,6 +185,12 @@ std::string StreamUtility::Read_Ascii( int32_t count )
 	return str;
 }
 
+void StreamUtility::Read(std::string &out) {
+  uint16_t stringLength;
+  Read(stringLength);
+  out = Read_Ascii(stringLength);
+}
+
 std::wstring StreamUtility::Read_AsciiToUnicode( int32_t count )
 {
 	if( count == 0 )

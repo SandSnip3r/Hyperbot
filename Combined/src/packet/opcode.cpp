@@ -2,7 +2,7 @@
 
 namespace packet {
 
-std::string toStr(Opcode opcode) {
+std::string toString(Opcode opcode) {
   if (opcode == Opcode::kServerEnvironmentWeather) {
     return "kServerEnvironmentWeather";
   }
@@ -354,6 +354,9 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kServerAgentBuffAdd) {
     return "kServerAgentBuffAdd";
   }
+  if (opcode == Opcode::kServerAgentBuffLink) {
+    return "kServerAgentBuffLink";
+  }
   if (opcode == Opcode::kServerAgentBuffRemove) {
     return "kServerAgentBuffRemove";
   }
@@ -441,12 +444,7 @@ std::string toStr(Opcode opcode) {
   if (opcode == Opcode::kServerGatewayLoginIbuvResult) {
     return "kServerGatewayLoginIbuvResult";
   }
-  return "UNKNOWN";
-}
-
-std::ostream& operator<<(std::ostream &stream, Opcode opcode) {
-  stream << toStr(opcode);
-  return stream;
+  return "UNKNOWN-"+std::to_string(static_cast<int>(opcode));
 }
 
 } // namespace packet

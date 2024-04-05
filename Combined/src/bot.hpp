@@ -25,6 +25,7 @@ public:
       broker::EventBroker &eventBroker);
 
   void initialize();
+  void run();
   const config::Config& config() const;
   const proto::config::CharacterConfig& currentCharacterConfig() const;
   const pk2::GameData& gameData() const;
@@ -50,6 +51,7 @@ protected:
   StatAggregator statAggregator_{worldState_, eventBroker_};
 
 private:
+  std::unique_ptr<state::machine::StateMachine> loginStateMachine_;
   std::unique_ptr<state::machine::StateMachine> autoPotionStateMachine_;
   std::unique_ptr<state::machine::StateMachine> bottingStateMachine_;
   inline static const std::string kEstVisRangeFilename{"estimatedVisibilityRange.txt"};
@@ -70,12 +72,6 @@ private:
 
   // Debug help
   void handleInjectPacket(const event::InjectPacket &castedEvent);
-  // Login events
-  void handleStateShardIdUpdated() const;
-  void handleStateConnectedToAgentServerUpdated();
-  void handleStateReceivedCaptchaPromptUpdated() const;
-  void handleLoggedIn();
-  void handleStateCharacterListUpdated() const;
   // Movement events
   void handleMovementTimerEnded();
   void handleSpeedUpdated();

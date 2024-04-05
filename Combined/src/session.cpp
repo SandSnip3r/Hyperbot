@@ -19,8 +19,8 @@ void Session::initialize() {
 }
 
 void Session::run() {
-  auto port = proxy_.getOurListeningPort();
-  loader_.startClient(port); //throws if problem starting client & injecting
+  bot_.run(); // TODO: We should get rid of this function once we move the world state out of the bot.
+  loader_.startClient(proxy_.getOurListeningPort()); //throws if problem starting client & injecting
   proxy_.run(); //throws if socket issues, blocks
 }
 

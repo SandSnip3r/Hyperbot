@@ -14,6 +14,7 @@
 #include "serverAgentAlchemyElixirResponse.hpp"
 #include "serverAgentAlchemyStoneResponse.hpp"
 #include "serverAgentBuffAdd.hpp"
+#include "serverAgentBuffLink.hpp"
 #include "serverAgentBuffRemove.hpp"
 #include "serverAgentCharacterData.hpp"
 #include "serverAgentChatUpdate.hpp"
@@ -58,7 +59,8 @@ PacketParser::PacketParser(const state::EntityTracker &entityTracker, const pk2:
 std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &packet) const {
   // Given a packet's opcode, determine which parsed packet type is appropriate
   try {
-    switch (static_cast<Opcode>(packet.opcode)) {
+    const auto opcode = static_cast<Opcode>(packet.opcode);
+    switch (opcode) {
       case Opcode::kClientAgentChatRequest:
         return std::make_unique<ClientAgentChatRequest>(packet);
       case Opcode::kClientAgentCharacterMoveRequest:
@@ -139,6 +141,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ServerAgentEntityUpdateHwanLevel>(packet);
       case Opcode::kServerAgentBuffAdd:
         return std::make_unique<ServerAgentBuffAdd>(packet, gameData_.skillData());
+      case Opcode::kServerAgentBuffLink:
+        return std::make_unique<ServerAgentBuffLink>(packet);
       case Opcode::kServerAgentBuffRemove:
         return std::make_unique<ServerAgentBuffRemove>(packet);
       case Opcode::kClientAgentActionCommandRequest:
@@ -167,7 +171,7 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       // case static_cast<Opcode>(0x6005):
         return std::make_unique<ParsedUnknown>(packet);
     }
-    std::cout << "Warning! No packet parser found for opcode " << std::hex << (int)packet.opcode << std::dec << '\n';
+    std::cout << "Warning! No packet parser found for opcode " << std::hex << (int)packet.opcode << std::dec << '(' << toString(opcode) << ")" << std::endl;
   } catch (std::exception &ex) {
     std::cout << "Exception while parsing packet!\n";
     std::cout << "  " << ex.what() << '\n';

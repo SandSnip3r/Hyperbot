@@ -248,6 +248,11 @@ bool isValidTextDataLine(const std::string &line) {
   return isValidLine(kDataCount, line);
 }
 
+bool isValidMasteryLine(const std::string &line) {
+  constexpr int kDataCount = 13;
+  return isValidLine(kDataCount, line);
+}
+
 pk2::ref::Character parseCharacterdataLine(const std::string &line) {
   pk2::ref::Character character;
   const char *ptr = line.data();
@@ -956,6 +961,25 @@ pk2::ref::TextItemOrSkill parseTextItemOrSkillLine(const std::string &line) {
   ptr = parse(ptr, textItemOrSkill.unkLang9);
   parse(ptr, textItemOrSkill.unkLang10);
   return textItemOrSkill;
+}
+
+pk2::ref::Mastery parseMasteryLine(const std::string &line) {
+  pk2::ref::Mastery mastery; // TODO: make these pk2::ref items constructable from a string, create a common base class.
+  const char *ptr = line.data();
+  ptr = parse(ptr, mastery.masteryId);
+  ptr = parse(ptr, mastery.masteryName);
+  ptr = parse(ptr, mastery.masteryNameCode);
+  ptr = parse(ptr, mastery.groupNum);
+  ptr = parse(ptr, mastery.masteryDescriptionId);
+  ptr = parse(ptr, mastery.tabNameCode);
+  ptr = parse(ptr, mastery.tabId);
+  ptr = parse(ptr, mastery.skillToolTipType);
+  ptr = parse(ptr, mastery.weaponType1);
+  ptr = parse(ptr, mastery.weaponType2);
+  ptr = parse(ptr, mastery.weaponType3);
+  ptr = parse(ptr, mastery.masteryIcon);
+  parse(ptr, mastery.masteryFocusIcon);
+  return mastery;
 }
 
 uint16_t parseGatePort(const std::vector<uint8_t> &data) {

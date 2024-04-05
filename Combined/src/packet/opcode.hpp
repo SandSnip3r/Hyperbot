@@ -30,7 +30,7 @@ A000 = Framework_Ack
 B000 = Game_Ack
 */
 
-enum class Opcode {
+enum class Opcode : uint16_t {
   HACK = 0xA003,
 
   LOGIN_CLIENT_INFO = 0x2001, // LOGIN_CLIENT_INFO, LOGIN_SERVER_INFO, CLIENT_INFO, SERVER_INFO
@@ -170,6 +170,7 @@ enum class Opcode {
   kServerAgentActionCommandResponse = 0xB074,
 
   kServerAgentBuffAdd = 0xB0BD,
+  kServerAgentBuffLink = 0xB0BE,
   kServerAgentBuffRemove = 0xB072,
 
   SERVER_DEAD = 0x3011,
@@ -215,8 +216,7 @@ enum class Opcode {
   kServerAgentOperatorResponse = 0xB010,
 };
 
-std::string toStr(Opcode opcode);
-std::ostream& operator<<(std::ostream &stream, Opcode opcode);
+std::string toString(Opcode opcode);
 
 } // namespace packet
 

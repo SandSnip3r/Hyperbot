@@ -1,5 +1,4 @@
 #include "eventBroker.hpp"
-#include "logging.hpp"
 
 #include <string>
 

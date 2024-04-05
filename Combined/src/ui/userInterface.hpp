@@ -39,7 +39,7 @@ private:
   zmq::socket_t publisher_{context_, zmq::socket_type::pub};
   const pk2::GameData &gameData_; // TODO: Remove. The actual UserInterface needs this anyways
   broker::EventBroker &eventBroker_;
-  const state::WorldState *worldState_;
+  const state::WorldState *worldState_{nullptr};
   std::thread thr_;
 
   void subscribeToEvents();

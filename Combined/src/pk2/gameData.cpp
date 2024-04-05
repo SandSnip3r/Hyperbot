@@ -80,6 +80,10 @@ const SkillData& GameData::skillData() const {
   return skillData_;
 }
 
+const MasteryData& GameData::masteryData() const {
+  return masteryData_;
+}
+
 const MagicOptionData& GameData::magicOptionData() const {
   return magicOptionData_;
 }
@@ -495,6 +499,7 @@ void GameData::parseRefRegion(sro::pk2::Pk2ReaderModern &pk2Reader) {
 void GameData::parseTextData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   parseTextZoneName(pk2Reader);
   parseTextItemAndSkill(pk2Reader);
+  parseMasteryData(pk2Reader);
 }
 
 void GameData::parseTextZoneName(sro::pk2::Pk2ReaderModern &pk2Reader) {
@@ -517,6 +522,15 @@ void GameData::parseTextItemAndSkill(sro::pk2::Pk2ReaderModern &pk2Reader) {
     auto textItemAndSkillLines = parsing::fileDataToStringLines2(textItemAndSkillData);
     parseDataFile2<ref::TextItemOrSkill>(textItemAndSkillLines, parsing::isValidTextDataLine, parsing::parseTextItemOrSkillLine, std::bind(&TextItemAndSkillData::addItem, &textItemAndSkillData_, std::placeholders::_1));
   }
+}
+
+void GameData::parseMasteryData(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  const std::string kPath = "server_dep\\silkroad\\textdata\\skillmasterydata.txt";
+  sro::pk2::PK2Entry entry = pk2Reader.getEntry(kPath);
+  const auto data = pk2Reader.getEntryData(entry);
+  const auto lines = parsing::fileDataToStringLines(data);
+  // TODO: Template on the add function instead
+  parseDataFile2<ref::Mastery>(lines, parsing::isValidMasteryLine, parsing::parseMasteryLine, std::bind(&MasteryData::addMastery, &masteryData_, std::placeholders::_1));
 }
 
 void GameData::parseNavmeshData(sro::pk2::Pk2ReaderModern &pk2Reader) {

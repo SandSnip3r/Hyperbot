@@ -164,14 +164,7 @@ public:
   bool connectedToAgentServer{false};
   bool receivedCaptchaPrompt{false};
   std::vector<packet::structures::CharacterSelection::Character> characterList;
-  bool loggingIn{false};
   uint32_t token;
-
-  // TODO: The two things below do not belong here
-  // PC knowledge
-  const std::array<uint8_t,6> kMacAddress = {0,0,0,0,0,0};
-  // Server knowledge
-  const std::string kCaptchaAnswer = "";
   // =========================================================
 
   bool spawned_{false};

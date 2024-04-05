@@ -34,7 +34,7 @@ void PacketLogger::logPacket(const PacketContainer &packet, bool blocked, Packet
   if (logToFile) {
     logPacketToFile(msSinceEpoch, packet, blocked, direction);
   }
-  if (logToConsole) {
+  if (logToConsole || (std::find(opcodeConsoleLoggingWhitelist_.begin(), opcodeConsoleLoggingWhitelist_.end(), static_cast<packet::Opcode>(packet.opcode)) != opcodeConsoleLoggingWhitelist_.end())) {
     logPacketToConsole(msSinceEpoch, packet, blocked, direction);
   }
 }
@@ -97,7 +97,7 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
     }
     ss << '\n';
     if (lineNum == 0) {
-      const std::string kOpcodeStr = packet::toStr(static_cast<packet::Opcode>(packet.opcode));
+      const std::string kOpcodeStr = packet::toString(static_cast<packet::Opcode>(packet.opcode));
       if (kOpcodeStr.size() >= indentSize) {
         ss << kOpcodeStr.substr(0, indentSize);
       } else {

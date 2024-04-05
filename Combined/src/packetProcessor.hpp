@@ -14,6 +14,7 @@
 #include "packet/parsing/serverAgentAlchemyElixirResponse.hpp"
 #include "packet/parsing/serverAgentAlchemyStoneResponse.hpp"
 #include "packet/parsing/serverAgentBuffAdd.hpp"
+#include "packet/parsing/serverAgentBuffLink.hpp"
 #include "packet/parsing/serverAgentBuffRemove.hpp"
 #include "packet/parsing/serverAgentCharacterData.hpp"
 #include "packet/parsing/serverAgentChatUpdate.hpp"
@@ -150,6 +151,7 @@ private:
   void handleSkillAction(const packet::structures::SkillAction &action, std::optional<sro::scalar_types::EntityGlobalId> globalId = std::nullopt) const;
   void handleKnockedBackOrKnockedDown() const;
   void serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const;
+  void serverAgentBuffLinkReceived(const packet::parsing::ServerAgentBuffLink &packet) const;
   void serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const;
   void serverAgentChatUpdateReceived(const packet::parsing::ServerAgentChatUpdate &packet) const;
 

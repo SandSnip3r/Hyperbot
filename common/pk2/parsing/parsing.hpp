@@ -8,6 +8,7 @@
 #include "../ref/magicOption.hpp"
 #include "../ref/mappingShopGroup.hpp"
 #include "../ref/mappingShopWithTab.hpp"
+#include "../ref/mastery.hpp"
 #include "../ref/region.hpp"
 #include "../ref/scrapOfPackageItem.hpp"
 #include "../ref/shopGood.hpp"
@@ -122,6 +123,12 @@ bool isValidMappingShopWithTabLine(const std::string &line);
 // [return]       Whether the line is valid or not
 bool isValidTextDataLine(const std::string &line);
 
+// Validates if the line of skill mastery data is valid.
+//
+// [param] line   Line from PK2 file representing a mastery
+// [return]       Whether the line is valid or not
+bool isValidMasteryLine(const std::string &line);
+
 // Parses string representing a line of text from skilldata_xxxx.txt in the Media.pk2 into a Skill object
 //
 // [param] line   A line of text
@@ -212,6 +219,8 @@ pk2::ref::TextZoneName parseTextZoneNameLine(const std::string &line);
 // [param] line   A line of text
 // [return]       A populated TextItemOrSkill object
 pk2::ref::TextItemOrSkill parseTextItemOrSkillLine(const std::string &line);
+
+pk2::ref::Mastery parseMasteryLine(const std::string &line);
 
 // Parses raw pk2 data into a gateway server port
 //

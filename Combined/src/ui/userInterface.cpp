@@ -101,6 +101,9 @@ void UserInterface::subscribeToEvents() {
 }
 
 void UserInterface::handleEvent(const event::Event *event) {
+  if (worldState_ == nullptr) {
+    throw std::runtime_error("User interface received an event, but does not yet have a pointer to the world state");
+  }
   std::unique_lock<std::mutex> selfStateLock(worldState_->selfState().selfMutex);
 
   try {

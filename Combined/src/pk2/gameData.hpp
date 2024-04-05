@@ -5,6 +5,7 @@
 #include "itemData.hpp"
 #include "levelData.hpp"
 #include "magicOptionData.hpp"
+#include "masteryData.hpp"
 #include "refRegion.hpp"
 #include "regionInfo.hpp"
 #include "shopData.hpp"
@@ -36,6 +37,7 @@ public:
   const ItemData& itemData() const;
   const ShopData& shopData() const;
   const SkillData& skillData() const;
+  const MasteryData& masteryData() const;
   const MagicOptionData& magicOptionData() const;
   const LevelData& levelData() const;
   const RefRegion& refRegion() const;
@@ -54,6 +56,7 @@ private:
   ItemData itemData_;
   ShopData shopData_;
   SkillData skillData_;
+  MasteryData masteryData_;
   MagicOptionData magicOptionData_;
   LevelData levelData_;
   RefRegion refRegion_;
@@ -76,6 +79,7 @@ private:
   void parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseMasteryData(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseTeleportData(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseMagicOptionData(sro::pk2::Pk2ReaderModern &pk2Reader);

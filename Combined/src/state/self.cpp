@@ -189,7 +189,6 @@ void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &state
       const auto kBit = static_cast<uint32_t>(1) << bitNum;
       if ((newlyReceivedStates & kBit) != 0) {
         const auto kState = static_cast<packet::enums::AbnormalStateFlag>(kBit);
-        LOG() << "We are now under " << kState << std::endl;
         if (kState <= packet::enums::AbnormalStateFlag::kZombie) {
           // Legacy state
           // We now are kState
@@ -208,7 +207,6 @@ void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &state
       const auto kBit = static_cast<uint32_t>(1) << bitNum;
       if ((expiredStates & kBit) != 0) {
         const auto kState = static_cast<packet::enums::AbnormalStateFlag>(kBit);
-        LOG() << "We are no longer under " << kState << std::endl;
         if (kState <= packet::enums::AbnormalStateFlag::kZombie) {
           // Legacy state
           // We are no longer kState

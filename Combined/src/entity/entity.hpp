@@ -124,18 +124,12 @@ public:
 
   void setLifeState(sro::entity::LifeState newLifeState, broker::EventBroker &eventBroker);
   void setCurrentHp(uint32_t hp, broker::EventBroker &eventBroker);
-protected:
-  std::optional<uint32_t> currentHp_;
-};
 
-struct BuffData {
-  sro::scalar_types::ReferenceObjectId skillRefId;
-  std::chrono::high_resolution_clock::time_point endTimePoint;
-};
-
-class PlayerCharacter : public Character {
-public:
-  std::string name;
+  // ---- Buffs ----
+  struct BuffData {
+    sro::scalar_types::ReferenceObjectId skillRefId;
+    std::chrono::high_resolution_clock::time_point endTimePoint;
+  };
   // Maps TokenId to BuffData
   std::map<uint32_t, BuffData> buffDataMap;
   std::set<sro::scalar_types::ReferenceObjectId> activeBuffs() const;
@@ -144,6 +138,13 @@ public:
   void addBuff(sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, int32_t durationMs, broker::EventBroker &eventBroker);
   void removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, broker::EventBroker &eventBroker);
   void clearBuffs();
+protected:
+  std::optional<uint32_t> currentHp_;
+};
+
+class PlayerCharacter : public Character {
+public:
+  std::string name;
 };
 
 class NonplayerCharacter : public Character {};

@@ -53,6 +53,7 @@ public:
 	bool SeekRead( int32_t index, SeekDirection dir );
 	int32_t Delete( int32_t index, int32_t count );
 	std::string Read_Ascii( int32_t count );
+	void Read(std::string &out);
 	std::wstring Read_AsciiToUnicode( int32_t count );
 	std::wstring Read_Unicode( int32_t count );
 	std::string Read_UnicodeToAscii( int32_t count );
