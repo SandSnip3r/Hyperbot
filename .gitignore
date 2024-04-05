@@ -267,3 +267,6 @@ __pycache__/
 tools/paramIdNumToName/main
 tools/whites-and-blues/main
 documents/private-server.md
+tools/alchemy-math/*.o
+tools/alchemy-math/expected
+tools/alchemy-math/sim

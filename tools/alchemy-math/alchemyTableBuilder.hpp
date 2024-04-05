@@ -28,7 +28,7 @@ public:
     std::fill(powderBonuses_.begin()+index, powderBonuses_.end(), 0.08);
   }
 
-  void useLuckyPowder(bool use) {
+  void setUseLuckyPowder(bool use) {
     useLuckyPowder_ = use;
   }
 
@@ -36,11 +36,21 @@ public:
     std::fill(useLuckStoneTable_.begin(), useLuckStoneTable_.end(), false);
   }
 
-  void useLuckStoneAt(int level, bool use) {
+  void setUseLuckStoneAt(int level, bool use) {
     useLuckStoneTable_[level] = true;
   }
 
-  void usePremium(bool use) {
+  void setUseLuckStoneAtAndAbove(int level, bool use) {
+    for (size_t i=level; i<useLuckStoneTable_.size(); ++i) {
+      useLuckStoneTable_[i] = true;
+    }
+  }
+
+  bool getUseLuckStoneAt(int level) const {
+    return useLuckStoneTable_[level];
+  }
+
+  void setUsePremium(bool use) {
     usePremium_ = use;
   }
 
@@ -58,19 +68,20 @@ public:
         table_[i] += kLuckStoneBonus;
       }
       if (usePremium_) {
-        table_[i] += kPremiumStoneBonus;
+        table_[i] += kPremiumBonus;
       }
       table_[i] += avatarBonus_;
       table_[i] = std::clamp(table_[i], 0.0, 1.0);
     }
   }
-  
+
   const std::array<double,255>& get() const {
     return table_;
   }
-private:
+
   static constexpr const double kLuckStoneBonus{0.05};
-  static constexpr const double kPremiumStoneBonus{0.05};
+private:
+  static constexpr const double kPremiumBonus{0.05};
   std::array<double,255> baseRates_;
   std::array<double,255> powderBonuses_;
   std::array<bool,255> useLuckStoneTable_ = {};
