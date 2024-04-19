@@ -599,14 +599,13 @@ std::vector<NavmeshTriangulation::State> NavmeshTriangulation::getSuccessors(con
   const auto &regionTriangulation = getNavmeshTriangulationForRegion(currentStateRegionId);
   const auto regionCurrentState = createRegionState(currentState);
   const auto regionGoalState = createRegionState(goalState);
-  std::vector<SingleRegionNavmeshTriangulation::State> regionSuccessors;
   std::optional<SingleRegionNavmeshTriangulation::State> optionalGoal;
   if (goalTriangleRegionId == currentStateRegionId) {
     // State and goal are in same region, we can pass the goal state to getSuccessors
     optionalGoal = regionGoalState;
   }
-  regionSuccessors = regionTriangulation.getSuccessors(regionCurrentState, optionalGoal, agentRadius);
 
+  const auto regionSuccessors = regionTriangulation.getSuccessors(regionCurrentState, optionalGoal, agentRadius);
   std::vector<State> globalSuccessors;
   std::transform(regionSuccessors.begin(), regionSuccessors.end(), std::back_inserter(globalSuccessors), [currentStateRegionId = currentStateRegionId](const auto &regionCurrentState) {
     return createGlobalState(regionCurrentState, currentStateRegionId);
