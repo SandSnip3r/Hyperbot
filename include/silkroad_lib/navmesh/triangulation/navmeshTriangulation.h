@@ -47,10 +47,11 @@ public:
   MarkerType getVertexMarker(const IndexType vertexIndex) const;
   pathfinder::Vector getVertex(const IndexType vertexIndex) const;
   TriangleVerticesType getTriangleVertices(const IndexType triangleIndex) const;
-  std::vector<State> getSuccessors(const State &currentState, const State &goalState, const double agentRadius) const;
+  std::vector<State> getSuccessors(const State &currentState, const std::optional<State> goalState, const double agentRadius) const;
   std::vector<State> getNeighborsInObjectArea(const State &currentState) const;
   EdgeType getSharedEdge(const IndexType triangle1Index, const IndexType triangle2Index) const;
   EdgeType getEdge(const IndexType edgeIndex) const;
+  EdgeVertexIndicesType getEdgeVertexIndices(const IndexType edgeIndex) const;
   // Debug help (for Pathfinder)
   std::optional<IndexType> getVertexIndex(const pathfinder::Vector &vertex) const;
   

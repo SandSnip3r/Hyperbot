@@ -581,31 +581,34 @@ std::optional<NavmeshTriangulation::GlobalEdgeAndTriangleIndices> NavmeshTriangu
   return globalEdgeLinkIt->second;
 }
 
-std::vector<NavmeshTriangulation::State> NavmeshTriangulation::getSuccessors(const State &currentState, const State &goalState, const double agentRadius) const {
+std::vector<NavmeshTriangulation::State> NavmeshTriangulation::getSuccessors(const State &currentState, const std::optional<State> goalState, const double agentRadius) const {
   if (currentState.isGoal()) {
     throw std::runtime_error("Trying to get successors of goal");
   }
 
-  if (currentState.isSameTriangleAs(goalState)) {
-    // This is the goal, only successor is the goal point itself
-    auto newGoalState{currentState};
-    newGoalState.setIsGoal(true);
-    return {newGoalState};
+  if (goalState.has_value()) {
+    if (currentState.isSameTriangleAs(*goalState)) {
+      // This is the goal, only successor is the goal point itself
+      auto newGoalState{currentState};
+      newGoalState.setIsGoal(true);
+      return {newGoalState};
+    }
   }
 
   // Get successors from single region
   const auto [currentStateRegionId, currentStateTriangleIndex] = splitRegionAndIndex(currentState.getTriangleIndex());
-  const auto [goalTriangleRegionId, goalTriangleRegionIndex] = splitRegionAndIndex(goalState.getTriangleIndex());
   const auto &regionTriangulation = getNavmeshTriangulationForRegion(currentStateRegionId);
   const auto regionCurrentState = createRegionState(currentState);
-  const auto regionGoalState = createRegionState(goalState);
-  std::vector<SingleRegionNavmeshTriangulation::State> regionSuccessors;
   std::optional<SingleRegionNavmeshTriangulation::State> optionalGoal;
-  if (goalTriangleRegionId == currentStateRegionId) {
-    // State and goal are in same region, we can pass the goal state to getSuccessors
-    optionalGoal = regionGoalState;
+  if (goalState.has_value()) {
+    const auto [goalTriangleRegionId, goalTriangleRegionIndex] = splitRegionAndIndex(goalState->getTriangleIndex());
+    const auto regionGoalState = createRegionState(*goalState);
+    if (goalTriangleRegionId == currentStateRegionId) {
+      // State and goal are in same region, we can pass the goal state to getSuccessors
+      optionalGoal = regionGoalState;
+    }
   }
-  regionSuccessors = regionTriangulation.getSuccessors(regionCurrentState, optionalGoal, agentRadius);
+  std::vector<SingleRegionNavmeshTriangulation::State> regionSuccessors = regionTriangulation.getSuccessors(regionCurrentState, optionalGoal, agentRadius);
 
   std::vector<State> globalSuccessors;
   std::transform(regionSuccessors.begin(), regionSuccessors.end(), std::back_inserter(globalSuccessors), [currentStateRegionId = currentStateRegionId](const auto &regionCurrentState) {
@@ -732,6 +735,13 @@ NavmeshTriangulation::EdgeType NavmeshTriangulation::getEdge(const IndexType edg
   const auto &regionTriangulation = getNavmeshTriangulationForRegion(regionId);
   const auto [edgeVertex1, edgeVertex2] = regionTriangulation.getEdge(index);
   return {translatePointToGlobal(edgeVertex1, regionId), translatePointToGlobal(edgeVertex2, regionId)};
+}
+
+NavmeshTriangulation::EdgeVertexIndicesType NavmeshTriangulation::getEdgeVertexIndices(const IndexType edgeIndex) const {
+  const auto [regionId, index] = splitRegionAndIndex(edgeIndex);
+  const auto &regionTriangulation = getNavmeshTriangulationForRegion(regionId);
+  const auto [edgeIndex1, edgeIndex2] = regionTriangulation.getEdgeVertexIndices(index);
+  return {createIndex(edgeIndex1, regionId), createIndex(edgeIndex2, regionId)};
 }
   
 pathfinder::Vector NavmeshTriangulation::translatePointToGlobal(pathfinder::Vector point, const uint16_t regionId) const {
