@@ -27,21 +27,21 @@ void DropItem::onUpdate(const event::Event *event) {
     if (auto *entitySpawnedEvent = dynamic_cast<const event::EntitySpawned*>(event); entitySpawnedEvent != nullptr) {
       const auto *entity = bot_.entityTracker().getEntity(entitySpawnedEvent->globalId);
       if (entity->refObjId == refId_) {
-        LOG() << "Item spawned" << std::endl;
+        HYPERBOT_LOG() << "Item spawned" << std::endl;
         // This is our item.
       }
     } else if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event); inventoryUpdatedEvent != nullptr) {
-      LOG() << "inventory update" << std::endl;
+      HYPERBOT_LOG() << "inventory update" << std::endl;
       if (!inventoryUpdatedEvent->destSlotNum) {
-        LOG() << "  is a drop" << std::endl;
+        HYPERBOT_LOG() << "  is a drop" << std::endl;
         // Is a item drop/delete update.
         if (*inventoryUpdatedEvent->srcSlotNum == inventorySlot_) {
-          LOG() << "    is our item" << std::endl;
+          HYPERBOT_LOG() << "    is our item" << std::endl;
           // Is our item.
           done_ = true;
           return;
         } else {
-          LOG() << "    dropped from " << (int)*inventoryUpdatedEvent->srcSlotNum << " but we expected " << (int)inventorySlot_ << std::endl;
+          HYPERBOT_LOG() << "    dropped from " << (int)*inventoryUpdatedEvent->srcSlotNum << " but we expected " << (int)inventorySlot_ << std::endl;
         }
       }
     }
@@ -54,7 +54,7 @@ void DropItem::onUpdate(const event::Event *event) {
   const auto packet = packet::building::ClientAgentInventoryOperationRequest::dropItem(inventorySlot_);
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
   waitingForItemToBeDropped_ = true;
-  LOG() << "Send drop packet" << std::endl;
+  HYPERBOT_LOG() << "Send drop packet" << std::endl;
 }
 
 bool DropItem::done() const {

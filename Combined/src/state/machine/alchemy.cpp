@@ -45,18 +45,18 @@ void Alchemy::onUpdate(const event::Event *event) {
         alchemyTimedOutEventId_.reset();
       }
     } else if (event->eventCode == event::EventCode::kAlchemyTimedOut) {
-      LOG() << "Received alchemy timed out event" << std::endl;
+      HYPERBOT_LOG() << "Received alchemy timed out event" << std::endl;
       if (alchemyTimedOutEventId_) {
         alchemyTimedOutEventId_.reset();
       } else {
-        LOG() << "Whoa! Have no event!" << std::endl;
+        HYPERBOT_LOG() << "Whoa! Have no event!" << std::endl;
       }
     } else if (event->eventCode == event::EventCode::kGmCommandTimedOut) {
-      LOG() << "Received gm command timed out event" << std::endl;
+      HYPERBOT_LOG() << "Received gm command timed out event" << std::endl;
       if (makeItemTimedOutEventId_) {
         makeItemTimedOutEventId_.reset();
       } else {
-        LOG() << "Whoa! Have no event!" << std::endl;
+        HYPERBOT_LOG() << "Whoa! Have no event!" << std::endl;
       }
       waitingForCreatedItem_.reset();
     } else if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event); inventoryUpdatedEvent != nullptr) {
@@ -125,7 +125,7 @@ void Alchemy::onUpdate(const event::Event *event) {
   const auto slotsWithBlade = bot_.selfState().inventory.findItemsWithRefId(kBladeRefObjId);
   if (slotsWithBlade.empty()) {
     // Don't have a blade to work with. Make one.
-    LOG() << "spawning a blade that is +" << nextBladePlusToSpawn_ << std::endl;
+    HYPERBOT_LOG() << "spawning a blade that is +" << nextBladePlusToSpawn_ << std::endl;
     const auto makeItemPacket = packet::building::ClientAgentOperatorRequest::makeItem(kBladeRefObjId, nextBladePlusToSpawn_);
     ++nextBladePlusToSpawn_;
     if (nextBladePlusToSpawn_ == 9) {
@@ -142,7 +142,7 @@ void Alchemy::onUpdate(const event::Event *event) {
   if (blade == nullptr) {
     // Whoa, expected item at this slot to be a blade, but it's not even a piece of equipment!
     // TODO: Somehow throw an error.
-    LOG() << "Expected item at this slot (" << slotsWithBlade.front() << ") to be a blade" << std::endl;
+    HYPERBOT_LOG() << "Expected item at this slot (" << slotsWithBlade.front() << ") to be a blade" << std::endl;
     done_ = true;
     return;
   }
@@ -153,7 +153,7 @@ void Alchemy::onUpdate(const event::Event *event) {
   }
   if (blade->optLevel == 0) {
     // We just failed. Let's drop this sword.
-    LOG() << "Want to drop blade" << std::endl;
+    HYPERBOT_LOG() << "Want to drop blade" << std::endl;
     setChildStateMachine<DropItem>(slotsWithBlade.front());
     return;
   }
@@ -176,7 +176,7 @@ void Alchemy::onUpdate(const event::Event *event) {
       const auto luckyStoneSlots = bot_.selfState().inventory.findItemsWithRefId(kLuckyStoneRefObjId);
       if (luckyStoneSlots.empty()) {
         // Don't have any lucky stones.
-        LOG() << "Making a lucky stone" << std::endl;
+        HYPERBOT_LOG() << "Making a lucky stone" << std::endl;
         const auto makeItemPacket = packet::building::ClientAgentOperatorRequest::makeItem(kLuckyStoneRefObjId, 0);
         bot_.packetBroker().injectPacket(makeItemPacket, PacketContainer::Direction::kClientToServer);
         makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMakeItemTimedOutMs), event::EventCode::kGmCommandTimedOut);

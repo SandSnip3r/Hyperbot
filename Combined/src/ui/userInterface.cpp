@@ -51,9 +51,9 @@ void UserInterface::runAsync() {
     // Run the request receiver in another thread
     thr_ = std::thread(&UserInterface::run, this);
   } catch (const std::exception &ex) {
-    LOG() << "Exception while binding to UI: \"" << ex.what() << "\"" << std::endl;
+    HYPERBOT_LOG() << "Exception while binding to UI: \"" << ex.what() << "\"" << std::endl;
   } catch (...) {
-    LOG() << "Exception while binding to UI" << std::endl;
+    HYPERBOT_LOG() << "Exception while binding to UI" << std::endl;
   }
 }
 
@@ -289,9 +289,9 @@ void UserInterface::handleEvent(const event::Event *event) {
       return;
     }
 
-    LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
+    HYPERBOT_LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
   } catch (std::exception &ex) {
-    LOG() << "Error while handling event!\n  " << ex.what() << std::endl;
+    HYPERBOT_LOG() << "Error while handling event!\n  " << ex.what() << std::endl;
   }
 }
 

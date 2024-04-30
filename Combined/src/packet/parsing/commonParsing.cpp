@@ -608,7 +608,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
         uint16_t guildNameLength = stream.Read<uint16_t>();
         std::string guildName = stream.Read_Ascii(guildNameLength);
       } else if (categories::kSiegeStruct.contains(characterTypeId)) {
-        LOG() << "CGObjSiegeStruct encountered in parseSpawn, but unhandled" << std::endl;
+        HYPERBOT_LOG() << "CGObjSiegeStruct encountered in parseSpawn, but unhandled" << std::endl;
       //   // CGObjSiegeStruct
       //   uint32_t unk0 = stream.Read<uint32_t>(); // 0xFFFFFFFF
       //   uint16_t unk1 = stream.Read<uint16_t>(); // 0x0054

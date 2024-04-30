@@ -69,7 +69,7 @@ void TalkingToShopNpc::figureOutWhatToBuy() {
     const auto prev = countToBuy;
     countToBuy = std::min<int32_t>(countToBuy, remainingGold / itemData.price);
     if (countToBuy != prev) {
-      LOG() << "Wanted to buy " << prev << " " << itemName << "(s), but can only afford  " << countToBuy << std::endl;
+      HYPERBOT_LOG() << "Wanted to buy " << prev << " " << itemName << "(s), but can only afford  " << countToBuy << std::endl;
     }
     if (countToBuy == 0) {
       // Cannot afford any of these.
@@ -96,7 +96,7 @@ void TalkingToShopNpc::figureOutWhatToBuy() {
       for (const auto &itemIndexAndScrapPair : packageMap) {
         if (itemIndexAndScrapPair.second.refItemCodeName == nameOfItemToBuy) {
           itemsToBuy_[itemRefId] = BuyingItems::PurchaseRequest{ static_cast<uint8_t>(tabIndex), itemIndexAndScrapPair.first, static_cast<uint16_t>(countToBuy), itemData.maxStack };
-          LOG() << "Going to spend " << countToBuy * itemData.price << " gold on " << itemName << ". Gold will go from " << remainingGold;
+          HYPERBOT_LOG() << "Going to spend " << countToBuy * itemData.price << " gold on " << itemName << ". Gold will go from " << remainingGold;
           remainingGold -= countToBuy * itemData.price;
           std::cout << " to " << remainingGold << std::endl;
           foundItemInShop = true;
@@ -133,7 +133,7 @@ bool TalkingToShopNpc::needToRepair() const {
     }
     const auto *itemAsEquip = dynamic_cast<const storage::ItemEquipment*>(itemPtr);
     if (itemAsEquip == nullptr) {
-      LOG() << "Item can be repaired, but it's not an equipment, weird" << std::endl;
+      HYPERBOT_LOG() << "Item can be repaired, but it's not an equipment, weird" << std::endl;
       continue;
     }
     if (itemAsEquip->repairInvalid(bot_.gameData())) {
@@ -155,7 +155,7 @@ bool TalkingToShopNpc::doneWithNpc() const {
 
 void TalkingToShopNpc::onUpdate(const event::Event *event) {
   if (done_) {
-    LOG() << "TalkingToShopNpc on update called, but we're done. This is a smell of imperfect logic" << std::endl;
+    HYPERBOT_LOG() << "TalkingToShopNpc on update called, but we're done. This is a smell of imperfect logic" << std::endl;
     return;
   }
 

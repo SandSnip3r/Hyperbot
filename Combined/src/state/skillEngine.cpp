@@ -25,7 +25,7 @@ bool SkillEngine::skillIsOnCooldown(sro::scalar_types::ReferenceObjectId skillRe
 std::optional<std::chrono::milliseconds> SkillEngine::skillRemainingCooldown(sro::scalar_types::ReferenceObjectId skillRefId, const broker::EventBroker &eventBroker) const {
   const auto it = skillCooldownEventIdMap_.find(skillRefId);
   if (it == skillCooldownEventIdMap_.end()) {
-    LOG() << "Asking for time remaining on skill cooldown, but dont have skill cooldown data" << std::endl;
+    HYPERBOT_LOG() << "Asking for time remaining on skill cooldown, but dont have skill cooldown data" << std::endl;
     return {};
   }
   return eventBroker.timeRemainingOnDelayedEvent(it->second);

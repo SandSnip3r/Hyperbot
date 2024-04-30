@@ -74,7 +74,7 @@ void Townlooping::onUpdate(const event::Event *event) {
       ++currentNpcIndex_;
       if (done()) {
         // No more Npcs, done with townloop
-        LOG() << "No more npcs to visit, done with townloop" << std::endl;
+        HYPERBOT_LOG() << "No more npcs to visit, done with townloop" << std::endl;
         return;
       }
       // Update our state to walk to the next npc.

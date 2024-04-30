@@ -50,7 +50,7 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
                primaryItemMovement.type == packet::enums::ItemMovementType::kSetExchangeGold) {
       primaryItemMovement.goldAmount = stream.Read<uint64_t>();
       if (primaryItemMovement.type == packet::enums::ItemMovementType::kSetExchangeGold) {
-        LOG() << "This gold update is \"kSetExchangeGold\" with amount: " << primaryItemMovement.goldAmount << std::endl;
+        HYPERBOT_LOG() << "This gold update is \"kSetExchangeGold\" with amount: " << primaryItemMovement.goldAmount << std::endl;
       }
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickItem) {
       primaryItemMovement.destSlot = stream.Read<uint8_t>();
@@ -114,13 +114,13 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
       if (primaryItemMovement.destSlot == 0xFE) {
         primaryItemMovement.goldPickAmount = stream.Read<uint32_t>();
       } else {
-        LOG() << "Pick item by other. Slot: " << static_cast<int>(primaryItemMovement.destSlot) << std::endl;
+        HYPERBOT_LOG() << "Pick item by other. Slot: " << static_cast<int>(primaryItemMovement.destSlot) << std::endl;
         primaryItemMovement.newItem = parseGenericItem(stream, itemData);
       }
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kSetExchangeItem) {
-      LOG() << "InventoryOperationResponse type kSetExchangeItem" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kSetExchangeItem" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kCancelExchangeItem) {
-      LOG() << "InventoryOperationResponse type kCancelExchangeItem" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kCancelExchangeItem" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickItemCos) {
       primaryItemMovement.globalId = stream.Read<uint32_t>(); // COS
       primaryItemMovement.destSlot = stream.Read<uint8_t>();
@@ -133,40 +133,40 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
       std::string ownerName = stream.Read_Ascii(ownerNameLength);
       if (ownerNameLength > 0 || ownerName.size() > 0) {
         // Usually no owner, maybe this is for quest?
-        LOG() << "Cos picked item with owner \"" << ownerName << "\"(" << ownerNameLength << ")" << std::endl;
+        HYPERBOT_LOG() << "Cos picked item with owner \"" << ownerName << "\"(" << ownerNameLength << ")" << std::endl;
       }
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kDropItemCos) {
-      LOG() << "InventoryOperationResponse type kDropItemCos" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kDropItemCos" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kBuyItemCos) {
-      LOG() << "InventoryOperationResponse type kBuyItemCos" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kBuyItemCos" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kSellItemCos) {
-      LOG() << "InventoryOperationResponse type kSellItemCos" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kSellItemCos" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kAddCositemByServer) {
-      LOG() << "InventoryOperationResponse type kAddCositemByServer" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kAddCositemByServer" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kDelCositemByServer) {
-      LOG() << "InventoryOperationResponse type kDelCositemByServer" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kDelCositemByServer" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kBuyCashItem) {
-      LOG() << "InventoryOperationResponse type kBuyCashItem" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kBuyCashItem" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kMoveItemTradeNow) {
-      LOG() << "InventoryOperationResponse type kMoveItemTradeNow" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kMoveItemTradeNow" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPushItemIntoMagicCube) {
-      LOG() << "InventoryOperationResponse type kPushItemIntoMagicCube" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kPushItemIntoMagicCube" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPopItemFromMagicCube) {
-      LOG() << "InventoryOperationResponse type kPopItemFromMagicCube" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kPopItemFromMagicCube" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kDelItemInMagicCube) {
-      LOG() << "InventoryOperationResponse type kDelItemInMagicCube" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kDelItemInMagicCube" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kActivateMagicCube) {
-      LOG() << "InventoryOperationResponse type kActivateMagicCube" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kActivateMagicCube" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kBuyItemWithToken) {
-      LOG() << "InventoryOperationResponse type kBuyItemWithToken" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kBuyItemWithToken" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickSpecialItem) {
-      LOG() << "InventoryOperationResponse type kPickSpecialItem" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kPickSpecialItem" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickSpecialItemBySilkpet) {
-      LOG() << "InventoryOperationResponse type kPickSpecialItemBySilkpet" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kPickSpecialItemBySilkpet" << std::endl;
     } else if (primaryItemMovement.type == packet::enums::ItemMovementType::kPickSpecialItemByOther) {
-      LOG() << "InventoryOperationResponse type kPickSpecialItemByOther" << std::endl;
+      HYPERBOT_LOG() << "InventoryOperationResponse type kPickSpecialItemByOther" << std::endl;
     } else {
-      LOG() << "Unhandled item movement case! Type: " << static_cast<int>(primaryItemMovement.type) << '\n';
+      HYPERBOT_LOG() << "Unhandled item movement case! Type: " << static_cast<int>(primaryItemMovement.type) << '\n';
     }
     if (!itemMovements_.empty()) {
       // There were secondary item movements added, place the primary item movement at the beginning of the list
@@ -175,8 +175,8 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
       itemMovements_.push_back(primaryItemMovement);
     }
   } else {
-    LOG() << "Item movement failed! Dumping data\n";
-    LOG() << DumpToString(stream) << '\n';
+    HYPERBOT_LOG() << "Item movement failed! Dumping data\n";
+    HYPERBOT_LOG() << DumpToString(stream) << '\n';
   }
 }
 // TODO: Try to inject a buy packet that buys more than 1 stack of a stackable item

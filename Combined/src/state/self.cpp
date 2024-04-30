@@ -30,7 +30,7 @@ void Self::handleEvent(const event::Event *event) {
         break;
     }
   } catch (std::exception &ex) {
-    LOG() << "Error while handling event!\n  " << ex.what() << std::endl;
+    HYPERBOT_LOG() << "Error while handling event!\n  " << ex.what() << std::endl;
   }
 }
 
@@ -261,12 +261,12 @@ void Self::usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milli
     // This should never happen if all cooldowns are accurate.
     //  However, in the case of purification pills, which are maybe the only item with no real cooldown, if we create an artificial cooldown in the bot and use multiple through the client, this can trigger.
     // throw std::runtime_error("Used an item (" + type_id::toString(typeData) + "), but it's already on cooldown");
-    LOG() << "Used an item (" << type_id::toString(typeData) << "), but it's already on cooldown" << std::endl;
+    HYPERBOT_LOG() << "Used an item (" << type_id::toString(typeData) << "), but it's already on cooldown" << std::endl;
     return;
   }
 
   if (!cooldown) {
-    LOG() << "Used an item (" << type_id::toString(typeData) << "), but we don't know its cooldown time." << std::endl;
+    HYPERBOT_LOG() << "Used an item (" << type_id::toString(typeData) << "), but we don't know its cooldown time." << std::endl;
     return;
   }
 
@@ -280,7 +280,7 @@ void Self::itemCooldownEnded(type_id::TypeId itemTypeData) {
   if (it != itemCooldownEventIdMap_.end()) {
     itemCooldownEventIdMap_.erase(it);
   } else {
-    LOG() << "Item cooldown ended, but we're not tracking it!?" << std::endl;
+    HYPERBOT_LOG() << "Item cooldown ended, but we're not tracking it!?" << std::endl;
   }
 }
 

@@ -67,7 +67,7 @@ void Proxy::run() {
       ioService_.run(ec);
 
       if (ec) {
-        LOG() << "Error running io_service: \"" << ec.message() << '"' << std::endl;
+        HYPERBOT_LOG() << "Error running io_service: \"" << ec.message() << '"' << std::endl;
       } else {
         //No more work
         break;
@@ -147,7 +147,7 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
 
     //Error check
     if (ec) {
-      LOG() << "Unable to connect to " << (connectToAgent ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent ? agentPort_ : gatewayPort_) << ": \"" << ec.message() << '"' << std::endl;
+      HYPERBOT_LOG() << "Unable to connect to " << (connectToAgent ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent ? agentPort_ : gatewayPort_) << ": \"" << ec.message() << '"' << std::endl;
 
       // Silkroad connection is no longer needed
       clientConnection.Close();
@@ -162,7 +162,7 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
     //Post another accept
     PostAccept();
   } else {
-    LOG() << "Error accepting new connection: \"" << error.message() << '"' << std::endl;
+    HYPERBOT_LOG() << "Error accepting new connection: \"" << error.message() << '"' << std::endl;
   }
 }
 
@@ -202,7 +202,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
       //Send packets that are currently in the security api
       while (clientConnection.security->HasPacketToSend()) {
         if (!clientConnection.Send(clientConnection.security->GetPacketToSend())) {
-          LOG() << "Client connection Send error" << std::endl;
+          HYPERBOT_LOG() << "Client connection Send error" << std::endl;
           break;
         }
       }
@@ -234,7 +234,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
 
             uint32_t loginID = r.Read<uint32_t>();        //Login ID
             agentIP_ = r.Read_Ascii(r.Read<uint16_t>());  //Agent IP
-            LOG() << "Gateway login response gave us Agentserver IP: \"" << agentIP_ << '"' << std::endl;
+            HYPERBOT_LOG() << "Gateway login response gave us Agentserver IP: \"" << agentIP_ << '"' << std::endl;
             agentPort_ = r.Read<uint16_t>();              //Agent port
 
             StreamUtility w;
@@ -253,7 +253,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             }
 
             //Close active connections
-            LOG() << "Closing gateway connection, connecting to agentserver" << std::endl;
+            HYPERBOT_LOG() << "Closing gateway connection, connecting to agentserver" << std::endl;
             clientConnection.Close();
             serverConnection.Close();
 
@@ -270,7 +270,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           // Initialize data/container
           if (characterInfoPacketContainer_) {
             // What? There's already one?
-            LOG() << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
+            HYPERBOT_LOG() << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
           characterInfoPacketContainer_.emplace(packet);
@@ -280,7 +280,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           // Initialize data/container
           if (groupSpawnPacketContainer_) {
             // What? There's already one?
-            LOG() << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
+            HYPERBOT_LOG() << "[@@@] Wait, we got a char info begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
           groupSpawnPacketContainer_.emplace(packet);
@@ -290,7 +290,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           // Initialize data/container
           if (storagePacketContainer_) {
             // What? There's already one?
-            LOG() << "[@@@] Wait, we got a storage begin packet, but we've already initialized the data\n";
+            HYPERBOT_LOG() << "[@@@] Wait, we got a storage begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
           storagePacketContainer_.emplace(packet);
@@ -300,7 +300,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           // Initialize data/container
           if (guildStoragePacketContainer_) {
             // What? There's already one?
-            LOG() << "[@@@] Wait, we got a guild storage begin packet, but we've already initialized the data\n";
+            HYPERBOT_LOG() << "[@@@] Wait, we got a guild storage begin packet, but we've already initialized the data\n";
           }
           // Initialize packet data with the "begin" data
           guildStoragePacketContainer_.emplace(packet);
@@ -363,7 +363,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
       //Send packets that are currently in the security api
       while (serverConnection.security->HasPacketToSend()) {
         if (!serverConnection.Send(serverConnection.security->GetPacketToSend())) {
-          LOG() << "Server connection Send error" << std::endl;
+          HYPERBOT_LOG() << "Server connection Send error" << std::endl;
           break;
         }
       }
@@ -374,6 +374,6 @@ Post:
     timer->expires_from_now(boost::posix_time::milliseconds(kPacketProcessDelayMs));
     timer->async_wait(boost::bind(&Proxy::ProcessPackets, this, boost::asio::placeholders::error));
   } else {
-    LOG() << "Error: \"" << error.message() << '"' << std::endl;
+    HYPERBOT_LOG() << "Error: \"" << error.message() << '"' << std::endl;
   }
 }

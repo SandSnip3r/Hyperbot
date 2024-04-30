@@ -36,7 +36,7 @@ void StatAggregator::handleEvent(const event::Event *event) {
       try {
         initialize(worldState_.selfState().name);
       } catch (std::exception &ex) {
-        LOG() << "Error while initializing " << ex.what() << std::endl;
+        HYPERBOT_LOG() << "Error while initializing " << ex.what() << std::endl;
       }
     }
   }
@@ -111,16 +111,16 @@ void StatAggregator::handleEvent(const event::Event *event) {
 void StatAggregator::printParsedFiles(const proto::stats::StatFileRegistry &registry) const {
   for (const auto &i : registry.character_entries()) {
     const auto &charName =  i.first;
-    LOG() << "\"" << charName << "\":" << std::endl;;
+    HYPERBOT_LOG() << "\"" << charName << "\":" << std::endl;;
     for (const auto &fileData : i.second.files()) {
       if (fileData.proto_version_number() != kVersionNum) {
-        LOG() << "    File \"" << fileData.filename() << "\" has wrong version number: " << fileData.proto_version_number() << std::endl;
+        HYPERBOT_LOG() << "    File \"" << fileData.filename() << "\" has wrong version number: " << fileData.proto_version_number() << std::endl;
         continue;
       }
       const auto statsPath = getAppDataPath() / fileData.filename();
       std::ifstream statsFile(statsPath, std::ios::binary);
       if (!statsFile) {
-        LOG() << "    Cannot open \"" << statsPath.string() << "\"" << std::endl;
+        HYPERBOT_LOG() << "    Cannot open \"" << statsPath.string() << "\"" << std::endl;
         continue;
       }
       google::protobuf::io::IstreamInputStream isistream_(&statsFile);
@@ -137,14 +137,14 @@ void StatAggregator::printParsedFiles(const proto::stats::StatFileRegistry &regi
         bool good{true};
         bool res = event.ParseFromCodedStream(&input);
         if (!res) {
-          LOG() << "     Did not read message" << std::endl;
+          HYPERBOT_LOG() << "     Did not read message" << std::endl;
           break;
         }
         if (!input.ConsumedEntireMessage()) {
-          LOG() << "     Did not consume entire message!!" << std::endl;
+          HYPERBOT_LOG() << "     Did not consume entire message!!" << std::endl;
           break;
         }
-        LOG() << "    " << event.DebugString() << std::endl;
+        HYPERBOT_LOG() << "    " << event.DebugString() << std::endl;
         input.PopLimit(limit);
       }
     }
@@ -212,7 +212,7 @@ void StatAggregator::writeEventToStatFile(const proto::stats::StatEvent &event) 
   // Now write the message.
   event.SerializeToOstream(&statFile_);
   statFile_.flush();
-  // LOG() << "Writing message \"" << event.DebugString() << "\" which has bin size " << eventDataSize << std::endl;
+  // HYPERBOT_LOG() << "Writing message \"" << event.DebugString() << "\" which has bin size " << eventDataSize << std::endl;
 }
 
 proto::stats::StatEvent createStatEvent() {

@@ -188,7 +188,7 @@ void TalkingToStorageNpc::storeItems(const event::Event *event) {
       bot_.packetBroker().injectPacket(depositItemPacket, PacketContainer::Direction::kClientToServer);
       return;
     } else {
-      LOG() << "Storage is full!" << std::endl;
+      HYPERBOT_LOG() << "Storage is full!" << std::endl;
       // TODO: Handle a full storage
       npcInteractionState_ = NpcInteractionState::kDoneStoring;
       return;

@@ -158,13 +158,13 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
   try {
     parsedPacket = packetParser_.parsePacket(packet);
   } catch (std::exception &ex) {
-    LOG() << "Failed to parse packet " << std::hex << packet.opcode << std::dec << ". \"" << ex.what() << '"' << std::endl;
+    HYPERBOT_LOG() << "Failed to parse packet " << std::hex << packet.opcode << std::dec << ". \"" << ex.what() << '"' << std::endl;
     return;
   }
 
   if (!parsedPacket) {
     // Not yet parsing this packet
-    LOG() << "Subscribed to a packet which we're not yet parsing " << std::hex << packet.opcode << std::dec << std::endl;
+    HYPERBOT_LOG() << "Subscribed to a packet which we're not yet parsing " << std::hex << packet.opcode << std::dec << std::endl;
     return;
   }
 
@@ -230,11 +230,11 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffRemove, serverAgentBuffRemoveReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentChatUpdate, serverAgentChatUpdateReceived);
   } catch (std::exception &ex) {
-    LOG() << "Error while handling packet!\n  " << ex.what() << std::endl;
+    HYPERBOT_LOG() << "Error while handling packet!\n  " << ex.what() << std::endl;
     return;
   }
 
-  LOG() << "Unhandled packet subscribed to " << std::hex << packet.opcode << std::dec << std::endl;
+  HYPERBOT_LOG() << "Unhandled packet subscribed to " << std::hex << packet.opcode << std::dec << std::endl;
   return;
 }
 
@@ -262,7 +262,7 @@ void PacketProcessor::loginResponseReceived(const packet::parsing::ParsedLoginRe
     worldState_.selfState().token = packet.token();
   } else {
     // TODO: Send an event.
-    LOG() << " Login failed\n";
+    HYPERBOT_LOG() << " Login failed\n";
   }
 }
 
@@ -302,7 +302,7 @@ void PacketProcessor::charSelectionJoinResponseReceived(const packet::parsing::P
   if (packet.result() != 0x01) {
     // Character selection failed
     // TODO: Properly handle error
-    LOG() << "Failed when selecting character\n";
+    HYPERBOT_LOG() << "Failed when selecting character\n";
   }
 }
 
@@ -375,7 +375,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   worldState_.selfState().setMasteriesAndSkills(packet.masteries(), packet.skills());
   // for (const auto &m : packet.masteries()) {
   //   const auto &mastery = gameData_.masteryData().getMasteryById(m.id);
-  //   LOG() << "Mastery " << mastery.masteryNameCode << "(" << m.id << ") is level " << (int)m.level << std::endl;
+  //   HYPERBOT_LOG() << "Mastery " << mastery.masteryNameCode << "(" << m.id << ") is level " << (int)m.level << std::endl;
   // }
   // std::vector<std::pair<std::string, pk2::ref::Skill::Param1Type>> skillTypes = {
   //   {"Melee skills", pk2::ref::Skill::Param1Type::kMelee},
@@ -384,7 +384,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   //   {"Passive skills", pk2::ref::Skill::Param1Type::kPassive},
   // };
   // for (const auto &i : skillTypes) {
-  //   LOG() << i.first << ": [ ";
+  //   HYPERBOT_LOG() << i.first << ": [ ";
   //   for (const auto &s : packet.skills()) {
   //     const auto &skillData = gameData_.skillData().getSkillById(s.id);
   //     if (skillData.param1Type() == i.second) {
@@ -432,7 +432,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   const auto &avatarInventoryItemMap = packet.avatarInventoryItemMap();
   helpers::initializeInventory(worldState_.selfState().avatarInventory, avatarInventorySize, avatarInventoryItemMap);
 
-  LOG() << "GID:" << worldState_.selfState().globalId << ", and we have " << worldState_.selfState().currentHp() << " hp and " << worldState_.selfState().currentMp() << " mp\n";
+  HYPERBOT_LOG() << "GID:" << worldState_.selfState().globalId << ", and we have " << worldState_.selfState().currentHp() << " hp and " << worldState_.selfState().currentMp() << " mp\n";
   eventBroker_.publishEvent(event::EventCode::kSpawned);
 }
 
@@ -457,10 +457,10 @@ void PacketProcessor::serverAgentCosDataReceived(const packet::parsing::ServerAg
         // On resummon, our COS globalId will change
       }
     } else {
-      LOG() << "Got Cos data for someone else's Cos" << std::endl;
+      HYPERBOT_LOG() << "Got Cos data for someone else's Cos" << std::endl;
     }
   } else {
-    LOG() << "Non-ability Cos" << std::endl;
+    HYPERBOT_LOG() << "Non-ability Cos" << std::endl;
   }
 }
 
@@ -570,7 +570,7 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     if (packet.errorCode() != packet::enums::InventoryErrorCode::kWaitForReuseDelay &&
         packet.errorCode() != packet::enums::InventoryErrorCode::kCharacterDead &&
         packet.errorCode() != packet::enums::InventoryErrorCode::kItemDoesNotExist) {
-      LOG() << "Unknown error while trying to use an item: " << static_cast<int>(packet.errorCode()) << '\n';
+      HYPERBOT_LOG() << "Unknown error while trying to use an item: " << static_cast<int>(packet.errorCode()) << '\n';
     }
     eventBroker_.publishEvent<event::ItemUseFailed>(packet.slotNum(), packet.typeData(), packet.errorCode());
     return;
@@ -659,7 +659,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
           }
         }
         if (!addedToStack) {
-          LOG() << "Error: Item couldnt be added to the stack\n";
+          HYPERBOT_LOG() << "Error: Item couldnt be added to the stack\n";
         }
       } else {
         // This is a new item
@@ -671,7 +671,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
         eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, destSlot);
       }
     } else {
-      LOG() << "Error: Picked an item, but the newItem is a nullptr\n";
+      HYPERBOT_LOG() << "Error: Picked an item, but the newItem is a nullptr\n";
     }
   };
 
@@ -680,7 +680,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
       worldState_.selfState().inventory.deleteItem(slotIndex);
       eventBroker_.publishEvent<event::InventoryUpdated>(slotIndex, std::nullopt);
     } else {
-      LOG() << "RemoveItemFromInventory(): There's no item in this inventory slot\n";
+      HYPERBOT_LOG() << "RemoveItemFromInventory(): There's no item in this inventory slot\n";
     }
   };
 
@@ -744,7 +744,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
         }
         worldState_.selfState().resetUserPurchaseRequest();
       } else {
-        LOG() << "kBuyItem but we dont have the data from the client packet\n";
+        HYPERBOT_LOG() << "kBuyItem but we dont have the data from the client packet\n";
         // TODO: Introduce unknown item concept?
       }
     } else if (movement.type == packet::enums::ItemMovementType::kSellItem) {
@@ -754,7 +754,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
         storage::ItemExpendable *itemExpendable;
         if ((itemExpendable = dynamic_cast<storage::ItemExpendable*>(item)) != nullptr) {
           if (itemExpendable->quantity != movement.quantity) {
-            LOG() << "Sold only some of this item " << itemExpendable->quantity << " -> " << itemExpendable->quantity-movement.quantity << '\n';
+            HYPERBOT_LOG() << "Sold only some of this item " << itemExpendable->quantity << " -> " << itemExpendable->quantity-movement.quantity << '\n';
             soldEntireStack = false;
             itemExpendable->quantity -= movement.quantity;
             auto clonedItem = storage::cloneItem(item);
@@ -768,7 +768,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
         }
         eventBroker_.publishEvent<event::InventoryUpdated>(movement.srcSlot, std::nullopt);
       } else {
-        LOG() << "Sold an item from a slot that we didnt have item data for\n";
+        HYPERBOT_LOG() << "Sold an item from a slot that we didnt have item data for\n";
       }
     } else if (movement.type == packet::enums::ItemMovementType::kBuyback) {
       if (worldState_.selfState().buybackQueue.hasItem(movement.srcSlot)) {
@@ -781,7 +781,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
             storage::ItemExpendable *itemExpendable = dynamic_cast<storage::ItemExpendable*>(itemPtr);
             if (itemExpendable != nullptr) {
               if (itemExpendable->quantity > movement.quantity) {
-                LOG() << "Only buying back a partial amount from the buyback slot. Didnt know this was possible (" << movement.quantity << '/' << itemExpendable->quantity << ")\n";
+                HYPERBOT_LOG() << "Only buying back a partial amount from the buyback slot. Didnt know this was possible (" << movement.quantity << '/' << itemExpendable->quantity << ")\n";
                 boughtBackAll = false;
                 auto clonedItem = storage::cloneItem(itemPtr);
                 itemExpendable->quantity -= movement.quantity;
@@ -796,10 +796,10 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
             eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, movement.destSlot);
           }
         } else {
-          LOG() << "Bought back item is being moved into a slot that's already occupied\n";
+          HYPERBOT_LOG() << "Bought back item is being moved into a slot that's already occupied\n";
         }
       } else {
-        LOG() << "Bought back an item that we werent tracking\n";
+        HYPERBOT_LOG() << "Bought back an item that we werent tracking\n";
       }
     } else if (movement.type == packet::enums::ItemMovementType::kPickItem) {
       if (movement.destSlot != packet::structures::ItemMovement::kGoldSlot) {
@@ -851,7 +851,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
     } else if (movement.type == packet::enums::ItemMovementType::kPickItemByOther) {
       // Always is our COS picking gold. Gold update packet updates our state. We dont need to handle this
     } else {
-      LOG() << "Unknown item movement type: " << static_cast<int>(movement.type) << std::endl;
+      HYPERBOT_LOG() << "Unknown item movement type: " << static_cast<int>(movement.type) << std::endl;
     }
   }
 }
@@ -862,7 +862,7 @@ void PacketProcessor::serverAgentEntityGroupSpawnDataReceived(const packet::pars
       if (entity) {
         entitySpawned(entity);
       } else {
-        LOG() << "Received null entity from group spawn" << std::endl;
+        HYPERBOT_LOG() << "Received null entity from group spawn" << std::endl;
       }
     }
   } else {
@@ -876,7 +876,7 @@ void PacketProcessor::serverAgentEntitySpawnReceived(const packet::parsing::Serv
   if (packet.entity()) {
     entitySpawned(packet.entity());
   } else {
-    LOG() << "Received null entity from spawn" << std::endl;
+    HYPERBOT_LOG() << "Received null entity from spawn" << std::endl;
   }
 }
 
@@ -908,7 +908,7 @@ void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId
   if (!worldState_.entityTracker().trackingEntity(globalId)) {
     // TODO: Once eventzones are handled, this check can be removed;
     //  getEntity will throw
-    LOG() << "Entity despawned, but we're not tracking it" << std::endl;
+    HYPERBOT_LOG() << "Entity despawned, but we're not tracking it" << std::endl;
     return;
   }
   // Before destroying an entity, see if we have a running movement timer to cancel
@@ -943,17 +943,17 @@ void PacketProcessor::serverAgentDeselectResponseReceived(const packet::parsing:
         worldState_.selfState().selectedEntity.reset();
         eventBroker_.publishEvent(event::EventCode::kEntityDeselected);
       } else {
-        LOG() << "Weird, we didnt have anything selected\n";
+        HYPERBOT_LOG() << "Weird, we didnt have anything selected\n";
       }
     }
   } else {
-    LOG() << "Deselection failed" << std::endl;
+    HYPERBOT_LOG() << "Deselection failed" << std::endl;
   }
 }
 
 void PacketProcessor::serverAgentSelectResponseReceived(const packet::parsing::ServerAgentActionSelectResponse &packet) const {
   if (packet.result() != 1) {
-    LOG() << "Selection failed" << std::endl;
+    HYPERBOT_LOG() << "Selection failed" << std::endl;
     return;
   }
 
@@ -983,10 +983,10 @@ void PacketProcessor::serverAgentTalkResponseReceived(const packet::parsing::Ser
       worldState_.selfState().pendingTalkGid.reset();
       eventBroker_.publishEvent(event::EventCode::kNpcTalkStart);
     } else {
-      LOG() << "Weird, we werent expecting to be talking to anything. As a result, we dont know what we're talking to" << std::endl;
+      HYPERBOT_LOG() << "Weird, we werent expecting to be talking to anything. As a result, we dont know what we're talking to" << std::endl;
     }
   } else {
-    LOG() << "Failed to talk to NPC" << std::endl;
+    HYPERBOT_LOG() << "Failed to talk to NPC" << std::endl;
   }
 }
 
@@ -1004,7 +1004,7 @@ void PacketProcessor::serverAgentAlchemyElixirResponseReceived(const packet::par
       worldState_.selfState().inventory.addItem(packet.slot(), packet.item());
     } else {
       // If the item is destroyed, a server delete packet will remove the item from the inventory.
-      LOG() << "Item was destroyed!" << std::endl;
+      HYPERBOT_LOG() << "Item was destroyed!" << std::endl;
     }
   }
   eventBroker_.publishEvent(event::EventCode::kAlchemyCompleted);
@@ -1023,7 +1023,7 @@ void PacketProcessor::serverAgentInventoryRepairResponseReceived(const packet::p
   if (packet.successful()) {
     eventBroker_.publishEvent(event::EventCode::kRepairSuccessful);
   } else {
-    LOG() << "Repairing item(s) failed! Error code: " << packet.errorCode() << std::endl;
+    HYPERBOT_LOG() << "Repairing item(s) failed! Error code: " << packet.errorCode() << std::endl;
   }
 }
 
@@ -1077,7 +1077,7 @@ void PacketProcessor::serverAgentInventoryUpdateItemReceived(const packet::parsi
 
 void PacketProcessor::clientAgentActionTalkRequestReceived(const packet::parsing::ClientAgentActionTalkRequest &packet) const {
   if (worldState_.selfState().pendingTalkGid) {
-    LOG() << "Weird, we're already waiting on a response from the server to talk to someone\n";
+    HYPERBOT_LOG() << "Weird, we're already waiting on a response from the server to talk to someone\n";
   } else {
     worldState_.selfState().pendingTalkGid = packet.gId();
   }
@@ -1130,13 +1130,13 @@ void PacketProcessor::serverAgentGuildStorageDataReceived(const packet::parsing:
 }
 
 void PacketProcessor::clientAgentActionCommandRequestReceived(const packet::parsing::ClientAgentActionCommandRequest &packet) const {
-  // LOG() << "Client command action received" << std::endl; // COMMAND_QUEUE_DEBUG
+  // HYPERBOT_LOG() << "Client command action received" << std::endl; // COMMAND_QUEUE_DEBUG
   worldState_.selfState().skillEngine.pendingCommandQueue.push_back(packet.actionCommand());
   // printCommandQueues(); // COMMAND_QUEUE_DEBUG
 }
 
 void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const {
-  // LOG() << "Received command response. " << packet.actionState() << std::endl; // COMMAND_QUEUE_DEBUG
+  // HYPERBOT_LOG() << "Received command response. " << packet.actionState() << std::endl; // COMMAND_QUEUE_DEBUG
 
   if (packet.actionState() == packet::enums::ActionState::kQueued) {
     if (worldState_.selfState().skillEngine.pendingCommandQueue.empty()) {
@@ -1172,7 +1172,7 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
       if (worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute &&
           worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kCast &&
           !worldState_.selfState().skillEngine.acceptedCommandQueue.front().wasExecuted) {
-        LOG() << "This command(skill) was never executed!!" << std::endl;
+        HYPERBOT_LOG() << "This command(skill) was never executed!!" << std::endl;
         eventBroker_.publishEvent<event::CommandError>(worldState_.selfState().skillEngine.acceptedCommandQueue.front().command);
         // TODO: Maybe this should be a different event than "CommandError"?
       }
@@ -1208,10 +1208,10 @@ ActionReuseDelay is the skill's cooldown
 */
 
 void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const {
-  // LOG() << "***** Skill Begin *****" << std::endl;
+  // HYPERBOT_LOG() << "***** Skill Begin *****" << std::endl;
   if (packet.result() == 2) {
     // Error
-    // LOG() << "Skill unsuccessful, err " << packet.errorCode() << std::endl;
+    // HYPERBOT_LOG() << "Skill unsuccessful, err " << packet.errorCode() << std::endl;
     if (packet.casterGlobalId()) {
       // Which skill is this? It must be the first item in the skillEngine.pendingCommandQueue
       if (!worldState_.selfState().skillEngine.pendingCommandQueue.empty()) {
@@ -1219,16 +1219,16 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         if (nextCommand.commandType == packet::enums::CommandType::kExecute) {
           if (nextCommand.actionType == packet::enums::ActionType::kCast) {
             const auto skillRefId = nextCommand.refSkillId;
-            // LOG() << "Our skill failed (" << skillRefId << ')' << std::endl;
+            // HYPERBOT_LOG() << "Our skill failed (" << skillRefId << ')' << std::endl;
             eventBroker_.publishEvent<event::OurSkillFailed>(skillRefId, packet.errorCode());
           } else {
-            // LOG() << "Out skill failed, but the most recent pending command isnt a \"Cast\"" << std::endl;
+            // HYPERBOT_LOG() << "Out skill failed, but the most recent pending command isnt a \"Cast\"" << std::endl;
           }
         } else {
-          // LOG() << "Our skill failed, but the most recent pending command isnt an \"Execute\"" << std::endl;
+          // HYPERBOT_LOG() << "Our skill failed, but the most recent pending command isnt an \"Execute\"" << std::endl;
         }
       } else {
-        // LOG() << "Our skill failed, but we dont know which one!" << std::endl;
+        // HYPERBOT_LOG() << "Our skill failed, but we dont know which one!" << std::endl;
       }
     }
     return;
@@ -1262,7 +1262,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     auto logNoEnd = [&](const auto skillRefId) {
       const auto maybeSkillName = gameData_.getSkillNameIfExists(skillRefId);
       std::string skillName = (maybeSkillName ? *maybeSkillName : std::string("UNKNOWN"));
-      LOG() << std::string(1000, 'L') << "\nNo end came for skill " << skillRefId << " (" << skillName << ")" << std::endl;
+      HYPERBOT_LOG() << std::string(1000, 'L') << "\nNo end came for skill " << skillRefId << " (" << skillName << ")" << std::endl;
       std::ofstream myFile("no_end.txt", std::ios::app);
       if (myFile) {
         myFile << skillRefId << ',';
@@ -1274,7 +1274,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       if (it->second.refSkillId == packet.refSkillId()) {
         // We already tracked this skill. This means an end never came
         if (expectEnd) {
-          LOG() << "Oh no" << std::endl;
+          HYPERBOT_LOG() << "Oh no" << std::endl;
           logNoEnd(it->second.refSkillId);
         }
         it = tracked_.erase(it);
@@ -1293,7 +1293,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       if (trackedItem.expTime <= std::chrono::high_resolution_clock::now()) {
         // This one expired
         if (trackedItem.expectEnd) {
-          LOG() << "Oh no" << std::endl;
+          HYPERBOT_LOG() << "Oh no" << std::endl;
           logNoEnd(trackedItem.refSkillId);
         }
         it = tracked_.erase(it);
@@ -1319,13 +1319,13 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       }
       return *skillName;
     }();
-    // LOG() << "SkillBegin \"" << skillName << "\" (" << packet.refSkillId() << ") with preparing time: " << skillData.actionPreparingTime << ", casting time: " << skillData.actionCastingTime << ", action duration: " << skillData.actionActionDuration << ", and reuse delay: " << skillData.actionReuseDelay << std::endl;
+    // HYPERBOT_LOG() << "SkillBegin \"" << skillName << "\" (" << packet.refSkillId() << ") with preparing time: " << skillData.actionPreparingTime << ", casting time: " << skillData.actionCastingTime << ", action duration: " << skillData.actionActionDuration << ", and reuse delay: " << skillData.actionReuseDelay << std::endl;
     // if (!isRootSkill) {
-    //   LOG() << "  Skill " << packet.refSkillId() << "'s root is " << rootSkillRefId << std::endl;
+    //   HYPERBOT_LOG() << "  Skill " << packet.refSkillId() << "'s root is " << rootSkillRefId << std::endl;
     // }
     if (isRootSkill) {
       // Don't send skill begin packets for skills which are in the middle of a chain.
-      // LOG() << "Publishing skill began event" << std::endl;
+      // HYPERBOT_LOG() << "Publishing skill began event" << std::endl;
       eventBroker_.publishEvent<event::SkillBegan>(worldState_.selfState().globalId, packet.refSkillId());
     }
     // We expect that were is at least one accepted command in the queue
@@ -1356,13 +1356,13 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         if (skillIsCommonAttack && !(worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute &&
                                      worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kAttack)) {
           // First command is not a common attack
-          // LOG() << "First command in the queue isnt a common attack!" << std::endl;
+          // HYPERBOT_LOG() << "First command in the queue isnt a common attack!" << std::endl;
         }
       } else {
         // We cast this skill
         if (*indexOfOurSkill != 0) {
           // Remove all commands before this one in the queue, those have probably been discarded by the server
-          LOG() << "Our skill is not the first in the accepted command queue." << std::endl;
+          HYPERBOT_LOG() << "Our skill is not the first in the accepted command queue." << std::endl;
           // TODO: Should previous items be removed?
 
           //  We should in this case:
@@ -1386,7 +1386,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
           } else {
             for (int i=0; i<*indexOfOurSkill; ++i) {
               // TODO: Should we publish an event that command has been skipped?
-              LOG() << "Command #" << i << " (" << wrapActionCommand(worldState_.selfState().skillEngine.acceptedCommandQueue.at(i).command) << ") skipped" << std::endl;
+              HYPERBOT_LOG() << "Command #" << i << " (" << wrapActionCommand(worldState_.selfState().skillEngine.acceptedCommandQueue.at(i).command) << ") skipped" << std::endl;
             }
             worldState_.selfState().skillEngine.acceptedCommandQueue.erase(worldState_.selfState().skillEngine.acceptedCommandQueue.begin(), worldState_.selfState().skillEngine.acceptedCommandQueue.begin() + *indexOfOurSkill);
             indexOfOurSkill = 0;
@@ -1408,7 +1408,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       }
     } else {
       // This happens when we spawn in with a speed scroll
-      // LOG() << "WARNING: accepted command queue empty" << std::endl;
+      // HYPERBOT_LOG() << "WARNING: accepted command queue empty" << std::endl;
     }
     bool expectSkillEnd{false};
     if (skillData.param1Type() == pk2::ref::Skill::Param1Type::kBuff) {
@@ -1421,7 +1421,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       // We cast this skill, save the cast ID so that we can reference it later on SkillEnd
       worldState_.selfState().skillEngine.skillCastIdMap.emplace(std::piecewise_construct, std::forward_as_tuple(packet.castId()), std::forward_as_tuple(packet.casterGlobalId(), packet.refSkillId()));
       if (worldState_.selfState().skillEngine.skillCastIdMap.size() > 1) {
-        // LOG() << "  Skill casts tracked: [ ";
+        // HYPERBOT_LOG() << "  Skill casts tracked: [ ";
         // for (const auto &i : worldState_.selfState().skillEngine.skillCastIdMap) {
         //   std::cout << i.first << ", ";
         // }
@@ -1449,7 +1449,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
   switch (skill.basicActivity) {
     case 0:
       // Seems to be passives
-      // LOG() << "Cast a skill with basic activity == 0" << std::endl;
+      // HYPERBOT_LOG() << "Cast a skill with basic activity == 0" << std::endl;
       break;
     case 1:
       // Dont stop while running. Can be cast while something else is being case
@@ -1470,7 +1470,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
 }
 
 void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const {
-  // LOG() << "***** Skill End *****" << std::endl;
+  // HYPERBOT_LOG() << "***** Skill End *****" << std::endl;
   // BEGIN DEBUGGING SkillBegin/SkillEnd
   {
     auto it = tracked_.find(packet.castId());
@@ -1482,14 +1482,14 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
           const auto skillRefId = trackedSkill.refSkillId;
           const auto maybeSkillName = gameData_.getSkillNameIfExists(skillRefId);
           std::string skillName = (maybeSkillName ? *maybeSkillName : std::string("UNKNOWN"));
-          LOG() << std::string(1000, 'L') << "\nUnexpected end came for skill " << skillRefId << " (" << skillName << ")" << std::endl;
+          HYPERBOT_LOG() << std::string(1000, 'L') << "\nUnexpected end came for skill " << skillRefId << " (" << skillName << ")" << std::endl;
           std::ofstream myFile("unexpected_end.txt", std::ios::app);
           if (myFile) {
             myFile << skillRefId << ',';
           }
         }
       } else {
-        LOG() << "We tracked a skill which we did not cast. Weird." << std::endl;
+        HYPERBOT_LOG() << "We tracked a skill which we did not cast. Weird." << std::endl;
       }
       // Remove from map.
       tracked_.erase(it);
@@ -1517,7 +1517,7 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
       // We cast this skill
       const auto &skillData = gameData_.skillData().getSkillById(thisSkillId);
       const auto maybeSkillName = gameData_.textItemAndSkillData().getSkillNameIfExists(skillData.uiSkillName);
-      // LOG() << "  Is our \"" << (maybeSkillName ? *maybeSkillName : "UNKNOWN") << "\" end" << std::endl;
+      // HYPERBOT_LOG() << "  Is our \"" << (maybeSkillName ? *maybeSkillName : "UNKNOWN") << "\" end" << std::endl;
       bool doneWithSkill{true};
       if (skillData.basicChainCode != 0) {
         // There are more pieces to this skill
@@ -1526,9 +1526,9 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
         doneWithSkill = false;
         // const auto &nextSkillPiece = gameData_.skillData().getSkillById(skillInfo.skillRefId);
         // if (nextSkillPiece.actionCastingTime != 0) {
-        //   LOG() << "  Another piece of skill is coming, basic chain code=" << skillData.basicChainCode << ". This skill has non-zero cast time: " << nextSkillPiece.actionCastingTime << std::endl;
+        //   HYPERBOT_LOG() << "  Another piece of skill is coming, basic chain code=" << skillData.basicChainCode << ". This skill has non-zero cast time: " << nextSkillPiece.actionCastingTime << std::endl;
         // } else {
-        //   LOG() << "  Skill has another piece, but has 0 casting time." << std::endl;
+        //   HYPERBOT_LOG() << "  Skill has another piece, but has 0 casting time." << std::endl;
         //   // TODO: Check if there is ANOTHER piece coming...
         // }
       }
@@ -1541,15 +1541,15 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
         worldState_.selfState().skillEngine.skillCastIdMap.erase(skillCastIt);
       }
     } else {
-      // LOG() << "  Is NOT our skill end" << std::endl;
+      // HYPERBOT_LOG() << "  Is NOT our skill end" << std::endl;
     }
   // } else {
-  //   LOG() << "  Untracked cast" << std::endl;
+  //   HYPERBOT_LOG() << "  Untracked cast" << std::endl;
   }
 }
 
 void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &action, std::optional<sro::scalar_types::EntityGlobalId> casterGlobalId) const {
-  // LOG() << "    -- Handle Skill Action" << std::endl;
+  // HYPERBOT_LOG() << "    -- Handle Skill Action" << std::endl;
   if (casterGlobalId &&
      (flags::isSet(action.actionFlag, packet::enums::ActionFlag::kTeleport) ||
       flags::isSet(action.actionFlag, packet::enums::ActionFlag::kSprint))) {
@@ -1578,9 +1578,9 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
       entity::Entity &targetEntity = worldState_.getEntity<entity::Entity>(hitObject.targetGlobalId);
       if (auto *character = dynamic_cast<entity::Character*>(&targetEntity)) {
         // if (casterGlobalId) {
-        //   LOG() << "      " << nameOfEntity(*casterGlobalId);
+        //   HYPERBOT_LOG() << "      " << nameOfEntity(*casterGlobalId);
         // } else {
-        //   LOG() << "      Nobody";
+        //   HYPERBOT_LOG() << "      Nobody";
         // }
         // std::cout << " just dealt " << hitResult.damage << " to " << nameOfEntity(hitObject.targetGlobalId) << std::endl;
         if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKill)) {
@@ -1591,15 +1591,15 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
           }
         } else {
           if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
-            LOG() << "      Entity has been knocked down" << std::endl;
+            HYPERBOT_LOG() << "      Entity has been knocked down" << std::endl;
             // TODO: Update entity state, publish knocked down event(?), publish delayed stood up event
           }
           if (flags::isSet(hitResult.damageFlag, packet::enums::DamageFlag::kEffect) && hitResult.effect != 0) {
             if (hitObject.targetGlobalId == worldState_.selfState().globalId) {
               // Applied an effect to us
-              LOG() << "      We have been hit with effect: " << static_cast<packet::enums::AbnormalStateFlag>(hitResult.effect) << std::endl;
+              HYPERBOT_LOG() << "      We have been hit with effect: " << static_cast<packet::enums::AbnormalStateFlag>(hitResult.effect) << std::endl;
             } else {
-              LOG() << "      " << nameOfEntity(hitObject.targetGlobalId) << " has been hit with effect: " << static_cast<packet::enums::AbnormalStateFlag>(hitResult.effect) << std::endl;
+              HYPERBOT_LOG() << "      " << nameOfEntity(hitObject.targetGlobalId) << " has been hit with effect: " << static_cast<packet::enums::AbnormalStateFlag>(hitResult.effect) << std::endl;
             }
           }
           if (character->knowCurrentHp()) {
@@ -1621,7 +1621,7 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
             bool knockedBackOrKnockedDown{false};
             if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockback)) {
               constexpr const int kKnockbackStunDuration{2000};
-              LOG() << "      We were knocked back " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockbackStunDuration << "ms" << std::endl;
+              HYPERBOT_LOG() << "      We were knocked back " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockbackStunDuration << "ms" << std::endl;
               worldState_.selfState().stunnedFromKnockback = true;
               knockedBackOrKnockedDown = true;
               // Publish knocked back event
@@ -1630,7 +1630,7 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
               eventBroker_.publishDelayedEvent(std::chrono::milliseconds(kKnockbackStunDuration), event::EventCode::kKnockbackStunEnded);
             } else if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
               constexpr const int kKnockdownStunDuration{6000};
-              LOG() << "      We were knocked down " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockdownStunDuration << "ms" << std::endl;
+              HYPERBOT_LOG() << "      We were knocked down " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockdownStunDuration << "ms" << std::endl;
               worldState_.selfState().stunnedFromKnockdown = true;
               knockedBackOrKnockedDown = true;
               // Publish knocked down event
@@ -1658,7 +1658,7 @@ void PacketProcessor::handleKnockedBackOrKnockedDown() const {
   // It doesn't make sense to remove all pending commands as those have not even been acknowledge by the server yet
   //  The server will likely respond with an error response for them
   if (!worldState_.selfState().skillEngine.skillCastIdMap.empty()) {
-    LOG() << "KB/KD with active casts: ";
+    HYPERBOT_LOG() << "KB/KD with active casts: ";
     for (const auto &i : worldState_.selfState().skillEngine.skillCastIdMap) {
       std::cout << i.first << ", ";
     }
@@ -1675,22 +1675,22 @@ void PacketProcessor::serverAgentBuffAddReceived(const packet::parsing::ServerAg
     // No buff remove will be received when this expires
     //  Seems to be only for debuffs
     //  Weirdly, it's also sent for Sprint Assault.
-    LOG() << "Skipping buff \"" << (skillName ? *skillName : "UNKNOWN") << "\" for " << packet.globalId() << " with tokenId: " << packet.activeBuffToken() << std::endl;
+    HYPERBOT_LOG() << "Skipping buff \"" << (skillName ? *skillName : "UNKNOWN") << "\" for " << packet.globalId() << " with tokenId: " << packet.activeBuffToken() << std::endl;
     return;
   }
-  LOG() << "Buff \"" << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")\" added to " << packet.globalId() << " with tokenId: " << packet.activeBuffToken() << std::endl;
+  HYPERBOT_LOG() << "Buff \"" << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")\" added to " << packet.globalId() << " with tokenId: " << packet.activeBuffToken() << std::endl;
   const auto &skillData = gameData_.skillData().getSkillById(packet.skillRefId());
   worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken(), skillData.duration());
 }
 
 void PacketProcessor::serverAgentBuffLinkReceived(const packet::parsing::ServerAgentBuffLink &packet) const {
   const auto skillName = gameData_.getSkillNameIfExists(packet.skillRefId());
-  LOG() << "Buff link received " << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")," << packet.activeBuffToken() << ',' << packet.targetGlobalId() << ',' << packet.targetName() << std::endl;
+  HYPERBOT_LOG() << "Buff link received " << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")," << packet.activeBuffToken() << ',' << packet.targetGlobalId() << ',' << packet.targetName() << std::endl;
   // TODO: Where should I track the buff link? It seems to be a duplicate of what was sent in the "BuffAdd" packet.
 }
 
 void PacketProcessor::serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const {
-  LOG() << "Buff remove received. Buffs to remove: [ ";
+  HYPERBOT_LOG() << "Buff remove received. Buffs to remove: [ ";
   for (const auto &tokenId : packet.tokens()) {
     std::cout << tokenId << ", ";
   }

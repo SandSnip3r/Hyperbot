@@ -283,7 +283,7 @@ float MobileEntity::privateCurrentSpeed() const {
   } else if (motionState == MotionState::kSit) {
     throw std::runtime_error("Trying to get current speed, but entity is sitting");
   } else {
-    LOG() << "Motion state is " << static_cast<int>(motionState) << std::endl;
+    HYPERBOT_LOG() << "Motion state is " << static_cast<int>(motionState) << std::endl;
     // TODO: Understand what the other cases are here
     // TODO: Include zerk
     throw std::runtime_error("Trying to get speed, but not walking nor running");
@@ -512,7 +512,7 @@ uint32_t Monster::getMaxHp(const pk2::CharacterData &characterData) const {
       hp *= 30;
       break;
     default:
-      LOG() << "Asking for max HP of an unknown monster rarity" << std::endl;
+      HYPERBOT_LOG() << "Asking for max HP of an unknown monster rarity" << std::endl;
       break;
   }
   if (flags::isSet(rarity, sro::entity::MonsterRarity::kPartyFlag)) {

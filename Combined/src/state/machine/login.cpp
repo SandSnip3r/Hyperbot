@@ -35,7 +35,7 @@ void Login::onUpdate(const event::Event *event) {
       const auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(bot_.selfState().token, username_, password_, bot_.gameData().divisionInfo().locale, kMacAddress);
       bot_.packetBroker().injectPacket(clientAuthPacket, PacketContainer::Direction::kClientToServer);
     } else if (event->eventCode == event::EventCode::kStateCharacterListUpdated) {
-      LOG() << "Char list received: [ ";
+      HYPERBOT_LOG() << "Char list received: [ ";
       for (const auto &i : bot_.selfState().characterList) {
         std::cout << i.name << ' ';
       }
@@ -46,22 +46,22 @@ void Login::onUpdate(const event::Event *event) {
         return character.name == characterName_;
       });
       if (it == bot_.selfState().characterList.end()) {
-        LOG() << "Unable to find character \"" << characterName_ << "\"" << std::endl;
+        HYPERBOT_LOG() << "Unable to find character \"" << characterName_ << "\"" << std::endl;
         return;
       }
 
       // Found our character, select it
-      LOG() << "Selecting \"" << characterName_ << "\"" << std::endl;
+      HYPERBOT_LOG() << "Selecting \"" << characterName_ << "\"" << std::endl;
       auto charSelectionPacket = packet::building::ClientAgentCharacterSelectionJoinRequest::packet(characterName_);
       bot_.packetBroker().injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
     } else if (event->eventCode == event::EventCode::kStateReceivedCaptchaPromptUpdated) {
-      LOG() << "Got captcha. Sending answer\n";
+      HYPERBOT_LOG() << "Got captcha. Sending answer\n";
       const auto captchaAnswerPacket = packet::building::ClientGatewayLoginIbuvAnswer::packet(kCaptchaAnswer);
       bot_.packetBroker().injectPacket(captchaAnswerPacket, PacketContainer::Direction::kClientToServer);
     } else if (event->eventCode == event::EventCode::kLoggedIn) {
-      LOG() << "Logged in." << std::endl;
+      HYPERBOT_LOG() << "Logged in." << std::endl;
     } else if (event->eventCode == event::EventCode::kSpawned) {
-      LOG() << "Logged in and character selected. Done." << std::endl;
+      HYPERBOT_LOG() << "Logged in and character selected. Done." << std::endl;
       done_ = true;
     }
   }

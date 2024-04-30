@@ -47,16 +47,16 @@ void UseItem::onUpdate(const event::Event *event) {
           bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
           itemUseTimeoutEventId_.reset();
         if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kItemDoesNotExist) {
-          LOG() << "Failed to use item because it doesnt exist" << std::endl;
+          HYPERBOT_LOG() << "Failed to use item because it doesnt exist" << std::endl;
           done_ = true;
           return;
         } else if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kCharacterDead) {
-          LOG() << "Failed to use item because we're dead" << std::endl;
+          HYPERBOT_LOG() << "Failed to use item because we're dead" << std::endl;
           done_ = true;
           return;
         } else if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kWaitForReuseDelay) {
         } else {
-          LOG() << "Failed to use item because of unknown reason" << std::endl;
+          HYPERBOT_LOG() << "Failed to use item because of unknown reason" << std::endl;
         }
       } else {
         // TODO: This can happen if an item use failure causes us to exit out of here, construct another UseItem, and enter this function with the same event
@@ -90,7 +90,7 @@ void UseItem::onUpdate(const event::Event *event) {
                 // TODO: This can happen if we send two requests before we get the first response. If we timeout and the first response was just slow.
                 // TODO:  Solve this issue and put the exception back.
                 looksGood = true;
-                LOG() << "Item changed count from " << lastKnownQuantity_ << " to " << itemAsExpendable->quantity << std::endl;
+                HYPERBOT_LOG() << "Item changed count from " << lastKnownQuantity_ << " to " << itemAsExpendable->quantity << std::endl;
               }
               // throw std::runtime_error("Item changed count from " + std::to_string(lastKnownQuantity_) + " to " + std::to_string(itemAsExpendable->quantity));
             }

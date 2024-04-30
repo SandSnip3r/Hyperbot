@@ -31,10 +31,10 @@ public:
     config_.initialize(appDataDirectory);
     if (characterToLogin_) {
       // TODO: This will result in overwriting of the original config file if this is saved.
-      LOG() << "Given a character to log into: \"" << *characterToLogin_ << "\". Overwritting config." << std::endl;
+      HYPERBOT_LOG() << "Given a character to log into: \"" << *characterToLogin_ << "\". Overwritting config." << std::endl;
       config_.configProto().set_character_to_login(*characterToLogin_);
     } else {
-      LOG() << "Using default character to login" << std::endl;
+      HYPERBOT_LOG() << "Using default character to login" << std::endl;
     }
 
     subscribeToEvents();
@@ -49,11 +49,11 @@ public:
       std::unique_lock<std::mutex> gameDataLock(gameDataMutex_);
       if (!gameDataReady_) {
         // Game data hasn't yet been parsed, need to wait until the config is updated to contain a sro_client path which has parsable game data
-        LOG() << "Waiting until game data is parsed" << std::endl;
+        HYPERBOT_LOG() << "Waiting until game data is parsed" << std::endl;
         gameDataParsedConditionVariable_.wait(gameDataLock, [this](){
           return gameDataReady_;
         });
-        LOG() << "Done parsing game data" << std::endl;
+        HYPERBOT_LOG() << "Done parsing game data" << std::endl;
       }
     }
 
@@ -64,7 +64,7 @@ public:
       userInterface.broadcastLaunch();
       session.run();
     } catch (const std::exception &ex) {
-      LOG() << "Error while running session: \"" << ex.what() << '"' << std::endl;
+      HYPERBOT_LOG() << "Error while running session: \"" << ex.what() << '"' << std::endl;
     }
   }
 
@@ -114,7 +114,7 @@ private:
     {
       std::unique_lock<std::mutex> configLock(config_.mutex());
       if (!config_.configProto().has_client_path()) {
-        LOG() << "Config does not contain a client path. Nothing to do" << std::endl;
+        HYPERBOT_LOG() << "Config does not contain a client path. Nothing to do" << std::endl;
         return;
       }
       clientPath = config_.configProto().client_path();
@@ -129,7 +129,7 @@ private:
       gameDataReady_ = true;
       gameDataParsedConditionVariable_.notify_one();
     } catch (const std::exception &ex) {
-      LOG() << "Failed to parse Silkroad game data: \"" << ex.what() << "\"" << std::endl;
+      HYPERBOT_LOG() << "Failed to parse Silkroad game data: \"" << ex.what() << "\"" << std::endl;
       // If we fail to parse the game data, we don't know that the GameData object is in a good state
       //  Throw an error so we don't end up here again
       throw std::runtime_error("We failed to parse the Silkroad game data");
@@ -141,13 +141,13 @@ int main(int argc, char **argv) {
   std::optional<std::string> characterToLogin;
   if (argc > 1) {
     characterToLogin = argv[1];
-    LOG() << "Want to log in character \"" << *characterToLogin << "\"" << std::endl;
+    HYPERBOT_LOG() << "Want to log in character \"" << *characterToLogin << "\"" << std::endl;
   }
   Hyperbot hyperbot(characterToLogin);
   try {
     hyperbot.run();
   } catch (const std::exception &ex) {
-    LOG() << "Caught an exception; exiting. \"" << ex.what() << '"' << std::endl;
+    HYPERBOT_LOG() << "Caught an exception; exiting. \"" << ex.what() << '"' << std::endl;
     return 1;
   }
   return 0;

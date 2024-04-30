@@ -28,10 +28,10 @@ void Botting::initializeChildState() {
   // if we're already in town, initialize as Townlooping
   //  there's a chance we have everything we need, then Townlooping will immediately finish and we'll move onto the next state as per the normal flow
   if (bot_.selfState().inTown() || bot_.needToGoToTown()) {
-    LOG() << "Initializing state as Townlooping" << std::endl;
+    HYPERBOT_LOG() << "Initializing state as Townlooping" << std::endl;
     setChildStateMachine<Townlooping>();
   } else {
-    LOG() << "Initializing state as Training" << std::endl;
+    HYPERBOT_LOG() << "Initializing state as Training" << std::endl;
     setChildStateMachine<Training>(trainingAreaGeometry_->clone());
   }
 }
@@ -51,7 +51,7 @@ void Botting::onUpdate(const event::Event *event) {
     if (dynamic_cast<Townlooping*>(childState_.get())) {
       // Done with the townloop, start training
       static int townloopCount = 0;
-      LOG() << "Townloop count: " << ++townloopCount << std::endl;
+      HYPERBOT_LOG() << "Townloop count: " << ++townloopCount << std::endl;
       setChildStateMachine<Training>(trainingAreaGeometry_->clone());
     } else if (dynamic_cast<Training*>(childState_.get())) {
       // Done training, go back to town

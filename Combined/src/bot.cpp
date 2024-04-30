@@ -47,7 +47,7 @@ Bot::Bot(const config::Config &config,
   std::ifstream estVisRangeFile{kEstVisRangeFilename};
   if (estVisRangeFile) {
     estVisRangeFile >> worldState_.selfState().estimatedVisibilityRange;
-    LOG() << "Parsed estimated visibility range from file as " << worldState_.selfState().estimatedVisibilityRange << std::endl;
+    HYPERBOT_LOG() << "Parsed estimated visibility range from file as " << worldState_.selfState().estimatedVisibilityRange << std::endl;
   }
 }
 
@@ -396,18 +396,18 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
       case event::EventCode::kChatReceived: {
-        LOG() << 'e' << std::endl;
+        HYPERBOT_LOG() << 'e' << std::endl;
         const auto &castedEvent = dynamic_cast<const event::ChatReceived&>(*event);
         handleChatCommand(castedEvent);
         break;
       }
       default: {
-        LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
+        HYPERBOT_LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
         break;
       }
     }
   } catch (std::exception &ex) {
-    LOG() << "Error while handling event " << static_cast<int>(event->eventCode) << "!\n Error: \"" << ex.what() << '"' << std::endl;
+    HYPERBOT_LOG() << "Error while handling event " << static_cast<int>(event->eventCode) << "!\n Error: \"" << ex.what() << '"' << std::endl;
   }
 }
 
@@ -429,7 +429,7 @@ void Bot::onUpdate(const event::Event *event) {
     try {
       autoPotionStateMachine_->onUpdate(event);
     } catch (std::exception &ex) {
-      LOG() << "Error while running autopotion: " << ex.what() << std::endl;
+      HYPERBOT_LOG() << "Error while running autopotion: " << ex.what() << std::endl;
     }
   }
 
@@ -457,7 +457,7 @@ void Bot::handleRequestStopTraining() {
 
 void Bot::startTraining() {
   if (worldState_.selfState().trainingIsActive) {
-    LOG() << "Asked to start training, but we're already training" << std::endl;
+    HYPERBOT_LOG() << "Asked to start training, but we're already training" << std::endl;
     return;
   }
 
@@ -465,7 +465,7 @@ void Bot::startTraining() {
     throw std::runtime_error("Asked to start training, but already have a botting state machine");
   }
 
-  LOG() << "Starting training" << std::endl;
+  HYPERBOT_LOG() << "Starting training" << std::endl;
   worldState_.selfState().trainingIsActive = true;
   eventBroker_.publishEvent(event::EventCode::kTrainingStarted);
   // TODO: Should we stop whatever we're doing?
@@ -483,12 +483,12 @@ void Bot::stopTraining() {
   if (worldState_.selfState().trainingIsActive) {
     // TODO: Need to cleanup current action to avoid leaving the client in a bad state
     //  Ex. Need to close a shop npc dialog
-    LOG() << "Stopping training" << std::endl;
+    HYPERBOT_LOG() << "Stopping training" << std::endl;
     worldState_.selfState().trainingIsActive = false;
     eventBroker_.publishEvent(event::EventCode::kTrainingStopped);
     bottingStateMachine_.reset();
   } else {
-    LOG() << "Asked to stop training, but we werent training" << std::endl;
+    HYPERBOT_LOG() << "Asked to stop training, but we werent training" << std::endl;
   }
 }
 
@@ -504,11 +504,11 @@ void Bot::handleChatCommand(const event::ChatReceived &event) {
     std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
     if (msg == "start") {
       // Start training
-      LOG() << "Got chat command " << event.message << std::endl;
+      HYPERBOT_LOG() << "Got chat command " << event.message << std::endl;
       startTraining();
     } else if (msg == "stop") {
       // Stop training
-      LOG() << "Got chat command " << event.message << std::endl;
+      HYPERBOT_LOG() << "Got chat command " << event.message << std::endl;
       stopTraining();
     }
   }
@@ -527,7 +527,7 @@ void Bot::handleInjectPacket(const event::InjectPacket &castedEvent) {
     stream.Write<uint8_t>(i);
   }
   const auto packet = PacketContainer(static_cast<uint16_t>(castedEvent.opcode), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
-  LOG() << "Injecting packet" << std::endl;
+  HYPERBOT_LOG() << "Injecting packet" << std::endl;
   packetBroker_.injectPacket(packet, direction);
 }
 
@@ -550,12 +550,12 @@ void Bot::handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globa
 }
 
 void Bot::handleEntityEnteredGeometry(const event::EntityEnteredGeometry &event) {
-  LOG() << "Entity " << event.globalId << " entered geometry" << std::endl;
+  HYPERBOT_LOG() << "Entity " << event.globalId << " entered geometry" << std::endl;
   onUpdate();
 }
 
 void Bot::handleEntityExitedGeometry(const event::EntityExitedGeometry &event) {
-  LOG() << "Entity " << event.globalId << " exited geometry" << std::endl;
+  HYPERBOT_LOG() << "Entity " << event.globalId << " exited geometry" << std::endl;
   onUpdate();
 }
 
@@ -564,7 +564,7 @@ void Bot::handleEntityExitedGeometry(const event::EntityExitedGeometry &event) {
 // ============================================================================================================================
 
 void Bot::handleSpawned(const event::Event *event) {
-  LOG() << "Spawned at position " << worldState_.selfState().position() << std::endl;
+  HYPERBOT_LOG() << "Spawned at position " << worldState_.selfState().position() << std::endl;
   onUpdate(event);
 }
 
@@ -587,7 +587,7 @@ void Bot::handleStatesChanged() {
 void Bot::handleSkillBegan(const event::SkillBegan &event) {
   if (event.casterGlobalId == worldState_.selfState().globalId) {
     const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
-    // LOG() << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" began" << std::endl;
+    // HYPERBOT_LOG() << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" began" << std::endl;
     onUpdate(&event);
   }
 }
@@ -595,14 +595,14 @@ void Bot::handleSkillBegan(const event::SkillBegan &event) {
 void Bot::handleSkillEnded(const event::SkillEnded &event) {
   if (event.casterGlobalId == worldState_.selfState().globalId) {
     const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
-    // LOG() << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" ended" << std::endl;
+    // HYPERBOT_LOG() << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" ended" << std::endl;
     onUpdate(&event);
   }
 }
 
 void Bot::handleSkillCooldownEnded(const event::SkillCooldownEnded &event) {
   const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
-  // LOG() << "Skill " << event.skillRefId << "(" << (skillName ? *skillName : "UNKNOWN") << ") cooldown ended" << std::endl;
+  // HYPERBOT_LOG() << "Skill " << event.skillRefId << "(" << (skillName ? *skillName : "UNKNOWN") << ") cooldown ended" << std::endl;
   worldState_.selfState().skillEngine.skillCooldownEnded(event.skillRefId);
   onUpdate();
 }
@@ -625,7 +625,7 @@ void Bot::entitySpawned(const event::EntitySpawned &event) {
     const auto &entity = worldState_.getEntity<entity::Entity>(event.globalId);
     const auto distanceToEntity = sro::position_math::calculateDistance2d(worldState_.selfState().position(), entity.position());
     if (distanceToEntity > worldState_.selfState().estimatedVisibilityRange) {
-      LOG() << "Bumping up estimated visibility range to " << distanceToEntity << std::endl;
+      HYPERBOT_LOG() << "Bumping up estimated visibility range to " << distanceToEntity << std::endl;
       worldState_.selfState().estimatedVisibilityRange = distanceToEntity;
       std::ofstream estVisRangeFile{kEstVisRangeFilename};
       if (estVisRangeFile) {
@@ -642,11 +642,11 @@ void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
     if (selfState().bodyState() == packet::enums::BodyState::kInvisibleGm) {
       // For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
       // Set self as visible
-      LOG() << "Setting self as visible" << std::endl;
+      HYPERBOT_LOG() << "Setting self as visible" << std::endl;
       const auto setVisiblePacket = packet::building::ClientAgentOperatorRequest::toggleInvisible();
       packetBroker_.injectPacket(setVisiblePacket, PacketContainer::Direction::kClientToServer);
 
-      // LOG() << "Setting free pvp mode" << std::endl;
+      // HYPERBOT_LOG() << "Setting free pvp mode" << std::endl;
       // const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
       // packetBroker_.injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
     }
@@ -655,7 +655,7 @@ void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
 }
 
 void Bot::itemUseTimedOut(const event::ItemUseTimeout &event) {
-  LOG() << "Item use timed out!" << std::endl;
+  HYPERBOT_LOG() << "Item use timed out!" << std::endl;
   onUpdate(&event);
 }
 
@@ -677,12 +677,12 @@ void Bot::handleItemCooldownEnded(const event::ItemCooldownEnded &event) {
 bool Bot::needToGoToTown() const {
   const auto mpPotionSlots = selfState().inventory.findItemsOfCategory({type_id::categories::kMpPotion});
   if (mpPotionSlots.empty()) {
-    LOG() << "Checking if we need to go to town. Have no MP potions" << std::endl;
+    HYPERBOT_LOG() << "Checking if we need to go to town. Have no MP potions" << std::endl;
     return true;
   }
   const auto hpPotionSlots = selfState().inventory.findItemsOfCategory({type_id::categories::kHpPotion});
   if (hpPotionSlots.empty()) {
-    LOG() << "Checking if we need to go to town. Have no HP potions" << std::endl;
+    HYPERBOT_LOG() << "Checking if we need to go to town. Have no HP potions" << std::endl;
     return true;
   }
   int hpPotionCount=0;
@@ -699,7 +699,7 @@ bool Bot::needToGoToTown() const {
   }
   constexpr const int kMinHpCount{10};
   if (hpPotionCount < kMinHpCount) {
-    LOG() << "Checking if we need to go to town. Have fewer than " << kMinHpCount << " HP potions" << std::endl;
+    HYPERBOT_LOG() << "Checking if we need to go to town. Have fewer than " << kMinHpCount << " HP potions" << std::endl;
     return true;
   }
   return false;
@@ -725,14 +725,14 @@ bool Bot::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
   if (skillData.consumeMP > currentMp ||
       (selfState().maxMp() && skillData.consumeMPRatio > (static_cast<double>(currentMp) / *selfState().maxMp()) * 100)) {
     // Not enough MP to cast.
-    LOG() << "Not enough MP to cast skill " << (gameData().getSkillNameIfExists(skillRefId) ? *gameData().getSkillNameIfExists(skillRefId) : std::string("unknown")) << std::endl;
+    HYPERBOT_LOG() << "Not enough MP to cast skill " << (gameData().getSkillNameIfExists(skillRefId) ? *gameData().getSkillNameIfExists(skillRefId) : std::string("unknown")) << std::endl;
     return false;
   }
   const auto currentHp = selfState().currentHp();
   if (skillData.consumeHP > currentHp ||
       (selfState().maxHp() && skillData.consumeHPRatio > (static_cast<double>(currentHp) / *selfState().maxHp()) * 100)) {
     // Not enough HP to cast.
-    LOG() << "Not enough HP to cast skill " << (gameData().getSkillNameIfExists(skillRefId) ? *gameData().getSkillNameIfExists(skillRefId) : std::string("unknown")) << std::endl;
+    HYPERBOT_LOG() << "Not enough HP to cast skill " << (gameData().getSkillNameIfExists(skillRefId) ? *gameData().getSkillNameIfExists(skillRefId) : std::string("unknown")) << std::endl;
     return false;
   }
   if (selfState().skillEngine.skillIsOnCooldown(skillRefId)) {

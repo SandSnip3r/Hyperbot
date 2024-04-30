@@ -3,7 +3,7 @@
 
 #define CHECK_ERROR(error) \
 if (error) { \
-  LOG() << "Error: \"" << error.message() << '"' << std::endl; \
+  HYPERBOT_LOG() << "Error: \"" << error.message() << '"' << std::endl; \
 }
 
 //Handles incoming packets
