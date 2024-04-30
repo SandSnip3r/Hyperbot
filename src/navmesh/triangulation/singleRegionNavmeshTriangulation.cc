@@ -248,7 +248,7 @@ bool SingleRegionNavmeshTriangulation::agentFitsThroughEdge(const IndexType edge
   //  The vertices of the edge could be unconstrained and thus we could pass through them
 }
 
-std::vector<SingleRegionNavmeshTriangulation::State> SingleRegionNavmeshTriangulation::getSuccessors(const State &currentState, const std::optional<State> goalState, const double agentRadius) const {
+absl::InlinedVector<SingleRegionNavmeshTriangulation::State, 3> SingleRegionNavmeshTriangulation::getSuccessors(const State &currentState, const std::optional<State> goalState, const double agentRadius) const {
   // A state corresponds to a single triangle triangle (but a triangle can have multiple states)
   // This triangle has 3 edges (obviously)
   // 1 of these edges is the edge that we came though (unless we're starting in this triangle, then there isnt an entry edge index)
@@ -570,7 +570,7 @@ std::vector<SingleRegionNavmeshTriangulation::State> SingleRegionNavmeshTriangul
     throw std::runtime_error("Triangle is not in data");
   }
   
-  std::vector<State> successors;
+  absl::InlinedVector<State, 3> successors;
   // For each neighboring triangle
   const auto &[neighborAcrossEdge1, neighborAcrossEdge2, neighborAcrossEdge3] = getTriangleNeighborsWithSharedEdges(triangleIndexForState);
   for (const auto &neighborAcrossEdge : {neighborAcrossEdge1, neighborAcrossEdge2, neighborAcrossEdge3}) {

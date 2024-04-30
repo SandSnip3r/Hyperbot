@@ -35,7 +35,7 @@ PK2Entry Pk2ReaderModern::getEntry(const std::string &entryName) {
   return entry;
 }
 
-std::vector<uint8_t> Pk2ReaderModern::getEntryData(PK2Entry &entry) {
+std::vector<uint8_t> Pk2ReaderModern::getEntryData(PK2Entry &entry) { // TODO: This function should take a reference to a vector as input instead
   std::unique_lock<std::mutex> lock(mutex_);
   std::vector<uint8_t> data;
   bool result = pk2Reader_.ExtractToMemory(entry, data);

@@ -8,6 +8,7 @@ namespace sro::scalar_types {
 using EntityGlobalId = uint32_t;
 using ReferenceObjectId = uint32_t;
 using StorageIndexType = uint8_t;
+using OptLevelType = uint8_t;
 
 } // namespace sro::scalar_types
 

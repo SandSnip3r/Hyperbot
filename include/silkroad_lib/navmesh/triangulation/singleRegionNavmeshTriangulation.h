@@ -8,6 +8,8 @@
 #include "triangle_lib_navmesh.h"
 #include "vector.h"
 
+#include <absl/container/inlined_vector.h>
+
 #include <map>
 #include <set>
 
@@ -70,7 +72,7 @@ public:
   void addObjectDataForTriangle(const IndexType triangleIndex, const ObjectData &objectData);
   const std::vector<ObjectData>& getObjectDatasForTriangle(const IndexType triangleIndex) const;
   
-  std::vector<State> getSuccessors(const State &currentState, const std::optional<State> goalState, const double agentRadius) const;
+  absl::InlinedVector<State, 3> getSuccessors(const State &currentState, const std::optional<State> goalState, const double agentRadius) const;
   bool agentFitsThroughEdge(const IndexType edgeIndex, const double agentRadius) const;
   static pathfinder::Vector to2dPoint(const math::Vector3 &point);
   State createStartState(const math::Vector3 &point, const IndexType triangleIndex) const;
