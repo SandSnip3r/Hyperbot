@@ -12,6 +12,7 @@
 #include "../../common/pk2/divisionInfo.hpp"
 #include "../../common/pk2/parsing/parsing.hpp"
 
+#include <absl/log/globals.h>
 #include <absl/log/initialize.h>
 #include <absl/log/log.h>
 
@@ -142,6 +143,9 @@ private:
 int main(int argc, char **argv) {
   // Initialize abseil logging.
   absl::InitializeLog();
+  // Ideally, this setting of the threshold and vlog level should come from the commandline, but something about our cmake setup results in the relevant flags not being linked into this binary.
+  absl::SetGlobalVLogLevel(10);
+  absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
 
   std::optional<std::string> characterToLogin;
   if (argc > 1) {
