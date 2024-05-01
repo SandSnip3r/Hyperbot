@@ -298,7 +298,7 @@ structures::SkillAction parseSkillAction(StreamUtility &stream) {
           // Only ever knocked down or knocked back, there is no combination
           hit.position = parseInt32Pos(stream);
         } else if (static_cast<uint8_t>(hit.hitResultFlag) == 7) {
-          std::cout << "parseSkillAction: WHOAAAAA!!!! Unhandled skill end case. Unknown what this is!!!\n";
+          LOG(WARNING) << "parseSkillAction: WHOAAAAA!!!! Unhandled skill end case. Unknown what this is!!!";
         }
         hitObject.hits.emplace_back(std::move(hit));
       }
@@ -328,18 +328,18 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
   const auto refObjId = stream.Read<sro::scalar_types::ReferenceObjectId>();
   if (refObjId == std::numeric_limits<sro::scalar_types::ReferenceObjectId>::max()) {
     // Special case, refObjId == -1
-    std::cout << "EVENT_ZONE\n";
+    LOG(INFO) << "EVENT_ZONE";
     // EVENT_ZONE (Traps, Buffzones, ...)
     uint16_t eventZoneTypeId = stream.Read<uint16_t>();
-    std::cout << " eventZoneTypeId:" << eventZoneTypeId << '\n';
+    LOG(INFO) << " eventZoneTypeId:" << eventZoneTypeId;
     sro::scalar_types::ReferenceObjectId eventZoneRefSkillId = stream.Read<sro::scalar_types::ReferenceObjectId>();
-    std::cout << " eventZoneRefSkillId:" << eventZoneRefSkillId << '\n';
+    LOG(INFO) << " eventZoneRefSkillId:" << eventZoneRefSkillId;
     sro::scalar_types::EntityGlobalId globalId = stream.Read<sro::scalar_types::EntityGlobalId>();
-    std::cout << " globalId:" << globalId << '\n';
+    LOG(INFO) << " globalId:" << globalId;
     const auto position = parsePosition(stream);
-    std::cout << " position:" << position << '\n';
+    LOG(INFO) << " position:" << position;
     sro::Angle angle = stream.Read<sro::Angle>();
-    std::cout << " angle:" << angle << '\n';
+    LOG(INFO) << " angle:" << angle;
     return {};
   }
 
@@ -644,7 +644,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
                  categories::kQuestAndEvent.contains(itemTypeId)) {
         uint16_t ownerNameLength = stream.Read<uint16_t>();
         std::string ownerName = stream.Read_Ascii(ownerNameLength);
-        std::cout << "Item is a quest item belonging to " << ownerName << '\n';
+        LOG(INFO) << "Item is a quest item belonging to " << ownerName;
       }
     }
     itemPtr->globalId = stream.Read<uint32_t>();

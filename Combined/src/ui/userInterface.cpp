@@ -339,7 +339,7 @@ void UserInterface::handleRequest(const zmq::message_t &request) {
         break;
       }
     default:
-      std::cout << "Unknown request type" << std::endl;
+      LOG(WARNING) << "Unknown request type";
       break;
   }
 }

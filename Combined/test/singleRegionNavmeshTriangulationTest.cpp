@@ -17,5 +17,4 @@ TEST(Name, name2) {
   // ============================================================================================================================================
   using TestType = sro::navmesh::triangulation::SingleRegionNavmeshTriangulation;
   // TestType t;
-  std::cout << "We're in the test now!!" << std::endl;
 }

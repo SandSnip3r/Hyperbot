@@ -3,7 +3,8 @@
 #include "../../../../common/pk2/parsing/parsing.hpp"
 
 #include <silkroad_lib/position_math.h> // TODO: Remove
-#include <iostream> // TODO: Remove
+
+#include <absl/log/log.h> // TODO: Remove
 
 #include <optional>
 #include <stdexcept>
@@ -76,8 +77,7 @@ RegionInfo parseRegionInfo(const std::vector<uint8_t> &data) {
         {
           const auto &b = currentRegion->regionRects.back();
           if (b.height < 0) {
-            std::cout << "noo" << std::endl;
-            std::cout << "regionX: " << regionX << " ,regionZ: " << regionZ << std::endl;
+            LOG(WARNING) << "Negative height. regionX: " << regionX << " ,regionZ: " << regionZ;
           }
         }
       } else if (pieces[2].size() >= 4 &&

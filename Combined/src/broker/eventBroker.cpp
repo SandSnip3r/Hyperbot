@@ -49,7 +49,7 @@ EventBroker::SubscriptionId EventBroker::subscribeToEvent(event::EventCode event
     // for (const auto &i : subscriptionIt->second) {
     //   const auto iAddr = getAddress(i.handleFunction);
     //   if (thisAddr == iAddr) {
-    //     std::cout << "This exact handler is even subscribed to this event" << std::endl;
+    //     LOG(WARNING) << "This exact handler is even subscribed to this event";
     //   }
     // }
   }

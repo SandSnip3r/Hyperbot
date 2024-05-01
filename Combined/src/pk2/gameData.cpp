@@ -8,8 +8,9 @@
 #include <silkroad_lib/pk2/navmeshParser.h>
 #include <silkroad_lib/pk2/pk2.h>
 
+#include <absl/log/log.h>
+
 #include <functional>
-#include <iostream>
 #include <fstream>
 #include <map>
 
@@ -159,7 +160,7 @@ void parseDataFile(const std::string &data,
   }
   if (start < data.size()-1) {
     // File doesnt end in newline. One more line to read
-    std::cout << "One more\n";
+    LOG(INFO) << "One more\n";
     const auto line = data.substr(start);
     if (isValidDataLine(line)) {
       saveParsedDataObject(parseDataLine(line));
@@ -200,7 +201,7 @@ void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "Parsing character data" << std::endl;
+    LOG(INFO) << "Parsing character data";
   }
   for (auto characterdataFilename : characterdataFilenames) {
     auto characterdataPath = kTextdataDirectory + characterdataFilename;
@@ -212,13 +213,12 @@ void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
       parseDataFile2<ref::Character>(characterdataLines, parsing::isValidCharacterdataLine, parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
       // parseDataFile<ref::Character>(characterdataStr, parsing::isValidCharacterdataLine, parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
     } catch (std::exception &ex) {
-      std::cout << "Exception while parsing character data\n";
-      std::cout << "  " << ex.what() << '\n';
+      LOG(WARNING) << "Exception while parsing character data: \"" << ex.what() << '"';
     }
   }
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "  Cached " << characterData_.size() << " character(s)" << std::endl;
+    LOG(INFO) << "  Cached " << characterData_.size() << " character(s)";
   }
 }
 
@@ -231,7 +231,7 @@ void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "Parsing item data" << std::endl;
+    LOG(INFO) << "Parsing item data";
   }
   for (auto itemdataFilename : itemdataFilenames) {
     auto itemdataPath = kTextdataDirectory + itemdataFilename;
@@ -240,7 +240,7 @@ void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   }
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "  Cached " << itemData_.size() << " item(s)" << std::endl;
+    LOG(INFO) << "  Cached " << itemData_.size() << " item(s)";
   }
 }
 
@@ -254,7 +254,7 @@ void GameData::parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "Parsing skill data" << std::endl;
+    LOG(INFO) << "Parsing skill data";
   }
   for (auto skilldataFilename : skilldataFilenames) {
     auto skilldataPath = kTextdataDirectory + skilldataFilename;
@@ -267,7 +267,7 @@ void GameData::parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   }
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "  Cached " << skillData_.size() << " skill(s)" << std::endl;
+    LOG(INFO) << "  Cached " << skillData_.size() << " skill(s)";
   }
 }
 
@@ -276,14 +276,14 @@ void GameData::parseTeleportData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kTeleportDataFilename = "teleportbuilding.txt";
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "Parsing teleport data." << std::endl;
+    LOG(INFO) << "Parsing teleport data.";
   }
   auto teleportDataPath = kTextdataDirectory + kTeleportDataFilename;
   auto teleportDataStr = getFileDataAsString(pk2Reader, teleportDataPath);
   parseDataFile<ref::Teleport>(teleportDataStr, parsing::isValidTeleportbuildingLine, parsing::parseTeleportbuildingLine, std::bind(&TeleportData::addTeleport, &teleportData_, std::placeholders::_1));
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "  Cached " << teleportData_.size() << " teleport(s)" << std::endl;
+    LOG(INFO) << "  Cached " << teleportData_.size() << " teleport(s)";
   }
 }
 
@@ -309,7 +309,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kScrapOfPackageItemFilename = "refscrapofpackageitem.txt";
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "Parsing scrap of package item.";
+    LOG(INFO) << "Parsing scrap of package item.";
   }
   auto scrapOfPackageItemPath = kTextdataDirectory + kScrapOfPackageItemFilename;
   auto scrapOfPackageItemStr = getFileDataAsString(pk2Reader, scrapOfPackageItemPath);
@@ -318,7 +318,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   });
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "  Cached " << scrapOfPackageItemMap.size() << " scrap of package item(s)\n";
+    LOG(INFO) << "  Cached " << scrapOfPackageItemMap.size() << " scrap of package item(s)";
   }
 
   // refshoptab.txt
@@ -327,7 +327,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kShopTabFilename = "refshoptab.txt";
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "Parsing shop tab.";
+    LOG(INFO) << "Parsing shop tab.";
   }
   auto shopTabPath = kTextdataDirectory + kShopTabFilename;
   auto shopTabStr = getFileDataAsString(pk2Reader, shopTabPath);
@@ -336,7 +336,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   });
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "  Cached " << shopTabs.size() << " shop tab(s)\n";
+    LOG(INFO) << "  Cached " << shopTabs.size() << " shop tab(s)";
   }
 
   // refshopgroup.txt
@@ -345,7 +345,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kShopGroupFilename = "refshopgroup.txt";
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "Parsing shop group.";
+    LOG(INFO) << "Parsing shop group.";
   }
   auto shopGroupPath = kTextdataDirectory + kShopGroupFilename;
   auto shopGroupStr = getFileDataAsString(pk2Reader, shopGroupPath);
@@ -354,7 +354,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   });
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "  Cached " << shopGroups.size() << " shop group(s)\n";
+    LOG(INFO) << "  Cached " << shopGroups.size() << " shop group(s)";
   }
 
   // refshopgoods.txt
@@ -363,7 +363,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kShopGoodsFilename = "refshopgoods.txt";
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "Parsing shop goods.";
+    LOG(INFO) << "Parsing shop goods.";
   }
   auto shopGoodsPath = kTextdataDirectory + kShopGoodsFilename;
   auto shopGoodsStr = getFileDataAsString(pk2Reader, shopGoodsPath);
@@ -372,7 +372,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   });
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "  Cached " << shopGoods.size() << " shop goods\n";
+    LOG(INFO) << "  Cached " << shopGoods.size() << " shop goods";
   }
 
   // refmappingshopgroup.txt
@@ -381,7 +381,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kMappingShopGroupFilename = "refmappingshopgroup.txt";
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "Parsing mapping shop group.";
+    LOG(INFO) << "Parsing mapping shop group.";
   }
   auto mappingShopGroupPath = kTextdataDirectory + kMappingShopGroupFilename;
   auto mappingShopGroupStr = getFileDataAsString(pk2Reader, mappingShopGroupPath);
@@ -390,7 +390,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   });
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "  Cached " << mappingShopGroups.size() << " mapping shop group\n";
+    LOG(INFO) << "  Cached " << mappingShopGroups.size() << " mapping shop group";
   }
 
   // refmappingshopwithtab.txt
@@ -399,7 +399,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kMappingShopWithTabFilename = "refmappingshopwithtab.txt";
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "Parsing mapping shop with tab.";
+    LOG(INFO) << "Parsing mapping shop with tab.";
   }
   auto mappingShopWithTabPath = kTextdataDirectory + kMappingShopWithTabFilename;
   auto mappingShopWithTabStr = getFileDataAsString(pk2Reader, mappingShopWithTabPath);
@@ -408,7 +408,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   });
   {
     std::unique_lock<std::mutex> lock(printMutex_);
-    std::cout << "  Cached " << mappingShopWithTabs.size() << " mapping shop with tab\n";
+    LOG(INFO) << "  Cached " << mappingShopWithTabs.size() << " mapping shop with tab";
   }
 
   // Packages have already been created when we parsed everything
@@ -449,7 +449,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
                 // First time finding this tab
                 tabGroups.emplace_back(tabGroup);
               } else {
-                std::cout << "Found a duplicate tab group for NPC \"" << npc << "\"\n";
+                LOG(INFO) << "Found a duplicate tab group for NPC \"" << npc << "\"";
               }
             }
           }
@@ -468,7 +468,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
               shopData_.addTabToNpc(npc, tabCount, tab);
               ++tabCount;
             } else {
-              std::cout << "Tab \"" << tabName << "\" didnt have any goods in it. Not adding to shop for any NPC\n";
+              LOG(INFO) << "Tab \"" << tabName << "\" didnt have any goods in it. Not adding to shop for any NPC";
             }
           }
         }
@@ -533,7 +533,7 @@ void GameData::parseMasteryData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseNavmeshData(sro::pk2::Pk2ReaderModern &pk2Reader) {
-  std::cout << "Parsing navmesh data\n";
+  LOG(INFO) << "Parsing navmesh data";
   sro::pk2::NavmeshParser navmeshParser(pk2Reader);
   navmesh_ = navmeshParser.parseNavmesh();
   navmeshTriangulation_ = sro::navmesh::triangulation::NavmeshTriangulation(*navmesh_);
@@ -544,7 +544,7 @@ void GameData::parseNavmeshData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   //     const auto regionId = math::position::worldRegionIdFromXY(regionX, regionY);
   //     // const auto regionId = math::position::worldRegionIdFromXY(70, 107);
   //     const auto [x,y] = math::position::regionXYFromRegionId(regionId);
-  //     // std::cout << "Region " << regionId << " is " << x << ',' << y << std::endl;
+  //     // LOG(INFO) << "Region " << regionId << " is " << x << ',' << y;
   //     if (navmeshParser.regionIsEnabled(regionId)) {
   //       const auto regionNavmeshData = navmeshParser.parseRegionNavmesh(regionId);
   //       auto regionNavmesh = navmesh::buildNavmeshForRegion(regionNavmeshData, navmeshParser, false);

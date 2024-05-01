@@ -1,5 +1,4 @@
 #include "stream_utility.h"
-#include <iostream>
 #include <iomanip>
 #include <cctype>
 #include <sstream>
@@ -400,12 +399,11 @@ std::string DumpToString( const void * stream, int32_t size )
 					ss << ".";
 				}
 			}
-			ss << std::endl;
+			ss << '\n';
 			index = 0;
 		}
 	}
-	std::string final = ss.str();
-	return final;
+	return ss.str();
 }
 
 //-----------------------------------------------------------------------------

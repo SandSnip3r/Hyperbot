@@ -46,6 +46,8 @@
 
 #include "packet/opcode.hpp"
 
+#include <absl/log/log.h>
+
 #include <iostream>
 
 namespace packet::parsing {
@@ -171,10 +173,9 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       // case static_cast<Opcode>(0x6005):
         return std::make_unique<ParsedUnknown>(packet);
     }
-    std::cout << "Warning! No packet parser found for opcode " << std::hex << (int)packet.opcode << std::dec << '(' << toString(opcode) << ")" << std::endl;
+    LOG(WARNING) << "Warning! No packet parser found for opcode " << std::hex << (int)packet.opcode << std::dec << '(' << toString(opcode) << ")";
   } catch (std::exception &ex) {
-    std::cout << "Exception while parsing packet!\n";
-    std::cout << "  " << ex.what() << '\n';
+    LOG(WARNING) << "Exception while parsing packet! \"" << ex.what() << '"';
   }
   return nullptr;
 }

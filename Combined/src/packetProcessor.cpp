@@ -1001,7 +1001,7 @@ void PacketProcessor::serverAgentAlchemyElixirResponseReceived(const packet::par
       const storage::Item *item = worldState_.selfState().inventory.getItem(packet.slot());
       const storage::ItemEquipment *equipment = dynamic_cast<const storage::ItemEquipment*>(item);
       std::ofstream outfile("alch-"+worldState_.selfState().name+".txt", std::ios::app);
-      outfile << static_cast<int>(equipment->optLevel)+1 << ' ' << (packet.success() ? "success" : "fail") << std::endl;
+      outfile << static_cast<int>(equipment->optLevel)+1 << ' ' << (packet.success() ? "success\n" : "fail\n");
     }
     if (!packet.itemWasDestroyed()) {
       // TODO: Should the inventory API allow overwriting items?
@@ -1156,18 +1156,18 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     }
     // Error seems to always refer to the most recent
     const auto failedCommand = worldState_.selfState().skillEngine.pendingCommandQueue.front();
-    // std::cout << "Command error " << packet.errorCode() << ": " << wrapActionCommand(failedCommand) << std::endl; // COMMAND_QUEUE_DEBUG
+    // LOG(INFO) << "Command error " << packet.errorCode() << ": " << wrapActionCommand(failedCommand); // COMMAND_QUEUE_DEBUG
     eventBroker_.publishEvent<event::CommandError>(failedCommand);
     worldState_.selfState().skillEngine.pendingCommandQueue.erase(worldState_.selfState().skillEngine.pendingCommandQueue.begin());
   } else /*if (packet.actionState() == packet::enums::ActionState::kEnd)*/ {
     // It seems like if a skill is completed without interruption, this end will come after the SkillEnd packet
     // If a skill is interrupted, this end will come BEFORE the SkillEnd packet
     if (worldState_.selfState().skillEngine.acceptedCommandQueue.empty()) {
-      std::cout << "WARNING: Command ended, but we had no accepted command" << std::endl;
+      LOG(WARNING) << "Command ended, but we had no accepted command";
       if (!worldState_.selfState().skillEngine.pendingCommandQueue.empty()) {
-        std::cout << " Pending command queue is not empty though, maybe we ought to pop that?" << std::endl;
+        LOG(INFO) << " Pending command queue is not empty though, maybe we ought to pop that?";
         if (worldState_.selfState().skillEngine.pendingCommandQueue.front().commandType == packet::enums::CommandType::kCancel) {
-          std::cout << "  Action is a cancel, popping" << std::endl;
+          LOG(INFO) << "  Action is a cancel, popping";
           // TODO: I am not confident in the assumption that this means that we delete the first item in the pending queue
           worldState_.selfState().skillEngine.pendingCommandQueue.erase(worldState_.selfState().skillEngine.pendingCommandQueue.begin());
         }
@@ -1193,16 +1193,16 @@ WrappedCommand PacketProcessor::wrapActionCommand(const packet::structures::Acti
 }
 
 void PacketProcessor::printCommandQueues() const {
-  std::cout << "-----------------------------------------------------------" << std::endl;
-  std::cout << "Pending command Queue:" << (worldState_.selfState().skillEngine.pendingCommandQueue.empty() ? " <empty>" : "") << std::endl;
+  LOG(INFO) << "-----------------------------------------------------------";
+  LOG(INFO) << "Pending command Queue:" << (worldState_.selfState().skillEngine.pendingCommandQueue.empty() ? " <empty>" : "");
   for (const auto &c : worldState_.selfState().skillEngine.pendingCommandQueue) {
-    std::cout << "  " << wrapActionCommand(c) << std::endl;
+    LOG(INFO) << "  " << wrapActionCommand(c);
   }
-  std::cout << "Accepted command Queue:" << (worldState_.selfState().skillEngine.acceptedCommandQueue.empty() ? " <empty>" : "") << std::endl;
+  LOG(INFO) << "Accepted command Queue:" << (worldState_.selfState().skillEngine.acceptedCommandQueue.empty() ? " <empty>" : "");
   for (const auto &c : worldState_.selfState().skillEngine.acceptedCommandQueue) {
-    std::cout << "  [" << (c.wasExecuted ? 'X' : ' ') << "] " << wrapActionCommand(c.command) << std::endl;
+    LOG(INFO) << "  [" << (c.wasExecuted ? 'X' : ' ') << "] " << wrapActionCommand(c.command);
   }
-  std::cout << "-----------------------------------------------------------" << std::endl;
+  LOG(INFO) << "-----------------------------------------------------------";
 }
 
 // Skill Notes:
@@ -1356,7 +1356,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       // TODO: Common attacks will not be found, does that matter? That means that no skill cooldown will be created for one
       if (!indexOfOurSkill) {
         // TODO: Shouldn't happen now
-        std::cout << "Couldn't find our skill in the accepted command queue" << std::endl;
+        LOG(INFO) << "Couldn't find our skill in the accepted command queue";
         // This happens for common attacks
         if (skillIsCommonAttack && !(worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute &&
                                      worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kAttack)) {

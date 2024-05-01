@@ -3,7 +3,7 @@
 
 #include <silkroad_lib/position_math.h>
 
-#include <iostream>
+#include <absl/log/log.h>
 
 namespace packet::parsing {
 
@@ -338,8 +338,8 @@ ParsedClientItemMove::ParsedClientItemMove(const PacketContainer &packet) : Pars
   } else if (movement_.type == packet::enums::ItemMovementType::kDropItem) {
     uint8_t sourceInventorySlot = stream.Read<uint8_t>();
   } else {
-    std::cout << "New item movement type! " << static_cast<int>(movement_.type) << '\n';
-    std::cout << "Dump: " << DumpToString(stream) << '\n';
+    LOG(INFO) << "New item movement type! " << static_cast<int>(movement_.type);
+    LOG(INFO) << "Dump: " << DumpToString(stream);
   }
 }
 

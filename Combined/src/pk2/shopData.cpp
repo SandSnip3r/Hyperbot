@@ -1,12 +1,14 @@
 #include "shopData.hpp"
 
+#include <absl/log/log.h>
+
 namespace pk2 {
 
 Tab::Tab(const std::string &tabName) : name_(tabName) {}
 
 void Tab::addPackageAtSlot(ref::ScrapOfPackageItem package, uint8_t slotNum) {
   if (packageMap_.find(slotNum) != packageMap_.end()) {
-    std::cout << "Warning! Overwriting item in tab " << name_ << " at slot " << (int)slotNum << '\n';
+    LOG(WARNING) << "Warning! Overwriting item in tab " << name_ << " at slot " << (int)slotNum;
   }
   packageMap_[slotNum] = package;
 }
