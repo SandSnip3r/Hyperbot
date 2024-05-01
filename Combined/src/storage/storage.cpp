@@ -1,7 +1,8 @@
 #include "storage.hpp"
 
+#include <absl/log/log.h>
+
 #include <algorithm>
-#include <iostream>
 
 namespace storage {
 
@@ -95,7 +96,7 @@ void Storage::moveItem(uint8_t srcSlot, uint8_t destSlot, uint16_t quantity) {
       }
     }
   } else {
-    std::cerr << "Moving an item, but it doesnt exist at the source location\n";
+    LOG(WARNING) << "Moving an item, but it doesnt exist at the source location";
   }
 }
 

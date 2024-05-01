@@ -8,7 +8,6 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
-#include <iostream>
 #include <sstream>
 
 Loader::Loader(const config::Config &config, const pk2::DivisionInfo &divisionInfo) : kDivisionInfo_(divisionInfo) {

@@ -1,6 +1,6 @@
 #include "stream_utility.h"
-#include <iomanip>
 #include <cctype>
+#include <iomanip>
 #include <sstream>
 
 //-----------------------------------------------------------------------------

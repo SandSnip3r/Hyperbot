@@ -6,8 +6,6 @@
 
 #include <absl/log/log.h>
 
-#include <iostream>
-
 namespace packet::parsing {
 
 namespace {

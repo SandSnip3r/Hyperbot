@@ -2,7 +2,6 @@
 
 #include <silkroad_lib/position_math.h>
 
-#include <iostream>
 #include <utility>
 
 namespace packet::parsing {

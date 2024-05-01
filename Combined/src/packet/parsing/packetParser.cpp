@@ -48,8 +48,6 @@
 
 #include <absl/log/log.h>
 
-#include <iostream>
-
 namespace packet::parsing {
 
 PacketParser::PacketParser(const state::EntityTracker &entityTracker, const pk2::GameData &gameData) :

@@ -6,7 +6,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <iostream> // TODO: Remove
 
 namespace pk2 {
 
