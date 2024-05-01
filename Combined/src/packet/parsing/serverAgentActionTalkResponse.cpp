@@ -1,7 +1,5 @@
 #include "serverAgentActionTalkResponse.hpp"
 
-#include "logging.hpp"
-
 namespace packet::parsing {
 
 ServerAgentActionTalkResponse::ServerAgentActionTalkResponse(const PacketContainer &packet) :

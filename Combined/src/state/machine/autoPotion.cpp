@@ -3,7 +3,6 @@
 
 #include "bot.hpp"
 #include "event/event.hpp"
-#include "logging.hpp"
 #include "helpers.hpp"
 #include "type_id/categories.hpp"
 

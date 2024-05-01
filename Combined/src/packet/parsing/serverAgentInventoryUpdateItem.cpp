@@ -1,6 +1,6 @@
 #include "serverAgentInventoryUpdateItem.hpp"
 
-#include "logging.hpp"
+#include <absl/log/log.h>
 
 namespace packet::parsing {
 
@@ -20,40 +20,40 @@ ServerAgentInventoryUpdateItem::ServerAgentInventoryUpdateItem(const PacketConta
   itemUpdateFlag_ = static_cast<enums::ItemUpdateFlag>(stream.Read<std::underlying_type_t<enums::ItemUpdateFlag>>());
   if (hasFlagSet(itemUpdateFlag_, enums::ItemUpdateFlag::kRefObjID)) {
     uint32_t refObjId = stream.Read<uint32_t>();
-    HYPERBOT_LOG() << "Item at slot " << static_cast<int>(slotIndex_) << " updated ref obj id: " << refObjId << std::endl;
+    LOG(INFO) << "Item at slot " << static_cast<int>(slotIndex_) << " updated ref obj id: " << refObjId;
   }
   if (hasFlagSet(itemUpdateFlag_, enums::ItemUpdateFlag::kOptLevel)) {
     uint8_t optLevel = stream.Read<uint8_t>();
-    HYPERBOT_LOG() << "Item at slot " << static_cast<int>(slotIndex_) << " updated opt level: " << static_cast<int>(optLevel) << std::endl;
+    LOG(INFO) << "Item at slot " << static_cast<int>(slotIndex_) << " updated opt level: " << static_cast<int>(optLevel);
   }
   if (hasFlagSet(itemUpdateFlag_, enums::ItemUpdateFlag::kVariance)) {
     uint64_t variance = stream.Read<uint64_t>();
-    HYPERBOT_LOG() << "Item at slot " << static_cast<int>(slotIndex_) << " updated variance: " << variance << std::endl;
+    LOG(INFO) << "Item at slot " << static_cast<int>(slotIndex_) << " updated variance: " << variance;
   }
   if (hasFlagSet(itemUpdateFlag_, enums::ItemUpdateFlag::kQuantity)) {
     quantity_ = stream.Read<uint16_t>();
   }
   if (hasFlagSet(itemUpdateFlag_, enums::ItemUpdateFlag::kDurability)) {
     uint32_t durability = stream.Read<uint32_t>();
-    HYPERBOT_LOG() << "Item at slot " << static_cast<int>(slotIndex_) << " updated durability: " << durability << std::endl;
+    LOG(INFO) << "Item at slot " << static_cast<int>(slotIndex_) << " updated durability: " << durability;
   }
   if (hasFlagSet(itemUpdateFlag_, enums::ItemUpdateFlag::kMagParams)) {
     uint8_t magParamCount = stream.Read<uint8_t>();
-    HYPERBOT_LOG() << "Item at slot " << static_cast<int>(slotIndex_) << " updated mag params" << std::endl;
+    LOG(INFO) << "Item at slot " << static_cast<int>(slotIndex_) << " updated mag params";
     for (int i=0; i<magParamCount; ++i) {
       uint32_t type = stream.Read<uint32_t>();
       uint32_t value = stream.Read<uint32_t>();
-      HYPERBOT_LOG() << "  Mag param type " << type << std::endl;
-      HYPERBOT_LOG() << "  Mag param value " << value << std::endl;
+      LOG(INFO) << "  Mag param type " << type;
+      LOG(INFO) << "  Mag param value " << value;
     }
   }
   if (hasFlagSet(itemUpdateFlag_, enums::ItemUpdateFlag::kState)) {
     uint8_t state = stream.Read<uint8_t>();
-    HYPERBOT_LOG() << "Item at slot " << static_cast<int>(slotIndex_) << " updated state: " << static_cast<int>(state) << std::endl;
+    LOG(INFO) << "Item at slot " << static_cast<int>(slotIndex_) << " updated state: " << static_cast<int>(state);
   }
   if (hasFlagSet(itemUpdateFlag_, enums::ItemUpdateFlag::kUnknown128)) {
     uint32_t unknown = stream.Read<uint32_t>();
-    HYPERBOT_LOG() << "Item at slot " << static_cast<int>(slotIndex_) << " updated UNKNOWN: " << unknown << std::endl;
+    LOG(INFO) << "Item at slot " << static_cast<int>(slotIndex_) << " updated UNKNOWN: " << unknown;
   }
 }
 

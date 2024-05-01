@@ -1,7 +1,6 @@
 #include "itemList.hpp"
 
 #include "helpers.hpp"
-#include "logging.hpp"
 
 namespace storage {
 

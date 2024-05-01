@@ -2,8 +2,9 @@
 
 #include "bot.hpp"
 #include "event/event.hpp"
-#include "logging.hpp"
 #include "packet/building/clientAgentInventoryOperationRequest.hpp"
+
+#include <absl/log/log.h>
 
 #include <stdexcept>
 
@@ -34,7 +35,7 @@ void MoveItemInInventory::onUpdate(const event::Event *event) {
           return;
         } else {
           // Item was moved, update where it is and try again
-          HYPERBOT_LOG() << "Item was moved to somewhere else" << std::endl;
+          LOG(INFO) << "Item was moved to somewhere else";
           // Even though we prevent the human from moving items, in theory, this could trigger. Maybe an inventory operation request was sent before we were constructed
           srcSlot_ = *inventoryUpdatedEvent->destSlotNum;
         }

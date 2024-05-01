@@ -1,5 +1,4 @@
 #include "helpers.hpp"
-#include "logging.hpp"
 
 #include <silkroad_lib/position.h>
 #include <silkroad_lib/position_math.h>

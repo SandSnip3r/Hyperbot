@@ -1,12 +1,13 @@
 #include "talkingToStorageNpc.hpp"
 
 #include "bot.hpp"
-#include "logging.hpp"
 #include "packet/building/clientAgentActionDeselectRequest.hpp"
 #include "packet/building/clientAgentActionSelectRequest.hpp"
 #include "packet/building/clientAgentActionTalkRequest.hpp"
 #include "packet/building/clientAgentInventoryOperationRequest.hpp"
 #include "packet/building/clientAgentInventoryStorageOpenRequest.hpp"
+
+#include <absl/log/log.h>
 
 namespace state::machine {
 
@@ -188,7 +189,7 @@ void TalkingToStorageNpc::storeItems(const event::Event *event) {
       bot_.packetBroker().injectPacket(depositItemPacket, PacketContainer::Direction::kClientToServer);
       return;
     } else {
-      HYPERBOT_LOG() << "Storage is full!" << std::endl;
+      LOG(INFO) << "Storage is full!";
       // TODO: Handle a full storage
       npcInteractionState_ = NpcInteractionState::kDoneStoring;
       return;

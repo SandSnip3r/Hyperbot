@@ -1,10 +1,11 @@
 #include "walking.hpp"
 
 #include "bot.hpp"
-#include "logging.hpp"
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 
 #include <silkroad_lib/position_math.h>
+
+#include <absl/log/log.h>
 
 namespace state::machine {
 
@@ -21,7 +22,7 @@ Walking::~Walking() {
 
 void Walking::onUpdate(const event::Event *event) {
   if (done()) {
-    HYPERBOT_LOG() << "Walking but done" << std::endl;
+    LOG(INFO) << "Walking but done";
     return;
   }
 
@@ -32,7 +33,7 @@ void Walking::onUpdate(const event::Event *event) {
         bot_.eventBroker().cancelDelayedEvent(*movementRequestTimeoutEventId_);
         movementRequestTimeoutEventId_.reset();
       } else {
-        HYPERBOT_LOG() << "Movement began, but had no running movement request timeout timer" << std::endl;
+        LOG(INFO) << "Movement began, but had no running movement request timeout timer";
       }
       // Nothing else to do here. We're now waiting for our movement to end
       return;
@@ -43,8 +44,8 @@ void Walking::onUpdate(const event::Event *event) {
         movementRequestTimeoutEventId_.reset();
       }
     } else if (event->eventCode == event::EventCode::kMovementRequestTimedOut) {
-      HYPERBOT_LOG() << "kMovementRequestTimedOut" << std::endl;
-      HYPERBOT_LOG() << "Movement request timed out" << std::endl;
+      LOG(INFO) << "kMovementRequestTimedOut";
+      LOG(INFO) << "Movement request timed out";
       movementRequestTimeoutEventId_.reset();
     }
   }
@@ -83,7 +84,7 @@ void Walking::onUpdate(const event::Event *event) {
   // We are not moving, we're not at the current waypoint, and there's not a pending movement request
   // Send a request to move to the current waypoint
   const auto &currentWaypoint = waypoints_.at(currentWaypointIndex_);
-  // HYPERBOT_LOG() << "Requesting movement to " << currentWaypoint.asSroPosition() << ". We are currently at " << bot_.selfState().position() << " which is " << sro::position_math::calculateDistance2d(currentWaypoint.asSroPosition(), bot_.selfState().position()) << 'm' << std::endl;
+  // LOG(INFO) << "Requesting movement to " << currentWaypoint.asSroPosition() << ". We are currently at " << bot_.selfState().position() << " which is " << sro::position_math::calculateDistance2d(currentWaypoint.asSroPosition(), bot_.selfState().position()) << 'm';
   const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint);
   bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
   const int kMovementRequestTimeoutMs{333}; // TODO: Move somewhere else and make an educated guess about what this value should be

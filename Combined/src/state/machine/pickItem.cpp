@@ -2,7 +2,6 @@
 
 #include "bot.hpp"
 #include "event/event.hpp"
-#include "logging.hpp"
 #include "packet/building/clientAgentActionCommandRequest.hpp"
 
 namespace state::machine {

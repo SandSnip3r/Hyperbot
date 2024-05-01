@@ -3,9 +3,12 @@
 
 #include "bot.hpp"
 #include "event/event.hpp"
-#include "logging.hpp"
 #include "packet/building/clientAgentActionCommandRequest.hpp"
 #include "type_id/categories.hpp"
+
+#include <absl/log/log.h>
+#include <absl/strings/str_format.h>
+#include <absl/strings/str_join.h>
 
 namespace state::machine {
 
@@ -15,7 +18,7 @@ std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &s
   std::vector<type_id::TypeCategory> possibleWeapons;
   for (auto i : skillData.reqi()) {
     if (i.typeId3 != 6) {
-      HYPERBOT_LOG() << "reqi asks for non-weapon (typeId3: " << static_cast<int>(i.typeId3) << ")" << std::endl;
+      LOG(INFO) << "reqi asks for non-weapon (typeId3: " << static_cast<int>(i.typeId3) << ")";
     }
     possibleWeapons.push_back(type_id::categories::kEquipment.subCategory(i.typeId3).subCategory(i.typeId4));
   }
@@ -46,11 +49,9 @@ std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &s
   }
   // Currently equipped weapon (if any) cannot cast this skill, search through our inventory for a weapon which can cast this skill
   std::vector<uint8_t> possibleWeaponSlots = bot.selfState().inventory.findItemsOfCategory(possibleWeapons);
-  HYPERBOT_LOG() << "Possible slots with weapon for skill: [ ";
-  for (const auto slot : possibleWeaponSlots) {
-    std::cout << static_cast<int>(slot) << ", ";
-  }
-  std::cout << "]" << std::endl;
+  LOG(INFO) << absl::StreamFormat("Possible slots with weapon for skill: [ %s ]", absl::StrJoin(possibleWeaponSlots, ", ", [](std::string *out, auto slot){
+    out->append(std::to_string(slot));
+  }));
   if (possibleWeaponSlots.empty()) {
     throw std::runtime_error("We have no weapon that can cast this skill");
   }
@@ -133,11 +134,11 @@ void CastSkill::onUpdate(const event::Event *event) {
   bool megaDebug{false};
   if (event != nullptr && event->eventCode == event::EventCode::kStateMachineActiveTooLong) {
     const auto maybeSkillName = bot_.gameData().getSkillNameIfExists(skillRefId_);
-    HYPERBOT_LOG() << "We seem to be stuck. Skill name: " << (maybeSkillName ? *maybeSkillName : std::string("UNKNOWN")) << std::endl;
-    HYPERBOT_LOG() << "expectingSkillCommandFailure_: " << expectingSkillCommandFailure_ << std::endl;
-    HYPERBOT_LOG() << "skillCastTimeoutEventId_: " << skillCastTimeoutEventId_.has_value() << std::endl;
-    HYPERBOT_LOG() << "waitingForSkillToEnd_: " << waitingForSkillToEnd_ << std::endl;
-    HYPERBOT_LOG() << "done_: " << done_ << std::endl;
+    LOG(INFO) << "We seem to be stuck. Skill name: " << (maybeSkillName ? *maybeSkillName : std::string("UNKNOWN"));
+    LOG(INFO) << "expectingSkillCommandFailure_: " << expectingSkillCommandFailure_;
+    LOG(INFO) << "skillCastTimeoutEventId_: " << skillCastTimeoutEventId_.has_value();
+    LOG(INFO) << "waitingForSkillToEnd_: " << waitingForSkillToEnd_;
+    LOG(INFO) << "done_: " << done_;
     megaDebug = true;
   }
 
@@ -160,7 +161,7 @@ void CastSkill::onUpdate(const event::Event *event) {
           // We cast this skill
           const auto rootSkillId = bot_.gameData().skillData().getRootSkillRefId(skillBeganEvent->skillRefId);
           if (rootSkillId != skillRefId_) {
-            HYPERBOT_LOG() << "This isnt the skill we thought we were casting!!!" << std::endl;
+            LOG(INFO) << "This isnt the skill we thought we were casting!!!";
             // TODO: How should we actually handle this error?
             // Note: This happens if our skill was queued too slowly and a common attack slipped between the cracks
             //  Lets just skip this
@@ -179,51 +180,51 @@ void CastSkill::onUpdate(const event::Event *event) {
           // We cast this skill
           const auto rootSkillId = bot_.gameData().skillData().getRootSkillRefId(skillEndedEvent->skillRefId);
           if (rootSkillId != skillRefId_) {
-            HYPERBOT_LOG() << "This isnt the skill we thought we were casting!!! Thought we were casting " << skillRefId_ << " but this skill is " << skillEndedEvent->skillRefId << ", with root skill id " << rootSkillId << std::endl;
+            LOG(INFO) << "This isnt the skill we thought we were casting!!! Thought we were casting " << skillRefId_ << " but this skill is " << skillEndedEvent->skillRefId << ", with root skill id " << rootSkillId;
             // TODO: How should we actually handle this error?
             //  Probably ignore?
             return;
           }
           // This "skill" ended, but maybe it is only one piece of a chain. Figure out if more are coming
-          HYPERBOT_LOG() << "Skill ended: " << skillEndedEvent->skillRefId << std::endl;
+          LOG(INFO) << "Skill ended: " << skillEndedEvent->skillRefId;
           bool wasLastPieceOfSkill{false};
           const auto &thisSkillData = bot_.gameData().skillData().getSkillById(skillEndedEvent->skillRefId);
           const bool isFinalPieceOfChain = (thisSkillData.basicChainCode == 0);
           if (isFinalPieceOfChain) {
             // There couldn't possibly be another piece
-            HYPERBOT_LOG() << "Final piece of chain" << std::endl;
+            LOG(INFO) << "Final piece of chain";
             wasLastPieceOfSkill = true;
           } else {
-            HYPERBOT_LOG() << "Not final piece of chain " << thisSkillData.basicChainCode << std::endl;
+            LOG(INFO) << "Not final piece of chain " << thisSkillData.basicChainCode;
             // This isn't the last piece of the chain, but maybe this piece did enough damage to kill the target
             // In this case, no other skill begin/ends will come
             // TODO: This block makes an assumption that this is an attack on another entity
             if (targetGlobalId_) {
               if (*targetGlobalId_ == bot_.selfState().globalId) {
-                HYPERBOT_LOG() << "This skill is cast by us, on us" << std::endl;
+                LOG(INFO) << "This skill is cast by us, on us";
               }
               if (const auto *characterEntity = dynamic_cast<const entity::Character*>(bot_.entityTracker().getEntity(*targetGlobalId_))) {
                 if (characterEntity->knowCurrentHp()) {
                   if (characterEntity->currentHp() == 0) {
                     // Entity is dead
-                    HYPERBOT_LOG() << "Entity is dead" << std::endl;
+                    LOG(INFO) << "Entity is dead";
                     wasLastPieceOfSkill = true;
                   } else {
-                    HYPERBOT_LOG() << "Entity has more HP" << std::endl;
+                    LOG(INFO) << "Entity has more HP";
                   }
                 } else {
-                  HYPERBOT_LOG() << "Dont know entity's HP" << std::endl;
+                  LOG(INFO) << "Dont know entity's HP";
                 }
               }
             }
           }
           if (wasLastPieceOfSkill) {
-            HYPERBOT_LOG() << "Is last piece of skill" << std::endl;
+            LOG(INFO) << "Is last piece of skill";
             waitingForSkillToEnd_ = false; // Do we need to set this if we're "done"?
             done_ = true;
             return;
           } else {
-            HYPERBOT_LOG() << "This isnt the last piece of the skill; waiting" << std::endl;
+            LOG(INFO) << "This isnt the last piece of the skill; waiting";
           }
           // Note: There is a chance that this skill killed the target, but we dont know that it's dead yet
           //  We will try to cast a skill on it, but it will fail
@@ -250,9 +251,9 @@ void CastSkill::onUpdate(const event::Event *event) {
         }
       } else if (const auto *skillFailedEvent = dynamic_cast<const event::OurSkillFailed*>(event)) {
         if (skillFailedEvent->skillRefId != skillRefId_) {
-          HYPERBOT_LOG() << "Received skill failed event for a skill we're not trying to cast (" << skillFailedEvent->skillRefId << ')' << std::endl;
+          LOG(INFO) << "Received skill failed event for a skill we're not trying to cast (" << skillFailedEvent->skillRefId << ')';
         } else {
-          HYPERBOT_LOG() << "Our skill (" << skillFailedEvent->skillRefId << "," << bot_.gameData().textItemAndSkillData().getSkillName(bot_.gameData().skillData().getSkillById(skillFailedEvent->skillRefId).uiSkillName) << ") failed to cast" << std::endl;
+          LOG(INFO) << "Our skill (" << skillFailedEvent->skillRefId << "," << bot_.gameData().textItemAndSkillData().getSkillName(bot_.gameData().skillData().getSkillById(skillFailedEvent->skillRefId).uiSkillName) << ") failed to cast";
           expectingSkillCommandFailure_ = true;
           if (!skillCastTimeoutEventId_) {
             throw std::runtime_error("Failed to cast skill, but didn't have a timeout running for it");
@@ -260,13 +261,13 @@ void CastSkill::onUpdate(const event::Event *event) {
           bot_.eventBroker().cancelDelayedEvent(*skillCastTimeoutEventId_);
           skillCastTimeoutEventId_.reset();
           if (waitingForSkillToEnd_) {
-            HYPERBOT_LOG() << "Weird, skill started, but failed?" << std::endl;
+            LOG(INFO) << "Weird, skill started, but failed?";
             waitingForSkillToEnd_ = false;
           }
         }
       } else if (event->eventCode == event::EventCode::kKnockedBack || event->eventCode == event::EventCode::kKnockedDown) {
         // We've been completely interruped, yield
-        HYPERBOT_LOG() << "We've been knocked back while trying to cast a skill. Aborting state" << std::endl;
+        LOG(INFO) << "We've been knocked back while trying to cast a skill. Aborting state";
         done_ = true;
         return;
         // TODO: I think instead it makes sense to return a status, which says something like "Interrupted", then the parent can choose to destroy us
@@ -283,7 +284,7 @@ void CastSkill::onUpdate(const event::Event *event) {
           }
           skillCastTimeoutEventId_.reset();
           // Relinqush control to our master.
-          HYPERBOT_LOG() << "Done casting skill because it timed out" << std::endl;
+          LOG(INFO) << "Done casting skill because it timed out";
           done_ = true;
           return;
         }
@@ -293,7 +294,7 @@ void CastSkill::onUpdate(const event::Event *event) {
 
   if (bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown) {
     // Cannot cast a skill right now
-    if (megaDebug) HYPERBOT_LOG() << "stunned from kb or kd" << std::endl;
+    if (megaDebug) LOG(INFO) << "stunned from kb or kd";
     return;
   }
 
@@ -318,7 +319,7 @@ void CastSkill::onUpdate(const event::Event *event) {
   // At this point, the required equipment is equipped
   if (skillCastTimeoutEventId_ || waitingForSkillToEnd_) {
     // Still waiting on skill
-    if (megaDebug) HYPERBOT_LOG() << "still waiting on skill" << std::endl;
+    if (megaDebug) LOG(INFO) << "still waiting on skill";
     return;
   }
 
@@ -335,15 +336,15 @@ void CastSkill::onUpdate(const event::Event *event) {
 
   // Cast imbue if it exists and is not active
   if (imbueSkillRefId_) {
-    HYPERBOT_LOG() << "Given imbue skill to cast" << std::endl;
+    LOG(INFO) << "Given imbue skill to cast";
     if (!targetGlobalId_) {
       throw std::runtime_error("Using an imbue when casting a skill on no target");
     }
 
     if (!bot_.selfState().buffIsActive(*imbueSkillRefId_)) {
-      HYPERBOT_LOG() << "Imbue is not active." << std::endl;
+      LOG(INFO) << "Imbue is not active.";
       if (!bot_.selfState().skillEngine.skillIsOnCooldown(*imbueSkillRefId_)) {
-        HYPERBOT_LOG() << "Imbue is not on cooldown; creating child CastSkill to cast it" << std::endl;
+        LOG(INFO) << "Imbue is not on cooldown; creating child CastSkill to cast it";
         CastSkillStateMachineBuilder builder(bot_, *imbueSkillRefId_);
         setChildStateMachine(builder.create());
         onUpdate(event);
@@ -351,33 +352,33 @@ void CastSkill::onUpdate(const event::Event *event) {
       } else {
         const auto skillRemainingCooldown = bot_.selfState().skillEngine.skillRemainingCooldown(*imbueSkillRefId_, bot_.eventBroker());
         if (skillRemainingCooldown) {
-          HYPERBOT_LOG() << "Imbue is on cooldown with " << skillRemainingCooldown->count() << "ms remaining" << std::endl;
+          LOG(INFO) << "Imbue is on cooldown with " << skillRemainingCooldown->count() << "ms remaining";
         } else {
-          HYPERBOT_LOG() << "We thought the imbue is on cooldown, but we don't know how much time is remaining...?" << std::endl;
+          LOG(INFO) << "We thought the imbue is on cooldown, but we don't know how much time is remaining...?";
         }
       }
-      HYPERBOT_LOG() << "Imbue buff is not active. Waiting." << std::endl;
+      LOG(INFO) << "Imbue buff is not active. Waiting.";
       return;
     } else {
       // Check the remaining duration of this buff, it it's less than the ping time, we ought to re-cast since it might expire before we cast the actual attack.
-      HYPERBOT_LOG() << "Imbue is already active" << std::endl;
+      LOG(INFO) << "Imbue is already active";
       constexpr const int kEstimatedPingMs = 100; // TODO: Get from a centralized location.
       const auto buffRemainingTime = bot_.selfState().buffMsRemaining(*imbueSkillRefId_);
       if (buffRemainingTime < kEstimatedPingMs) {
-        HYPERBOT_LOG() << "Imbue might end before our skill-use packet even gets to the server (" << buffRemainingTime << " ms remaining)" << std::endl;
+        LOG(INFO) << "Imbue might end before our skill-use packet even gets to the server (" << buffRemainingTime << " ms remaining)";
         const auto skillRemainingCooldown = bot_.selfState().skillEngine.skillRemainingCooldown(*imbueSkillRefId_, bot_.eventBroker());
         if (skillRemainingCooldown) {
-          HYPERBOT_LOG() << "Skill remaining cooldown: " << skillRemainingCooldown->count() << "ms" << std::endl;
+          LOG(INFO) << "Skill remaining cooldown: " << skillRemainingCooldown->count() << "ms";
           if (skillRemainingCooldown->count() > kEstimatedPingMs) {
-            HYPERBOT_LOG() << std::string(1000, '_') << "Too much cooldown. Waiting." << std::endl;
+            LOG(INFO) << std::string(1000, '_') << "Too much cooldown. Waiting.";
             return;
           }
         } else {
-          HYPERBOT_LOG() << "Skill has no remaining cooldown" << std::endl;
+          LOG(INFO) << "Skill has no remaining cooldown";
         }
         // TODO: Add a data structure that tracks skills which were successfully cast, which should give us a buff, but for when we havent yet received BuffBegin. Like a "anticipated buffs" list.
         if (bot_.selfState().skillEngine.alreadyTriedToCastSkill(*imbueSkillRefId_)) {
-          HYPERBOT_LOG() << "Already tried to cast skill.." << std::endl;
+          LOG(INFO) << "Already tried to cast skill..";
         }
         CastSkillStateMachineBuilder builder(bot_, *imbueSkillRefId_);
         setChildStateMachine(builder.create());
@@ -388,9 +389,9 @@ void CastSkill::onUpdate(const event::Event *event) {
     }
   }
 
-  HYPERBOT_LOG() << "Using skill " << bot_.gameData().textItemAndSkillData().getSkillName(bot_.gameData().skillData().getSkillById(skillRefId_).uiSkillName) << std::endl;
+  LOG(INFO) << "Using skill " << bot_.gameData().textItemAndSkillData().getSkillName(bot_.gameData().skillData().getSkillById(skillRefId_).uiSkillName);
   if (bot_.selfState().skillEngine.skillIsOnCooldown(skillRefId_)) {
-    HYPERBOT_LOG() << "  but skill is on cooldown" << std::endl;
+    LOG(INFO) << "  but skill is on cooldown";
   }
   bot_.packetBroker().injectPacket(castSkillPacket, PacketContainer::Direction::kClientToServer);
   skillCastTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::SkillCastTimeout>(std::chrono::milliseconds(kSkillCastTimeoutMs), skillRefId_);

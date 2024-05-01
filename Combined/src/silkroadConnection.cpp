@@ -1,9 +1,10 @@
-#include "logging.hpp"
 #include "silkroadConnection.hpp"
+
+#include <absl/log/log.h>
 
 #define CHECK_ERROR(error) \
 if (error) { \
-  HYPERBOT_LOG() << "Error: \"" << error.message() << '"' << std::endl; \
+  LOG(INFO) << "Error: \"" << error.message() << '"'; \
 }
 
 //Handles incoming packets

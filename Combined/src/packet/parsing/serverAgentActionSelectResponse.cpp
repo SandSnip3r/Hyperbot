@@ -1,5 +1,3 @@
-#include "logging.hpp"
-
 #include "serverAgentActionSelectResponse.hpp"
 
 namespace packet::parsing {

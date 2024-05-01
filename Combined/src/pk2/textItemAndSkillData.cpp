@@ -1,7 +1,5 @@
 #include "textItemAndSkillData.hpp"
 
-#include "logging.hpp"
-
 namespace {
 
 std::string removeCarriageReturnAndLineFeed(std::string str) {

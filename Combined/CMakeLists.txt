@@ -73,8 +73,6 @@ set(no_group_source_files
     "src/helpers.hpp"
     "src/loader.cpp"
     "src/loader.hpp"
-    "src/logging.cpp"
-    "src/logging.hpp"
     "src/main.cpp"
     "src/math/pointTranslator.cpp"
     "src/math/pointTranslator.hpp"

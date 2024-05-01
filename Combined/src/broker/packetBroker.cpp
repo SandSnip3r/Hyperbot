@@ -1,4 +1,3 @@
-#include "logging.hpp"
 #include "packetBroker.hpp"
 
 #include <stdexcept>

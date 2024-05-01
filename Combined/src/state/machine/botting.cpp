@@ -4,8 +4,9 @@
 #include "walking.hpp"
 
 #include "bot.hpp"
-#include "logging.hpp"
 #include "type_id/categories.hpp"
+
+#include <absl/log/log.h>
 
 namespace state::machine {
 
@@ -28,10 +29,10 @@ void Botting::initializeChildState() {
   // if we're already in town, initialize as Townlooping
   //  there's a chance we have everything we need, then Townlooping will immediately finish and we'll move onto the next state as per the normal flow
   if (bot_.selfState().inTown() || bot_.needToGoToTown()) {
-    HYPERBOT_LOG() << "Initializing state as Townlooping" << std::endl;
+    LOG(INFO) << "Initializing state as Townlooping";
     setChildStateMachine<Townlooping>();
   } else {
-    HYPERBOT_LOG() << "Initializing state as Training" << std::endl;
+    LOG(INFO) << "Initializing state as Training";
     setChildStateMachine<Training>(trainingAreaGeometry_->clone());
   }
 }
@@ -51,7 +52,7 @@ void Botting::onUpdate(const event::Event *event) {
     if (dynamic_cast<Townlooping*>(childState_.get())) {
       // Done with the townloop, start training
       static int townloopCount = 0;
-      HYPERBOT_LOG() << "Townloop count: " << ++townloopCount << std::endl;
+      LOG(INFO) << "Townloop count: " << ++townloopCount;
       setChildStateMachine<Training>(trainingAreaGeometry_->clone());
     } else if (dynamic_cast<Training*>(childState_.get())) {
       // Done training, go back to town

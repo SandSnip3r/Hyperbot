@@ -1,13 +1,14 @@
 #include "talkingToShopNpc.hpp"
 
 #include "bot.hpp"
-#include "logging.hpp"
 #include "packet/building/clientAgentActionDeselectRequest.hpp"
 #include "packet/building/clientAgentActionSelectRequest.hpp"
 #include "packet/building/clientAgentActionTalkRequest.hpp"
 #include "packet/building/clientAgentInventoryRepairRequest.hpp"
 
 #include <silkroad_lib/position_math.h>
+
+#include <absl/log/log.h>
 
 #include <optional>
 
@@ -69,7 +70,7 @@ void TalkingToShopNpc::figureOutWhatToBuy() {
     const auto prev = countToBuy;
     countToBuy = std::min<int32_t>(countToBuy, remainingGold / itemData.price);
     if (countToBuy != prev) {
-      HYPERBOT_LOG() << "Wanted to buy " << prev << " " << itemName << "(s), but can only afford  " << countToBuy << std::endl;
+      LOG(INFO) << "Wanted to buy " << prev << " " << itemName << "(s), but can only afford  " << countToBuy;
     }
     if (countToBuy == 0) {
       // Cannot afford any of these.
@@ -96,9 +97,9 @@ void TalkingToShopNpc::figureOutWhatToBuy() {
       for (const auto &itemIndexAndScrapPair : packageMap) {
         if (itemIndexAndScrapPair.second.refItemCodeName == nameOfItemToBuy) {
           itemsToBuy_[itemRefId] = BuyingItems::PurchaseRequest{ static_cast<uint8_t>(tabIndex), itemIndexAndScrapPair.first, static_cast<uint16_t>(countToBuy), itemData.maxStack };
-          HYPERBOT_LOG() << "Going to spend " << countToBuy * itemData.price << " gold on " << itemName << ". Gold will go from " << remainingGold;
+          const auto oldRemainingGold = remainingGold;
           remainingGold -= countToBuy * itemData.price;
-          std::cout << " to " << remainingGold << std::endl;
+          LOG(INFO) << "Going to spend " << countToBuy * itemData.price << " gold on " << itemName << ". Gold will go from " << oldRemainingGold << " to " << remainingGold;
           foundItemInShop = true;
           break;
         }
@@ -133,7 +134,7 @@ bool TalkingToShopNpc::needToRepair() const {
     }
     const auto *itemAsEquip = dynamic_cast<const storage::ItemEquipment*>(itemPtr);
     if (itemAsEquip == nullptr) {
-      HYPERBOT_LOG() << "Item can be repaired, but it's not an equipment, weird" << std::endl;
+      LOG(INFO) << "Item can be repaired, but it's not an equipment, weird";
       continue;
     }
     if (itemAsEquip->repairInvalid(bot_.gameData())) {
@@ -155,7 +156,7 @@ bool TalkingToShopNpc::doneWithNpc() const {
 
 void TalkingToShopNpc::onUpdate(const event::Event *event) {
   if (done_) {
-    HYPERBOT_LOG() << "TalkingToShopNpc on update called, but we're done. This is a smell of imperfect logic" << std::endl;
+    LOG(INFO) << "TalkingToShopNpc on update called, but we're done. This is a smell of imperfect logic";
     return;
   }
 

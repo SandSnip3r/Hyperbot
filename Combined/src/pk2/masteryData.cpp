@@ -1,5 +1,4 @@
 #include "masteryData.hpp"
-#include "logging.hpp"
 
 #include <stdexcept>
 #include <string>

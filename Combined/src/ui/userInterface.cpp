@@ -1,10 +1,11 @@
-#include "logging.hpp"
 #include "userInterface.hpp"
 
 #include "pk2/gameData.hpp"
 #include "state/worldState.hpp"
 
 #include "ui-proto/request.pb.h"
+
+#include <absl/log/log.h>
 
 namespace {
 
@@ -51,9 +52,9 @@ void UserInterface::runAsync() {
     // Run the request receiver in another thread
     thr_ = std::thread(&UserInterface::run, this);
   } catch (const std::exception &ex) {
-    HYPERBOT_LOG() << "Exception while binding to UI: \"" << ex.what() << "\"" << std::endl;
+    LOG(INFO) << "Exception while binding to UI: \"" << ex.what() << "\"";
   } catch (...) {
-    HYPERBOT_LOG() << "Exception while binding to UI" << std::endl;
+    LOG(INFO) << "Exception while binding to UI";
   }
 }
 
@@ -289,9 +290,9 @@ void UserInterface::handleEvent(const event::Event *event) {
       return;
     }
 
-    HYPERBOT_LOG() << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode) << '\n';
+    LOG(INFO) << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode);
   } catch (std::exception &ex) {
-    HYPERBOT_LOG() << "Error while handling event!\n  " << ex.what() << std::endl;
+    LOG(INFO) << "Error while handling event!\n  " << ex.what();
   }
 }
 

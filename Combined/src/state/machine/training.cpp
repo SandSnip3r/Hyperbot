@@ -4,7 +4,6 @@
 #include "entity/geometry.hpp"
 #include "bot.hpp"
 #include "helpers.hpp"
-#include "logging.hpp"
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 #include "packet/building/clientAgentCharacterUpdateBodyStateRequest.hpp"
 #include "state/machine/pickItem.hpp"
@@ -16,6 +15,8 @@
 
 #include <silkroad_lib/constants.h>
 #include <silkroad_lib/position_math.h>
+
+#include <absl/log/log.h>
 
 #include <algorithm>
 #include <array>
@@ -126,7 +127,7 @@ Training::~Training() {
 
 void Training::onUpdate(const event::Event *event) {
   if (done()) {
-    HYPERBOT_LOG() << "Training's onUpdate called, but it's done" << std::endl;
+    LOG(INFO) << "Training's onUpdate called, but it's done";
     return;
   }
   // TODO: Improve on this mechanism
@@ -168,7 +169,7 @@ void Training::onUpdate(const event::Event *event) {
       }
     } else if (const auto *entityMovementBegan = dynamic_cast<const event::EntityMovementBegan*>(event)) {
       if (walkingTargetAndAttack_ && entityMovementBegan->globalId == walkingTargetAndAttack_->targetId) {
-        HYPERBOT_LOG() << "The target that we're walking to has changed its movement, we'll need to recalculate" << std::endl;
+        LOG(INFO) << "The target that we're walking to has changed its movement, we'll need to recalculate";
         walkingTargetAndAttack_.reset();
       }
     } else if (const auto *entityLifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event)) {
@@ -190,7 +191,7 @@ void Training::onUpdate(const event::Event *event) {
     if (childState_->done()) {
       if (dynamic_cast<Walking*>(childState_.get()) != nullptr) {
         // Done walking.
-        HYPERBOT_LOG() << "Done walking, current pos " << bot_.selfState().position() << std::endl;
+        LOG(INFO) << "Done walking, current pos " << bot_.selfState().position();
       }
       childState_.reset();
     } else {
@@ -204,7 +205,7 @@ void Training::onUpdate(const event::Event *event) {
 
   // We either have no child state, or we're walking somewhere.
   if (!bot_.selfState().spawned()) {
-    HYPERBOT_LOG() << "We are not spawned, nothing to do" << std::endl;
+    LOG(INFO) << "We are not spawned, nothing to do";
     return;
   }
 
@@ -220,7 +221,7 @@ void Training::onUpdate(const event::Event *event) {
   }
 
   if (bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown) {
-    HYPERBOT_LOG() << "In Training and stunned from KB/KD" << std::endl;
+    LOG(INFO) << "In Training and stunned from KB/KD";
   }
 
   // First, check that our buffs are all active. Use different sets of buffs for inside and outside of the training area.
@@ -233,7 +234,7 @@ void Training::onUpdate(const event::Event *event) {
 
   bool setNewChildState = checkBuffs(*buffList);
   if (setNewChildState) {
-    HYPERBOT_LOG() << "Have some buff to cast" << std::endl;
+    LOG(INFO) << "Have some buff to cast";
     onUpdate(event);
     return;
   }
@@ -256,7 +257,7 @@ void Training::onUpdate(const event::Event *event) {
     if (trainingAreaCircle == nullptr) {
       throw std::runtime_error("Not sure where to navigate to for other shapes");
     }
-    HYPERBOT_LOG() << "Not in training area, navigating to the center of the training area circle: " << trainingAreaCircle->center() << std::endl;
+    LOG(INFO) << "Not in training area, navigating to the center of the training area circle: " << trainingAreaCircle->center();
     const auto pathToTrainingAreaCenter = bot_.calculatePathToDestination(trainingAreaCircle->center());
     setChildStateMachine<Walking>(pathToTrainingAreaCenter);
     onUpdate(event);
@@ -295,7 +296,7 @@ void Training::onUpdate(const event::Event *event) {
     onUpdate(event);
     return;
   }
-  HYPERBOT_LOG() << "Made it to the end" << std::endl;
+  LOG(INFO) << "Made it to the end";
 }
 
 bool Training::tryPickItem(const ItemList &itemList) {
@@ -314,7 +315,7 @@ bool Training::tryPickItem(const ItemList &itemList) {
     cosGlobalId = bot_.selfState().cosInventoryMap.begin()->first;
   }
   if (!cosGlobalId && !canMove()) {
-    HYPERBOT_LOG() << "No way to pick up items. No pickpet and cant move." << std::endl;
+    LOG(INFO) << "No way to pick up items. No pickpet and cant move.";
     return false;
   }
 
@@ -382,7 +383,7 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
   // Evaluate targets and skills
   const auto targetAndAttack = getTargetAndAttackSkill(monsterList);
   if (!targetAndAttack) {
-    HYPERBOT_LOG() << "No target/skill chosen" << std::endl;
+    LOG(INFO) << "No target/skill chosen";
     return false;
   }
   bool finishedWalking{false};
@@ -405,7 +406,7 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
 
   if (destinationPosition) {
     // Need to walk to cast skill on entity.
-    // HYPERBOT_LOG() << "Need to walk to " << *destinationPosition << " to cast skill on entity, which is " << sro::position_math::calculateDistance2d(targetEntity.position(), *destinationPosition) << " away from the target" << std::endl;
+    // LOG(INFO) << "Need to walk to " << *destinationPosition << " to cast skill on entity, which is " << sro::position_math::calculateDistance2d(targetEntity.position(), *destinationPosition) << " away from the target";
     const auto pathToDestination = bot_.calculatePathToDestination(*destinationPosition);
     possiblyOverwriteChildStateMachine<Walking>(pathToDestination);
     walkingTargetAndAttack_ = targetAndAttack;
@@ -437,7 +438,7 @@ bool Training::walkToRandomPoint() {
   }
 
   if (bot_.selfState().moving()) {
-    HYPERBOT_LOG() << "We're not in charge of a movement, but we're moving somewhere. What's this?" << std::endl;
+    LOG(INFO) << "We're not in charge of a movement, but we're moving somewhere. What's this?";
   }
 
   constexpr const int kMaxTryCount{10};
@@ -449,11 +450,11 @@ bool Training::walkToRandomPoint() {
       success = true;
       break;
     } catch (std::exception &ex) {
-      HYPERBOT_LOG() << "Couldn't walk to random position. Exception: " << ex.what() << std::endl;
+      LOG(INFO) << "Couldn't walk to random position. Exception: " << ex.what();
     }
   }
   if (!success) {
-    HYPERBOT_LOG() << "Cannot walk to a random point" << std::endl;
+    LOG(INFO) << "Cannot walk to a random point";
   }
   return success;
 }
@@ -488,14 +489,14 @@ bool Training::checkBuffs(const SkillList &buffList) {
   const auto nextBuffToCast = getNextBuffToCast(buffList);
   if (nextBuffToCast) {
     auto castSkillBuilder = CastSkillStateMachineBuilder(bot_, *nextBuffToCast);
-    HYPERBOT_LOG() << "Next buff to cast is " << *nextBuffToCast << std::endl;
+    LOG(INFO) << "Next buff to cast is " << *nextBuffToCast;
     const auto &buffData = bot_.gameData().skillData().getSkillById(*nextBuffToCast);
 
     // Does the buff require a specific weapon to be equipped to cast?
     const auto weaponSlot = getInventorySlotOfWeaponForSkill(buffData, bot_);
     // Note: It is also possible that a skill requires a shield (shield bash)
     if (weaponSlot) {
-      HYPERBOT_LOG() << "Inventory slot of weapon for skill is " << static_cast<int>(*weaponSlot) << std::endl;
+      LOG(INFO) << "Inventory slot of weapon for skill is " << static_cast<int>(*weaponSlot);
       castSkillBuilder.withWeapon(*weaponSlot);
     }
 
@@ -503,11 +504,11 @@ bool Training::checkBuffs(const SkillList &buffList) {
 
     if (buffData.targetRequired) {
       // TODO: We assume this buff is for ourself
-      HYPERBOT_LOG() << "Buff requires a target, using self (req self? " << buffData.targetGroupSelf << ')' << std::endl;
+      LOG(INFO) << "Buff requires a target, using self (req self? " << buffData.targetGroupSelf << ')';
       castSkillBuilder.withTarget(bot_.selfState().globalId);
     }
 
-    HYPERBOT_LOG() << "Created child state to cast skill" << std::endl;
+    LOG(INFO) << "Created child state to cast skill";
     possiblyOverwriteChildStateMachine(castSkillBuilder.create());
     return true;
   }
@@ -530,7 +531,7 @@ std::optional<sro::Position> Training::calculateWhereToWalkToAttackEntityWithSki
   const double skillRangeMinusRounding = std::max(sro::constants::kSqrtHalf, skill.actionRange - sro::constants::kSqrtHalf*2);
   const auto calcd_dist = sro::position_math::calculateDistance2d(selfCurrentPosition, entity.position());
   if (calcd_dist <= skillRangeMinusRounding) {
-    HYPERBOT_LOG() << "Already close enough" << std::endl;
+    LOG(INFO) << "Already close enough";
     // We are already close enough.
     return {};
   }
@@ -632,7 +633,7 @@ void Training::removeSkillsFromListWhichWeDontHave(SkillList &skillList) {
   });
   for (auto it=newEndIt; it!=skillList.end(); ++it) {
     const auto maybeSkillName = bot_.gameData().getSkillNameIfExists(*it);
-    HYPERBOT_LOG() << "Dont have skill " << (maybeSkillName ? *maybeSkillName : std::string("UNKNOWN")) << ". Removing from list" << std::endl;
+    LOG(INFO) << "Dont have skill " << (maybeSkillName ? *maybeSkillName : std::string("UNKNOWN")) << ". Removing from list";
   }
   skillList.erase(newEndIt, skillList.end());
 };
@@ -671,7 +672,7 @@ void Training::buildBuffList() {
       const auto buffRequiredWeapons = buffData.reqi();
       if (!buffRequiredWeapons.empty()) {
         // Buff requires a weapon at all times
-        HYPERBOT_LOG() << "Moving buffs around. Moving " << i << " to " << backIndex << std::endl;
+        LOG(INFO) << "Moving buffs around. Moving " << i << " to " << backIndex;
         std::swap(buffList[i], buffList[backIndex]);
         --backIndex;
       }
@@ -731,7 +732,7 @@ std::optional<Training::TargetAndAttackSkill> Training::getTargetAndAttackSkill(
     }
   }
   if (availableSkills.empty()) {
-    HYPERBOT_LOG() << "Want to attack a monster but have no available skills" << std::endl;
+    LOG(INFO) << "Want to attack a monster but have no available skills";
     return {};
   }
 
@@ -787,7 +788,7 @@ std::optional<Training::TargetAndAttackSkill> Training::getTargetAndAttackSkill(
       }
       ++index;
     }
-    HYPERBOT_LOG() << "Dont know prioritiy of this monster!" << std::endl;
+    LOG(INFO) << "Dont know prioritiy of this monster!";
     return 100;
   };
 

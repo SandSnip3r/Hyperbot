@@ -1,4 +1,3 @@
-#include "logging.hpp"
 #include "session.hpp"
 
 Session::Session(const pk2::GameData &gameData,

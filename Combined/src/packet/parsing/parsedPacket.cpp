@@ -1,5 +1,4 @@
 #include "commonParsing.hpp"
-#include "logging.hpp"
 #include "parsedPacket.hpp"
 
 #include <silkroad_lib/position_math.h>

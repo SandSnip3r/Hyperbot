@@ -2,8 +2,9 @@
 
 #include "bot.hpp"
 #include "event/event.hpp"
-#include "logging.hpp"
 #include "packet/building/clientAgentInventoryOperationRequest.hpp"
+
+#include <absl/log/log.h>
 
 namespace state::machine {
 
@@ -27,21 +28,21 @@ void DropItem::onUpdate(const event::Event *event) {
     if (auto *entitySpawnedEvent = dynamic_cast<const event::EntitySpawned*>(event); entitySpawnedEvent != nullptr) {
       const auto *entity = bot_.entityTracker().getEntity(entitySpawnedEvent->globalId);
       if (entity->refObjId == refId_) {
-        HYPERBOT_LOG() << "Item spawned" << std::endl;
+        LOG(INFO) << "Item spawned";
         // This is our item.
       }
     } else if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event); inventoryUpdatedEvent != nullptr) {
-      HYPERBOT_LOG() << "inventory update" << std::endl;
+      LOG(INFO) << "inventory update";
       if (!inventoryUpdatedEvent->destSlotNum) {
-        HYPERBOT_LOG() << "  is a drop" << std::endl;
+        LOG(INFO) << "  is a drop";
         // Is a item drop/delete update.
         if (*inventoryUpdatedEvent->srcSlotNum == inventorySlot_) {
-          HYPERBOT_LOG() << "    is our item" << std::endl;
+          LOG(INFO) << "    is our item";
           // Is our item.
           done_ = true;
           return;
         } else {
-          HYPERBOT_LOG() << "    dropped from " << (int)*inventoryUpdatedEvent->srcSlotNum << " but we expected " << (int)inventorySlot_ << std::endl;
+          LOG(INFO) << "    dropped from " << (int)*inventoryUpdatedEvent->srcSlotNum << " but we expected " << (int)inventorySlot_;
         }
       }
     }
@@ -54,7 +55,7 @@ void DropItem::onUpdate(const event::Event *event) {
   const auto packet = packet::building::ClientAgentInventoryOperationRequest::dropItem(inventorySlot_);
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
   waitingForItemToBeDropped_ = true;
-  HYPERBOT_LOG() << "Send drop packet" << std::endl;
+  LOG(INFO) << "Send drop packet";
 }
 
 bool DropItem::done() const {

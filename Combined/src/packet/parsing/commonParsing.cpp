@@ -1,9 +1,10 @@
 #include "commonParsing.hpp"
-#include "logging.hpp"
 #include "type_id/categories.hpp"
 #include "type_id/typeCategory.hpp"
 
 #include <silkroad_lib/position_math.h>
+
+#include <absl/log/log.h>
 
 #include <iostream>
 
@@ -608,7 +609,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
         uint16_t guildNameLength = stream.Read<uint16_t>();
         std::string guildName = stream.Read_Ascii(guildNameLength);
       } else if (categories::kSiegeStruct.contains(characterTypeId)) {
-        HYPERBOT_LOG() << "CGObjSiegeStruct encountered in parseSpawn, but unhandled" << std::endl;
+        LOG(INFO) << "CGObjSiegeStruct encountered in parseSpawn, but unhandled";
       //   // CGObjSiegeStruct
       //   uint32_t unk0 = stream.Read<uint32_t>(); // 0xFFFFFFFF
       //   uint16_t unk1 = stream.Read<uint16_t>(); // 0x0054

@@ -1,8 +1,6 @@
 #include "commonParsing.hpp"
 #include "serverAgentCharacterData.hpp"
 
-#include "logging.hpp"
-
 namespace packet::parsing {
 
 ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData) : ParsedPacket(packet) {

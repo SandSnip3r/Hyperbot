@@ -1,7 +1,6 @@
 #include "entityTracker.hpp"
 #include "event/event.hpp"
 #include "helpers.hpp"
-#include "logging.hpp"
 
 namespace state {
 

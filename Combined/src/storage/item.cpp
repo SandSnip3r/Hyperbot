@@ -1,5 +1,4 @@
 #include "item.hpp"
-#include "logging.hpp"
 
 #include <iostream>
 #include <iomanip>

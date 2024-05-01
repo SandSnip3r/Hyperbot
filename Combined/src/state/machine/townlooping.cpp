@@ -6,8 +6,9 @@
 #include "walking.hpp"
 
 #include "bot.hpp"
-#include "logging.hpp"
 #include "type_id/categories.hpp"
+
+#include <absl/log/log.h>
 
 namespace state::machine {
 
@@ -74,7 +75,7 @@ void Townlooping::onUpdate(const event::Event *event) {
       ++currentNpcIndex_;
       if (done()) {
         // No more Npcs, done with townloop
-        HYPERBOT_LOG() << "No more npcs to visit, done with townloop" << std::endl;
+        LOG(INFO) << "No more npcs to visit, done with townloop";
         return;
       }
       // Update our state to walk to the next npc.

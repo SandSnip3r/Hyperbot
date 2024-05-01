@@ -1,6 +1,5 @@
 #include "gameData.hpp"
 
-#include "logging.hpp"
 #include "pk2/parsing/regionInfoParser.hpp"
 #include "../../../common/pk2/parsing/parsing.hpp"
 
