@@ -499,6 +499,8 @@ target_link_libraries(${PROJECT_NAME}
     cppzmq
     cppzmq-static
     SilkroadLib
+    absl::flags
+    absl::flags_parse
 )
 
 # ==============================================================================
