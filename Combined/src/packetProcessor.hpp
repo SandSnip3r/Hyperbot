@@ -18,6 +18,7 @@
 #include "packet/parsing/serverAgentBuffRemove.hpp"
 #include "packet/parsing/serverAgentCharacterData.hpp"
 #include "packet/parsing/serverAgentChatUpdate.hpp"
+#include "packet/parsing/serverAgentGameReset.hpp"
 #include "packet/parsing/serverAgentCosData.hpp"
 #include "packet/parsing/serverAgentEntityDamageEffect.hpp"
 #include "packet/parsing/serverAgentEntityDespawn.hpp"
@@ -154,6 +155,7 @@ private:
   void serverAgentBuffLinkReceived(const packet::parsing::ServerAgentBuffLink &packet) const;
   void serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const;
   void serverAgentChatUpdateReceived(const packet::parsing::ServerAgentChatUpdate &packet) const;
+  void serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet) const;
 
   std::optional<std::chrono::milliseconds> getItemCooldownMs(const storage::ItemExpendable &item) const;
   WrappedCommand wrapActionCommand(const packet::structures::ActionCommand &command) const;

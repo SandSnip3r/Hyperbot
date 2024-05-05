@@ -210,6 +210,8 @@ set(no_group_source_files
     "src/packet/parsing/serverAgentEntityUpdateState.hpp"
     "src/packet/parsing/serverAgentEntityUpdateStatus.cpp"
     "src/packet/parsing/serverAgentEntityUpdateStatus.hpp"
+    "src/packet/parsing/serverAgentGameReset.cpp"
+    "src/packet/parsing/serverAgentGameReset.hpp"
     "src/packet/parsing/serverAgentGuildStorageData.cpp"
     "src/packet/parsing/serverAgentGuildStorageData.hpp"
     "src/packet/parsing/serverAgentInventoryItemUseResponse.cpp"

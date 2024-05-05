@@ -27,7 +27,7 @@ public:
   void initialize();
   void run();
   const config::Config& config() const;
-  const proto::config::CharacterConfig& currentCharacterConfig() const;
+  const proto::config::CharacterConfig* currentCharacterConfig() const;
   const pk2::GameData& gameData() const;
   Proxy& proxy() const;
   broker::PacketBroker& packetBroker() const;
@@ -72,6 +72,8 @@ private:
 
   // Debug help
   void handleInjectPacket(const event::InjectPacket &castedEvent);
+  // Login events
+  void handleLoggedIn(const event::Event *event);
   // Movement events
   void handleMovementTimerEnded();
   void handleSpeedUpdated();
@@ -99,6 +101,7 @@ private:
   void handleKnockbackStunEnded();
   void handleKnockdownStunEnded();
   void handleItemCooldownEnded(const event::ItemCooldownEnded &event);
+  void handleGameReset(const event::Event *event);
 
 public:
   bool needToGoToTown() const;

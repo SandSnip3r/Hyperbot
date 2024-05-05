@@ -34,6 +34,7 @@
 #include "serverAgentEntityUpdatePosition.hpp"
 #include "serverAgentEntityUpdateState.hpp"
 #include "serverAgentEntityUpdateStatus.hpp"
+#include "serverAgentGameReset.hpp"
 #include "serverAgentGuildStorageData.hpp"
 #include "serverAgentInventoryItemUseResponse.hpp"
 #include "serverAgentInventoryOperationResponse.hpp"
@@ -157,6 +158,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ServerAgentEntityRemoveOwnership>(packet);
       case Opcode::kServerAgentChatUpdate:
         return std::make_unique<ServerAgentChatUpdate>(packet);
+      case Opcode::kServerAgentGameReset:
+        return std::make_unique<ServerAgentGameReset>(packet);
       case Opcode::kServerAgentEntityUpdatePosition:
         return std::make_unique<ServerAgentEntityUpdatePosition>(packet);
       case Opcode::kServerAgentEntityUpdateAngle:

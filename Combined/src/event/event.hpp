@@ -105,6 +105,7 @@ enum class EventCode {
 
   kGmCommandTimedOut,
   kChatReceived,
+  kGameReset,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,

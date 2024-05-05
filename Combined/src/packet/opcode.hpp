@@ -191,7 +191,7 @@ enum class Opcode : uint16_t {
   SERVER_SILK_AMOUNT = 0x3153,
 
   SERVER_TELEPORT = 0xB05A,
-  SERVER_ANIMATION_TELEPORT = 0x34B5,
+  kServerAgentGameReset = 0x34B5,
 
   kServerAgentInventoryStorageBegin = 0x3047,
   kServerAgentInventoryStorageData = 0x3049,

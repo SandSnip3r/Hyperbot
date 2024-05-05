@@ -17,8 +17,8 @@ private:
   const std::string directoryPath;
   std::string filePath;
   std::ofstream logfile;
-  bool logToFile{true};
-  bool logToConsole{false};
+  static const bool logToFile;
+  static const bool logToConsole;
   inline static const std::vector<packet::Opcode> opcodeConsoleLoggingWhitelist_ = {};
   void logPacketToFile(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, PacketContainer::Direction direction);
   void logPacketToConsole(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, PacketContainer::Direction direction);

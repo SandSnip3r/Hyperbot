@@ -402,8 +402,8 @@ std::string toString(Opcode opcode) {
   if (opcode == Opcode::SERVER_TELEPORT) {
     return "SERVER_TELEPORT";
   }
-  if (opcode == Opcode::SERVER_ANIMATION_TELEPORT) {
-    return "SERVER_ANIMATION_TELEPORT";
+  if (opcode == Opcode::kServerAgentGameReset) {
+    return "kServerAgentGameReset";
   }
   if (opcode == Opcode::kServerAgentInventoryStorageBegin) {
     return "kServerAgentInventoryStorageBegin";

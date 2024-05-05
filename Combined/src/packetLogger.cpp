@@ -20,6 +20,9 @@ int64_t getMsSinceEpoch() {
 
 } // anonymous namespace
 
+const bool PacketLogger::logToFile = true;
+const bool PacketLogger::logToConsole = false;
+
 PacketLogger::PacketLogger(const std::string &logDirectoryPath) : directoryPath(logDirectoryPath) {
   //TODO: Proper path handling. std::fs? boost?
   filePath = directoryPath + "\\" + std::to_string(getMsSinceEpoch()) + ".txt";

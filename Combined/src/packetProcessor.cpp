@@ -154,6 +154,7 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffLink, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffRemove, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentChatUpdate, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentGameReset, packetHandleFunction);
 }
 
 void PacketProcessor::handlePacket(const PacketContainer &packet) const {
@@ -232,6 +233,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffLink, serverAgentBuffLinkReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffRemove, serverAgentBuffRemoveReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentChatUpdate, serverAgentChatUpdateReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentGameReset, serverAgentGameResetReceived);
   } catch (std::exception &ex) {
     LOG(INFO) << "Error while handling packet!\n  " << ex.what();
     return;
@@ -1699,4 +1701,8 @@ void PacketProcessor::serverAgentChatUpdateReceived(const packet::parsing::Serve
   } else {
     eventBroker_.publishEvent<event::ChatReceived>(packet.chatType(), packet.senderName(), packet.message());
   }
+}
+
+void PacketProcessor::serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet) const {
+  eventBroker_.publishEvent(event::EventCode::kGameReset);
 }

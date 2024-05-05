@@ -26,11 +26,15 @@
 
 namespace {
 
-std::pair<std::string, std::string> getLoginInfoFromConfig(const config::Config &config) {
+std::optional<std::pair<std::string, std::string>> getLoginInfoFromConfig(const config::Config &config) {
   std::unique_lock<std::mutex> configLock(config.mutex());
   const auto &characterName = config.configProto().character_to_login();
-  const auto &characterConfig = config.getCharacterConfig(characterName);
-  return {characterConfig.username(), characterConfig.password()};
+  const auto *characterConfig = config.getCharacterConfig(characterName);
+  if (characterConfig == nullptr) {
+    // No config; don't have login info.
+    return {};
+  }
+  return std::make_pair(characterConfig->username(), characterConfig->password());
 }
 
 } // anonymous namespace
@@ -65,8 +69,11 @@ void Bot::run() {
   }
   if (haveCharacterToLogin) {
     std::string characterName = config_.configProto().character_to_login();
-    const auto [username, password] = getLoginInfoFromConfig(config_);
-    loginStateMachine_ = std::make_unique<state::machine::Login>(*this, username, password, characterName);
+    const auto loginInfo = getLoginInfoFromConfig(config_);
+    if (loginInfo) {
+      const auto [username, password] = loginInfo.value();
+      loginStateMachine_ = std::make_unique<state::machine::Login>(*this, username, password, characterName);
+    }
   }
 }
 
@@ -74,7 +81,7 @@ const config::Config& Bot::config() const {
   return config_;
 }
 
-const proto::config::CharacterConfig& Bot::currentCharacterConfig() const {
+const proto::config::CharacterConfig* Bot::currentCharacterConfig() const {
   if (!worldState_.selfState().spawned()) {
     throw std::runtime_error("Not yet spawned, don't know which character config to fetch");
   }
@@ -171,6 +178,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kAlchemyTimedOut, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kGmCommandTimedOut, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kChatReceived, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kGameReset, eventHandleFunction);
 
   // Skills
   eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
@@ -208,11 +216,14 @@ void Bot::handleEvent(const event::Event *event) {
       }
 
       // Login events
+      case event::EventCode::kLoggedIn: {
+        handleLoggedIn(event);
+        break;
+      }
       case event::EventCode::kStateShardIdUpdated:
       case event::EventCode::kStateReceivedCaptchaPromptUpdated:
       case event::EventCode::kStateConnectedToAgentServerUpdated:
-      case event::EventCode::kStateCharacterListUpdated:
-      case event::EventCode::kLoggedIn: {
+      case event::EventCode::kStateCharacterListUpdated: {
         onUpdate(event);
         break;
       }
@@ -401,6 +412,10 @@ void Bot::handleEvent(const event::Event *event) {
         handleChatCommand(castedEvent);
         break;
       }
+      case event::EventCode::kGameReset: {
+        handleGameReset(event);
+        break;
+      }
       default: {
         LOG(INFO) << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode);
         break;
@@ -420,8 +435,6 @@ void Bot::onUpdate(const event::Event *event) {
     loginStateMachine_->onUpdate(event);
     if (loginStateMachine_->done()) {
       loginStateMachine_.reset();
-      // Only construct an autopotion state machine once the character is logged in.
-      autoPotionStateMachine_ = std::make_unique<state::machine::AutoPotion>(*this);
     }
   }
   // Highest priority is our vitals, we will try to heal even if we're not training
@@ -515,6 +528,14 @@ void Bot::handleChatCommand(const event::ChatReceived &event) {
 }
 
 // ============================================================================================================================
+// ====================================================Login event handling====================================================
+// ============================================================================================================================
+
+void Bot::handleLoggedIn(const event::Event *event) {
+  onUpdate(event);
+}
+
+// ============================================================================================================================
 // =========================================================Debug help=========================================================
 // ============================================================================================================================
 
@@ -565,6 +586,13 @@ void Bot::handleEntityExitedGeometry(const event::EntityExitedGeometry &event) {
 
 void Bot::handleSpawned(const event::Event *event) {
   LOG(INFO) << "Spawned at position " << worldState_.selfState().position();
+
+  // Only construct an autopotion state machine once the character is logged in.
+  if (currentCharacterConfig() != nullptr) {
+    autoPotionStateMachine_ = std::make_unique<state::machine::AutoPotion>(*this);
+  } else {
+    LOG(WARNING) << "Not constructing AutoPotion because we have no character config";
+  }
   onUpdate(event);
 }
 
@@ -672,6 +700,14 @@ void Bot::handleKnockdownStunEnded() {
 void Bot::handleItemCooldownEnded(const event::ItemCooldownEnded &event) {
   selfState().itemCooldownEnded(event.typeId);
   onUpdate(&event);
+}
+
+void Bot::handleGameReset(const event::Event *event) {
+  if (autoPotionStateMachine_) {
+    // Destroy autopotion when we despawn.
+    autoPotionStateMachine_.reset();
+  }
+  onUpdate(event);
 }
 
 bool Bot::needToGoToTown() const {

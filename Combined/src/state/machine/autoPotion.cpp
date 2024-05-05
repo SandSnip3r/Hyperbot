@@ -177,7 +177,7 @@ bool AutoPotion::tryUseHpPotion() {
   bool usedAnItem = false;
 
   // Prioritize vigors since they're generally used in more dire situations.
-  if (hpPercentage < bot_.currentCharacterConfig().autopotion_config().vigor_hp_threshold() &&
+  if (hpPercentage < bot_.currentCharacterConfig()->autopotion_config().vigor_hp_threshold() &&
       bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
     // Use vigor potion
     usedAnItem = usePotion(type_id::categories::kVigorPotion);
@@ -188,7 +188,7 @@ bool AutoPotion::tryUseHpPotion() {
     return true;
   }
 
-  if (hpPercentage < bot_.currentCharacterConfig().autopotion_config().hp_threshold() && bot_.selfState().canUseItem(type_id::categories::kHpPotion)) {
+  if (hpPercentage < bot_.currentCharacterConfig()->autopotion_config().hp_threshold() && bot_.selfState().canUseItem(type_id::categories::kHpPotion)) {
     // Use health potion
     usedAnItem = usePotion(type_id::categories::kHpPotion);
   }
@@ -208,7 +208,7 @@ bool AutoPotion::tryUseMpPotion() {
 
   // Prioritize vigors since they're generally used in more dire situations.
   // Don't use vigors when we have zombie.
-  if (!haveZombie && mpPercentage < bot_.currentCharacterConfig().autopotion_config().vigor_mp_threshold() &&
+  if (!haveZombie && mpPercentage < bot_.currentCharacterConfig()->autopotion_config().vigor_mp_threshold() &&
       bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
     // Use vigor potion
     usedAnItem = usePotion(type_id::categories::kVigorPotion);
@@ -219,7 +219,7 @@ bool AutoPotion::tryUseMpPotion() {
     return true;
   }
 
-  if (mpPercentage < bot_.currentCharacterConfig().autopotion_config().mp_threshold() && bot_.selfState().canUseItem(type_id::categories::kMpPotion)) {
+  if (mpPercentage < bot_.currentCharacterConfig()->autopotion_config().mp_threshold() && bot_.selfState().canUseItem(type_id::categories::kMpPotion)) {
     // Use mana potion
     usedAnItem = usePotion(type_id::categories::kMpPotion);
   }

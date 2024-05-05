@@ -80,31 +80,24 @@ const proto::config::Config& Config::configProto() const {
   return configProto_;
 }
 
-bool Config::haveCharacterConfig(const std::string &characterName) const {
-  const auto it = std::find_if(configProto_.character_configs().begin(), configProto_.character_configs().end(), [&characterName](const auto &characterConfig) {
-    return characterConfig.character_name() == characterName;
-  });
-  return (it != configProto_.character_configs().end());
-}
-
-proto::config::CharacterConfig& Config::getCharacterConfig(const std::string &characterName) {
+proto::config::CharacterConfig* Config::getCharacterConfig(const std::string &characterName) {
   const auto it = std::find_if(configProto_.mutable_character_configs()->begin(), configProto_.mutable_character_configs()->end(), [&characterName](const auto &characterConfig) {
     return characterConfig.character_name() == characterName;
   });
   if (it == configProto_.mutable_character_configs()->end()) {
-    throw std::runtime_error("Do not have config for character \"" + characterName + "\"");
+    return nullptr;
   }
-  return *it;
+  return &(*it);
 }
 
-const proto::config::CharacterConfig& Config::getCharacterConfig(const std::string &characterName) const {
+const proto::config::CharacterConfig* Config::getCharacterConfig(const std::string &characterName) const {
   const auto it = std::find_if(configProto_.character_configs().cbegin(), configProto_.character_configs().cend(), [&characterName](const auto &characterConfig) {
     return characterConfig.character_name() == characterName;
   });
   if (it == configProto_.character_configs().cend()) {
-    throw std::runtime_error("Do not have config for character \"" + characterName + "\"");
+    return nullptr;
   }
-  return *it;
+  return &(*it);
 }
 
 std::mutex& Config::mutex() const {
