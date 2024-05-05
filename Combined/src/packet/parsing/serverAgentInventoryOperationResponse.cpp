@@ -184,6 +184,6 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
   }
 }
 // TODO: Try to inject a buy packet that buys more than 1 stack of a stackable item
-//  Invesitage what it does to the kBuyFromNPC data
+//  Investigate what it does to the kBuyFromNPC data
 
 } // namespace packet::parsing
