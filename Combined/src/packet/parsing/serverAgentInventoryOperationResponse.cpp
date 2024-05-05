@@ -176,8 +176,11 @@ ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(con
       itemMovements_.push_back(primaryItemMovement);
     }
   } else {
-    LOG(INFO) << "Item movement failed! Dumping data";
-    LOG(INFO) << "  \"" << DumpToString(stream) << '"';
+    uint16_t errorCode;
+    stream.Read(errorCode);
+    if (errorCode != 0x0003) { // UIIT_MSG_STRGERR_INVALID_TARGET
+      LOG(INFO) << absl::StreamFormat("Item movement failed! Error code %#06X", errorCode);
+    }
   }
 }
 // TODO: Try to inject a buy packet that buys more than 1 stack of a stackable item

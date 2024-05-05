@@ -235,7 +235,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
 
             uint32_t loginID = r.Read<uint32_t>();        //Login ID
             agentIP_ = r.Read_Ascii(r.Read<uint16_t>());  //Agent IP
-            LOG(INFO) << "Gateway login response gave us Agentserver IP: \"" << agentIP_ << '"';
+            VLOG(1) << "Gateway login response gave us Agentserver IP: \"" << agentIP_ << '"';
             agentPort_ = r.Read<uint16_t>();              //Agent port
 
             StreamUtility w;
@@ -254,7 +254,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             }
 
             //Close active connections
-            LOG(INFO) << "Closing gateway connection, connecting to agentserver";
+            VLOG(2) << "Closing gateway connection, connecting to agentserver";
             clientConnection.Close();
             serverConnection.Close();
 

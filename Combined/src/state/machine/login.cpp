@@ -47,7 +47,7 @@ void Login::onUpdate(const event::Event *event) {
         return character.name == characterName_;
       });
       if (it == bot_.selfState().characterList.end()) {
-        LOG(INFO) << "Unable to find character \"" << characterName_ << "\"";
+        VLOG(1) << "Unable to find character \"" << characterName_ << "\"";
         return;
       }
 
@@ -56,11 +56,11 @@ void Login::onUpdate(const event::Event *event) {
       auto charSelectionPacket = packet::building::ClientAgentCharacterSelectionJoinRequest::packet(characterName_);
       bot_.packetBroker().injectPacket(charSelectionPacket, PacketContainer::Direction::kClientToServer);
     } else if (event->eventCode == event::EventCode::kStateReceivedCaptchaPromptUpdated) {
-      LOG(INFO) << "Got captcha. Sending answer";
+      VLOG(2) << "Got captcha. Sending answer";
       const auto captchaAnswerPacket = packet::building::ClientGatewayLoginIbuvAnswer::packet(kCaptchaAnswer);
       bot_.packetBroker().injectPacket(captchaAnswerPacket, PacketContainer::Direction::kClientToServer);
     } else if (event->eventCode == event::EventCode::kLoggedIn) {
-      LOG(INFO) << "Logged in.";
+      VLOG(2) << "Logged in.";
     } else if (event->eventCode == event::EventCode::kSpawned) {
       LOG(INFO) << "Logged in and character selected. Done.";
       done_ = true;

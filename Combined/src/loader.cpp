@@ -70,8 +70,8 @@ void Loader::startClient(uint16_t proxyListeningPort) {
   if (result == false) {
     throw std::runtime_error("Could not start \""+clientPath_.string()+"\"");
   }
-  LOG(INFO) << "Client " << clientPath_ << " (PID:" << pi.dwProcessId << ") launched with arguments \"" << arguments_ << '"';
-  LOG(INFO) << "The client should connect to port " << proxyListeningPort;
+  VLOG(1) << "Client " << clientPath_ << " (PID:" << pi.dwProcessId << ") launched with arguments \"" << arguments_ << '"';
+  VLOG(1) << "The client should connect to port " << proxyListeningPort;
   {
     // Write to a file (<Client PID>.txt) the port that the client should connect to
     // TODO: Replace %APPDATA% with %TEMP% to prevent stray file buildup

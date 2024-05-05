@@ -378,39 +378,41 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   worldState_.selfState().setHwanPoints(packet.hwanPoints());
   worldState_.selfState().setCurrentExpAndSpExp(packet.currentExperience(), packet.currentSpExperience());
   worldState_.selfState().setMasteriesAndSkills(packet.masteries(), packet.skills());
-  // for (const auto &m : packet.masteries()) {
-  //   const auto &mastery = gameData_.masteryData().getMasteryById(m.id);
-  //   LOG(INFO) << "Mastery " << mastery.masteryNameCode << "(" << m.id << ") is level " << (int)m.level;
-  // }
-  std::vector<std::pair<std::string, pk2::ref::Skill::Param1Type>> skillTypes = {
-    {"Melee skills", pk2::ref::Skill::Param1Type::kMelee},
-    {"Ranged skills", pk2::ref::Skill::Param1Type::kRanged},
-    {"Buffs", pk2::ref::Skill::Param1Type::kBuff},
-    {"Passive skills", pk2::ref::Skill::Param1Type::kPassive},
-  };
-  for (const auto &i : skillTypes) {
-    std::stringstream ss;
-    ss << i.first << ": [ ";
-    for (const auto &s : packet.skills()) {
-      const auto &skillData = gameData_.skillData().getSkillById(s.id);
-      if (skillData.param1Type() == i.second) {
-        constexpr const bool kLogName{true};
-        if constexpr (kLogName) {
-          // Print name
-          const auto maybeSkillName = gameData_.getSkillNameIfExists(s.id);
-          if (maybeSkillName) {
-            ss << *maybeSkillName << "(" << s.id << "), ";
+  if (VLOG_IS_ON(1)) {
+    // for (const auto &m : packet.masteries()) {
+    //   const auto &mastery = gameData_.masteryData().getMasteryById(m.id);
+    //   VLOG(1) << "Mastery " << mastery.masteryNameCode << "(" << m.id << ") is level " << (int)m.level;
+    // }
+    std::vector<std::pair<std::string, pk2::ref::Skill::Param1Type>> skillTypes = {
+      {"Melee skills", pk2::ref::Skill::Param1Type::kMelee},
+      {"Ranged skills", pk2::ref::Skill::Param1Type::kRanged},
+      {"Buffs", pk2::ref::Skill::Param1Type::kBuff},
+      {"Passive skills", pk2::ref::Skill::Param1Type::kPassive},
+    };
+    for (const auto &i : skillTypes) {
+      std::stringstream ss;
+      ss << i.first << ": [ ";
+      for (const auto &s : packet.skills()) {
+        const auto &skillData = gameData_.skillData().getSkillById(s.id);
+        if (skillData.param1Type() == i.second) {
+          constexpr const bool kLogName{true};
+          if constexpr (kLogName) {
+            // Print name
+            const auto maybeSkillName = gameData_.getSkillNameIfExists(s.id);
+            if (maybeSkillName) {
+              ss << *maybeSkillName << "(" << s.id << "), ";
+            } else {
+              ss << s.id << ", ";
+            }
           } else {
+            // Print RefId
             ss << s.id << ", ";
           }
-        } else {
-          // Print RefId
-          ss << s.id << ", ";
         }
       }
+      ss << "]";
+      VLOG(1) << ss.str();
     }
-    ss << "]";
-    LOG(INFO) << ss.str();
   }
 
   // Position
@@ -439,7 +441,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   const auto &avatarInventoryItemMap = packet.avatarInventoryItemMap();
   helpers::initializeInventory(worldState_.selfState().avatarInventory, avatarInventorySize, avatarInventoryItemMap);
 
-  LOG(INFO) << "GID:" << worldState_.selfState().globalId << ", and we have " << worldState_.selfState().currentHp() << " hp and " << worldState_.selfState().currentMp() << " mp";
+  VLOG(1) << "GID:" << worldState_.selfState().globalId << ", and we have " << worldState_.selfState().currentHp() << " hp and " << worldState_.selfState().currentMp() << " mp";
   eventBroker_.publishEvent(event::EventCode::kSpawned);
 }
 
@@ -1675,19 +1677,19 @@ void PacketProcessor::serverAgentBuffAddReceived(const packet::parsing::ServerAg
     LOG(INFO) << "Skipping buff \"" << (skillName ? *skillName : "UNKNOWN") << "\" for " << packet.globalId() << " with tokenId: " << packet.activeBuffToken();
     return;
   }
-  LOG(INFO) << "Buff \"" << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")\" added to " << packet.globalId() << " with tokenId: " << packet.activeBuffToken();
+  VLOG(1) << "Buff \"" << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")\" added to " << packet.globalId() << " with tokenId: " << packet.activeBuffToken();
   const auto &skillData = gameData_.skillData().getSkillById(packet.skillRefId());
   worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken(), skillData.duration());
 }
 
 void PacketProcessor::serverAgentBuffLinkReceived(const packet::parsing::ServerAgentBuffLink &packet) const {
   const auto skillName = gameData_.getSkillNameIfExists(packet.skillRefId());
-  LOG(INFO) << "Buff link received " << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")," << packet.activeBuffToken() << ',' << packet.targetGlobalId() << ',' << packet.targetName();
+  VLOG(1) << "Buff link received " << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")," << packet.activeBuffToken() << ',' << packet.targetGlobalId() << ',' << packet.targetName();
   // TODO: Where should I track the buff link? It seems to be a duplicate of what was sent in the "BuffAdd" packet.
 }
 
 void PacketProcessor::serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const {
-  LOG(INFO) << absl::StreamFormat("Buff remove received. Buffs to remove: [ %s ]", absl::StrJoin(packet.tokens(), ", ", [](std::string *out, auto tokenId){
+  VLOG(1) << absl::StreamFormat("Buff remove received. Buffs to remove: [ %s ]", absl::StrJoin(packet.tokens(), ", ", [](std::string *out, auto tokenId){
     out->append(std::to_string(tokenId));
   }));
   worldState_.removeBuffs(packet.tokens());

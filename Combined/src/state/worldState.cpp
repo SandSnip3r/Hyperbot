@@ -26,33 +26,33 @@ const state::Self& WorldState::selfState() const {
 }
 
 void WorldState::addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, int32_t durationMs) {
-  LOG(INFO) << "There are " << buffTokenToEntityAndSkillIdMap_.size() << " buffs tracked in WordState";
+  VLOG(1) << "There are " << buffTokenToEntityAndSkillIdMap_.size() << " buffs tracked in WordState";
   // For now, we only care about PlayerCharacters
   // TODO: add buffs for others
   entity::Entity *entity = getEntity(globalId);
   if (auto *character = dynamic_cast<entity::Character*>(entity)) {
     if (!dynamic_cast<entity::PlayerCharacter*>(entity)) {
-      LOG(INFO) << "Handling a buff for a non-player character";
+      VLOG(1) << "Handling a buff for a non-player character";
     }
     buffTokenToEntityAndSkillIdMap_.emplace(std::piecewise_construct, std::forward_as_tuple(tokenId), std::forward_as_tuple(globalId, skillRefId));
     character->addBuff(skillRefId, tokenId, durationMs, eventBroker_);
-    LOG(INFO) << "Buff with token " << tokenId << " added";
+    VLOG(1) << "Buff with token " << tokenId << " added";
   } else {
     throw std::runtime_error("Got a buff for a non-character.");
   }
-  LOG(INFO) << absl::StreamFormat("Known tokens: [ %s ]", absl::StrJoin(buffTokenToEntityAndSkillIdMap_, ", ", [](std::string *out, const auto data){
+  VLOG(1) << absl::StreamFormat("Known tokens: [ %s ]", absl::StrJoin(buffTokenToEntityAndSkillIdMap_, ", ", [](std::string *out, const auto data){
     out->append(std::to_string(data.first));
   }));
 }
 
 void WorldState::removeBuffs(const std::vector<uint32_t> &tokenIds) {
-  LOG(INFO) << absl::StreamFormat("Known tokens: [ %s ]", absl::StrJoin(buffTokenToEntityAndSkillIdMap_, ", ", [](std::string *out, const auto data){
+  VLOG(1) << absl::StreamFormat("Known tokens: [ %s ]", absl::StrJoin(buffTokenToEntityAndSkillIdMap_, ", ", [](std::string *out, const auto data){
     out->append(std::to_string(data.first));
   }));
   for (const auto tokenId : tokenIds) {
     auto buffTokenDataIt = buffTokenToEntityAndSkillIdMap_.find(tokenId);
     if (buffTokenDataIt == buffTokenToEntityAndSkillIdMap_.end()) {
-      LOG(INFO) << "Asked to remove a buff " << tokenId << ", but we are not tracking it";
+      VLOG(1) << "Asked to remove a buff " << tokenId << ", but we are not tracking it";
       continue;
     }
     entity::Entity *entity = getEntity(buffTokenDataIt->second.globalId);
