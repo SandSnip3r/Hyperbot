@@ -4,7 +4,7 @@ set(CMAKE_SYSTEM_VERSION 10.0 CACHE STRING "" FORCE)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-project(Combined LANGUAGES CXX C)
+project(Hyperbot LANGUAGES CXX C)
 
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
@@ -89,6 +89,6 @@ enable_testing()
 ################################################################################
 add_subdirectory(Pathfinder)
 add_subdirectory(SilkroadLib)
-add_subdirectory(Combined)
+add_subdirectory(Hyperbot)
 add_subdirectory(loaderDll)
 

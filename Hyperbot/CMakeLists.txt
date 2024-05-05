@@ -1,4 +1,4 @@
-set(PROJECT_NAME Combined)
+set(PROJECT_NAME Hyperbot)
 
 ################################################################################
 # Source groups
@@ -365,7 +365,7 @@ find_package(cppzmq CONFIG REQUIRED)
 add_executable(${PROJECT_NAME} ${ALL_FILES})
 
 use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "${DEFAULT_CXX_PROPS}")
-set(ROOT_NAMESPACE Combined)
+set(ROOT_NAMESPACE Hyperbot)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VS_GLOBAL_KEYWORD "Win32Proj"

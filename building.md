@@ -28,8 +28,8 @@
 3. Run the MSBuild.exe supplied with Visual Studio
    - Example location: `C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin`
    - Pass the path to the Solution file created by CMake
-      - Probably `Combined.sln` in your current directory
-   - Final command example: `/mnt/c/Program\ Files\ \(x86\)/Microsoft\ Visual\ Studio/2019/Community/MSBuild/Current/Bin/MSBuild.exe Combined.sln`
+      - Probably `Hyperbot.sln` in your current directory
+   - Final command example: `/mnt/c/Program\ Files\ \(x86\)/Microsoft\ Visual\ Studio/2019/Community/MSBuild/Current/Bin/MSBuild.exe Hyperbot.sln`
 
 ## Using Visual Studio
 
@@ -38,7 +38,7 @@
 3. Select root `CMakeLists.txt`
 4. Set configuration x86-Debug
    - This configuration is defined in `CMakeSettings.json`
-5. Right click the root `CMakeLists.txt` and choose "Generate Cache for Combined"
+5. Right click the root `CMakeLists.txt` and choose "Generate Cache for Hyperbot"
    - I think this runs Ninja to generate build files in the output directory defined in `CMakeSettings.json`
    - If there are files in this output directory already, it could cause issues in Visual Studio
 6. Build -> Build All
