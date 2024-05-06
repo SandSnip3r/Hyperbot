@@ -9,11 +9,18 @@ message AutopotionConfig {
   double vigor_mp_threshold = 4;
 }
 
+message TrainingConfig {
+  double center_x = 1;
+  double center_y = 2;
+  double center_z = 3;
+}
+
 message CharacterConfig {
   string character_name = 1;
   string username = 2;
   string password = 3;
   AutopotionConfig autopotion_config = 4;
+  TrainingConfig training_config = 5;
 }
 
 message Config {

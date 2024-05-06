@@ -1,5 +1,6 @@
 syntax = "proto3";
 
+import "config.proto";
 import "entity.proto";
 
 import "google/protobuf/empty.proto";
@@ -151,6 +152,10 @@ message WalkingPathUpdated {
   repeated Position waypoints = 1;
 }
 
+message ConfigLoaded {
+  config.Config config = 1;
+}
+
 // Broadcast message
 
 message BroadcastMessage {
@@ -182,5 +187,6 @@ message BroadcastMessage {
     StateMachineCreated stateMachineCreated = 25;
     google.protobuf.Empty stateMachineDestroyed = 26;
     WalkingPathUpdated walkingPathUpdated = 27;
+    ConfigLoaded configLoaded = 28;
   }
 }
