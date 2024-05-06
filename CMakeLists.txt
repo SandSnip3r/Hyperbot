@@ -7,6 +7,7 @@ set(MESSAGE_SOURCES
   entity.proto
   config.proto
   request.proto
+  stats.proto
 )
 
 protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${MESSAGE_SOURCES})
