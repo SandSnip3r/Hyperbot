@@ -10,9 +10,11 @@ message AutopotionConfig {
 }
 
 message TrainingConfig {
-  double center_x = 1;
-  double center_y = 2;
-  double center_z = 3;
+  int32 region = 1;
+  double center_x = 2;
+  double center_y = 3;
+  double center_z = 4;
+  double radius = 5;
 }
 
 message CharacterConfig {
