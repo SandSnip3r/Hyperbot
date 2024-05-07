@@ -152,7 +152,7 @@ message WalkingPathUpdated {
   repeated Position waypoints = 1;
 }
 
-message ConfigLoaded {
+message Config {
   config.Config config = 1;
 }
 
@@ -187,6 +187,6 @@ message BroadcastMessage {
     StateMachineCreated stateMachineCreated = 25;
     google.protobuf.Empty stateMachineDestroyed = 26;
     WalkingPathUpdated walkingPathUpdated = 27;
-    ConfigLoaded configLoaded = 28;
+    Config config = 28;
   }
 }
