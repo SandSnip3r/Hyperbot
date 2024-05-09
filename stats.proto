@@ -31,7 +31,7 @@ message StatEvent {
     entity.Entity entity_killed = 3;
     uint32 damage_dealt = 4;
     uint32 level_updated = 5;
-    
+
     // This value represents SP experience. Each full skill point is 400 sp experience. So the amount of SP the character has is this value / 400.
     uint64 skillpoint_updated = 6;
     uint64 experience_updated = 7;
