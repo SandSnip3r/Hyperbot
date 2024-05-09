@@ -6,6 +6,7 @@ set(MESSAGE_SOURCES
   broadcast.proto
   entity.proto
   config.proto
+  position.proto
   request.proto
   stats.proto
 )

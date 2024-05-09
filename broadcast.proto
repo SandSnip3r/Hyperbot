@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "config.proto";
 import "entity.proto";
+import "position.proto";
 
 import "google/protobuf/empty.proto";
 
@@ -23,15 +24,6 @@ enum LifeState {
   kDead = 2;
   kGone = 3;
 };
-
-// Sub-structures
-
-message Position {
-  uint32 regionId = 1;
-  float x = 2;
-  float y = 3;
-  float z = 4;
-}
 
 // Messages
 
@@ -76,20 +68,20 @@ message RegionNameUpdate {
 }
 
 message CharacterPositionChanged {
-  Position position = 1;
+  position.Position position = 1;
 }
 
 message CharacterMovementBegan {
-  Position currentPosition = 1;
+  position.Position currentPosition = 1;
   oneof destination {
-    Position destinationPosition = 2;
+    position.Position destinationPosition = 2;
     uint32 destinationAngle = 3;
   }
   float speed = 4;
 }
 
 message CharacterMovementEnded {
-  Position currentPosition = 1;
+  position.Position currentPosition = 1;
 }
 
 message CharacterNotMovingAngleChanged {
@@ -105,7 +97,7 @@ message ItemUpdate {
 
 message EntitySpawned {
   uint32 globalId = 1;
-  Position position = 2;
+  position.Position position = 2;
   entity.Entity entity = 3;
 }
 
@@ -115,7 +107,7 @@ message EntityDespawned {
 
 message EntityPositionChanged {
   uint32 globalId = 1;
-  Position position = 2;
+  position.Position position = 2;
 }
 
 message EntityMovementBegan {
@@ -134,7 +126,7 @@ message EntityLifeStateChanged {
 }
 
 message Circle {
-  Position center = 1;
+  position.Position center = 1;
   float radius = 2;
 }
 
@@ -149,7 +141,7 @@ message StateMachineCreated {
 }
 
 message WalkingPathUpdated {
-  repeated Position waypoints = 1;
+  repeated position.Position waypoints = 1;
 }
 
 message Config {

@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "position.proto";
+
 package proto.config;
 
 message AutopotionConfig {
@@ -10,11 +12,8 @@ message AutopotionConfig {
 }
 
 message TrainingConfig {
-  int32 region = 1;
-  double center_x = 2;
-  double center_y = 3;
-  double center_z = 4;
-  double radius = 5;
+  position.Position center = 1;
+  double radius = 2;
 }
 
 message CharacterConfig {
