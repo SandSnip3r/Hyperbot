@@ -64,19 +64,21 @@ private:
   void temp();
 
   void initializeUi();
-  std::optional<QPixmap> parseRegionMinimapPixmapFromPk2(sro::pk2::Pk2ReaderModern &pk2Reader, sro::Sector xSector, sro::Sector ySector);
+  QPixmap parseRegionMinimapPixmapFromPk2(sro::pk2::Pk2ReaderModern &pk2Reader, sro::Sector xSector, sro::Sector ySector);
+  QPixmap loadDdjAsQPixmap(sro::pk2::Pk2ReaderModern &pk2Reader, const std::string &path);
   void initializeMap();
   void loadNavmeshIntoScene();
   void connectMainControls();
   void connectTabWidget();
   void connectBotBroadcastMessages();
+  void connectConfigControls();
   void connectPacketInjection();
   void triggerMovementTimer();
   void killMovementTimer();
 
   void entityMovementTimerTriggered();
 
-  void injectPacket(request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes);
+  void injectPacket(proto::request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes);
   void updateItemList(ItemListWidget *itemListWidget, uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void updateGoldLabel(QLabel *label, uint64_t goldAmount);
   void updateDisplayedPosition(const sro::Position &position);
@@ -140,7 +142,7 @@ public slots:
   void onCosInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void onStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void onGuildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
-  void onEntitySpawned(uint32_t globalId, sro::Position position, broadcast::EntityType entityType);
+  void onEntitySpawned(uint32_t globalId, sro::Position position, proto::entity::Entity entityData);
   void onEntityDespawned(uint32_t globalId);
   void onEntityPositionChanged(sro::scalar_types::EntityGlobalId globalId, sro::Position position);
   void onEntityMovementBeganToDest(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, sro::Position destinationPosition, float speed);

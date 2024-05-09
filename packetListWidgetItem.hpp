@@ -7,14 +7,14 @@
 
 class PacketListWidgetItem : public QListWidgetItem {
 public:
-  PacketListWidgetItem(request::PacketToInject::Direction dir, const uint16_t op, std::string d, QListWidget *parent = nullptr);
+  PacketListWidgetItem(proto::request::PacketToInject::Direction dir, const uint16_t op, std::string d, QListWidget *parent = nullptr);
   virtual QVariant data(int role) const override;
-  request::PacketToInject::Direction direction() const;
+  proto::request::PacketToInject::Direction direction() const;
   uint16_t opcode() const;
   std::string data() const;
   enum { Type = UserType + 1 };
 private:
-  request::PacketToInject::Direction direction_;
+  proto::request::PacketToInject::Direction direction_;
   const uint16_t opcode_;
   std::string data_;
 

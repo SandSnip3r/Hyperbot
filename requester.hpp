@@ -16,7 +16,8 @@ public:
   Requester(zmq::context_t &context);
   void connect();
   void sendConfig(const proto::config::Config &config);
-  void injectPacket(request::PacketToInject::Direction packetDirection, uint16_t opcode, const std::string &rawBytes);
+  void injectPacket(proto::request::PacketToInject::Direction packetDirection, uint16_t opcode, const std::string &rawBytes);
+  void setCurrentPositionAsTrainingCenter();
   void startTraining();
   void stopTraining();
 private:
@@ -27,16 +28,14 @@ private:
   void serializeSendAndRecvAck(const T &protoMsg) {
     std::string protoMsgAsStr;
     protoMsg.SerializeToString(&protoMsgAsStr);
-    
+
     zmq::message_t zmqMsg;
     zmqMsg.rebuild(protoMsgAsStr.data(), protoMsgAsStr.size());
     socket_.send(zmqMsg, zmq::send_flags::none);
-    std::cout << "Message sent" << std::endl;
 
     // Receive our quick acknowledgement
     zmq::message_t reply;
     socket_.recv(reply, zmq::recv_flags::none);
-    std::cout << "Received response " << reply.data<char>() << std::endl;
   }
 signals:
 };

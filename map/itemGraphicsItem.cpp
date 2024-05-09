@@ -4,7 +4,7 @@
 
 namespace map {
 
-ItemGraphicsItem::ItemGraphicsItem(broadcast::EntityType type) : entityType_(type) {
+ItemGraphicsItem::ItemGraphicsItem(proto::entity::ItemRarity itemRarity) : itemRarity_(itemRarity) {
   precomputeWhatToDraw();
 }
 
@@ -13,12 +13,15 @@ void ItemGraphicsItem::precomputeWhatToDraw() {
   borderPen_.setWidth(0);
   borderPen_.setColor({0,0,0});
   fillBrush_.setStyle(Qt::BrushStyle::SolidPattern);
-  if (entityType_ == broadcast::EntityType::kItemCommon) {
+  if (itemRarity_ == proto::entity::ItemRarity::kWhite) {
     fillBrush_.setColor({255,255,255});
-  } else if (entityType_ == broadcast::EntityType::kItemRare) {
+  } else if (itemRarity_ == proto::entity::ItemRarity::kBlue) {
     fillBrush_.setColor({114,191,255});
-  } else if (entityType_ == broadcast::EntityType::kItemSox) {
+  } else if (itemRarity_ == proto::entity::ItemRarity::kSox) {
     fillBrush_.setColor({255,217,83});
+  } else {
+    std::cout << "Weird item rarity" << std::endl;
+    fillBrush_.setColor({255,108,0});
   }
   shapeRadius_ = kEntitySquareBaseRadius_;
   updateRadius(shapeRadius_);

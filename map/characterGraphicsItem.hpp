@@ -1,16 +1,24 @@
 #ifndef MAP_CHARACTER_GRAPHICS_ITEM_HPP_
 #define MAP_CHARACTER_GRAPHICS_ITEM_HPP_
 
-#include "proto/broadcast.pb.h"
+#include "proto/entity.pb.h"
 
 #include <QGraphicsItem>
 #include <QPainter>
 
 namespace map {
 
+enum class CharacterType {
+  kCharacter,
+  kPlayerCharacter,
+  kNonPlayerCharacter,
+  kMonster,
+  kPortal
+};
+
 class CharacterGraphicsItem : public QGraphicsItem {
 public:
-  CharacterGraphicsItem(broadcast::EntityType type);
+  CharacterGraphicsItem(CharacterType characterType, std::optional<proto::entity::MonsterRarity> monsterRarity = std::nullopt);
   QRectF boundingRect() const override;
   void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
   // enum { Type = UserType + 2 };
@@ -18,7 +26,8 @@ public:
   void setDead();
 private:
   static constexpr float kEntityCircleBaseRadius_{5.0};
-  broadcast::EntityType entityType_;
+  CharacterType characterType_;
+  std::optional<proto::entity::MonsterRarity> monsterRarity_;
   void precomputeWhatToDraw();
   void updateRadius(const float newRadius);
   QPen borderPen_;

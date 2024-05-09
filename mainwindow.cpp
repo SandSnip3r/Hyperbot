@@ -4,6 +4,7 @@
 #include "map/itemGraphicsItem.hpp"
 #include "packetListWidgetItem.hpp"
 #include "regionGraphicsItem.hpp"
+#include "textureToImage.hpp"
 #include "./ui_mainwindow.h"
 
 #include "proto/config.pb.h"
@@ -13,20 +14,14 @@
 #include <silkroad_lib/pk2/pk2ReaderModern.h>
 #include <silkroad_lib/pk2/navmeshParser.h>
 
-#include <gli/convert.hpp>
-#include <gli/format.hpp>
-#include <gli/load_dds.hpp>
-#include <gli/sampler2d.hpp>
-
 #include <QDir>
 #include <QImage>
 #include <QMessageBox>
 
-const std::filesystem::path MainWindow::kSilkroadPath_{"C:/Users/Victor/Documents/Development/Daxter Silkroad server files/Silkroad Client"};
+#include <fstream>
+#include <iostream>
 
-namespace {
-QImage convertTexture2dToQImage(const gli::texture2d &texture2d);
-} // anonymous namespace
+const std::filesystem::path MainWindow::kSilkroadPath_{"C:/Users/Victor/Documents/Development/Daxter Silkroad server files/Silkroad Client"};
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
@@ -38,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
   connectMainControls();
   connectTabWidget();
   connectBotBroadcastMessages();
+  connectConfigControls();
 
   // Start bot connection
   // EventHandler is a subscriber to what the bot publishes
@@ -56,6 +52,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 }
 
 void MainWindow::temp() {
+  return;
   proto::config::Config config;
   config.set_client_path("C:\\Users\\Victor\\Documents\\Development\\Daxter Silkroad server files\\Silkroad Client");
   config.set_character_to_login("IP_Man");
@@ -141,30 +138,26 @@ void MainWindow::initializeUi() {
   )");
 }
 
-std::optional<QPixmap> MainWindow::parseRegionMinimapPixmapFromPk2(sro::pk2::Pk2ReaderModern &pk2Reader, sro::Sector xSector, sro::Sector ySector) {
+QPixmap MainWindow::parseRegionMinimapPixmapFromPk2(sro::pk2::Pk2ReaderModern &pk2Reader, sro::Sector xSector, sro::Sector ySector) {
   const std::string kMinimapDirectory = "minimap\\";
   const std::string kMiniMapImageFileName = std::to_string(xSector) + "x" + std::to_string(ySector) + ".ddj";
   const std::string kMiniMapImagePath = kMinimapDirectory + kMiniMapImageFileName;
-  if (!pk2Reader.hasEntry(kMiniMapImagePath)) {
-    return {};
+  return loadDdjAsQPixmap(pk2Reader, kMiniMapImagePath);
+}
+
+QPixmap MainWindow::loadDdjAsQPixmap(sro::pk2::Pk2ReaderModern &pk2Reader, const std::string &path) {
+  if (!pk2Reader.hasEntry(path)) {
+    throw std::runtime_error("No pk2 entry for \""+path+"\"");
   }
-  sro::pk2::PK2Entry miniMapImageEntry = pk2Reader.getEntry(kMiniMapImagePath);
-  auto miniMapImageData = pk2Reader.getEntryData(miniMapImageEntry);
+  sro::pk2::PK2Entry imageEntry = pk2Reader.getEntry(path);
+  auto imageData = pk2Reader.getEntryData(imageEntry);
 
   // First 20 bytes are joymax specific
-  const auto kJoymaxHeaderSize = 20;
-  auto *buffer = miniMapImageData.data() + kJoymaxHeaderSize;
+  constexpr int kJoymaxHeaderSize = 20;
+  auto *buffer = imageData.data() + kJoymaxHeaderSize;
   const char *charBuffer = reinterpret_cast<const char*>(buffer);
-
-  const auto texture = gli::load_dds(charBuffer, miniMapImageData.size() - kJoymaxHeaderSize);
-  if (texture.size() == 0) {
-    // Check if returned texture is not "empty"
-    std::cout << "Couldnt parse minimap image" << std::endl;
-    return {};
-  }
-
-  auto texture2d = gli::texture2d(texture);
-  return QPixmap::fromImage(convertTexture2dToQImage(texture2d));
+  const QImage img = texture_to_image::dataToQImage(charBuffer, imageData.size() - kJoymaxHeaderSize);
+  return QPixmap::fromImage(img);
 }
 
 void MainWindow::initializeMap() {
@@ -210,14 +203,12 @@ void MainWindow::loadNavmeshIntoScene() {
       // Create new graphics item for this region's navmesh
       const auto &region = navmesh_->getRegion(regionId);
       RegionGraphicsItem *item = new RegionGraphicsItem(*navmesh_, region, regionTriangulation);
-      {
+      try {
         // Set minimap pixmap for region
-        const auto minimapPixmap = parseRegionMinimapPixmapFromPk2(pk2MediaReader, regionX, regionY);
-        if (minimapPixmap) {
-          item->setPixmap(*minimapPixmap);
-        } else {
-          std::cout << "Couldn't load minimap image for region " << static_cast<int>(regionX) << ',' << static_cast<int>(regionY) << std::endl;
-        }
+        const QPixmap minimapPixmap = parseRegionMinimapPixmapFromPk2(pk2MediaReader, regionX, regionY);
+        item->setPixmap(minimapPixmap);
+      } catch (const std::exception &ex) {
+        std::cout << "Couldn't load minimap image for region " << static_cast<int>(regionX) << ',' << static_cast<int>(regionY) << ". \"" << ex.what() << '"' << std::endl;
       }
       const auto mapPos = sroPositionToMapPosition({regionId, 0.0, 0.0, sro::game_constants::kRegionHeight});
       item->setPos(mapPos);
@@ -286,6 +277,10 @@ void MainWindow::connectBotBroadcastMessages() {
   connect(&eventHandler_, &EventHandler::stateMachineCreated, this, &MainWindow::onStateMachineCreated);
   connect(&eventHandler_, &EventHandler::stateMachineDestroyed, this, &MainWindow::onStateMachineDestroyed);
   connect(&eventHandler_, &EventHandler::walkingPathUpdated, this, &MainWindow::onWalkingPathUpdated);
+}
+
+void MainWindow::connectConfigControls() {
+  ui->characterConfig->setEventHandlerAndRequester(&eventHandler_, &requester_);
 }
 
 void MainWindow::connectPacketInjection() {
@@ -367,7 +362,7 @@ void MainWindow::entityMovementTimerTriggered() {
 }
 
 
-void MainWindow::injectPacket(request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes) {
+void MainWindow::injectPacket(proto::request::PacketToInject::Direction packetDirection, const uint16_t opcode, std::string actualBytes) {
   requester_.injectPacket(packetDirection, opcode, actualBytes);
   PacketListWidgetItem *packet = new PacketListWidgetItem(packetDirection, opcode, actualBytes, ui->injectedPacketListWidget);
   ui->injectedPacketListWidget->addItem(packet);
@@ -433,11 +428,11 @@ void MainWindow::addToDataButtonClicked() {
 }
 
 void MainWindow::injectPacketButtonClicked() {
-  request::PacketToInject::Direction packetDirection;
+  proto::request::PacketToInject::Direction packetDirection;
   if (ui->packetInjectionToServerRadioButton->isChecked()) {
-    packetDirection = request::PacketToInject::kClientToServer;
+    packetDirection = proto::request::PacketToInject::kClientToServer;
   } else {
-    packetDirection = request::PacketToInject::kServerToClient;
+    packetDirection = proto::request::PacketToInject::kServerToClient;
   }
   if (ui->injectPacketOpcodeLineEdit->text().isEmpty()) {
     std::cout << "injectPacketOpcodeLineEdit is empty" << std::endl;
@@ -701,69 +696,108 @@ void MainWindow::onGuildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, 
   updateItemList(ui->guildStorageListWidget, slotIndex, quantity, itemName);
 }
 
-void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, broadcast::EntityType entityType) {
+void MainWindow::onEntitySpawned(uint32_t globalId, sro::Position position, proto::entity::Entity entityData) {
   std::unique_ptr<entity_data::Entity> entity;
   // Create an entity object
-  switch (entityType) {
-    case broadcast::EntityType::kSelf:
-      throw std::runtime_error("Right now, we dont expect ourself to be spawning");
-    case broadcast::EntityType::kCharacter:
-    case broadcast::EntityType::kPlayerCharacter:
-    case broadcast::EntityType::kNonplayerCharacter:
-    case broadcast::EntityType::kMonsterGeneral:
-    case broadcast::EntityType::kMonsterChampion:
-    case broadcast::EntityType::kMonsterGiant:
-    case broadcast::EntityType::kMonsterElite:
-    case broadcast::EntityType::kMonsterUnique:
-    case broadcast::EntityType::kMonsterPartyGeneral:
-    case broadcast::EntityType::kMonsterPartyChampion:
-    case broadcast::EntityType::kMonsterPartyGiant:
-      entity = std::make_unique<entity_data::Character>();
-      break;
-    case broadcast::EntityType::kItemCommon:
-    case broadcast::EntityType::kItemRare:
-    case broadcast::EntityType::kItemSox:
-    case broadcast::EntityType::kPortal:
-      entity = std::make_unique<entity_data::Entity>();
-      break;
-    default:
-      throw std::runtime_error("There should be no other entity types");
+  if (entityData.has_self()) {
+    throw std::runtime_error("Right now, we dont expect ourself to be spawning");
+  } else if (entityData.has_item() ||
+             entityData.has_portal()) {
+    entity = std::make_unique<entity_data::Entity>(entityData);
+  } else {
+    entity = std::make_unique<entity_data::Character>(entityData);
   }
   entity->globalId = globalId;
-  entity->entityType = entityType;
 
   QGraphicsItem *item;
-  if (entityType == broadcast::EntityType::kItemCommon ||
-      entityType == broadcast::EntityType::kItemRare ||
-      entityType == broadcast::EntityType::kItemSox) {
-    item = new map::ItemGraphicsItem(entityType);
+  if (entityData.has_item()) {
+    item = new map::ItemGraphicsItem(entityData.item().rarity());
   } else {
-    item = new map::CharacterGraphicsItem(entityType);
+    map::CharacterType characterType;
+    std::optional<proto::entity::MonsterRarity> monsterRarity;
+    if (entityData.has_character()) {
+      characterType = map::CharacterType::kCharacter;
+    } else if (entityData.has_nonplayer_character()) {
+      characterType = map::CharacterType::kNonPlayerCharacter;
+    } else if (entityData.has_player_character()) {
+      characterType = map::CharacterType::kPlayerCharacter;
+    } else if (entityData.has_portal()) {
+      characterType = map::CharacterType::kPortal;
+    } else if (entityData.has_monster()) {
+      characterType = map::CharacterType::kMonster;
+      monsterRarity = entityData.monster().rarity();
+    }
+    item = new map::CharacterGraphicsItem(characterType, monsterRarity);
   }
   mapScene_->addItem(item);
   auto mapPosition = sroPositionToMapPosition(position);
   item->setPos(mapPosition);
-  [](auto *item, const auto type) {
-    const std::map<broadcast::EntityType, qreal> entityZValues = {
-      {broadcast::EntityType::kPortal, 1},
-      {broadcast::EntityType::kCharacter, 1},
-      {broadcast::EntityType::kNonplayerCharacter, 2},
-      {broadcast::EntityType::kItemCommon, 3},
-      {broadcast::EntityType::kItemRare, 4},
-      {broadcast::EntityType::kItemSox, 5},
-      {broadcast::EntityType::kPlayerCharacter, 6},
-      {broadcast::EntityType::kMonsterGeneral, 7},
-      {broadcast::EntityType::kMonsterChampion, 8},
-      {broadcast::EntityType::kMonsterPartyGeneral, 9},
-      {broadcast::EntityType::kMonsterElite, 10},
-      {broadcast::EntityType::kMonsterGiant, 11},
-      {broadcast::EntityType::kMonsterPartyChampion, 12},
-      {broadcast::EntityType::kMonsterPartyGiant, 13},
-      {broadcast::EntityType::kMonsterUnique, 14},
-      {broadcast::EntityType::kSelf, 15},
-    };
-    item->setZValue(entityZValues.at(type));
-  }(item, entityType);
+
+  // Calculate a z value for this entity.
+  const int zValue = [&](){
+    if (entityData.has_portal() ||
+        entityData.has_player_character()) {
+      return 1;
+    } else if (entityData.has_nonplayer_character()) {
+      return 2;
+    } else if (entityData.has_item()) {
+      switch (entityData.item().rarity()) {
+        case proto::entity::ItemRarity::kWhite:
+          return 3;
+        case proto::entity::ItemRarity::kBlue:
+          return 4;
+        case proto::entity::ItemRarity::kSox:
+          return 5;
+        case proto::entity::ItemRarity::kSet:
+        case proto::entity::ItemRarity::kRareSet:
+        case proto::entity::ItemRarity::kLegend:
+        default:
+          return 6;
+      }
+    } else if (entityData.has_monster()) {
+      switch (entityData.monster().rarity()) {
+        case proto::entity::MonsterRarity::kGeneral:
+          return 7;
+        case proto::entity::MonsterRarity::kChampion:
+          return 8;
+        case proto::entity::MonsterRarity::kUnique:
+          return 9;
+        case proto::entity::MonsterRarity::kGiant:
+          return 10;
+        case proto::entity::MonsterRarity::kTitan:
+          return 11;
+        case proto::entity::MonsterRarity::kElite:
+          return 12;
+        case proto::entity::MonsterRarity::kEliteStrong:
+          return 13;
+        case proto::entity::MonsterRarity::kUnique2:
+          return 14;
+        case proto::entity::MonsterRarity::kGeneralParty:
+          return 15;
+        case proto::entity::MonsterRarity::kChampionParty:
+          return 16;
+        case proto::entity::MonsterRarity::kUniqueParty:
+          return 17;
+        case proto::entity::MonsterRarity::kGiantParty:
+          return 18;
+        case proto::entity::MonsterRarity::kTitanParty:
+          return 19;
+        case proto::entity::MonsterRarity::kEliteParty:
+          return 20;
+        case proto::entity::MonsterRarity::kEliteStrongParty:
+          return 21;
+        case proto::entity::MonsterRarity::kUnique2Party:
+        default:
+          return 22;
+      }
+    } else if (entityData.has_self()) {
+      return 23;
+    } else {
+      std::cout << "Unknown entity type" << std::endl;
+      return 24;
+    }
+  }();
+  item->setZValue(zValue);
   if (auto it = entityGraphicsItemMap_.find(globalId); it != entityGraphicsItemMap_.end()) {
     // Already have an item here, delete it, we'll replace it
 
@@ -969,48 +1003,3 @@ void MainWindow::updateEntityDisplayedPosition(sro::scalar_types::EntityGlobalId
 bool MainWindow::haveEntity(sro::scalar_types::EntityGlobalId globalId) {
   return entityData_.find(globalId) != entityData_.end();
 }
-
-namespace {
-
-QImage convertTexture2dToQImage(const gli::texture2d &texture2d) {
-  if (texture2d.format() != gli::FORMAT_RGBA_DXT1_UNORM_BLOCK8) {
-    return {};
-    // TODO: Why does this happen?
-    throw std::runtime_error("Trying to convert wrong texture");
-  }
-  if (texture2d.levels() < 1) {
-    throw std::runtime_error("Have texture with no levels");
-  }
-  const auto &extent2d = texture2d.extent(0);
-  QImage image(extent2d.x, extent2d.y, QImage::Format_RGB32);
-
-  gli::extent2d blockExtent;
-  {
-    gli::extent3d tempExtent = gli::block_extent(gli::FORMAT_RGBA_DXT1_UNORM_BLOCK8);
-    blockExtent.x = tempExtent.x;
-    blockExtent.y = tempExtent.y;
-  }
-
-  gli::extent2d texelCoord;
-  gli::extent2d blockCoord;
-  gli::extent2d levelExtent = texture2d.extent(0);
-  gli::extent2d levelExtentInBlocks = glm::max(gli::extent2d(1, 1), levelExtent / blockExtent);
-  for (blockCoord.y = 0, texelCoord.y = 0; blockCoord.y < levelExtentInBlocks.y; ++blockCoord.y, texelCoord.y += blockExtent.y) {
-    for (blockCoord.x = 0, texelCoord.x = 0; blockCoord.x < levelExtentInBlocks.x; ++blockCoord.x, texelCoord.x += blockExtent.x) {
-      const gli::detail::dxt1_block *dxt1Block = texture2d.data<gli::detail::dxt1_block>(0, 0, 0) + (blockCoord.y * levelExtentInBlocks.x + blockCoord.x);
-      const gli::detail::texel_block4x4 decompressedBlock = gli::detail::decompress_dxt1_block(*dxt1Block);
-
-      gli::extent2d decompressedBlockCoord;
-      for (decompressedBlockCoord.y = 0; decompressedBlockCoord.y < glm::min(4, levelExtent.y); ++decompressedBlockCoord.y) {
-        for (decompressedBlockCoord.x = 0; decompressedBlockCoord.x < glm::min(4, levelExtent.x); ++decompressedBlockCoord.x) {
-          const auto resultingCoordinate = texelCoord + decompressedBlockCoord;
-          const auto &texel = decompressedBlock.Texel[decompressedBlockCoord.y][decompressedBlockCoord.x];
-          image.setPixelColor(resultingCoordinate.x, resultingCoordinate.y, QColor::fromRgbF(texel.r, texel.g, texel.b, texel.a));
-        }
-      }
-    }
-  }
-  return image;
-}
-
-} // anonymous namespace

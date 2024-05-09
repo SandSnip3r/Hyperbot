@@ -9,33 +9,39 @@ void Requester::connect() {
 }
 
 void Requester::sendConfig(const proto::config::Config &config) {
-  request::RequestMessage requestMessage;
+  proto::request::RequestMessage requestMessage;
   *requestMessage.mutable_config() = config;
   serializeSendAndRecvAck(requestMessage);
 }
 
-void Requester::injectPacket(request::PacketToInject::Direction packetDirection, uint16_t opcode, const std::string &rawBytes) {
-  request::PacketToInject packet;
+void Requester::injectPacket(proto::request::PacketToInject::Direction packetDirection, uint16_t opcode, const std::string &rawBytes) {
+  proto::request::PacketToInject packet;
   packet.set_direction(packetDirection);
   packet.set_opcode(opcode);
   packet.set_data(rawBytes);
-  request::RequestMessage requestMessage;
+  proto::request::RequestMessage requestMessage;
   *requestMessage.mutable_packetdata() = packet;
   serializeSendAndRecvAck(requestMessage);
 }
 
+void Requester::setCurrentPositionAsTrainingCenter() {
+  proto::request::RequestMessage requestMessage;
+  requestMessage.mutable_setcurrentpositionastrainingcenter();
+  serializeSendAndRecvAck(requestMessage);
+}
+
 void Requester::startTraining() {
-  request::DoAction action;
-  action.set_action(request::DoAction::kStartTraining);
-  request::RequestMessage requestMessage;
+  proto::request::DoAction action;
+  action.set_action(proto::request::DoAction::kStartTraining);
+  proto::request::RequestMessage requestMessage;
   *requestMessage.mutable_doaction() = action;
   serializeSendAndRecvAck(requestMessage);
 }
 
 void Requester::stopTraining() {
-  request::DoAction action;
-  action.set_action(request::DoAction::kStopTraining);
-  request::RequestMessage requestMessage;
+  proto::request::DoAction action;
+  action.set_action(proto::request::DoAction::kStopTraining);
+  proto::request::RequestMessage requestMessage;
   *requestMessage.mutable_doaction() = action;
   serializeSendAndRecvAck(requestMessage);
 }

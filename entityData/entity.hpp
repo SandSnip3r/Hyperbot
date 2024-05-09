@@ -3,7 +3,7 @@
 
 #include "common.hpp"
 
-#include "proto/broadcast.pb.h"
+#include "proto/entity.pb.h"
 
 #include <silkroad_lib/entity.h>
 #include <silkroad_lib/scalar_types.h>
@@ -14,19 +14,23 @@ namespace entity_data {
 
 class Entity {
 public:
+  Entity() = default;
+  Entity(proto::entity::Entity entityData) : entityData(entityData) {}
   virtual ~Entity() = default;
   sro::scalar_types::EntityGlobalId globalId;
-  broadcast::EntityType entityType;
+  proto::entity::Entity entityData;
 };
 
 class MobileEntity : public Entity {
 public:
+  using Entity::Entity;
   virtual ~MobileEntity() = default;
   std::optional<Movement> movement;
 };
 
 class Character : public MobileEntity {
 public:
+  using MobileEntity::MobileEntity;
   virtual ~Character() = default;
   sro::entity::LifeState lifeState;
 };

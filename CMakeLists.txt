@@ -60,7 +60,8 @@ set(PROJECT_SOURCES
   regionGraphicsItem.hpp
   requester.cpp
   requester.hpp
-
+  textureToImage.cpp
+  textureToImage.hpp
   mainwindow.ui
   ${TS_FILES}
 )
@@ -75,6 +76,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(hyperbot-ui
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        characterconfig.h characterconfig.cpp characterconfig.ui
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET hyperbot-ui APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

@@ -4,7 +4,10 @@
 
 namespace map {
 
-CharacterGraphicsItem::CharacterGraphicsItem(broadcast::EntityType type) : entityType_(type) {
+CharacterGraphicsItem::CharacterGraphicsItem(CharacterType characterType, std::optional<proto::entity::MonsterRarity> monsterRarity) : characterType_(characterType), monsterRarity_(monsterRarity) {
+  if (characterType == CharacterType::kMonster && !monsterRarity_) {
+    throw std::runtime_error("Character type is monster, but dont have monster rarity");
+  }
   precomputeWhatToDraw();
 }
 
@@ -16,9 +19,15 @@ void CharacterGraphicsItem::precomputeWhatToDraw() {
   // Border is thin
   borderPen_.setWidth(0);
 
-  if (entityType_ == broadcast::EntityType::kMonsterPartyGeneral ||
-      entityType_ == broadcast::EntityType::kMonsterPartyChampion ||
-      entityType_ == broadcast::EntityType::kMonsterPartyGiant) {
+  if (monsterRarity_ &&
+      (*monsterRarity_ == proto::entity::MonsterRarity::kGeneralParty ||
+       *monsterRarity_ == proto::entity::MonsterRarity::kChampionParty ||
+       *monsterRarity_ == proto::entity::MonsterRarity::kUniqueParty ||
+       *monsterRarity_ == proto::entity::MonsterRarity::kGiantParty ||
+       *monsterRarity_ == proto::entity::MonsterRarity::kTitanParty ||
+       *monsterRarity_ == proto::entity::MonsterRarity::kEliteParty ||
+       *monsterRarity_ == proto::entity::MonsterRarity::kEliteStrongParty ||
+       *monsterRarity_ == proto::entity::MonsterRarity::kUnique2Party)) {
     // Party monsters are drawn with a blue border
     borderPen_.setColor({25,166,233});
   } else {
@@ -27,29 +36,31 @@ void CharacterGraphicsItem::precomputeWhatToDraw() {
   }
 
   // Set radius first
-  if (entityType_ == broadcast::EntityType::kMonsterChampion ||
-      entityType_ == broadcast::EntityType::kMonsterPartyChampion) {
+  if (monsterRarity_ &&
+      (*monsterRarity_ == proto::entity::MonsterRarity::kChampion ||
+       *monsterRarity_ == proto::entity::MonsterRarity::kChampionParty)) {
     shapeRadius_ = kEntityCircleBaseRadius_ * kChampionRadiusMultiplier;
-  } else if (entityType_ == broadcast::EntityType::kMonsterUnique) {
-    shapeRadius_ = kEntityCircleBaseRadius_ * kUniqueRadiusMultiplier;
-  } else if (entityType_ == broadcast::EntityType::kMonsterGiant ||
-      entityType_ == broadcast::EntityType::kMonsterPartyGiant) {
+  } else if (monsterRarity_ &&
+             (*monsterRarity_ == proto::entity::MonsterRarity::kGiant ||
+              *monsterRarity_ == proto::entity::MonsterRarity::kGiantParty)) {
     shapeRadius_ = kEntityCircleBaseRadius_ * kGiantRadiusMultiplier;
+  } else if (monsterRarity_ &&
+             (*monsterRarity_ == proto::entity::MonsterRarity::kUnique ||
+              *monsterRarity_ == proto::entity::MonsterRarity::kUnique2 ||
+              *monsterRarity_ == proto::entity::MonsterRarity::kUniqueParty ||
+              *monsterRarity_ == proto::entity::MonsterRarity::kUnique2Party)) {
+    shapeRadius_ = kEntityCircleBaseRadius_ * kUniqueRadiusMultiplier;
   } else {
     shapeRadius_ = kEntityCircleBaseRadius_;
   }
   updateRadius(shapeRadius_);
 
-  if (entityType_ == broadcast::EntityType::kMonsterGeneral ||
-      entityType_ == broadcast::EntityType::kMonsterChampion ||
-      entityType_ == broadcast::EntityType::kMonsterGiant ||
-      entityType_ == broadcast::EntityType::kMonsterElite ||
-      entityType_ == broadcast::EntityType::kMonsterPartyGeneral ||
-      entityType_ == broadcast::EntityType::kMonsterPartyChampion ||
-      entityType_ == broadcast::EntityType::kMonsterPartyGiant ||
-      entityType_ == broadcast::EntityType::kMonsterUnique) {
+  if (characterType_ == CharacterType::kMonster) {
     // Drawing a monster, lets draw it as a circle with a black border
-    if (entityType_ == broadcast::EntityType::kMonsterUnique) {
+    if (*monsterRarity_ == proto::entity::MonsterRarity::kUnique ||
+        *monsterRarity_ == proto::entity::MonsterRarity::kUnique2 ||
+        *monsterRarity_ == proto::entity::MonsterRarity::kUniqueParty ||
+        *monsterRarity_ == proto::entity::MonsterRarity::kUnique2Party) {
       // Purple
       circleGradient_.setColorAt(0, {255,128,255});
       circleGradient_.setColorAt(0.66, {207,27,255});
@@ -60,21 +71,16 @@ void CharacterGraphicsItem::precomputeWhatToDraw() {
       circleGradient_.setColorAt(0.33, {255,0,0});
       circleGradient_.setColorAt(1, {32,0,0});
     }
-  } else if (entityType_ == broadcast::EntityType::kNonplayerCharacter) {
+  } else if (characterType_ == CharacterType::kNonPlayerCharacter) {
     // Blue
     circleGradient_.setColorAt(0, {128,128,255});
     circleGradient_.setColorAt(0.33, {48,96,219});
     circleGradient_.setColorAt(1, {0,0,32});
-  } else if (entityType_ == broadcast::EntityType::kPlayerCharacter) {
+  } else if (characterType_ == CharacterType::kPlayerCharacter) {
     // Light green
     circleGradient_.setColorAt(0, {255,128,255});
     circleGradient_.setColorAt(0.33, {157, 199, 0});
     circleGradient_.setColorAt(1, {16,32,0});
-  } else if (entityType_ == broadcast::EntityType::kSelf) {
-    // Tan
-    circleGradient_.setColorAt(0, {255,255,128});
-    circleGradient_.setColorAt(0.33, {216,158,0});
-    circleGradient_.setColorAt(1, {32,16,0});
   } else {
     // Not entirely sure what we're drawing, lets draw a solid black circle
     fillBrush_.setColor({0,0,0});

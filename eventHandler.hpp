@@ -2,6 +2,7 @@
 #define EVENT_HANDLER_HPP_
 
 #include "proto/broadcast.pb.h"
+#include "proto/config.pb.h"
 
 #include <silkroad_lib/entity.h>
 #include <silkroad_lib/position.h>
@@ -48,7 +49,7 @@ signals:
   void cosInventoryItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void storageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
   void guildStorageItemUpdate(uint8_t slotIndex, uint16_t quantity, std::optional<std::string> itemName);
-  void entitySpawned(uint32_t globalId, sro::Position position, broadcast::EntityType entityType);
+  void entitySpawned(uint32_t globalId, sro::Position position, proto::entity::Entity entityData);
   void entityDespawned(uint32_t globalId);
   void entityPositionChanged(sro::scalar_types::EntityGlobalId globalId, sro::Position position);
   void entityMovementBeganToDest(sro::scalar_types::EntityGlobalId globalId, sro::Position currentPosition, sro::Position destinationPosition, float speed);
@@ -60,12 +61,13 @@ signals:
   void stateMachineCreated(std::string name);
   void stateMachineDestroyed();
   void walkingPathUpdated(std::vector<sro::Position> waypoints);
+  void configReceived(proto::config::Config config);
 private:
   zmq::context_t &context_;
   std::atomic<bool> run_;
   std::thread thr_;
   void run();
-  void handle(const broadcast::BroadcastMessage &message);
+  void handle(const proto::broadcast::BroadcastMessage &message);
 };
 
 #endif // EVENT_HANDLER_HPP_

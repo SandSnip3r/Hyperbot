@@ -1,16 +1,18 @@
 #include "eventHandler.hpp"
 
+#include "proto/position.pb.h"
+
 namespace {
 
-sro::entity::LifeState lifeStateFromProto(const broadcast::LifeState lifeState) {
+sro::entity::LifeState lifeStateFromProto(const proto::broadcast::LifeState lifeState) {
   switch (lifeState) {
-    case broadcast::LifeState::kEmbryo:
+    case proto::broadcast::LifeState::kEmbryo:
       return sro::entity::LifeState::kEmbryo;
-    case broadcast::LifeState::kAlive:
+    case proto::broadcast::LifeState::kAlive:
       return sro::entity::LifeState::kAlive;
-    case broadcast::LifeState::kDead:
+    case proto::broadcast::LifeState::kDead:
       return sro::entity::LifeState::kDead;
-    case broadcast::LifeState::kGone:
+    case proto::broadcast::LifeState::kGone:
       return sro::entity::LifeState::kGone;
     default:
       throw std::runtime_error("Unknown lifestate");
@@ -42,7 +44,7 @@ void EventHandler::run() {
   while (run_) {
     zmq::message_t message;
     subscriber.recv(message);
-    broadcast::BroadcastMessage broadcastMessage;
+    proto::broadcast::BroadcastMessage broadcastMessage;
     broadcastMessage.ParseFromArray(message.data(), message.size());
     handle(broadcastMessage);
   }
@@ -50,83 +52,83 @@ void EventHandler::run() {
 
 namespace {
 
-sro::Position parsePosition(const broadcast::Position &pos) {
+sro::Position parsePosition(const proto::position::Position &pos) {
   return {static_cast<sro::RegionId>(pos.regionid()), pos.x(), pos.y(), pos.z()};
 }
 
 } // namespace
 
-void EventHandler::handle(const broadcast::BroadcastMessage &message) {
+void EventHandler::handle(const proto::broadcast::BroadcastMessage &message) {
   switch (message.body_case()) {
-    case broadcast::BroadcastMessage::BodyCase::kLaunch: {
+    case proto::broadcast::BroadcastMessage::BodyCase::kLaunch: {
         emit launch();
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterSpawn: {
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterSpawn: {
         emit characterSpawn();
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterHpUpdate: {
-        const broadcast::CharacterHpUpdate &msg = message.characterhpupdate();
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterHpUpdate: {
+        const proto::broadcast::CharacterHpUpdate &msg = message.characterhpupdate();
         emit characterHpUpdateChanged(msg.currenthp());
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterMpUpdate: {
-        const broadcast::CharacterMpUpdate &msg = message.charactermpupdate();
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterMpUpdate: {
+        const proto::broadcast::CharacterMpUpdate &msg = message.charactermpupdate();
         emit characterMpUpdateChanged(msg.currentmp());
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterMaxHpMpUpdate: {
-        const broadcast::CharacterMaxHpMpUpdate &msg = message.charactermaxhpmpupdate();
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterMaxHpMpUpdate: {
+        const proto::broadcast::CharacterMaxHpMpUpdate &msg = message.charactermaxhpmpupdate();
         emit characterMaxHpMpUpdateChanged(msg.maxhp(), msg.maxmp());
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterLevelUpdate: {
-        const broadcast::CharacterLevelUpdate &msg = message.characterlevelupdate();
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterLevelUpdate: {
+        const proto::broadcast::CharacterLevelUpdate &msg = message.characterlevelupdate();
         emit characterLevelUpdate(msg.level(), msg.exprequired());
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterExperienceUpdate: {
-        const broadcast::CharacterExperienceUpdate &msg = message.characterexperienceupdate();
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterExperienceUpdate: {
+        const proto::broadcast::CharacterExperienceUpdate &msg = message.characterexperienceupdate();
         emit characterExperienceUpdate(msg.currentexperience(), msg.currentspexperience());
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterSpUpdate: {
-        const broadcast::CharacterSpUpdate &msg = message.characterspupdate();
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterSpUpdate: {
+        const proto::broadcast::CharacterSpUpdate &msg = message.characterspupdate();
         emit characterSpUpdate(msg.skillpoints());
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterNameUpdate: {
-        const broadcast::CharacterNameUpdate &msg = message.characternameupdate();
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterNameUpdate: {
+        const proto::broadcast::CharacterNameUpdate &msg = message.characternameupdate();
         emit characterNameUpdate(msg.name());
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kGoldAmountUpdate: {
-        const broadcast::GoldAmountUpdate &msg = message.goldamountupdate();
-        if (msg.goldlocation() == broadcast::ItemLocation::kCharacterInventory) {
+    case proto::broadcast::BroadcastMessage::BodyCase::kGoldAmountUpdate: {
+        const proto::broadcast::GoldAmountUpdate &msg = message.goldamountupdate();
+        if (msg.goldlocation() == proto::broadcast::ItemLocation::kCharacterInventory) {
           emit inventoryGoldAmountUpdate(msg.goldamount());
-        } else if (msg.goldlocation() == broadcast::ItemLocation::kStorage) {
+        } else if (msg.goldlocation() == proto::broadcast::ItemLocation::kStorage) {
           emit storageGoldAmountUpdate(msg.goldamount());
-        } else if (msg.goldlocation() == broadcast::ItemLocation::kGuildStorage) {
+        } else if (msg.goldlocation() == proto::broadcast::ItemLocation::kGuildStorage) {
           emit guildStorageGoldAmountUpdate(msg.goldamount());
         }
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterPositionChanged: {
-        const broadcast::CharacterPositionChanged &msg = message.characterpositionchanged();
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterPositionChanged: {
+        const proto::broadcast::CharacterPositionChanged &msg = message.characterpositionchanged();
         emit characterPositionChanged(parsePosition(msg.position()));
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterMovementBegan: {
-        const broadcast::CharacterMovementBegan &msg = message.charactermovementbegan();
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterMovementBegan: {
+        const proto::broadcast::CharacterMovementBegan &msg = message.charactermovementbegan();
         const sro::Position currentPosition = parsePosition(msg.currentposition());
         const auto speed = msg.speed();
         switch (msg.destination_case()) {
-          case broadcast::CharacterMovementBegan::DestinationCase::kDestinationPosition: {
+          case proto::broadcast::CharacterMovementBegan::DestinationCase::kDestinationPosition: {
             emit characterMovementBeganToDest(currentPosition, parsePosition(msg.destinationposition()), speed);
             break;
           }
-          case broadcast::CharacterMovementBegan::DestinationCase::kDestinationAngle: {
+          case proto::broadcast::CharacterMovementBegan::DestinationCase::kDestinationAngle: {
             const auto angle = msg.destinationangle();
             emit characterMovementBeganTowardAngle(currentPosition, angle, speed);
             break;
@@ -137,67 +139,67 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         }
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterMovementEnded: {
-        const broadcast::CharacterMovementEnded &msg = message.charactermovementended();
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterMovementEnded: {
+        const proto::broadcast::CharacterMovementEnded &msg = message.charactermovementended();
         emit characterMovementEnded(parsePosition(msg.currentposition()));
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kCharacterNotMovingAngleChanged: {
-        const broadcast::CharacterNotMovingAngleChanged &msg = message.characternotmovinganglechanged();
+    case proto::broadcast::BroadcastMessage::BodyCase::kCharacterNotMovingAngleChanged: {
+        const proto::broadcast::CharacterNotMovingAngleChanged &msg = message.characternotmovinganglechanged();
         emit characterNotMovingAngleChanged(msg.angle());
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kRegionNameUpdate: {
-        const broadcast::RegionNameUpdate &msg = message.regionnameupdate();
+    case proto::broadcast::BroadcastMessage::BodyCase::kRegionNameUpdate: {
+        const proto::broadcast::RegionNameUpdate &msg = message.regionnameupdate();
         emit regionNameUpdate(msg.name());
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kItemUpdate: {
-        const broadcast::ItemUpdate &msg = message.itemupdate();
+    case proto::broadcast::BroadcastMessage::BodyCase::kItemUpdate: {
+        const proto::broadcast::ItemUpdate &msg = message.itemupdate();
         std::optional<std::string> itemName;
         if (msg.has_itemname()) {
           itemName = msg.itemname();
         }
-        if (msg.itemlocation() == broadcast::ItemLocation::kCharacterInventory) {
+        if (msg.itemlocation() == proto::broadcast::ItemLocation::kCharacterInventory) {
           emit characterInventoryItemUpdate(msg.slotindex(), msg.quantity(), itemName);
-        } else if (msg.itemlocation() == broadcast::ItemLocation::kAvatarInventory) {
+        } else if (msg.itemlocation() == proto::broadcast::ItemLocation::kAvatarInventory) {
           emit avatarInventoryItemUpdate(msg.slotindex(), msg.quantity(), itemName);
-        } else if (msg.itemlocation() == broadcast::ItemLocation::kCosInventory) {
+        } else if (msg.itemlocation() == proto::broadcast::ItemLocation::kCosInventory) {
           emit cosInventoryItemUpdate(msg.slotindex(), msg.quantity(), itemName);
-        } else if (msg.itemlocation() == broadcast::ItemLocation::kStorage) {
+        } else if (msg.itemlocation() == proto::broadcast::ItemLocation::kStorage) {
           emit storageItemUpdate(msg.slotindex(), msg.quantity(), itemName);
-        } else if (msg.itemlocation() == broadcast::ItemLocation::kGuildStorage) {
+        } else if (msg.itemlocation() == proto::broadcast::ItemLocation::kGuildStorage) {
           emit guildStorageItemUpdate(msg.slotindex(), msg.quantity(), itemName);
         }
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kEntitySpawned: {
-        const broadcast::EntitySpawned &msg = message.entityspawned();
-        emit entitySpawned(msg.globalid(), parsePosition(msg.position()), msg.entitytype());
+    case proto::broadcast::BroadcastMessage::BodyCase::kEntitySpawned: {
+        const proto::broadcast::EntitySpawned &msg = message.entityspawned();
+        emit entitySpawned(msg.globalid(), parsePosition(msg.position()), msg.entity());
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kEntityDespawned: {
-        const broadcast::EntityDespawned &msg = message.entitydespawned();
+    case proto::broadcast::BroadcastMessage::BodyCase::kEntityDespawned: {
+        const proto::broadcast::EntityDespawned &msg = message.entitydespawned();
         emit entityDespawned(msg.globalid());
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kEntityPositionChanged: {
-        const broadcast::EntityPositionChanged &msg = message.entitypositionchanged();
+    case proto::broadcast::BroadcastMessage::BodyCase::kEntityPositionChanged: {
+        const proto::broadcast::EntityPositionChanged &msg = message.entitypositionchanged();
         emit entityPositionChanged(msg.globalid(), parsePosition(msg.position()));
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kEntityMovementBegan: {
-        const broadcast::EntityMovementBegan &msg = message.entitymovementbegan();
+    case proto::broadcast::BroadcastMessage::BodyCase::kEntityMovementBegan: {
+        const proto::broadcast::EntityMovementBegan &msg = message.entitymovementbegan();
         const auto entityId = msg.globalid();
-        const broadcast::CharacterMovementBegan &charMovementMsg = msg.charactermovementbegan();
+        const proto::broadcast::CharacterMovementBegan &charMovementMsg = msg.charactermovementbegan();
         sro::Position currentPosition = parsePosition(charMovementMsg.currentposition());
         const auto speed = charMovementMsg.speed();
         switch (charMovementMsg.destination_case()) {
-          case broadcast::CharacterMovementBegan::DestinationCase::kDestinationPosition: {
+          case proto::broadcast::CharacterMovementBegan::DestinationCase::kDestinationPosition: {
             emit entityMovementBeganToDest(entityId, currentPosition, parsePosition(charMovementMsg.destinationposition()), speed);
             break;
           }
-          case broadcast::CharacterMovementBegan::DestinationCase::kDestinationAngle: {
+          case proto::broadcast::CharacterMovementBegan::DestinationCase::kDestinationAngle: {
             const auto angle = charMovementMsg.destinationangle();
             emit entityMovementBeganTowardAngle(entityId, currentPosition, angle, speed);
             break;
@@ -208,24 +210,24 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         }
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kEntityMovementEnded: {
-        const broadcast::EntityMovementEnded &msg = message.entitymovementended();
-        const broadcast::CharacterMovementEnded &charMovementMsg = msg.charactermovementended();
+    case proto::broadcast::BroadcastMessage::BodyCase::kEntityMovementEnded: {
+        const proto::broadcast::EntityMovementEnded &msg = message.entitymovementended();
+        const proto::broadcast::CharacterMovementEnded &charMovementMsg = msg.charactermovementended();
         const auto entityId = msg.globalid();
         emit entityMovementEnded(entityId, parsePosition(charMovementMsg.currentposition()));
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kEntityLifeStateChanged: {
-        const broadcast::EntityLifeStateChanged &msg = message.entitylifestatechanged();
+    case proto::broadcast::BroadcastMessage::BodyCase::kEntityLifeStateChanged: {
+        const proto::broadcast::EntityLifeStateChanged &msg = message.entitylifestatechanged();
         const auto entityId = msg.globalid();
         const auto lifeState = lifeStateFromProto(msg.lifestate());
         emit entityLifeStateChanged(entityId, lifeState);
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kTrainingAreaSet: {
-        const broadcast::TrainingAreaSet &msg = message.trainingareaset();
+    case proto::broadcast::BroadcastMessage::BodyCase::kTrainingAreaSet: {
+        const proto::broadcast::TrainingAreaSet &msg = message.trainingareaset();
         switch (msg.geometry_case()) {
-          case broadcast::TrainingAreaSet::GeometryCase::kCircle: {
+          case proto::broadcast::TrainingAreaSet::GeometryCase::kCircle: {
             emit trainingAreaCircleSet(parsePosition(msg.circle().center()), msg.circle().radius());
             break;
           }
@@ -234,22 +236,22 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         }
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kTrainingAreaReset: {
+    case proto::broadcast::BroadcastMessage::BodyCase::kTrainingAreaReset: {
         emit trainingAreaReset();
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kStateMachineCreated: {
-        const broadcast::StateMachineCreated &msg = message.statemachinecreated();
+    case proto::broadcast::BroadcastMessage::BodyCase::kStateMachineCreated: {
+        const proto::broadcast::StateMachineCreated &msg = message.statemachinecreated();
         const auto name = msg.name();
         emit stateMachineCreated(name);
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kStateMachineDestroyed: {
+    case proto::broadcast::BroadcastMessage::BodyCase::kStateMachineDestroyed: {
         emit stateMachineDestroyed();
         break;
       }
-    case broadcast::BroadcastMessage::BodyCase::kWalkingPathUpdated: {
-        const broadcast::WalkingPathUpdated &msg = message.walkingpathupdated();
+    case proto::broadcast::BroadcastMessage::BodyCase::kWalkingPathUpdated: {
+        const proto::broadcast::WalkingPathUpdated &msg = message.walkingpathupdated();
         std::vector<sro::Position> waypoints;
         waypoints.reserve(msg.waypoints_size());
         for (int i=0; i<msg.waypoints_size(); ++i) {
@@ -257,6 +259,10 @@ void EventHandler::handle(const broadcast::BroadcastMessage &message) {
         }
         emit walkingPathUpdated(waypoints);
         break;
+      }
+    case proto::broadcast::BroadcastMessage::BodyCase::kConfig: {
+        const proto::broadcast::Config &msg = message.config();
+        emit configReceived(msg.config());
       }
     default:
       // Unknown case. Might be a malformed message

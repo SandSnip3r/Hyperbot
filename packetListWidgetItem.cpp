@@ -1,6 +1,6 @@
 #include "packetListWidgetItem.hpp"
 
-PacketListWidgetItem::PacketListWidgetItem(request::PacketToInject::Direction dir, const uint16_t op, std::string d, QListWidget *parent) : direction_(dir), opcode_(op), data_(d), QListWidgetItem(parent, Type) {
+PacketListWidgetItem::PacketListWidgetItem(proto::request::PacketToInject::Direction dir, const uint16_t op, std::string d, QListWidget *parent) : direction_(dir), opcode_(op), data_(d), QListWidgetItem(parent, Type) {
   //
 }
 
@@ -12,7 +12,7 @@ QVariant PacketListWidgetItem::data(int role) const {
   }
 }
 
-request::PacketToInject::Direction PacketListWidgetItem::direction() const {
+proto::request::PacketToInject::Direction PacketListWidgetItem::direction() const {
   return direction_;
 }
 
@@ -26,7 +26,7 @@ std::string PacketListWidgetItem::data() const {
 
 QString PacketListWidgetItem::toString() const {
   QString result;
-  if (direction_ == request::PacketToInject::kClientToServer) {
+  if (direction_ == proto::request::PacketToInject::kClientToServer) {
     result = "[C->S] ";
   } else {
     result = "[S->C] ";
