@@ -41,7 +41,7 @@ protected:
   friend class broker::EventBroker;
   void handleEvent(const event::Event *event);
 
-  const config::Config &config_;
+  config::Config config_;
   const pk2::GameData &gameData_;
   Proxy &proxy_;
   broker::PacketBroker &packetBroker_;
@@ -102,6 +102,7 @@ private:
   void handleKnockdownStunEnded();
   void handleItemCooldownEnded(const event::ItemCooldownEnded &event);
   void handleGameReset(const event::Event *event);
+  void setCurrentPositionAsTrainingCenter();
 
 public:
   bool needToGoToTown() const;

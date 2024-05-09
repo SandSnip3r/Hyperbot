@@ -7,6 +7,7 @@
 #include "storage/storage.hpp"
 
 #include "ui-proto/broadcast.pb.h"
+#include "ui-proto/config.pb.h"
 #include <silkroad_lib/position.h>
 #include <silkroad_lib/scalar_types.h>
 #include <zmq.hpp>
@@ -34,6 +35,7 @@ public:
   void runAsync();
 
   void broadcastLaunch();
+  void broadcastConfig(const proto::config::Config &config);
 private:
   zmq::context_t context_;
   zmq::socket_t publisher_{context_, zmq::socket_type::pub};
@@ -96,7 +98,6 @@ private:
 
   void broadcast(const proto::broadcast::BroadcastMessage &broadcastProto);
 
-  void setPosition(proto::broadcast::Position *msg, const sro::Position &pos) const;
   void setCharacterMovementBegan(proto::broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Position &destPosition, const float speed) const;
   void setCharacterMovementBegan(proto::broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Angle angle, const float speed) const;
   void setCharacterMovementEnded(proto::broadcast::CharacterMovementEnded *msg, const sro::Position &currentPosition) const;

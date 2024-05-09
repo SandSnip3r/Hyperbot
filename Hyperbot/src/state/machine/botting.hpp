@@ -18,7 +18,9 @@ public:
 private:
   static inline std::string kName{"Botting"};
   sro::Position trainingSpotCenter_;
+  double trainingRadius_;
   std::unique_ptr<entity::Geometry> trainingAreaGeometry_;
+  void setTrainingSpotFromConfig();
   void initializeChildState();
 };
 

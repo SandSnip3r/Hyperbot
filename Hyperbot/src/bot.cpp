@@ -11,6 +11,7 @@
 #include "packet/building/clientAgentFreePvpUpdateRequest.hpp"
 #include "packet/building/clientAgentOperatorRequest.hpp"
 // </remove>
+#include "proto_convert/convert.hpp"
 #include "state/machine/alchemy.hpp"
 #include "state/machine/autoPotion.hpp"
 #include "state/machine/botting.hpp"
@@ -23,21 +24,6 @@
 #include <silkroad_lib/position_math.h>
 
 #include <absl/log/log.h>
-
-namespace {
-
-std::optional<std::pair<std::string, std::string>> getLoginInfoFromConfig(const config::Config &config) {
-  std::unique_lock<std::mutex> configLock(config.mutex());
-  const auto &characterName = config.configProto().character_to_login();
-  const auto *characterConfig = config.getCharacterConfig(characterName);
-  if (characterConfig == nullptr) {
-    // No config; don't have login info.
-    return {};
-  }
-  return std::make_pair(characterConfig->username(), characterConfig->password());
-}
-
-} // anonymous namespace
 
 Bot::Bot(const config::Config &config,
          const pk2::GameData &gameData,
@@ -62,18 +48,10 @@ void Bot::initialize() {
 }
 
 void Bot::run() {
-  bool haveCharacterToLogin;
-  {
-    std::unique_lock<std::mutex> configLock(config_.mutex());
-    haveCharacterToLogin = config_.configProto().has_character_to_login();
-  }
-  if (haveCharacterToLogin) {
-    std::string characterName = config_.configProto().character_to_login();
-    const auto loginInfo = getLoginInfoFromConfig(config_);
-    if (loginInfo) {
-      const auto [username, password] = loginInfo.value();
-      loginStateMachine_ = std::make_unique<state::machine::Login>(*this, username, password, characterName);
-    }
+  if (config_.configProto().has_character_to_login()) {
+    const std::string &characterName = config_.configProto().character_to_login();
+    const auto [username, password] = config_.getLoginInfo(characterName);
+    loginStateMachine_ = std::make_unique<state::machine::Login>(*this, username, password, characterName);
   }
 }
 
@@ -179,6 +157,8 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kGmCommandTimedOut, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kChatReceived, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kGameReset, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kSetCurrentPositionAsTrainingCenter, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
 
   // Skills
   eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
@@ -416,6 +396,21 @@ void Bot::handleEvent(const event::Event *event) {
         handleGameReset(event);
         break;
       }
+      case event::EventCode::kSetCurrentPositionAsTrainingCenter: {
+        setCurrentPositionAsTrainingCenter();
+        break;
+      }
+      case event::EventCode::kNewConfigReceived: {
+        const auto &castedEvent = dynamic_cast<const event::NewConfigReceived&>(*event);
+        config_.overwriteConfigProto(castedEvent.config);
+        eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto()); // TODO: It's a little weird to receive a config and then immediately send it out. (UserInterface handles this event and sends the config to the UI)
+        break;
+      }
+      case event::EventCode::kConfigUpdated: {
+        LOG(INFO) << "Config has been updated";
+        onUpdate(event);
+        break;
+      }
       default: {
         LOG(INFO) << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode);
         break;
@@ -571,12 +566,10 @@ void Bot::handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globa
 }
 
 void Bot::handleEntityEnteredGeometry(const event::EntityEnteredGeometry &event) {
-  LOG(INFO) << "Entity " << event.globalId << " entered geometry";
   onUpdate();
 }
 
 void Bot::handleEntityExitedGeometry(const event::EntityExitedGeometry &event) {
-  LOG(INFO) << "Entity " << event.globalId << " exited geometry";
   onUpdate();
 }
 
@@ -708,6 +701,15 @@ void Bot::handleGameReset(const event::Event *event) {
     autoPotionStateMachine_.reset();
   }
   onUpdate(event);
+}
+
+void Bot::setCurrentPositionAsTrainingCenter() {
+  proto::config::CharacterConfig *characterConfig = config_.getCharacterConfig(worldState_.selfState().name);
+  proto::config::TrainingConfig *trainingConfig = characterConfig->mutable_training_config();
+  const auto currentPosition = worldState_.selfState().position();
+  proto_convert::positionToProto(currentPosition, *trainingConfig->mutable_center());
+  config_.save();
+  eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto());
 }
 
 bool Bot::needToGoToTown() const {

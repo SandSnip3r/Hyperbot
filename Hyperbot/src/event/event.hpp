@@ -106,6 +106,7 @@ enum class EventCode {
   kGmCommandTimedOut,
   kChatReceived,
   kGameReset,
+  kSetCurrentPositionAsTrainingCenter,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -409,6 +410,13 @@ public:
   std::variant<uint32_t, std::string> sender;
   std::string message;
   virtual ~ChatReceived() = default;
+};
+
+struct ConfigUpdated : public Event {
+public:
+  explicit ConfigUpdated(const proto::config::Config &c);
+  proto::config::Config config;
+  virtual ~ConfigUpdated() = default;
 };
 
 } // namespace event

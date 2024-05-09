@@ -3,6 +3,8 @@
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 
+#include <absl/strings/str_format.h>
+
 #include <fstream>
 #include <stdexcept>
 
@@ -80,7 +82,7 @@ const proto::config::Config& Config::configProto() const {
   return configProto_;
 }
 
-proto::config::CharacterConfig* Config::getCharacterConfig(const std::string &characterName) {
+proto::config::CharacterConfig* Config::getCharacterConfig(absl::string_view characterName) {
   const auto it = std::find_if(configProto_.mutable_character_configs()->begin(), configProto_.mutable_character_configs()->end(), [&characterName](const auto &characterConfig) {
     return characterConfig.character_name() == characterName;
   });
@@ -90,7 +92,7 @@ proto::config::CharacterConfig* Config::getCharacterConfig(const std::string &ch
   return &(*it);
 }
 
-const proto::config::CharacterConfig* Config::getCharacterConfig(const std::string &characterName) const {
+const proto::config::CharacterConfig* Config::getCharacterConfig(absl::string_view characterName) const {
   const auto it = std::find_if(configProto_.character_configs().cbegin(), configProto_.character_configs().cend(), [&characterName](const auto &characterConfig) {
     return characterConfig.character_name() == characterName;
   });
@@ -100,8 +102,12 @@ const proto::config::CharacterConfig* Config::getCharacterConfig(const std::stri
   return &(*it);
 }
 
-std::mutex& Config::mutex() const {
-  return mutex_;
+std::pair<std::string, std::string> Config::getLoginInfo(absl::string_view characterName) const {
+  const auto *characterConfig = getCharacterConfig(characterName);
+  if (characterConfig == nullptr) {
+    throw std::runtime_error(absl::StrFormat("Cannot get login info for unknown character \"%s\"", characterName));
+  }
+  return {characterConfig->username(), characterConfig->password()};
 }
 
 } // namespace config

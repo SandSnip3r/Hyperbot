@@ -71,11 +71,16 @@ public:
       }
     }
 
+    // We were able to parse our game data; no longer want to accept new configs here.
+    LOG(INFO) << "Unsubscribing from new config received events";
+    eventBroker_.unsubscribeFromEvent(configReceivedSubscriptionId_);
+
     try {
       Session session{gameData_, config_, eventBroker_};
       session.initialize();
       userInterface.setWorldState(session.getWorldState());
       userInterface.broadcastLaunch();
+      userInterface.broadcastConfig(config_.configProto());
       session.run();
     } catch (const std::exception &ex) {
       LOG(INFO) << "Error while running session: \"" << ex.what() << '"';
@@ -85,16 +90,18 @@ public:
 private:
   std::optional<std::string> characterToLogin_;
   config::Config config_;
+  std::mutex configMutex_;
   broker::EventBroker eventBroker_;
   bool waitingForClientPath_{true};
   pk2::GameData gameData_;
   bool gameDataReady_{false};
   std::condition_variable gameDataParsedConditionVariable_;
   std::mutex gameDataMutex_;
+  broker::EventBroker::SubscriptionId configReceivedSubscriptionId_;
 
   void subscribeToEvents() {
     auto eventHandleFunction = std::bind(&Hyperbot::handleEvent, this, std::placeholders::_1);
-    eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
+    configReceivedSubscriptionId_ = eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
   }
 
   void handleEvent(const event::Event *event) {
@@ -106,7 +113,7 @@ private:
 
   void handleNewConfigReceived(const event::NewConfigReceived &event) {
     {
-      std::unique_lock<std::mutex> configLock(config_.mutex());
+      std::unique_lock<std::mutex> configLock(configMutex_);
       config_.overwriteConfigProto(event.config);
     }
     eventBroker_.publishEvent(event::EventCode::kConfigUpdated);
@@ -126,7 +133,7 @@ private:
   void tryInitializeGameData() {
     std::string clientPath;
     {
-      std::unique_lock<std::mutex> configLock(config_.mutex());
+      std::unique_lock<std::mutex> configLock(configMutex_);
       if (!config_.configProto().has_client_path()) {
         LOG(INFO) << "Config does not contain a client path. Nothing to do";
         return;
@@ -186,8 +193,8 @@ int main(int argc, char **argv) {
   if (absl::GetFlag(FLAGS_character) != (kDefaultCharacterFlagValue)) {
     characterToLogin = absl::GetFlag(FLAGS_character);
   }
-  Hyperbot hyperbot(characterToLogin);
   try {
+    Hyperbot hyperbot(characterToLogin);
     hyperbot.run();
   } catch (const std::exception &ex) {
     LOG(INFO) << "Caught an exception; exiting. \"" << ex.what() << '"';

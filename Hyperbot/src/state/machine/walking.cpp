@@ -22,7 +22,7 @@ Walking::~Walking() {
 
 void Walking::onUpdate(const event::Event *event) {
   if (done()) {
-    LOG(INFO) << "Walking but done";
+    VLOG(1) << "Walking but done";
     return;
   }
 
@@ -44,8 +44,7 @@ void Walking::onUpdate(const event::Event *event) {
         movementRequestTimeoutEventId_.reset();
       }
     } else if (event->eventCode == event::EventCode::kMovementRequestTimedOut) {
-      LOG(INFO) << "kMovementRequestTimedOut";
-      LOG(INFO) << "Movement request timed out";
+      VLOG(2) << "Movement request timed out";
       movementRequestTimeoutEventId_.reset();
     }
   }

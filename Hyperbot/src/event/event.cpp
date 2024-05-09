@@ -81,4 +81,6 @@ InventoryItemUpdated::InventoryItemUpdated(const uint8_t &slot) : Event(EventCod
 ChatReceived::ChatReceived(packet::enums::ChatType type, uint32_t senderGlobalId, const std::string &msg) : Event(EventCode::kChatReceived), chatType(type), sender(senderGlobalId), message(msg) {}
 ChatReceived::ChatReceived(packet::enums::ChatType type, const std::string &senderName, const std::string &msg) : Event(EventCode::kChatReceived), chatType(type), sender(senderName), message(msg) {}
 
+ConfigUpdated::ConfigUpdated(const proto::config::Config &c) : Event(EventCode::kConfigUpdated), config(c) {}
+
 } // namespace event

@@ -1,6 +1,7 @@
 #include "userInterface.hpp"
 
 #include "pk2/gameData.hpp"
+#include "proto_convert/convert.hpp"
 #include "state/worldState.hpp"
 
 #include "ui-proto/request.pb.h"
@@ -65,6 +66,14 @@ void UserInterface::broadcastLaunch() {
   broadcast(broadcastMessage);
 }
 
+void UserInterface::broadcastConfig(const proto::config::Config &config) {
+  proto::broadcast::BroadcastMessage broadcastMessage;
+  proto::broadcast::Config *broadcastConfigProto = broadcastMessage.mutable_config();
+  proto::config::Config *configProto = broadcastConfigProto->mutable_config();
+  *configProto = config;
+  broadcast(broadcastMessage);
+}
+
 void UserInterface::subscribeToEvents() {
   auto eventHandleFunction = std::bind(&UserInterface::handleEvent, this, std::placeholders::_1);
 
@@ -99,6 +108,7 @@ void UserInterface::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kWalkingPathUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kConfigUpdated, eventHandleFunction);
 }
 
 void UserInterface::handleEvent(const event::Event *event) {
@@ -290,6 +300,12 @@ void UserInterface::handleEvent(const event::Event *event) {
       return;
     }
 
+    if (eventCode == event::EventCode::kConfigUpdated) {
+      const event::ConfigUpdated &castedEvent = dynamic_cast<const event::ConfigUpdated&>(*event);
+      broadcastConfig(castedEvent.config);
+      return;
+    }
+
     LOG(INFO) << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode);
   } catch (std::exception &ex) {
     LOG(INFO) << "Error while handling event!\n  " << ex.what();
@@ -336,6 +352,10 @@ void UserInterface::handleRequest(const zmq::message_t &request) {
     case proto::request::RequestMessage::BodyCase::kConfig: {
         const proto::config::Config &config = requestMsg.config();
         eventBroker_.publishEvent<event::NewConfigReceived>(config);
+        break;
+      }
+    case proto::request::RequestMessage::BodyCase::kSetCurrentPositionAsTrainingCenter: {
+        eventBroker_.publishEvent(event::EventCode::kSetCurrentPositionAsTrainingCenter);
         break;
       }
     default:
@@ -632,7 +652,7 @@ void UserInterface::broadcastGoldAmountUpdate(uint64_t goldAmount, proto::broadc
 void UserInterface::broadcastPositionChangedUpdate(const sro::Position &currentPosition) {
   proto::broadcast::BroadcastMessage broadcastMessage;
   auto *msg = broadcastMessage.mutable_characterpositionchanged();
-  setPosition(msg->mutable_position(), currentPosition);
+  proto_convert::positionToProto(currentPosition, *msg->mutable_position());
   broadcast(broadcastMessage);
 }
 
@@ -687,7 +707,7 @@ void UserInterface::broadcastEntitySpawned(const entity::Entity *entity) {
   proto::broadcast::BroadcastMessage broadcastMessage;
   auto *entitySpawnedMsg = broadcastMessage.mutable_entityspawned();
   entitySpawnedMsg->set_globalid(entity->globalId);
-  setPosition(entitySpawnedMsg->mutable_position(), entity->position());
+  proto_convert::positionToProto(entity->position(), *entitySpawnedMsg->mutable_position());
   setEntity(entitySpawnedMsg->mutable_entity(), entity);
   broadcast(broadcastMessage);
 }
@@ -703,7 +723,7 @@ void UserInterface::broadcastEntityPositionChanged(const sro::scalar_types::Enti
   proto::broadcast::BroadcastMessage broadcastMessage;
   auto *entityPositionChangedMsg = broadcastMessage.mutable_entitypositionchanged();
   entityPositionChangedMsg->set_globalid(globalId);
-  setPosition(entityPositionChangedMsg->mutable_position(), position);
+  proto_convert::positionToProto(position, *entityPositionChangedMsg->mutable_position());
   broadcast(broadcastMessage);
 }
 
@@ -744,7 +764,7 @@ void UserInterface::broadcastTrainingAreaSet(const entity::Geometry *trainingAre
   proto::broadcast::TrainingAreaSet *trainingAreaSet = broadcastMessage.mutable_trainingareaset();
   if (const auto *trainingAreaCircle = dynamic_cast<const entity::Circle*>(trainingAreaGeometry)) {
     proto::broadcast::Circle *circle = trainingAreaSet->mutable_circle();
-    setPosition(circle->mutable_center(), trainingAreaCircle->center());
+    proto_convert::positionToProto(trainingAreaCircle->center(), *circle->mutable_center());
     circle->set_radius(trainingAreaCircle->radius());
   } else {
     throw std::runtime_error("Unsupported training area geometry");
@@ -775,7 +795,7 @@ void UserInterface::broadcastWalkingPathUpdated(const std::vector<sro::Position>
   proto::broadcast::BroadcastMessage broadcastMessage;
   proto::broadcast::WalkingPathUpdated *walkingPathUpdated = broadcastMessage.mutable_walkingpathupdated();
   for (const auto &waypoint : waypoints) {
-    setPosition(walkingPathUpdated->add_waypoints(), waypoint);
+    proto_convert::positionToProto(waypoint, *walkingPathUpdated->add_waypoints());
   }
   broadcast(broadcastMessage);
 }
@@ -795,27 +815,20 @@ void UserInterface::broadcast(const proto::broadcast::BroadcastMessage &broadcas
   // auto res = publisher_.send(msg, zmq::send_flags::none);
 }
 
-void UserInterface::setPosition(proto::broadcast::Position *msg, const sro::Position &pos) const {
-  msg->set_regionid(pos.regionId());
-  msg->set_x(pos.xOffset());
-  msg->set_y(pos.yOffset());
-  msg->set_z(pos.zOffset());
-}
-
 void UserInterface::setCharacterMovementBegan(proto::broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Position &destPosition, const float speed) const {
-  setPosition(msg->mutable_currentposition(), srcPosition);
-  setPosition(msg->mutable_destinationposition(), destPosition);
+  proto_convert::positionToProto(srcPosition, *msg->mutable_currentposition());
+  proto_convert::positionToProto(destPosition, *msg->mutable_destinationposition());
   msg->set_speed(speed);
 }
 
 void UserInterface::setCharacterMovementBegan(proto::broadcast::CharacterMovementBegan *msg, const sro::Position &srcPosition, const sro::Angle angle, const float speed) const {
-  setPosition(msg->mutable_currentposition(), srcPosition);
+  proto_convert::positionToProto(srcPosition, *msg->mutable_currentposition());
   msg->set_destinationangle(angle);
   msg->set_speed(speed);
 }
 
 void UserInterface::setCharacterMovementEnded(proto::broadcast::CharacterMovementEnded *msg, const sro::Position &currentPosition) const {
-  setPosition(msg->mutable_currentposition(), currentPosition);
+  proto_convert::positionToProto(currentPosition, *msg->mutable_currentposition());
 }
 
 void UserInterface::setEntity(proto::entity::Entity *msg, const entity::Entity *entity) const {

@@ -264,6 +264,8 @@ set(no_group_source_files
     "src/pk2/textItemAndSkillData.hpp"
     "src/pk2/textZoneNameData.cpp"
     "src/pk2/textZoneNameData.hpp"
+    "src/proto_convert/convert.cpp"
+    "src/proto_convert/convert.hpp"
     "src/proxy.cpp"
     "src/proxy.hpp"
     "src/session.cpp"

@@ -3,8 +3,9 @@
 
 #include "ui-proto/config.pb.h"
 
+#include <absl/strings/string_view.h>
+
 #include <filesystem>
-#include <mutex>
 
 namespace config {
 
@@ -15,14 +16,13 @@ public:
   void overwriteConfigProto(const proto::config::Config &configProto);
   proto::config::Config& configProto();
   const proto::config::Config& configProto() const;
-  proto::config::CharacterConfig* getCharacterConfig(const std::string &characterName);
-  const proto::config::CharacterConfig* getCharacterConfig(const std::string &characterName) const;
-  std::mutex& mutex() const;
+  proto::config::CharacterConfig* getCharacterConfig(absl::string_view characterName);
+  const proto::config::CharacterConfig* getCharacterConfig(absl::string_view characterName) const;
+  std::pair<std::string, std::string> getLoginInfo(absl::string_view characterName) const;
 private:
   static constexpr const bool kProtobufSavedAsBinary_{false};
   inline static const std::string kConfigFileFilename{"config"};
   std::filesystem::path configFileFilePath_;
-  mutable std::mutex mutex_;
   proto::config::Config configProto_;
 };
 

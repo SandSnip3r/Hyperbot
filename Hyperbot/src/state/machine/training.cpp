@@ -169,7 +169,7 @@ void Training::onUpdate(const event::Event *event) {
       }
     } else if (const auto *entityMovementBegan = dynamic_cast<const event::EntityMovementBegan*>(event)) {
       if (walkingTargetAndAttack_ && entityMovementBegan->globalId == walkingTargetAndAttack_->targetId) {
-        LOG(INFO) << "The target that we're walking to has changed its movement, we'll need to recalculate";
+        // The target that we're walking to has changed its movement, we'll need to recalculate
         walkingTargetAndAttack_.reset();
       }
     } else if (const auto *entityLifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event)) {
@@ -189,10 +189,6 @@ void Training::onUpdate(const event::Event *event) {
     // Either casting a skill, picking up an item ourself, picking up an item with COS, or walking somewhere.
     childState_->onUpdate(event);
     if (childState_->done()) {
-      if (dynamic_cast<Walking*>(childState_.get()) != nullptr) {
-        // Done walking.
-        LOG(INFO) << "Done walking, current pos " << bot_.selfState().position();
-      }
       childState_.reset();
     } else {
       // Child state is not yet done.
@@ -205,7 +201,7 @@ void Training::onUpdate(const event::Event *event) {
 
   // We either have no child state, or we're walking somewhere.
   if (!bot_.selfState().spawned()) {
-    LOG(INFO) << "We are not spawned, nothing to do";
+    // We are not spawned, nothing to do
     return;
   }
 
@@ -220,10 +216,6 @@ void Training::onUpdate(const event::Event *event) {
     return;
   }
 
-  if (bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown) {
-    LOG(INFO) << "In Training and stunned from KB/KD";
-  }
-
   // First, check that our buffs are all active. Use different sets of buffs for inside and outside of the training area.
   SkillList *buffList;
   if (trainingAreaGeometry_->pointIsInside(bot_.selfState().position())) {
@@ -234,7 +226,7 @@ void Training::onUpdate(const event::Event *event) {
 
   bool setNewChildState = checkBuffs(*buffList);
   if (setNewChildState) {
-    LOG(INFO) << "Have some buff to cast";
+    // Have some buff to cast
     onUpdate(event);
     return;
   }
@@ -257,7 +249,7 @@ void Training::onUpdate(const event::Event *event) {
     if (trainingAreaCircle == nullptr) {
       throw std::runtime_error("Not sure where to navigate to for other shapes");
     }
-    LOG(INFO) << "Not in training area, navigating to the center of the training area circle: " << trainingAreaCircle->center();
+    // Not in training area, navigating to the center of the training area
     const auto pathToTrainingAreaCenter = bot_.calculatePathToDestination(trainingAreaCircle->center());
     setChildStateMachine<Walking>(pathToTrainingAreaCenter);
     onUpdate(event);
@@ -285,6 +277,7 @@ void Training::onUpdate(const event::Event *event) {
     return;
   }
 
+  // TODO: Calculate if entire training geometry is visible, if so, do not explore.
   // Nothing left to do except explore the training area. Randomly walk to a point.
   if (childState_ && dynamic_cast<Walking*>(childState_.get()) != nullptr) {
     // Already walking somewhere.
@@ -315,7 +308,7 @@ bool Training::tryPickItem(const ItemList &itemList) {
     cosGlobalId = bot_.selfState().cosInventoryMap.begin()->first;
   }
   if (!cosGlobalId && !canMove()) {
-    LOG(INFO) << "No way to pick up items. No pickpet and cant move.";
+    // No way to pick up items. No pickpet and cant move.
     return false;
   }
 
@@ -383,7 +376,7 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
   // Evaluate targets and skills
   const auto targetAndAttack = getTargetAndAttackSkill(monsterList);
   if (!targetAndAttack) {
-    LOG(INFO) << "No target/skill chosen";
+    // No target/skill chosen
     return false;
   }
   bool finishedWalking{false};
@@ -437,10 +430,6 @@ bool Training::walkToRandomPoint() {
     return false;
   }
 
-  if (bot_.selfState().moving()) {
-    LOG(INFO) << "We're not in charge of a movement, but we're moving somewhere. What's this?";
-  }
-
   constexpr const int kMaxTryCount{10};
   bool success{false};
   for (int i=0; i<kMaxTryCount; ++i) {
@@ -454,7 +443,7 @@ bool Training::walkToRandomPoint() {
     }
   }
   if (!success) {
-    LOG(INFO) << "Cannot walk to a random point";
+    LOG(INFO) << "Tried " << kMaxTryCount << " times, cannot walk to a random point";
   }
   return success;
 }
@@ -489,14 +478,14 @@ bool Training::checkBuffs(const SkillList &buffList) {
   const auto nextBuffToCast = getNextBuffToCast(buffList);
   if (nextBuffToCast) {
     auto castSkillBuilder = CastSkillStateMachineBuilder(bot_, *nextBuffToCast);
-    LOG(INFO) << "Next buff to cast is " << *nextBuffToCast;
+    // Next buff to cast is `*nextBuffToCast`
     const auto &buffData = bot_.gameData().skillData().getSkillById(*nextBuffToCast);
 
     // Does the buff require a specific weapon to be equipped to cast?
     const auto weaponSlot = getInventorySlotOfWeaponForSkill(buffData, bot_);
     // Note: It is also possible that a skill requires a shield (shield bash)
     if (weaponSlot) {
-      LOG(INFO) << "Inventory slot of weapon for skill is " << static_cast<int>(*weaponSlot);
+      // Inventory slot of weapon for skill is `*weaponSlot`
       castSkillBuilder.withWeapon(*weaponSlot);
     }
 
@@ -504,11 +493,11 @@ bool Training::checkBuffs(const SkillList &buffList) {
 
     if (buffData.targetRequired) {
       // TODO: We assume this buff is for ourself
-      LOG(INFO) << "Buff requires a target, using self (req self? " << buffData.targetGroupSelf << ')';
+      // Buff requires a target, using self
       castSkillBuilder.withTarget(bot_.selfState().globalId);
     }
 
-    LOG(INFO) << "Created child state to cast skill";
+    // Create a child state to cast skill
     possiblyOverwriteChildStateMachine(castSkillBuilder.create());
     return true;
   }
@@ -531,7 +520,6 @@ std::optional<sro::Position> Training::calculateWhereToWalkToAttackEntityWithSki
   const double skillRangeMinusRounding = std::max(sro::constants::kSqrtHalf, skill.actionRange - sro::constants::kSqrtHalf*2);
   const auto calcd_dist = sro::position_math::calculateDistance2d(selfCurrentPosition, entity.position());
   if (calcd_dist <= skillRangeMinusRounding) {
-    LOG(INFO) << "Already close enough";
     // We are already close enough.
     return {};
   }
@@ -732,7 +720,7 @@ std::optional<Training::TargetAndAttackSkill> Training::getTargetAndAttackSkill(
     }
   }
   if (availableSkills.empty()) {
-    LOG(INFO) << "Want to attack a monster but have no available skills";
+    // Want to attack a monster but have no available skills
     return {};
   }
 
