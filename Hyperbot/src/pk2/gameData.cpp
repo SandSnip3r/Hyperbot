@@ -9,14 +9,18 @@
 #include <silkroad_lib/pk2/pk2.h>
 
 #include <absl/log/log.h>
+#include <absl/strings/str_split.h>
 
 #include <functional>
 #include <fstream>
 #include <map>
+#include <string_view>
+#include <vector>
 
 namespace pk2 {
 
 void GameData::parseSilkroadFiles(const std::filesystem::path &clientPath) {
+  LOG(INFO) << "Parsing Silkroad files";
   try {
     const auto kDataPath = clientPath / "Data.pk2";
     sro::pk2::Pk2ReaderModern pk2Reader{kDataPath};
@@ -31,14 +35,18 @@ void GameData::parseSilkroadFiles(const std::filesystem::path &clientPath) {
   } catch (std::exception &ex) {
     throw std::runtime_error(std::string("Failed to parse Media.Pk2 at path \""+clientPath.string()+"\". Error: \"")+ex.what()+"\"");
   }
+  LOG(INFO) << "Done parsing Silkroad files";
 }
 
 void GameData::parseData(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(1) << "Parsing Data.pk2";
   parseNavmeshData(pk2Reader);
   parseRegionInfo(pk2Reader);
+  VLOG(1) << "Done parsing Data.pk2";
 }
 
 void GameData::parseMedia(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(1) << "Parsing Media.pk2";
   std::vector<std::thread> thrs;
   parseGatewayPort(pk2Reader);
   parseDivisionInfo(pk2Reader);
@@ -54,6 +62,7 @@ void GameData::parseMedia(sro::pk2::Pk2ReaderModern &pk2Reader) {
   for (auto &thr : thrs) {
     thr.join();
   }
+  VLOG(1) << "Done parsing Media.pk2";
 }
 
 const uint16_t GameData::gatewayPort() const {
@@ -96,8 +105,8 @@ const RefRegion& GameData::refRegion() const {
   return refRegion_;
 }
 
-const TextItemAndSkillData& GameData::textItemAndSkillData() const {
-  return textItemAndSkillData_;
+const TextData& GameData::textData() const {
+  return textData_;
 }
 
 const TextZoneNameData& GameData::textZoneNameData() const {
@@ -119,9 +128,22 @@ const RegionInfo& GameData::regionInfo() const {
   return regionInfo_;
 }
 
-std::optional<std::string> GameData::getSkillNameIfExists(sro::scalar_types::ReferenceObjectId skillRefId) const {
+std::string GameData::getSkillName(sro::scalar_types::ReferenceObjectId skillRefId) const {
   const auto &skill = skillData_.getSkillById(skillRefId);
-  return textItemAndSkillData_.getSkillNameIfExists(skill.uiSkillName);
+  const auto maybeName = textData_.getSkillNameIfExists(skill.uiSkillName);
+  return (maybeName ? *maybeName : "UNKNOWN_SKILL");
+}
+
+std::string GameData::getItemName(sro::scalar_types::ReferenceObjectId itemRefId) const {
+  const auto &item = itemData_.getItemById(itemRefId);
+  const auto maybeName = textData_.getItemNameIfExists(item.nameStrID128);
+  return (maybeName ? *maybeName : "UNKNOWN_ITEM");
+}
+
+std::string GameData::getMasteryName(pk2::ref::MasteryId masteryId) const {
+  const auto &masteryDataObj = masteryData_.getMasteryById(masteryId);
+  const auto maybeName = textData_.getMasteryNameIfExists(masteryDataObj.masteryNameCode);
+  return (maybeName ? *maybeName : "UNKNOWN_MASTERY");
 }
 
 void GameData::parseGatewayPort(sro::pk2::Pk2ReaderModern &pk2Reader) {
@@ -497,8 +519,9 @@ void GameData::parseRefRegion(sro::pk2::Pk2ReaderModern &pk2Reader) {
 
 void GameData::parseTextData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   parseTextZoneName(pk2Reader);
-  parseTextItemAndSkill(pk2Reader);
+  parseText(pk2Reader);
   parseMasteryData(pk2Reader);
+  parseTextUiSystem(pk2Reader);
 }
 
 void GameData::parseTextZoneName(sro::pk2::Pk2ReaderModern &pk2Reader) {
@@ -507,7 +530,7 @@ void GameData::parseTextZoneName(sro::pk2::Pk2ReaderModern &pk2Reader) {
   parseDataFile<ref::TextZoneName>(textZoneNameStr, parsing::isValidTextDataLine, parsing::parseTextZoneNameLine, std::bind(&TextZoneNameData::addItem, &textZoneNameData_, std::placeholders::_1));
 }
 
-void GameData::parseTextItemAndSkill(sro::pk2::Pk2ReaderModern &pk2Reader) {
+void GameData::parseText(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   const std::string kMasterTextDataName = "textdataname.txt";
   const std::string kMasterTextDataPath = kTextdataDirectory + kMasterTextDataName;
@@ -516,10 +539,10 @@ void GameData::parseTextItemAndSkill(sro::pk2::Pk2ReaderModern &pk2Reader) {
   auto textDataFilenames = parsing::fileDataToStringLines(masterTextDataData);
   for (auto textDataFilename : textDataFilenames) {
     auto textDataPath = kTextdataDirectory + textDataFilename;
-    sro::pk2::PK2Entry textItemAndSkillEntry = pk2Reader.getEntry(textDataPath);
-    auto textItemAndSkillData = pk2Reader.getEntryData(textItemAndSkillEntry);
-    auto textItemAndSkillLines = parsing::fileDataToStringLines2(textItemAndSkillData);
-    parseDataFile2<ref::TextItemOrSkill>(textItemAndSkillLines, parsing::isValidTextDataLine, parsing::parseTextItemOrSkillLine, std::bind(&TextItemAndSkillData::addItem, &textItemAndSkillData_, std::placeholders::_1));
+    sro::pk2::PK2Entry textEntry = pk2Reader.getEntry(textDataPath);
+    auto textData = pk2Reader.getEntryData(textEntry);
+    auto textLines = parsing::fileDataToStringLines2(textData);
+    parseDataFile2<ref::Text>(textLines, parsing::isValidTextDataLine, parsing::parseTextLine, std::bind(&TextData::addItem, &textData_, std::placeholders::_1));
   }
 }
 
@@ -530,6 +553,39 @@ void GameData::parseMasteryData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const auto lines = parsing::fileDataToStringLines(data);
   // TODO: Template on the add function instead
   parseDataFile2<ref::Mastery>(lines, parsing::isValidMasteryLine, parsing::parseMasteryLine, std::bind(&MasteryData::addMastery, &masteryData_, std::placeholders::_1));
+}
+
+void GameData::parseTextUiSystem(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  const std::string kPath = "server_dep\\silkroad\\textdata\\textuisystem.txt";
+  sro::pk2::PK2Entry entry = pk2Reader.getEntry(kPath);
+  const auto data = pk2Reader.getEntryData(entry);
+  const auto lines = parsing::fileDataToStringLines(data);
+  bool isMasteryNameSection{false};
+  for (const std::string &line : lines) {
+    if (line.size() >= 2 && line[0] == '/' && line[1] == '/') {
+      // This line starts a new section.
+      const std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
+      if (pieces.size() > 0 && pieces[0] == "// Mastery Name") {
+        isMasteryNameSection = true;
+      } else {
+        if (isMasteryNameSection) {
+          // Done with Mastery Name section.
+          // For now, there's nothing else we want in this file.
+          return;
+        }
+      }
+    } else {
+      // Is not a section header.
+      if (isMasteryNameSection) {
+        // This is the section we care about.
+        if (parsing::isValidTextDataLine(line)) {
+          textData_.addItem(parsing::parseTextLine(line));
+        } else {
+          throw std::runtime_error(absl::StrFormat("When parsing textuisystem.txt for mastery names, encountered \"%s\" which is not a valid text data line", line));
+        }
+      }
+    }
+  }
 }
 
 void GameData::parseNavmeshData(sro::pk2::Pk2ReaderModern &pk2Reader) {

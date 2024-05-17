@@ -27,7 +27,7 @@ private:
   static inline std::string kName{"Training"};
   bool done_{false};
   bool wantToAttackMonster(const entity::Monster &monster) const;
-  void buildBuffList();
+  void getSkillsFromConfig();
   using SkillList = std::vector<sro::scalar_types::ReferenceObjectId>;
   using ItemList = std::vector<const entity::Item*>;
   using MonsterList = std::vector<const entity::Monster*>;

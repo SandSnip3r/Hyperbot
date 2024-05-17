@@ -14,6 +14,7 @@ namespace state::machine {
 
 // TODO: This feels like a weird home for this function.
 std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &skillData, const Bot &bot);
+std::optional<uint8_t> getInventorySlotOfShield(const Bot &bot);
 
 class CastSkillStateMachineBuilder {
 public:
@@ -53,6 +54,7 @@ private:
   std::optional<broker::EventBroker::DelayedEventId> skillCastTimeoutEventId_;
   bool waitingForSkillToEnd_{false};
   bool done_{false};
+  std::string skillName() const;
 };
 
 } // namespace state::machine

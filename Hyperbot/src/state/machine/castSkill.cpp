@@ -61,6 +61,18 @@ std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &s
   return possibleWeaponSlots.front();
 }
 
+std::optional<uint8_t> getInventorySlotOfShield(const Bot &bot) {
+  const bool characterIsChinese = bot.selfState().race() == state::Race::kChinese;
+  const type_id::TypeCategory shieldCategory = (characterIsChinese ? type_id::categories::kChineseShield : type_id::categories::kEuropeanShield);
+  std::vector<uint8_t> possibleShieldSlots = bot.selfState().inventory.findItemsOfCategory({shieldCategory});
+  if (possibleShieldSlots.empty()) {
+    VLOG(1) << "Looking for shield, but didnt find one";
+    return {};
+  }
+  // TODO: Choose our best shield.
+  return possibleShieldSlots.front();
+}
+
 CastSkillStateMachineBuilder::CastSkillStateMachineBuilder(Bot &bot, sro::scalar_types::ReferenceObjectId skillRefId) : bot_(bot), skillRefId_(skillRefId) {
 }
 
@@ -92,6 +104,7 @@ std::unique_ptr<StateMachine> CastSkillStateMachineBuilder::create() const {
 
 CastSkill::CastSkill(Bot &bot, sro::scalar_types::ReferenceObjectId skillRefId, std::optional<sro::scalar_types::EntityGlobalId> targetGlobalId, std::optional<uint8_t> weaponSlot, std::optional<uint8_t> shieldSlot, std::optional<sro::scalar_types::ReferenceObjectId> imbueSkillRefId) : StateMachine(bot), skillRefId_(skillRefId), targetGlobalId_(targetGlobalId), weaponSlot_(weaponSlot), shieldSlot_(shieldSlot), imbueSkillRefId_(imbueSkillRefId) {
   stateMachineCreated(kName);
+  VLOG(1) << "Constructed CastSkill for " << skillName();
   if (weaponSlot_ && *weaponSlot_ == kWeaponInventorySlot_) {
     // Weapon is already where it needs to be, dont move it
     weaponSlot_.reset();
@@ -119,6 +132,7 @@ CastSkill::CastSkill(Bot &bot, sro::scalar_types::ReferenceObjectId skillRefId, 
 }
 
 CastSkill::~CastSkill() {
+  VLOG(1) << "Destructing CastSkill for " << skillName();
   if (skillCastTimeoutEventId_) {
     bot_.eventBroker().cancelDelayedEvent(*skillCastTimeoutEventId_);
     skillCastTimeoutEventId_.reset();
@@ -133,8 +147,7 @@ void CastSkill::onUpdate(const event::Event *event) {
 
   bool megaDebug{false};
   if (event != nullptr && event->eventCode == event::EventCode::kStateMachineActiveTooLong) {
-    const auto maybeSkillName = bot_.gameData().getSkillNameIfExists(skillRefId_);
-    LOG(INFO) << "We seem to be stuck. Skill name: " << (maybeSkillName ? *maybeSkillName : std::string("UNKNOWN"));
+    LOG(INFO) << "We seem to be stuck. Skill name: " << skillName();
     LOG(INFO) << "expectingSkillCommandFailure_: " << expectingSkillCommandFailure_;
     LOG(INFO) << "skillCastTimeoutEventId_: " << skillCastTimeoutEventId_.has_value();
     LOG(INFO) << "waitingForSkillToEnd_: " << waitingForSkillToEnd_;
@@ -158,6 +171,7 @@ void CastSkill::onUpdate(const event::Event *event) {
       // If we're not waiting for our skill to cast or end, there is no event we care about
       if (const auto *skillBeganEvent = dynamic_cast<const event::SkillBegan*>(event)) {
         if (skillBeganEvent->casterGlobalId == bot_.selfState().globalId) {
+          VLOG(2) << "Our skill \"" << skillName() << "\" begin";
           // We cast this skill
           const auto rootSkillId = bot_.gameData().skillData().getRootSkillRefId(skillBeganEvent->skillRefId);
           if (rootSkillId != skillRefId_) {
@@ -177,6 +191,7 @@ void CastSkill::onUpdate(const event::Event *event) {
         }
       } else if (const auto *skillEndedEvent = dynamic_cast<const event::SkillEnded*>(event)) {
         if (skillEndedEvent->casterGlobalId == bot_.selfState().globalId && waitingForSkillToEnd_) {
+          VLOG(2) << "Our skill \"" << skillName() << "\" end";
           // We cast this skill
           const auto rootSkillId = bot_.gameData().skillData().getRootSkillRefId(skillEndedEvent->skillRefId);
           if (rootSkillId != skillRefId_) {
@@ -221,23 +236,22 @@ void CastSkill::onUpdate(const event::Event *event) {
         if (commandError->command.commandType == packet::enums::CommandType::kExecute) {
           if (commandError->command.actionType == packet::enums::ActionType::kCast) {
             if (commandError->command.refSkillId == skillRefId_) {
+              VLOG(2) << "Command error";
               // Our command to cast this skill failed.
               if (expectingSkillCommandFailure_) {
                 // Expecting this failure; not acting on it.
                 expectingSkillCommandFailure_ = false;
               } else {
-                if (skillCastTimeoutEventId_) {
-                  bot_.eventBroker().cancelDelayedEvent(*skillCastTimeoutEventId_);
-                  skillCastTimeoutEventId_.reset();
-                }
-                if (waitingForSkillToEnd_) {
-                  throw std::runtime_error("Waiting for skill to cast, command failed, but we were waiting for the skill to end (which means it must have started)");
-                }
+                // We were not expecting this command error. Maybe the target died or something. Relinquish control to parent state machine.
+                VLOG(1) << "Was not expecting this command error. Killing state machine";
+                done_ = true;
+                return;
               }
             }
           }
         }
       } else if (const auto *skillFailedEvent = dynamic_cast<const event::OurSkillFailed*>(event)) {
+        VLOG(2) << "Skill failed";
         if (skillFailedEvent->skillRefId == skillRefId_) {
           // Our skill failed to cast
           expectingSkillCommandFailure_ = true;
@@ -264,6 +278,7 @@ void CastSkill::onUpdate(const event::Event *event) {
         }
         waitingForSkillToEnd_ = false;
       } else if (const auto *skillCastTimeoutEvent = dynamic_cast<const event::SkillCastTimeout*>(event)) {
+        VLOG(2) << "Skill cast timed out";
         if (skillCastTimeoutEvent->skillId == skillRefId_) {
           // Our skill cast timed out, something must be wrong.
           if (!skillCastTimeoutEventId_) {
@@ -306,18 +321,8 @@ void CastSkill::onUpdate(const event::Event *event) {
   if (skillCastTimeoutEventId_ || waitingForSkillToEnd_) {
     // Still waiting on skill
     if (megaDebug) LOG(INFO) << "still waiting on skill";
+    VLOG(1) << "Still waiting on skill " << skillName() << " to complete";
     return;
-  }
-
-  // Cast skill
-  // TODO: Handle common attack
-  PacketContainer castSkillPacket;
-  if (targetGlobalId_) {
-    // Have a target
-    castSkillPacket = packet::building::ClientAgentActionCommandRequest::cast(skillRefId_, *targetGlobalId_);
-  } else {
-    // No target
-    castSkillPacket = packet::building::ClientAgentActionCommandRequest::cast(skillRefId_);
   }
 
   // Cast imbue if it exists and is not active
@@ -362,13 +367,28 @@ void CastSkill::onUpdate(const event::Event *event) {
       }
     }
   }
-  // Finally, use skill
+
+  VLOG(1) << "Casting skill " << skillName();
+  // Finally, cast skill
+  // TODO: Handle common attack
+  PacketContainer castSkillPacket;
+  if (targetGlobalId_) {
+    // Have a target
+    castSkillPacket = packet::building::ClientAgentActionCommandRequest::cast(skillRefId_, *targetGlobalId_);
+  } else {
+    // No target
+    castSkillPacket = packet::building::ClientAgentActionCommandRequest::cast(skillRefId_);
+  }
   bot_.packetBroker().injectPacket(castSkillPacket, PacketContainer::Direction::kClientToServer);
   skillCastTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::SkillCastTimeout>(std::chrono::milliseconds(kSkillCastTimeoutMs), skillRefId_);
 }
 
 bool CastSkill::done() const {
   return done_;
+}
+
+std::string CastSkill::skillName() const {
+  return bot_.gameData().getSkillName(skillRefId_);
 }
 
 } // namespace state::machine

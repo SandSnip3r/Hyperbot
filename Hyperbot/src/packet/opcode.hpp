@@ -73,7 +73,7 @@ enum class Opcode : uint16_t {
   CLIENT_STR_UPDATE = 0x7050,
   CLIENT_INT_UPDATE = 0x7051,
   CLIENT_CHARACTER_STATE = 0x704F,
-  CLIENT_RESPAWN = 0x3053,
+  kClientAgentCharacterResurrect = 0x3053,
   CLIENT_MASTERYUPDATE = 0x70A2,
   CLIENT_SKILLUPDATE = 0x70A1,
   CLIENT_EMOTION = 0x3091,
@@ -145,8 +145,8 @@ enum class Opcode : uint16_t {
   kServerAgentEntityDamageEffect = 0x3058,
   SERVER_ANIMATION_LEVEL_UP = 0x3054,
   kServerAgentEntityUpdateExperience = 0x3056,
-  SERVER_MASTERYUPDATE = 0xB0A2,
-  SERVER_SKILLUPDATE = 0xB0A1,
+  kServerAgentSkillMasteryLearnResponse = 0xB0A2,
+  kServerAgentSkillLearnResponse = 0xB0A1,
 
   kServerAgentChatUpdate = 0x3026,
   SERVER_CHAT_ACCEPT = 0xB025,
@@ -173,8 +173,7 @@ enum class Opcode : uint16_t {
   kServerAgentBuffLink = 0xB0BE,
   kServerAgentBuffRemove = 0xB072,
 
-  SERVER_DEAD = 0x3011,
-  // SERVER_DEAD2 = 0x30D2,
+  kServerAgentResurrectOption = 0x3011,
   kServerAgentAbnormalInfo = 0x30D2,
 
   SERVER_PARTY_FORM = 0xB069,

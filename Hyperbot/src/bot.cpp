@@ -159,6 +159,8 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kGameReset, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kSetCurrentPositionAsTrainingCenter, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kResurrectOption, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kLeveledUpSkill, eventHandleFunction);
 
   // Skills
   eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
@@ -203,7 +205,8 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kStateShardIdUpdated:
       case event::EventCode::kStateReceivedCaptchaPromptUpdated:
       case event::EventCode::kStateConnectedToAgentServerUpdated:
-      case event::EventCode::kStateCharacterListUpdated: {
+      case event::EventCode::kStateCharacterListUpdated:
+      case event::EventCode::kResurrectOption: {
         onUpdate(event);
         break;
       }
@@ -345,8 +348,7 @@ void Bot::handleEvent(const event::Event *event) {
 
       // Skills
       case event::EventCode::kSkillBegan: {
-        const auto &castedEvent = dynamic_cast<const event::SkillBegan&>(*event);
-        handleSkillBegan(castedEvent);
+        onUpdate(event);
         break;
       }
       case event::EventCode::kSkillEnded: {
@@ -409,6 +411,11 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kConfigUpdated: {
         LOG(INFO) << "Config has been updated";
         onUpdate(event);
+        break;
+      }
+      case event::EventCode::kLeveledUpSkill: {
+        const auto &castedEvent = dynamic_cast<const event::LeveledUpSkill&>(*event);
+        handleLeveledUpSkill(castedEvent);
         break;
       }
       default: {
@@ -605,25 +612,15 @@ void Bot::handleStatesChanged() {
 // ===========================================================Skills===========================================================
 // ============================================================================================================================
 
-void Bot::handleSkillBegan(const event::SkillBegan &event) {
-  if (event.casterGlobalId == worldState_.selfState().globalId) {
-    const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
-    // LOG(INFO) << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" began";
-    onUpdate(&event);
-  }
-}
-
 void Bot::handleSkillEnded(const event::SkillEnded &event) {
   if (event.casterGlobalId == worldState_.selfState().globalId) {
-    const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
-    // LOG(INFO) << "Our skill \"" << (skillName ? *skillName : "UNKNOWN") << "\" ended";
+    // LOG(INFO) << "Our skill \"" << gameData_.getSkillName(event.skillRefId) << "\" ended";
     onUpdate(&event);
   }
 }
 
 void Bot::handleSkillCooldownEnded(const event::SkillCooldownEnded &event) {
-  const auto skillName = gameData_.getSkillNameIfExists(event.skillRefId);
-  // LOG(INFO) << "Skill " << event.skillRefId << "(" << (skillName ? *skillName : "UNKNOWN") << ") cooldown ended";
+  // LOG(INFO) << "Skill " << event.skillRefId << "(" << gameData_.getSkillName(event.skillRefId) << ") cooldown ended";
   worldState_.selfState().skillEngine.skillCooldownEnded(event.skillRefId);
   onUpdate();
 }
@@ -712,34 +709,80 @@ void Bot::setCurrentPositionAsTrainingCenter() {
   eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto());
 }
 
+void Bot::handleLeveledUpSkill(const event::LeveledUpSkill &event) {
+  // If this skill is in our config, update it with the new one.
+  auto *characterConfig = config_.getCharacterConfig(worldState_.selfState().name);
+  if (characterConfig == nullptr) {
+    return;
+  }
+  auto *trainingConfig = characterConfig->mutable_training_config();
+  LOG(INFO) << "Updated skill from " << event.oldSkillRefId << " to " << event.newSkillRefId;
+  bool updatedConfig=false;
+  {
+    auto *attackSkills = trainingConfig->mutable_training_attack_skill_ids();
+    auto it = std::find(attackSkills->begin(), attackSkills->end(), event.oldSkillRefId);
+    if (it != attackSkills->end()) {
+      LOG(INFO) << "Found skill in training_attack_skill_ids. Updating";
+      *it = event.newSkillRefId;
+      updatedConfig = true;
+    }
+  }
+  {
+    auto *trainingBuffSkills = trainingConfig->mutable_training_buff_skill_ids();
+    auto it = std::find(trainingBuffSkills->begin(), trainingBuffSkills->end(), event.oldSkillRefId);
+    if (it != trainingBuffSkills->end()) {
+      LOG(INFO) << "Found skill in training_buff_skill_ids. Updating";
+      *it = event.newSkillRefId;
+      updatedConfig = true;
+    }
+  }
+  {
+    auto *nonTrainingBuffSkills = trainingConfig->mutable_nontraining_buff_skill_ids();
+    auto it = std::find(nonTrainingBuffSkills->begin(), nonTrainingBuffSkills->end(), event.oldSkillRefId);
+    if (it != nonTrainingBuffSkills->end()) {
+      LOG(INFO) << "Found skill in nontraining_buff_skill_ids. Updating";
+      *it = event.newSkillRefId;
+      updatedConfig = true;
+    }
+  }
+  if (updatedConfig) {
+    config_.save();
+    eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto());
+  } else {
+    LOG(INFO) << "Skill was not in config";
+  }
+}
+
 bool Bot::needToGoToTown() const {
-  const auto mpPotionSlots = selfState().inventory.findItemsOfCategory({type_id::categories::kMpPotion});
-  if (mpPotionSlots.empty()) {
-    LOG(INFO) << "Checking if we need to go to town. Have no MP potions";
-    return true;
-  }
-  const auto hpPotionSlots = selfState().inventory.findItemsOfCategory({type_id::categories::kHpPotion});
-  if (hpPotionSlots.empty()) {
-    LOG(INFO) << "Checking if we need to go to town. Have no HP potions";
-    return true;
-  }
-  int hpPotionCount=0;
-  for (const auto slot : hpPotionSlots) {
-    const auto *item = selfState().inventory.getItem(slot);
-    if (item == nullptr) {
-      throw std::runtime_error("Expecting hp potion, but item is null");
-    }
-    const auto *itemAsExp = dynamic_cast<const storage::ItemExpendable*>(item);
-    if (itemAsExp == nullptr) {
-      throw std::runtime_error("Expecting hp potion, but expendable is null");
-    }
-    hpPotionCount += itemAsExp->quantity;
-  }
-  constexpr const int kMinHpCount{10};
-  if (hpPotionCount < kMinHpCount) {
-    LOG(INFO) << "Checking if we need to go to town. Have fewer than " << kMinHpCount << " HP potions";
-    return true;
-  }
+  // TODO: Get this from configuration. Maybe have it be implemented as a list of ReturnToTownCondition functors
+  // TODO: Since we're actually botting such a low level character, we wont send him to town for not having enough potions.
+  // const auto mpPotionSlots = selfState().inventory.findItemsOfCategory({type_id::categories::kMpPotion});
+  // if (mpPotionSlots.empty()) {
+  //   LOG(INFO) << "Checking if we need to go to town. Have no MP potions";
+  //   return true;
+  // }
+  // const auto hpPotionSlots = selfState().inventory.findItemsOfCategory({type_id::categories::kHpPotion});
+  // if (hpPotionSlots.empty()) {
+  //   LOG(INFO) << "Checking if we need to go to town. Have no HP potions";
+  //   return true;
+  // }
+  // int hpPotionCount=0;
+  // for (const auto slot : hpPotionSlots) {
+  //   const auto *item = selfState().inventory.getItem(slot);
+  //   if (item == nullptr) {
+  //     throw std::runtime_error("Expecting hp potion, but item is null");
+  //   }
+  //   const auto *itemAsExp = dynamic_cast<const storage::ItemExpendable*>(item);
+  //   if (itemAsExp == nullptr) {
+  //     throw std::runtime_error("Expecting hp potion, but expendable is null");
+  //   }
+  //   hpPotionCount += itemAsExp->quantity;
+  // }
+  // constexpr const int kMinHpCount{10};
+  // if (hpPotionCount < kMinHpCount) {
+  //   LOG(INFO) << "Checking if we need to go to town. Have fewer than " << kMinHpCount << " HP potions";
+  //   return true;
+  // }
   return false;
 }
 
@@ -750,6 +793,10 @@ bool Bot::similarSkillIsAlreadyActive(sro::scalar_types::ReferenceObjectId skill
     const auto &activeBuffData = gameData_.skillData().getSkillById(activeBuffId);
     if (givenSkillData.actionOverlap == activeBuffData.actionOverlap) {
       // These two cannot be active at the same time
+      return true;
+    }
+    if (givenSkillData.hasParam(pk2::ref::skill_param::kHaste) &&
+        activeBuffData.hasParam(pk2::ref::skill_param::kHaste)) {
       return true;
     }
   }
@@ -763,14 +810,14 @@ bool Bot::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
   if (skillData.consumeMP > currentMp ||
       (selfState().maxMp() && skillData.consumeMPRatio > (static_cast<double>(currentMp) / *selfState().maxMp()) * 100)) {
     // Not enough MP to cast.
-    LOG(INFO) << "Not enough MP to cast skill " << (gameData().getSkillNameIfExists(skillRefId) ? *gameData().getSkillNameIfExists(skillRefId) : std::string("unknown"));
+    LOG(INFO) << "Not enough MP to cast skill " << gameData().getSkillName(skillRefId);
     return false;
   }
   const auto currentHp = selfState().currentHp();
   if (skillData.consumeHP > currentHp ||
       (selfState().maxHp() && skillData.consumeHPRatio > (static_cast<double>(currentHp) / *selfState().maxHp()) * 100)) {
     // Not enough HP to cast.
-    LOG(INFO) << "Not enough HP to cast skill " << (gameData().getSkillNameIfExists(skillRefId) ? *gameData().getSkillNameIfExists(skillRefId) : std::string("unknown"));
+    LOG(INFO) << "Not enough HP to cast skill " << gameData().getSkillName(skillRefId);
     return false;
   }
   if (selfState().skillEngine.skillIsOnCooldown(skillRefId)) {
@@ -787,7 +834,7 @@ bool Bot::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
 std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestination(const sro::Position &destinationPosition) const {
   // Since we can only move to positions on whole integers, find the closest possible point to the destination position while also accounting for the transformation that happens to the packet while being converted to be sent over the network
   const auto networkReadyPos = packet::building::NetworkReadyPosition::roundToNearest(destinationPosition);
-  const auto closestDestinationPosition = networkReadyPos.asSroPosition();
+  const sro::Position closestDestinationPosition = networkReadyPos.asSroPosition();
   if (sro::position_math::calculateDistance2d(selfState().position(), closestDestinationPosition) <= sqrt(0.5)) {
     // Already at destination
     return {};
@@ -873,10 +920,10 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
     return result;
   };
 
-  constexpr const double kAgentRadius{7.23};
+  constexpr const double kAgentRadius{3.14};
   pathfinder::Pathfinder<sro::navmesh::triangulation::NavmeshTriangulation> pathfinder(gameData().navmeshTriangulation(), kAgentRadius);
   try {
-    const auto currentPosition = selfState().position();
+    const sro::Position currentPosition = selfState().position();
     const sro::math::Vector3 currentPositionPoint(currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset());
     const auto navmeshCurrentPosition = gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(currentPositionPoint, currentPosition.regionId());
 
@@ -884,6 +931,7 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
     const auto navmeshDestinationPosition = gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, destinationPosition.regionId());
 
     // TODO: If the src or dest positions are overlapping with a constraint, we need to add an extra point.
+    LOG(INFO) << absl::StreamFormat("Calculating path from (%d;%.10f,%.10f,%.10f) to (%d;%.10f,%.10f,%.10f)", currentPosition.regionId(), currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset(), closestDestinationPosition.regionId(), closestDestinationPosition.xOffset(), closestDestinationPosition.yOffset(), closestDestinationPosition.zOffset());
     const auto pathfindingResult = pathfinder.findShortestPath(navmeshCurrentPosition, navmeshDestinationPosition);
     const auto &path = pathfindingResult.shortestPath;
     if (path.empty()) {

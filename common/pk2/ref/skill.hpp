@@ -2,11 +2,18 @@
 #define PK2_MEDIA_SKILL_HPP_
 
 #include <array>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace pk2::ref {
+
+namespace skill_param {
+
+extern const int32_t kHaste;
+
+} // namespace skill_param
 
 struct RequiredWeapon {
   uint8_t typeId3, typeId4;
@@ -87,6 +94,8 @@ struct Skill {
   
   // Efta or atfe ("auto transfer effect") like Recovery Division or bard dances
   bool isEfta() const;
+  bool isImbue() const;
+  bool hasParam(int32_t param) const;
   std::vector<RequiredWeapon> reqi() const;
   bool isInstant() const;
   bool isTele() const;

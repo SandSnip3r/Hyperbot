@@ -940,26 +940,26 @@ pk2::ref::TextZoneName parseTextZoneNameLine(const std::string &line) {
   return textZoneName;
 }
 
-pk2::ref::TextItemOrSkill parseTextItemOrSkillLine(const std::string &line) {
-  pk2::ref::TextItemOrSkill textItemOrSkill;
+pk2::ref::Text parseTextLine(const std::string &line) {
+  pk2::ref::Text text;
   const char *ptr = line.data();
-  ptr = parse(ptr, textItemOrSkill.service);
-  ptr = parse(ptr, textItemOrSkill.key);
-  ptr = parse(ptr, textItemOrSkill.korean);
-  ptr = parse(ptr, textItemOrSkill.unkLang0);
-  ptr = parse(ptr, textItemOrSkill.unkLang1);
-  ptr = parse(ptr, textItemOrSkill.unkLang2);
-  ptr = parse(ptr, textItemOrSkill.unkLang3);
-  ptr = parse(ptr, textItemOrSkill.unkLang4);
-  ptr = parse(ptr, textItemOrSkill.english);
-  ptr = parse(ptr, textItemOrSkill.vietnamese);
-  ptr = parse(ptr, textItemOrSkill.unkLang5);
-  ptr = parse(ptr, textItemOrSkill.unkLang6);
-  ptr = parse(ptr, textItemOrSkill.unkLang7);
-  ptr = parse(ptr, textItemOrSkill.unkLang8);
-  ptr = parse(ptr, textItemOrSkill.unkLang9);
-  parse(ptr, textItemOrSkill.unkLang10);
-  return textItemOrSkill;
+  ptr = parse(ptr, text.service);
+  ptr = parse(ptr, text.key);
+  ptr = parse(ptr, text.korean);
+  ptr = parse(ptr, text.unkLang0);
+  ptr = parse(ptr, text.unkLang1);
+  ptr = parse(ptr, text.unkLang2);
+  ptr = parse(ptr, text.unkLang3);
+  ptr = parse(ptr, text.unkLang4);
+  ptr = parse(ptr, text.english);
+  ptr = parse(ptr, text.vietnamese);
+  ptr = parse(ptr, text.unkLang5);
+  ptr = parse(ptr, text.unkLang6);
+  ptr = parse(ptr, text.unkLang7);
+  ptr = parse(ptr, text.unkLang8);
+  ptr = parse(ptr, text.unkLang9);
+  parse(ptr, text.unkLang10);
+  return text;
 }
 
 pk2::ref::Mastery parseMasteryLine(const std::string &line) {

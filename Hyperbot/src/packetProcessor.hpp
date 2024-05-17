@@ -42,8 +42,11 @@
 #include "packet/parsing/serverAgentInventoryStorageData.hpp"
 #include "packet/parsing/serverAgentInventoryUpdateDurability.hpp"
 #include "packet/parsing/serverAgentInventoryUpdateItem.hpp"
+#include "packet/parsing/serverAgentResurrectOption.hpp"
 #include "packet/parsing/serverAgentSkillBegin.hpp"
 #include "packet/parsing/serverAgentSkillEnd.hpp"
+#include "packet/parsing/serverAgentSkillLearnResponse.hpp"
+#include "packet/parsing/serverAgentSkillMasteryLearnResponse.hpp"
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
 #include "state/worldState.hpp"
@@ -129,6 +132,8 @@ private:
   void serverAgentEntityDespawnReceived(const packet::parsing::ServerAgentEntityDespawn &packet) const;
   void entitySpawned(std::shared_ptr<entity::Entity> entity) const;
   void entityDespawned(sro::scalar_types::EntityGlobalId globalId) const;
+  void serverAgentSkillLearnResponseReceived(const packet::parsing::ServerAgentSkillLearnResponse &packet) const;
+  void serverAgentSkillMasteryLearnResponseReceived(const packet::parsing::ServerAgentSkillMasteryLearnResponse &packet) const;
 
   // Misc
   void serverAgentDeselectResponseReceived(const packet::parsing::ServerAgentActionDeselectResponse &packet) const;
@@ -156,6 +161,7 @@ private:
   void serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const;
   void serverAgentChatUpdateReceived(const packet::parsing::ServerAgentChatUpdate &packet) const;
   void serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet) const;
+  void serverAgentResurrectOptionReceived(const packet::parsing::ServerAgentResurrectOption &packet) const;
 
   std::optional<std::chrono::milliseconds> getItemCooldownMs(const storage::ItemExpendable &item) const;
   WrappedCommand wrapActionCommand(const packet::structures::ActionCommand &command) const;

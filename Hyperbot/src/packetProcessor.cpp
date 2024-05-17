@@ -30,7 +30,7 @@ WrappedCommand::WrappedCommand(const packet::structures::ActionCommand &command,
 std::optional<std::string> WrappedCommand::skillName() const {
   if (actionCommand.commandType == packet::enums::CommandType::kExecute) {
     if (actionCommand.actionType == packet::enums::ActionType::kCast || actionCommand.actionType == packet::enums::ActionType::kDispel) {
-      return gameData_.getSkillNameIfExists(actionCommand.refSkillId);
+      return gameData_.getSkillName(actionCommand.refSkillId);
     }
   }
   throw std::runtime_error("Asking for skill name for ActionCommand which does not use or cancel a skill");
@@ -130,6 +130,8 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityGroupspawnData, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySpawn, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityDespawn, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillLearnResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillMasteryLearnResponse, packetHandleFunction);
 
   //   Misc. packets
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionDeselectResponse, packetHandleFunction);
@@ -155,6 +157,7 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffRemove, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentChatUpdate, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentGameReset, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentResurrectOption, packetHandleFunction);
 }
 
 void PacketProcessor::handlePacket(const PacketContainer &packet) const {
@@ -208,6 +211,8 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityGroupSpawnData, serverAgentEntityGroupSpawnDataReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntitySpawn, serverAgentEntitySpawnReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityDespawn, serverAgentEntityDespawnReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentSkillLearnResponse, serverAgentSkillLearnResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentSkillMasteryLearnResponse, serverAgentSkillMasteryLearnResponseReceived);
 
     // Misc. packets
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentActionDeselectResponse, serverAgentDeselectResponseReceived);
@@ -234,6 +239,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentBuffRemove, serverAgentBuffRemoveReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentChatUpdate, serverAgentChatUpdateReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentGameReset, serverAgentGameResetReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentResurrectOption, serverAgentResurrectOptionReceived);
   } catch (std::exception &ex) {
     LOG(INFO) << "Error while handling packet!\n  " << ex.what();
     return;
@@ -384,6 +390,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
     //   VLOG(1) << "Mastery " << mastery.masteryNameCode << "(" << m.id << ") is level " << (int)m.level;
     // }
     std::vector<std::pair<std::string, pk2::ref::Skill::Param1Type>> skillTypes = {
+      // TODO: These labels are wrong!
       {"Melee skills", pk2::ref::Skill::Param1Type::kMelee},
       {"Ranged skills", pk2::ref::Skill::Param1Type::kRanged},
       {"Buffs", pk2::ref::Skill::Param1Type::kBuff},
@@ -395,18 +402,16 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
       for (const auto &s : packet.skills()) {
         const auto &skillData = gameData_.skillData().getSkillById(s.id);
         if (skillData.param1Type() == i.second) {
+          std::optional<std::string> maybeSkillName;
           constexpr const bool kLogName{true};
           if constexpr (kLogName) {
-            // Print name
-            const auto maybeSkillName = gameData_.getSkillNameIfExists(s.id);
-            if (maybeSkillName) {
-              ss << *maybeSkillName << "(" << s.id << "), ";
-            } else {
-              ss << s.id << ", ";
-            }
+            maybeSkillName = gameData_.getSkillName(s.id);
+          }
+          // Print skill
+          if (maybeSkillName) {
+            ss << absl::StreamFormat("{%s:%d}, ", *maybeSkillName, s.id);
           } else {
-            // Print RefId
-            ss << s.id << ", ";
+            ss << absl::StreamFormat("{%d}, ", s.id);
           }
         }
       }
@@ -559,7 +564,7 @@ void PacketProcessor::serverAgentEntityDamageEffectReceived(const packet::parsin
     }
   }
   // This packet only comes for effects which we deal.
-  eventBroker_.publishEvent<event::DealtDamage>(packet.globalId(), packet.effectDamage());
+  eventBroker_.publishEvent<event::DealtDamage>(worldState_.selfState().globalId, packet.globalId(), packet.effectDamage());
 }
 
 void PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const {
@@ -933,6 +938,33 @@ void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId
   eventBroker_.publishEvent<event::EntityDespawned>(globalId);
 }
 
+void PacketProcessor::serverAgentSkillLearnResponseReceived(const packet::parsing::ServerAgentSkillLearnResponse &packet) const {
+  // ServerAgentSkillLearnResponse(const PacketContainer &packet);
+  // bool success() const;
+  // uint32_t skillId() const;
+  // uint16_t errorCode() const;
+  if (packet.success()) {
+    LOG(INFO) << "Successfully learned skill " << gameData_.getSkillName(packet.skillId());
+    worldState_.selfState().learnSkill(packet.skillId());
+  } else {
+    LOG(INFO) << "Error learning skill " << packet.errorCode();
+  }
+}
+
+void PacketProcessor::serverAgentSkillMasteryLearnResponseReceived(const packet::parsing::ServerAgentSkillMasteryLearnResponse &packet) const {
+  // ServerAgentSkillMasteryLearnResponse(const PacketContainer &packet);
+  // bool success() const;
+  // uint32_t masteryId() const;
+  // uint8_t masteryLevel() const;
+  // uint16_t errorCode() const;
+  if (packet.success()) {
+    LOG(INFO) << "Successfully leveled mastery " << gameData_.getMasteryName(packet.masteryId()) << " to level " << static_cast<int>(packet.masteryLevel());
+    worldState_.selfState().learnMastery(packet.masteryId(), packet.masteryLevel());
+  } else {
+    LOG(INFO) << "Error learning mastery " << packet.errorCode();
+  }
+}
+
 // ============================================================================================================================
 // ============================================================Misc============================================================
 // ============================================================================================================================
@@ -1145,7 +1177,7 @@ void PacketProcessor::clientAgentActionCommandRequestReceived(const packet::pars
 }
 
 void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const {
-  // LOG(INFO) << "Received command response. " << packet.actionState(); // COMMAND_QUEUE_DEBUG
+  VLOG(4) << "Received command response. " << packet.actionState();
 
   if (packet.actionState() == packet::enums::ActionState::kQueued) {
     if (worldState_.selfState().skillEngine.pendingCommandQueue.empty()) {
@@ -1153,6 +1185,12 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     }
     worldState_.selfState().skillEngine.acceptedCommandQueue.emplace_back(worldState_.selfState().skillEngine.pendingCommandQueue.front());
     worldState_.selfState().skillEngine.pendingCommandQueue.erase(worldState_.selfState().skillEngine.pendingCommandQueue.begin());
+    const auto &command = worldState_.selfState().skillEngine.acceptedCommandQueue.back();
+    if (command.command.commandType == packet::enums::CommandType::kExecute &&
+        command.command.actionType == packet::enums::ActionType::kCast) {
+      const auto &skillData = gameData_.skillData().getSkillById(command.command.refSkillId);
+      VLOG(4) << "Queued command is to cast skill " << gameData_.getSkillName(command.command.refSkillId);
+    }
   } else if (packet.actionState() == packet::enums::ActionState::kError) {
     // 16388 happens when the skill is on cooldown
     if (worldState_.selfState().skillEngine.pendingCommandQueue.empty()) {
@@ -1160,7 +1198,7 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     }
     // Error seems to always refer to the most recent
     const auto failedCommand = worldState_.selfState().skillEngine.pendingCommandQueue.front();
-    // LOG(INFO) << "Command error " << packet.errorCode() << ": " << wrapActionCommand(failedCommand); // COMMAND_QUEUE_DEBUG
+    VLOG(4) << "Command error " << packet.errorCode() << ": " << wrapActionCommand(failedCommand);
     eventBroker_.publishEvent<event::CommandError>(failedCommand);
     worldState_.selfState().skillEngine.pendingCommandQueue.erase(worldState_.selfState().skillEngine.pendingCommandQueue.begin());
   } else /*if (packet.actionState() == packet::enums::ActionState::kEnd)*/ {
@@ -1178,14 +1216,19 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
       }
     } else {
       // We arent told which command ended, we just assume it was the most recent
-      if (worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute &&
-          worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kCast &&
-          !worldState_.selfState().skillEngine.acceptedCommandQueue.front().wasExecuted) {
-        LOG(INFO) << "This command(skill) was never executed!!";
-        eventBroker_.publishEvent<event::CommandError>(worldState_.selfState().skillEngine.acceptedCommandQueue.front().command);
+      const auto firstCommandIt = worldState_.selfState().skillEngine.acceptedCommandQueue.begin();
+      if (firstCommandIt->command.commandType == packet::enums::CommandType::kExecute &&
+          firstCommandIt->command.actionType == packet::enums::ActionType::kCast &&
+          !firstCommandIt->wasExecuted) {
+        LOG(INFO) << "This command (skill " << gameData_.getSkillName(firstCommandIt->command.refSkillId) << ") was never executed!!";
+        eventBroker_.publishEvent<event::CommandError>(firstCommandIt->command);
         // TODO: Maybe this should be a different event than "CommandError"?
       }
-      worldState_.selfState().skillEngine.acceptedCommandQueue.erase(worldState_.selfState().skillEngine.acceptedCommandQueue.begin());
+      if (firstCommandIt->command.commandType == packet::enums::CommandType::kExecute &&
+          firstCommandIt->command.actionType == packet::enums::ActionType::kCast) {
+        VLOG(4) << "Skill " << gameData_.getSkillName(firstCommandIt->command.refSkillId) << " command ended";
+      }
+      worldState_.selfState().skillEngine.acceptedCommandQueue.erase(firstCommandIt);
     }
   }
 
@@ -1217,7 +1260,7 @@ ActionReuseDelay is the skill's cooldown
 */
 
 void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const {
-  // LOG(INFO) << "***** Skill Begin *****";
+  VLOG(4) << "***** Skill Begin *****";
   if (packet.result() == 2) {
     // Error
     // LOG(INFO) << "Skill unsuccessful, err " << packet.errorCode();
@@ -1269,9 +1312,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       throw std::runtime_error("Unimplemented");
     }();
     auto logNoEnd = [&](const auto skillRefId) {
-      const auto maybeSkillName = gameData_.getSkillNameIfExists(skillRefId);
-      std::string skillName = (maybeSkillName ? *maybeSkillName : std::string("UNKNOWN"));
-      LOG(INFO) << std::string(1000, 'L') << "\nNo end came for skill " << skillRefId << " (" << skillName << ")";
+      LOG(INFO) << std::string(1000, 'L') << "\nNo end came for skill " << skillRefId << " (" << gameData_.getSkillName(skillRefId) << ")";
       std::ofstream myFile("no_end.txt", std::ios::app);
       if (myFile) {
         myFile << skillRefId << ',';
@@ -1322,13 +1363,9 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       if (skillIsCommonAttack) {
         return "Common";
       }
-      const auto skillName = gameData_.textItemAndSkillData().getSkillNameIfExists(skillData.uiSkillName);
-      if (!skillName) {
-        return "UNKNOWN";
-      }
-      return *skillName;
+      return gameData_.getSkillName(packet.refSkillId());
     }();
-    // LOG(INFO) << "SkillBegin \"" << skillName << "\" (" << packet.refSkillId() << ") with preparing time: " << skillData.actionPreparingTime << ", casting time: " << skillData.actionCastingTime << ", action duration: " << skillData.actionActionDuration << ", and reuse delay: " << skillData.actionReuseDelay;
+    VLOG(4) << "SkillBegin \"" << skillName << "\" (" << packet.refSkillId() << ") with preparing time: " << skillData.actionPreparingTime << ", casting time: " << skillData.actionCastingTime << ", action duration: " << skillData.actionActionDuration << ", and reuse delay: " << skillData.actionReuseDelay;
     // if (!isRootSkill) {
     //   LOG(INFO) << "  Skill " << packet.refSkillId() << "'s root is " << rootSkillRefId;
     // }
@@ -1477,7 +1514,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
 }
 
 void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const {
-  // LOG(INFO) << "***** Skill End *****";
+  VLOG(4) << "***** Skill End *****";
   // BEGIN DEBUGGING SkillBegin/SkillEnd
   {
     auto it = tracked_.find(packet.castId());
@@ -1487,9 +1524,7 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
         // Only want to do this checking for our own skills
         if (!trackedSkill.expectEnd) {
           const auto skillRefId = trackedSkill.refSkillId;
-          const auto maybeSkillName = gameData_.getSkillNameIfExists(skillRefId);
-          std::string skillName = (maybeSkillName ? *maybeSkillName : std::string("UNKNOWN"));
-          LOG(INFO) << std::string(1000, 'L') << "\nUnexpected end came for skill " << skillRefId << " (" << skillName << ")";
+          LOG(INFO) << std::string(1000, 'L') << "\nUnexpected end came for skill " << skillRefId << " (" << gameData_.getSkillName(skillRefId) << ")";
           std::ofstream myFile("unexpected_end.txt", std::ios::app);
           if (myFile) {
             myFile << skillRefId << ',';
@@ -1505,6 +1540,19 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
   // END DEBUGGING SkillBegin/SkillEnd
   if (packet.result() == 2) {
     // Not successful?
+    VLOG(1) << absl::StreamFormat("Result == %d, error: %d. Cast ID %d", packet.result(), packet.errorCode(), packet.castId());
+    if (packet.errorCode() != 0) {
+      LOG(WARNING) << "Newly seen error code!";
+    }
+    auto skillCastIt = worldState_.selfState().skillEngine.skillCastIdMap.find(packet.castId());
+    if (skillCastIt != worldState_.selfState().skillEngine.skillCastIdMap.end()) {
+      VLOG(2) << "Publishing a successful end";
+      eventBroker_.publishEvent<event::SkillEnded>(worldState_.selfState().globalId, skillCastIt->second.skillRefId);
+      VLOG(2) << "Deleting tracked cast";
+      worldState_.selfState().skillEngine.skillCastIdMap.erase(skillCastIt);
+    } else {
+      LOG(WARNING) << "Skill ended with error, but we didn't track the cast";
+    }
     return;
   }
 
@@ -1523,8 +1571,7 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
     if (skillInfo.casterGlobalId == worldState_.selfState().globalId) {
       // We cast this skill
       const auto &skillData = gameData_.skillData().getSkillById(thisSkillId);
-      const auto maybeSkillName = gameData_.textItemAndSkillData().getSkillNameIfExists(skillData.uiSkillName);
-      // LOG(INFO) << "  Is our \"" << (maybeSkillName ? *maybeSkillName : "UNKNOWN") << "\" end";
+      VLOG(4) << "  Is our \"" << gameData_.getSkillName(thisSkillId) << "\" end";
       bool doneWithSkill{true};
       if (skillData.basicChainCode != 0) {
         // There are more pieces to this skill
@@ -1550,8 +1597,8 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
     } else {
       // LOG(INFO) << "  Is NOT our skill end";
     }
-  // } else {
-  //   LOG(INFO) << "  Untracked cast";
+  } else {
+    VLOG(4) << "  Untracked cast";
   }
 }
 
@@ -1578,9 +1625,9 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
     for (const auto &hitResult : hitObject.hits) {
       if (casterGlobalId && *casterGlobalId == worldState_.selfState().globalId) {
         // We cast this.
-        if (hitResult.damage > 0) {
-          eventBroker_.publishEvent<event::DealtDamage>(hitObject.targetGlobalId, hitResult.damage);
-        }
+      }
+      if (hitResult.damage > 0 && casterGlobalId) {
+        eventBroker_.publishEvent<event::DealtDamage>(*casterGlobalId, hitObject.targetGlobalId, hitResult.damage);
       }
       entity::Entity &targetEntity = worldState_.getEntity<entity::Entity>(hitObject.targetGlobalId);
       if (auto *character = dynamic_cast<entity::Character*>(&targetEntity)) {
@@ -1669,22 +1716,21 @@ void PacketProcessor::handleKnockedBackOrKnockedDown() const {
 }
 
 void PacketProcessor::serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const {
-  const auto skillName = gameData_.getSkillNameIfExists(packet.skillRefId());
+  const auto skillName = gameData_.getSkillName(packet.skillRefId());
   if (packet.activeBuffToken() == 0) {
     // No buff remove will be received when this expires
     //  Seems to be only for debuffs
     //  Weirdly, it's also sent for Sprint Assault.
-    LOG(INFO) << "Skipping buff \"" << (skillName ? *skillName : "UNKNOWN") << "\" for " << packet.globalId() << " with tokenId: " << packet.activeBuffToken();
+    LOG(INFO) << "Skipping buff \"" << skillName << "\" for " << packet.globalId() << " with tokenId: " << packet.activeBuffToken();
     return;
   }
-  VLOG(1) << "Buff \"" << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")\" added to " << packet.globalId() << " with tokenId: " << packet.activeBuffToken();
+  VLOG(1) << "Buff \"" << skillName << "(" << packet.skillRefId() << ")\" added to " << packet.globalId() << " with tokenId: " << packet.activeBuffToken();
   const auto &skillData = gameData_.skillData().getSkillById(packet.skillRefId());
   worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken(), skillData.duration());
 }
 
 void PacketProcessor::serverAgentBuffLinkReceived(const packet::parsing::ServerAgentBuffLink &packet) const {
-  const auto skillName = gameData_.getSkillNameIfExists(packet.skillRefId());
-  VLOG(1) << "Buff link received " << (skillName ? *skillName : "UNKNOWN") << "(" << packet.skillRefId() << ")," << packet.activeBuffToken() << ',' << packet.targetGlobalId() << ',' << packet.targetName();
+  VLOG(1) << "Buff link received " << gameData_.getSkillName(packet.skillRefId()) << "(" << packet.skillRefId() << ")," << packet.activeBuffToken() << ',' << packet.targetGlobalId() << ',' << packet.targetName();
   // TODO: Where should I track the buff link? It seems to be a duplicate of what was sent in the "BuffAdd" packet.
 }
 
@@ -1707,4 +1753,8 @@ void PacketProcessor::serverAgentChatUpdateReceived(const packet::parsing::Serve
 
 void PacketProcessor::serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet) const {
   eventBroker_.publishEvent(event::EventCode::kGameReset);
+}
+
+void PacketProcessor::serverAgentResurrectOptionReceived(const packet::parsing::ServerAgentResurrectOption &packet) const {
+  eventBroker_.publishEvent<event::ResurrectOption>(packet.option());
 }

@@ -48,7 +48,7 @@ SkillBegan::SkillBegan(sro::scalar_types::EntityGlobalId casterId, sro::scalar_t
 
 SkillEnded::SkillEnded(sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId) : Event(EventCode::kSkillEnded), casterGlobalId(casterId), skillRefId(skillId) {}
 
-DealtDamage::DealtDamage(sro::scalar_types::EntityGlobalId targetId, uint32_t damageAmount) : Event(EventCode::kDealtDamage), targetId(targetId), damageAmount(damageAmount) {}
+DealtDamage::DealtDamage(sro::scalar_types::EntityGlobalId sourceId, sro::scalar_types::EntityGlobalId targetId, uint32_t damageAmount) : Event(EventCode::kDealtDamage), sourceId(sourceId), targetId(targetId), damageAmount(damageAmount) {}
 
 KilledEntity::KilledEntity(sro::scalar_types::EntityGlobalId targetId) : Event(EventCode::kKilledEntity), targetId(targetId) {}
 
@@ -82,5 +82,9 @@ ChatReceived::ChatReceived(packet::enums::ChatType type, uint32_t senderGlobalId
 ChatReceived::ChatReceived(packet::enums::ChatType type, const std::string &senderName, const std::string &msg) : Event(EventCode::kChatReceived), chatType(type), sender(senderName), message(msg) {}
 
 ConfigUpdated::ConfigUpdated(const proto::config::Config &c) : Event(EventCode::kConfigUpdated), config(c) {}
+
+ResurrectOption::ResurrectOption(packet::enums::ResurrectionOptionFlag option) : Event(EventCode::kResurrectOption), option(option) {}
+
+LeveledUpSkill::LeveledUpSkill(sro::scalar_types::ReferenceSkillId oldSkillId, sro::scalar_types::ReferenceSkillId newSkillId) : Event(EventCode::kLeveledUpSkill), oldSkillRefId(oldSkillId), newSkillRefId(newSkillId) {}
 
 } // namespace event

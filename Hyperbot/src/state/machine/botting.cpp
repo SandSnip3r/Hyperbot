@@ -51,6 +51,8 @@ void Botting::onUpdate(const event::Event *event) {
     throw std::runtime_error("Botting must always have a child state when onUpdate is called");
   }
 
+  // TODO: Handle config changes.
+
   childState_->onUpdate(event);
   if (childState_->done()) {
     // Move on to the next thing
@@ -61,6 +63,9 @@ void Botting::onUpdate(const event::Event *event) {
       setChildStateMachine<Training>(trainingAreaGeometry_->clone());
     } else if (dynamic_cast<Training*>(childState_.get())) {
       // Done training, go back to town
+      if (bot_.selfState().lifeState == sro::entity::LifeState::kDead) {
+        // We died. For now, we let Townlooping figure out what to do, since Training didn't want to handle it.
+      }
       setChildStateMachine<Townlooping>();
     } else {
       throw std::runtime_error("Botting's child state is not valid");

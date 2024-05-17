@@ -75,6 +75,9 @@ bool AutoPotion::done() const {
 }
 
 bool AutoPotion::tryUsePurificationPill() {
+  if (!bot_.currentCharacterConfig()->autopotion_config().use_purification_pills()) {
+    return false;
+  }
   const auto modernStateLevels = bot_.selfState().modernStateLevels();
   if (!std::any_of(modernStateLevels.begin(), modernStateLevels.end(), [](auto level){ return level > 0; })) {
     // Don't have any modern statuses. Don't need to use a purification pill.
@@ -177,6 +180,7 @@ bool AutoPotion::tryUseHpPotion() {
   bool usedAnItem = false;
 
   // Prioritize vigors since they're generally used in more dire situations.
+  //  TODO: I think the above logic is nonsense
   if (hpPercentage < bot_.currentCharacterConfig()->autopotion_config().vigor_hp_threshold() &&
       bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
     // Use vigor potion
@@ -227,6 +231,9 @@ bool AutoPotion::tryUseMpPotion() {
 }
 
 bool AutoPotion::tryUseUniversalPill() {
+  if (!bot_.currentCharacterConfig()->autopotion_config().use_universal_pills()) {
+    return false;
+  }
   const auto legacyStateEffects = bot_.selfState().legacyStateEffects();
   if (!std::any_of(legacyStateEffects.begin(), legacyStateEffects.end(), [](const uint16_t effect){ return effect > 0; })) {
     // Don't have any legacy statuses. Don't need to use a universal pill.

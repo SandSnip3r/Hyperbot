@@ -238,6 +238,53 @@ void Self::setMasteriesAndSkills(const std::vector<packet::structures::Mastery> 
                                  const std::vector<packet::structures::Skill> &skills) {
   masteries_ = masteries;
   skills_ = skills;
+  for (const auto &skill : skills_) {
+    if (!skill.enabled) {
+      LOG(WARNING) << absl::StreamFormat("Received a skill (%d) which is not enabled", skill.id);
+    }
+  }
+}
+
+void Self::learnSkill(sro::scalar_types::ReferenceSkillId skillId) {
+  // Check if any of our current skills have the same group ID.
+  const auto &newSkillData = gameData_.skillData().getSkillById(skillId);
+  bool foundSkill = false;
+  for (auto &skill : skills_) {
+    const auto &existingSkillData = gameData_.skillData().getSkillById(skill.id);
+    if (newSkillData.groupId == existingSkillData.groupId) {
+      LOG(INFO) << absl::StreamFormat("Our new skill %d, has same group ID as existing skill %d. (group id: %d)", skillId, skill.id, newSkillData.groupId);
+      // We should overwrite this skill.
+      LOG(INFO) << "Overwriting...";
+      eventBroker_.publishEvent<event::LeveledUpSkill>(skill.id, skillId);
+      skill.id = skillId;
+      foundSkill = true;
+      break;
+    }
+  }
+  if (!foundSkill) {
+    LOG(INFO) << absl::StreamFormat("Did not find existing skill which has same group id as new skill %d", skillId);
+    LOG(INFO) << "Inserting new skill";
+    skills_.emplace_back(skillId, /*enabled=*/true);
+  }
+}
+
+void Self::learnMastery(sro::scalar_types::ReferenceMasteryId masteryId, uint8_t masteryLevel) {
+  bool foundMastery = false;
+  for (auto &mastery : masteries_) {
+    if (mastery.id == masteryId) {
+      LOG(INFO) << absl::StreamFormat("Found mastery (ID:%d). Updating level from %d to %d", masteryId, mastery.level, masteryLevel);
+      foundMastery = true;
+      mastery.level = masteryLevel;
+      break;
+    }
+  }
+  if (!foundMastery) {
+    LOG(INFO) << absl::StreamFormat("Did not find mastery %d. Creating new with level %d", masteryId, masteryLevel);
+    if (masteryLevel != 1) {
+      LOG(WARNING) << absl::StreamFormat("Super weird that we learned a new mastery and the level isnt 1. It's %d", masteryLevel);
+    }
+    masteries_.emplace_back(masteryId, masteryLevel);
+  }
 }
 
 void Self::setGold(uint64_t goldAmount) {

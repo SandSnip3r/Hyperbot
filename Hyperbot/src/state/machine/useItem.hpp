@@ -24,7 +24,7 @@ private:
   sro::scalar_types::StorageIndexType inventoryIndex_;
   type_id::TypeId itemTypeId_;
   uint16_t lastKnownQuantity_;
-  std::string itemName_{"UNKNOWN"};
+  std::string itemName_;
   bool done_{false};
   void cleanupAndExit();
 

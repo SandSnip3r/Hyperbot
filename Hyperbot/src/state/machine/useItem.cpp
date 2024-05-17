@@ -25,11 +25,7 @@ UseItem::UseItem(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex) :
   }
   itemTypeId_ = itemAsExpendable->typeId();
   lastKnownQuantity_ = itemAsExpendable->quantity;
-  const auto &itemData = bot_.gameData().itemData().getItemById(item->refItemId);
-  auto maybeName = bot_.gameData().textItemAndSkillData().getItemNameIfExists(itemData.nameStrID128);
-  if (maybeName) {
-    itemName_ = *maybeName;
-  }
+  itemName_ = bot_.gameData().getItemName(item->refItemId);
 }
 
 UseItem::~UseItem() {

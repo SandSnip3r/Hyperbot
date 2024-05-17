@@ -4,16 +4,6 @@
 #include <stdexcept>
 
 namespace pk2::ref {
-  
-bool Skill::isEfta() const {
-  const int32_t kEfta = 1701213281;
-  for (const auto param : params) {
-    if (param == kEfta) {
-      return true;
-    }
-  }
-  return false;
-}
 
 namespace {
 
@@ -26,12 +16,52 @@ uint32_t getVal(const std::string &str) {
   return val;
 }
 
+const uint32_t kEftaVal = getVal("efta");
 const uint32_t kReqiVal = getVal("reqi");
 const uint32_t kTel2Val = getVal("tel2");
 const uint32_t kTel3Val = getVal("tel3");
 const uint32_t kTeleVal = getVal("tele");
 const uint32_t kDuraVal = getVal("dura");
+const uint32_t kAttVal = getVal("att");
 
+} // anonymous namespace
+
+namespace skill_param {
+
+const int32_t kHaste = getVal("hste");
+
+} // namespace skill_param
+
+bool Skill::isEfta() const {
+  for (const auto param : params) {
+    if (param == kEftaVal) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Skill::isImbue() const {
+  // It's not obvious how to identify an imbue. For now, we use 3 criteria:
+  //  Has "att" param
+  //  Basic activity is 1
+  //  Consumes MP
+  if (!hasParam(kAttVal)) {
+    return false;
+  }
+  if (basicActivity != 1) {
+    return false;
+  }
+  return consumeMP > 0;
+}
+
+bool Skill::hasParam(int32_t param) const {
+  for (const auto p : params) {
+    if (p == param) {
+      return true;
+    }
+  }
+  return false;
 }
 
 std::vector<RequiredWeapon> Skill::reqi() const {

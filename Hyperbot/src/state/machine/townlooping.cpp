@@ -6,6 +6,7 @@
 #include "walking.hpp"
 
 #include "bot.hpp"
+#include "packet/building/clientAgentCharacterResurrect.hpp"
 #include "type_id/categories.hpp"
 
 #include <absl/log/log.h>
@@ -96,6 +97,12 @@ void Townlooping::onUpdate(const event::Event *event) {
       if (bodyStateChangedEvent->globalId == bot_.selfState().globalId) {
         waitingForSpawn_ = false;
       }
+    } else if (const auto *resurrectOption = dynamic_cast<const event::ResurrectOption*>(event)) {
+      // Got a resurrection option; whatever the option is, we'll do it.
+      const auto packet = packet::building::ClientAgentCharacterResurrect::resurrect(resurrectOption->option);
+      bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
+      waitingForSpawn_ = true;
+      return;
     }
   }
 
@@ -106,16 +113,21 @@ void Townlooping::onUpdate(const event::Event *event) {
   // First, check if we're out of town and have a return scroll to use
   if (!bot_.worldState().selfState().inTown()) {
     // Not in town
-    const auto returnScrollSlots = bot_.selfState().inventory.findItemsOfCategory({type_id::categories::kReturnScroll});
-    if (!returnScrollSlots.empty()) {
-      if (sanityCheckUsedReturnScroll_) {
-        throw std::runtime_error("We already used a return scroll and want to use another. Something is wrong");
-      }
-      // TODO: Make a decision of which to use; for now, we just use the first.
-      setChildStateMachine<UseReturnScroll>(returnScrollSlots.front());
-      onUpdate(event);
-      sanityCheckUsedReturnScroll_ = true;
+    if (bot_.selfState().lifeState == sro::entity::LifeState::kDead) {
+      // We're dead, wait for resurrection option message.
       return;
+    } else {
+      const auto returnScrollSlots = bot_.selfState().inventory.findItemsOfCategory({type_id::categories::kReturnScroll});
+      if (!returnScrollSlots.empty()) {
+        if (sanityCheckUsedReturnScroll_) {
+          throw std::runtime_error("We already used a return scroll and want to use another. Something is wrong");
+        }
+        // TODO: Make a decision of which to use; for now, we just use the first.
+        setChildStateMachine<UseReturnScroll>(returnScrollSlots.front());
+        onUpdate(event);
+        sanityCheckUsedReturnScroll_ = true;
+        return;
+      }
     }
   }
 
@@ -196,11 +208,11 @@ void Townlooping::buildBuffList() {
 void Townlooping::buildShoppingList() {
   // TODO: This should be based on a botting config
   shoppingList_ = {
-    { 8, 300 }, //ITEM_ETC_HP_POTION_05 (XL hp potion)
-    { 15, 700 }, //ITEM_ETC_MP_POTION_05 (XL mp potion)
-    { 59, 50 }, //ITEM_ETC_CURE_ALL_05 (M special universal pill)
-    { 10377, 150 }, //ITEM_ETC_CURE_RANDOM_04 (XL purification pill)
-    { 2198, 1 }, //ITEM_ETC_SCROLL_RETURN_02 (Special Return Scroll)
+    // { 8, 300 }, //ITEM_ETC_HP_POTION_05 (XL hp potion)
+    // { 15, 700 }, //ITEM_ETC_MP_POTION_05 (XL mp potion)
+    // { 59, 50 }, //ITEM_ETC_CURE_ALL_05 (M special universal pill)
+    // { 10377, 150 }, //ITEM_ETC_CURE_RANDOM_04 (XL purification pill)
+    // { 2198, 1 }, //ITEM_ETC_SCROLL_RETURN_02 (Special Return Scroll)
     // { 62, 1000 }, //ITEM_ETC_AMMO_ARROW_01 (Arrow)
     // { 3909, 1 }, //ITEM_COS_C_DHORSE1 (Ironclad Horse)
   };

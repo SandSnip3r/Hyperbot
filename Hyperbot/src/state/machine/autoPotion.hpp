@@ -8,6 +8,9 @@
 
 namespace state::machine {
 
+// TODO: For autopotion, calculate constants for:
+//  1. Highest HP to use a potion and have the entire potion be used.
+//  2. Lowest HP where a potion's effects are not wasted (overflow)
 class AutoPotion : public StateMachine {
 public:
   AutoPotion(Bot &bot);

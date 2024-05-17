@@ -3,15 +3,12 @@
 
 #include "../../../common/pk2/ref/mastery.hpp"
 
-// #include <silkroad_lib/scalar_types.h>
-
 #include <unordered_map>
 
 namespace pk2 {
 
 class MasteryData {
 public:
-  // ----
   using MasteryMap = std::unordered_map<ref::MasteryId,ref::Mastery>;
   void addMastery(pk2::ref::Mastery &&mastery);
   const pk2::ref::Mastery& getMasteryById(pk2::ref::MasteryId id) const;

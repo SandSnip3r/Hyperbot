@@ -17,6 +17,7 @@
 #include <silkroad_lib/position_math.h>
 
 #include <absl/log/log.h>
+#include <absl/strings/str_join.h>
 
 #include <algorithm>
 #include <array>
@@ -59,46 +60,70 @@ sro::Position randomPointInGeometry(const entity::Geometry *geometry) {
 
 namespace state::machine {
 
+void Training::getSkillsFromConfig() {
+  const auto *currentCharacterConfig = bot_.currentCharacterConfig();
+  if (currentCharacterConfig == nullptr) {
+    throw std::runtime_error("Don't have a config to get training skills from");
+  }
+  const auto &trainingConfig = currentCharacterConfig->training_config();
+
+  // Attack skills
+  for (sro::scalar_types::ReferenceObjectId id : trainingConfig.training_attack_skill_ids()) {
+    skillsToUse_.push_back(id);
+  }
+  removeSkillsFromListWhichWeDontHave(skillsToUse_);
+
+  // Training buffs
+  for (sro::scalar_types::ReferenceObjectId id : trainingConfig.training_buff_skill_ids()) {
+    const auto &skill = bot_.gameData().skillData().getSkillById(id);
+    if (skill.isImbue()) {
+      if (imbueRefId_.has_value()) {
+        LOG(WARNING) << "Multiple imbues specified in config: " << *imbueRefId_ << " and " << id;
+      }
+      imbueRefId_ = id;
+    } else {
+      trainingBuffs_.push_back(id);
+    }
+  }
+  removeSkillsFromListWhichWeDontHave(trainingBuffs_);
+
+  // Nontraining buffs
+  for (sro::scalar_types::ReferenceObjectId id : trainingConfig.nontraining_buff_skill_ids()) {
+    nonTrainingBuffs_.push_back(id);
+  }
+  removeSkillsFromListWhichWeDontHave(nonTrainingBuffs_);
+
+  // Move all buffs which require a weapon at all times to the end
+  // TODO: Can do better, move skills which require a weapon at all times AND have a cooldown shorter than the skill duration even further to the back of the list
+  auto sortBuffs = [&](auto &buffList) {
+    int backIndex = buffList.size()-1;
+    for (int i=0; i<backIndex; ++i) {
+      const auto &buffRefId = buffList[i];
+      const auto &buffData = bot_.gameData().skillData().getSkillById(buffRefId);
+      const auto buffRequiredWeapons = buffData.reqi();
+      if (!buffRequiredWeapons.empty()) {
+        // Buff requires a weapon at all times
+        LOG(INFO) << "Moving buffs around. Moving " << i << " to " << backIndex;
+        std::swap(buffList[i], buffList[backIndex]);
+        --backIndex;
+      }
+    }
+  };
+  sortBuffs(trainingBuffs_);
+  sortBuffs(nonTrainingBuffs_);
+
+  LOG(INFO) << "Skills parsed from config:";
+  if (imbueRefId_) {
+    LOG(INFO) << "  Imbue: " << *imbueRefId_;
+  }
+  LOG(INFO) << "  TrainingAttackSkills: " << absl::StrJoin(trainingConfig.training_attack_skill_ids(), ", ");
+  LOG(INFO) << "  TrainingBuffSkills: " << absl::StrJoin(trainingConfig.training_buff_skill_ids(), ", ");
+  LOG(INFO) << "  NontrainingBuffSkills: " << absl::StrJoin(trainingConfig.nontraining_buff_skill_ids(), ", ");
+}
+
 Training::Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeometry) : StateMachine(bot), trainingAreaGeometry_(std::move(trainingAreaGeometry)) {
   stateMachineCreated(kName);
-  buildBuffList();
-  // Create a list of skills to use
-  skillsToUse_ = SkillList {
-  // TODO: Why do i get a Handle Read Error when I send an invalid skill?
-    7805, // Flying Dragon - Flash
-    8204, // Crane's Thunderbolt
-    8084, // Snow Storm - Multi Shot
-    // 8195, // Horse's Thunderbolt
-    7675, // Ghost Spear - Emperor
-    7672, // Ghost Spear - Storm Cloud
-    // 885, // Chain Spear - Shura
-
-    // Rogue
-    // 9612, // Distance Shot
-    // 9940, // Prick
-    // // 9798, // Mortal Wounds
-    // // 9623, // Blast Shot
-    // // 9631, // Hurricane Shot
-    // 9544, // Intense Shot
-    // 9868, // Screw
-    // 9528, // Power Shot
-    // 9587, // Rapid Shot
-
-    // Wizard
-    // 10264, // Fire Bolt
-    // 10122, // Ice Bolt (very low level)
-    // 10135, // Frozen Spear
-
-    // Warrior
-    // 8499, // Sprint Assault
-
-    // Bard
-    // 11261, // Weird Chord
-
-    // Warlock
-    // 11072, // Vampire Kiss
-  };
-  removeSkillsFromListWhichWeDontHave(skillsToUse_);
+  getSkillsFromConfig();
 
   bot_.selfState().setTrainingAreaGeometry(trainingAreaGeometry_->clone());
   bot_.selfState().registerGeometryBoundary(bot_.selfState().trainingAreaGeometry->clone(), bot_.eventBroker());
@@ -175,9 +200,9 @@ void Training::onUpdate(const event::Event *event) {
     } else if (const auto *entityLifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event)) {
       if (entityLifeStateChanged->globalId == bot_.selfState().globalId) {
         if (bot_.selfState().lifeState == sro::entity::LifeState::kDead) {
-          if (childState_) {
-            childState_.reset();
-          }
+          // We died. Cleanup and gtfo.
+          done_ = true;
+          return;
         }
       }
     }
@@ -316,8 +341,9 @@ bool Training::tryPickItem(const ItemList &itemList) {
   // Lets see if there's anything to pick up
   auto wantItem = [](const entity::Item *item) {
     // TODO: Check if this item should be picked up, based on a configured filter
-    return (item->refObjId != 62 && // Arrows
-            item->refObjId != 10383); // Bolts
+    return true;
+    // return (item->refObjId != 62 && // Arrows
+    //         item->refObjId != 10383); // Bolts
   };
   for (const auto *item : itemList) {
     if (!item->ownerJId || *item->ownerJId == bot_.selfState().jId) {
@@ -416,7 +442,23 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
     const auto weaponSlot = getInventorySlotOfWeaponForSkill(skillData, bot_);
     if (weaponSlot) {
       castSkillBuilder.withWeapon(*weaponSlot);
+
+      // Check if the weapon can be accompanied by a shield
+      const auto *item = bot_.selfState().inventory.getItem(*weaponSlot);
+      const storage::ItemEquipment *equipment = dynamic_cast<const storage::ItemEquipment*>(item);
+      if (equipment != nullptr) {
+        if (!equipment->itemInfo->twoHanded) {
+          const auto shieldSlot = getInventorySlotOfShield(bot_);
+          if (shieldSlot) {
+            // Inventory slot of shield for skill is `*shieldSlot`
+            castSkillBuilder.withShield(*shieldSlot);
+          }
+        }
+      }
     }
+
+    // TODO: Maybe the attack requires a shield.
+
     if (imbueRefId_) {
       castSkillBuilder.withImbue(*imbueRefId_);
     }
@@ -487,9 +529,32 @@ bool Training::checkBuffs(const SkillList &buffList) {
     if (weaponSlot) {
       // Inventory slot of weapon for skill is `*weaponSlot`
       castSkillBuilder.withWeapon(*weaponSlot);
+
+      LOG(INFO) << "Want to equip weapon at slot " << static_cast<int>(*weaponSlot);
+      // Check if the weapon can be accompanied by a shield
+      const auto *item = bot_.selfState().inventory.getItem(*weaponSlot);
+      const storage::ItemEquipment *equipment = dynamic_cast<const storage::ItemEquipment*>(item);
+      if (equipment != nullptr) {
+        LOG(INFO) << "Weapon is equipment";
+        if (!equipment->itemInfo->twoHanded) {
+          LOG(INFO) << "Weapon is not twohanded";
+          const auto shieldSlot = getInventorySlotOfShield(bot_);
+          if (shieldSlot) {
+            LOG(INFO) << "Want shield at slot " << static_cast<int>(*shieldSlot);
+            // Inventory slot of shield for skill is `*shieldSlot`
+            castSkillBuilder.withShield(*shieldSlot);
+          } else {
+            LOG(INFO) << "No shield!";
+          }
+        } else {
+          LOG(INFO) << "Weapon " << equipment->refItemId << " is twohanded? " << static_cast<int>(equipment->itemInfo->twoHanded);
+        }
+      } else {
+        LOG(WARNING) << "Found item (supposed to be weapon) at slot " << static_cast<int>(*weaponSlot) << " is not a piece of equipment";
+      }
     }
 
-    // TODO: Shield too?
+    // TODO: Does the skill actually require a shield? If so, equip it.
 
     if (buffData.targetRequired) {
       // TODO: We assume this buff is for ourself
@@ -620,59 +685,10 @@ void Training::removeSkillsFromListWhichWeDontHave(SkillList &skillList) {
     return !bot_.selfState().haveSkill(skillId);
   });
   for (auto it=newEndIt; it!=skillList.end(); ++it) {
-    const auto maybeSkillName = bot_.gameData().getSkillNameIfExists(*it);
-    LOG(INFO) << "Dont have skill " << (maybeSkillName ? *maybeSkillName : std::string("UNKNOWN")) << ". Removing from list";
+    LOG(INFO) << "Dont have skill " << bot_.gameData().getSkillName(*it) << ". Removing from list";
   }
   skillList.erase(newEndIt, skillList.end());
 };
-
-void Training::buildBuffList() {
-  // TODO: This data should come from some config
-  imbueRefId_ = 8129; // 8129, "Thunder Phoenix Force"
-
-  // Create a list of buffs to use
-  trainingBuffs_ = SkillList {
-    8150, // Ghost Walk - God
-    8115, // Snow Shield - Intensify
-    8133, // God - Piercing Force
-    7980, // Final Guard of Ice
-    8183, // Concentration - 4th
-
-    // Cleric
-    // 11795, // Holy Recovery Division
-    // 11934, // Holy Spell
-
-    // Rogue
-    // 9516, // Crossbow Extreme
-  };
-
-  nonTrainingBuffs_ = SkillList {
-    8150, // Ghost Walk - God
-  };
-
-  // Move all buffs which require a weapon at all times to the end
-  // TODO: Can do better, move skills which require a weapon at all times AND have a cooldown shorter than the skill duration even further to the back of the list
-  auto sortBuffs = [&](auto &buffList) {
-    int backIndex = buffList.size()-1;
-    for (int i=0; i<backIndex; ++i) {
-      const auto &buffRefId = buffList[i];
-      const auto &buffData = bot_.gameData().skillData().getSkillById(buffRefId);
-      const auto buffRequiredWeapons = buffData.reqi();
-      if (!buffRequiredWeapons.empty()) {
-        // Buff requires a weapon at all times
-        LOG(INFO) << "Moving buffs around. Moving " << i << " to " << backIndex;
-        std::swap(buffList[i], buffList[backIndex]);
-        --backIndex;
-      }
-    }
-  };
-
-  removeSkillsFromListWhichWeDontHave(trainingBuffs_);
-  removeSkillsFromListWhichWeDontHave(nonTrainingBuffs_);
-
-  sortBuffs(trainingBuffs_);
-  sortBuffs(nonTrainingBuffs_);
-}
 
 std::optional<sro::scalar_types::ReferenceObjectId> Training::getNextBuffToCast(const SkillList &buffList) const {
   // Lets evaluate our buffs and see if any need to be reactivated
@@ -768,7 +784,7 @@ std::optional<Training::TargetAndAttackSkill> Training::getTargetAndAttackSkill(
       {sro::entity::MonsterRarity::kChampion, false},
       {sro::entity::MonsterRarity::kGeneral, false},
     };
-    bool isAttackingUs = (monster->targetGlobalId && *monster->targetGlobalId == bot_.selfState().globalId);
+    const bool isAttackingUs = (monster->targetGlobalId && *monster->targetGlobalId == bot_.selfState().globalId);
     int index=0;
     for (const auto &i : monsterPriorities) {
       if (i.rarity == monster->rarity && i.isAttacking == isAttackingUs) {
@@ -776,38 +792,61 @@ std::optional<Training::TargetAndAttackSkill> Training::getTargetAndAttackSkill(
       }
       ++index;
     }
-    LOG(INFO) << "Dont know prioritiy of this monster!";
+    LOG(WARNING) << "Dont know prioritiy of this monster!";
     return 100;
   };
 
   // Choose the highest priority monster (lowest priority value, tiebreak with which is closer)
   const auto currentPosition = bot_.selfState().position();
   const auto currentLevel = bot_.selfState().getCurrentLevel();
-  auto min_it = std::min_element(monsters.begin(), monsters.end(), [&](const entity::Monster *lhs, const entity::Monster *rhs) {
-    // First, prefer something closest to our level.
-    const auto lhsLevel = bot_.gameData().characterData().getCharacterById(lhs->refObjId).lvl;
-    const auto rhsLevel = bot_.gameData().characterData().getCharacterById(rhs->refObjId).lvl;
-    const auto levelDiffLhs = std::abs(currentLevel - lhsLevel);
-    const auto levelDiffRhs = std::abs(currentLevel - rhsLevel);
-    if (levelDiffLhs == levelDiffRhs) {
-      const auto lhsPriority = getPriorityBasedOnRarity(lhs);
-      const auto rhsPriority = getPriorityBasedOnRarity(rhs);
-      if (lhsPriority == rhsPriority) {
-        // If same priority, closer is better
-        return sro::position_math::calculateDistance2d(currentPosition, lhs->position()) < sro::position_math::calculateDistance2d(currentPosition, rhs->position());
+  auto tmpMonsterList = monsters;
+  std::sort(tmpMonsterList.begin(), tmpMonsterList.end(), [&](const entity::Monster *lhs, const entity::Monster *rhs) {
+    // Prefer monsters which are currently attacking us.
+    const bool lhsIsAttackingUs = lhs->targetGlobalId && *lhs->targetGlobalId == bot_.selfState().globalId;
+    const bool rhsIsAttackingUs = rhs->targetGlobalId && *rhs->targetGlobalId == bot_.selfState().globalId;
+    if (lhsIsAttackingUs == rhsIsAttackingUs) {
+      // Prefer monsters closest to our level.
+      const auto lhsLevel = bot_.gameData().characterData().getCharacterById(lhs->refObjId).lvl;
+      const auto rhsLevel = bot_.gameData().characterData().getCharacterById(rhs->refObjId).lvl;
+      const auto levelDiffLhs = std::abs(currentLevel - lhsLevel);
+      const auto levelDiffRhs = std::abs(currentLevel - rhsLevel);
+      if (levelDiffLhs == levelDiffRhs) {
+        // Prefer monsters with higher priority.
+        const auto lhsPriority = getPriorityBasedOnRarity(lhs);
+        const auto rhsPriority = getPriorityBasedOnRarity(rhs);
+        if (lhsPriority == rhsPriority) {
+          // Prefer closer monsters.
+          return sro::position_math::calculateDistance2d(currentPosition, lhs->position()) < sro::position_math::calculateDistance2d(currentPosition, rhs->position());
+        } else {
+          return lhsPriority < rhsPriority;
+        }
       } else {
-        return lhsPriority < rhsPriority;
+        return levelDiffLhs < levelDiffRhs;
       }
     } else {
-      return levelDiffLhs < levelDiffRhs;
+      return lhsIsAttackingUs;
     }
   });
-  // Choose the first attack
-  const auto *targetMonster = dynamic_cast<const entity::Monster*>(*min_it);
-  if (targetMonster == nullptr) {
-    throw std::runtime_error("Target is not a monster");
+  for (const entity::Monster *targetMonster : tmpMonsterList) {
+    // Choose the first attack which we can use
+    // If the skill applies a buff to the monster (like a DOT), make sure the monster doesn't already have the buff.
+    for (const auto skillId : availableSkills) {
+      bool canCast = true;
+      for (const auto buffId : targetMonster->activeBuffs()) {
+        if (buffId == skillId) {
+          LOG(INFO) << "  Target has buff " << buffId << " which is the same as the skill we want to cast " << skillId;
+          canCast = false;
+          break;
+        }
+      }
+      if (canCast) {
+        return TargetAndAttackSkill{targetMonster->globalId, skillId};
+      }
+    }
+
   }
-  return TargetAndAttackSkill{targetMonster->globalId, availableSkills.front()};
+  LOG(INFO) << "No available skill/target";
+  return {};
 }
 
 } // namespace state::machine

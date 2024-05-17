@@ -107,6 +107,8 @@ enum class EventCode {
   kChatReceived,
   kGameReset,
   kSetCurrentPositionAsTrainingCenter,
+  kResurrectOption,
+  kLeveledUpSkill,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -294,7 +296,8 @@ public:
 
 struct DealtDamage : public Event {
 public:
-  DealtDamage(sro::scalar_types::EntityGlobalId targetId, uint32_t damageAmount);
+  DealtDamage(sro::scalar_types::EntityGlobalId sourceId, sro::scalar_types::EntityGlobalId targetId, uint32_t damageAmount);
+  const sro::scalar_types::EntityGlobalId sourceId;
   const sro::scalar_types::EntityGlobalId targetId;
   const uint32_t damageAmount;
   virtual ~DealtDamage() = default;
@@ -417,6 +420,21 @@ public:
   explicit ConfigUpdated(const proto::config::Config &c);
   proto::config::Config config;
   virtual ~ConfigUpdated() = default;
+};
+
+struct ResurrectOption : public Event {
+public:
+  explicit ResurrectOption(packet::enums::ResurrectionOptionFlag option);
+  packet::enums::ResurrectionOptionFlag option;
+  virtual ~ResurrectOption() = default;
+};
+
+struct LeveledUpSkill : public Event {
+public:
+  explicit LeveledUpSkill(sro::scalar_types::ReferenceSkillId oldSkillId, sro::scalar_types::ReferenceSkillId newSkillId);
+  sro::scalar_types::ReferenceSkillId oldSkillRefId;
+  sro::scalar_types::ReferenceSkillId newSkillRefId;
+  virtual ~LeveledUpSkill() = default;
 };
 
 } // namespace event

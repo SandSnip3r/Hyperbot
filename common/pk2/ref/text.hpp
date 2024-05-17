@@ -1,12 +1,12 @@
-#ifndef PK2_REF_TEXT_ITEM_OR_SKILL_HPP_
-#define PK2_REF_TEXT_ITEM_OR_SKILL_HPP_
+#ifndef PK2_REF_TEXT_HPP_
+#define PK2_REF_TEXT_HPP_
 
 #include <string>
 #include <ostream>
 
 namespace pk2::ref {
 
-struct TextItemOrSkill {
+struct Text {
   int32_t service;
   std::string key;
   std::string korean;
@@ -25,8 +25,8 @@ struct TextItemOrSkill {
   std::string unkLang10;	
 };
 
-std::ostream& operator<<(std::ostream &stream, const TextItemOrSkill &itemOrSkill);
+std::ostream& operator<<(std::ostream &stream, const Text &itemOrSkill);
 
 } // namespace pk2::ref
 
-#endif // PK2_REF_TEXT_ITEM_OR_SKILL_HPP_
+#endif // PK2_REF_TEXT_HPP_

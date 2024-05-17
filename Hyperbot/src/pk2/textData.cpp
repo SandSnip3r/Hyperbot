@@ -1,4 +1,8 @@
-#include "textItemAndSkillData.hpp"
+#include "textData.hpp"
+
+#include <absl/algorithm/container.h>
+#include <absl/log/log.h>
+#include <absl/strings/str_join.h>
 
 namespace {
 
@@ -20,13 +24,32 @@ std::string removeCarriageReturnAndLineFeed(std::string str) {
 
 namespace pk2 {
 
-void TextItemAndSkillData::addItem(ref::TextItemOrSkill &&itemOrSkill) {
-  if (itemOrSkill.service == 0) {
+void TextData::addItem(ref::Text &&text) {
+  if (text.service == 0) {
     // Not in service, skipping
     return;
   }
   const std::string kItemPrefix{"SN_ITEM"};
   const std::string kSkillPrefix{"SN_SKILL"};
+  const std::string kMasteryPrefix{"UIIT_STT_"};
+  auto isMastery = [](std::string_view str){
+    static constexpr std::array arr = {
+      "UIIT_STT_WARRIOR",
+      "UIIT_STT_ROG",
+      "UIIT_STT_WIZARD",
+      "UIIT_STT_WARLOCK",
+      "UIIT_STT_BARD",
+      "UIIT_STT_CLERIC",
+      "UIIT_STT_MASTERY_VI",
+      "UIIT_STT_MASTERY_HEUK",
+      "UIIT_STT_MASTERY_PA",
+      "UIIT_STT_MASTERY_HAN",
+      "UIIT_STT_MASTERY_PUNG",
+      "UIIT_STT_MASTERY_HWA",
+      "UIIT_STT_MASTERY_GI"
+    };
+    return absl::c_linear_search(arr, str);
+  };
   auto startsWithPrefix = [](const std::string &str, const std::string &kPrefix) -> bool {
     if (str.size() < kPrefix.size()) {
       return false;
@@ -63,10 +86,12 @@ void TextItemAndSkillData::addItem(ref::TextItemOrSkill &&itemOrSkill) {
     return false;
   };
 
-  if (startsWithPrefix(itemOrSkill.key, kItemPrefix) && !isStudyOrDesc(itemOrSkill.key))  {
-    itemNames_.emplace(itemOrSkill.key, removeCarriageReturnAndLineFeed(itemOrSkill.english));
-  } else if (startsWithPrefix(itemOrSkill.key, kSkillPrefix) && !isStudyOrDesc(itemOrSkill.key)) {
-    skillNames_.emplace(itemOrSkill.key, removeCarriageReturnAndLineFeed(itemOrSkill.english));
+  if (startsWithPrefix(text.key, kItemPrefix) && !isStudyOrDesc(text.key))  {
+    itemNames_.emplace(text.key, removeCarriageReturnAndLineFeed(text.english));
+  } else if (startsWithPrefix(text.key, kSkillPrefix) && !isStudyOrDesc(text.key)) {
+    skillNames_.emplace(text.key, removeCarriageReturnAndLineFeed(text.english));
+  } else if (isMastery(text.key)) {
+    masteryNames_.emplace(text.key, removeCarriageReturnAndLineFeed(text.english));
   } else {
     // TODO: Other types can be added
     //  All possible types: SN_COS, SN_EU, SN_EVENT, SN_FORTRESS,
@@ -76,7 +101,7 @@ void TextItemAndSkillData::addItem(ref::TextItemOrSkill &&itemOrSkill) {
   }
 }
 
-const std::string& TextItemAndSkillData::getItemName(const std::string &nameStrID128) const {
+const std::string& TextData::getItemName(const std::string &nameStrID128) const {
   const auto it = itemNames_.find(nameStrID128);
   if (it == itemNames_.end()) {
     throw std::runtime_error("Could not find name for item \""+nameStrID128+"\"");
@@ -84,7 +109,7 @@ const std::string& TextItemAndSkillData::getItemName(const std::string &nameStrI
   return it->second;
 }
 
-const std::string& TextItemAndSkillData::getSkillName(const std::string &uiSkillName) const {
+const std::string& TextData::getSkillName(const std::string &uiSkillName) const {
   const auto it = skillNames_.find(uiSkillName);
   if (it == skillNames_.end()) {
     throw std::runtime_error("Could not find name for skill \""+uiSkillName+"\"");
@@ -92,7 +117,16 @@ const std::string& TextItemAndSkillData::getSkillName(const std::string &uiSkill
   return it->second;
 }
 
-std::optional<std::string> TextItemAndSkillData::getItemNameIfExists(const std::string &nameStrID128) const {
+const std::string& TextData::getMasteryName(const std::string &masteryNameCode) const {
+  const auto it = masteryNames_.find(masteryNameCode);
+  if (it == masteryNames_.end()) {
+    throw std::runtime_error("Could not find name for mastery \""+masteryNameCode+"\"");
+  }
+  return it->second;
+}
+
+
+std::optional<std::string> TextData::getItemNameIfExists(const std::string &nameStrID128) const {
   const auto it = itemNames_.find(nameStrID128);
   if (it == itemNames_.end()) {
     return std::nullopt;
@@ -100,12 +134,21 @@ std::optional<std::string> TextItemAndSkillData::getItemNameIfExists(const std::
   return it->second;
 }
 
-std::optional<std::string> TextItemAndSkillData::getSkillNameIfExists(const std::string &uiSkillName) const {
+std::optional<std::string> TextData::getSkillNameIfExists(const std::string &uiSkillName) const {
   const auto it = skillNames_.find(uiSkillName);
   if (it == skillNames_.end()) {
     return std::nullopt;
   }
   return it->second;
 }
+
+std::optional<std::string> TextData::getMasteryNameIfExists(const std::string &masteryNameCode) const {
+  const auto it = masteryNames_.find(masteryNameCode);
+  if (it == masteryNames_.end()) {
+    return std::nullopt;
+  }
+  return it->second;
+}
+
 
 } // namespace pk2

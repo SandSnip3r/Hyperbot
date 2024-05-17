@@ -178,6 +178,24 @@ void TalkingToStorageNpc::storeItems(const event::Event *event) {
     const auto slotsWithThisItemType = bot_.selfState().inventory.findItemsWithTypeId(itemTypeToStore);
     slotsWithItemsToStore.insert(slotsWithItemsToStore.end(), slotsWithThisItemType.begin(), slotsWithThisItemType.end());
   }
+  // Also, try to store things which are already in storage.
+  for (uint8_t slot=0; slot<bot_.selfState().inventory.size(); ++slot) {
+    if (bot_.selfState().inventory.hasItem(slot)) {
+      // Check if any slot in storage matches this item
+      for (uint8_t storageSlot=0; storageSlot<bot_.selfState().storage.size(); ++storageSlot) {
+        if (bot_.selfState().storage.hasItem(storageSlot)) {
+          const auto *inventoryItem = bot_.selfState().inventory.getItem(slot);
+          const auto *storageItem = bot_.selfState().storage.getItem(storageSlot);
+          if (inventoryItem->refItemId == storageItem->refItemId) {
+            // Items match. We want to store this item.
+            VLOG(1) << "Want to store " << bot_.gameData().getItemName(inventoryItem->refItemId) << " because items like it are already in storage.";
+            slotsWithItemsToStore.push_back(slot);
+            break;
+          }
+        }
+      }
+    }
+  }
   std::sort(slotsWithItemsToStore.begin(), slotsWithItemsToStore.end());
   if (!slotsWithItemsToStore.empty()) {
     // Try to store first item

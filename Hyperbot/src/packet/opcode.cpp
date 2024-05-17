@@ -111,8 +111,8 @@ std::string toString(Opcode opcode) {
   if (opcode == Opcode::CLIENT_CHARACTER_STATE) {
     return "CLIENT_CHARACTER_STATE";
   }
-  if (opcode == Opcode::CLIENT_RESPAWN) {
-    return "CLIENT_RESPAWN";
+  if (opcode == Opcode::kClientAgentCharacterResurrect) {
+    return "kClientAgentCharacterResurrect";
   }
   if (opcode == Opcode::CLIENT_MASTERYUPDATE) {
     return "CLIENT_MASTERYUPDATE";
@@ -303,11 +303,11 @@ std::string toString(Opcode opcode) {
   if (opcode == Opcode::kServerAgentEntityUpdateExperience) {
     return "kServerAgentEntityUpdateExperience";
   }
-  if (opcode == Opcode::SERVER_MASTERYUPDATE) {
-    return "SERVER_MASTERYUPDATE";
+  if (opcode == Opcode::kServerAgentSkillMasteryLearnResponse) {
+    return "kServerAgentSkillMasteryLearnResponse";
   }
-  if (opcode == Opcode::SERVER_SKILLUPDATE) {
-    return "SERVER_SKILLUPDATE";
+  if (opcode == Opcode::kServerAgentSkillLearnResponse) {
+    return "kServerAgentSkillLearnResponse";
   }
   if (opcode == Opcode::kServerAgentChatUpdate) {
     return "kServerAgentChatUpdate";
@@ -360,8 +360,8 @@ std::string toString(Opcode opcode) {
   if (opcode == Opcode::kServerAgentBuffRemove) {
     return "kServerAgentBuffRemove";
   }
-  if (opcode == Opcode::SERVER_DEAD) {
-    return "SERVER_DEAD";
+  if (opcode == Opcode::kServerAgentResurrectOption) {
+    return "kServerAgentResurrectOption";
   }
   if (opcode == Opcode::kServerAgentAbnormalInfo) {
     return "kServerAgentAbnormalInfo";

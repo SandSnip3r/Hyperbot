@@ -11,7 +11,7 @@
 #include "shopData.hpp"
 #include "skillData.hpp"
 #include "teleportData.hpp"
-#include "textItemAndSkillData.hpp"
+#include "textData.hpp"
 #include "textZoneNameData.hpp"
 #include "../../../common/pk2/divisionInfo.hpp"
 
@@ -41,13 +41,15 @@ public:
   const MagicOptionData& magicOptionData() const;
   const LevelData& levelData() const;
   const RefRegion& refRegion() const;
-  const TextItemAndSkillData& textItemAndSkillData() const;
+  const TextData& textData() const;
   const TextZoneNameData& textZoneNameData() const;
   const TeleportData& teleportData() const;
   const sro::navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
   const RegionInfo& regionInfo() const;
 
-  std::optional<std::string> getSkillNameIfExists(sro::scalar_types::ReferenceObjectId skillRefId) const;
+  std::string getSkillName(sro::scalar_types::ReferenceObjectId skillRefId) const;
+  std::string getItemName(sro::scalar_types::ReferenceObjectId itemRefId) const;
+  std::string getMasteryName(pk2::ref::MasteryId masteryId) const;
 private:
   std::mutex printMutex_;
   uint16_t gatewayPort_;
@@ -60,7 +62,7 @@ private:
   MagicOptionData magicOptionData_;
   LevelData levelData_;
   RefRegion refRegion_;
-  TextItemAndSkillData textItemAndSkillData_;
+  TextData textData_;
   TextZoneNameData textZoneNameData_;
   TeleportData teleportData_;
 
@@ -87,7 +89,8 @@ private:
   void parseRefRegion(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseTextData(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseTextZoneName(sro::pk2::Pk2ReaderModern &pk2Reader);
-  void parseTextItemAndSkill(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseText(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseTextUiSystem(sro::pk2::Pk2ReaderModern &pk2Reader);
 };
 
 } // namespace pk2

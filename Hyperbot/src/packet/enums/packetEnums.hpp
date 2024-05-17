@@ -449,6 +449,15 @@ enum class AlchemyType : uint8_t {
   kSocketRemove = 10 //different alchemyAction
 };
 
+enum class ResurrectionOptionFlag : uint8_t {
+  kAtSpecifiedPoint = 1, // 1 = Ressurect at the specified point
+  kAtPresentPoint = 2,   // 2 = Ressurect at the present point.
+  kNormal = 4,
+  // 02 = PVP / CTF
+  // 04 = Normal
+  // 06 = Fortress
+};
+
 std::ostream& operator<<(std::ostream &stream, const ActionState &enumVal);
 std::ostream& operator<<(std::ostream &stream, const CommandType &enumVal);
 std::ostream& operator<<(std::ostream &stream, const ActionType &enumVal);

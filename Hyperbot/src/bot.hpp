@@ -16,6 +16,8 @@
 #include <optional>
 #include <vector>
 
+// TODO: Principal question: When a new config is received, reinitialize the entire StateMachine tree
+//    vs have each state machine constantly pulling realtime values from the config.
 class Bot {
 public:
   Bot(const config::Config &config,
@@ -90,7 +92,6 @@ private:
   void handleStatesChanged();
 
   // Skills
-  void handleSkillBegan(const event::SkillBegan &event);
   void handleSkillEnded(const event::SkillEnded &event);
   void handleSkillCooldownEnded(const event::SkillCooldownEnded &event);
 
@@ -103,6 +104,7 @@ private:
   void handleItemCooldownEnded(const event::ItemCooldownEnded &event);
   void handleGameReset(const event::Event *event);
   void setCurrentPositionAsTrainingCenter();
+  void handleLeveledUpSkill(const event::LeveledUpSkill &event);
 
 public:
   bool needToGoToTown() const;

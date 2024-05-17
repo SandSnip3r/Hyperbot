@@ -72,9 +72,11 @@ void StatAggregator::handleEvent(const event::Event *event) {
       serializeKilledEntity(entity, *entityKilledEvent);
       writeEventToStatFile(protoEvent);
     } else if (const auto *dealtDamage = dynamic_cast<const event::DealtDamage*>(event)) {
-      auto protoEvent = createStatEvent();
-      protoEvent.set_damage_dealt(dealtDamage->damageAmount);
-      writeEventToStatFile(protoEvent);
+      if (dealtDamage->sourceId == worldState_.selfState().globalId) {
+        auto protoEvent = createStatEvent();
+        protoEvent.set_damage_dealt(dealtDamage->damageAmount);
+        writeEventToStatFile(protoEvent);
+      }
     } else if (eventCode == event::EventCode::kCharacterSkillPointsUpdated) {
       auto protoEvent = createStatEvent();
       protoEvent.set_skillpoint_updated(worldState_.selfState().getSkillPoints()*400 + worldState_.selfState().getCurrentSpExperience());

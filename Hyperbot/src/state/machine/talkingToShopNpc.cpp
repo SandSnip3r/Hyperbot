@@ -64,7 +64,7 @@ void TalkingToShopNpc::figureOutWhatToBuy() {
     }
     uint16_t countToBuy = shoppingItemIdCountPair.second - ownedCountOfItem;
     const auto &itemData = bot_.gameData().itemData().getItemById(itemRefId);
-    std::string itemName = (bot_.gameData().textItemAndSkillData().getItemNameIfExists(itemData.nameStrID128) ? *bot_.gameData().textItemAndSkillData().getItemNameIfExists(itemData.nameStrID128) : std::string("UNKNOWN"));
+    const std::string itemName = bot_.gameData().getItemName(itemRefId);
     // Figure out how many we can buy based on current gold and price.
     // TODO: Price might instead come from the _RefPricePolicyOfItem table.
     const auto prev = countToBuy;

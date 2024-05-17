@@ -79,6 +79,8 @@ public:
   void setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level);
   void setMasteriesAndSkills(const std::vector<packet::structures::Mastery> &masteries,
                              const std::vector<packet::structures::Skill> &skills);
+  void learnSkill(sro::scalar_types::ReferenceSkillId skillId);
+  void learnMastery(sro::scalar_types::ReferenceMasteryId masteryId, uint8_t masteryLevel);
 
   void setGold(uint64_t goldAmount);
   void setStorageGold(uint64_t goldAmount);

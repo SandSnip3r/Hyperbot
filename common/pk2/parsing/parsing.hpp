@@ -16,7 +16,7 @@
 #include "../ref/shopTab.hpp"
 #include "../ref/skill.hpp"
 #include "../ref/teleport.hpp"
-#include "../ref/textItemOrSkill.hpp"
+#include "../ref/text.hpp"
 #include "../ref/textZoneName.hpp"
 
 #include <filesystem>
@@ -213,12 +213,12 @@ pk2::ref::MappingShopWithTab parseMappingShopWithTabLine(const std::string &line
 // [return]       A populated TextZoneName object
 pk2::ref::TextZoneName parseTextZoneNameLine(const std::string &line);
 
-// Parses string representing a line of text from textdata_equip&skill.txt or textdata_object.txt in the Media.pk2 into a TextItemOrSkill object
+// Parses string representing a line of text from textdata_equip&skill.txt or textdata_object.txt in the Media.pk2 into a Text object
 //  Note: This isn't the only type of data in these files
 //
 // [param] line   A line of text
-// [return]       A populated TextItemOrSkill object
-pk2::ref::TextItemOrSkill parseTextItemOrSkillLine(const std::string &line);
+// [return]       A populated Text object
+pk2::ref::Text parseTextLine(const std::string &line);
 
 pk2::ref::Mastery parseMasteryLine(const std::string &line);
 

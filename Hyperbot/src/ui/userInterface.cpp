@@ -569,7 +569,7 @@ void UserInterface::broadcastItemUpdateForSlot(proto::broadcast::ItemLocation it
       // Not an expendable, only 1
       quantity = 1;
     }
-    itemName = gameData_.textItemAndSkillData().getItemName(item->itemInfo->nameStrID128);
+    itemName = gameData_.getItemName(item->refItemId);
   }
   broadcastItemUpdate(itemLocation, slotIndex, quantity, itemName);
 }
