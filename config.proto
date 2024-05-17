@@ -14,6 +14,9 @@ message AutopotionConfig {
 message TrainingConfig {
   position.Position center = 1;
   double radius = 2;
+  repeated uint32 training_attack_skill_ids = 3;
+  repeated uint32 training_buff_skill_ids = 4;
+  repeated uint32 nontraining_buff_skill_ids = 5;
 }
 
 message CharacterConfig {
