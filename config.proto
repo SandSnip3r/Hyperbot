@@ -9,6 +9,8 @@ message AutopotionConfig {
   double mp_threshold = 2;
   double vigor_hp_threshold = 3;
   double vigor_mp_threshold = 4;
+  bool use_universal_pills = 5;
+  bool use_purification_pills = 6;
 }
 
 message TrainingConfig {
