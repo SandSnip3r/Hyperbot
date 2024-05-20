@@ -102,11 +102,11 @@ std::string toString(Opcode opcode) {
   if (opcode == Opcode::kClientAgentActionCommandRequest) {
     return "kClientAgentActionCommandRequest";
   }
-  if (opcode == Opcode::CLIENT_STR_UPDATE) {
-    return "CLIENT_STR_UPDATE";
+  if (opcode == Opcode::kClientAgentCharacterIncreaseStrRequest) {
+    return "kClientAgentCharacterIncreaseStrRequest";
   }
-  if (opcode == Opcode::CLIENT_INT_UPDATE) {
-    return "CLIENT_INT_UPDATE";
+  if (opcode == Opcode::kClientAgentCharacterIncreaseIntRequest) {
+    return "kClientAgentCharacterIncreaseIntRequest";
   }
   if (opcode == Opcode::CLIENT_CHARACTER_STATE) {
     return "CLIENT_CHARACTER_STATE";
@@ -273,11 +273,11 @@ std::string toString(Opcode opcode) {
   if (opcode == Opcode::kServerAgentCharacterUpdateStats) {
     return "kServerAgentCharacterUpdateStats";
   }
-  if (opcode == Opcode::SERVER_STR_UPDATE) {
-    return "SERVER_STR_UPDATE";
+  if (opcode == Opcode::kServerAgentCharacterIncreaseStrResponse) {
+    return "kServerAgentCharacterIncreaseStrResponse";
   }
-  if (opcode == Opcode::SERVER_INT_UPDATE) {
-    return "SERVER_INT_UPDATE";
+  if (opcode == Opcode::kServerAgentCharacterIncreaseIntResponse) {
+    return "kServerAgentCharacterIncreaseIntResponse";
   }
   if (opcode == Opcode::kServerAgentEntityUpdateState) {
     return "kServerAgentEntityUpdateState";

@@ -17,6 +17,7 @@ Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
   stateMachineCreated(kName);
   buildBuffList();
   buildShoppingList();
+  buildSellList();
   buildNpcList();
 
   // Figure out which town we'll townloop in
@@ -66,7 +67,13 @@ void Townlooping::onUpdate(const event::Event *event) {
       if (npcsToVisit_[currentNpcIndex_] == Npc::kStorage) {
         setChildStateMachine<TalkingToStorageNpc>();
       } else {
-        setChildStateMachine<TalkingToShopNpc>(npcsToVisit_[currentNpcIndex_], shoppingList_);
+        if (!soldItems_) {
+          // Only sell items to the first NPC
+          setChildStateMachine<TalkingToShopNpc>(npcsToVisit_[currentNpcIndex_], shoppingList_, slotsToSell_);
+          soldItems_ = true;
+        } else {
+          setChildStateMachine<TalkingToShopNpc>(npcsToVisit_[currentNpcIndex_], shoppingList_);
+        }
       }
       onUpdate(event);
       return;
@@ -216,6 +223,27 @@ void Townlooping::buildShoppingList() {
     // { 62, 1000 }, //ITEM_ETC_AMMO_ARROW_01 (Arrow)
     // { 3909, 1 }, //ITEM_COS_C_DHORSE1 (Ironclad Horse)
   };
+}
+
+void Townlooping::buildSellList() {
+  // TODO: This should be based on a botting config
+  static const std::vector<type_id::TypeCategory> kTypesToSell = {
+    type_id::categories::kAmmo
+  };
+  slotsToSell_.clear();
+  const auto &inventory = bot_.selfState().inventory;
+  for (sro::scalar_types::StorageIndexType i=0; i<inventory.size(); ++i) {
+    if (inventory.hasItem(i)) {
+      if (inventory.getItem(i)->isOneOf(kTypesToSell)) {
+        uint16_t quantity{1};
+        if (const auto *expItem = dynamic_cast<const storage::ItemExpendable*>(inventory.getItem(i))) {
+          quantity = expItem->quantity;
+        }
+        LOG(INFO) << "Want to sell " << bot_.gameData().getItemName(inventory.getItem(i)->refItemId) << "x" << quantity << " at slot " << static_cast<int>(i);
+        slotsToSell_.push_back(i);
+      }
+    }
+  }
 }
 
 void Townlooping::buildNpcList() {

@@ -22,6 +22,7 @@ public:
   static PacketContainer withinInventoryPacket(sro::scalar_types::StorageIndexType srcSlot, sro::scalar_types::StorageIndexType destSlot, uint16_t quantity);
   static PacketContainer withinStoragePacket(sro::scalar_types::StorageIndexType srcSlot, sro::scalar_types::StorageIndexType destSlot, uint16_t quantity, uint32_t npcGId);
   static PacketContainer buyPacket(uint8_t tabIndex, uint8_t itemIndex, uint16_t quantity, uint32_t npcGId);
+  static PacketContainer sellPacket(uint8_t itemIndex, uint16_t quantity, uint32_t npcGId);
   static PacketContainer dropItem(sro::scalar_types::StorageIndexType slot);
 };
 

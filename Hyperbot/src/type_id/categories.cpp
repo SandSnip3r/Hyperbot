@@ -51,6 +51,7 @@ const TypeCategory kItem{static_cast<uint8_t>(3)};
     const TypeCategory kScroll{kExpendable.subCategory(3)};
       const TypeCategory kReturnScroll{kScroll.subCategory(1)};
       const TypeCategory kReverseReturnScroll{kScroll.subCategory(3)};
+    const TypeCategory kAmmo{kExpendable.subCategory(4)};
     const TypeCategory kCurrency{kExpendable.subCategory(5)};
       const TypeCategory kGold{kCurrency.subCategory(0)};
     const TypeCategory kSpecialGoods{kExpendable.subCategory(8)};

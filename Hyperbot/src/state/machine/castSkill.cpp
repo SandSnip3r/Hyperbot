@@ -49,9 +49,6 @@ std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &s
   }
   // Currently equipped weapon (if any) cannot cast this skill, search through our inventory for a weapon which can cast this skill
   std::vector<uint8_t> possibleWeaponSlots = bot.selfState().inventory.findItemsOfCategory(possibleWeapons);
-  LOG(INFO) << absl::StreamFormat("Possible slots with weapon for skill: [ %s ]", absl::StrJoin(possibleWeaponSlots, ", ", [](std::string *out, auto slot){
-    out->append(std::to_string(slot));
-  }));
   if (possibleWeaponSlots.empty()) {
     throw std::runtime_error("We have no weapon that can cast this skill");
   }

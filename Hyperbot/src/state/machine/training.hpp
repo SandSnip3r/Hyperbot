@@ -28,6 +28,7 @@ private:
   bool done_{false};
   bool wantToAttackMonster(const entity::Monster &monster) const;
   void getSkillsFromConfig();
+  void resetSkillLists();
   using SkillList = std::vector<sro::scalar_types::ReferenceObjectId>;
   using ItemList = std::vector<const entity::Item*>;
   using MonsterList = std::vector<const entity::Monster*>;
@@ -39,6 +40,7 @@ private:
     sro::scalar_types::ReferenceObjectId skillId;
   };
   std::optional<TargetAndAttackSkill> getTargetAndAttackSkill(const MonsterList &monsters) const;
+  std::unique_ptr<StateMachine> applyStatPointsChildStateMachine_;
   const std::unique_ptr<entity::Geometry> trainingAreaGeometry_;
   SkillList trainingBuffs_;
   SkillList nonTrainingBuffs_;

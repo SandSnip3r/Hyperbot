@@ -1131,7 +1131,8 @@ void PacketProcessor::serverAgentEntityUpdatePointsReceived(const packet::parsin
     worldState_.selfState().setSkillPoints(packet.skillPoints());
   } else if (packet.updatePointsType() == packet::enums::UpdatePointsType::kHwan) {
     worldState_.selfState().setHwanPoints(packet.hwanPoints());
-    eventBroker_.publishEvent(event::EventCode::kHwanPointsUpdated);
+  } else if (packet.updatePointsType() == packet::enums::UpdatePointsType::kStatPoint) {
+    worldState_.selfState().setAvailableStatPoints(packet.statPoints());
   }
 }
 

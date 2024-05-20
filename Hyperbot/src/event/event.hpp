@@ -49,6 +49,7 @@ enum class EventCode {
   kGuildStorageGoldUpdated,
   kCharacterLevelUpdated,
   kCharacterSkillPointsUpdated,
+  kCharacterAvailableStatPointsUpdated,
   kCharacterExperienceUpdated,
   kEnteredNewRegion,
   kEntitySpawned,

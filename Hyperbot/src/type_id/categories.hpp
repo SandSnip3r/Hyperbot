@@ -56,6 +56,7 @@ extern const TypeCategory kItem;
     extern const TypeCategory kScroll;
       extern const TypeCategory kReturnScroll;
       extern const TypeCategory kReverseReturnScroll;
+    extern const TypeCategory kAmmo;
     extern const TypeCategory kCurrency;
       extern const TypeCategory kGold;
     extern const TypeCategory kSpecialGoods;

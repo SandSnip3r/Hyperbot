@@ -6,6 +6,7 @@
 #include "helpers.hpp"
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 #include "packet/building/clientAgentCharacterUpdateBodyStateRequest.hpp"
+#include "state/machine/applyStatPoints.hpp"
 #include "state/machine/pickItem.hpp"
 #include "state/machine/pickItemWithCos.hpp"
 #include "type_id/categories.hpp"
@@ -59,6 +60,13 @@ sro::Position randomPointInGeometry(const entity::Geometry *geometry) {
 } // anonymous namespace
 
 namespace state::machine {
+
+void Training::resetSkillLists() {
+  skillsToUse_.clear();
+  trainingBuffs_.clear();
+  nonTrainingBuffs_.clear();
+  imbueRefId_.reset();
+}
 
 void Training::getSkillsFromConfig() {
   const auto *currentCharacterConfig = bot_.currentCharacterConfig();
@@ -205,10 +213,27 @@ void Training::onUpdate(const event::Event *event) {
           return;
         }
       }
+    } else if (const auto *configUpdated = dynamic_cast<const event::ConfigUpdated*>(event)) {
+      LOG(INFO) << "Config updated, resetting skills and re-fetching from config";
+      resetSkillLists();
+      getSkillsFromConfig();
+    } else if (event->eventCode == event::EventCode::kCharacterAvailableStatPointsUpdated) {
+      if (!applyStatPointsChildStateMachine_ && bot_.selfState().getAvailableStatPoints() > 0) {
+        LOG(INFO) << "Constructing state machine to apply " << bot_.selfState().getAvailableStatPoints() << " stat points to int";
+        applyStatPointsChildStateMachine_ = std::make_unique<ApplyStatPoints>(bot_, std::vector<StatPointType>(bot_.selfState().getAvailableStatPoints(), StatPointType::kInt));
+      }
     }
   }
   // Mark this event as handled, so that if we recurse, we dont handle it again
   RAII raii(handledEvents_, event);
+
+  if (applyStatPointsChildStateMachine_) {
+    applyStatPointsChildStateMachine_->onUpdate(event);
+    if (applyStatPointsChildStateMachine_->done()) {
+      LOG(INFO) << "Done applying stat points";
+      applyStatPointsChildStateMachine_.reset();
+    }
+  }
 
   if (childState_) {
     // Either casting a skill, picking up an item ourself, picking up an item with COS, or walking somewhere.
@@ -530,24 +555,16 @@ bool Training::checkBuffs(const SkillList &buffList) {
       // Inventory slot of weapon for skill is `*weaponSlot`
       castSkillBuilder.withWeapon(*weaponSlot);
 
-      LOG(INFO) << "Want to equip weapon at slot " << static_cast<int>(*weaponSlot);
       // Check if the weapon can be accompanied by a shield
       const auto *item = bot_.selfState().inventory.getItem(*weaponSlot);
       const storage::ItemEquipment *equipment = dynamic_cast<const storage::ItemEquipment*>(item);
       if (equipment != nullptr) {
-        LOG(INFO) << "Weapon is equipment";
         if (!equipment->itemInfo->twoHanded) {
-          LOG(INFO) << "Weapon is not twohanded";
           const auto shieldSlot = getInventorySlotOfShield(bot_);
           if (shieldSlot) {
-            LOG(INFO) << "Want shield at slot " << static_cast<int>(*shieldSlot);
             // Inventory slot of shield for skill is `*shieldSlot`
             castSkillBuilder.withShield(*shieldSlot);
-          } else {
-            LOG(INFO) << "No shield!";
           }
-        } else {
-          LOG(INFO) << "Weapon " << equipment->refItemId << " is twohanded? " << static_cast<int>(equipment->itemInfo->twoHanded);
         }
       } else {
         LOG(WARNING) << "Found item (supposed to be weapon) at slot " << static_cast<int>(*weaponSlot) << " is not a piece of equipment";
@@ -834,7 +851,6 @@ std::optional<Training::TargetAndAttackSkill> Training::getTargetAndAttackSkill(
       bool canCast = true;
       for (const auto buffId : targetMonster->activeBuffs()) {
         if (buffId == skillId) {
-          LOG(INFO) << "  Target has buff " << buffId << " which is the same as the skill we want to cast " << skillId;
           canCast = false;
           break;
         }

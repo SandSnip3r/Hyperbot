@@ -5,6 +5,7 @@
 #include "packet/building/clientAgentActionSelectRequest.hpp"
 #include "packet/building/clientAgentActionTalkRequest.hpp"
 #include "packet/building/clientAgentInventoryRepairRequest.hpp"
+#include "sellingItems.hpp"
 
 #include <silkroad_lib/position_math.h>
 
@@ -14,7 +15,7 @@
 
 namespace state::machine {
 
-TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList) : StateMachine(bot), npc_(npc), shoppingList_(shoppingList) {
+TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell) : StateMachine(bot), npc_(npc), shoppingList_(shoppingList), slotsToSell_(slotsToSell) {
   stateMachineCreated(kName);
   // We know we are near our npc, lets find the closest npc to us.
   // TODO: This won't always work. We don't need to get very close to an npc to talk to them, we could be closer to another npc.
@@ -115,7 +116,14 @@ bool TalkingToShopNpc::doneBuyingItems() const {
   if (itemsToBuy_.empty()) {
     return true;
   }
-  return childState_ && childState_->done();
+  return doneBuyingItems_;
+}
+
+bool TalkingToShopNpc::doneSellingItems() const {
+  if (slotsToSell_.empty()) {
+    return true;
+  }
+  return doneSellingItems_;
 }
 
 bool TalkingToShopNpc::needToRepair() const {
@@ -151,7 +159,7 @@ bool TalkingToShopNpc::needToRepair() const {
 }
 
 bool TalkingToShopNpc::doneWithNpc() const {
-  return doneBuyingItems() && !needToRepair();
+  return doneBuyingItems() && doneSellingItems() && !needToRepair();
 }
 
 void TalkingToShopNpc::onUpdate(const event::Event *event) {
@@ -160,7 +168,7 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
     return;
   }
 
-  if (bot_.selfState().talkingGidAndOption) {
+  if (bot_.selfState().talkingGidAndOption) { // TODO: Move this state out to the state machine, I think.
     // We are talking to an Npc
     if (bot_.selfState().talkingGidAndOption->first != npcGid_) {
       throw std::runtime_error("We're not talking to the potion Npc that we thought we were");
@@ -171,17 +179,33 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
     if (waitingForTalkResponse_) {
       // Successfully began talking to Npc
       waitingForTalkResponse_ = false;
-      setChildStateMachine<BuyingItems>(itemsToBuy_);
+      if (!slotsToSell_.empty()) {
+        // First, sell items
+        setChildStateMachine<SellingItems>(slotsToSell_);
+      } else {
+        setChildStateMachine<BuyingItems>(itemsToBuy_);
+      }
     }
 
     // Now that we are talking to the npc, start buying items
     if (!childState_) {
-      throw std::runtime_error("If we reach this point, the state must be BuyingItems");
+      throw std::runtime_error("If we reach this point, the state must be SellingItems or BuyingItems");
     }
     childState_->onUpdate(event);
     if (!childState_->done()) {
-      // Still buying items, do not continue
+      // Still selling or buying items, do not continue
       return;
+    }
+    // Done with child state machine
+    if (dynamic_cast<const SellingItems*>(childState_.get()) != nullptr) {
+      // Finished selling items, switch to buying items.
+      doneSellingItems_ = true;
+      setChildStateMachine<BuyingItems>(itemsToBuy_);
+      onUpdate(event);
+      return;
+    } else {
+      doneBuyingItems_ = true;
+      childState_.reset();
     }
 
     // Done buying items at this point
@@ -207,7 +231,7 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
       }
 
       // We're either about to buy items or done buying items
-      if (doneBuyingItems()) {
+      if (doneBuyingItems() && doneSellingItems()) {
         // We must deselect the npc
         if (waitingOnDeselectionResponse_) {
           // Already deselected, nothing to do

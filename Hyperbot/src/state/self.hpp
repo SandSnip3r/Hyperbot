@@ -56,6 +56,7 @@ public:
   void setCurrentLevel(uint8_t currentLevel);
   void setHwanLevel(uint8_t hwanLevel);
   void setSkillPoints(uint64_t skillPoints);
+  void setAvailableStatPoints(uint16_t statPoints);
   void setCurrentExpAndSpExp(uint32_t currentExperience, uint32_t currentSpExperience);
 
   void setHpPotionEventId(const broker::TimerManager::TimerId &timerId);
@@ -98,6 +99,7 @@ public:
   uint8_t getCurrentLevel() const;
   uint8_t hwanLevel() const;
   uint64_t getSkillPoints() const;
+  uint16_t getAvailableStatPoints() const;
   uint32_t getCurrentExperience() const;
   uint32_t getCurrentSpExperience() const;
 
@@ -178,6 +180,7 @@ private:
   uint64_t currentExperience_;
   uint32_t currentSpExperience_;
   uint32_t skillPoints_;
+  uint16_t availableStatPoints_;
 public:
   uint32_t jId;
   Race race_;

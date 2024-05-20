@@ -14,7 +14,7 @@ ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet
   currentSpExperience_ = stream.Read<uint32_t>();
   gold_ = stream.Read<uint64_t>();
   skillPoints_ = stream.Read<uint32_t>();
-  uint16_t remainStatPoint = stream.Read<uint16_t>();
+  stream.Read(availableStatPoints_);
   stream.Read(hwanPoints_);
   uint32_t gatheredExpPoint = stream.Read<uint32_t>();
   hp_ = stream.Read<uint32_t>();

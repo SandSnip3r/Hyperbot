@@ -27,6 +27,8 @@ private:
     kConstantinople
   };
 
+  bool soldItems_{false};
+  std::vector<sro::scalar_types::StorageIndexType> slotsToSell_;
   std::map<uint32_t, int> shoppingList_;
   Town currentTown_;
   std::vector<Npc> npcsToVisit_;
@@ -38,6 +40,7 @@ private:
 
   void buildBuffList();
   void buildShoppingList();
+  void buildSellList();
   void buildNpcList();
   std::optional<sro::scalar_types::ReferenceObjectId> getNextBuffToCast() const;
   sro::Position positionOfNpc(Npc npc) const;

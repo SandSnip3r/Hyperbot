@@ -26,6 +26,7 @@ public:
   uint32_t currentSpExperience() const;
   uint64_t gold() const;
   uint32_t skillPoints() const;
+  uint16_t availableStatPoints() const;
   uint8_t hwanPoints() const;
   uint32_t entityUniqueId() const;
   uint32_t hp() const;
@@ -54,6 +55,7 @@ private:
   uint32_t currentSpExperience_;
   uint64_t gold_;
   uint32_t skillPoints_;
+  uint16_t availableStatPoints_;
   uint8_t hwanPoints_;
   uint32_t entityUniqueId_;
   uint32_t hp_;

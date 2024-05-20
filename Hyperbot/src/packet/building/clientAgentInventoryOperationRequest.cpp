@@ -57,7 +57,14 @@ PacketContainer ClientAgentInventoryOperationRequest::buyPacket(uint8_t tabIndex
   stream.Write<>(npcGId);
   return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
 }
-
+PacketContainer ClientAgentInventoryOperationRequest::sellPacket(uint8_t itemIndex, uint16_t quantity, uint32_t npcGId) {
+  StreamUtility stream;
+  stream.Write(packet::enums::ItemMovementType::kSellItem);
+  stream.Write<>(itemIndex);
+  stream.Write<>(quantity);
+  stream.Write<>(npcGId);
+  return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
+}
 PacketContainer ClientAgentInventoryOperationRequest::dropItem(sro::scalar_types::StorageIndexType slot) {
   StreamUtility stream;
   stream.Write(packet::enums::ItemMovementType::kDropItem);

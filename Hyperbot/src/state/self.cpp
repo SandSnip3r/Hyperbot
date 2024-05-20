@@ -65,6 +65,11 @@ void Self::setSkillPoints(uint64_t skillPoints) {
   eventBroker_.publishEvent(event::EventCode::kCharacterSkillPointsUpdated);
 }
 
+void Self::setAvailableStatPoints(uint16_t statPoints) {
+  availableStatPoints_ = statPoints;
+  eventBroker_.publishEvent(event::EventCode::kCharacterAvailableStatPointsUpdated);
+}
+
 void Self::setCurrentExpAndSpExp(uint32_t currentExperience, uint32_t currentSpExperience) {
   currentExperience_ = currentExperience;
   currentSpExperience_ = currentSpExperience;
@@ -82,6 +87,7 @@ void Self::setBodyState(packet::enums::BodyState bodyState) {
 
 void Self::setHwanPoints(uint8_t hwanPoints) {
   hwanPoints_ = hwanPoints;
+  eventBroker_.publishEvent(event::EventCode::kHwanPointsUpdated);
 }
 
 void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) {
@@ -361,6 +367,10 @@ uint8_t Self::hwanLevel() const {
 
 uint64_t Self::getSkillPoints() const {
   return skillPoints_;
+}
+
+uint16_t Self::getAvailableStatPoints() const {
+  return availableStatPoints_;
 }
 
 uint32_t Self::getCurrentExperience() const {

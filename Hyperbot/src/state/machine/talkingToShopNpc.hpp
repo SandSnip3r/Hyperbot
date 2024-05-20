@@ -11,7 +11,7 @@ namespace state::machine {
 
 class TalkingToShopNpc : public StateMachine {
 public:
-  TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList);
+  TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell = {});
   ~TalkingToShopNpc() override;
   void onUpdate(const event::Event *event) override;
   bool done() const override;
@@ -21,6 +21,9 @@ private:
   const std::map<uint32_t, int> &shoppingList_;
   uint32_t npcGid_;
   std::map<uint32_t, BuyingItems::PurchaseRequest> itemsToBuy_;
+  std::vector<sro::scalar_types::StorageIndexType> slotsToSell_;
+  bool doneBuyingItems_{false};
+  bool doneSellingItems_{false};
   bool waitingForSelectionResponse_{false};
   bool waitingForTalkResponse_{false};
   bool waitingForRepairResponse_{false};
@@ -30,6 +33,7 @@ private:
 
   void figureOutWhatToBuy();
   bool needToRepair() const;
+  bool doneSellingItems() const;
   bool doneBuyingItems() const;
   bool doneWithNpc() const;
 };

@@ -128,6 +128,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCharacterAvailableStatPointsUpdated, eventHandleFunction);
 
   // Misc
   eventBroker_.subscribeToEvent(event::EventCode::kEntityDeselected, eventHandleFunction);
@@ -159,6 +160,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kGameReset, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kSetCurrentPositionAsTrainingCenter, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kConfigUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kResurrectOption, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kLeveledUpSkill, eventHandleFunction);
 
@@ -206,7 +208,8 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kStateReceivedCaptchaPromptUpdated:
       case event::EventCode::kStateConnectedToAgentServerUpdated:
       case event::EventCode::kStateCharacterListUpdated:
-      case event::EventCode::kResurrectOption: {
+      case event::EventCode::kResurrectOption:
+      case event::EventCode::kCharacterAvailableStatPointsUpdated: {
         onUpdate(event);
         break;
       }
@@ -409,7 +412,6 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
       case event::EventCode::kConfigUpdated: {
-        LOG(INFO) << "Config has been updated";
         onUpdate(event);
         break;
       }
@@ -922,6 +924,8 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
 
   constexpr const double kAgentRadius{3.14};
   pathfinder::Pathfinder<sro::navmesh::triangulation::NavmeshTriangulation> pathfinder(gameData().navmeshTriangulation(), kAgentRadius);
+  pathfinder.setTimeout(std::chrono::milliseconds(150));
+  std::string debugPath;
   try {
     const sro::Position currentPosition = selfState().position();
     const sro::math::Vector3 currentPositionPoint(currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset());
@@ -931,7 +935,7 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
     const auto navmeshDestinationPosition = gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(destinationPositionPoint, destinationPosition.regionId());
 
     // TODO: If the src or dest positions are overlapping with a constraint, we need to add an extra point.
-    LOG(INFO) << absl::StreamFormat("Calculating path from (%d;%.10f,%.10f,%.10f) to (%d;%.10f,%.10f,%.10f)", currentPosition.regionId(), currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset(), closestDestinationPosition.regionId(), closestDestinationPosition.xOffset(), closestDestinationPosition.yOffset(), closestDestinationPosition.zOffset());
+    debugPath = absl::StrFormat("Calculating path from (%d;%.10f,%.10f,%.10f) to (%d;%.10f,%.10f,%.10f)", currentPosition.regionId(), currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset(), closestDestinationPosition.regionId(), closestDestinationPosition.xOffset(), closestDestinationPosition.yOffset(), closestDestinationPosition.zOffset());
     const auto pathfindingResult = pathfinder.findShortestPath(navmeshCurrentPosition, navmeshDestinationPosition);
     const auto &path = pathfindingResult.shortestPath;
     if (path.empty()) {
@@ -943,6 +947,7 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
     breakUpLongMovements(waypoints);
     return convertWaypointsToNetworkReadyPoints(waypoints);
   } catch (std::exception &ex) {
+    LOG(INFO) << "Failed trying to build path: " << debugPath;
     throw std::runtime_error("Cannot find path with pathfinder: \""+std::string(ex.what())+"\"");
   }
 }
