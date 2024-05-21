@@ -22,7 +22,7 @@ class EventHandler : public QObject {
 public:
   EventHandler(zmq::context_t &context);
   ~EventHandler();
-  
+
   void runAsync();
 signals:
   void connected();
