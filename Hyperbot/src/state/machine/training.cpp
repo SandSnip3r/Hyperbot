@@ -4,6 +4,7 @@
 #include "entity/geometry.hpp"
 #include "bot.hpp"
 #include "helpers.hpp"
+#include "packet/building/clientAgentActionSelectRequest.hpp"
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 #include "packet/building/clientAgentCharacterUpdateBodyStateRequest.hpp"
 #include "state/machine/applyStatPoints.hpp"
@@ -486,6 +487,10 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
 
     if (imbueRefId_) {
       castSkillBuilder.withImbue(*imbueRefId_);
+    }
+    if (targetEntity.globalId != bot_.selfState().globalId && (!bot_.selfState().selectedEntity || *bot_.selfState().selectedEntity != targetEntity.globalId)) {
+      const auto selectPacket = packet::building::ClientAgentActionSelectRequest::packet(targetEntity.globalId);
+      bot_.packetBroker().injectPacket(selectPacket, PacketContainer::Direction::kClientToServer);
     }
     possiblyOverwriteChildStateMachine(castSkillBuilder.create());
   }
