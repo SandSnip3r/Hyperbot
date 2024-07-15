@@ -15,6 +15,18 @@
 
 namespace state {
 
+namespace {
+
+template<typename T>
+bool optionalValueIsDifferentFromNewValue(const std::optional<T> &oldOptional, const T &newValue) {
+  if (!oldOptional.has_value()) {
+    return true;
+  }
+  return *oldOptional != newValue;
+}
+
+} // anonymous namespace
+
 Self::Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData) : eventBroker_(eventBroker), gameData_(gameData) {
   // TODO: Move this out of here. Move it into the Bot
   auto eventHandleFunction = std::bind(&Self::handleEvent, this, std::placeholders::_1);
@@ -60,7 +72,7 @@ void Self::setHwanLevel(uint8_t hwanLevel) {
   hwanLevel_ = hwanLevel;
 }
 
-void Self::setSkillPoints(uint64_t skillPoints) {
+void Self::setSkillPoints(uint32_t skillPoints) {
   skillPoints_ = skillPoints;
   eventBroker_.publishEvent(event::EventCode::kCharacterSkillPointsUpdated);
 }
@@ -70,7 +82,7 @@ void Self::setAvailableStatPoints(uint16_t statPoints) {
   eventBroker_.publishEvent(event::EventCode::kCharacterAvailableStatPointsUpdated);
 }
 
-void Self::setCurrentExpAndSpExp(uint32_t currentExperience, uint32_t currentSpExperience) {
+void Self::setCurrentExpAndSpExp(uint64_t currentExperience, uint64_t currentSpExperience) {
   currentExperience_ = currentExperience;
   currentSpExperience_ = currentSpExperience;
   eventBroker_.publishEvent(event::EventCode::kCharacterExperienceUpdated);
@@ -177,9 +189,32 @@ void Self::setCurrentMp(uint32_t mp) {
 }
 
 void Self::setMaxHpMp(uint32_t maxHp, uint32_t maxMp) {
+  const bool changed = optionalValueIsDifferentFromNewValue(maxHp_, maxHp) ||
+                       optionalValueIsDifferentFromNewValue(maxMp_, maxMp);
   maxHp_ = maxHp;
   maxMp_ = maxMp;
-  eventBroker_.publishEvent(event::EventCode::kMaxHpMpChanged);
+  if (changed) {
+    eventBroker_.publishEvent(event::EventCode::kMaxHpMpChanged);
+  }
+}
+
+void Self::setStatPoints(uint16_t strPoints, uint16_t intPoints) {
+  const bool changed = optionalValueIsDifferentFromNewValue(strPoints_, strPoints) ||
+                       optionalValueIsDifferentFromNewValue(intPoints_, intPoints);
+  const int pointsUsed = (strPoints_ ? (strPoints - *strPoints_) : 0) +
+                         (intPoints_ ? (intPoints - *intPoints_) : 0);
+  strPoints_ = strPoints;
+  intPoints_ = intPoints;
+  if (pointsUsed > 0) {
+    if (availableStatPoints_ < pointsUsed) {
+      throw std::runtime_error("Used more points than available stat points");
+    }
+    availableStatPoints_ -= pointsUsed;
+    eventBroker_.publishEvent(event::EventCode::kCharacterAvailableStatPointsUpdated);
+  }
+  if (changed) {
+    eventBroker_.publishEvent(event::EventCode::kStatsChanged);
+  }
 }
 
 void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels) {
@@ -365,7 +400,7 @@ uint8_t Self::hwanLevel() const {
   return hwanLevel_;
 }
 
-uint64_t Self::getSkillPoints() const {
+uint32_t Self::getSkillPoints() const {
   return skillPoints_;
 }
 
@@ -373,11 +408,11 @@ uint16_t Self::getAvailableStatPoints() const {
   return availableStatPoints_;
 }
 
-uint32_t Self::getCurrentExperience() const {
+uint64_t Self::getCurrentExperience() const {
   return currentExperience_;
 }
 
-uint32_t Self::getCurrentSpExperience() const {
+uint64_t Self::getCurrentSpExperience() const {
   return currentSpExperience_;
 }
 
@@ -444,6 +479,14 @@ std::optional<uint32_t> Self::maxHp() const {
 
 std::optional<uint32_t> Self::maxMp() const {
   return maxMp_;
+}
+
+std::optional<uint16_t> Self::strPoints() const {
+  return strPoints_;
+}
+
+std::optional<uint16_t> Self::intPoints() const {
+  return intPoints_;
 }
 
 uint32_t Self::stateBitmask() const {

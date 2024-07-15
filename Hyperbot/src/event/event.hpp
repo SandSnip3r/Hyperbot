@@ -24,6 +24,7 @@ enum class EventCode {
   kEntityHpChanged,
   kMpChanged,
   kMaxHpMpChanged,
+  kStatsChanged,
   kStatesChanged,
   kSkillCooldownEnded,
   kInventoryUpdated,

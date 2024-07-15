@@ -3,6 +3,7 @@
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 
+#include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 
 #include <fstream>
@@ -102,12 +103,13 @@ const proto::config::CharacterConfig* Config::getCharacterConfig(absl::string_vi
   return &(*it);
 }
 
-std::pair<std::string, std::string> Config::getLoginInfo(absl::string_view characterName) const {
+std::optional<LoginInfo> Config::getLoginInfo(absl::string_view characterName) const {
   const auto *characterConfig = getCharacterConfig(characterName);
   if (characterConfig == nullptr) {
-    throw std::runtime_error(absl::StrFormat("Cannot get login info for unknown character \"%s\"", characterName));
+    LOG(WARNING) << absl::StrFormat("Cannot get login info for unknown character \"%s\"", characterName);
+    return {};
   }
-  return {characterConfig->username(), characterConfig->password()};
+  return LoginInfo{characterConfig->username(), characterConfig->password()};
 }
 
 } // namespace config

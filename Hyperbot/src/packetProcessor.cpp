@@ -123,6 +123,8 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityDamageEffect, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAbnormalInfo, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterUpdateStats, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterIncreaseIntResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterIncreaseStrResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryItemUseResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryOperationResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMoveSpeed, packetHandleFunction);
@@ -205,7 +207,9 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateStatus, serverAgentEntityUpdateStatusReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityDamageEffect, serverAgentEntityDamageEffectReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentAbnormalInfo, serverAgentAbnormalInfoReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterUpdateStats, serverAgentCharacterUpdateStatsReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCharacterUpdateStats, serverAgentCharacterUpdateStatsReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCharacterIncreaseIntResponse, serverAgentCharacterIncreaseIntResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCharacterIncreaseStrResponse, serverAgentCharacterIncreaseStrResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryItemUseResponse, serverAgentInventoryItemUseResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryOperationResponse, serverAgentInventoryOperationResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityGroupSpawnData, serverAgentEntityGroupSpawnDataReceived);
@@ -250,7 +254,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
 }
 
 void PacketProcessor::resetDataBecauseCharacterSpawned() const {
-  // On teleport, COS will have different globaIds
+  // On teleport, COS will have different globalIds
   worldState_.selfState().cosInventoryMap.clear();
   // Reset existing buffs
   worldState_.selfState().clearBuffs();
@@ -381,6 +385,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   worldState_.selfState().setHwanLevel(packet.hwanLevel());
   worldState_.selfState().setCurrentLevel(packet.curLevel());
   worldState_.selfState().setSkillPoints(packet.skillPoints());
+  worldState_.selfState().setAvailableStatPoints(packet.availableStatPoints());
   worldState_.selfState().setHwanPoints(packet.hwanPoints());
   worldState_.selfState().setCurrentExpAndSpExp(packet.currentExperience(), packet.currentSpExperience());
   worldState_.selfState().setMasteriesAndSkills(packet.masteries(), packet.skills());
@@ -465,7 +470,7 @@ void PacketProcessor::serverAgentCosDataReceived(const packet::parsing::ServerAg
         helpers::initializeInventory(cosInventory, packet.inventorySize(), packet.inventoryItemMap());
         eventBroker_.publishEvent<event::CosSpawned>(packet.globalId());
       } else {
-        throw std::runtime_error("Aready tracking this Cos");
+        throw std::runtime_error("Already tracking this Cos");
         // Maybe we should ensure that we never get here
         // On teleport, our COS globalId will change
         // On resummon, our COS globalId will change
@@ -574,8 +579,35 @@ void PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::Par
   eventBroker_.publishEvent(event::EventCode::kStatesChanged);
 }
 
-void PacketProcessor::serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const {
+void PacketProcessor::serverAgentCharacterUpdateStatsReceived(const packet::parsing::ServerAgentCharacterUpdateStats &packet) const {
   worldState_.selfState().setMaxHpMp(packet.maxHp(), packet.maxMp());
+  worldState_.selfState().setStatPoints(packet.strPoints(), packet.intPoints());
+}
+
+void PacketProcessor::serverAgentCharacterIncreaseIntResponseReceived(const packet::parsing::ServerAgentCharacterIncreaseIntResponse &packet) const {
+  if (packet.result() != 2) {
+    // Success!
+    // Note: We could update our int points here, but we instead do it from ServerAgentCharacterUpdateStats, which comes earlier.
+  } else {
+    if (packet.errorCode() == 29702) {
+      LOG(INFO) << "Not enough stat points when trying to increase Int";
+    } else {
+      LOG(INFO) << "Unknown error when increasing Int points: " << packet.errorCode();
+    }
+  }
+}
+
+void PacketProcessor::serverAgentCharacterIncreaseStrResponseReceived(const packet::parsing::ServerAgentCharacterIncreaseStrResponse &packet) const {
+  if (packet.result() != 2) {
+    // Success!
+    // Note: We could update our str points here, but we instead do it from ServerAgentCharacterUpdateStats, which comes earlier.
+  } else {
+    if (packet.errorCode() == 29702) {
+      LOG(INFO) << "Not enough stat points when trying to increase Str";
+    } else {
+      LOG(INFO) << "Unknown error when increasing Str points: " << packet.errorCode();
+    }
+  }
 }
 
 void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::parsing::ServerAgentInventoryItemUseResponse &packet) const {
@@ -673,7 +705,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
           }
         }
         if (!addedToStack) {
-          LOG(INFO) << "Error: Item couldnt be added to the stack";
+          LOG(INFO) << "Error: Item couldn't be added to the stack";
         }
       } else {
         // This is a new item
@@ -782,7 +814,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
         }
         eventBroker_.publishEvent<event::InventoryUpdated>(movement.srcSlot, std::nullopt);
       } else {
-        LOG(INFO) << "Sold an item from a slot that we didnt have item data for";
+        LOG(INFO) << "Sold an item from a slot that we didn't have item data for";
       }
     } else if (movement.type == packet::enums::ItemMovementType::kBuyback) {
       if (worldState_.selfState().buybackQueue.hasItem(movement.srcSlot)) {
@@ -795,7 +827,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
             storage::ItemExpendable *itemExpendable = dynamic_cast<storage::ItemExpendable*>(itemPtr);
             if (itemExpendable != nullptr) {
               if (itemExpendable->quantity > movement.quantity) {
-                LOG(INFO) << "Only buying back a partial amount from the buyback slot. Didnt know this was possible (" << movement.quantity << '/' << itemExpendable->quantity << ")";
+                LOG(INFO) << "Only buying back a partial amount from the buyback slot. Didn't know this was possible (" << movement.quantity << '/' << itemExpendable->quantity << ")";
                 boughtBackAll = false;
                 auto clonedItem = storage::cloneItem(itemPtr);
                 itemExpendable->quantity -= movement.quantity;
@@ -813,7 +845,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
           LOG(INFO) << "Bought back item is being moved into a slot that's already occupied";
         }
       } else {
-        LOG(INFO) << "Bought back an item that we werent tracking";
+        LOG(INFO) << "Bought back an item that we weren't tracking";
       }
     } else if (movement.type == packet::enums::ItemMovementType::kPickItem) {
       if (movement.destSlot != packet::structures::ItemMovement::kGoldSlot) {
@@ -984,7 +1016,7 @@ void PacketProcessor::serverAgentDeselectResponseReceived(const packet::parsing:
         worldState_.selfState().selectedEntity.reset();
         eventBroker_.publishEvent(event::EventCode::kEntityDeselected);
       } else {
-        LOG(INFO) << "Weird, we didnt have anything selected";
+        LOG(INFO) << "Weird, we didn't have anything selected";
       }
     }
   } else {
@@ -1024,7 +1056,7 @@ void PacketProcessor::serverAgentTalkResponseReceived(const packet::parsing::Ser
       worldState_.selfState().pendingTalkGid.reset();
       eventBroker_.publishEvent(event::EventCode::kNpcTalkStart);
     } else {
-      LOG(INFO) << "Weird, we werent expecting to be talking to anything. As a result, we dont know what we're talking to";
+      LOG(INFO) << "Weird, we weren't expecting to be talking to anything. As a result, we dont know what we're talking to";
     }
   } else {
     LOG(INFO) << "Failed to talk to NPC";
@@ -1070,15 +1102,15 @@ void PacketProcessor::serverAgentInventoryRepairResponseReceived(const packet::p
 
 void PacketProcessor::serverAgentInventoryUpdateDurabilityReceived(const packet::parsing::ServerAgentInventoryUpdateDurability &packet) const {
   if (!worldState_.selfState().inventory.hasItem(packet.slotIndex())) {
-    throw std::runtime_error("Recieved durability update for inventory slot where no item exists");
+    throw std::runtime_error("Received durability update for inventory slot where no item exists");
   }
   auto *item = worldState_.selfState().inventory.getItem(packet.slotIndex());
   if (item == nullptr) {
-    throw std::runtime_error("Recieved durability update for inventory item which is null");
+    throw std::runtime_error("Received durability update for inventory item which is null");
   }
   auto *itemAsEquip = dynamic_cast<storage::ItemEquipment*>(item);
   if (itemAsEquip == nullptr) {
-    throw std::runtime_error("Recieved durability update for inventory item which is not a piece of equipment");
+    throw std::runtime_error("Received durability update for inventory item which is not a piece of equipment");
   }
   // Update item's durability
   itemAsEquip->durability = packet.durability();
@@ -1087,11 +1119,11 @@ void PacketProcessor::serverAgentInventoryUpdateDurabilityReceived(const packet:
 
 void PacketProcessor::serverAgentInventoryUpdateItemReceived(const packet::parsing::ServerAgentInventoryUpdateItem &packet) const {
   if (!worldState_.selfState().inventory.hasItem(packet.slotIndex())) {
-    throw std::runtime_error("Recieved item update for inventory slot where no item exists");
+    throw std::runtime_error("Received item update for inventory slot where no item exists");
   }
   auto *item = worldState_.selfState().inventory.getItem(packet.slotIndex());
   if (item == nullptr) {
-    throw std::runtime_error("Recieved item update for inventory item which is null");
+    throw std::runtime_error("Received item update for inventory item which is null");
   }
   if (packet.itemUpdateHasFlag(packet::enums::ItemUpdateFlag::kQuantity)) {
     // Known reasons for this update: alchemy
@@ -1157,7 +1189,7 @@ void PacketProcessor::serverAgentEntityUpdateExperienceReceived(const packet::pa
       newExperience += maxExpOfCurrentLevel;
     }
   }
-  const auto newSpExperience = (worldState_.selfState().getCurrentSpExperience() + packet.gainedSpExperiencePoints()) % kSpExperienceRequired;
+  const uint64_t newSpExperience = (worldState_.selfState().getCurrentSpExperience() + packet.gainedSpExperiencePoints()) % kSpExperienceRequired;
   worldState_.selfState().setCurrentExpAndSpExp(newExperience, newSpExperience);
   if (currentLevel != levelBefore) {
     // Our level changed!
@@ -1275,10 +1307,10 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
             // LOG(INFO) << "Our skill failed (" << skillRefId << ')';
             eventBroker_.publishEvent<event::OurSkillFailed>(skillRefId, packet.errorCode());
           } else {
-            // LOG(INFO) << "Out skill failed, but the most recent pending command isnt a \"Cast\"";
+            // LOG(INFO) << "Out skill failed, but the most recent pending command isn't a \"Cast\"";
           }
         } else {
-          // LOG(INFO) << "Our skill failed, but the most recent pending command isnt an \"Execute\"";
+          // LOG(INFO) << "Our skill failed, but the most recent pending command isn't an \"Execute\"";
         }
       } else {
         // LOG(INFO) << "Our skill failed, but we dont know which one!";
@@ -1379,7 +1411,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     const bool isFinalPieceOfChain = skillData.basicChainCode == 0;
     if (!worldState_.selfState().skillEngine.acceptedCommandQueue.empty()) {
       // Try to find the index of this skill in the accepted command queue.
-      // Iterate backwards, because if there are multiple occurences, the last one is probably the one that this skill begin refers to.
+      // Iterate backwards, because if there are multiple occurrences, the last one is probably the one that this skill begin refers to.
       std::optional<size_t> indexOfOurSkill;
       const auto &acceptedCommandQueue = worldState_.selfState().skillEngine.acceptedCommandQueue;
       for (int i=acceptedCommandQueue.size()-1; i>=0; --i) {
@@ -1403,7 +1435,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         if (skillIsCommonAttack && !(worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute &&
                                      worldState_.selfState().skillEngine.acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kAttack)) {
           // First command is not a common attack
-          // LOG(INFO) << "First command in the queue isnt a common attack!";
+          // LOG(INFO) << "First command in the queue isn't a common attack!";
         }
       } else {
         // We cast this skill
@@ -1482,7 +1514,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
   } else {
     // Caster is not us
     if (auto *monster = dynamic_cast<entity::Monster*>(worldState_.entityTracker().getEntity(packet.casterGlobalId()))) {
-      // Caster is a monster, track who the monster is targetting
+      // Caster is a monster, track who the monster is targeting
       monster->targetGlobalId = packet.targetGlobalId();
     }
   }

@@ -93,7 +93,7 @@ TimerManager::TimerId TimerManager::registerTimer(TimePoint timeEnd, std::functi
   return thisTimerId;
 }
 
-void TimerManager::triggerInstantTimer(std::function<void()> callback){
+void TimerManager::triggerInstantTimer(std::function<void()> callback) {
   {
     std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
       // Add the new "timer" on the "heap"

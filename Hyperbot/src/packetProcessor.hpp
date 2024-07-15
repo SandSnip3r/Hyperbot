@@ -17,6 +17,9 @@
 #include "packet/parsing/serverAgentBuffLink.hpp"
 #include "packet/parsing/serverAgentBuffRemove.hpp"
 #include "packet/parsing/serverAgentCharacterData.hpp"
+#include "packet/parsing/serverAgentCharacterUpdateStats.hpp"
+#include "packet/parsing/serverAgentCharacterIncreaseIntResponse.hpp"
+#include "packet/parsing/serverAgentCharacterIncreaseStrResponse.hpp"
 #include "packet/parsing/serverAgentChatUpdate.hpp"
 #include "packet/parsing/serverAgentGameReset.hpp"
 #include "packet/parsing/serverAgentCosData.hpp"
@@ -124,7 +127,9 @@ private:
   void serverAgentEntityUpdateStatusReceived(const packet::parsing::ServerAgentEntityUpdateStatus &packet) const;
   void serverAgentEntityDamageEffectReceived(const packet::parsing::ServerAgentEntityDamageEffect &packet) const;
   void serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const;
-  void serverAgentCharacterUpdateStatsReceived(const packet::parsing::ParsedServerAgentCharacterUpdateStats &packet) const;
+  void serverAgentCharacterUpdateStatsReceived(const packet::parsing::ServerAgentCharacterUpdateStats &packet) const;
+  void serverAgentCharacterIncreaseIntResponseReceived(const packet::parsing::ServerAgentCharacterIncreaseIntResponse &packet) const;
+  void serverAgentCharacterIncreaseStrResponseReceived(const packet::parsing::ServerAgentCharacterIncreaseStrResponse &packet) const;
   void serverAgentInventoryItemUseResponseReceived(const packet::parsing::ServerAgentInventoryItemUseResponse &packet) const;
   void serverAgentInventoryOperationResponseReceived(const packet::parsing::ServerAgentInventoryOperationResponse &packet) const;
   void serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ServerAgentEntityGroupSpawnData &packet) const;

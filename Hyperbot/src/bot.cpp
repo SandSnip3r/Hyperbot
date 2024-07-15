@@ -16,6 +16,7 @@
 #include "state/machine/autoPotion.hpp"
 #include "state/machine/botting.hpp"
 #include "state/machine/login.hpp"
+#include "state/machine/applyStatPoints.hpp"
 #include "type_id/categories.hpp"
 
 #include "pathfinder.h"
@@ -24,6 +25,10 @@
 #include <silkroad_lib/position_math.h>
 
 #include <absl/log/log.h>
+#include <absl/strings/str_join.h>
+#include <absl/strings/str_split.h>
+
+#include <regex>
 
 Bot::Bot(const config::Config &config,
          const pk2::GameData &gameData,
@@ -50,8 +55,12 @@ void Bot::initialize() {
 void Bot::run() {
   if (config_.configProto().has_character_to_login()) {
     const std::string &characterName = config_.configProto().character_to_login();
-    const auto [username, password] = config_.getLoginInfo(characterName);
-    loginStateMachine_ = std::make_unique<state::machine::Login>(*this, username, password, characterName);
+    const auto loginInfo = config_.getLoginInfo(characterName);
+    if (loginInfo) {
+      loginStateMachine_ = std::make_unique<state::machine::Login>(*this, loginInfo->username, loginInfo->password, characterName);
+    } else {
+      LOG(INFO) << "No login info for character, not automatically logging in.";
+    }
   }
 }
 
@@ -129,6 +138,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCharacterAvailableStatPointsUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStatsChanged, eventHandleFunction);
 
   // Misc
   eventBroker_.subscribeToEvent(event::EventCode::kEntityDeselected, eventHandleFunction);
@@ -209,7 +219,8 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kStateConnectedToAgentServerUpdated:
       case event::EventCode::kStateCharacterListUpdated:
       case event::EventCode::kResurrectOption:
-      case event::EventCode::kCharacterAvailableStatPointsUpdated: {
+      case event::EventCode::kCharacterAvailableStatPointsUpdated:
+      case event::EventCode::kStatsChanged: {
         onUpdate(event);
         break;
       }
@@ -441,6 +452,9 @@ void Bot::onUpdate(const event::Event *event) {
       loginStateMachine_.reset();
     }
   }
+
+  concurrentStateMachines_.onUpdate(event);
+
   // Highest priority is our vitals, we will try to heal even if we're not training
   if (autoPotionStateMachine_ && !autoPotionStateMachine_->done()) {
     try {
@@ -505,7 +519,7 @@ void Bot::stopTraining() {
     eventBroker_.publishEvent(event::EventCode::kTrainingStopped);
     bottingStateMachine_.reset();
   } else {
-    LOG(INFO) << "Asked to stop training, but we werent training";
+    LOG(INFO) << "Asked to stop training, but we weren't training";
   }
 }
 
@@ -514,19 +528,44 @@ void Bot::stopTraining() {
 // ============================================================================================================================
 
 void Bot::handleChatCommand(const event::ChatReceived &event) {
+  std::regex commandRegex(R"delim(cmd (.*))delim", std::regex::ECMAScript);
+  std::regex maxRegex(R"delim(max ([a-z\s]+))delim", std::regex::ECMAScript);
   if (event.chatType == packet::enums::ChatType::kAll ||
       event.chatType == packet::enums::ChatType::kAllGm) {
     // All chat
     std::string msg = event.message;
     std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
-    if (msg == "start") {
-      // Start training
-      LOG(INFO) << "Got chat command " << event.message;
-      startTraining();
-    } else if (msg == "stop") {
-      // Stop training
-      LOG(INFO) << "Got chat command " << event.message;
-      stopTraining();
+    if (std::smatch commandMatchResults; std::regex_match(event.message, commandMatchResults, commandRegex)) {
+      LOG(INFO) << "Received command: \"" << commandMatchResults.str(0) << '"';
+      const std::string command = commandMatchResults.str(1);
+      if (command == "start") {
+        // Start training
+        startTraining();
+      } else if (command == "stop") {
+        // Stop training
+        stopTraining();
+      } else if (std::smatch maxMatchResults; std::regex_match(command, maxMatchResults, maxRegex)) {
+        const std::string maxMatch = maxMatchResults.str(1);
+        std::vector<std::string_view> thingsToMax = absl::StrSplit(maxMatch, ' ');
+        thingsToMax.erase(std::remove_if(thingsToMax.begin(), thingsToMax.end(), [](const auto &s) { return s.empty(); }), thingsToMax.end());
+        LOG(INFO) << "    Want to max " << absl::StrJoin(thingsToMax, ",");
+        bool added = false;
+        for (std::string_view thingToMax : thingsToMax) {
+          if (thingToMax == "str" || thingToMax == "int") {
+            if (selfState().getAvailableStatPoints() > 0) {
+              const state::machine::StatPointType type = (thingToMax == "str" ? state::machine::StatPointType::kStr : state::machine::StatPointType::kInt);
+              LOG(INFO) << "Have " << selfState().getAvailableStatPoints() << " stat points for " << static_cast<int>(type);
+              concurrentStateMachines_.emplace<state::machine::ApplyStatPoints>(std::vector<state::machine::StatPointType>(selfState().getAvailableStatPoints(), type));
+              added = true;
+            } else {
+              LOG(INFO) << "No available stat points for " << thingToMax;
+            }
+          }
+        }
+        if (added) {
+          onUpdate(&event);
+        }
+      }
     }
   }
 }

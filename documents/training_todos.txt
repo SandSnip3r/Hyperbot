@@ -1,0 +1,11 @@
+Handle Fear.
+Pathfind back to training spot (optionally use beginner teleport).
+Move start & goal points for pathfinding away from obstacles.
+Return to town when inventory full.
+Respect 5s untouchable phase after spawning.
+Don't visit npcs if we have nothing to do there.
+Store all alchemy materials.
+Sell female equipment.
+Sell LA&HA.
+
+Select the attacked monster.

@@ -21,6 +21,8 @@ size_t getAddress(std::function<T(U...)> f) {
 
 namespace broker {
 
+// TODO: Whenever publishing an event, an ID should be returned. This same ID should be stored in the event.
+
 class EventBroker {
 public:
   using DelayedEventId = TimerManager::TimerId;

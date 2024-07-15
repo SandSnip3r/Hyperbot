@@ -272,6 +272,10 @@ uint32_t ServerAgentCharacterData::skillPoints() const {
   return skillPoints_;
 }
 
+uint16_t ServerAgentCharacterData::availableStatPoints() const {
+  return availableStatPoints_;
+}
+
 uint8_t ServerAgentCharacterData::hwanPoints() const {
   return hwanPoints_;
 }

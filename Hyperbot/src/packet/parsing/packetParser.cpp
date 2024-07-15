@@ -17,6 +17,9 @@
 #include "serverAgentBuffLink.hpp"
 #include "serverAgentBuffRemove.hpp"
 #include "serverAgentCharacterData.hpp"
+#include "serverAgentCharacterIncreaseStrResponse.hpp"
+#include "serverAgentCharacterIncreaseIntResponse.hpp"
+#include "serverAgentCharacterUpdateStats.hpp"
 #include "serverAgentChatUpdate.hpp"
 #include "serverAgentCosData.hpp"
 #include "serverAgentEntityDamageEffect.hpp"
@@ -118,7 +121,11 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       case Opcode::kServerAgentEntityUpdatePoints:
         return std::make_unique<ServerAgentEntityUpdatePoints>(packet);
       case Opcode::kServerAgentCharacterUpdateStats:
-        return std::make_unique<ParsedServerAgentCharacterUpdateStats>(packet);
+        return std::make_unique<ServerAgentCharacterUpdateStats>(packet);
+      case Opcode::kServerAgentCharacterIncreaseStrResponse:
+        return std::make_unique<ServerAgentCharacterIncreaseStrResponse>(packet);
+      case Opcode::kServerAgentCharacterIncreaseIntResponse:
+        return std::make_unique<ServerAgentCharacterIncreaseIntResponse>(packet);
       case Opcode::kServerAgentInventoryItemUseResponse:
         return std::make_unique<ServerAgentInventoryItemUseResponse>(packet);
       case Opcode::kClientAgentInventoryItemUseRequest:

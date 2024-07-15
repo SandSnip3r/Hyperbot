@@ -52,18 +52,6 @@ private:
   uint32_t stateBitmask_;
   std::array<packet::structures::vitals::AbnormalState, 32> states_ = {0};
 };
-
-//=========================================================================================================================================================
-
-class ParsedServerAgentCharacterUpdateStats : public ParsedPacket {
-public:
-  ParsedServerAgentCharacterUpdateStats(const PacketContainer &packet);
-  uint32_t maxHp() const;
-  uint32_t maxMp() const;
-private:
-  uint32_t maxHp_;
-  uint32_t maxMp_;
-};
   
 //=========================================================================================================================================================
 

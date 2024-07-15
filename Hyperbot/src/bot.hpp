@@ -11,6 +11,7 @@
 #include "proxy.hpp"
 #include "statAggregator.hpp"
 #include "state/worldState.hpp"
+#include "state/machine/concurrentStateMachines.hpp"
 #include "state/machine/stateMachine.hpp"
 
 #include <optional>
@@ -56,6 +57,7 @@ private:
   std::unique_ptr<state::machine::StateMachine> loginStateMachine_;
   std::unique_ptr<state::machine::StateMachine> autoPotionStateMachine_;
   std::unique_ptr<state::machine::StateMachine> bottingStateMachine_;
+  state::machine::ConcurrentStateMachines concurrentStateMachines_{*this};
   inline static const std::string kEstVisRangeFilename{"estimatedVisibilityRange.txt"};
 
   void subscribeToEvents();

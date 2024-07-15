@@ -3,6 +3,7 @@
 
 #include "stateMachine.hpp"
 
+#include <optional>
 #include <vector>
 
 namespace state::machine {
@@ -21,7 +22,8 @@ public:
 private:
   static inline std::string kName{"ApplyStatPoints"};
   std::vector<StatPointType> statPointTypes_;
-  int lastAvailableStatPoints_;
+  std::optional<uint16_t> lastInt_;
+  std::optional<uint16_t> lastStr_;
   bool waiting_{false};
   bool done_{false};
 };

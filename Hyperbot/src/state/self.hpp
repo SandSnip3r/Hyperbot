@@ -55,15 +55,9 @@ public:
   // Setters
   void setCurrentLevel(uint8_t currentLevel);
   void setHwanLevel(uint8_t hwanLevel);
-  void setSkillPoints(uint64_t skillPoints);
+  void setSkillPoints(uint32_t skillPoints);
   void setAvailableStatPoints(uint16_t statPoints);
-  void setCurrentExpAndSpExp(uint32_t currentExperience, uint32_t currentSpExperience);
-
-  void setHpPotionEventId(const broker::TimerManager::TimerId &timerId);
-  void setMpPotionEventId(const broker::TimerManager::TimerId &timerId);
-  void setVigorPotionEventId(const broker::TimerManager::TimerId &timerId);
-  void setUniversalPillEventId(const broker::TimerManager::TimerId &timerId);
-  void setPurificationPillEventId(const broker::TimerManager::TimerId &timerId);
+  void setCurrentExpAndSpExp(uint64_t currentExperience, uint64_t currentSpExperience);
 
   void setHwanSpeed(float hwanSpeed);
   void setBodyState(packet::enums::BodyState bodyState);
@@ -74,6 +68,7 @@ public:
 
   void setCurrentMp(uint32_t mp);
   void setMaxHpMp(uint32_t maxHp, uint32_t maxMp);
+  void setStatPoints(uint16_t strPoints, uint16_t intPoints);
   void updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels);
   void setStateBitmask(uint32_t stateBitmask);
   void setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect);
@@ -98,21 +93,16 @@ public:
 
   uint8_t getCurrentLevel() const;
   uint8_t hwanLevel() const;
-  uint64_t getSkillPoints() const;
+  uint32_t getSkillPoints() const;
   uint16_t getAvailableStatPoints() const;
-  uint32_t getCurrentExperience() const;
-  uint32_t getCurrentSpExperience() const;
+  uint64_t getCurrentExperience() const;
+  uint64_t getCurrentSpExperience() const;
 
   bool haveHpPotionEventId() const;
   bool haveMpPotionEventId() const;
   bool haveVigorPotionEventId() const;
   bool haveUniversalPillEventId() const;
   bool havePurificationPillEventId() const;
-  broker::TimerManager::TimerId getHpPotionEventId() const;
-  broker::TimerManager::TimerId getMpPotionEventId() const;
-  broker::TimerManager::TimerId getVigorPotionEventId() const;
-  broker::TimerManager::TimerId getUniversalPillEventId() const;
-  broker::TimerManager::TimerId getPurificationPillEventId() const;
   int getHpPotionDelay() const;
   int getMpPotionDelay() const;
   int getVigorPotionDelay() const;
@@ -129,6 +119,8 @@ public:
   uint32_t currentMp() const;
   std::optional<uint32_t> maxHp() const;
   std::optional<uint32_t> maxMp() const;
+  std::optional<uint16_t> strPoints() const;
+  std::optional<uint16_t> intPoints() const;
   
   uint32_t stateBitmask() const;
   std::array<uint16_t,6> legacyStateEffects() const;
@@ -178,7 +170,7 @@ private:
   uint8_t currentLevel_;
   uint8_t hwanLevel_;
   uint64_t currentExperience_;
-  uint32_t currentSpExperience_;
+  uint64_t currentSpExperience_; // Some packets use uint32, some use uint64.
   uint32_t skillPoints_;
   uint16_t availableStatPoints_;
 public:
@@ -199,13 +191,15 @@ public:
   uint8_t hwanPoints_;
 
   // Movement/position
-  std::optional<broker::TimerManager::TimerId> enteredNewRegionEventId_;
+  std::optional<broker::EventBroker::DelayedEventId> enteredNewRegionEventId_;
 
   // Health
 private:
   uint32_t mp_;
   std::optional<uint32_t> maxHp_;
   std::optional<uint32_t> maxMp_;
+  std::optional<uint16_t> strPoints_;
+  std::optional<uint16_t> intPoints_;
 public:
 
   // Statuses
