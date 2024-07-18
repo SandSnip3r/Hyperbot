@@ -61,7 +61,7 @@ const EntityType& WorldState::getEntity(sro::scalar_types::EntityGlobalId global
   } else if (entityTracker_.trackingEntity(globalId)) {
     return entityTracker_.getEntity<EntityType>(globalId);
   } else {
-    throw std::runtime_error("Trying to get untracked entity");
+    throw std::runtime_error(absl::StrFormat("Trying to get untracked entity %d", globalId));
   }
 }
 

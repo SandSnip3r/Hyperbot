@@ -76,7 +76,7 @@ public:
   std::optional<MotionState> lastMotionState;
   float walkSpeed;
   float runSpeed;
-  std::optional<broker::EventBroker::DelayedEventId> movingEventId;
+  std::optional<broker::EventBroker::EventId> movingEventId;
   void initializeAsMoving(const sro::Position &destinationPosition);
   void initializeAsMoving(sro::Angle destinationAngle);
   void registerGeometryBoundary(std::unique_ptr<Geometry> geometry, broker::EventBroker &eventBroker);
@@ -110,8 +110,8 @@ protected:
   void privateSetMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker);
 private:
   std::unique_ptr<Geometry> geometry_;
-  std::optional<broker::EventBroker::DelayedEventId> enterGeometryEventId_;
-  std::optional<broker::EventBroker::DelayedEventId> exitGeometryEventId_;
+  std::optional<broker::EventBroker::EventId> enterGeometryEventId_;
+  std::optional<broker::EventBroker::EventId> exitGeometryEventId_;
   void checkIfWillCrossGeometryBoundary(broker::EventBroker &eventBroker);
   void cancelGeometryEvents(broker::EventBroker &eventBroker);
 };

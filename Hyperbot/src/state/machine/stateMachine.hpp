@@ -41,7 +41,7 @@ protected:
   std::unique_ptr<StateMachine> childState_;
 private:
   std::vector<packet::Opcode> blockedOpcodes_;
-  broker::EventBroker::DelayedEventId debugEventId_;
+  broker::EventBroker::EventId debugEventId_;
 };
 
 std::ostream& operator<<(std::ostream &stream, Npc npc);

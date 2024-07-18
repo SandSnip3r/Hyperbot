@@ -4,7 +4,7 @@ namespace packet {
 
 std::string toString(Opcode opcode) {
   if (opcode == Opcode::kServerEnvironmentWeather) {
-    return "kServerEnvironmentWeather";
+    return "ServerEnvironmentWeather";
   }
   if (opcode == Opcode::HACK) {
     return "HACK";
@@ -16,13 +16,13 @@ std::string toString(Opcode opcode) {
     return "LOGIN_CLIENT_KEEP_ALIVE";
   }
   if (opcode == Opcode::kClientGatewayPatchRequest) {
-    return "kClientGatewayPatchRequest";
+    return "ClientGatewayPatchRequest";
   }
   if (opcode == Opcode::LOGIN_CLIENT_SERVERLIST_REQUEST) {
     return "LOGIN_CLIENT_SERVERLIST_REQUEST";
   }
   if (opcode == Opcode::kClientGatewayLoginRequest) {
-    return "kClientGatewayLoginRequest";
+    return "ClientGatewayLoginRequest";
   }
   if (opcode == Opcode::LOGIN_CLIENT_ACCEPT_HANDSHAKE) {
     return "LOGIN_CLIENT_ACCEPT_HANDSHAKE";
@@ -43,10 +43,10 @@ std::string toString(Opcode opcode) {
     return "LOGIN_SERVER_LAUNCHER";
   }
   if (opcode == Opcode::kServerGatewayShardListResponse) {
-    return "kServerGatewayShardListResponse";
+    return "ServerGatewayShardListResponse";
   }
   if (opcode == Opcode::kServerGatewayLoginResponse) {
-    return "kServerGatewayLoginResponse";
+    return "ServerGatewayLoginResponse";
   }
   if (opcode == Opcode::CLIENT_INFO) {
     return "CLIENT_INFO";
@@ -61,10 +61,10 @@ std::string toString(Opcode opcode) {
     return "CLIENT_PATCH_REQUEST";
   }
   if (opcode == Opcode::kClientAgentAuthRequest) {
-    return "kClientAgentAuthRequest";
+    return "ClientAgentAuthRequest";
   }
   if (opcode == Opcode::kClientAgentInventoryOperationRequest) {
-    return "kClientAgentInventoryOperationRequest";
+    return "ClientAgentInventoryOperationRequest";
   }
   if (opcode == Opcode::CLIENT_INGAME_NOTIFY) {
     return "CLIENT_INGAME_NOTIFY";
@@ -76,43 +76,43 @@ std::string toString(Opcode opcode) {
     return "CLIENT_COUNTDOWN_INTERRUPT";
   }
   if (opcode == Opcode::kClientAgentCharacterSelectionActionRequest) {
-    return "kClientAgentCharacterSelectionActionRequest";
+    return "ClientAgentCharacterSelectionActionRequest";
   }
   if (opcode == Opcode::kClientAgentChatRequest) {
-    return "kClientAgentChatRequest";
+    return "ClientAgentChatRequest";
   }
   if (opcode == Opcode::kClientAgentCharacterSelectionJoinRequest) {
-    return "kClientAgentCharacterSelectionJoinRequest";
+    return "ClientAgentCharacterSelectionJoinRequest";
   }
   if (opcode == Opcode::kClientAgentActionSelectRequest) {
-    return "kClientAgentActionSelectRequest";
+    return "ClientAgentActionSelectRequest";
   }
   if (opcode == Opcode::kClientAgentOperatorRequest) {
-    return "kClientAgentOperatorRequest";
+    return "ClientAgentOperatorRequest";
   }
   if (opcode == Opcode::kServerAgentOperatorResponse) {
-    return "kServerAgentOperatorResponse";
+    return "ServerAgentOperatorResponse";
   }
   if (opcode == Opcode::kClientAgentCharacterMoveRequest) {
-    return "kClientAgentCharacterMoveRequest";
+    return "ClientAgentCharacterMoveRequest";
   }
   if (opcode == Opcode::kClientAgentCosCommandRequest) {
-    return "kClientAgentCosCommandRequest";
+    return "ClientAgentCosCommandRequest";
   }
   if (opcode == Opcode::kClientAgentActionCommandRequest) {
-    return "kClientAgentActionCommandRequest";
+    return "ClientAgentActionCommandRequest";
   }
   if (opcode == Opcode::kClientAgentCharacterIncreaseStrRequest) {
-    return "kClientAgentCharacterIncreaseStrRequest";
+    return "ClientAgentCharacterIncreaseStrRequest";
   }
   if (opcode == Opcode::kClientAgentCharacterIncreaseIntRequest) {
-    return "kClientAgentCharacterIncreaseIntRequest";
+    return "ClientAgentCharacterIncreaseIntRequest";
   }
   if (opcode == Opcode::CLIENT_CHARACTER_STATE) {
     return "CLIENT_CHARACTER_STATE";
   }
   if (opcode == Opcode::kClientAgentCharacterResurrect) {
-    return "kClientAgentCharacterResurrect";
+    return "ClientAgentCharacterResurrect";
   }
   if (opcode == Opcode::CLIENT_MASTERYUPDATE) {
     return "CLIENT_MASTERYUPDATE";
@@ -124,16 +124,16 @@ std::string toString(Opcode opcode) {
     return "CLIENT_EMOTION";
   }
   if (opcode == Opcode::kClientAgentInventoryItemUseRequest) {
-    return "kClientAgentInventoryItemUseRequest";
+    return "ClientAgentInventoryItemUseRequest";
   }
   if (opcode == Opcode::CLIENT_HOTKEY_CHANGE) {
     return "CLIENT_HOTKEY_CHANGE";
   }
   if (opcode == Opcode::kClientAgentActionTalkRequest) {
-    return "kClientAgentActionTalkRequest";
+    return "ClientAgentActionTalkRequest";
   }
   if (opcode == Opcode::kClientAgentActionDeselectRequest) {
-    return "kClientAgentActionDeselectRequest";
+    return "ClientAgentActionDeselectRequest";
   }
   if (opcode == Opcode::CLIENT_TELEPORT) {
     return "CLIENT_TELEPORT";
@@ -169,10 +169,10 @@ std::string toString(Opcode opcode) {
     return "CLIENT_ANIMATION_INVITE";
   }
   if (opcode == Opcode::kClientAgentAlchemyElixirRequest) {
-    return "kClientAgentAlchemyElixirRequest";
+    return "ClientAgentAlchemyElixirRequest";
   }
   if (opcode == Opcode::kClientAgentAlchemyStoneRequest) {
-    return "kClientAgentAlchemyStoneRequest";
+    return "ClientAgentAlchemyStoneRequest";
   }
   if (opcode == Opcode::CLIENT_TRANSPORT_HOME) {
     return "CLIENT_TRANSPORT_HOME";
@@ -181,13 +181,13 @@ std::string toString(Opcode opcode) {
     return "CLIENT_TRANSPORT_DELETE";
   }
   if (opcode == Opcode::kClientAgentInventoryStorageOpenRequest) {
-    return "kClientAgentInventoryStorageOpenRequest";
+    return "ClientAgentInventoryStorageOpenRequest";
   }
   if (opcode == Opcode::kClientAgentInventoryRepairRequest) {
-    return "kClientAgentInventoryRepairRequest";
+    return "ClientAgentInventoryRepairRequest";
   }
   if (opcode == Opcode::kClientAgentCharacterUpdateBodyStateRequest) {
-    return "kClientAgentCharacterUpdateBodyStateRequest";
+    return "ClientAgentCharacterUpdateBodyStateRequest";
   }
   if (opcode == Opcode::SERVER_INFO) {
     return "SERVER_INFO";
@@ -199,16 +199,16 @@ std::string toString(Opcode opcode) {
     return "SERVER_PATCH_INFO";
   }
   if (opcode == Opcode::kServerAgentAuthResponse) {
-    return "kServerAgentAuthResponse";
+    return "ServerAgentAuthResponse";
   }
   if (opcode == Opcode::kServerAgentCharacterSelectionActionResponse) {
-    return "kServerAgentCharacterSelectionActionResponse";
+    return "ServerAgentCharacterSelectionActionResponse";
   }
   if (opcode == Opcode::kServerAgentCharacterData) {
-    return "kServerAgentCharacterData";
+    return "ServerAgentCharacterData";
   }
   if (opcode == Opcode::kServerAgentCharacterSelectionJoinResponse) {
-    return "kServerAgentCharacterSelectionJoinResponse";
+    return "ServerAgentCharacterSelectionJoinResponse";
   }
   if (opcode == Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN) {
     return "SERVER_AGENT_CHARACTER_INFO_BEGIN";
@@ -217,22 +217,22 @@ std::string toString(Opcode opcode) {
     return "SERVER_AGENT_CHARACTER_INFO_END";
   }
   if (opcode == Opcode::kServerAgentEnvironmentCelestialPosition) {
-    return "kServerAgentEnvironmentCelestialPosition";
+    return "ServerAgentEnvironmentCelestialPosition";
   }
   if (opcode == Opcode::kServerAgentEntitySpawn) {
-    return "kServerAgentEntitySpawn";
+    return "ServerAgentEntitySpawn";
   }
   if (opcode == Opcode::kServerAgentEntityDespawn) {
-    return "kServerAgentEntityDespawn";
+    return "ServerAgentEntityDespawn";
   }
   if (opcode == Opcode::kServerAgentEntityGroupspawnBegin) {
-    return "kServerAgentEntityGroupspawnBegin";
+    return "ServerAgentEntityGroupspawnBegin";
   }
   if (opcode == Opcode::kServerAgentEntityGroupspawnData) {
-    return "kServerAgentEntityGroupspawnData";
+    return "ServerAgentEntityGroupspawnData";
   }
   if (opcode == Opcode::kServerAgentEntityGroupspawnEnd) {
-    return "kServerAgentEntityGroupspawnEnd";
+    return "ServerAgentEntityGroupspawnEnd";
   }
   if (opcode == Opcode::SERVER_ITEM_EQUIP) {
     return "SERVER_ITEM_EQUIP";
@@ -241,13 +241,13 @@ std::string toString(Opcode opcode) {
     return "SERVER_ITEM_UNEQUIP";
   }
   if (opcode == Opcode::kServerAgentInventoryOperationResponse) {
-    return "kServerAgentInventoryOperationResponse";
+    return "ServerAgentInventoryOperationResponse";
   }
   if (opcode == Opcode::SERVER_ANIMATION_ITEM_PICKUP) {
     return "SERVER_ANIMATION_ITEM_PICKUP";
   }
   if (opcode == Opcode::kServerAgentInventoryItemUseResponse) {
-    return "kServerAgentInventoryItemUseResponse";
+    return "ServerAgentInventoryItemUseResponse";
   }
   if (opcode == Opcode::SERVER_ANIMATION_ITEM_USE) {
     return "SERVER_ANIMATION_ITEM_USE";
@@ -256,7 +256,7 @@ std::string toString(Opcode opcode) {
     return "SERVER_ANIMATION_CAPE";
   }
   if (opcode == Opcode::kServerAgentInventoryUpdateItem) {
-    return "kServerAgentInventoryUpdateItem";
+    return "ServerAgentInventoryUpdateItem";
   }
   if (opcode == Opcode::SERVER_QUIT_GAME) {
     return "SERVER_QUIT_GAME";
@@ -268,70 +268,70 @@ std::string toString(Opcode opcode) {
     return "SERVER_COUNTDOWN_INTERRUPT";
   }
   if (opcode == Opcode::kServerAgentEntityUpdatePoints) {
-    return "kServerAgentEntityUpdatePoints";
+    return "ServerAgentEntityUpdatePoints";
   }
   if (opcode == Opcode::kServerAgentCharacterUpdateStats) {
-    return "kServerAgentCharacterUpdateStats";
+    return "ServerAgentCharacterUpdateStats";
   }
   if (opcode == Opcode::kServerAgentCharacterIncreaseStrResponse) {
-    return "kServerAgentCharacterIncreaseStrResponse";
+    return "ServerAgentCharacterIncreaseStrResponse";
   }
   if (opcode == Opcode::kServerAgentCharacterIncreaseIntResponse) {
-    return "kServerAgentCharacterIncreaseIntResponse";
+    return "ServerAgentCharacterIncreaseIntResponse";
   }
   if (opcode == Opcode::kServerAgentEntityUpdateState) {
-    return "kServerAgentEntityUpdateState";
+    return "ServerAgentEntityUpdateState";
   }
   if (opcode == Opcode::kServerAgentEntityUpdateHwanLevel) {
-    return "kServerAgentEntityUpdateHwanLevel";
+    return "ServerAgentEntityUpdateHwanLevel";
   }
   if (opcode == Opcode::kServerAgentEntityUpdateMoveSpeed) {
-    return "kServerAgentEntityUpdateMoveSpeed";
+    return "ServerAgentEntityUpdateMoveSpeed";
   }
   if (opcode == Opcode::kServerAgentEntityRemoveOwnership) {
-    return "kServerAgentEntityRemoveOwnership";
+    return "ServerAgentEntityRemoveOwnership";
   }
   if (opcode == Opcode::kServerAgentEntityUpdateStatus) {
-    return "kServerAgentEntityUpdateStatus";
+    return "ServerAgentEntityUpdateStatus";
   }
   if (opcode == Opcode::kServerAgentEntityDamageEffect) {
-    return "kServerAgentEntityDamageEffect";
+    return "ServerAgentEntityDamageEffect";
   }
   if (opcode == Opcode::SERVER_ANIMATION_LEVEL_UP) {
     return "SERVER_ANIMATION_LEVEL_UP";
   }
   if (opcode == Opcode::kServerAgentEntityUpdateExperience) {
-    return "kServerAgentEntityUpdateExperience";
+    return "ServerAgentEntityUpdateExperience";
   }
   if (opcode == Opcode::kServerAgentSkillMasteryLearnResponse) {
-    return "kServerAgentSkillMasteryLearnResponse";
+    return "ServerAgentSkillMasteryLearnResponse";
   }
   if (opcode == Opcode::kServerAgentSkillLearnResponse) {
-    return "kServerAgentSkillLearnResponse";
+    return "ServerAgentSkillLearnResponse";
   }
   if (opcode == Opcode::kServerAgentChatUpdate) {
-    return "kServerAgentChatUpdate";
+    return "ServerAgentChatUpdate";
   }
   if (opcode == Opcode::SERVER_CHAT_ACCEPT) {
     return "SERVER_CHAT_ACCEPT";
   }
   if (opcode == Opcode::kServerAgentActionDeselectResponse) {
-    return "kServerAgentActionDeselectResponse";
+    return "ServerAgentActionDeselectResponse";
   }
   if (opcode == Opcode::kServerAgentActionSelectResponse) {
-    return "kServerAgentActionSelectResponse";
+    return "ServerAgentActionSelectResponse";
   }
   if (opcode == Opcode::kServerAgentActionTalkResponse) {
-    return "kServerAgentActionTalkResponse";
+    return "ServerAgentActionTalkResponse";
   }
   if (opcode == Opcode::kServerAgentEntityUpdateMovement) {
-    return "kServerAgentEntityUpdateMovement";
+    return "ServerAgentEntityUpdateMovement";
   }
   if (opcode == Opcode::SERVER_UNIQUE) {
     return "SERVER_UNIQUE";
   }
   if (opcode == Opcode::kServerAgentCosData) {
-    return "kServerAgentCosData";
+    return "ServerAgentCosData";
   }
   if (opcode == Opcode::SERVER_COS_SIT_UP) {
     return "SERVER_COS_SIT_UP";
@@ -343,28 +343,28 @@ std::string toString(Opcode opcode) {
     return "SERVER_COS_DELETE";
   }
   if (opcode == Opcode::kServerAgentSkillBegin) {
-    return "kServerAgentSkillBegin";
+    return "ServerAgentSkillBegin";
   }
   if (opcode == Opcode::kServerAgentActionCommandResponse) {
-    return "kServerAgentActionCommandResponse";
+    return "ServerAgentActionCommandResponse";
   }
   if (opcode == Opcode::kServerAgentSkillEnd) {
-    return "kServerAgentSkillEnd";
+    return "ServerAgentSkillEnd";
   }
   if (opcode == Opcode::kServerAgentBuffAdd) {
-    return "kServerAgentBuffAdd";
+    return "ServerAgentBuffAdd";
   }
   if (opcode == Opcode::kServerAgentBuffLink) {
-    return "kServerAgentBuffLink";
+    return "ServerAgentBuffLink";
   }
   if (opcode == Opcode::kServerAgentBuffRemove) {
-    return "kServerAgentBuffRemove";
+    return "ServerAgentBuffRemove";
   }
   if (opcode == Opcode::kServerAgentResurrectOption) {
-    return "kServerAgentResurrectOption";
+    return "ServerAgentResurrectOption";
   }
   if (opcode == Opcode::kServerAgentAbnormalInfo) {
-    return "kServerAgentAbnormalInfo";
+    return "ServerAgentAbnormalInfo";
   }
   if (opcode == Opcode::SERVER_PARTY_FORM) {
     return "SERVER_PARTY_FORM";
@@ -403,46 +403,46 @@ std::string toString(Opcode opcode) {
     return "SERVER_TELEPORT";
   }
   if (opcode == Opcode::kServerAgentGameReset) {
-    return "kServerAgentGameReset";
+    return "ServerAgentGameReset";
   }
   if (opcode == Opcode::kServerAgentInventoryStorageBegin) {
-    return "kServerAgentInventoryStorageBegin";
+    return "ServerAgentInventoryStorageBegin";
   }
   if (opcode == Opcode::kServerAgentInventoryStorageData) {
-    return "kServerAgentInventoryStorageData";
+    return "ServerAgentInventoryStorageData";
   }
   if (opcode == Opcode::kServerAgentInventoryStorageEnd) {
-    return "kServerAgentInventoryStorageEnd";
+    return "ServerAgentInventoryStorageEnd";
   }
   if (opcode == Opcode::kServerAgentAlchemyElixirResponse) {
-    return "kServerAgentAlchemyElixirResponse";
+    return "ServerAgentAlchemyElixirResponse";
   }
   if (opcode == Opcode::kServerAgentAlchemyStoneResponse) {
-    return "kServerAgentAlchemyStoneResponse";
+    return "ServerAgentAlchemyStoneResponse";
   }
   if (opcode == Opcode::kServerAgentInventoryRepairResponse) {
-    return "kServerAgentInventoryRepairResponse";
+    return "ServerAgentInventoryRepairResponse";
   }
   if (opcode == Opcode::kServerAgentInventoryUpdateDurability) {
-    return "kServerAgentInventoryUpdateDurability";
+    return "ServerAgentInventoryUpdateDurability";
   }
   if (opcode == Opcode::kServerAgentEntityUpdatePosition) {
-    return "kServerAgentEntityUpdatePosition";
+    return "ServerAgentEntityUpdatePosition";
   }
   if (opcode == Opcode::kClientAgentFreePvpUpdateRequest) {
-    return "kClientAgentFreePvpUpdateRequest";
+    return "ClientAgentFreePvpUpdateRequest";
   }
   if (opcode == Opcode::kServerAgentFreePvpUpdateResponse) {
-    return "kServerAgentFreePvpUpdateResponse";
+    return "ServerAgentFreePvpUpdateResponse";
   }
   if (opcode == Opcode::kClientGatewayLoginIbuvAnswer) {
-    return "kClientGatewayLoginIbuvAnswer";
+    return "ClientGatewayLoginIbuvAnswer";
   }
   if (opcode == Opcode::kServerGatewayLoginIbuvChallenge) {
-    return "kServerGatewayLoginIbuvChallenge";
+    return "ServerGatewayLoginIbuvChallenge";
   }
   if (opcode == Opcode::kServerGatewayLoginIbuvResult) {
-    return "kServerGatewayLoginIbuvResult";
+    return "ServerGatewayLoginIbuvResult";
   }
   return "UNKNOWN-"+std::to_string(static_cast<int>(opcode));
 }

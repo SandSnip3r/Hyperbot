@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -111,6 +112,7 @@ enum class EventCode {
   kSetCurrentPositionAsTrainingCenter,
   kResurrectOption,
   kLeveledUpSkill,
+  kTimeout,
 
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
@@ -122,23 +124,27 @@ enum class EventCode {
   // ===================================================================================
 };
 
+std::string_view toString(EventCode eventCode);
+
 struct Event {
 public:
-  explicit Event(EventCode code);
+  using EventId = uint32_t;
+  explicit Event(EventId id, EventCode code);
+  const EventId eventId;
   const EventCode eventCode;
   virtual ~Event() = default;
 };
 
 struct SkillCooldownEnded : public Event {
 public:
-  SkillCooldownEnded(int32_t skillId);
-  const int32_t skillRefId;
+  SkillCooldownEnded(EventId id, sro::scalar_types::ReferenceSkillId skillId);
+  const sro::scalar_types::ReferenceSkillId skillRefId;
   virtual ~SkillCooldownEnded() = default;
 };
 
 struct InventoryUpdated : public Event {
 public:
-  InventoryUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  InventoryUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
   const std::optional<int8_t> srcSlotNum;
   const std::optional<int8_t> destSlotNum;
   virtual ~InventoryUpdated() = default;
@@ -146,7 +152,7 @@ public:
 
 struct AvatarInventoryUpdated : public Event {
 public:
-  AvatarInventoryUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  AvatarInventoryUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
   const std::optional<int8_t> srcSlotNum;
   const std::optional<int8_t> destSlotNum;
   virtual ~AvatarInventoryUpdated() = default;
@@ -154,8 +160,8 @@ public:
 
 struct CosInventoryUpdated : public Event {
 public:
-  CosInventoryUpdated(uint32_t gId, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
-  uint32_t globalId;
+  CosInventoryUpdated(EventId id, sro::scalar_types::EntityGlobalId gId, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  sro::scalar_types::EntityGlobalId globalId;
   const std::optional<int8_t> srcSlotNum;
   const std::optional<int8_t> destSlotNum;
   virtual ~CosInventoryUpdated() = default;
@@ -163,7 +169,7 @@ public:
 
 struct StorageUpdated : public Event {
 public:
-  StorageUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  StorageUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
   const std::optional<int8_t> srcSlotNum;
   const std::optional<int8_t> destSlotNum;
   virtual ~StorageUpdated() = default;
@@ -171,7 +177,7 @@ public:
 
 struct GuildStorageUpdated : public Event {
 public:
-  GuildStorageUpdated(const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  GuildStorageUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
   const std::optional<int8_t> srcSlotNum;
   const std::optional<int8_t> destSlotNum;
   virtual ~GuildStorageUpdated() = default;
@@ -179,7 +185,7 @@ public:
 
 struct ItemUseFailed : public Event {
 public:
-  ItemUseFailed(uint8_t slotNum, type_id::TypeId typeId, packet::enums::InventoryErrorCode reason_param);
+  ItemUseFailed(EventId id, uint8_t slotNum, type_id::TypeId typeId, packet::enums::InventoryErrorCode reason_param);
   uint8_t inventorySlotNum;
   type_id::TypeId itemTypeId;
   packet::enums::InventoryErrorCode reason;
@@ -189,7 +195,7 @@ public:
 struct InjectPacket : public Event {
 public:
   enum class Direction { kClientToServer, kServerToClient };
-  InjectPacket(Direction dir, uint16_t op, const std::string &d);
+  InjectPacket(EventId id, Direction dir, uint16_t op, const std::string &d);
   Direction direction;
   uint16_t opcode;
   std::string data;
@@ -198,91 +204,91 @@ public:
 
 struct CosSpawned : public Event {
 public:
-  CosSpawned(uint32_t cosGId);
-  const uint32_t cosGlobalId;
+  CosSpawned(EventId id, sro::scalar_types::EntityGlobalId cosGId);
+  const sro::scalar_types::EntityGlobalId cosGlobalId;
   virtual ~CosSpawned() = default;
 };
 
 struct EntitySpawned : public Event {
 public:
-  EntitySpawned(uint32_t id);
-  const uint32_t globalId;
+  EntitySpawned(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntitySpawned() = default;
 };
 
 struct EntityDespawned : public Event {
 public:
-  EntityDespawned(uint32_t id);
-  const uint32_t globalId;
+  EntityDespawned(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityDespawned() = default;
 };
 
 struct EntityMovementEnded : public Event {
 public:
-  EntityMovementEnded(sro::scalar_types::EntityGlobalId id);
+  EntityMovementEnded(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityMovementEnded() = default;
 };
 
 struct EntityMovementBegan : public Event {
 public:
-  EntityMovementBegan(sro::scalar_types::EntityGlobalId id);
+  EntityMovementBegan(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityMovementBegan() = default;
 };
 
 struct EntityMovementTimerEnded : public Event {
 public:
-  EntityMovementTimerEnded(sro::scalar_types::EntityGlobalId id);
+  EntityMovementTimerEnded(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityMovementTimerEnded() = default;
 };
 
 struct EntityPositionUpdated : public Event {
 public:
-  EntityPositionUpdated(sro::scalar_types::EntityGlobalId id);
+  EntityPositionUpdated(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityPositionUpdated() = default;
 };
 
 struct EntityNotMovingAngleChanged : public Event {
 public:
-  EntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId id);
+  EntityNotMovingAngleChanged(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityNotMovingAngleChanged() = default;
 };
 
 struct EntityBodyStateChanged : public Event {
 public:
-  EntityBodyStateChanged(sro::scalar_types::EntityGlobalId id);
+  EntityBodyStateChanged(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityBodyStateChanged() = default;
 };
 
 struct EntityLifeStateChanged : public Event {
 public:
-  EntityLifeStateChanged(sro::scalar_types::EntityGlobalId id);
+  EntityLifeStateChanged(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityLifeStateChanged() = default;
 };
 
 struct EntityEnteredGeometry : public Event {
 public:
-  EntityEnteredGeometry(sro::scalar_types::EntityGlobalId id);
+  EntityEnteredGeometry(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityEnteredGeometry() = default;
 };
 
 struct EntityExitedGeometry : public Event {
 public:
-  EntityExitedGeometry(sro::scalar_types::EntityGlobalId id);
+  EntityExitedGeometry(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityExitedGeometry() = default;
 };
 
 struct SkillBegan : public Event {
 public:
-  SkillBegan(sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId);
+  SkillBegan(EventId id, sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId);
   const sro::scalar_types::EntityGlobalId casterGlobalId;
   const sro::scalar_types::ReferenceObjectId skillRefId;
   virtual ~SkillBegan() = default;
@@ -290,7 +296,7 @@ public:
 
 struct SkillEnded : public Event {
 public:
-  SkillEnded(sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId);
+  SkillEnded(EventId id, sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId);
   const sro::scalar_types::EntityGlobalId casterGlobalId;
   const sro::scalar_types::ReferenceObjectId skillRefId;
   virtual ~SkillEnded() = default;
@@ -298,7 +304,7 @@ public:
 
 struct DealtDamage : public Event {
 public:
-  DealtDamage(sro::scalar_types::EntityGlobalId sourceId, sro::scalar_types::EntityGlobalId targetId, uint32_t damageAmount);
+  DealtDamage(EventId id, sro::scalar_types::EntityGlobalId sourceId, sro::scalar_types::EntityGlobalId targetId, uint32_t damageAmount);
   const sro::scalar_types::EntityGlobalId sourceId;
   const sro::scalar_types::EntityGlobalId targetId;
   const uint32_t damageAmount;
@@ -307,29 +313,29 @@ public:
 
 struct KilledEntity : public Event {
 public:
-  KilledEntity(sro::scalar_types::EntityGlobalId targetId);
+  KilledEntity(EventId id, sro::scalar_types::EntityGlobalId targetId);
   const sro::scalar_types::EntityGlobalId targetId;
   virtual ~KilledEntity() = default;
 };
 
 struct OurSkillFailed : public Event {
 public:
-  OurSkillFailed(sro::scalar_types::ReferenceObjectId id, uint16_t err);
-  const sro::scalar_types::ReferenceObjectId skillRefId;
+  OurSkillFailed(EventId id, sro::scalar_types::ReferenceSkillId skillId, uint16_t err);
+  const sro::scalar_types::ReferenceSkillId skillRefId;
   const uint16_t errorCode;
   virtual ~OurSkillFailed() = default;
 };
 
 struct EntityHpChanged : public Event {
 public:
-  EntityHpChanged(sro::scalar_types::EntityGlobalId id);
+  EntityHpChanged(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityHpChanged() = default;
 };
 
 struct BuffAdded : public Event {
 public:
-  BuffAdded(sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId);
+  BuffAdded(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId);
   const sro::scalar_types::EntityGlobalId entityGlobalId;
   const sro::scalar_types::ReferenceObjectId buffRefId;
   virtual ~BuffAdded() = default;
@@ -337,7 +343,7 @@ public:
 
 struct BuffRemoved : public Event {
 public:
-  BuffRemoved(sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId);
+  BuffRemoved(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId);
   const sro::scalar_types::EntityGlobalId entityGlobalId;
   const sro::scalar_types::ReferenceObjectId buffRefId;
   virtual ~BuffRemoved() = default;
@@ -345,13 +351,13 @@ public:
 
 struct CommandError : public Event {
 public:
-  CommandError(const packet::structures::ActionCommand &cmd);
+  CommandError(EventId id, const packet::structures::ActionCommand &cmd);
   const packet::structures::ActionCommand command;
   virtual ~CommandError() = default;
 };
 struct ItemUseTimeout : public Event {
 public:
-  ItemUseTimeout(uint8_t slot, type_id::TypeId tid);
+  ItemUseTimeout(EventId id, uint8_t slot, type_id::TypeId tid);
   const uint8_t slotNum;
   const type_id::TypeId typeData;
   virtual ~ItemUseTimeout() = default;
@@ -359,81 +365,81 @@ public:
 
 struct SkillCastTimeout : public Event {
 public:
-  SkillCastTimeout(sro::scalar_types::ReferenceObjectId skillId);
+  SkillCastTimeout(EventId id, sro::scalar_types::ReferenceObjectId skillId);
   const sro::scalar_types::ReferenceObjectId skillId;
   virtual ~SkillCastTimeout() = default;
 };
 
 struct EntityOwnershipRemoved : public Event {
 public:
-  EntityOwnershipRemoved(sro::scalar_types::EntityGlobalId id);
+  EntityOwnershipRemoved(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityOwnershipRemoved() = default;
 };
 
 struct StateMachineCreated : public Event {
 public:
-  StateMachineCreated(const std::string &name);
+  StateMachineCreated(EventId id, const std::string &name);
   const std::string stateMachineName;
   virtual ~StateMachineCreated() = default;
 };
 
 struct ItemCooldownEnded : public Event {
 public:
-  ItemCooldownEnded(type_id::TypeId tId);
+  ItemCooldownEnded(EventId id, type_id::TypeId tId);
   const type_id::TypeId typeId;
   virtual ~ItemCooldownEnded() = default;
 };
 
 struct WalkingPathUpdated : public Event {
 public:
-  WalkingPathUpdated(const std::vector<packet::building::NetworkReadyPosition> &waypoints);
+  WalkingPathUpdated(EventId id, const std::vector<packet::building::NetworkReadyPosition> &waypoints);
   const std::vector<packet::building::NetworkReadyPosition> waypoints;
   virtual ~WalkingPathUpdated() = default;
 };
 
 struct NewConfigReceived : public Event {
 public:
-  NewConfigReceived(const proto::config::Config &config_param);
+  NewConfigReceived(EventId id, const proto::config::Config &config_param);
   const proto::config::Config config;
   virtual ~NewConfigReceived() = default;
 };
 
 struct InventoryItemUpdated : public Event {
 public:
-  InventoryItemUpdated(const uint8_t &slot);
+  InventoryItemUpdated(EventId id, const uint8_t &slot);
   const uint8_t slotIndex;
   virtual ~InventoryItemUpdated() = default;
 };
 
 struct ChatReceived : public Event {
 public:
-  explicit ChatReceived(packet::enums::ChatType type, uint32_t senderGlobalId, const std::string &msg);
-  explicit ChatReceived(packet::enums::ChatType type, const std::string &senderName, const std::string &msg);
+  explicit ChatReceived(EventId id, packet::enums::ChatType type, sro::scalar_types::EntityGlobalId senderGlobalId, const std::string &msg);
+  explicit ChatReceived(EventId id, packet::enums::ChatType type, const std::string &senderName, const std::string &msg);
   packet::enums::ChatType chatType;
   // Sender Global Id or Sender Name.
-  std::variant<uint32_t, std::string> sender;
+  std::variant<sro::scalar_types::EntityGlobalId, std::string> sender;
   std::string message;
   virtual ~ChatReceived() = default;
 };
 
 struct ConfigUpdated : public Event {
 public:
-  explicit ConfigUpdated(const proto::config::Config &c);
+  explicit ConfigUpdated(EventId id, const proto::config::Config &c);
   proto::config::Config config;
   virtual ~ConfigUpdated() = default;
 };
 
 struct ResurrectOption : public Event {
 public:
-  explicit ResurrectOption(packet::enums::ResurrectionOptionFlag option);
+  explicit ResurrectOption(EventId id, packet::enums::ResurrectionOptionFlag option);
   packet::enums::ResurrectionOptionFlag option;
   virtual ~ResurrectOption() = default;
 };
 
 struct LeveledUpSkill : public Event {
 public:
-  explicit LeveledUpSkill(sro::scalar_types::ReferenceSkillId oldSkillId, sro::scalar_types::ReferenceSkillId newSkillId);
+  explicit LeveledUpSkill(EventId id, sro::scalar_types::ReferenceSkillId oldSkillId, sro::scalar_types::ReferenceSkillId newSkillId);
   sro::scalar_types::ReferenceSkillId oldSkillRefId;
   sro::scalar_types::ReferenceSkillId newSkillRefId;
   virtual ~LeveledUpSkill() = default;

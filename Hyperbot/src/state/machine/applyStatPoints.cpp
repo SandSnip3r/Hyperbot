@@ -18,58 +18,77 @@ ApplyStatPoints::ApplyStatPoints(Bot &bot, std::vector<StatPointType> statPointT
     done_ = true;
     return;
   }
-  LOG(INFO) << "Have " << bot_.selfState().getAvailableStatPoints() << " stat point(s). Want to apply " << statPointTypes_.size();
+  // Apply the given stat points in the order given (first to last), but since we want to be efficient with our vector, we'll remove items from the end. Because of this, we reverse the vector.
+  std::reverse(statPointTypes_.begin(), statPointTypes_.end());
+  VLOG(1) << "Have " << bot_.selfState().getAvailableStatPoints() << " stat point(s). Want to apply " << statPointTypes_.size();
 }
 
 ApplyStatPoints::~ApplyStatPoints() {
   // stateMachineDestroyed();
 }
 
+void ApplyStatPoints::success() {
+  if (!timeoutEventId_) {
+    LOG(WARNING) << "Successfully added stat point, but had no timeout event";
+    return;
+  }
+  bool success = bot_.eventBroker().cancelDelayedEvent(*timeoutEventId_);
+  if (!success) {
+    throw std::runtime_error("Failed to cancel timer for stat point application timeout");
+  }
+  timeoutEventId_.reset();
+}
+
 void ApplyStatPoints::onUpdate(const event::Event *event) {
   if (event != nullptr) {
     if (event->eventCode == event::EventCode::kStatsChanged) {
-      LOG(INFO) << "Stats changed";
+      VLOG(3) << "Stats changed";
       if (lastInt_ && lastStr_ &&
           bot_.selfState().intPoints() && bot_.selfState().strPoints() &&
           !statPointTypes_.empty()) {
         const auto ourType = statPointTypes_.back();
         if (ourType == StatPointType::kInt) {
           if (*bot_.selfState().intPoints() == *lastInt_ + 1) {
-            LOG(INFO) << "Successfully used 1 int";
+            VLOG(2) << "Successfully used 1 int";
             statPointTypes_.pop_back();
-            waiting_ = false;
+            success();
           }
         } else {
           if (*bot_.selfState().strPoints() == *lastStr_ + 1) {
-            LOG(INFO) << "Successfully used 1 str";
+            VLOG(2) << "Successfully used 1 str";
             statPointTypes_.pop_back();
-            waiting_ = false;
+            success();
           }
         }
       }
       lastInt_ = bot_.selfState().intPoints();
       lastStr_ = bot_.selfState().strPoints();
+    } else if (event->eventCode == event::EventCode::kTimeout) {
+      if (timeoutEventId_ && event->eventId == *timeoutEventId_) {
+        VLOG(3) << "Timed out!";
+        timeoutEventId_.reset();
+      }
     }
   }
   
-  if (waiting_) {
+  if (timeoutEventId_) {
     return;
   }
 
   if (!lastInt_ || !lastStr_) {
-    LOG(INFO) << "Do not yet know our current int or str";
+    VLOG(2) << "Do not yet know our current int or str";
     return;
   }
 
   if (statPointTypes_.empty()) {
     // Last point applied; done
-    LOG(INFO) << "Last point applied. Done";
+    VLOG(3) << "Last point applied. Done";
     done_ = true;
     return;
   }
 
   if (bot_.selfState().getAvailableStatPoints() < 1) {
-    LOG(INFO) << "No more stat points";
+    VLOG(2) << "No more stat points";
     if (!statPointTypes_.empty()) {
       LOG(WARNING) << "Want to apply " << statPointTypes_.size() << " more stat points, but we have none left";
     }
@@ -80,14 +99,14 @@ void ApplyStatPoints::onUpdate(const event::Event *event) {
   const StatPointType pointToApply = statPointTypes_.back();
   PacketContainer packet;
   if (pointToApply == StatPointType::kInt) {
-    LOG(INFO) << "Applying an Int stat point. Have " << bot_.selfState().getAvailableStatPoints() << " stat point(s)";
+    VLOG(2) << "Applying an Int stat point. Have " << bot_.selfState().getAvailableStatPoints() << " stat point(s)";
     packet = packet::building::ClientAgentCharacterIncreaseIntRequest::packet();
   } else {
-    LOG(INFO) << "Applying a Str stat point. Have " << bot_.selfState().getAvailableStatPoints() << " stat point(s)";
+    VLOG(2) << "Applying a Str stat point. Have " << bot_.selfState().getAvailableStatPoints() << " stat point(s)";
     packet = packet::building::ClientAgentCharacterIncreaseStrRequest::packet();
   }
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
-  waiting_ = true;
+  timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(200), event::EventCode::kTimeout);
 }
 
 bool ApplyStatPoints::done() const {

@@ -305,10 +305,9 @@ void UserInterface::handleEvent(const event::Event *event) {
       broadcastConfig(castedEvent.config);
       return;
     }
-
-    LOG(INFO) << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode);
+    LOG(WARNING) << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode);
   } catch (std::exception &ex) {
-    LOG(INFO) << "Error while handling event!\n  " << ex.what();
+    LOG(WARNING) << absl::StreamFormat("Error while handling event %s: \"%s\"", event::toString(event->eventCode), ex.what());
   }
 }
 

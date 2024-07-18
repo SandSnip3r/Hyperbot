@@ -107,10 +107,10 @@ void MobileEntity::setSpeed(float walkSpeed, float runSpeed, broker::EventBroker
   const auto currentTime = std::chrono::high_resolution_clock::now();
   std::lock_guard<std::mutex> lock(mutex_);
   if (walkSpeed == this->walkSpeed && runSpeed == this->runSpeed) {
-    // Didnt actually change
+    // Didn't actually change
     return;
   }
-  // Get interpolated position before change speed, since that calulation depends on our current speed
+  // Get interpolated position before change speed, since that calculation depends on our current speed
   const auto interpolatedPosition = interpolateCurrentPosition(currentTime);
   this->walkSpeed = walkSpeed;
   this->runSpeed = runSpeed;
@@ -205,12 +205,13 @@ void MobileEntity::movementTimerCompleted(broker::EventBroker &eventBroker) {
     throw std::runtime_error("MobileEntity: Movement timer completed, but had no running timer");
   }
   if (!moving()) {
-    throw std::runtime_error("MobileEntity: Movement timer completed, but entity wasnt moving");
+    throw std::runtime_error("MobileEntity: Movement timer completed, but entity wasn't moving");
   }
   if (!destinationPosition) {
     throw std::runtime_error("MobileEntity: Movement timer completed, but we dont know where the entity was going");
   }
   position_ = *destinationPosition;
+  movingEventId.reset();
   cancelMovement(eventBroker);
   eventBroker.publishEvent<event::EntityMovementEnded>(globalId);
 }
@@ -247,7 +248,7 @@ sro::Position MobileEntity::interpolateCurrentPosition(const std::chrono::high_r
     } else if (percentTraveled == 0) {
       return position_;
     } else if (percentTraveled >= 1) {
-      //  It doesnt make much sense to travel past our destination position, that just means our timer is off. We'll truncate to the destination position.
+      //  It doesn't make much sense to travel past our destination position, that just means our timer is off. We'll truncate to the destination position.
       if (percentTraveled == std::numeric_limits<double>::infinity()) {
         throw std::runtime_error("Traveled an infinite distance.");
       }
@@ -275,7 +276,7 @@ float MobileEntity::privateCurrentSpeed() const {
       } else if (*lastMotionState == MotionState::kWalk) {
         return walkSpeed;
       } else {
-        throw std::runtime_error("Motion state is Stand, last motion state isnt walk or run ("+std::to_string(static_cast<int>(*lastMotionState))+")");
+        throw std::runtime_error("Motion state is Stand, last motion state isn't walk or run ("+std::to_string(static_cast<int>(*lastMotionState))+")");
       }
     } else {
       // MotionState: Stand, no previous motion state assuming that we're running
@@ -285,7 +286,7 @@ float MobileEntity::privateCurrentSpeed() const {
     throw std::runtime_error("Trying to get current speed, but entity is sitting");
   } else {
     // TODO: Understand what the other cases are here
-    // TODO: Include zerk
+    // TODO: Include berserk
     throw std::runtime_error("Trying to get speed, but not walking nor running");
   }
 }
@@ -294,7 +295,7 @@ void MobileEntity::privateSetStationaryAtPosition(const sro::Position &position,
   cancelMovement(eventBroker);
   bool angleUpdated{false};
   if (position_ != position) {
-    // Calculate angle of line created by these two points. Entity is facing that dirction
+    // Calculate angle of line created by these two points. Entity is facing that direction
     angle_ = sro::position_math::calculateAngleOfLine(position_, position);
     angleUpdated = true;
   }
@@ -500,8 +501,8 @@ uint32_t Monster::getMaxHp(const pk2::CharacterData &characterData) const {
   const auto &data = characterData.getCharacterById(refObjId);
   uint32_t hp = data.maxHp;
   using RarityRawType = std::underlying_type_t<decltype(rarity)>;
-  const auto partylessRarity = static_cast<sro::entity::MonsterRarity>(static_cast<RarityRawType>(rarity) & (static_cast<RarityRawType>(sro::entity::MonsterRarity::kPartyFlag)-1));
-  switch (partylessRarity) {
+  const auto nonPartyRarity = static_cast<sro::entity::MonsterRarity>(static_cast<RarityRawType>(rarity) & (static_cast<RarityRawType>(sro::entity::MonsterRarity::kPartyFlag)-1));
+  switch (nonPartyRarity) {
     case sro::entity::MonsterRarity::kChampion:
       hp *= 2;
       break;
@@ -512,7 +513,7 @@ uint32_t Monster::getMaxHp(const pk2::CharacterData &characterData) const {
       hp *= 30;
       break;
     default:
-      LOG(INFO) << "Asking for max HP of an unknown monster rarity";
+      LOG(WARNING) << "Asking for max HP of an unknown monster rarity";
       break;
   }
   if (flags::isSet(rarity, sro::entity::MonsterRarity::kPartyFlag)) {

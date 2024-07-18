@@ -173,6 +173,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kConfigUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kResurrectOption, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kLeveledUpSkill, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kTimeout, eventHandleFunction);
 
   // Skills
   eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
@@ -220,7 +221,8 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kStateCharacterListUpdated:
       case event::EventCode::kResurrectOption:
       case event::EventCode::kCharacterAvailableStatPointsUpdated:
-      case event::EventCode::kStatsChanged: {
+      case event::EventCode::kStatsChanged:
+      case event::EventCode::kTimeout: {
         onUpdate(event);
         break;
       }
@@ -432,12 +434,12 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
       default: {
-        LOG(INFO) << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode);
+        LOG(INFO) << absl::StreamFormat("Unhandled event (%s) subscribed to.", event::toString(event->eventCode));
         break;
       }
     }
   } catch (std::exception &ex) {
-    LOG(INFO) << "Error while handling event " << static_cast<int>(event->eventCode) << "!\n Error: \"" << ex.what() << '"';
+    LOG(INFO) << absl::StreamFormat("Error while handling event %s: \"%s\"", event::toString(event->eventCode), ex.what());
   }
 }
 
@@ -674,7 +676,7 @@ void Bot::entitySpawned(const event::EntitySpawned &event) {
   const bool trackingEntity = worldState_.entityTracker().trackingEntity(event.globalId);
   if (!trackingEntity) {
     // TODO: Maybe we ought to move this check at the source of the event and get rid of this
-    throw std::runtime_error("Received entity spawned event, but we're not tracking this entity");
+    throw std::runtime_error(absl::StrFormat("Received entity spawned event, but we are not tracking entity %d", event.globalId));
   }
   {
     // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.

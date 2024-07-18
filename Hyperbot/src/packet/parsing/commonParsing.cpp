@@ -58,6 +58,7 @@ std::shared_ptr<entity::Entity> newObjectFromId(sro::scalar_types::ReferenceObje
     ptr->typeId4 = portal.typeId4;
     return ptr;
   }
+  throw std::runtime_error("Do not know how to create this entity");
 }
 
 } // anonymous namespace

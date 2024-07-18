@@ -13,7 +13,7 @@ namespace state {
 
 class SkillEngine {
 public:
-  void skillCooldownBegin(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker::DelayedEventId cooldownEndEventId);
+  void skillCooldownBegin(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker::EventId cooldownEndEventId);
   void skillCooldownEnded(sro::scalar_types::ReferenceObjectId skillRefId);
   bool skillIsOnCooldown(sro::scalar_types::ReferenceObjectId skillRefId) const;
   std::optional<std::chrono::milliseconds> skillRemainingCooldown(sro::scalar_types::ReferenceObjectId skillRefId, const broker::EventBroker &eventBroker) const;
@@ -21,7 +21,7 @@ public:
   void reset();
 
 private:
-  std::map<sro::scalar_types::ReferenceObjectId, broker::EventBroker::DelayedEventId> skillCooldownEventIdMap_;
+  std::map<sro::scalar_types::ReferenceObjectId, broker::EventBroker::EventId> skillCooldownEventIdMap_;
 
 public:
   struct SkillInfo {

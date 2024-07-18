@@ -102,8 +102,11 @@ PacketContainer ServerAgentEntitySpawn::packet(const ServerAgentEntitySpawn::Inp
   // stream.Write<uint32_t>(0x0000741b); // skillRefId
   // stream.Write<uint32_t>(0x00000221); // token  
 
-  std::string name = "_Nuked_";
-  stream.Write<uint16_t>(name.length());
+  const std::string name = "_Nuked_";
+  if (name.length() > std::numeric_limits<uint16_t>::max()) {
+    throw std::runtime_error("Name is too long");
+  }
+  stream.Write<uint16_t>(static_cast<uint16_t>(name.length()));
   stream.Write_Ascii(name);
 
   stream.Write<uint8_t>(0x02); // jobType

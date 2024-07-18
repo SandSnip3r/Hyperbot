@@ -245,11 +245,11 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentGameReset, serverAgentGameResetReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentResurrectOption, serverAgentResurrectOptionReceived);
   } catch (std::exception &ex) {
-    LOG(INFO) << "Error while handling packet!\n  " << ex.what();
+    LOG(INFO) << absl::StreamFormat("Error while handling packet %s: \"%s\"", packet::toString(static_cast<packet::Opcode>(packet.opcode)), ex.what());
     return;
   }
 
-  LOG(INFO) << "Unhandled packet subscribed to " << std::hex << packet.opcode << std::dec;
+  LOG(INFO) << absl::StreamFormat("Unhandled packet (%s; %#06x) subscribed to.", packet::toString(static_cast<packet::Opcode>(packet.opcode)), packet.opcode);
   return;
 }
 

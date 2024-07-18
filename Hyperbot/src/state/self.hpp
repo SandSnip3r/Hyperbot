@@ -180,7 +180,7 @@ public:
 
 private:
   // Item use cooldowns
-  std::map<type_id::TypeId, broker::EventBroker::DelayedEventId> itemCooldownEventIdMap_;
+  std::map<type_id::TypeId, broker::EventBroker::EventId> itemCooldownEventIdMap_;
 public:
 
   // Speeds
@@ -191,7 +191,7 @@ public:
   uint8_t hwanPoints_;
 
   // Movement/position
-  std::optional<broker::EventBroker::DelayedEventId> enteredNewRegionEventId_;
+  std::optional<broker::EventBroker::EventId> enteredNewRegionEventId_;
 
   // Health
 private:

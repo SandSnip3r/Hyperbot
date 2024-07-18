@@ -31,8 +31,8 @@ private:
   bool waitingForCreatedBlade_{false};
   int nextBladePlusToSpawn_{1};
   std::optional<sro::scalar_types::ReferenceObjectId> waitingForCreatedItem_;
-  std::optional<broker::EventBroker::DelayedEventId> alchemyTimedOutEventId_;
-  std::optional<broker::EventBroker::DelayedEventId> makeItemTimedOutEventId_;
+  std::optional<broker::EventBroker::EventId> alchemyTimedOutEventId_;
+  std::optional<broker::EventBroker::EventId> makeItemTimedOutEventId_;
 
   void initialize();
 };

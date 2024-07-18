@@ -51,7 +51,7 @@ private:
   std::optional<uint8_t> shieldSlot_;
   std::optional<sro::scalar_types::ReferenceObjectId> imbueSkillRefId_;
   bool expectingSkillCommandFailure_{false};
-  std::optional<broker::EventBroker::DelayedEventId> skillCastTimeoutEventId_;
+  std::optional<broker::EventBroker::EventId> skillCastTimeoutEventId_;
   bool waitingForSkillToEnd_{false};
   bool done_{false};
   std::string skillName() const;

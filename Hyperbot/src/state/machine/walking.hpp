@@ -24,7 +24,7 @@ private:
   bool tookAction_{false};
   std::vector<packet::building::NetworkReadyPosition> waypoints_;
   size_t currentWaypointIndex_{0};
-  std::optional<broker::EventBroker::DelayedEventId> movementRequestTimeoutEventId_;
+  std::optional<broker::EventBroker::EventId> movementRequestTimeoutEventId_;
 };
 
 } // namespace state::machine

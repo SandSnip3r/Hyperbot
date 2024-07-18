@@ -2,6 +2,7 @@
 #define STATE_MACHINE_APPLY_STAT_POINTS_HPP_
 
 #include "stateMachine.hpp"
+#include "broker/eventBroker.hpp"
 
 #include <optional>
 #include <vector>
@@ -24,8 +25,9 @@ private:
   std::vector<StatPointType> statPointTypes_;
   std::optional<uint16_t> lastInt_;
   std::optional<uint16_t> lastStr_;
-  bool waiting_{false};
+  std::optional<broker::EventBroker::EventId> timeoutEventId_;
   bool done_{false};
+  void success();
 };
 
 } // namespace state::machine
