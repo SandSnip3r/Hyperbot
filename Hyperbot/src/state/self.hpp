@@ -135,6 +135,7 @@ public:
   std::vector<packet::structures::Mastery> masteries() const;
   std::vector<packet::structures::Skill> skills() const;
   bool haveSkill(sro::scalar_types::ReferenceObjectId id) const;
+  uint8_t getMasteryLevel(sro::scalar_types::ReferenceMasteryId id) const;
 
   bool canUseItems() const;
   bool canUseItem(type_id::TypeId itemTypeId) const;

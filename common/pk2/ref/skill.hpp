@@ -22,9 +22,10 @@ struct RequiredWeapon {
 using SkillId = int32_t;
 
 struct Skill {
+  using GroupId = int32_t;
   uint8_t service;
-  int32_t id;
-  int32_t groupId;
+  SkillId id;
+  GroupId groupId;
   std::string basicCode;
   std::string basicName;
   std::string basicGroup;

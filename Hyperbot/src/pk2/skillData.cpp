@@ -1,5 +1,6 @@
 #include "skillData.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 
@@ -56,6 +57,17 @@ sro::scalar_types::ReferenceObjectId SkillData::getRootSkillRefId(sro::scalar_ty
     }
   }
   return id;
+}
+
+std::vector<ref::SkillId> SkillData::getSkillIdsForMastery(sro::scalar_types::ReferenceMasteryId masteryId) const {
+  std::vector<ref::SkillId> result;
+  for (auto &skillIdSkillPair : skills_) {
+    if (skillIdSkillPair.second.reqCommonMastery1 == masteryId ||
+        skillIdSkillPair.second.reqCommonMastery2 == masteryId) {
+      result.push_back(skillIdSkillPair.first);
+    }
+  }
+  return result;
 }
 
 } // namespace pk2

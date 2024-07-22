@@ -146,6 +146,16 @@ std::string GameData::getMasteryName(pk2::ref::MasteryId masteryId) const {
   return (maybeName ? *maybeName : "UNKNOWN_MASTERY");
 }
 
+pk2::ref::MasteryId GameData::getMasteryId(std::string masteryName) const {
+  std::transform(masteryName.begin(), masteryName.end(), masteryName.begin(), [](unsigned char c) { return std::tolower(c); });
+  masteryName[0] = std::toupper(masteryName[0]);
+  std::optional<std::string> maybeNameCode = textData_.getMasteryNameCodeIfExists(masteryName);
+  if (!maybeNameCode) {
+    throw std::runtime_error(absl::StrFormat("Cannot get mastery id for mastery \"%s\"", masteryName));
+  }
+  return masteryData_.getMasteryIdByMasteryNameCode(*maybeNameCode);
+}
+
 void GameData::parseGatewayPort(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kGatePortEntryName = "GATEPORT.TXT";
   sro::pk2::PK2Entry gatePortEntry = pk2Reader.getEntry(kGatePortEntryName);

@@ -245,8 +245,11 @@ std::string_view toString(EventCode eventCode) {
   if (eventCode == EventCode::kResurrectOption) {
     return "ResurrectOption";
   }
-  if (eventCode == EventCode::kLeveledUpSkill) {
-    return "LeveledUpSkill";
+  if (eventCode == EventCode::kLearnMasterySuccess) {
+    return "LearnMasterySuccess";
+  }
+  if (eventCode == EventCode::kLearnSkillSuccess) {
+    return "LearnSkillSuccess";
   }
   if (eventCode == EventCode::kTimeout) {
     return "Timeout";
@@ -395,7 +398,10 @@ ConfigUpdated::ConfigUpdated(EventId id, const proto::config::Config &c) :
 ResurrectOption::ResurrectOption(EventId id, packet::enums::ResurrectionOptionFlag option) :
     Event(id, EventCode::kResurrectOption), option(option) {}
 
-LeveledUpSkill::LeveledUpSkill(EventId id, sro::scalar_types::ReferenceSkillId oldSkillId, sro::scalar_types::ReferenceSkillId newSkillId) :
-    Event(id, EventCode::kLeveledUpSkill), oldSkillRefId(oldSkillId), newSkillRefId(newSkillId) {}
+LearnMasterySuccess::LearnMasterySuccess(EventId id, sro::scalar_types::ReferenceMasteryId masteryId) :
+    Event(id, EventCode::kLearnMasterySuccess), masteryId(masteryId) {}
+
+LearnSkillSuccess::LearnSkillSuccess(EventId id, sro::scalar_types::ReferenceSkillId newSkillId, std::optional<sro::scalar_types::ReferenceSkillId> oldSkillId) :
+    Event(id, EventCode::kLearnSkillSuccess), newSkillRefId(newSkillId), oldSkillRefId(oldSkillId) {}
 
 } // namespace event

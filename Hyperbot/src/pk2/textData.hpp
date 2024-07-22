@@ -18,6 +18,9 @@ public:
   std::optional<std::string> getItemNameIfExists(const std::string &nameStrID128) const;
   std::optional<std::string> getSkillNameIfExists(const std::string &uiSkillName) const;
   std::optional<std::string> getMasteryNameIfExists(const std::string &masteryNameCode) const;
+
+  // Expecting names like Pacheon, Wizard, Rogue, Fire, etc. Case matters.
+  std::optional<std::string> getMasteryNameCodeIfExists(const std::string &masteryName) const;
 private:
   std::map<std::string, std::string> itemNames_;
   std::map<std::string, std::string> skillNames_;

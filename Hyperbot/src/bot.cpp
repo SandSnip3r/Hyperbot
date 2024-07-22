@@ -10,13 +10,15 @@
 // For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
 #include "packet/building/clientAgentFreePvpUpdateRequest.hpp"
 #include "packet/building/clientAgentOperatorRequest.hpp"
+#include "packet/building/clientAgentSkillMasteryLearnRequest.hpp"
 // </remove>
 #include "proto_convert/convert.hpp"
 #include "state/machine/alchemy.hpp"
+#include "state/machine/applyStatPoints.hpp"
 #include "state/machine/autoPotion.hpp"
 #include "state/machine/botting.hpp"
 #include "state/machine/login.hpp"
-#include "state/machine/applyStatPoints.hpp"
+#include "state/machine/maxMasteryAndSkills.hpp"
 #include "type_id/categories.hpp"
 
 #include "pathfinder.h"
@@ -172,7 +174,9 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kConfigUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kResurrectOption, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kLeveledUpSkill, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kLearnMasterySuccess, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kLearnSkillSuccess, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kLearnSkillError, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kTimeout, eventHandleFunction);
 
   // Skills
@@ -222,7 +226,9 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kResurrectOption:
       case event::EventCode::kCharacterAvailableStatPointsUpdated:
       case event::EventCode::kStatsChanged:
-      case event::EventCode::kTimeout: {
+      case event::EventCode::kTimeout:
+      case event::EventCode::kLearnSkillError:
+      case event::EventCode::kLearnMasterySuccess: {
         onUpdate(event);
         break;
       }
@@ -428,9 +434,10 @@ void Bot::handleEvent(const event::Event *event) {
         onUpdate(event);
         break;
       }
-      case event::EventCode::kLeveledUpSkill: {
-        const auto &castedEvent = dynamic_cast<const event::LeveledUpSkill&>(*event);
+      case event::EventCode::kLearnSkillSuccess: {
+        const auto &castedEvent = dynamic_cast<const event::LearnSkillSuccess&>(*event);
         handleLeveledUpSkill(castedEvent);
+        onUpdate(event);
         break;
       }
       default: {
@@ -562,6 +569,12 @@ void Bot::handleChatCommand(const event::ChatReceived &event) {
             } else {
               LOG(INFO) << "No available stat points for " << thingToMax;
             }
+          } else {
+            // Is this a mastery?
+            const auto masteryId = gameData_.getMasteryId(std::string(thingToMax));
+            LOG(INFO) << "Asking to max mastery ID " << masteryId << " = \"" << thingToMax << "\"";
+            concurrentStateMachines_.emplace<state::machine::MaxMasteryAndSkills>(masteryId);
+            added = true;
           }
         }
         if (added) {
@@ -752,38 +765,39 @@ void Bot::setCurrentPositionAsTrainingCenter() {
   eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto());
 }
 
-void Bot::handleLeveledUpSkill(const event::LeveledUpSkill &event) {
+void Bot::handleLeveledUpSkill(const event::LearnSkillSuccess &event) {
+  if (!event.oldSkillRefId.has_value()) {
+    // This is the first skill in this group, it can not exist in the config.
+    // TODO: Skills in different groups should overwrite others. For example, the first book of fire imbue and second book are different groups, but once we get the second book, it should(?) overwrite.
+    return;
+  }
   // If this skill is in our config, update it with the new one.
   auto *characterConfig = config_.getCharacterConfig(worldState_.selfState().name);
   if (characterConfig == nullptr) {
     return;
   }
   auto *trainingConfig = characterConfig->mutable_training_config();
-  LOG(INFO) << "Updated skill from " << event.oldSkillRefId << " to " << event.newSkillRefId;
   bool updatedConfig=false;
   {
     auto *attackSkills = trainingConfig->mutable_training_attack_skill_ids();
-    auto it = std::find(attackSkills->begin(), attackSkills->end(), event.oldSkillRefId);
+    auto it = std::find(attackSkills->begin(), attackSkills->end(), *event.oldSkillRefId);
     if (it != attackSkills->end()) {
-      LOG(INFO) << "Found skill in training_attack_skill_ids. Updating";
       *it = event.newSkillRefId;
       updatedConfig = true;
     }
   }
   {
     auto *trainingBuffSkills = trainingConfig->mutable_training_buff_skill_ids();
-    auto it = std::find(trainingBuffSkills->begin(), trainingBuffSkills->end(), event.oldSkillRefId);
+    auto it = std::find(trainingBuffSkills->begin(), trainingBuffSkills->end(), *event.oldSkillRefId);
     if (it != trainingBuffSkills->end()) {
-      LOG(INFO) << "Found skill in training_buff_skill_ids. Updating";
       *it = event.newSkillRefId;
       updatedConfig = true;
     }
   }
   {
     auto *nonTrainingBuffSkills = trainingConfig->mutable_nontraining_buff_skill_ids();
-    auto it = std::find(nonTrainingBuffSkills->begin(), nonTrainingBuffSkills->end(), event.oldSkillRefId);
+    auto it = std::find(nonTrainingBuffSkills->begin(), nonTrainingBuffSkills->end(), *event.oldSkillRefId);
     if (it != nonTrainingBuffSkills->end()) {
-      LOG(INFO) << "Found skill in nontraining_buff_skill_ids. Updating";
       *it = event.newSkillRefId;
       updatedConfig = true;
     }
@@ -791,8 +805,6 @@ void Bot::handleLeveledUpSkill(const event::LeveledUpSkill &event) {
   if (updatedConfig) {
     config_.save();
     eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto());
-  } else {
-    LOG(INFO) << "Skill was not in config";
   }
 }
 

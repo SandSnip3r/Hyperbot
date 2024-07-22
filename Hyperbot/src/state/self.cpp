@@ -159,7 +159,7 @@ void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(c
   if (!intersectionPoint) {
     throw std::runtime_error("This must intersect somewhere since we know we're crossing a region boundary");
   }
-  sro::Position intersectionPos(currentPosition.regionId(), intersectionPoint->x(), 0.0f, intersectionPoint->y());
+  sro::Position intersectionPos(currentPosition.regionId(), static_cast<float>(intersectionPoint->x()), 0.0f, static_cast<float>(intersectionPoint->y()));
   // Start timer
   const auto seconds = helpers::secondsToTravel(currentPosition, intersectionPos, currentSpeed());
   enteredNewRegionEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)), event::EventCode::kEnteredNewRegion);
@@ -293,19 +293,17 @@ void Self::learnSkill(sro::scalar_types::ReferenceSkillId skillId) {
   for (auto &skill : skills_) {
     const auto &existingSkillData = gameData_.skillData().getSkillById(skill.id);
     if (newSkillData.groupId == existingSkillData.groupId) {
-      LOG(INFO) << absl::StreamFormat("Our new skill %d, has same group ID as existing skill %d. (group id: %d)", skillId, skill.id, newSkillData.groupId);
-      // We should overwrite this skill.
-      LOG(INFO) << "Overwriting...";
-      eventBroker_.publishEvent<event::LeveledUpSkill>(skill.id, skillId);
+      // Overwrite this skill.
+      eventBroker_.publishEvent<event::LearnSkillSuccess>(skillId, skill.id);
       skill.id = skillId;
       foundSkill = true;
       break;
     }
   }
   if (!foundSkill) {
-    LOG(INFO) << absl::StreamFormat("Did not find existing skill which has same group id as new skill %d", skillId);
-    LOG(INFO) << "Inserting new skill";
+    // Did not find existing skill with this group ID, create new.
     skills_.emplace_back(skillId, /*enabled=*/true);
+    eventBroker_.publishEvent<event::LearnSkillSuccess>(skillId);
   }
 }
 
@@ -313,19 +311,20 @@ void Self::learnMastery(sro::scalar_types::ReferenceMasteryId masteryId, uint8_t
   bool foundMastery = false;
   for (auto &mastery : masteries_) {
     if (mastery.id == masteryId) {
-      LOG(INFO) << absl::StreamFormat("Found mastery (ID:%d). Updating level from %d to %d", masteryId, mastery.level, masteryLevel);
+      VLOG(1) << absl::StreamFormat("Found mastery (ID:%d). Updating level from %d to %d", masteryId, mastery.level, masteryLevel);
       foundMastery = true;
       mastery.level = masteryLevel;
       break;
     }
   }
   if (!foundMastery) {
-    LOG(INFO) << absl::StreamFormat("Did not find mastery %d. Creating new with level %d", masteryId, masteryLevel);
+    VLOG(1) << absl::StreamFormat("Did not find mastery %d. Creating new with level %d", masteryId, masteryLevel);
     if (masteryLevel != 1) {
-      LOG(WARNING) << absl::StreamFormat("Super weird that we learned a new mastery and the level isnt 1. It's %d", masteryLevel);
+      LOG(WARNING) << absl::StreamFormat("Super weird that we learned a new mastery and the level isn't 1. It's %d", masteryLevel);
     }
     masteries_.emplace_back(masteryId, masteryLevel);
   }
+  eventBroker_.publishEvent<event::LearnMasterySuccess>(masteryId);
 }
 
 void Self::setGold(uint64_t goldAmount) {
@@ -534,6 +533,16 @@ bool Self::haveSkill(sro::scalar_types::ReferenceObjectId id) const {
     }
   }
   return false;
+}
+
+uint8_t Self::getMasteryLevel(sro::scalar_types::ReferenceMasteryId id) const {
+  for (const packet::structures::Mastery &mastery : masteries_) {
+    if (mastery.id == id) {
+      return mastery.level;
+    }
+  }
+  LOG(WARNING) << "Asking for mastery level which we're not tracking";
+  return 0;
 }
 
 bool Self::canUseItems() const {

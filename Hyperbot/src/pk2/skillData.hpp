@@ -18,6 +18,8 @@ public:
   int32_t getSkillTotalDuration(sro::scalar_types::ReferenceObjectId id) const;
   const SkillMap::size_type size() const;
   sro::scalar_types::ReferenceObjectId getRootSkillRefId(sro::scalar_types::ReferenceObjectId id) const;
+
+  std::vector<ref::SkillId> getSkillIdsForMastery(sro::scalar_types::ReferenceMasteryId masteryId) const;
 private:
   SkillMap skills_;
 };

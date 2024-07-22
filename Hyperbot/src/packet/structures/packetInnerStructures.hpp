@@ -81,8 +81,8 @@ struct Mastery {
 };
 
 struct Skill {
-  Skill(uint32_t i, bool e) : id(i), enabled(e) {}
-  sro::scalar_types::ReferenceObjectId id;
+  Skill(sro::scalar_types::ReferenceSkillId i, bool e) : id(i), enabled(e) {}
+  sro::scalar_types::ReferenceSkillId id;
   bool enabled;
 };
 

@@ -971,29 +971,19 @@ void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId
 }
 
 void PacketProcessor::serverAgentSkillLearnResponseReceived(const packet::parsing::ServerAgentSkillLearnResponse &packet) const {
-  // ServerAgentSkillLearnResponse(const PacketContainer &packet);
-  // bool success() const;
-  // uint32_t skillId() const;
-  // uint16_t errorCode() const;
   if (packet.success()) {
-    LOG(INFO) << "Successfully learned skill " << gameData_.getSkillName(packet.skillId());
     worldState_.selfState().learnSkill(packet.skillId());
   } else {
-    LOG(INFO) << "Error learning skill " << packet.errorCode();
+    LOG(INFO) << "Error learning skill. Error: " << packet.errorCode();
+    eventBroker_.publishEvent(event::EventCode::kLearnSkillError);
   }
 }
 
 void PacketProcessor::serverAgentSkillMasteryLearnResponseReceived(const packet::parsing::ServerAgentSkillMasteryLearnResponse &packet) const {
-  // ServerAgentSkillMasteryLearnResponse(const PacketContainer &packet);
-  // bool success() const;
-  // uint32_t masteryId() const;
-  // uint8_t masteryLevel() const;
-  // uint16_t errorCode() const;
   if (packet.success()) {
-    LOG(INFO) << "Successfully leveled mastery " << gameData_.getMasteryName(packet.masteryId()) << " to level " << static_cast<int>(packet.masteryLevel());
     worldState_.selfState().learnMastery(packet.masteryId(), packet.masteryLevel());
   } else {
-    LOG(INFO) << "Error learning mastery " << packet.errorCode();
+    LOG(WARNING) << "Error learning mastery. Error: " << packet.errorCode();
   }
 }
 

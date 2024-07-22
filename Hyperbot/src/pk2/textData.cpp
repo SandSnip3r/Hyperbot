@@ -150,5 +150,14 @@ std::optional<std::string> TextData::getMasteryNameIfExists(const std::string &m
   return it->second;
 }
 
+std::optional<std::string> TextData::getMasteryNameCodeIfExists(const std::string &masteryName) const {
+  for (const auto &codeAndNamePair : masteryNames_) {
+    if (codeAndNamePair.second == masteryName) {
+      return codeAndNamePair.first;
+    }
+  }
+  return std::nullopt;
+}
+
 
 } // namespace pk2

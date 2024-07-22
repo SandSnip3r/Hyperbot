@@ -111,7 +111,9 @@ enum class EventCode {
   kGameReset,
   kSetCurrentPositionAsTrainingCenter,
   kResurrectOption,
-  kLeveledUpSkill,
+  kLearnMasterySuccess,
+  kLearnSkillSuccess,
+  kLearnSkillError,
   kTimeout,
 
   // ===================================State updates===================================
@@ -437,12 +439,19 @@ public:
   virtual ~ResurrectOption() = default;
 };
 
-struct LeveledUpSkill : public Event {
+struct LearnMasterySuccess : public Event {
 public:
-  explicit LeveledUpSkill(EventId id, sro::scalar_types::ReferenceSkillId oldSkillId, sro::scalar_types::ReferenceSkillId newSkillId);
-  sro::scalar_types::ReferenceSkillId oldSkillRefId;
+  explicit LearnMasterySuccess(EventId id, sro::scalar_types::ReferenceMasteryId masteryId);
+  sro::scalar_types::ReferenceMasteryId masteryId;
+  virtual ~LearnMasterySuccess() = default;
+};
+
+struct LearnSkillSuccess : public Event {
+public:
+  explicit LearnSkillSuccess(EventId id, sro::scalar_types::ReferenceSkillId newSkillId, std::optional<sro::scalar_types::ReferenceSkillId> oldSkillId = std::nullopt);
   sro::scalar_types::ReferenceSkillId newSkillRefId;
-  virtual ~LeveledUpSkill() = default;
+  std::optional<sro::scalar_types::ReferenceSkillId> oldSkillRefId;
+  virtual ~LearnSkillSuccess() = default;
 };
 
 } // namespace event

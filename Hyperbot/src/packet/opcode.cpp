@@ -114,11 +114,11 @@ std::string toString(Opcode opcode) {
   if (opcode == Opcode::kClientAgentCharacterResurrect) {
     return "ClientAgentCharacterResurrect";
   }
-  if (opcode == Opcode::CLIENT_MASTERYUPDATE) {
-    return "CLIENT_MASTERYUPDATE";
+  if (opcode == Opcode::kClientAgentSkillMasteryLearnRequest) {
+    return "ClientAgentSkillMasteryLearnRequest";
   }
-  if (opcode == Opcode::CLIENT_SKILLUPDATE) {
-    return "CLIENT_SKILLUPDATE";
+  if (opcode == Opcode::kClientAgentSkillLearnRequest) {
+    return "ClientAgentSkillLearnRequest";
   }
   if (opcode == Opcode::CLIENT_EMOTION) {
     return "CLIENT_EMOTION";

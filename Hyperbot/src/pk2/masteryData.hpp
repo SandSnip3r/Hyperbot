@@ -12,6 +12,7 @@ public:
   using MasteryMap = std::unordered_map<ref::MasteryId,ref::Mastery>;
   void addMastery(pk2::ref::Mastery &&mastery);
   const pk2::ref::Mastery& getMasteryById(pk2::ref::MasteryId id) const;
+  pk2::ref::MasteryId getMasteryIdByMasteryNameCode(std::string_view masteryNameCode) const;
 private:
   MasteryMap masteries_;
 };

@@ -50,6 +50,9 @@ public:
   std::string getSkillName(sro::scalar_types::ReferenceObjectId skillRefId) const;
   std::string getItemName(sro::scalar_types::ReferenceObjectId itemRefId) const;
   std::string getMasteryName(pk2::ref::MasteryId masteryId) const;
+
+  // Expecting names like Pacheon, WIZARD, roGue, fiRE, etc. Case does not matter.
+  pk2::ref::MasteryId getMasteryId(std::string masteryName) const;
 private:
   std::mutex printMutex_;
   uint16_t gatewayPort_;

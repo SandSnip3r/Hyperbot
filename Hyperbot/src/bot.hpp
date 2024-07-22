@@ -106,7 +106,7 @@ private:
   void handleItemCooldownEnded(const event::ItemCooldownEnded &event);
   void handleGameReset(const event::Event *event);
   void setCurrentPositionAsTrainingCenter();
-  void handleLeveledUpSkill(const event::LeveledUpSkill &event);
+  void handleLeveledUpSkill(const event::LearnSkillSuccess &event);
 
 public:
   bool needToGoToTown() const;
