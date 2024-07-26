@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "position.proto";
 
-package proto.config;
+package proto.character_config;
 
 message AutopotionConfig {
   double hp_threshold = 1;
@@ -27,10 +27,4 @@ message CharacterConfig {
   string password = 3;
   AutopotionConfig autopotion_config = 4;
   TrainingConfig training_config = 5;
-}
-
-message Config {
-  optional string client_path = 1;
-  optional string character_to_login = 2;
-  repeated CharacterConfig character_configs = 3;
 }

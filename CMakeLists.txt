@@ -4,10 +4,11 @@ include_directories(${Protobuf_INCLUDE_DIRS})
 
 set(MESSAGE_SOURCES
   broadcast.proto
+  character_config.proto
   entity.proto
-  config.proto
   position.proto
   request.proto
+  server_config.proto
   stats.proto
 )
 

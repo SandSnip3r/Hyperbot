@@ -1,6 +1,5 @@
 syntax = "proto3";
 
-import "config.proto";
 import "google/protobuf/empty.proto";
 
 package proto.request;
@@ -27,7 +26,6 @@ message RequestMessage {
   oneof body {
     PacketToInject packetData = 1;
     DoAction doAction = 2;
-    proto.config.Config config = 3;
-    google.protobuf.Empty setCurrentPositionAsTrainingCenter = 4;
+    google.protobuf.Empty setCurrentPositionAsTrainingCenter = 3;
   }
 }
