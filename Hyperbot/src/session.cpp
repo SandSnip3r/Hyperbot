@@ -19,7 +19,6 @@ void Session::initialize() {
 }
 
 void Session::runAsync() {
-  //test
   loader_.startClient(proxy_.getOurListeningPort()); //throws if problem starting client & injecting
   proxyThread_ = std::thread(std::bind(&Proxy::run, &proxy_));
   // proxy_.run(); //throws if socket issues, blocks
