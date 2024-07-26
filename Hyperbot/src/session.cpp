@@ -1,15 +1,16 @@
 #include "session.hpp"
 
 Session::Session(const pk2::GameData &gameData,
-                 const config::Config &config,
+                 std::string_view clientPath,
                  broker::EventBroker &eventBroker) :
     gameData_(gameData),
-    config_(config),
+    clientPath_(clientPath),
     eventBroker_(eventBroker) {
 }
 
 Session::~Session() {
   proxy_.stop();
+  proxyThread_.join();
   // loader_.killClient();
 }
 
@@ -17,10 +18,11 @@ void Session::initialize() {
   bot_.initialize();
 }
 
-void Session::run() {
-  bot_.run(); // TODO: We should get rid of this function once we move the world state out of the bot.
+void Session::runAsync() {
+  //test
   loader_.startClient(proxy_.getOurListeningPort()); //throws if problem starting client & injecting
-  proxy_.run(); //throws if socket issues, blocks
+  proxyThread_ = std::thread(std::bind(&Proxy::run, &proxy_));
+  // proxy_.run(); //throws if socket issues, blocks
 }
 
 const state::WorldState& Session::getWorldState() const {

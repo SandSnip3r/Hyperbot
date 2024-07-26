@@ -2,7 +2,7 @@
 #define BOT_HPP_
 
 #include "broker/packetBroker.hpp"
-#include "config/config.hpp"
+#include "config/characterConfig.hpp"
 #include "event/event.hpp"
 #include "packet/building/commonBuilding.hpp"
 #include "packetProcessor.hpp"
@@ -21,16 +21,13 @@
 //    vs have each state machine constantly pulling realtime values from the config.
 class Bot {
 public:
-  Bot(const config::Config &config,
-      const pk2::GameData &gameData,
+  Bot(const pk2::GameData &gameData,
       Proxy &proxy,
       broker::PacketBroker &packetBroker,
       broker::EventBroker &eventBroker);
 
   void initialize();
-  void run();
-  const config::Config& config() const;
-  const proto::config::CharacterConfig* currentCharacterConfig() const;
+  const config::CharacterConfig* config() const;
   const pk2::GameData& gameData() const;
   Proxy& proxy() const;
   broker::PacketBroker& packetBroker() const;
@@ -44,7 +41,7 @@ protected:
   friend class broker::EventBroker;
   void handleEvent(const event::Event *event);
 
-  config::Config config_;
+  std::optional<config::CharacterConfig> config_;
   const pk2::GameData &gameData_;
   Proxy &proxy_;
   broker::PacketBroker &packetBroker_;
@@ -106,7 +103,7 @@ private:
   void handleItemCooldownEnded(const event::ItemCooldownEnded &event);
   void handleGameReset(const event::Event *event);
   void setCurrentPositionAsTrainingCenter();
-  void handleLeveledUpSkill(const event::LearnSkillSuccess &event);
+  void handleLearnedSkill(const event::LearnSkillSuccess &event);
 
 public:
   bool needToGoToTown() const;

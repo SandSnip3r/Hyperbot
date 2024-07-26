@@ -206,6 +206,7 @@ void Self::setStatPoints(uint16_t strPoints, uint16_t intPoints) {
   strPoints_ = strPoints;
   intPoints_ = intPoints;
   if (pointsUsed > 0) {
+    // TODO: This packet is received when stat points are added as well as when equipment is changed. In the first case, we should reduce our available stat points. In the second case, we should not.
     if (availableStatPoints_ < pointsUsed) {
       throw std::runtime_error("Used more points than available stat points");
     }

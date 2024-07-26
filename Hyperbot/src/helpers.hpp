@@ -12,12 +12,14 @@
 
 #include <silkroad_lib/position.h>
 
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <tuple>
 
 namespace helpers {
 
+std::filesystem::path getAppDataDirectory();
 float secondsToTravel(const sro::Position &srcPosition, const sro::Position &destPosition, const float currentSpeed);
 void initializeInventory(storage::Storage &inventory, uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<storage::Item>> &inventoryItemMap);
 void printItem(uint8_t slot, const storage::Item *item, const pk2::GameData &gameData);

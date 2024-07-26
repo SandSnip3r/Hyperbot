@@ -12,18 +12,18 @@
 namespace state::machine {
 
 Botting::Botting(Bot &bot) : StateMachine(bot) {
+  if (bot_.config() == nullptr) {
+    throw std::runtime_error("Cannot construct Botting state machine if Bot does not have a config");
+  }
   stateMachineCreated(kName);
   setTrainingSpotFromConfig();
   initializeChildState();
 }
 
 void Botting::setTrainingSpotFromConfig() {
-  const auto *characterConfig = bot_.config().getCharacterConfig(bot_.worldState().selfState().name);
-  if (characterConfig == nullptr) {
-    throw std::runtime_error("Constructing a Botting state machine but have no character config");
-  }
-  trainingSpotCenter_ = proto_convert::protoToPosition(characterConfig->training_config().center());
-  trainingRadius_ = characterConfig->training_config().radius();
+  const proto::character_config::CharacterConfig &characterConfig = bot_.config()->proto();
+  trainingSpotCenter_ = proto_convert::protoToPosition(characterConfig.training_config().center());
+  trainingRadius_ = characterConfig.training_config().radius();
   LOG(INFO) << absl::StreamFormat("Parsed training spot center from config as (%d,%f,%f,%f), and radius as %f", trainingSpotCenter_.regionId(), trainingSpotCenter_.xOffset(), trainingSpotCenter_.yOffset(), trainingSpotCenter_.zOffset(), trainingRadius_);
   trainingAreaGeometry_ = std::make_unique<entity::Circle>(trainingSpotCenter_, trainingRadius_);
 }

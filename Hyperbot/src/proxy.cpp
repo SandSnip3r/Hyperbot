@@ -28,10 +28,10 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
 
   packetBroker_.setInjectionFunction(std::bind(&Proxy::inject, this, std::placeholders::_1, std::placeholders::_2));
 
-  //Start accepting connections
+  // Start accepting connections
   PostAccept();
 
-  //Post the packet processing timer
+  // Post the packet processing timer
   timer->expires_from_now(boost::posix_time::milliseconds(kPacketProcessDelayMs));
   timer->async_wait(boost::bind(&Proxy::ProcessPackets, this, boost::asio::placeholders::error));
 }
@@ -60,21 +60,21 @@ void Proxy::inject(const PacketContainer &packet, const PacketContainer::Directi
 }
 
 void Proxy::run() {
-  //Start processing network events
+  // Start processing network events
   while(true) {
     try {
-      //Run
+      // Run
       boost::system::error_code ec;
       ioService_.run(ec);
 
       if (ec) {
         LOG(INFO) << "Error running io_service: \"" << ec.message() << '"';
       } else {
-        //No more work
+        // No more work
         break;
       }
       
-      //Prevent high CPU usage
+      // Prevent high CPU usage
       boost::this_thread::sleep(boost::posix_time::milliseconds(1));
     } catch (const std::exception &ex) {
       LOG(INFO) << "Exception while running io_service \"" << ex.what() << '"';
@@ -116,7 +116,7 @@ bool Proxy::blockingOpcode(packet::Opcode opcode) const {
 
 // Starts accepting new connections
 void Proxy::PostAccept(uint32_t count) {
-  for (uint32_t x = 0; x < count; ++x) {
+  for (uint32_t x=0; x<count; ++x) {
     // The newly created socket will be used when something connects
     boost::shared_ptr<boost::asio::ip::tcp::socket> s(boost::make_shared<boost::asio::ip::tcp::socket>(ioService_));
     acceptor.async_accept(*s, boost::bind(&Proxy::HandleAccept, this, s, boost::asio::placeholders::error));
@@ -131,7 +131,7 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
     clientConnection.Close();
     serverConnection.Close();
 
-    //Disable nagle
+    // Disable nagle
     s->set_option(boost::asio::ip::tcp::no_delay(true));
 
     clientConnection.Initialize(s);
@@ -146,7 +146,7 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
       ec = serverConnection.Connect(gatewayAddress_, gatewayPort_);
     }
 
-    //Error check
+    // Error check
     if (ec) {
       LOG(INFO) << "Unable to connect to " << (connectToAgent ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent ? agentPort_ : gatewayPort_) << ": \"" << ec.message() << '"';
 
@@ -157,10 +157,10 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
       serverConnection.PostRead();
     }
 
-    //Next connection goes to the gateway server
+    // Next connection goes to the gateway server
     connectToAgent = false;
 
-    //Post another accept
+    // Post another accept
     PostAccept();
   } else {
     LOG(INFO) << "Error accepting new connection: \"" << error.message() << '"';
@@ -174,7 +174,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         // Client sent a packet
         bool forward = true;
 
-        //Retrieve the packet out of the security api
+        // Retrieve the packet out of the security api
         const auto [packet, wasInjected] = clientConnection.security->GetPacketToRecv();
         const auto direction = (wasInjected ? PacketContainer::Direction::kBotToServer : PacketContainer::Direction::kClientToServer);
 
@@ -184,7 +184,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           forward = false;
         }
 
-        //Log packet
+        // Log packet
         packetLogger.logPacket(packet, !forward, direction);
 
         if (packet.opcode == 0x2001) {
@@ -194,13 +194,13 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         // Run packet through bot, regardless if it's blocked
         packetBroker_.packetReceived(packet, direction);
 
-        //Forward the packet to Joymax
+        // Forward the packet to gateway/agent server.
         if (forward && serverConnection.security) {
           serverConnection.InjectToSend(packet);
         }
       }
 
-      //Send packets that are currently in the security api
+      // Send packets that are currently in the security api
       while (clientConnection.security->HasPacketToSend()) {
         if (!clientConnection.Send(clientConnection.security->GetPacketToSend())) {
           LOG(INFO) << "Client connection Send error";
@@ -214,7 +214,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         // Server sent a packet
         bool forward = true;
 
-        //Retrieve the packet out of the security api
+        // Retrieve the packet out of the security api
         const auto [packet, wasInjected] = serverConnection.security->GetPacketToRecv();
         const auto direction = (wasInjected ? PacketContainer::Direction::kBotToClient : PacketContainer::Direction::kServerToClient);
 
@@ -224,7 +224,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           forward = false;
         }
 
-        //Log packet
+        // Log packet
         packetLogger.logPacket(packet, !forward, direction);
 
         if (static_cast<packet::Opcode>(packet.opcode) == packet::Opcode::kServerGatewayLoginResponse) {
@@ -233,10 +233,10 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
             // The next connection will go to the agent server
             connectToAgent = true;
 
-            uint32_t loginID = r.Read<uint32_t>();        //Login ID
-            agentIP_ = r.Read_Ascii(r.Read<uint16_t>());  //Agent IP
+            uint32_t loginID = r.Read<uint32_t>();        // Login ID
+            agentIP_ = r.Read_Ascii(r.Read<uint16_t>());  // Agent IP
             VLOG(1) << "Gateway login response gave us Agentserver IP: \"" << agentIP_ << '"';
-            agentPort_ = r.Read<uint16_t>();              //Agent port
+            agentPort_ = r.Read<uint16_t>();              // Agent port
 
             StreamUtility w;
             w.Write<uint8_t>(1);                    // Success flag
@@ -253,14 +253,14 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
               clientConnection.Send(clientConnection.security->GetPacketToSend());
             }
 
-            //Close active connections
+            // Close active connections
             VLOG(2) << "Closing gateway connection, connecting to agentserver";
             clientConnection.Close();
             serverConnection.Close();
 
-            //Want to forward this to the bot so it can grab the token
+            // Want to forward this to the bot so it can grab the token
             packetBroker_.packetReceived(packet, direction);
-            //Security pointer is now valid so skip to the end
+            // Security pointer is now valid so skip to the end
             // Skipping to "Post" wont forward this packet to the client
             goto Post;
           }
@@ -355,13 +355,13 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           packetBroker_.packetReceived(packet, direction);
         }
 
-        //Forward the packet to the Silkroad server
+        // Forward the packet to the Silkroad server
         if (forward && clientConnection.security) {
           clientConnection.InjectToSend(packet);
         }
       }
 
-      //Send packets that are currently in the security api
+      // Send packets that are currently in the security api
       while (serverConnection.security->HasPacketToSend()) {
         if (!serverConnection.Send(serverConnection.security->GetPacketToSend())) {
           LOG(INFO) << "Server connection Send error";
@@ -371,7 +371,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
     }
 
 Post:
-    //Repost the timer
+    // Repost the timer
     timer->expires_from_now(boost::posix_time::milliseconds(kPacketProcessDelayMs));
     timer->async_wait(boost::bind(&Proxy::ProcessPackets, this, boost::asio::placeholders::error));
   } else {

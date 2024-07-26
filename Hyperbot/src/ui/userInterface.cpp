@@ -66,14 +66,6 @@ void UserInterface::broadcastLaunch() {
   broadcast(broadcastMessage);
 }
 
-void UserInterface::broadcastConfig(const proto::config::Config &config) {
-  proto::broadcast::BroadcastMessage broadcastMessage;
-  proto::broadcast::Config *broadcastConfigProto = broadcastMessage.mutable_config();
-  proto::config::Config *configProto = broadcastConfigProto->mutable_config();
-  *configProto = config;
-  broadcast(broadcastMessage);
-}
-
 void UserInterface::subscribeToEvents() {
   auto eventHandleFunction = std::bind(&UserInterface::handleEvent, this, std::placeholders::_1);
 
@@ -108,7 +100,6 @@ void UserInterface::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kWalkingPathUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kConfigUpdated, eventHandleFunction);
 }
 
 void UserInterface::handleEvent(const event::Event *event) {
@@ -300,11 +291,6 @@ void UserInterface::handleEvent(const event::Event *event) {
       return;
     }
 
-    if (eventCode == event::EventCode::kConfigUpdated) {
-      const event::ConfigUpdated &castedEvent = dynamic_cast<const event::ConfigUpdated&>(*event);
-      broadcastConfig(castedEvent.config);
-      return;
-    }
     LOG(WARNING) << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode);
   } catch (std::exception &ex) {
     LOG(WARNING) << absl::StreamFormat("Error while handling event %s: \"%s\"", event::toString(event->eventCode), ex.what());
@@ -346,11 +332,6 @@ void UserInterface::handleRequest(const zmq::message_t &request) {
         } else if (doActionMsg.action() == proto::request::DoAction::kStopTraining) {
           eventBroker_.publishEvent(event::EventCode::kRequestStopTraining);
         }
-        break;
-      }
-    case proto::request::RequestMessage::BodyCase::kConfig: {
-        const proto::config::Config &config = requestMsg.config();
-        eventBroker_.publishEvent<event::NewConfigReceived>(config);
         break;
       }
     case proto::request::RequestMessage::BodyCase::kSetCurrentPositionAsTrainingCenter: {

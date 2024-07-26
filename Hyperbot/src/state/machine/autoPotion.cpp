@@ -9,6 +9,9 @@
 namespace state::machine {
 
 AutoPotion::AutoPotion(Bot &bot) : StateMachine(bot) {
+  if (bot_.config() == nullptr) {
+    throw std::runtime_error("Cannot construct AutoPotion state machine if Bot does not have a config");
+  }
 }
 
 void AutoPotion::onUpdate(const event::Event *event) {
@@ -75,7 +78,7 @@ bool AutoPotion::done() const {
 }
 
 bool AutoPotion::tryUsePurificationPill() {
-  if (!bot_.currentCharacterConfig()->autopotion_config().use_purification_pills()) {
+  if (!bot_.config()->proto().autopotion_config().use_purification_pills()) {
     return false;
   }
   const auto modernStateLevels = bot_.selfState().modernStateLevels();
@@ -181,7 +184,7 @@ bool AutoPotion::tryUseHpPotion() {
 
   // Prioritize vigors since they're generally used in more dire situations.
   //  TODO: I think the above logic is nonsense
-  if (hpPercentage < bot_.currentCharacterConfig()->autopotion_config().vigor_hp_threshold() &&
+  if (hpPercentage < bot_.config()->proto().autopotion_config().vigor_hp_threshold() &&
       bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
     // Use vigor potion
     usedAnItem = usePotion(type_id::categories::kVigorPotion);
@@ -192,7 +195,7 @@ bool AutoPotion::tryUseHpPotion() {
     return true;
   }
 
-  if (hpPercentage < bot_.currentCharacterConfig()->autopotion_config().hp_threshold() && bot_.selfState().canUseItem(type_id::categories::kHpPotion)) {
+  if (hpPercentage < bot_.config()->proto().autopotion_config().hp_threshold() && bot_.selfState().canUseItem(type_id::categories::kHpPotion)) {
     // Use health potion
     usedAnItem = usePotion(type_id::categories::kHpPotion);
   }
@@ -212,7 +215,7 @@ bool AutoPotion::tryUseMpPotion() {
 
   // Prioritize vigors since they're generally used in more dire situations.
   // Don't use vigors when we have zombie.
-  if (!haveZombie && mpPercentage < bot_.currentCharacterConfig()->autopotion_config().vigor_mp_threshold() &&
+  if (!haveZombie && mpPercentage < bot_.config()->proto().autopotion_config().vigor_mp_threshold() &&
       bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
     // Use vigor potion
     usedAnItem = usePotion(type_id::categories::kVigorPotion);
@@ -223,7 +226,7 @@ bool AutoPotion::tryUseMpPotion() {
     return true;
   }
 
-  if (mpPercentage < bot_.currentCharacterConfig()->autopotion_config().mp_threshold() && bot_.selfState().canUseItem(type_id::categories::kMpPotion)) {
+  if (mpPercentage < bot_.config()->proto().autopotion_config().mp_threshold() && bot_.selfState().canUseItem(type_id::categories::kMpPotion)) {
     // Use mana potion
     usedAnItem = usePotion(type_id::categories::kMpPotion);
   }
@@ -231,7 +234,7 @@ bool AutoPotion::tryUseMpPotion() {
 }
 
 bool AutoPotion::tryUseUniversalPill() {
-  if (!bot_.currentCharacterConfig()->autopotion_config().use_universal_pills()) {
+  if (!bot_.config()->proto().autopotion_config().use_universal_pills()) {
     return false;
   }
   const auto legacyStateEffects = bot_.selfState().legacyStateEffects();

@@ -2,6 +2,8 @@
 
 #include "packet/opcode.hpp"
 
+#include <absl/strings/str_format.h>
+
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -20,31 +22,31 @@ int64_t getMsSinceEpoch() {
 
 } // anonymous namespace
 
-const bool PacketLogger::logToFile = true;
-const bool PacketLogger::logToConsole = false;
+const bool PacketLogger::kLogToFile = false;
+const bool PacketLogger::kLogToConsole = false;
 
-PacketLogger::PacketLogger(const std::string &logDirectoryPath) : directoryPath(logDirectoryPath) {
-  //TODO: Proper path handling. std::fs? boost?
-  filePath = directoryPath + "\\" + std::to_string(getMsSinceEpoch()) + ".txt";
-  logfile.open(filePath);
-  if (!logfile) {
-    throw std::runtime_error("Unable to initialize logfile \""+filePath+"\"");
+PacketLogger::PacketLogger(const std::string &logDirectoryPath) : logFileDirectoryPath_(logDirectoryPath), logFilePath_(getLogFilePath()) {
+  if (kLogToFile) {
+    logfile_.open(logFilePath_);
+    if (!logfile_) {
+      throw std::runtime_error("Unable to initialize logfile_ \""+logFilePath_+"\"");
+    }
   }
 }
 
 void PacketLogger::logPacket(const PacketContainer &packet, bool blocked, PacketContainer::Direction direction) {
   int64_t msSinceEpoch = getMsSinceEpoch();
-  if (logToFile) {
+  if (kLogToFile) {
     logPacketToFile(msSinceEpoch, packet, blocked, direction);
   }
-  if (logToConsole || (std::find(opcodeConsoleLoggingWhitelist_.begin(), opcodeConsoleLoggingWhitelist_.end(), static_cast<packet::Opcode>(packet.opcode)) != opcodeConsoleLoggingWhitelist_.end())) {
+  if (kLogToConsole || (std::find(opcodeConsoleLoggingWhitelist_.begin(), opcodeConsoleLoggingWhitelist_.end(), static_cast<packet::Opcode>(packet.opcode)) != opcodeConsoleLoggingWhitelist_.end())) {
     logPacketToConsole(msSinceEpoch, packet, blocked, direction);
   }
 }
 
 void PacketLogger::logPacketToFile(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, PacketContainer::Direction direction) {
-  if (!logfile) {
-    throw std::runtime_error("Log file \""+filePath+"\" problem");
+  if (!logfile_) {
+    throw std::runtime_error("Log file \""+logFilePath_+"\" problem");
   }
   std::stringstream ss;
   ss << msSinceEpoch << ',';
@@ -67,7 +69,7 @@ void PacketLogger::logPacketToFile(int64_t msSinceEpoch, const PacketContainer &
     ss << ',' << (int)stream.Read<uint8_t>();
   }
   ss << '\n';
-  logfile << ss.str() << std::flush;
+  logfile_ << ss.str() << std::flush;
 }
 
 void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContainer &packet, bool blocked, PacketContainer::Direction direction) {
@@ -127,4 +129,8 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
   }
   ss << '\n';
   std::cout << ss.rdbuf() << std::flush;
+}
+
+std::string PacketLogger::getLogFilePath() const {
+  return absl::StrFormat("%s\\%d.txt", logFileDirectoryPath_, getMsSinceEpoch(), ".txt");
 }

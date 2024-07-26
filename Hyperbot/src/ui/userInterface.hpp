@@ -7,7 +7,6 @@
 #include "storage/storage.hpp"
 
 #include "ui-proto/broadcast.pb.h"
-#include "ui-proto/config.pb.h"
 #include <silkroad_lib/position.h>
 #include <silkroad_lib/scalar_types.h>
 #include <zmq.hpp>
@@ -25,6 +24,7 @@ class WorldState;
 
 namespace ui {
 
+// TODO: The UserInterface displays things which depend on the GameData. Currently, this class sends some game data to the remote UI, but also the remote UI parses the game data itself. We should choose one; either send all relevant game data, or have the UI parse all game data for itself.
 class UserInterface {
 // TODO: std::string vs std::string_view. Might need to compile protobuf with c++17?
 public:
@@ -35,7 +35,6 @@ public:
   void runAsync();
 
   void broadcastLaunch();
-  void broadcastConfig(const proto::config::Config &config);
 private:
   zmq::context_t context_;
   zmq::socket_t publisher_{context_, zmq::socket_type::pub};

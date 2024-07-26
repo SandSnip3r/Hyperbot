@@ -70,11 +70,8 @@ void Training::resetSkillLists() {
 }
 
 void Training::getSkillsFromConfig() {
-  const auto *currentCharacterConfig = bot_.currentCharacterConfig();
-  if (currentCharacterConfig == nullptr) {
-    throw std::runtime_error("Don't have a config to get training skills from");
-  }
-  const auto &trainingConfig = currentCharacterConfig->training_config();
+  const proto::character_config::CharacterConfig &characterConfig = bot_.config()->proto();
+  const proto::character_config::TrainingConfig &trainingConfig = characterConfig.training_config();
 
   // Attack skills
   for (sro::scalar_types::ReferenceObjectId id : trainingConfig.training_attack_skill_ids()) {
@@ -131,6 +128,9 @@ void Training::getSkillsFromConfig() {
 }
 
 Training::Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeometry) : StateMachine(bot), trainingAreaGeometry_(std::move(trainingAreaGeometry)) {
+  if (bot_.config() == nullptr) {
+    throw std::runtime_error("Cannot construct Training state machine if Bot does not have a config");
+  }
   stateMachineCreated(kName);
   getSkillsFromConfig();
 
@@ -214,10 +214,10 @@ void Training::onUpdate(const event::Event *event) {
           return;
         }
       }
-    } else if (const auto *configUpdated = dynamic_cast<const event::ConfigUpdated*>(event)) {
-      LOG(INFO) << "Config updated, resetting skills and re-fetching from config";
-      resetSkillLists();
-      getSkillsFromConfig();
+    // } else if (const auto *configUpdated = dynamic_cast<const event::ConfigUpdated*>(event)) {
+    //   LOG(INFO) << "Config updated, resetting skills and re-fetching from config";
+    //   resetSkillLists();
+    //   getSkillsFromConfig();
     } else if (event->eventCode == event::EventCode::kCharacterAvailableStatPointsUpdated) {
       if (!applyStatPointsChildStateMachine_ && bot_.selfState().getAvailableStatPoints() > 0) {
         LOG(INFO) << "Constructing state machine to apply " << bot_.selfState().getAvailableStatPoints() << " stat points to int";

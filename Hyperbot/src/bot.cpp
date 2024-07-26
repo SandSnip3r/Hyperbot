@@ -32,12 +32,10 @@
 
 #include <regex>
 
-Bot::Bot(const config::Config &config,
-         const pk2::GameData &gameData,
+Bot::Bot(const pk2::GameData &gameData,
          Proxy &proxy,
          broker::PacketBroker &packetBroker,
          broker::EventBroker &eventBroker) :
-      config_(config),
       gameData_(gameData),
       proxy_(proxy),
       packetBroker_(packetBroker),
@@ -54,27 +52,11 @@ void Bot::initialize() {
   packetProcessor_.initialize();
 }
 
-void Bot::run() {
-  if (config_.configProto().has_character_to_login()) {
-    const std::string &characterName = config_.configProto().character_to_login();
-    const auto loginInfo = config_.getLoginInfo(characterName);
-    if (loginInfo) {
-      loginStateMachine_ = std::make_unique<state::machine::Login>(*this, loginInfo->username, loginInfo->password, characterName);
-    } else {
-      LOG(INFO) << "No login info for character, not automatically logging in.";
-    }
+const config::CharacterConfig* Bot::config() const {
+  if (config_.has_value()) {
+    return &config_.value();
   }
-}
-
-const config::Config& Bot::config() const {
-  return config_;
-}
-
-const proto::config::CharacterConfig* Bot::currentCharacterConfig() const {
-  if (!worldState_.selfState().spawned()) {
-    throw std::runtime_error("Not yet spawned, don't know which character config to fetch");
-  }
-  return config_.getCharacterConfig(worldState_.selfState().name);
+  return nullptr;
 }
 
 const pk2::GameData& Bot::gameData() const {
@@ -171,8 +153,8 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kChatReceived, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kGameReset, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kSetCurrentPositionAsTrainingCenter, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kConfigUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kConfigUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kResurrectOption, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kLearnMasterySuccess, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kLearnSkillSuccess, eventHandleFunction);
@@ -424,19 +406,9 @@ void Bot::handleEvent(const event::Event *event) {
         setCurrentPositionAsTrainingCenter();
         break;
       }
-      case event::EventCode::kNewConfigReceived: {
-        const auto &castedEvent = dynamic_cast<const event::NewConfigReceived&>(*event);
-        config_.overwriteConfigProto(castedEvent.config);
-        eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto()); // TODO: It's a little weird to receive a config and then immediately send it out. (UserInterface handles this event and sends the config to the UI)
-        break;
-      }
-      case event::EventCode::kConfigUpdated: {
-        onUpdate(event);
-        break;
-      }
       case event::EventCode::kLearnSkillSuccess: {
         const auto &castedEvent = dynamic_cast<const event::LearnSkillSuccess&>(*event);
-        handleLeveledUpSkill(castedEvent);
+        handleLearnedSkill(castedEvent);
         onUpdate(event);
         break;
       }
@@ -643,13 +615,13 @@ void Bot::handleEntityExitedGeometry(const event::EntityExitedGeometry &event) {
 void Bot::handleSpawned(const event::Event *event) {
   LOG(INFO) << "Spawned at position " << worldState_.selfState().position();
 
-  // Only construct an autopotion state machine once the character is logged in.
-  if (currentCharacterConfig() != nullptr) {
-    autoPotionStateMachine_ = std::make_unique<state::machine::AutoPotion>(*this);
-  } else {
-    LOG(WARNING) << "Not constructing AutoPotion because we have no character config";
-  }
-  onUpdate(event);
+  // // Only construct an autopotion state machine once the character is logged in.
+  // if (currentCharacterConfig() != nullptr) {
+  //   autoPotionStateMachine_ = std::make_unique<state::machine::AutoPotion>(*this);
+  // } else {
+  //   LOG(WARNING) << "Not constructing AutoPotion because we have no character config";
+  // }
+  // onUpdate(event);
 }
 
 void Bot::handleVitalsChanged() {
@@ -757,55 +729,55 @@ void Bot::handleGameReset(const event::Event *event) {
 }
 
 void Bot::setCurrentPositionAsTrainingCenter() {
-  proto::config::CharacterConfig *characterConfig = config_.getCharacterConfig(worldState_.selfState().name);
-  proto::config::TrainingConfig *trainingConfig = characterConfig->mutable_training_config();
-  const auto currentPosition = worldState_.selfState().position();
-  proto_convert::positionToProto(currentPosition, *trainingConfig->mutable_center());
-  config_.save();
-  eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto());
+  // proto::config::CharacterConfig *characterConfig = config_.getCharacterConfig(worldState_.selfState().name);
+  // proto::config::TrainingConfig *trainingConfig = characterConfig->mutable_training_config();
+  // const auto currentPosition = worldState_.selfState().position();
+  // proto_convert::positionToProto(currentPosition, *trainingConfig->mutable_center());
+  // config_.save();
+  // eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto());
 }
 
-void Bot::handleLeveledUpSkill(const event::LearnSkillSuccess &event) {
-  if (!event.oldSkillRefId.has_value()) {
-    // This is the first skill in this group, it can not exist in the config.
-    // TODO: Skills in different groups should overwrite others. For example, the first book of fire imbue and second book are different groups, but once we get the second book, it should(?) overwrite.
-    return;
-  }
-  // If this skill is in our config, update it with the new one.
-  auto *characterConfig = config_.getCharacterConfig(worldState_.selfState().name);
-  if (characterConfig == nullptr) {
-    return;
-  }
-  auto *trainingConfig = characterConfig->mutable_training_config();
-  bool updatedConfig=false;
-  {
-    auto *attackSkills = trainingConfig->mutable_training_attack_skill_ids();
-    auto it = std::find(attackSkills->begin(), attackSkills->end(), *event.oldSkillRefId);
-    if (it != attackSkills->end()) {
-      *it = event.newSkillRefId;
-      updatedConfig = true;
-    }
-  }
-  {
-    auto *trainingBuffSkills = trainingConfig->mutable_training_buff_skill_ids();
-    auto it = std::find(trainingBuffSkills->begin(), trainingBuffSkills->end(), *event.oldSkillRefId);
-    if (it != trainingBuffSkills->end()) {
-      *it = event.newSkillRefId;
-      updatedConfig = true;
-    }
-  }
-  {
-    auto *nonTrainingBuffSkills = trainingConfig->mutable_nontraining_buff_skill_ids();
-    auto it = std::find(nonTrainingBuffSkills->begin(), nonTrainingBuffSkills->end(), *event.oldSkillRefId);
-    if (it != nonTrainingBuffSkills->end()) {
-      *it = event.newSkillRefId;
-      updatedConfig = true;
-    }
-  }
-  if (updatedConfig) {
-    config_.save();
-    eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto());
-  }
+void Bot::handleLearnedSkill(const event::LearnSkillSuccess &event) {
+  // if (!event.oldSkillRefId.has_value()) {
+  //   // This is the first skill in this group, it can not exist in the config.
+  //   // TODO: Skills in different groups should overwrite others. For example, the first book of fire imbue and second book are different groups, but once we get the second book, it should(?) overwrite.
+  //   return;
+  // }
+  // // If this skill is in our config, update it with the new one.
+  // auto *characterConfig = config_.getCharacterConfig(worldState_.selfState().name);
+  // if (characterConfig == nullptr) {
+  //   return;
+  // }
+  // auto *trainingConfig = characterConfig->mutable_training_config();
+  // bool updatedConfig=false;
+  // {
+  //   auto *attackSkills = trainingConfig->mutable_training_attack_skill_ids();
+  //   auto it = std::find(attackSkills->begin(), attackSkills->end(), *event.oldSkillRefId);
+  //   if (it != attackSkills->end()) {
+  //     *it = event.newSkillRefId;
+  //     updatedConfig = true;
+  //   }
+  // }
+  // {
+  //   auto *trainingBuffSkills = trainingConfig->mutable_training_buff_skill_ids();
+  //   auto it = std::find(trainingBuffSkills->begin(), trainingBuffSkills->end(), *event.oldSkillRefId);
+  //   if (it != trainingBuffSkills->end()) {
+  //     *it = event.newSkillRefId;
+  //     updatedConfig = true;
+  //   }
+  // }
+  // {
+  //   auto *nonTrainingBuffSkills = trainingConfig->mutable_nontraining_buff_skill_ids();
+  //   auto it = std::find(nonTrainingBuffSkills->begin(), nonTrainingBuffSkills->end(), *event.oldSkillRefId);
+  //   if (it != nonTrainingBuffSkills->end()) {
+  //     *it = event.newSkillRefId;
+  //     updatedConfig = true;
+  //   }
+  // }
+  // if (updatedConfig) {
+  //   config_.save();
+  //   eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto());
+  // }
 }
 
 bool Bot::needToGoToTown() const {
@@ -957,7 +929,7 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
     };
     for (int i=waypoints.size()-1; i>0;) {
       if (tooFar(waypoints.at(i-1), waypoints.at(i))) {
-        // Pick a point that is the maxmimum distance possible away from waypoints[i] and insert it before waypoints[i]
+        // Pick a point that is the maximum distance possible away from waypoints[i] and insert it before waypoints[i]
         const auto newWaypoint = splitWaypoints(waypoints.at(i-1), waypoints.at(i));
         waypoints.insert(waypoints.begin()+i, newWaypoint);
       } else {

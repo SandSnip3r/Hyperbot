@@ -1,9 +1,23 @@
 #include "helpers.hpp"
 
+#include "../../common/Common.h"
+
 #include <silkroad_lib/position.h>
 #include <silkroad_lib/position_math.h>
 
 namespace helpers {
+
+std::filesystem::path getAppDataDirectory() {
+  const auto appDataDirectoryPath = getAppDataPath();
+  if (appDataDirectoryPath.empty()) {
+    throw std::runtime_error("Unable to find %APPDATA%\n");
+  }
+  // Make sure the directory exists
+  if (!std::filesystem::exists(appDataDirectoryPath)) {
+    std::filesystem::create_directory(appDataDirectoryPath);
+  }
+  return appDataDirectoryPath;
+}
 
 float secondsToTravel(const sro::Position &srcPosition, const sro::Position &destPosition, const float currentSpeed) {
   const auto distance = sro::position_math::calculateDistance2d(srcPosition, destPosition);

@@ -171,11 +171,11 @@ void StatAggregator::initialize(const std::string &characterName) {
       registry.ParseFromIstream(&registryInFile);
     }
     // printParsedFiles(registry);
-    // Else, file doesnt exist, use a default StatFileRegistry
+    // Else, file doesn't exist, use a default StatFileRegistry
   }
 
   // Add our filename to the list
-  // TODO: Make sure that the entry exists for this character if [] doesnt default construct one like std::map would.
+  // TODO: Make sure that the entry exists for this character if [] doesn't default construct one like std::map would.
   auto &characterEntry = (*registry.mutable_character_entries())[characterName_];
   auto *newFileData = characterEntry.add_files();
   newFileData->set_proto_version_number(kVersionNum);
@@ -202,7 +202,7 @@ void StatAggregator::initialize(const std::string &characterName) {
 }
 
 std::string StatAggregator::generateFilename() const {
-  // Use a hash of the charactername combined with the current time.
+  // Use a hash of the character name combined with the current time.
   const auto currentTime = std::chrono::system_clock::now();
   const auto hashOfCharacterName = std::hash<std::string>{}(characterName_);
   return std::to_string(std::chrono::duration_cast<std::chrono::seconds>(currentTime.time_since_epoch()).count()) + "_" + std::to_string(hashOfCharacterName);

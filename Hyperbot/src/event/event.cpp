@@ -212,12 +212,6 @@ std::string_view toString(EventCode eventCode) {
   if (eventCode == EventCode::kWalkingPathUpdated) {
     return "WalkingPathUpdated";
   }
-  if (eventCode == EventCode::kNewConfigReceived) {
-    return "NewConfigReceived";
-  }
-  if (eventCode == EventCode::kConfigUpdated) {
-    return "ConfigUpdated";
-  }
   if (eventCode == EventCode::kInventoryItemUpdated) {
     return "InventoryItemUpdated";
   }
@@ -381,9 +375,6 @@ ItemCooldownEnded::ItemCooldownEnded(EventId id, type_id::TypeId tId) :
 WalkingPathUpdated::WalkingPathUpdated(EventId id, const std::vector<packet::building::NetworkReadyPosition> &waypoints) :
     Event(id, EventCode::kWalkingPathUpdated), waypoints(waypoints) {}
 
-NewConfigReceived::NewConfigReceived(EventId id, const proto::config::Config &config_param) :
-    Event(id, EventCode::kNewConfigReceived), config(config_param) {}
-
 InventoryItemUpdated::InventoryItemUpdated(EventId id, const uint8_t &slot) :
     Event(id, EventCode::kInventoryItemUpdated), slotIndex(slot) {}
 
@@ -391,9 +382,6 @@ ChatReceived::ChatReceived(EventId id, packet::enums::ChatType type, sro::scalar
     Event(id, EventCode::kChatReceived), chatType(type), sender(senderGlobalId), message(msg) {}
 ChatReceived::ChatReceived(EventId id, packet::enums::ChatType type, const std::string &senderName, const std::string &msg) :
     Event(id, EventCode::kChatReceived), chatType(type), sender(senderName), message(msg) {}
-
-ConfigUpdated::ConfigUpdated(EventId id, const proto::config::Config &c) :
-    Event(id, EventCode::kConfigUpdated), config(c) {}
 
 ResurrectOption::ResurrectOption(EventId id, packet::enums::ResurrectionOptionFlag option) :
     Event(id, EventCode::kResurrectOption), option(option) {}

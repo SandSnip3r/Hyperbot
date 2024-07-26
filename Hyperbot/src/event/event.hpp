@@ -4,8 +4,6 @@
 #include "packet/building/commonBuilding.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 
-#include "ui-proto/config.pb.h"
-
 #include <silkroad_lib/scalar_types.h>
 
 #include <cstdint>
@@ -95,9 +93,6 @@ enum class EventCode {
 
   kMovementRequestTimedOut,
   kWalkingPathUpdated,
-
-  kNewConfigReceived,
-  kConfigUpdated,
 
   kInventoryItemUpdated,
   kHwanPointsUpdated,
@@ -400,13 +395,6 @@ public:
   virtual ~WalkingPathUpdated() = default;
 };
 
-struct NewConfigReceived : public Event {
-public:
-  NewConfigReceived(EventId id, const proto::config::Config &config_param);
-  const proto::config::Config config;
-  virtual ~NewConfigReceived() = default;
-};
-
 struct InventoryItemUpdated : public Event {
 public:
   InventoryItemUpdated(EventId id, const uint8_t &slot);
@@ -423,13 +411,6 @@ public:
   std::variant<sro::scalar_types::EntityGlobalId, std::string> sender;
   std::string message;
   virtual ~ChatReceived() = default;
-};
-
-struct ConfigUpdated : public Event {
-public:
-  explicit ConfigUpdated(EventId id, const proto::config::Config &c);
-  proto::config::Config config;
-  virtual ~ConfigUpdated() = default;
 };
 
 struct ResurrectOption : public Event {

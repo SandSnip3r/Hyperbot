@@ -10,17 +10,14 @@
 #include <functional>
 #include <sstream>
 
-Loader::Loader(const config::Config &config, const pk2::DivisionInfo &divisionInfo) : kDivisionInfo_(divisionInfo) {
-  if (!config.configProto().has_client_path()) {
-    throw std::runtime_error("The config does not contain the client path");
-  }
+Loader::Loader(std::string_view clientPath, const pk2::DivisionInfo &divisionInfo) : kDivisionInfo_(divisionInfo) {
   // TODO: Ensure this dll path is updated for release builds
   // Note: We assume that the DLL is in our current directory
   dllPath_ = std::filesystem::current_path() / "loaderDll.dll";
   if (!std::filesystem::exists(dllPath_)) {
     throw std::runtime_error("loaderDll.dll does not exist next to executable");
   }
-  clientPath_ = std::filesystem::path(config.configProto().client_path()) / "sro_client.exe";
+  clientPath_ = std::filesystem::path(clientPath) / "sro_client.exe";
   std::stringstream args;
   args << "0 /" << (int)kDivisionInfo_.locale << " " << 0 << " " << 0;
   arguments_ = args.str();
