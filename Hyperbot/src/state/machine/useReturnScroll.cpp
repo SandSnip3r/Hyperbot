@@ -46,7 +46,7 @@ void UseReturnScroll::onUpdate(const event::Event *event) {
 
   // Now, we must wait until we teleport or die
   if (event != nullptr) {
-    if (event->eventCode == event::EventCode::kSpawned) {
+    if (event->eventCode == event::EventCode::kSelfSpawned) {
       // We just teleported
       done_ = true;
       return;

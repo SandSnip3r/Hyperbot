@@ -3,6 +3,7 @@
 
 #include "packet/building/commonBuilding.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
+#include "sessionId.hpp"
 
 #include <silkroad_lib/scalar_types.h>
 
@@ -16,8 +17,7 @@
 namespace event {
 
 enum class EventCode {
-  kLoggedIn,
-  kSpawned,
+  kSelfSpawned,
   kCosSpawned,
   kItemCooldownEnded,
   kEntityHpChanged,
@@ -114,10 +114,13 @@ enum class EventCode {
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
   // Login state updates
-  kStateShardIdUpdated,
-  kStateConnectedToAgentServerUpdated,
-  kStateReceivedCaptchaPromptUpdated,
-  kStateCharacterListUpdated,
+  kServerAuthSuccess,
+  kShardListReceived,
+  kGatewayLoginResponseReceived,
+  kConnectedToAgentServer,
+  kCharacterListReceived,
+  kIbuvChallengeReceived,
+  kCharacterSelectionJoinSuccess,
   // ===================================================================================
 };
 
@@ -130,6 +133,66 @@ public:
   const EventId eventId;
   const EventCode eventCode;
   virtual ~Event() = default;
+};
+
+struct ServerAuthSuccess : public Event {
+public:
+  ServerAuthSuccess(EventId id, SessionId sessionId);
+  const SessionId sessionId;
+  virtual ~ServerAuthSuccess() = default;
+};
+
+struct ShardListReceived : public Event {
+public:
+  ShardListReceived(EventId id, SessionId sessionId, const std::vector<packet::structures::Shard> &shards);
+  const SessionId sessionId;
+  const std::vector<packet::structures::Shard> shards;
+  virtual ~ShardListReceived() = default;
+};
+
+struct IbuvChallengeReceived : public Event {
+public:
+  IbuvChallengeReceived(EventId id, SessionId sessionId);
+  const SessionId sessionId;
+  virtual ~IbuvChallengeReceived() = default;
+};
+
+struct GatewayLoginResponseReceived : public Event {
+public:
+  GatewayLoginResponseReceived(EventId id, SessionId sessionId, uint32_t agentServerToken);
+  const SessionId sessionId;
+  const uint32_t agentServerToken;
+  virtual ~GatewayLoginResponseReceived() = default;
+};
+
+struct ConnectedToAgentServer : public Event {
+public:
+  ConnectedToAgentServer(EventId id, SessionId sessionId);
+  const SessionId sessionId;
+  virtual ~ConnectedToAgentServer() = default;
+};
+
+struct CharacterListReceived : public Event {
+public:
+  CharacterListReceived(EventId id, SessionId sessionId, const std::vector<packet::structures::character_selection::Character> &characters);
+  const SessionId sessionId;
+  const std::vector<packet::structures::character_selection::Character> characters;
+  virtual ~CharacterListReceived() = default;
+};
+
+struct CharacterSelectionJoinSuccess : public Event {
+public:
+  CharacterSelectionJoinSuccess(EventId id, SessionId sessionId);
+  const SessionId sessionId;
+  virtual ~CharacterSelectionJoinSuccess() = default;
+};
+
+struct SelfSpawned : public Event {
+public:
+  SelfSpawned(EventId id, SessionId sessionId, sro::scalar_types::EntityGlobalId globalId);
+  const SessionId sessionId;
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~SelfSpawned() = default;
 };
 
 struct SkillCooldownEnded : public Event {

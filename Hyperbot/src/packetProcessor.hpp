@@ -7,12 +7,14 @@
 // #include "packet/parsing/clientAgentActionSelectRequest.hpp"
 #include "packet/parsing/clientAgentActionCommandRequest.hpp"
 #include "packet/parsing/clientAgentActionTalkRequest.hpp"
+#include "packet/parsing/frameworkMessageIdentify.hpp"
 #include "packet/parsing/serverAgentActionCommandResponse.hpp"
 #include "packet/parsing/serverAgentActionDeselectResponse.hpp"
 #include "packet/parsing/serverAgentActionSelectResponse.hpp"
 #include "packet/parsing/serverAgentActionTalkResponse.hpp"
 #include "packet/parsing/serverAgentAlchemyElixirResponse.hpp"
 #include "packet/parsing/serverAgentAlchemyStoneResponse.hpp"
+#include "packet/parsing/serverAgentAuthResponse.hpp"
 #include "packet/parsing/serverAgentBuffAdd.hpp"
 #include "packet/parsing/serverAgentBuffLink.hpp"
 #include "packet/parsing/serverAgentBuffRemove.hpp"
@@ -20,6 +22,8 @@
 #include "packet/parsing/serverAgentCharacterUpdateStats.hpp"
 #include "packet/parsing/serverAgentCharacterIncreaseIntResponse.hpp"
 #include "packet/parsing/serverAgentCharacterIncreaseStrResponse.hpp"
+#include "packet/parsing/serverAgentCharacterSelectionActionResponse.hpp"
+#include "packet/parsing/serverAgentCharacterSelectionJoinResponse.hpp"
 #include "packet/parsing/serverAgentChatUpdate.hpp"
 #include "packet/parsing/serverAgentGameReset.hpp"
 #include "packet/parsing/serverAgentCosData.hpp"
@@ -50,9 +54,13 @@
 #include "packet/parsing/serverAgentSkillEnd.hpp"
 #include "packet/parsing/serverAgentSkillLearnResponse.hpp"
 #include "packet/parsing/serverAgentSkillMasteryLearnResponse.hpp"
+#include "packet/parsing/serverGatewayLoginIbuvChallenge.hpp"
+#include "packet/parsing/serverGatewayLoginResponse.hpp"
+#include "packet/parsing/serverGatewayShardListResponse.hpp"
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
 #include "state/worldState.hpp"
+#include "sessionId.hpp"
 
 #define ENFORCE_PURIFICATION_PILL_COOLDOWN
 
@@ -72,7 +80,8 @@ std::ostream& operator<<(std::ostream &stream, const WrappedCommand &wrappedComm
  */
 class PacketProcessor {
 public:
-  PacketProcessor(state::WorldState &worldState,
+  PacketProcessor(SessionId sessionId,
+                  state::WorldState &worldState,
                   broker::PacketBroker &brokerSystem,
                   broker::EventBroker &eventBroker,
                   const pk2::GameData &gameData);
@@ -80,6 +89,7 @@ public:
   void initialize();
   void handlePacket(const PacketContainer &packet) const;
 private:
+  const SessionId sessionId_;
   state::WorldState &worldState_;
   broker::PacketBroker &packetBroker_;
   broker::EventBroker &eventBroker_;
@@ -102,20 +112,17 @@ private:
   // Packet handle functions
   //  In principal, each of these functions should only update the state and maybe publish an event.
   //  All member functions are const because this class should hold no state.
-  // From LoginModule
-  void serverListReceived(const packet::parsing::ParsedLoginServerList &packet) const;
-  void loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) const;
-  void loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet) const;
-  void unknownPacketReceived(const packet::parsing::ParsedUnknown &packet) const;
-  void serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet) const;
-  void charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet) const;
-  void charSelectionJoinResponseReceived(const packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse &packet) const;
-  // From MovementModule
+  void frameworkMessageIdentifyReceived(const packet::parsing::FrameworkMessageIdentify &packet) const;
+  void serverGatewayShardListResponseReceived(const packet::parsing::ServerGatewayShardListResponse &packet) const;
+  void serverGatewayLoginResponseReceived(const packet::parsing::ServerGatewayLoginResponse &packet) const;
+  void serverGatewayLoginIbuvChallengeReceived(const packet::parsing::ServerGatewayLoginIbuvChallenge &packet) const;
+  void serverAgentAuthResponseReceived(const packet::parsing::ServerAgentAuthResponse &packet) const;
+  void serverAgentCharacterSelectionActionResponseReceived(const packet::parsing::ServerAgentCharacterSelectionActionResponse &packet) const;
+  void serverAgentCharacterSelectionJoinResponseReceived(const packet::parsing::ServerAgentCharacterSelectionJoinResponse &packet) const;
   void serverAgentEntityUpdateAngleReceived(packet::parsing::ServerAgentEntityUpdateAngle &packet) const;
   void serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const;
   void serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const;
   void serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const;
-  // From CharacterInfoModule
   void clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) const;
   void serverAgentCharacterDataReceived(const packet::parsing::ServerAgentCharacterData &packet) const;
   void serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const;

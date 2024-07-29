@@ -1,5 +1,7 @@
 #include "bot.hpp"
 
+#include "config/characterConfig.hpp"
+#include "helpers.hpp"
 #include "packet/building/clientAgentActionDeselectRequest.hpp"
 #include "packet/building/clientAgentActionSelectRequest.hpp"
 #include "packet/building/clientAgentActionTalkRequest.hpp"
@@ -32,10 +34,12 @@
 
 #include <regex>
 
-Bot::Bot(const pk2::GameData &gameData,
+Bot::Bot(SessionId sessionId,
+         const pk2::GameData &gameData,
          Proxy &proxy,
          broker::PacketBroker &packetBroker,
          broker::EventBroker &eventBroker) :
+      sessionId_(sessionId),
       gameData_(gameData),
       proxy_(proxy),
       packetBroker_(packetBroker),
@@ -50,6 +54,28 @@ Bot::Bot(const pk2::GameData &gameData,
 void Bot::initialize() {
   subscribeToEvents();
   packetProcessor_.initialize();
+}
+
+void Bot::setCharacterToLogin(std::string_view characterName) {
+  loadConfig(characterName);
+  if (config_) {
+    config::LoginInfo loginInfo = config_->getLoginInfo();
+    LOG(INFO) << "Parsed login info as " << loginInfo.username << ',' << loginInfo.password;
+    loginStateMachine_ = std::make_unique<state::machine::Login>(*this, loginInfo.username, loginInfo.password, characterName);
+    LOG(INFO) << "State machine created";
+  }
+}
+
+void Bot::loadConfig(std::string_view characterName) {
+  const auto appDataDirectory = helpers::getAppDataDirectory();
+  try {
+    config::CharacterConfig characterConfig;
+    characterConfig.initialize(appDataDirectory, characterName);
+    config_.emplace(std::move(characterConfig));
+    LOG(INFO) << "Character config for " << characterName << " successfully loaded";
+  } catch (const std::exception& ex) {
+    LOG(WARNING) << absl::StreamFormat("Error parsing character config for character \"%s\": \"%s\"", characterName, ex.what());
+  }
 }
 
 const config::CharacterConfig* Bot::config() const {
@@ -103,11 +129,13 @@ void Bot::subscribeToEvents() {
   // Debug help
   eventBroker_.subscribeToEvent(event::EventCode::kInjectPacket, eventHandleFunction);
   // Login events
-  eventBroker_.subscribeToEvent(event::EventCode::kStateShardIdUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStateConnectedToAgentServerUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStateReceivedCaptchaPromptUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kLoggedIn, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStateCharacterListUpdated, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kShardListReceived, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kGatewayLoginResponseReceived, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kConnectedToAgentServer, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kIbuvChallengeReceived, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kServerAuthSuccess, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCharacterListReceived, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kCharacterSelectionJoinSuccess, eventHandleFunction);
   // Movement events
   eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementEnded, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementBegan, eventHandleFunction);
@@ -115,7 +143,7 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kEntityEnteredGeometry, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityExitedGeometry, eventHandleFunction);
   // Character info events
-  eventBroker_.subscribeToEvent(event::EventCode::kSpawned, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kSelfSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kItemUseFailed, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityHpChanged, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
@@ -197,20 +225,22 @@ void Bot::handleEvent(const event::Event *event) {
       }
 
       // Login events
-      case event::EventCode::kLoggedIn: {
+      case event::EventCode::kServerAuthSuccess: {
         handleLoggedIn(event);
         break;
       }
-      case event::EventCode::kStateShardIdUpdated:
-      case event::EventCode::kStateReceivedCaptchaPromptUpdated:
-      case event::EventCode::kStateConnectedToAgentServerUpdated:
-      case event::EventCode::kStateCharacterListUpdated:
+      case event::EventCode::kShardListReceived:
+      case event::EventCode::kIbuvChallengeReceived:
+      case event::EventCode::kConnectedToAgentServer:
+      case event::EventCode::kCharacterListReceived:
+      case event::EventCode::kCharacterSelectionJoinSuccess:
       case event::EventCode::kResurrectOption:
       case event::EventCode::kCharacterAvailableStatPointsUpdated:
       case event::EventCode::kStatsChanged:
       case event::EventCode::kTimeout:
       case event::EventCode::kLearnSkillError:
-      case event::EventCode::kLearnMasterySuccess: {
+      case event::EventCode::kLearnMasterySuccess:
+      case event::EventCode::kGatewayLoginResponseReceived: {
         onUpdate(event);
         break;
       }
@@ -242,7 +272,7 @@ void Bot::handleEvent(const event::Event *event) {
       }
 
       // Character info events
-      case event::EventCode::kSpawned: {
+      case event::EventCode::kSelfSpawned: {
         handleSpawned(event);
         break;
       }
@@ -621,7 +651,7 @@ void Bot::handleSpawned(const event::Event *event) {
   // } else {
   //   LOG(WARNING) << "Not constructing AutoPotion because we have no character config";
   // }
-  // onUpdate(event);
+  onUpdate(event);
 }
 
 void Bot::handleVitalsChanged() {

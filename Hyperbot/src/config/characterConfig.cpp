@@ -1,46 +1,47 @@
 #include "characterConfig.hpp"
 
-// #include <google/protobuf/text_format.h>
-// #include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/text_format.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
 
 // #include <absl/log/log.h>
 // #include <absl/strings/str_format.h>
 
-// #include <fstream>
-// #include <stdexcept>
+#include <fstream>
+#include <stdexcept>
 
 namespace config {
 
-void CharacterConfig::initialize(const std::filesystem::path &pathToConfig) {
-//   configFileFilePath_ = pathToConfig / kConfigFileFilename;
+void CharacterConfig::initialize(const std::filesystem::path &pathToConfig, std::string_view characterName) {
+  configFileFilePath_ = pathToConfig / characterName;
 
-//   std::ios_base::openmode fileOpenMode = std::ios::in;
-//   if constexpr (kProtobufSavedAsBinary_) {
-//     // Reading file as binary
-//     fileOpenMode |= std::ios::binary;
-//   }
+  std::ios_base::openmode fileOpenMode = std::ios::in;
+  if constexpr (kProtobufSavedAsBinary_) {
+    // Reading file as binary
+    fileOpenMode |= std::ios::binary;
+  }
 
-//   std::ifstream configFileIn(configFileFilePath_, fileOpenMode);
-//   if (!configFileIn) {
-//     // CharacterConfig file does not exist, create a new one with our default constructed proto
-//     save();
-//     return;
-//   }
+  std::ifstream configFileIn(configFileFilePath_, fileOpenMode);
+  if (!configFileIn) {
+    throw std::runtime_error("CharacterConfig file does not exist");
+    // // CharacterConfig file does not exist, create a new one with our default constructed proto
+    // save();
+    // return;
+  }
 
-//   // CharacterConfig file exists, parse
-//   bool success;
-//   if constexpr (kProtobufSavedAsBinary_) {
-//     // Try to read an existing open config file as binary
-//     success = configProto_.ParseFromIstream(&configFileIn);
-//   } else {
-//     // Try to read an existing open config file as string
-//     google::protobuf::io::IstreamInputStream pbIStream(&configFileIn);
-//     success = google::protobuf::TextFormat::Parse(&pbIStream, &configProto_);
-//   }
+  // CharacterConfig file exists, parse
+  bool success;
+  if constexpr (kProtobufSavedAsBinary_) {
+    // Try to read an existing open config file as binary
+    success = configProto_.ParseFromIstream(&configFileIn);
+  } else {
+    // Try to read an existing open config file as string
+    google::protobuf::io::IstreamInputStream pbIStream(&configFileIn);
+    success = google::protobuf::TextFormat::Parse(&pbIStream, &configProto_);
+  }
 
-//   if (!success) {
-//     throw std::runtime_error("CharacterConfig file open, but could not parse");
-//   }
+  if (!success) {
+    throw std::runtime_error("CharacterConfig file open, but could not parse");
+  }
 }
 
 // void Config::save() {
@@ -103,13 +104,8 @@ const proto::character_config::CharacterConfig& CharacterConfig::proto() const {
 //   return &(*it);
 // }
 
-// std::optional<LoginInfo> Config::getLoginInfo(absl::string_view characterName) const {
-//   const auto *characterConfig = getCharacterConfig(characterName);
-//   if (characterConfig == nullptr) {
-//     LOG(WARNING) << absl::StrFormat("Cannot get login info for unknown character \"%s\"", characterName);
-//     return {};
-//   }
-//   return LoginInfo{characterConfig->username(), characterConfig->password()};
-// }
+LoginInfo CharacterConfig::getLoginInfo() const {
+  return LoginInfo{configProto_.username(), configProto_.password()};
+}
 
 } // namespace config

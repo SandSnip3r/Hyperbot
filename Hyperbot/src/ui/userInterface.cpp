@@ -69,7 +69,7 @@ void UserInterface::broadcastLaunch() {
 void UserInterface::subscribeToEvents() {
   auto eventHandleFunction = std::bind(&UserInterface::handleEvent, this, std::placeholders::_1);
 
-  eventBroker_.subscribeToEvent(event::EventCode::kSpawned, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kSelfSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCosSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntitySpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityDespawned, eventHandleFunction);
@@ -111,7 +111,7 @@ void UserInterface::handleEvent(const event::Event *event) {
   try {
     const auto eventCode = event->eventCode;
 
-    if (eventCode == event::EventCode::kSpawned) {
+    if (eventCode == event::EventCode::kSelfSpawned) {
       handleSelfSpawned();
       return;
     }

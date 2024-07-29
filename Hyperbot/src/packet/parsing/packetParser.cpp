@@ -7,18 +7,22 @@
 #include "clientAgentCharacterMoveRequest.hpp"
 #include "clientAgentChatRequest.hpp"
 #include "clientAgentInventoryItemUseRequest.hpp"
+#include "frameworkMessageIdentify.hpp"
 #include "serverAgentActionCommandResponse.hpp"
 #include "serverAgentActionDeselectResponse.hpp"
 #include "serverAgentActionSelectResponse.hpp"
 #include "serverAgentActionTalkResponse.hpp"
 #include "serverAgentAlchemyElixirResponse.hpp"
 #include "serverAgentAlchemyStoneResponse.hpp"
+#include "serverAgentAuthResponse.hpp"
 #include "serverAgentBuffAdd.hpp"
 #include "serverAgentBuffLink.hpp"
 #include "serverAgentBuffRemove.hpp"
 #include "serverAgentCharacterData.hpp"
 #include "serverAgentCharacterIncreaseStrResponse.hpp"
 #include "serverAgentCharacterIncreaseIntResponse.hpp"
+#include "serverAgentCharacterSelectionActionResponse.hpp"
+#include "serverAgentCharacterSelectionJoinResponse.hpp"
 #include "serverAgentCharacterUpdateStats.hpp"
 #include "serverAgentChatUpdate.hpp"
 #include "serverAgentCosData.hpp"
@@ -50,6 +54,9 @@
 #include "serverAgentSkillEnd.hpp"
 #include "serverAgentSkillLearnResponse.hpp"
 #include "serverAgentSkillMasteryLearnResponse.hpp"
+#include "serverGatewayLoginIbuvChallenge.hpp"
+#include "serverGatewayLoginResponse.hpp"
+#include "serverGatewayShardListResponse.hpp"
 
 #include "packet/opcode.hpp"
 
@@ -68,6 +75,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
   try {
     const auto opcode = static_cast<Opcode>(packet.opcode);
     switch (opcode) {
+      case Opcode::kFrameworkMessageIdentify:
+        return std::make_unique<FrameworkMessageIdentify>(packet);
       case Opcode::kClientAgentChatRequest:
         return std::make_unique<ClientAgentChatRequest>(packet);
       case Opcode::kClientAgentCharacterMoveRequest:
@@ -81,21 +90,19 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       case Opcode::kClientAgentActionTalkRequest:
         return std::make_unique<ClientAgentActionTalkRequest>(packet);
       case Opcode::kServerGatewayShardListResponse:
-        return std::make_unique<ParsedLoginServerList>(packet);
+        return std::make_unique<ServerGatewayShardListResponse>(packet);
       case Opcode::kServerGatewayLoginResponse:
-        return std::make_unique<ParsedLoginResponse>(packet);
-      case Opcode::LOGIN_CLIENT_INFO:
-        return std::make_unique<ParsedLoginClientInfo>(packet);
+        return std::make_unique<ServerGatewayLoginResponse>(packet);
       case Opcode::kServerAgentAuthResponse:
-        return std::make_unique<ParsedServerAuthResponse>(packet);
+        return std::make_unique<ServerAgentAuthResponse>(packet);
       case Opcode::kServerAgentAlchemyElixirResponse:
         return std::make_unique<ServerAgentAlchemyElixirResponse>(packet, gameData_.itemData());
       case Opcode::kServerAgentAlchemyStoneResponse:
         return std::make_unique<ServerAgentAlchemyStoneResponse>(packet, gameData_.itemData());
       case Opcode::kServerAgentCharacterSelectionActionResponse:
-        return std::make_unique<ParsedServerAgentCharacterSelectionActionResponse>(packet);
+        return std::make_unique<ServerAgentCharacterSelectionActionResponse>(packet);
       case Opcode::kServerAgentCharacterSelectionJoinResponse:
-        return std::make_unique<ParsedServerAgentCharacterSelectionJoinResponse>(packet);
+        return std::make_unique<ServerAgentCharacterSelectionJoinResponse>(packet);
       case Opcode::kServerAgentCharacterData:
         return std::make_unique<ServerAgentCharacterData>(packet, gameData_.itemData(), gameData_.skillData());
       case Opcode::kServerAgentEntityGroupspawnData:
@@ -179,10 +186,9 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       case Opcode::kServerAgentCosData:
         return std::make_unique<ServerAgentCosData>(packet, gameData_.characterData(), gameData_.itemData());
       case Opcode::kClientAgentAuthRequest:
+        throw std::runtime_error("Trying to parse client agent auth request"); // TODO: Properly parse. This exception was put here just to see when we're trying to parse this packet.
       case Opcode::kServerGatewayLoginIbuvChallenge:
-      // case static_cast<Opcode>(0x2005):
-      // case static_cast<Opcode>(0x6005):
-        return std::make_unique<ParsedUnknown>(packet);
+        return std::make_unique<ServerGatewayLoginIbuvChallenge>(packet);
       case Opcode::kServerAgentSkillLearnResponse:
         return std::make_unique<ServerAgentSkillLearnResponse>(packet);
       case Opcode::kServerAgentSkillMasteryLearnResponse:

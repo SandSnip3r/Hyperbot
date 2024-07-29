@@ -14,14 +14,14 @@
 
 #include <fstream>
 
-#define TRY_CAST_AND_HANDLE_PACKET(PACKET_TYPE, HANDLE_FUNCTION_NAME) \
-{ \
+#define TRY_CAST_AND_HANDLE_PACKET(PACKET_TYPE, HANDLE_FUNCTION_NAME)        \
+do {                                                                         \
   auto *castedParsedPacket = dynamic_cast<PACKET_TYPE*>(parsedPacket.get()); \
-  if (castedParsedPacket != nullptr) { \
-    HANDLE_FUNCTION_NAME(*castedParsedPacket); \
-    return; \
-  } \
-}
+  if (castedParsedPacket != nullptr) {                                       \
+    HANDLE_FUNCTION_NAME(*castedParsedPacket);                               \
+    return;                                                                  \
+  }                                                                          \
+} while (false)
 
 WrappedCommand::WrappedCommand(const packet::structures::ActionCommand &command, const pk2::GameData &gameData) : actionCommand(command), gameData_(gameData) {
 
@@ -79,10 +79,12 @@ bool skillActionKilledTarget(sro::scalar_types::EntityGlobalId targetGlobalId, c
 
 } // anonymous namespace
 
-PacketProcessor::PacketProcessor(state::WorldState &worldState,
+PacketProcessor::PacketProcessor(SessionId sessionId,
+                                 state::WorldState &worldState,
                                  broker::PacketBroker &brokerSystem,
                                  broker::EventBroker &eventBroker,
                                  const pk2::GameData &gameData) :
+      sessionId_(sessionId),
       worldState_(worldState),
       packetBroker_(brokerSystem),
       eventBroker_(eventBroker),
@@ -98,10 +100,10 @@ void PacketProcessor::subscribeToPackets() {
 
   // Server packets
   //   Login packets
-  packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentAuthRequest, packetHandleFunction);
+  // packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentAuthRequest, packetHandleFunction); // TODO: Do we want to see this packet?
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayShardListResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayLoginResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::LOGIN_CLIENT_INFO, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kFrameworkMessageIdentify, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAuthResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterSelectionActionResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterSelectionJoinResponse, packetHandleFunction);
@@ -181,13 +183,13 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) const {
 
   try {
     // Login packet handlers
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedLoginServerList, serverListReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedLoginResponse, loginResponseReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedLoginClientInfo, loginClientInfoReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedUnknown, unknownPacketReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAuthResponse, serverAuthReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterSelectionActionResponse, charListReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse, charSelectionJoinResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::FrameworkMessageIdentify, frameworkMessageIdentifyReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerGatewayShardListResponse, serverGatewayShardListResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerGatewayLoginResponse, serverGatewayLoginResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerGatewayLoginIbuvChallenge, serverGatewayLoginIbuvChallengeReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentAuthResponse, serverAgentAuthResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCharacterSelectionActionResponse, serverAgentCharacterSelectionActionResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCharacterSelectionJoinResponse, serverAgentCharacterSelectionJoinResponseReceived);
 
     // Movement packet handlers
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateAngle, serverAgentEntityUpdateAngleReceived);
@@ -265,59 +267,66 @@ void PacketProcessor::resetDataBecauseCharacterSpawned() const {
 // ===============================================Login process packet handling================================================
 // ============================================================================================================================
 
-void PacketProcessor::serverListReceived(const packet::parsing::ParsedLoginServerList &packet) const {
-  // TODO: This data should be put into the event, rather than stored in the world state.
-  worldState_.selfState().shardId = packet.shardId();
-  eventBroker_.publishEvent(event::EventCode::kStateShardIdUpdated);
+void PacketProcessor::frameworkMessageIdentifyReceived(const packet::parsing::FrameworkMessageIdentify &packet) const {
+  // This packet is a response to the client sending 0x2001 where the client indicates that it is the "SR_Client"
+  if (packet.moduleName() == "AgentServer") {
+    // Connected to agentserver.
+    eventBroker_.publishEvent<event::ConnectedToAgentServer>(sessionId_);
+  }
 }
 
-void PacketProcessor::loginResponseReceived(const packet::parsing::ParsedLoginResponse &packet) const {
+void PacketProcessor::serverGatewayShardListResponseReceived(const packet::parsing::ServerGatewayShardListResponse &packet) const {
+  VLOG(1) << absl::StreamFormat("Shard list:\n%s", absl::StrJoin(packet.shards(), ",\n", [](std::string *out, const packet::structures::Shard &shard) {
+    absl::StrAppend(out, absl::StrFormat("  { ShardID: %d, FarmID: %d, Shard Name: \"%s\", Online: %d, Capacity: %d, Is Operating? %v }", shard.shardId, shard.farmId, shard.shardName, shard.onlineCount, shard.capacity, static_cast<bool>(shard.isOperating)));
+  }));
+  eventBroker_.publishEvent<event::ShardListReceived>(sessionId_, packet.shards());
+}
+
+void PacketProcessor::serverGatewayLoginResponseReceived(const packet::parsing::ServerGatewayLoginResponse &packet) const {
   // TODO: This data should be sent in an event, rather than stored in the world state.
   if (packet.result() == packet::enums::LoginResult::kSuccess) {
-    worldState_.selfState().token = packet.token();
+    VLOG(1) << "Received login response with token " << packet.agentServerToken();
+    eventBroker_.publishEvent<event::GatewayLoginResponseReceived>(sessionId_, packet.agentServerToken());
   } else {
     // TODO: Send an event.
-    LOG(INFO) << " Login failed";
+    LOG(WARNING) << " Login failed";
   }
 }
 
-void PacketProcessor::loginClientInfoReceived(const packet::parsing::ParsedLoginClientInfo &packet) const {
-  // This packet is a response to the client sending 0x2001 where the client indicates that it is the "SR_Client"
-  if (packet.serviceName() == "AgentServer") {
-    // Connected to agentserver, send client auth packet
-    worldState_.selfState().connectedToAgentServer = true;
-    eventBroker_.publishEvent(event::EventCode::kStateConnectedToAgentServerUpdated);
-  }
+void PacketProcessor::serverGatewayLoginIbuvChallengeReceived(const packet::parsing::ServerGatewayLoginIbuvChallenge &packet) const {
+  // Got the captcha prompt, respond with an answer
+  VLOG(1) << "Received captcha challenge";
+  eventBroker_.publishEvent<event::IbuvChallengeReceived>(sessionId_);
 }
 
-void PacketProcessor::unknownPacketReceived(const packet::parsing::ParsedUnknown &packet) const {
-  if (packet.opcode() == packet::Opcode::kServerGatewayLoginIbuvChallenge) {
-    // Got the captcha prompt, respond with an answer
-    worldState_.selfState().receivedCaptchaPrompt = true;
-    eventBroker_.publishEvent(event::EventCode::kStateReceivedCaptchaPromptUpdated);
-  }
-}
-
-void PacketProcessor::serverAuthReceived(const packet::parsing::ParsedServerAuthResponse &packet) const {
+void PacketProcessor::serverAgentAuthResponseReceived(const packet::parsing::ServerAgentAuthResponse &packet) const {
   if (packet.result() == 0x01) {
     // Successful login
-    eventBroker_.publishEvent(event::EventCode::kLoggedIn);
-    // Client will automatically request the character listing
-    // TODO: For clientless, we will need to do this ourself
+    eventBroker_.publishEvent<event::ServerAuthSuccess>(sessionId_);
   }
 }
 
-void PacketProcessor::charListReceived(const packet::parsing::ParsedServerAgentCharacterSelectionActionResponse &packet) const {
-  worldState_.selfState().characterList = packet.characters();
-  eventBroker_.publishEvent(event::EventCode::kStateCharacterListUpdated);
+void PacketProcessor::serverAgentCharacterSelectionActionResponseReceived(const packet::parsing::ServerAgentCharacterSelectionActionResponse &packet) const {
+  if (packet.result() == 1) {
+    if (packet.action() == packet::enums::CharacterSelectionAction::kList) {
+      VLOG(1) << "Character list received. " << packet.characters().size() << " character(s)";
+      eventBroker_.publishEvent<event::CharacterListReceived>(sessionId_, packet.characters());
+    } else {
+      LOG(INFO) << "Other character selection action success: " << static_cast<int>(packet.action());
+    }
+  } else {
+    LOG(WARNING) << "Error during character selection action " << static_cast<int>(packet.action()) << ", error code: " << packet.errorCode();
+  }
 }
 
-void PacketProcessor::charSelectionJoinResponseReceived(const packet::parsing::ParsedServerAgentCharacterSelectionJoinResponse &packet) const {
+void PacketProcessor::serverAgentCharacterSelectionJoinResponseReceived(const packet::parsing::ServerAgentCharacterSelectionJoinResponse &packet) const {
   // A character was selected after login, this is the response
-  if (packet.result() != 0x01) {
+  if (packet.result() == 1) {
+    eventBroker_.publishEvent<event::CharacterSelectionJoinSuccess>(sessionId_);
+  } else {
     // Character selection failed
     // TODO: Properly handle error
-    LOG(INFO) << "Failed when selecting character";
+    LOG(WARNING) << "Failed when selecting character";
   }
 }
 
@@ -452,7 +461,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   helpers::initializeInventory(worldState_.selfState().avatarInventory, avatarInventorySize, avatarInventoryItemMap);
 
   VLOG(1) << "GID:" << worldState_.selfState().globalId << ", and we have " << worldState_.selfState().currentHp() << " hp and " << worldState_.selfState().currentMp() << " mp";
-  eventBroker_.publishEvent(event::EventCode::kSpawned);
+  eventBroker_.publishEvent<event::SelfSpawned>(sessionId_, worldState_.selfState().globalId);
 }
 
 void PacketProcessor::serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const {

@@ -5,11 +5,11 @@
 namespace event {
 
 std::string_view toString(EventCode eventCode) {
-  if (eventCode == EventCode::kLoggedIn) {
-    return "LoggedIn";
+  if (eventCode == EventCode::kServerAuthSuccess) {
+    return "ServerAuthSuccess";
   }
-  if (eventCode == EventCode::kSpawned) {
-    return "Spawned";
+  if (eventCode == EventCode::kSelfSpawned) {
+    return "SelfSpawned";
   }
   if (eventCode == EventCode::kCosSpawned) {
     return "CosSpawned";
@@ -251,17 +251,17 @@ std::string_view toString(EventCode eventCode) {
   if (eventCode == EventCode::kStateUpdated) {
     return "StateUpdated";
   }
-  if (eventCode == EventCode::kStateShardIdUpdated) {
-    return "StateShardIdUpdated";
+  if (eventCode == EventCode::kShardListReceived) {
+    return "ShardListReceived";
   }
-  if (eventCode == EventCode::kStateConnectedToAgentServerUpdated) {
-    return "StateConnectedToAgentServerUpdated";
+  if (eventCode == EventCode::kConnectedToAgentServer) {
+    return "ConnectedToAgentServer";
   }
-  if (eventCode == EventCode::kStateReceivedCaptchaPromptUpdated) {
-    return "StateReceivedCaptchaPromptUpdated";
+  if (eventCode == EventCode::kIbuvChallengeReceived) {
+    return "IbuvChallengeReceived";
   }
-  if (eventCode == EventCode::kStateCharacterListUpdated) {
-    return "StateCharacterListUpdated";
+  if (eventCode == EventCode::kCharacterListReceived) {
+    return "CharacterListReceived";
   }
   LOG(WARNING) << absl::StreamFormat("Asking for string for unknown event %d", static_cast<int>(eventCode));
   return "UNKNOWN";
@@ -269,6 +269,30 @@ std::string_view toString(EventCode eventCode) {
 
 Event::Event(EventId id, EventCode code) :
     eventId(id), eventCode(code) {}
+
+ServerAuthSuccess::ServerAuthSuccess(EventId id, SessionId sessionId) :
+    Event(id, EventCode::kServerAuthSuccess), sessionId(sessionId) {}
+
+ShardListReceived::ShardListReceived(EventId id, SessionId sessionId, const std::vector<packet::structures::Shard> &shards) :
+    Event(id, EventCode::kShardListReceived), sessionId(sessionId), shards(shards) {}
+
+IbuvChallengeReceived::IbuvChallengeReceived(EventId id, SessionId sessionId) :
+    Event(id, EventCode::kIbuvChallengeReceived), sessionId(sessionId) {}
+
+GatewayLoginResponseReceived::GatewayLoginResponseReceived(EventId id, SessionId sessionId, uint32_t agentServerToken) :
+    Event(id, EventCode::kGatewayLoginResponseReceived), sessionId(sessionId), agentServerToken(agentServerToken) {}
+
+ConnectedToAgentServer::ConnectedToAgentServer(EventId id, SessionId sessionId) :
+    Event(id, EventCode::kConnectedToAgentServer), sessionId(sessionId) {}
+
+CharacterListReceived::CharacterListReceived(EventId id, SessionId sessionId, const std::vector<packet::structures::character_selection::Character> &characters) :
+    Event(id, EventCode::kCharacterListReceived), sessionId(sessionId), characters(characters) {}
+
+CharacterSelectionJoinSuccess::CharacterSelectionJoinSuccess(EventId id, SessionId sessionId) :
+    Event(id, EventCode::kCharacterSelectionJoinSuccess), sessionId(sessionId) {}
+
+SelfSpawned::SelfSpawned(EventId id, SessionId sessionId, sro::scalar_types::EntityGlobalId globalId) :
+    Event(id, EventCode::kSelfSpawned), sessionId(sessionId), globalId(globalId) {}
 
 SkillCooldownEnded::SkillCooldownEnded(EventId id, sro::scalar_types::ReferenceSkillId skillId) :
     Event(id, EventCode::kSkillCooldownEnded), skillRefId(skillId) {}

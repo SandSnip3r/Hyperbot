@@ -9,24 +9,28 @@
 #include "pk2/gameData.hpp"
 #include "pk2/gameData.hpp"
 #include "proxy.hpp"
+#include "sessionId.hpp"
 #include "statAggregator.hpp"
 #include "state/worldState.hpp"
 #include "state/machine/concurrentStateMachines.hpp"
 #include "state/machine/stateMachine.hpp"
 
 #include <optional>
+#include <string_view>
 #include <vector>
 
 // TODO: Principal question: When a new config is received, reinitialize the entire StateMachine tree
 //    vs have each state machine constantly pulling realtime values from the config.
 class Bot {
 public:
-  Bot(const pk2::GameData &gameData,
+  Bot(SessionId sessionId,
+      const pk2::GameData &gameData,
       Proxy &proxy,
       broker::PacketBroker &packetBroker,
       broker::EventBroker &eventBroker);
 
   void initialize();
+  void setCharacterToLogin(std::string_view characterName);
   const config::CharacterConfig* config() const;
   const pk2::GameData& gameData() const;
   Proxy& proxy() const;
@@ -37,17 +41,19 @@ public:
   const state::EntityTracker& entityTracker() const;
   state::Self& selfState();
   const state::Self& selfState() const;
+  SessionId sessionId() const { return sessionId_; }
 protected:
   friend class broker::EventBroker;
   void handleEvent(const event::Event *event);
 
   std::optional<config::CharacterConfig> config_;
+  const SessionId sessionId_;
   const pk2::GameData &gameData_;
   Proxy &proxy_;
   broker::PacketBroker &packetBroker_;
   broker::EventBroker &eventBroker_;
   state::WorldState worldState_{gameData_, eventBroker_}; // TODO: For multi-character, this will move out of the bot
-  PacketProcessor packetProcessor_{worldState_, packetBroker_, eventBroker_, gameData_};
+  PacketProcessor packetProcessor_{sessionId_, worldState_, packetBroker_, eventBroker_, gameData_};
   StatAggregator statAggregator_{worldState_, eventBroker_};
 
 private:
@@ -57,6 +63,7 @@ private:
   state::machine::ConcurrentStateMachines concurrentStateMachines_{*this};
   inline static const std::string kEstVisRangeFilename{"estimatedVisibilityRange.txt"};
 
+  void loadConfig(std::string_view characterName);
   void subscribeToEvents();
 
   // Main logic

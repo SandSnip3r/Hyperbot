@@ -20,7 +20,7 @@ namespace packet::enums {
 
 enum class AngleAction { kObsolete=0, kGoForward=1 };
 
-enum class CharacterSelectionAction {
+enum class CharacterSelectionAction : uint8_t {
   kCreate = 1,
   kList = 2,
   kDelete = 3,
@@ -42,17 +42,50 @@ enum class ChatType : uint8_t {
   kAcademy = 16,
 };
 
-enum class LoginResult {
+enum class LoginResult : uint8_t {
   kSuccess = 1,
   kFailed = 2,
   kOther = 3
 };
 
-enum class LoginBlockType {
+enum class LoginBlockType : uint8_t {
   kPunishment = 1,
   kAccountInspection = 2,
   kNoAccountInfo = 3,
   kFreeServiceOver = 4
+};
+
+enum class LoginErrorCode : uint8_t {
+  // Password entry has failed %d out of %d times.
+  kIncorrectUserInfo = 1,
+  // See LoginBlockType.
+  kBlocked = 2,
+  // This user is already connected. The user may still be connected because of an error that forced the game to close. Please try again in 5 minutes.
+  kUserStillConnected = 4,
+  // Failed to connect to server. (C5)
+  kUserShardIsOutOfService = 5,
+  // The server is full, please try again later.
+  kServerFull = 6,
+  // Failed to connect to server. (C7)
+  kUserInternalError = 7,
+  // Failed to connect to server. (C8)
+  kUserInvalidShard = 8,
+  // Failed to connect to server. (C9)
+  kCannotConnectAgent = 9,
+  // Failed to connect to server. (C10)
+  kServerInternalError = 10,
+  // Cannot connect to the server because access to the current IP has exceeded its limit.
+  kIpLimitExceeded = 11,
+  // UIIO_CLIENT_START_CONTENT_FAIL_BILLING_FAILED
+  kBillingFailed = 12,
+  // Billing server error occurred.
+  kBillingServerError = 13,
+  // Only adults over the age of 18 are allowed to connect to the server.
+  kUnderAgeAdultOnlyServer = 14,
+  // Only users over the age of 12 are allowed to connect to the server.
+  kUnderAgeTeenOnlyServer = 15,
+  // Adults over the age of 18 are not allowed to connect to the Teen server.
+  kOverAgeTeenOnlyServer = 16,
 };
 
 enum class UpdateFlag : uint16_t {

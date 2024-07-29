@@ -12,12 +12,13 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 namespace state::machine {
 
 class Login : public StateMachine {
 public:
-  Login(Bot &bot, const std::string &username, const std::string &password, const std::string &characterName);
+  Login(Bot &bot, std::string_view username, std::string_view password, std::string_view characterName);
   ~Login() override;
   void onUpdate(const event::Event *event) override;
   bool done() const override;
@@ -30,6 +31,7 @@ private:
   const std::string username_;
   const std::string password_;
   const std::string characterName_;
+  std::optional<uint32_t> agentServerToken_;
   bool done_{false};
 };
 

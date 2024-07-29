@@ -4,14 +4,18 @@ Session::Session(const pk2::GameData &gameData,
                  std::string_view clientPath,
                  broker::EventBroker &eventBroker) :
     gameData_(gameData),
-    clientPath_(clientPath),
-    eventBroker_(eventBroker) {
+    eventBroker_(eventBroker),
+    loader_(clientPath, gameData_.divisionInfo()) {
 }
 
 Session::~Session() {
   proxy_.stop();
   proxyThread_.join();
   // loader_.killClient();
+}
+
+void Session::setCharacterToLogin(std::string_view characterName) {
+  bot_.setCharacterToLogin(characterName);
 }
 
 void Session::initialize() {
@@ -26,4 +30,10 @@ void Session::runAsync() {
 
 const state::WorldState& Session::getWorldState() const {
   return bot_.worldState();
+}
+
+std::atomic<SessionId> Session::nextSessionId{0};
+
+SessionId Session::createUniqueSessionId() {
+  return nextSessionId.fetch_add(1);
 }

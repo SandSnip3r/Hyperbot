@@ -20,7 +20,12 @@ void Hyperbot::run() {
     Session session2{gameData_, serverConfig_.clientPath(), eventBroker_};
     session.initialize();
     session2.initialize();
+
+    // Do not call any other Session functions before the UI's WorldState is set.
     userInterface.setWorldState(session.getWorldState());
+
+    session.setCharacterToLogin("_Nuked_");
+    session2.setCharacterToLogin("IP_Man");
     userInterface.broadcastLaunch();
     session.runAsync();
     session2.runAsync();

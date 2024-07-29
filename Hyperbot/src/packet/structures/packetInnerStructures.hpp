@@ -8,28 +8,37 @@
 #include <silkroad_lib/scalar_types.h>
 
 #include <cmath>
+#include <cstdint>
 #include <ostream>
 #include <string>
 #include <vector>
 
 namespace packet::structures {
 
-namespace CharacterSelection {
+struct Shard {
+  uint16_t shardId;
+  std::string shardName;
+  uint16_t onlineCount;
+  uint16_t capacity;
+  uint8_t isOperating;
+  uint8_t farmId;
+};
+
+namespace character_selection {
 
 struct Item {
-  uint32_t refId;
-  uint8_t plus;
+  sro::scalar_types::ReferenceObjectId refId;
+  sro::scalar_types::OptLevelType plus;
 };
 
 struct Avatar {
-  uint32_t refId;
-  uint8_t plus;
+  sro::scalar_types::ReferenceObjectId refId;
+  sro::scalar_types::OptLevelType plus;
 };
 
 struct Character {
 public:
-  uint32_t refObjID;
-  // uint16_t  name.Length;
+  sro::scalar_types::ReferenceObjectId refObjID;
   std::string name;
   uint8_t scale;
   uint8_t curLevel;
@@ -39,20 +48,17 @@ public:
   uint16_t statPoint;
   uint32_t curHP;
   uint32_t curMP;
-  bool isDeleting;
-    uint32_t charDeleteTime;
+  uint8_t isDeleting;
+  uint32_t charDeleteRemainingMinutes; // if (isDeleting)
   uint8_t guildMemberClass;
-  bool isGuildRenameRequired;
-    // uint16_t currentGuildName.Length
-    std::string currentGuildName;
+  uint8_t isGuildRenameRequired;
+  std::string currentGuildName; // if (isGuildRenameRequired)
   uint8_t academyMemberClass;
-  // uint8_t itemCount;
   std::vector<Item> items;
-  // uint8_t avatarItemCount;
-  std::vector<Avatar> avatars;
+  std::vector<Avatar> avatarItems;
 };
 
-} // namespace CharacterSelection
+} // namespace character_selection
 
 namespace vitals {
 

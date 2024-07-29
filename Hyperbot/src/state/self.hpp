@@ -156,13 +156,6 @@ public:
   // =========================================================
 
   mutable std::mutex selfMutex;
-  // =======================Log in state======================
-  uint16_t shardId;
-  bool connectedToAgentServer{false};
-  bool receivedCaptchaPrompt{false};
-  std::vector<packet::structures::CharacterSelection::Character> characterList;
-  uint32_t token;
-  // =========================================================
 
   bool spawned_{false};
   

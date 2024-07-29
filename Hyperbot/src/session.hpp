@@ -4,10 +4,12 @@
 #include "bot.hpp"
 #include "loader.hpp"
 #include "proxy.hpp"
+#include "sessionId.hpp"
 
 #include "broker/packetBroker.hpp"
 #include "pk2/gameData.hpp"
 
+#include <atomic>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -24,18 +26,22 @@ public:
           std::string_view clientPath,
           broker::EventBroker &eventBroker);
   ~Session();
+  void setCharacterToLogin(std::string_view characterName);
   void initialize();
   void runAsync();
   const state::WorldState& getWorldState() const;
 private:
+  SessionId sessionId_{createUniqueSessionId()};
   const pk2::GameData &gameData_;
-  std::string_view clientPath_;
   broker::EventBroker &eventBroker_;
-  Loader loader_{clientPath_, gameData_.divisionInfo()};
+  Loader loader_;
   broker::PacketBroker packetBroker_;
   Proxy proxy_{gameData_, packetBroker_};
-  Bot bot_{gameData_, proxy_, packetBroker_, eventBroker_};
+  Bot bot_{sessionId_, gameData_, proxy_, packetBroker_, eventBroker_};
   std::thread proxyThread_;
+
+  static std::atomic<SessionId> nextSessionId;
+  static SessionId createUniqueSessionId();
 };
 
 #endif

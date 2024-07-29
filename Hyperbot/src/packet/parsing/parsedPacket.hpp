@@ -35,14 +35,6 @@ public:
 
 //=========================================================================================================================================================
 
-class ParsedUnknown : public ParsedPacket {
-public:
-  ParsedUnknown(const PacketContainer &packet);
-private:
-};
-
-//=========================================================================================================================================================
-
 class ParsedServerAgentAbnormalInfo : public ParsedPacket {
 public:
   ParsedServerAgentAbnormalInfo(const PacketContainer &packet);
@@ -51,78 +43,6 @@ public:
 private:
   uint32_t stateBitmask_;
   std::array<packet::structures::vitals::AbnormalState, 32> states_ = {0};
-};
-  
-//=========================================================================================================================================================
-
-class ParsedServerAgentCharacterSelectionJoinResponse : public ParsedPacket {
-public:
-  ParsedServerAgentCharacterSelectionJoinResponse(const PacketContainer &packet);
-  uint8_t result() const;
-  uint16_t errorCode() const;
-private:
-  uint8_t result_;
-  uint16_t errorCode_;
-};
-
-//=========================================================================================================================================================
-
-class ParsedServerAgentCharacterSelectionActionResponse : public ParsedPacket {
-public:
-  ParsedServerAgentCharacterSelectionActionResponse(const PacketContainer &packet);
-  packet::enums::CharacterSelectionAction action() const;
-  uint8_t result() const;
-  const std::vector<packet::structures::CharacterSelection::Character>& characters() const;
-  uint16_t errorCode() const;
-private:
-  packet::enums::CharacterSelectionAction action_;
-  uint8_t result_;
-  std::vector<packet::structures::CharacterSelection::Character> characters_;
-  uint16_t errorCode_; // TODO: Create enum for this
-};
-
-//=========================================================================================================================================================
-
-class ParsedServerAuthResponse : public ParsedPacket {
-public:
-  ParsedServerAuthResponse(const PacketContainer &packet);
-  uint8_t result() const;
-  uint8_t errorCode() const;
-private:
-  uint8_t result_;
-  uint8_t errorCode_;
-};
-
-//=========================================================================================================================================================
-
-class ParsedLoginClientInfo : public ParsedPacket {
-public:
-  ParsedLoginClientInfo(const PacketContainer &packet);
-  std::string serviceName() const;
-private:
-  std::string serviceName_;
-};
-
-//=========================================================================================================================================================
-
-class ParsedLoginResponse : public ParsedPacket {
-public:
-  ParsedLoginResponse(const PacketContainer &packet);
-  packet::enums::LoginResult result() const;
-  uint32_t token() const;
-private:
-  packet::enums::LoginResult result_;
-  uint32_t token_;
-};
-
-//=========================================================================================================================================================
-
-class ParsedLoginServerList : public ParsedPacket {
-public:
-  ParsedLoginServerList(const PacketContainer &packet);
-  uint16_t shardId() const;
-private:
-  uint16_t shardId_;
 };
 
 //=========================================================================================================================================================

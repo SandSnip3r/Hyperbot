@@ -9,8 +9,8 @@ std::string toString(Opcode opcode) {
   if (opcode == Opcode::HACK) {
     return "HACK";
   }
-  if (opcode == Opcode::LOGIN_CLIENT_INFO) {
-    return "LOGIN_CLIENT_INFO";
+  if (opcode == Opcode::kFrameworkMessageIdentify) {
+    return "FrameworkMessageIdentify";
   }
   if (opcode == Opcode::LOGIN_CLIENT_KEEP_ALIVE) {
     return "LOGIN_CLIENT_KEEP_ALIVE";

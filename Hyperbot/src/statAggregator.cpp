@@ -14,7 +14,7 @@ void serializeKilledEntity(const entity::Entity *entity, proto::entity::Entity &
 
 StatAggregator::StatAggregator(const state::WorldState &worldState, broker::EventBroker &eventBroker) : worldState_(worldState), eventBroker_(eventBroker) {
   auto eventHandleFunction = std::bind(&StatAggregator::handleEvent, this, std::placeholders::_1);
-  eventBroker_.subscribeToEvent(event::EventCode::kSpawned, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kSelfSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kTrainingStarted, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kTrainingStopped, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kEntityLifeStateChanged, eventHandleFunction);
@@ -28,7 +28,7 @@ StatAggregator::StatAggregator(const state::WorldState &worldState, broker::Even
 }
 
 void StatAggregator::handleEvent(const event::Event *event) {
-  if (event != nullptr && event->eventCode == event::EventCode::kSpawned) {
+  if (event != nullptr && event->eventCode == event::EventCode::kSelfSpawned) {
     if (worldState_.selfState().name != characterName_) {
       // We must have just logged in
       if (characterName_ != "") {
