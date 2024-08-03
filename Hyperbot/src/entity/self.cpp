@@ -8,12 +8,13 @@
 
 #include <silkroad_lib/position_math.h>
 #include <silkroad_lib/constants.h>
+#include <silkroad_lib/entity.h>
 
 #include <absl/log/log.h>
 
 #include <cmath>
 
-namespace state {
+namespace entity {
 
 namespace {
 
@@ -103,12 +104,12 @@ void Self::setHwanPoints(uint8_t hwanPoints) {
 }
 
 void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) {
-  entity::MobileEntity::setMovingToDestination(sourcePosition, destinationPosition, eventBroker);
+  MobileEntity::setMovingToDestination(sourcePosition, destinationPosition, eventBroker);
   checkIfWillLeaveRegionAndSetTimer(eventBroker);
 }
 
 void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) {
-  entity::MobileEntity::setMovingTowardAngle(sourcePosition, angle, eventBroker);
+  MobileEntity::setMovingTowardAngle(sourcePosition, angle, eventBroker);
   checkIfWillLeaveRegionAndSetTimer(eventBroker);
 }
 
@@ -176,7 +177,7 @@ void Self::enteredRegion() {
 }
 
 void Self::cancelMovement(broker::EventBroker &eventBroker) {
-  entity::MobileEntity::cancelMovement(eventBroker);
+  MobileEntity::cancelMovement(eventBroker);
   if (enteredNewRegionEventId_) {
     eventBroker_.cancelDelayedEvent(*enteredNewRegionEventId_);
     enteredNewRegionEventId_.reset();
@@ -218,7 +219,7 @@ void Self::setStatPoints(uint16_t strPoints, uint16_t intPoints) {
   }
 }
 
-void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels) {
+void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels, broker::EventBroker &eventBroker) {
   const auto oldStateBitmask = this->stateBitmask();
   uint32_t newlyReceivedStates = (oldStateBitmask ^ stateBitmask) & stateBitmask;
   uint32_t expiredStates = (oldStateBitmask ^ stateBitmask) & oldStateBitmask;
@@ -260,6 +261,8 @@ void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &state
       }
     }
   }
+  // TODO: Only send this event if the states actually changed
+  eventBroker.publishEvent(event::EventCode::kStatesChanged);
 }
 
 void Self::setStateBitmask(uint32_t stateBitmask) {
@@ -376,8 +379,8 @@ void Self::itemCooldownEnded(type_id::TypeId itemTypeData) {
 // =================================================Getters=================================================
 // =========================================================================================================
 
-entity::EntityType Self::entityType() const {
-  return entity::EntityType::kSelf;
+EntityType Self::entityType() const {
+  return EntityType::kSelf;
 }
 
 bool Self::spawned() const {
@@ -570,7 +573,7 @@ bool Self::canUseItem(type_id::TypeCategory itemType) const {
       return false;
     }
   } else if (lifeState == sro::entity::LifeState::kGone) {
-    // Cannot use anything while unspawned
+    // Cannot use anything while not spawned
     return false;
   }
   // Other states are Alive or Embryo. Alive is obvious. Embryo seems to be the life state given to an entity upon first spawning into the world, but it never gets changed to Alive. Until we have good reason to do otherwise, we'll treat Embryo as Alive.
@@ -606,7 +609,7 @@ void Self::resetUserPurchaseRequest() {
 
 // =================================================================================================
 
-void Self::setTrainingAreaGeometry(std::unique_ptr<entity::Geometry> &&geometry) {
+void Self::setTrainingAreaGeometry(std::unique_ptr<Geometry> &&geometry) {
   trainingAreaGeometry = std::move(geometry);
   eventBroker_.publishEvent(event::EventCode::kTrainingAreaSet);
 }
@@ -652,4 +655,4 @@ void Self::setRaceAndGender() {
   }
 }
 
-} // namespace state
+} // namespace entity

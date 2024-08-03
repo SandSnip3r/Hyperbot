@@ -34,13 +34,13 @@ std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &s
   }
 
   // First, check if the currently equipped weapon is valid for this skill
-  if (bot.selfState().inventory.hasItem(kWeaponInventorySlot)) {
-    const auto *item = bot.selfState().inventory.getItem(kWeaponInventorySlot);
+  if (bot.selfState()->inventory.hasItem(kWeaponInventorySlot)) {
+    const auto *item = bot.selfState()->inventory.getItem(kWeaponInventorySlot);
     if (!item) {
       throw std::runtime_error("Have an item, but got null");
     }
     if (!type_id::categories::kWeapon.contains(item->typeId())) {
-      throw std::runtime_error("Equipped \"weapon\" isnt a weapon");
+      throw std::runtime_error("Equipped \"weapon\" isn't a weapon");
     }
     if (item->isOneOf(possibleWeapons)) {
       // Currently equipped weapon can cast this skill
@@ -48,7 +48,7 @@ std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &s
     }
   }
   // Currently equipped weapon (if any) cannot cast this skill, search through our inventory for a weapon which can cast this skill
-  std::vector<uint8_t> possibleWeaponSlots = bot.selfState().inventory.findItemsOfCategory(possibleWeapons);
+  std::vector<uint8_t> possibleWeaponSlots = bot.selfState()->inventory.findItemsOfCategory(possibleWeapons);
   if (possibleWeaponSlots.empty()) {
     throw std::runtime_error("We have no weapon that can cast this skill");
   }
@@ -59,11 +59,11 @@ std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &s
 }
 
 std::optional<uint8_t> getInventorySlotOfShield(const Bot &bot) {
-  const bool characterIsChinese = bot.selfState().race() == state::Race::kChinese;
+  const bool characterIsChinese = bot.selfState()->race() == entity::Race::kChinese;
   const type_id::TypeCategory shieldCategory = (characterIsChinese ? type_id::categories::kChineseShield : type_id::categories::kEuropeanShield);
-  std::vector<uint8_t> possibleShieldSlots = bot.selfState().inventory.findItemsOfCategory({shieldCategory});
+  std::vector<uint8_t> possibleShieldSlots = bot.selfState()->inventory.findItemsOfCategory({shieldCategory});
   if (possibleShieldSlots.empty()) {
-    VLOG(1) << "Looking for shield, but didnt find one";
+    VLOG(1) << "Looking for shield, but didn't find one";
     return {};
   }
   // TODO: Choose our best shield.
@@ -167,12 +167,12 @@ void CastSkill::onUpdate(const event::Event *event) {
     if (skillCastTimeoutEventId_ || waitingForSkillToEnd_) {
       // If we're not waiting for our skill to cast or end, there is no event we care about
       if (const auto *skillBeganEvent = dynamic_cast<const event::SkillBegan*>(event)) {
-        if (skillBeganEvent->casterGlobalId == bot_.selfState().globalId) {
+        if (skillBeganEvent->casterGlobalId == bot_.selfState()->globalId) {
           VLOG(2) << "Our skill \"" << skillName() << "\" begin";
           // We cast this skill
           const auto rootSkillId = bot_.gameData().skillData().getRootSkillRefId(skillBeganEvent->skillRefId);
           if (rootSkillId != skillRefId_) {
-            // This isnt the skill we thought we were casting!
+            // This isn't the skill we thought we were casting!
             // TODO: How should we actually handle this error?
             // Note: This happens if our skill was queued too slowly and a common attack slipped between the cracks
             //  Lets just skip this
@@ -187,12 +187,12 @@ void CastSkill::onUpdate(const event::Event *event) {
           waitingForSkillToEnd_ = true;
         }
       } else if (const auto *skillEndedEvent = dynamic_cast<const event::SkillEnded*>(event)) {
-        if (skillEndedEvent->casterGlobalId == bot_.selfState().globalId && waitingForSkillToEnd_) {
+        if (skillEndedEvent->casterGlobalId == bot_.selfState()->globalId && waitingForSkillToEnd_) {
           VLOG(2) << "Our skill \"" << skillName() << "\" end";
           // We cast this skill
           const auto rootSkillId = bot_.gameData().skillData().getRootSkillRefId(skillEndedEvent->skillRefId);
           if (rootSkillId != skillRefId_) {
-            // This isnt the skill we thought we were casting! Thought we were casting `skillRefId_` but this skill is `skillEndedEvent->skillRefId` with root skill id `rootSkillId`
+            // This isn't the skill we thought we were casting! Thought we were casting `skillRefId_` but this skill is `skillEndedEvent->skillRefId` with root skill id `rootSkillId`
             // TODO: How should we actually handle this error?
             //  Probably ignore?
             return;
@@ -209,7 +209,7 @@ void CastSkill::onUpdate(const event::Event *event) {
             // In this case, no other skill begin/ends will come
             // TODO: This block makes an assumption that this is an attack on another entity
             if (targetGlobalId_) {
-              if (const auto *characterEntity = dynamic_cast<const entity::Character*>(bot_.entityTracker().getEntity(*targetGlobalId_))) {
+              if (std::shared_ptr<entity::Entity> entity = bot_.worldState().getEntity(*targetGlobalId_); const auto *characterEntity = dynamic_cast<const entity::Character*>(entity.get())) {
                 if (characterEntity->knowCurrentHp()) {
                   if (characterEntity->currentHp() == 0) {
                     // Entity is dead
@@ -224,9 +224,9 @@ void CastSkill::onUpdate(const event::Event *event) {
             done_ = true;
             return;
           }
-          // This isnt the last piece of the skill; waiting
+          // This isn't the last piece of the skill; waiting
           // Note: There is a chance that this skill killed the target, but we dont know that it's dead yet
-          //  For example, if we didnt know the monsters HP.
+          //  For example, if we didn't know the monsters HP.
           // We will try to cast a skill on it, but it will fail
         }
       } else if (const auto *commandError = dynamic_cast<const event::CommandError*>(event)) {
@@ -264,7 +264,7 @@ void CastSkill::onUpdate(const event::Event *event) {
           }
         }
       } else if (event->eventCode == event::EventCode::kKnockedBack || event->eventCode == event::EventCode::kKnockedDown) {
-        // We've been completely interruped, yield
+        // We've been completely interrupted, yield
         done_ = true;
         return;
         // TODO: I think instead it makes sense to return a status, which says something like "Interrupted", then the parent can choose to destroy us
@@ -282,7 +282,7 @@ void CastSkill::onUpdate(const event::Event *event) {
             throw std::runtime_error("The skill we were constructed to cast has timed out, but we weren't tracking a timeout event");
           }
           skillCastTimeoutEventId_.reset();
-          // Relinqush control to our master.
+          // Relinquish control to our master.
           done_ = true;
           return;
         }
@@ -290,7 +290,7 @@ void CastSkill::onUpdate(const event::Event *event) {
     }
   }
 
-  if (bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown) {
+  if (bot_.selfState()->stunnedFromKnockback || bot_.selfState()->stunnedFromKnockdown) {
     // Cannot cast a skill right now
     if (megaDebug) LOG(INFO) << "stunned from kb or kd";
     return;
@@ -329,9 +329,9 @@ void CastSkill::onUpdate(const event::Event *event) {
       throw std::runtime_error("Using an imbue when casting a skill on no target");
     }
 
-    if (!bot_.selfState().buffIsActive(*imbueSkillRefId_)) {
+    if (!bot_.selfState()->buffIsActive(*imbueSkillRefId_)) {
       // Imbue is not active
-      if (!bot_.selfState().skillEngine.skillIsOnCooldown(*imbueSkillRefId_)) {
+      if (!bot_.selfState()->skillEngine.skillIsOnCooldown(*imbueSkillRefId_)) {
         // Imbue is not on cooldown; creating child CastSkill to cast it
         CastSkillStateMachineBuilder builder(bot_, *imbueSkillRefId_);
         setChildStateMachine(builder.create());
@@ -344,10 +344,10 @@ void CastSkill::onUpdate(const event::Event *event) {
       // Imbue is already active
       // Check the remaining duration of this buff, it it's less than the ping time, we ought to re-cast since it might expire before we cast the actual attack.
       constexpr const int kEstimatedPingMs = 100; // TODO: Get from a centralized location.
-      const auto buffRemainingTime = bot_.selfState().buffMsRemaining(*imbueSkillRefId_);
+      const auto buffRemainingTime = bot_.selfState()->buffMsRemaining(*imbueSkillRefId_);
       if (buffRemainingTime < kEstimatedPingMs) {
         // Imbue might end before our skill-use packet even gets to the server
-        const auto skillRemainingCooldown = bot_.selfState().skillEngine.skillRemainingCooldown(*imbueSkillRefId_, bot_.eventBroker());
+        const auto skillRemainingCooldown = bot_.selfState()->skillEngine.skillRemainingCooldown(*imbueSkillRefId_, bot_.eventBroker());
         if (skillRemainingCooldown) {
           if (skillRemainingCooldown->count() > kEstimatedPingMs) {
             // Imbue has too much remaining cooldown to request it be cast (accounting for ping time)
@@ -355,7 +355,7 @@ void CastSkill::onUpdate(const event::Event *event) {
           }
         }
         // Imbue does not have too long of a cooldown
-        // TODO: Add a data structure that tracks skills which were successfully cast, which should give us a buff, but for when we havent yet received BuffBegin. Like a "anticipated buffs" list.
+        // TODO: Add a data structure that tracks skills which were successfully cast, which should give us a buff, but for when we haven't yet received BuffBegin. Like a "anticipated buffs" list.
         CastSkillStateMachineBuilder builder(bot_, *imbueSkillRefId_);
         setChildStateMachine(builder.create());
         onUpdate(event);

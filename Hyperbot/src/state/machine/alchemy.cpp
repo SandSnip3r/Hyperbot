@@ -30,7 +30,7 @@ Alchemy::~Alchemy() {
 }
 
 void Alchemy::initialize() {
-  startPosition_ = bot_.selfState().position();
+  startPosition_ = bot_.selfState()->position();
 }
 
 void Alchemy::onUpdate(const event::Event *event) {
@@ -64,7 +64,7 @@ void Alchemy::onUpdate(const event::Event *event) {
       if (!inventoryUpdatedEvent->srcSlotNum) {
         // New item appeared in our inventory, is it the item we just picked?
         // TODO: I think this should move into PickItem, maybe optionally checked.
-        const auto *item = bot_.selfState().inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
+        const auto *item = bot_.selfState()->inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
         if (waitingForCreatedItem_) {
           if (item->refItemId == *waitingForCreatedItem_) {
             // This is the item we created.
@@ -88,9 +88,9 @@ void Alchemy::onUpdate(const event::Event *event) {
 
   if (event != nullptr) {
     if (auto *entitySpawnedEvent = dynamic_cast<const event::EntitySpawned*>(event); entitySpawnedEvent != nullptr) {
-      const auto *entity = bot_.entityTracker().getEntity(entitySpawnedEvent->globalId);
+      std::shared_ptr<entity::Entity> entity = bot_.worldState().getEntity(entitySpawnedEvent->globalId);
       if (waitingForCreatedItem_ && entity->refObjId == *waitingForCreatedItem_) {
-        const auto distanceToItem = sro::position_math::calculateDistance2d(bot_.selfState().position(), entity->position());
+        const auto distanceToItem = sro::position_math::calculateDistance2d(bot_.selfState()->position(), entity->position());
         if (distanceToItem < 25.0) {
           // Only look at items spawning very close to us.
           if (makeItemTimedOutEventId_) {
@@ -114,7 +114,7 @@ void Alchemy::onUpdate(const event::Event *event) {
     return;
   }
 
-  const double distance = sro::position_math::calculateDistance2d(startPosition_, bot_.selfState().position());
+  const double distance = sro::position_math::calculateDistance2d(startPosition_, bot_.selfState()->position());
   if (distance > 25.0) {
     // Need to walk back to center.
     setChildStateMachine<Walking>(std::vector<packet::building::NetworkReadyPosition>({packet::building::NetworkReadyPosition(startPosition_)}));
@@ -122,8 +122,8 @@ void Alchemy::onUpdate(const event::Event *event) {
     return;
   }
 
-  const auto &inventory = bot_.selfState().inventory;
-  const auto slotsWithBlade = bot_.selfState().inventory.findItemsWithRefId(kBladeRefObjId);
+  const auto &inventory = bot_.selfState()->inventory;
+  const auto slotsWithBlade = bot_.selfState()->inventory.findItemsWithRefId(kBladeRefObjId);
   if (slotsWithBlade.empty()) {
     // Don't have a blade to work with. Make one.
     LOG(INFO) << "spawning a blade that is +" << nextBladePlusToSpawn_;
@@ -174,7 +174,7 @@ void Alchemy::onUpdate(const event::Event *event) {
     if (!bladeHasLuck) {
       // Need to apply luck.
       // Do we have any luck stones?
-      const auto luckyStoneSlots = bot_.selfState().inventory.findItemsWithRefId(kLuckyStoneRefObjId);
+      const auto luckyStoneSlots = bot_.selfState()->inventory.findItemsWithRefId(kLuckyStoneRefObjId);
       if (luckyStoneSlots.empty()) {
         // Don't have any lucky stones.
         LOG(INFO) << "Making a lucky stone";

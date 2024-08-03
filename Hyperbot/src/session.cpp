@@ -2,10 +2,12 @@
 
 Session::Session(const pk2::GameData &gameData,
                  std::string_view clientPath,
-                 broker::EventBroker &eventBroker) :
+                 broker::EventBroker &eventBroker,
+                 state::WorldState &worldState) :
     gameData_(gameData),
     eventBroker_(eventBroker),
-    loader_(clientPath, gameData_.divisionInfo()) {
+    loader_(clientPath, gameData_.divisionInfo()),
+    bot_(sessionId_, gameData_, proxy_, packetBroker_, eventBroker_, worldState) {
 }
 
 Session::~Session() {

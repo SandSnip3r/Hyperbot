@@ -17,8 +17,8 @@ AutoPotion::AutoPotion(Bot &bot) : StateMachine(bot) {
 void AutoPotion::onUpdate(const event::Event *event) {
   if (event) {
     if (const auto *lifeStateUpdateEvent = dynamic_cast<const event::EntityLifeStateChanged*>(event)) {
-      if (lifeStateUpdateEvent->globalId == bot_.selfState().globalId) {
-        if (bot_.selfState().lifeState == sro::entity::LifeState::kDead) {
+      if (lifeStateUpdateEvent->globalId == bot_.selfState()->globalId) {
+        if (bot_.selfState()->lifeState == sro::entity::LifeState::kDead) {
           // We died!
           if (childState_) {
             // We should destroy this child state.
@@ -43,7 +43,7 @@ void AutoPotion::onUpdate(const event::Event *event) {
 
   // We don't care about any events at the moment
 
-  if (!bot_.selfState().canUseItems()) {
+  if (!bot_.selfState()->canUseItems()) {
     // Nothing to do if we can't use items
     return;
   }
@@ -81,20 +81,20 @@ bool AutoPotion::tryUsePurificationPill() {
   if (!bot_.config()->proto().autopotion_config().use_purification_pills()) {
     return false;
   }
-  const auto modernStateLevels = bot_.selfState().modernStateLevels();
+  const auto modernStateLevels = bot_.selfState()->modernStateLevels();
   if (!std::any_of(modernStateLevels.begin(), modernStateLevels.end(), [](auto level){ return level > 0; })) {
     // Don't have any modern statuses. Don't need to use a purification pill.
     return false;
   }
 
-  if (!bot_.selfState().canUseItem(type_id::categories::kPurificationPill)) {
+  if (!bot_.selfState()->canUseItem(type_id::categories::kPurificationPill)) {
     return false;
   }
 
   uint8_t currentCureLevel = 0;
   std::set<int32_t> processedCureLevels;
   sro::scalar_types::StorageIndexType bestOptionSlotNum;
-  const auto &inventory = bot_.selfState().inventory;
+  const auto &inventory = bot_.selfState()->inventory;
 
   for (uint8_t slotNum=0; slotNum<inventory.size(); ++slotNum) {
     if (!inventory.hasItem(slotNum)) {
@@ -114,7 +114,7 @@ bool AutoPotion::tryUsePurificationPill() {
       continue;
     }
     const auto pillCureStateBitmask = itemAsExpendable->itemInfo->param1;
-    const auto curableStatesWeHave = (pillCureStateBitmask & bot_.selfState().stateBitmask());
+    const auto curableStatesWeHave = (pillCureStateBitmask & bot_.selfState()->stateBitmask());
     if (curableStatesWeHave == 0) {
       // This pill cannot cure any of the type(s) of statuses that we have
       continue;
@@ -167,13 +167,13 @@ bool AutoPotion::tryUsePurificationPill() {
 }
 
 bool AutoPotion::tryUseHpPotion() {
-  if (!bot_.selfState().maxHp()) {
+  if (!bot_.selfState()->maxHp()) {
     // Don't yet know our max hp
     return false;
   }
-  const double hpPercentage = static_cast<double>(bot_.selfState().currentHp()) / *bot_.selfState().maxHp();
+  const double hpPercentage = static_cast<double>(bot_.selfState()->currentHp()) / *bot_.selfState()->maxHp();
 
-  const auto legacyStateEffects = bot_.selfState().legacyStateEffects();
+  const auto legacyStateEffects = bot_.selfState()->legacyStateEffects();
   const bool haveZombie = (legacyStateEffects[helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie)] > 0);
   if (haveZombie) {
     // Don't want to use a health or vigor potion, there is nothing else to do in this function
@@ -185,7 +185,7 @@ bool AutoPotion::tryUseHpPotion() {
   // Prioritize vigors since they're generally used in more dire situations.
   //  TODO: I think the above logic is nonsense
   if (hpPercentage < bot_.config()->proto().autopotion_config().vigor_hp_threshold() &&
-      bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
+      bot_.selfState()->canUseItem(type_id::categories::kVigorPotion)) {
     // Use vigor potion
     usedAnItem = usePotion(type_id::categories::kVigorPotion);
   }
@@ -195,7 +195,7 @@ bool AutoPotion::tryUseHpPotion() {
     return true;
   }
 
-  if (hpPercentage < bot_.config()->proto().autopotion_config().hp_threshold() && bot_.selfState().canUseItem(type_id::categories::kHpPotion)) {
+  if (hpPercentage < bot_.config()->proto().autopotion_config().hp_threshold() && bot_.selfState()->canUseItem(type_id::categories::kHpPotion)) {
     // Use health potion
     usedAnItem = usePotion(type_id::categories::kHpPotion);
   }
@@ -203,20 +203,20 @@ bool AutoPotion::tryUseHpPotion() {
 }
 
 bool AutoPotion::tryUseMpPotion() {
-  if (!bot_.selfState().maxMp()) {
+  if (!bot_.selfState()->maxMp()) {
     // Don't yet know our max mp
     return false;
   }
-  const double mpPercentage = static_cast<double>(bot_.selfState().currentMp()) / *bot_.selfState().maxMp();
+  const double mpPercentage = static_cast<double>(bot_.selfState()->currentMp()) / *bot_.selfState()->maxMp();
 
   bool usedAnItem = false;
-  const auto legacyStateEffects = bot_.selfState().legacyStateEffects();
+  const auto legacyStateEffects = bot_.selfState()->legacyStateEffects();
   const bool haveZombie = (legacyStateEffects[helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie)] > 0);
 
   // Prioritize vigors since they're generally used in more dire situations.
   // Don't use vigors when we have zombie.
   if (!haveZombie && mpPercentage < bot_.config()->proto().autopotion_config().vigor_mp_threshold() &&
-      bot_.selfState().canUseItem(type_id::categories::kVigorPotion)) {
+      bot_.selfState()->canUseItem(type_id::categories::kVigorPotion)) {
     // Use vigor potion
     usedAnItem = usePotion(type_id::categories::kVigorPotion);
   }
@@ -226,7 +226,7 @@ bool AutoPotion::tryUseMpPotion() {
     return true;
   }
 
-  if (mpPercentage < bot_.config()->proto().autopotion_config().mp_threshold() && bot_.selfState().canUseItem(type_id::categories::kMpPotion)) {
+  if (mpPercentage < bot_.config()->proto().autopotion_config().mp_threshold() && bot_.selfState()->canUseItem(type_id::categories::kMpPotion)) {
     // Use mana potion
     usedAnItem = usePotion(type_id::categories::kMpPotion);
   }
@@ -237,13 +237,13 @@ bool AutoPotion::tryUseUniversalPill() {
   if (!bot_.config()->proto().autopotion_config().use_universal_pills()) {
     return false;
   }
-  const auto legacyStateEffects = bot_.selfState().legacyStateEffects();
+  const auto legacyStateEffects = bot_.selfState()->legacyStateEffects();
   if (!std::any_of(legacyStateEffects.begin(), legacyStateEffects.end(), [](const uint16_t effect){ return effect > 0; })) {
     // Don't have any legacy statuses. Don't need to use a universal pill.
     return false;
   }
 
-  if (!bot_.selfState().canUseItem(type_id::categories::kUniversalPill)) {
+  if (!bot_.selfState()->canUseItem(type_id::categories::kUniversalPill)) {
     return false;
   }
 
@@ -251,7 +251,7 @@ bool AutoPotion::tryUseUniversalPill() {
   uint16_t ourWorstStatusEffect = *std::max_element(legacyStateEffects.begin(), legacyStateEffects.end());
   int32_t bestCure = 0;
   uint8_t bestOptionSlotNum;
-  const auto &inventory = bot_.selfState().inventory;
+  const auto &inventory = bot_.selfState()->inventory;
 
   for (uint8_t slotNum=0; slotNum<inventory.size(); ++slotNum) {
     if (!inventory.hasItem(slotNum)) {
@@ -296,7 +296,7 @@ bool AutoPotion::tryUseUniversalPill() {
 
 bool AutoPotion::usePotion(const type_id::TypeCategory &potionType) {
   // Find the first one in our inventory
-  const auto &inventory = bot_.selfState().inventory;
+  const auto &inventory = bot_.selfState()->inventory;
 
   for (uint8_t slotNum=0; slotNum<inventory.size(); ++slotNum) {
     if (!inventory.hasItem(slotNum)) {

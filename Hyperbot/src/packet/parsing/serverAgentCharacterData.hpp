@@ -10,6 +10,7 @@
 #include "../../shared/silkroad_security.h"
 
 #include <silkroad_lib/position.h>
+#include <silkroad_lib/scalar_types.h>
 
 #include <cstdint>
 #include <map>
@@ -20,7 +21,7 @@ namespace packet::parsing {
 class ServerAgentCharacterData : public ParsedPacket {
 public:
   ServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData);
-  uint32_t refObjId() const;
+  sro::scalar_types::ReferenceObjectId refObjId() const { return refObjId_; }
   uint8_t curLevel() const;
   uint64_t currentExperience() const;
   uint32_t currentSpExperience() const;
@@ -28,7 +29,7 @@ public:
   uint32_t skillPoints() const;
   uint16_t availableStatPoints() const;
   uint8_t hwanPoints() const;
-  uint32_t entityUniqueId() const;
+  sro::scalar_types::EntityGlobalId globalId() const { return globalId_; }
   uint32_t hp() const;
   uint32_t mp() const;
   uint8_t hwanLevel() const;
@@ -49,7 +50,7 @@ public:
   enums::BodyState bodyState() const;
   uint32_t jId() const;
 private:
-  uint32_t refObjId_;
+  sro::scalar_types::ReferenceObjectId refObjId_;
   uint8_t curLevel_;
   uint64_t currentExperience_;
   uint32_t currentSpExperience_;
@@ -57,7 +58,7 @@ private:
   uint32_t skillPoints_;
   uint16_t availableStatPoints_;
   uint8_t hwanPoints_;
-  uint32_t entityUniqueId_;
+  sro::scalar_types::EntityGlobalId globalId_;
   uint32_t hp_;
   uint32_t mp_;
   uint8_t hwanLevel_;

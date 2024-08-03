@@ -32,7 +32,7 @@ ServerAgentEntityUpdateStatus::ServerAgentEntityUpdateStatus(const PacketContain
   }
 }
 
-sro::scalar_types::EntityGlobalId ServerAgentEntityUpdateStatus::entityUniqueId() const {
+sro::scalar_types::EntityGlobalId ServerAgentEntityUpdateStatus::globalId() const {
   return entityUniqueId_;
 }
 

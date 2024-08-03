@@ -13,7 +13,7 @@ UseReturnScroll::UseReturnScroll(Bot &bot, sro::scalar_types::StorageIndexType i
   stateMachineCreated(kName);
 
   // Do some quick checks to make sure we have this item and can use it
-  const auto &inventory = bot_.selfState().inventory;
+  const auto &inventory = bot_.selfState()->inventory;
   if (!inventory.hasItem(inventoryIndex_)) {
     throw std::runtime_error("Trying use nonexistent item in inventory");
   }

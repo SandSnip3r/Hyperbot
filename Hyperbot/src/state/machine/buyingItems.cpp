@@ -34,7 +34,7 @@ void BuyingItems::onUpdate(const event::Event *event) {
           //  ex. A pickup by a party member
 
           // Purchase was successful. Adjust shopping list to reflect the newly desired quantity
-          const auto *itemAtInventorySlot = bot_.selfState().inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
+          const auto *itemAtInventorySlot = bot_.selfState()->inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
           if (itemAtInventorySlot == nullptr) {
             throw std::runtime_error("Got an item from our inventory, but there's nothing here");
           }
@@ -67,15 +67,15 @@ void BuyingItems::onUpdate(const event::Event *event) {
           bot_.packetBroker().injectPacket(itemBuySpoofPacket, PacketContainer::Direction::kServerToClient);
         }
 
-        if (bot_.selfState().inventory.hasItem(*inventoryUpdatedEvent->destSlotNum)) {
+        if (bot_.selfState()->inventory.hasItem(*inventoryUpdatedEvent->destSlotNum)) {
           // Now, lets see if we want to stack this item. It could have been just bought, or we just stacked some of it into another slot
-          const auto *itemAtInventorySlot = bot_.selfState().inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
+          const auto *itemAtInventorySlot = bot_.selfState()->inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
           if (itemAtInventorySlot == nullptr) {
             throw std::runtime_error("Got an item from our inventory, but there's nothing here");
           }
           if (const auto *destItemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(itemAtInventorySlot)) {
             const auto refIdToStack = itemAtInventorySlot->refItemId;
-            auto inventorySlotsWithThisItem = bot_.selfState().inventory.findItemsWithRefId(refIdToStack);
+            auto inventorySlotsWithThisItem = bot_.selfState()->inventory.findItemsWithRefId(refIdToStack);
             if (inventorySlotsWithThisItem.size() > 1) {
               // Try to stack backwards
               std::reverse(inventorySlotsWithThisItem.begin(), inventorySlotsWithThisItem.end());
@@ -84,10 +84,10 @@ void BuyingItems::onUpdate(const event::Event *event) {
                 const auto laterItemIndex = inventorySlotsWithThisItem[i];
                 for (int j=i+1; j<inventorySlotsWithThisItem.size(); ++j) {
                   const auto earlierItemIndex = inventorySlotsWithThisItem[j];
-                  if (!bot_.selfState().inventory.hasItem(earlierItemIndex)) {
+                  if (!bot_.selfState()->inventory.hasItem(earlierItemIndex)) {
                     throw std::runtime_error("We were told there was an item here");
                   }
-                  const auto *earlierItem = bot_.selfState().inventory.getItem(earlierItemIndex);
+                  const auto *earlierItem = bot_.selfState()->inventory.getItem(earlierItemIndex);
                   const auto *earlierItemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(earlierItem);
                   if (earlierItemAsExpendable == nullptr) {
                     throw std::runtime_error("This item must be an expendable");
@@ -98,10 +98,10 @@ void BuyingItems::onUpdate(const event::Event *event) {
                   }
                   // We can stack the item in slot laterItemIndex to slot earlierItemIndex
                   const auto spaceLeftInStack = earlierItemAsExpendable->itemInfo->maxStack - earlierItemAsExpendable->quantity;
-                  if (!bot_.selfState().inventory.hasItem(laterItemIndex)) {
+                  if (!bot_.selfState()->inventory.hasItem(laterItemIndex)) {
                     throw std::runtime_error("We were told there was an item here");
                   }
-                  const auto *laterItem = bot_.selfState().inventory.getItem(laterItemIndex);
+                  const auto *laterItem = bot_.selfState()->inventory.getItem(laterItemIndex);
                   const auto *laterItemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(laterItem);
                   if (laterItemAsExpendable == nullptr) {
                     throw std::runtime_error("This item must be an expendable");
@@ -145,7 +145,7 @@ void BuyingItems::onUpdate(const event::Event *event) {
   const auto countToBuy = std::min(nextPurchaseRequest.quantity, static_cast<uint16_t>(nextPurchaseRequest.maxStackSize));
   // Block the server's response from reaching the client
   bot_.proxy().blockOpcode(packet::Opcode::kServerAgentInventoryOperationResponse);
-  const auto buyItemPacket = packet::building::ClientAgentInventoryOperationRequest::buyPacket(nextPurchaseRequest.tabIndex, nextPurchaseRequest.itemIndex, countToBuy, bot_.selfState().talkingGidAndOption->first);
+  const auto buyItemPacket = packet::building::ClientAgentInventoryOperationRequest::buyPacket(nextPurchaseRequest.tabIndex, nextPurchaseRequest.itemIndex, countToBuy, bot_.selfState()->talkingGidAndOption->first);
   bot_.packetBroker().injectPacket(buyItemPacket, PacketContainer::Direction::kClientToServer);
   waitingOnBuyResponse_ = true;
 }

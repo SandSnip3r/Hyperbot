@@ -8,6 +8,7 @@
 
 #include "broker/packetBroker.hpp"
 #include "pk2/gameData.hpp"
+#include "state/worldState.hpp"
 
 #include <atomic>
 #include <functional>
@@ -24,7 +25,8 @@ class Session {
 public:
   Session(const pk2::GameData &gameData,
           std::string_view clientPath,
-          broker::EventBroker &eventBroker);
+          broker::EventBroker &eventBroker,
+          state::WorldState &worldState);
   ~Session();
   void setCharacterToLogin(std::string_view characterName);
   void initialize();
@@ -37,7 +39,7 @@ private:
   Loader loader_;
   broker::PacketBroker packetBroker_;
   Proxy proxy_{gameData_, packetBroker_};
-  Bot bot_{sessionId_, gameData_, proxy_, packetBroker_, eventBroker_};
+  Bot bot_;
   std::thread proxyThread_;
 
   static std::atomic<SessionId> nextSessionId;

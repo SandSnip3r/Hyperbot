@@ -14,7 +14,7 @@ UseItem::UseItem(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex) :
   stateMachineCreated(kName);
 
   // Do some quick checks to make sure we have this item and can use it
-  const auto &inventory = bot_.selfState().inventory;
+  const auto &inventory = bot_.selfState()->inventory;
   if (!inventory.hasItem(inventoryIndex_)) {
     throw std::runtime_error("Trying use nonexistent item in inventory");
   }
@@ -76,7 +76,7 @@ void UseItem::onUpdate(const event::Event *event) {
         } else if (itemUseTimeoutEventId_) {
           // Check that item at this inventory slot decreased
           bool looksGood{false};
-          const auto *item = bot_.selfState().inventory.getItem(*inventoryUpdatedEvent->srcSlotNum);
+          const auto *item = bot_.selfState()->inventory.getItem(*inventoryUpdatedEvent->srcSlotNum);
           if (const auto *itemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(item)) {
             if (itemAsExpendable->quantity == lastKnownQuantity_-1) {
               // Item count decreased by 1, this is the usual expected case
@@ -126,7 +126,7 @@ void UseItem::onUpdate(const event::Event *event) {
     return;
   }
 
-  if (!bot_.selfState().canUseItem(itemTypeId_)) {
+  if (!bot_.selfState()->canUseItem(itemTypeId_)) {
     throw std::runtime_error("Cannot use item. How did we get here?");
   }
 

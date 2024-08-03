@@ -3,6 +3,7 @@
 
 #include "broker/packetBroker.hpp"
 #include "config/characterConfig.hpp"
+#include "entity/self.hpp"
 #include "event/event.hpp"
 #include "packet/building/commonBuilding.hpp"
 #include "packetProcessor.hpp"
@@ -16,6 +17,7 @@
 #include "state/machine/stateMachine.hpp"
 
 #include <optional>
+#include <memory>
 #include <string_view>
 #include <vector>
 
@@ -27,7 +29,8 @@ public:
       const pk2::GameData &gameData,
       Proxy &proxy,
       broker::PacketBroker &packetBroker,
-      broker::EventBroker &eventBroker);
+      broker::EventBroker &eventBroker,
+      state::WorldState &worldState);
 
   void initialize();
   void setCharacterToLogin(std::string_view characterName);
@@ -39,8 +42,7 @@ public:
   const state::WorldState& worldState() const;
   state::EntityTracker& entityTracker();
   const state::EntityTracker& entityTracker() const;
-  state::Self& selfState();
-  const state::Self& selfState() const;
+  std::shared_ptr<entity::Self> selfState() const;
   SessionId sessionId() const { return sessionId_; }
 protected:
   friend class broker::EventBroker;
@@ -52,16 +54,16 @@ protected:
   Proxy &proxy_;
   broker::PacketBroker &packetBroker_;
   broker::EventBroker &eventBroker_;
-  state::WorldState worldState_{gameData_, eventBroker_}; // TODO: For multi-character, this will move out of the bot
+  state::WorldState &worldState_;
   PacketProcessor packetProcessor_{sessionId_, worldState_, packetBroker_, eventBroker_, gameData_};
-  StatAggregator statAggregator_{worldState_, eventBroker_};
+  // StatAggregator statAggregator_{worldState_, eventBroker_};
+  std::optional<sro::scalar_types::EntityGlobalId> selfGlobalId_;
 
 private:
   std::unique_ptr<state::machine::StateMachine> loginStateMachine_;
   std::unique_ptr<state::machine::StateMachine> autoPotionStateMachine_;
   std::unique_ptr<state::machine::StateMachine> bottingStateMachine_;
   state::machine::ConcurrentStateMachines concurrentStateMachines_{*this};
-  inline static const std::string kEstVisRangeFilename{"estimatedVisibilityRange.txt"};
 
   void loadConfig(std::string_view characterName);
   void subscribeToEvents();

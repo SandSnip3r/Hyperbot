@@ -34,15 +34,15 @@ TalkingToShopNpc::~TalkingToShopNpc() {
 }
 
 void TalkingToShopNpc::figureOutWhatToBuy() {
-  int remainingGold = bot_.selfState().getGold();
+  int remainingGold = bot_.selfState()->getGold();
   for (const auto &shoppingItemIdCountPair : shoppingList_) {
     const auto itemRefId = shoppingItemIdCountPair.first;
     // Do we have enough of these in our inventory?
-    const auto slotsWithItem = bot_.selfState().inventory.findItemsWithRefId(itemRefId);
+    const auto slotsWithItem = bot_.selfState()->inventory.findItemsWithRefId(itemRefId);
     int ownedCountOfItem{0};
     bool haveEnoughOfThisItem{false};
     for (const auto slotWithItem : slotsWithItem) {
-      const auto *itemPtr = bot_.selfState().inventory.getItem(slotWithItem);
+      const auto *itemPtr = bot_.selfState()->inventory.getItem(slotWithItem);
       if (itemPtr == nullptr) {
         throw std::runtime_error("Inventory said we had an item, but it is null");
       }
@@ -78,10 +78,7 @@ void TalkingToShopNpc::figureOutWhatToBuy() {
       continue;
     }
     const auto &nameOfItemToBuy = itemData.codeName128;
-    const auto *npc = bot_.entityTracker().getEntity(npcGid_);
-    if (npc == nullptr) {
-      throw std::runtime_error("Got entity, but it's null");
-    }
+    std::shared_ptr<entity::Entity> npc = bot_.worldState().getEntity(npcGid_);
     if (npc->entityType() != entity::EntityType::kNonplayerCharacter) {
       throw std::runtime_error("Entity is not a NonplayerCharacter");
     }
@@ -130,12 +127,12 @@ bool TalkingToShopNpc::needToRepair() const {
   if (npc_ != Npc::kBlacksmith && npc_ != Npc::kProtector) {
     return false;
   }
-  for (int i=0; i<bot_.selfState().inventory.size(); ++i) {
-    if (!bot_.selfState().inventory.hasItem(i)) {
+  for (int i=0; i<bot_.selfState()->inventory.size(); ++i) {
+    if (!bot_.selfState()->inventory.hasItem(i)) {
       // Nothing in this slot
       continue;
     }
-    const auto *itemPtr = bot_.selfState().inventory.getItem(i);
+    const auto *itemPtr = bot_.selfState()->inventory.getItem(i);
     if (!itemPtr->itemInfo->canRepair) {
       // Not a repairable item
       continue;
@@ -168,12 +165,12 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
     return;
   }
 
-  if (bot_.selfState().talkingGidAndOption) { // TODO: Move this state out to the state machine, I think.
+  if (bot_.selfState()->talkingGidAndOption) { // TODO: Move this state out to the state machine, I think.
     // We are talking to an Npc
-    if (bot_.selfState().talkingGidAndOption->first != npcGid_) {
+    if (bot_.selfState()->talkingGidAndOption->first != npcGid_) {
       throw std::runtime_error("We're not talking to the potion Npc that we thought we were");
     }
-    if (bot_.selfState().talkingGidAndOption->second != packet::enums::TalkOption::kStore) {
+    if (bot_.selfState()->talkingGidAndOption->second != packet::enums::TalkOption::kStore) {
       throw std::runtime_error("We're not in the talk option that we thought we were");
     }
     if (waitingForTalkResponse_) {
@@ -215,15 +212,15 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
     }
 
     // Close the shop
-    const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(bot_.selfState().talkingGidAndOption->first);
+    const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(bot_.selfState()->talkingGidAndOption->first);
     bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
     waitingOnStopTalkResponse_ = true;
     return;
   } else {
     // We are not talking to an npc
-    if (bot_.selfState().selectedEntity) {
+    if (bot_.selfState()->selectedEntity) {
       // We have something selected
-      if (*bot_.selfState().selectedEntity != npcGid_) {
+      if (*bot_.selfState()->selectedEntity != npcGid_) {
         throw std::runtime_error("We have something selected, but it's not our expected Npc");
       }
       if (waitingForSelectionResponse_) {
@@ -239,7 +236,7 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
         }
 
         // Delect the npc
-        const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(*bot_.selfState().selectedEntity);
+        const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(*bot_.selfState()->selectedEntity);
         bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
         waitingOnDeselectionResponse_ = true;
         return;
@@ -251,7 +248,7 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
         }
 
         // Talk to npc
-        const auto openStorage = packet::building::ClientAgentActionTalkRequest::packet(*bot_.selfState().selectedEntity, packet::enums::TalkOption::kStore);
+        const auto openStorage = packet::building::ClientAgentActionTalkRequest::packet(*bot_.selfState()->selectedEntity, packet::enums::TalkOption::kStore);
         bot_.packetBroker().injectPacket(openStorage, PacketContainer::Direction::kClientToServer);
         waitingForTalkResponse_ = true;
       }

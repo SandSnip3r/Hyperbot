@@ -12,7 +12,7 @@
 proto::stats::StatEvent createStatEvent();
 void serializeKilledEntity(const entity::Entity *entity, proto::entity::Entity &protoEntity);
 
-StatAggregator::StatAggregator(const state::WorldState &worldState, broker::EventBroker &eventBroker) : worldState_(worldState), eventBroker_(eventBroker) {
+StatAggregator::StatAggregator(const state::WorldState &worldState, broker::EventBroker &eventBroker) : worldState_(worldState), eventBroker_(eventBroker) {/* 
   auto eventHandleFunction = std::bind(&StatAggregator::handleEvent, this, std::placeholders::_1);
   eventBroker_.subscribeToEvent(event::EventCode::kSelfSpawned, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kTrainingStarted, eventHandleFunction);
@@ -25,9 +25,9 @@ StatAggregator::StatAggregator(const state::WorldState &worldState, broker::Even
   eventBroker_.subscribeToEvent(event::EventCode::kInventoryGoldUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kCharacterLevelUpdated, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
-}
+ */}
 
-void StatAggregator::handleEvent(const event::Event *event) {
+void StatAggregator::handleEvent(const event::Event *event) {/* 
   if (event != nullptr && event->eventCode == event::EventCode::kSelfSpawned) {
     if (worldState_.selfState().name != characterName_) {
       // We must have just logged in
@@ -109,9 +109,9 @@ void StatAggregator::handleEvent(const event::Event *event) {
     }
   }
 
-}
+ */}
 
-void StatAggregator::printParsedFiles(const proto::stats::StatFileRegistry &registry) const {
+void StatAggregator::printParsedFiles(const proto::stats::StatFileRegistry &registry) const {/* 
   for (const auto &i : registry.character_entries()) {
     const auto &charName =  i.first;
     LOG(INFO) << "\"" << charName << "\":";;
@@ -152,9 +152,9 @@ void StatAggregator::printParsedFiles(const proto::stats::StatFileRegistry &regi
       }
     }
   }
-}
+ */}
 
-void StatAggregator::initialize(const std::string &characterName) {
+void StatAggregator::initialize(const std::string &characterName) {/* 
   characterName_ = characterName;
   filename_ = generateFilename();
 
@@ -199,16 +199,18 @@ void StatAggregator::initialize(const std::string &characterName) {
   }
 
   initialized_ = true;
-}
+ */}
 
-std::string StatAggregator::generateFilename() const {
+std::string StatAggregator::generateFilename() const {/* 
   // Use a hash of the character name combined with the current time.
   const auto currentTime = std::chrono::system_clock::now();
   const auto hashOfCharacterName = std::hash<std::string>{}(characterName_);
   return std::to_string(std::chrono::duration_cast<std::chrono::seconds>(currentTime.time_since_epoch()).count()) + "_" + std::to_string(hashOfCharacterName);
+ */
+  return {};
 }
 
-void StatAggregator::writeEventToStatFile(const proto::stats::StatEvent &event) {
+void StatAggregator::writeEventToStatFile(const proto::stats::StatEvent &event) {/* 
   const size_t eventDataSize = event.ByteSizeLong();
   // First write the size of the message.
   statFile_.write(reinterpret_cast<const char*>(&eventDataSize), sizeof(eventDataSize));
@@ -216,7 +218,7 @@ void StatAggregator::writeEventToStatFile(const proto::stats::StatEvent &event) 
   event.SerializeToOstream(&statFile_);
   statFile_.flush();
   // LOG(INFO) << "Writing message \"" << event.DebugString() << "\" which has bin size " << eventDataSize;
-}
+ */}
 
 proto::stats::StatEvent createStatEvent() {
   // Get the current time as a time_point

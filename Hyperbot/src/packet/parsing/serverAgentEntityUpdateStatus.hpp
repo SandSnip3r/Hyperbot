@@ -14,7 +14,7 @@ namespace packet::parsing {
 class ServerAgentEntityUpdateStatus : public ParsedPacket {
 public:
   ServerAgentEntityUpdateStatus(const PacketContainer &packet);
-  sro::scalar_types::EntityGlobalId entityUniqueId() const;
+  sro::scalar_types::EntityGlobalId globalId() const;
   enums::UpdateFlag updateFlag() const;
   enums::VitalInfoFlag vitalBitmask() const;
   uint32_t newHpValue() const;

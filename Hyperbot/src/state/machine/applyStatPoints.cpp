@@ -11,16 +11,16 @@ namespace state::machine {
 
 ApplyStatPoints::ApplyStatPoints(Bot &bot, std::vector<StatPointType> statPointTypes) : StateMachine(bot), statPointTypes_(statPointTypes) {
   // stateMachineCreated(kName);
-  lastInt_ = bot_.selfState().intPoints();
-  lastStr_ = bot_.selfState().strPoints();
-  if (bot_.selfState().getAvailableStatPoints() < statPointTypes_.size()) {
-    LOG(WARNING) << "Want to apply " << statPointTypes_.size() << " stat points, but only " << bot_.selfState().getAvailableStatPoints() << " available";
+  lastInt_ = bot_.selfState()->intPoints();
+  lastStr_ = bot_.selfState()->strPoints();
+  if (bot_.selfState()->getAvailableStatPoints() < statPointTypes_.size()) {
+    LOG(WARNING) << "Want to apply " << statPointTypes_.size() << " stat points, but only " << bot_.selfState()->getAvailableStatPoints() << " available";
     done_ = true;
     return;
   }
   // Apply the given stat points in the order given (first to last), but since we want to be efficient with our vector, we'll remove items from the end. Because of this, we reverse the vector.
   std::reverse(statPointTypes_.begin(), statPointTypes_.end());
-  VLOG(1) << "Have " << bot_.selfState().getAvailableStatPoints() << " stat point(s). Want to apply " << statPointTypes_.size();
+  VLOG(1) << "Have " << bot_.selfState()->getAvailableStatPoints() << " stat point(s). Want to apply " << statPointTypes_.size();
 }
 
 ApplyStatPoints::~ApplyStatPoints() {
@@ -44,25 +44,25 @@ void ApplyStatPoints::onUpdate(const event::Event *event) {
     if (event->eventCode == event::EventCode::kStatsChanged) {
       VLOG(3) << "Stats changed";
       if (lastInt_ && lastStr_ &&
-          bot_.selfState().intPoints() && bot_.selfState().strPoints() &&
+          bot_.selfState()->intPoints() && bot_.selfState()->strPoints() &&
           !statPointTypes_.empty()) {
         const auto ourType = statPointTypes_.back();
         if (ourType == StatPointType::kInt) {
-          if (*bot_.selfState().intPoints() == *lastInt_ + 1) {
+          if (*bot_.selfState()->intPoints() == *lastInt_ + 1) {
             VLOG(2) << "Successfully used 1 int";
             statPointTypes_.pop_back();
             success();
           }
         } else {
-          if (*bot_.selfState().strPoints() == *lastStr_ + 1) {
+          if (*bot_.selfState()->strPoints() == *lastStr_ + 1) {
             VLOG(2) << "Successfully used 1 str";
             statPointTypes_.pop_back();
             success();
           }
         }
       }
-      lastInt_ = bot_.selfState().intPoints();
-      lastStr_ = bot_.selfState().strPoints();
+      lastInt_ = bot_.selfState()->intPoints();
+      lastStr_ = bot_.selfState()->strPoints();
     } else if (event->eventCode == event::EventCode::kTimeout) {
       if (timeoutEventId_ && event->eventId == *timeoutEventId_) {
         VLOG(3) << "Timed out!";
@@ -87,7 +87,7 @@ void ApplyStatPoints::onUpdate(const event::Event *event) {
     return;
   }
 
-  if (bot_.selfState().getAvailableStatPoints() < 1) {
+  if (bot_.selfState()->getAvailableStatPoints() < 1) {
     VLOG(2) << "No more stat points";
     if (!statPointTypes_.empty()) {
       LOG(WARNING) << "Want to apply " << statPointTypes_.size() << " more stat points, but we have none left";
@@ -99,10 +99,10 @@ void ApplyStatPoints::onUpdate(const event::Event *event) {
   const StatPointType pointToApply = statPointTypes_.back();
   PacketContainer packet;
   if (pointToApply == StatPointType::kInt) {
-    VLOG(2) << "Applying an Int stat point. Have " << bot_.selfState().getAvailableStatPoints() << " stat point(s)";
+    VLOG(2) << "Applying an Int stat point. Have " << bot_.selfState()->getAvailableStatPoints() << " stat point(s)";
     packet = packet::building::ClientAgentCharacterIncreaseIntRequest::packet();
   } else {
-    VLOG(2) << "Applying a Str stat point. Have " << bot_.selfState().getAvailableStatPoints() << " stat point(s)";
+    VLOG(2) << "Applying a Str stat point. Have " << bot_.selfState()->getAvailableStatPoints() << " stat point(s)";
     packet = packet::building::ClientAgentCharacterIncreaseStrRequest::packet();
   }
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);

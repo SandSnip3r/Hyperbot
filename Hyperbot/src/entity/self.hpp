@@ -1,5 +1,5 @@
-#ifndef STATE_SELF_HPP
-#define STATE_SELF_HPP
+#ifndef ENTITY_SELF_HPP_
+#define ENTITY_SELF_HPP_
 
 #include "broker/eventBroker.hpp"
 #include "broker/timerManager.hpp"
@@ -9,7 +9,7 @@
 #include "packet/enums/packetEnums.hpp"
 #include "packet/parsing/parsedPacket.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
-#include "skillEngine.hpp"
+#include "state/skillEngine.hpp"
 #include "storage/buybackQueue.hpp"
 #include "storage/storage.hpp"
 
@@ -29,7 +29,7 @@
 #include <variant>
 #include <vector>
 
-namespace state {
+namespace entity {
 
 enum class Race {
   kChinese,
@@ -44,7 +44,7 @@ enum class Gender {
 // TODO: It will probably make more sense to lock the character state more broadly
 //  For example, when a packet comes in and we're updating the state
 //  Or, when we're doing game logic
-class Self : public entity::PlayerCharacter {
+class Self : public PlayerCharacter {
 public:
   Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData);
   virtual ~Self() = default;
@@ -69,7 +69,7 @@ public:
   void setCurrentMp(uint32_t mp);
   void setMaxHpMp(uint32_t maxHp, uint32_t maxMp);
   void setStatPoints(uint16_t strPoints, uint16_t intPoints);
-  void updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels);
+  void updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels, broker::EventBroker &eventBroker);
   void setStateBitmask(uint32_t stateBitmask);
   void setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect);
   void setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level);
@@ -86,7 +86,7 @@ public:
   void itemCooldownEnded(type_id::TypeId itemTypeData);
 
   // Getters
-  entity::EntityType entityType() const override;
+  EntityType entityType() const override;
   bool spawned() const;
   Race race() const;
   Gender gender() const;
@@ -155,7 +155,7 @@ public:
   packet::structures::ItemMovement getUserPurchaseRequest() const;
   // =========================================================
 
-  mutable std::mutex selfMutex;
+  // mutable std::mutex selfMutex;
 
   bool spawned_{false};
   
@@ -232,12 +232,12 @@ public:
   bool haveOpenedStorageSinceTeleport{false};
 
   // Training area
-  std::unique_ptr<entity::Geometry> trainingAreaGeometry;
-  void setTrainingAreaGeometry(std::unique_ptr<entity::Geometry> &&geometry);
+  std::unique_ptr<Geometry> trainingAreaGeometry;
+  void setTrainingAreaGeometry(std::unique_ptr<Geometry> &&geometry);
   void resetTrainingAreaGeometry();
 
   // Skills
-  SkillEngine skillEngine;
+  state::SkillEngine skillEngine;
 
   // Misc
   // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.
@@ -280,6 +280,6 @@ private:
   static const int kCombustionPotionDelayIncreaseMs_{4000};
 };
 
-} // namespace state
+} // namespace entity
 
-#endif // STATE_SELF_HPP
+#endif // ENTITY_SELF_HPP_

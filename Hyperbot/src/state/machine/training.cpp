@@ -134,22 +134,22 @@ Training::Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeo
   stateMachineCreated(kName);
   getSkillsFromConfig();
 
-  bot_.selfState().setTrainingAreaGeometry(trainingAreaGeometry_->clone());
-  bot_.selfState().registerGeometryBoundary(bot_.selfState().trainingAreaGeometry->clone(), bot_.eventBroker());
+  bot_.selfState()->setTrainingAreaGeometry(trainingAreaGeometry_->clone());
+  bot_.selfState()->registerGeometryBoundary(bot_.selfState()->trainingAreaGeometry->clone(), bot_.eventBroker());
   // Register training area geometry with all entities
-  for (const auto &idPtrPair : bot_.entityTracker().getEntityMap()) {
+  for (const auto &idPtrPair : bot_.worldState().entityTracker().getEntityMap()) {
     if (idPtrPair.second) {
       if (auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(idPtrPair.second.get())) {
-        mobileEntity->registerGeometryBoundary(bot_.selfState().trainingAreaGeometry->clone(), bot_.eventBroker());
+        mobileEntity->registerGeometryBoundary(bot_.selfState()->trainingAreaGeometry->clone(), bot_.eventBroker());
       }
     }
   }
 }
 
 Training::~Training() {
-  bot_.selfState().resetTrainingAreaGeometry();
-  bot_.selfState().resetGeometryBoundary(bot_.eventBroker());
-  for (const auto &idPtrPair : bot_.entityTracker().getEntityMap()) {
+  bot_.selfState()->resetTrainingAreaGeometry();
+  bot_.selfState()->resetGeometryBoundary(bot_.eventBroker());
+  for (const auto &idPtrPair : bot_.worldState().entityTracker().getEntityMap()) {
     if (idPtrPair.second) {
       if (auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(idPtrPair.second.get())) {
         mobileEntity->resetGeometryBoundary(bot_.eventBroker());
@@ -196,10 +196,10 @@ void Training::onUpdate(const event::Event *event) {
   // Check if this event updates our internal state.
   if (event != nullptr && handledEvents_.find(event) == handledEvents_.end()) {
     if (const auto *entitySpawnedEvent = dynamic_cast<const event::EntitySpawned*>(event)) {
-      auto *entity = bot_.entityTracker().getEntity(entitySpawnedEvent->globalId);
-      if (auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(entity)) {
+      std::shared_ptr<entity::Entity> entity = bot_.worldState().getEntity(entitySpawnedEvent->globalId);
+      if (auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(entity.get())) {
         // Register our training region boundary with the entity so that we will get events if they enter/exit
-        mobileEntity->registerGeometryBoundary(bot_.selfState().trainingAreaGeometry->clone(), bot_.eventBroker());
+        mobileEntity->registerGeometryBoundary(bot_.selfState()->trainingAreaGeometry->clone(), bot_.eventBroker());
       }
     } else if (const auto *entityMovementBegan = dynamic_cast<const event::EntityMovementBegan*>(event)) {
       if (walkingTargetAndAttack_ && entityMovementBegan->globalId == walkingTargetAndAttack_->targetId) {
@@ -207,8 +207,8 @@ void Training::onUpdate(const event::Event *event) {
         walkingTargetAndAttack_.reset();
       }
     } else if (const auto *entityLifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event)) {
-      if (entityLifeStateChanged->globalId == bot_.selfState().globalId) {
-        if (bot_.selfState().lifeState == sro::entity::LifeState::kDead) {
+      if (entityLifeStateChanged->globalId == bot_.selfState()->globalId) {
+        if (bot_.selfState()->lifeState == sro::entity::LifeState::kDead) {
           // We died. Cleanup and gtfo.
           done_ = true;
           return;
@@ -219,9 +219,9 @@ void Training::onUpdate(const event::Event *event) {
     //   resetSkillLists();
     //   getSkillsFromConfig();
     } else if (event->eventCode == event::EventCode::kCharacterAvailableStatPointsUpdated) {
-      if (!applyStatPointsChildStateMachine_ && bot_.selfState().getAvailableStatPoints() > 0) {
-        LOG(INFO) << "Constructing state machine to apply " << bot_.selfState().getAvailableStatPoints() << " stat points to int";
-        applyStatPointsChildStateMachine_ = std::make_unique<ApplyStatPoints>(bot_, std::vector<StatPointType>(bot_.selfState().getAvailableStatPoints(), StatPointType::kInt));
+      if (!applyStatPointsChildStateMachine_ && bot_.selfState()->getAvailableStatPoints() > 0) {
+        LOG(INFO) << "Constructing state machine to apply " << bot_.selfState()->getAvailableStatPoints() << " stat points to int";
+        applyStatPointsChildStateMachine_ = std::make_unique<ApplyStatPoints>(bot_, std::vector<StatPointType>(bot_.selfState()->getAvailableStatPoints(), StatPointType::kInt));
       }
     }
   }
@@ -251,12 +251,12 @@ void Training::onUpdate(const event::Event *event) {
   }
 
   // We either have no child state, or we're walking somewhere.
-  if (!bot_.selfState().spawned()) {
+  if (!bot_.selfState()->spawned()) {
     // We are not spawned, nothing to do
     return;
   }
 
-  if (bot_.selfState().lifeState == sro::entity::LifeState::kDead) {
+  if (bot_.selfState()->lifeState == sro::entity::LifeState::kDead) {
     // Dead, nothing to do.
     // TODO: Maybe go to town after some time
     return;
@@ -269,7 +269,7 @@ void Training::onUpdate(const event::Event *event) {
 
   // First, check that our buffs are all active. Use different sets of buffs for inside and outside of the training area.
   SkillList *buffList;
-  if (trainingAreaGeometry_->pointIsInside(bot_.selfState().position())) {
+  if (trainingAreaGeometry_->pointIsInside(bot_.selfState()->position())) {
     buffList = &trainingBuffs_;
   } else {
     buffList = &nonTrainingBuffs_;
@@ -284,7 +284,7 @@ void Training::onUpdate(const event::Event *event) {
 
   // TODO: Maybe we should have an event for when we enter the training area. That would trigger training area buffs immediately once we enter.
   // Buffs are all good at this point. First, check if we need to walk to the training area.
-  if (!trainingAreaGeometry_->pointIsInside(bot_.selfState().position())) {
+  if (!trainingAreaGeometry_->pointIsInside(bot_.selfState()->position())) {
     // We are not in the training area.
     // Are we already walking there?
     if (childState_ && dynamic_cast<Walking*>(childState_.get()) != nullptr) {
@@ -351,12 +351,12 @@ bool Training::tryPickItem(const ItemList &itemList) {
 
   // Maybe going to pick up an item, check if we're even in a state to be picking up items
   std::optional<sro::scalar_types::EntityGlobalId> cosGlobalId;
-  if (!bot_.selfState().cosInventoryMap.empty()) {
+  if (!bot_.selfState()->cosInventoryMap.empty()) {
     // Have a cos
     // TODO: How do we pick which COS to use?
     //  Maybe there can only ever be one.
     //  For now, just use the "first"
-    cosGlobalId = bot_.selfState().cosInventoryMap.begin()->first;
+    cosGlobalId = bot_.selfState()->cosInventoryMap.begin()->first;
   }
   if (!cosGlobalId && !canMove()) {
     // No way to pick up items. No pickpet and cant move.
@@ -372,7 +372,7 @@ bool Training::tryPickItem(const ItemList &itemList) {
     //         item->refObjId != 10383); // Bolts
   };
   for (const auto *item : itemList) {
-    if (!item->ownerJId || *item->ownerJId == bot_.selfState().jId) {
+    if (!item->ownerJId || *item->ownerJId == bot_.selfState()->jId) {
       // No owner or it belongs to us. Pick it up
       // TODO: Track party members' JIDs so that we know if we can pick up their items.
       if (!wantItem(item)) {
@@ -398,9 +398,9 @@ bool Training::tryPickItem(const ItemList &itemList) {
           }
         }
         // We are not walking to this item. We need to either start walking to it or pick it up.
-        const auto &item = bot_.entityTracker().getEntity<entity::Item>(targetItemGlobalId);
-        const auto itemPosition = item.position();
-        const auto distanceToItem = sro::position_math::calculateDistance2d(bot_.selfState().position(), itemPosition);
+        std::shared_ptr<entity::Item> item = bot_.worldState().getEntity<entity::Item>(targetItemGlobalId);
+        const auto itemPosition = item->position();
+        const auto distanceToItem = sro::position_math::calculateDistance2d(bot_.selfState()->position(), itemPosition);
         const float kMinimumDistanceToPickItem{5.0}; // TODO: Figure out more precisely what works here. Ideally this distance should be as large as possible without going over.
         if (justFinishedWalking || distanceToItem <= kMinimumDistanceToPickItem) {
           // Just got to the item, or within range of it; pick it up.
@@ -442,11 +442,11 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
       walkingTargetAndAttack_.reset();
     }
   }
-  const auto &targetEntity = bot_.worldState().getEntity<entity::MobileEntity>(targetAndAttack->targetId);
+  std::shared_ptr<const entity::MobileEntity> targetEntity = bot_.worldState().getEntity<entity::MobileEntity>(targetAndAttack->targetId);
   const auto attackRefId = targetAndAttack->skillId;
   std::optional<sro::Position> destinationPosition;
   if (!finishedWalking) {
-    destinationPosition = calculateWhereToWalkToAttackEntityWithSkill(targetEntity, attackRefId);
+    destinationPosition = calculateWhereToWalkToAttackEntityWithSkill(*targetEntity.get(), attackRefId);
   }
 
   if (destinationPosition) {
@@ -457,20 +457,20 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
     walkingTargetAndAttack_ = targetAndAttack;
   } else {
     // We are within range to cast skill.
-    if (bot_.selfState().hwanPoints() == 5) {
+    if (bot_.selfState()->hwanPoints() == 5) {
       // TODO: Use berserk in a StateMachine.
       const auto packet = packet::building::ClientAgentCharacterUpdateBodyStateRequest::packet(packet::enums::BodyState::kHwan);
       bot_.proxy().inject(packet, PacketContainer::Direction::kBotToServer);
     }
     CastSkillStateMachineBuilder castSkillBuilder(bot_, attackRefId);
-    castSkillBuilder.withTarget(targetEntity.globalId);
+    castSkillBuilder.withTarget(targetEntity->globalId);
     const auto &skillData = bot_.gameData().skillData().getSkillById(attackRefId);
     const auto weaponSlot = getInventorySlotOfWeaponForSkill(skillData, bot_);
     if (weaponSlot) {
       castSkillBuilder.withWeapon(*weaponSlot);
 
       // Check if the weapon can be accompanied by a shield
-      const auto *item = bot_.selfState().inventory.getItem(*weaponSlot);
+      const auto *item = bot_.selfState()->inventory.getItem(*weaponSlot);
       const storage::ItemEquipment *equipment = dynamic_cast<const storage::ItemEquipment*>(item);
       if (equipment != nullptr) {
         if (!equipment->itemInfo->twoHanded) {
@@ -488,8 +488,8 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
     if (imbueRefId_) {
       castSkillBuilder.withImbue(*imbueRefId_);
     }
-    if (targetEntity.globalId != bot_.selfState().globalId && (!bot_.selfState().selectedEntity || *bot_.selfState().selectedEntity != targetEntity.globalId)) {
-      const auto selectPacket = packet::building::ClientAgentActionSelectRequest::packet(targetEntity.globalId);
+    if (targetEntity->globalId != bot_.selfState()->globalId && (!bot_.selfState()->selectedEntity || *bot_.selfState()->selectedEntity != targetEntity->globalId)) {
+      const auto selectPacket = packet::building::ClientAgentActionSelectRequest::packet(targetEntity->globalId);
       bot_.packetBroker().injectPacket(selectPacket, PacketContainer::Direction::kClientToServer);
     }
     possiblyOverwriteChildStateMachine(castSkillBuilder.create());
@@ -523,7 +523,7 @@ bool Training::walkToRandomPoint() {
 std::tuple<Training::ItemList, Training::MonsterList> Training::getItemsAndMonstersInRange() const {
   ItemList itemsInRange;
   MonsterList monstersInRange;
-  for (const auto &entityIdPtrPair : bot_.entityTracker().getEntityMap()) {
+  for (const auto &entityIdPtrPair : bot_.worldState().entityTracker().getEntityMap()) {
     if (const auto *monster = dynamic_cast<const entity::Monster*>(entityIdPtrPair.second.get())) {
       if (monster->lifeState != sro::entity::LifeState::kAlive) {
         // Dont care about monsters that arent alive
@@ -561,7 +561,7 @@ bool Training::checkBuffs(const SkillList &buffList) {
       castSkillBuilder.withWeapon(*weaponSlot);
 
       // Check if the weapon can be accompanied by a shield
-      const auto *item = bot_.selfState().inventory.getItem(*weaponSlot);
+      const auto *item = bot_.selfState()->inventory.getItem(*weaponSlot);
       const storage::ItemEquipment *equipment = dynamic_cast<const storage::ItemEquipment*>(item);
       if (equipment != nullptr) {
         if (!equipment->itemInfo->twoHanded) {
@@ -581,7 +581,7 @@ bool Training::checkBuffs(const SkillList &buffList) {
     if (buffData.targetRequired) {
       // TODO: We assume this buff is for ourself
       // Buff requires a target, using self
-      castSkillBuilder.withTarget(bot_.selfState().globalId);
+      castSkillBuilder.withTarget(bot_.selfState()->globalId);
     }
 
     // Create a child state to cast skill
@@ -602,7 +602,7 @@ void Training::possiblyOverwriteChildStateMachine(std::unique_ptr<StateMachine> 
 }
 
 std::optional<sro::Position> Training::calculateWhereToWalkToAttackEntityWithSkill(const entity::MobileEntity &entity, sro::scalar_types::ReferenceObjectId attackRefId) {
-  const auto selfCurrentPosition = bot_.selfState().position();
+  const auto selfCurrentPosition = bot_.selfState()->position();
   const auto &skill = bot_.gameData().skillData().getSkillById(attackRefId);
   const double skillRangeMinusRounding = std::max(sro::constants::kSqrtHalf, skill.actionRange - sro::constants::kSqrtHalf*2);
   const auto calcd_dist = sro::position_math::calculateDistance2d(selfCurrentPosition, entity.position());
@@ -657,7 +657,7 @@ std::optional<sro::Position> Training::calculateWhereToWalkToAttackEntityWithSki
       // First calculate how long it will take us to get there.
       const auto distanceToDestination = sro::position_math::calculateDistance2d(selfCurrentPosition, destinationPos);
       constexpr const float kEstimatedPingTimeSeconds = 0.080;
-      const auto timeToGetToCurrentDest = distanceToDestination / bot_.selfState().currentSpeed() + kEstimatedPingTimeSeconds;
+      const auto timeToGetToCurrentDest = distanceToDestination / bot_.selfState()->currentSpeed() + kEstimatedPingTimeSeconds;
 
       // Next, calculate where the target will be after that amount of time.
       const auto targetNewPos = entity.positionAfterTime(timeToGetToCurrentDest);
@@ -694,7 +694,7 @@ bool Training::wantToAttackMonster(const entity::Monster &monster) const {
   const auto &characterData = bot_.gameData().characterData().getCharacterById(monster.refObjId);
 
   // TODO: Move this to the config, or determine at runtime.
-  // if (std::abs(characterData.lvl - bot_.selfState().getCurrentLevel()) > 10) {
+  // if (std::abs(characterData.lvl - bot_.selfState()->getCurrentLevel()) > 10) {
   //   // Don't attack anything 10 levels above or below us
   //   return false;
   // }
@@ -704,7 +704,7 @@ bool Training::wantToAttackMonster(const entity::Monster &monster) const {
 
 void Training::removeSkillsFromListWhichWeDontHave(SkillList &skillList) {
   auto newEndIt = std::remove_if(skillList.begin(), skillList.end(), [&](const auto &skillId) {
-    return !bot_.selfState().haveSkill(skillId);
+    return !bot_.selfState()->haveSkill(skillId);
   });
   for (auto it=newEndIt; it!=skillList.end(); ++it) {
     LOG(INFO) << "Dont have skill " << bot_.gameData().getSkillName(*it) << ". Removing from list";
@@ -717,7 +717,7 @@ std::optional<sro::scalar_types::ReferenceObjectId> Training::getNextBuffToCast(
   auto copyOfBuffsToUse = buffList;
   // Remove all buffs which are currently active.
   copyOfBuffsToUse.erase(std::remove_if(copyOfBuffsToUse.begin(), copyOfBuffsToUse.end(), [&](const auto &buff) {
-    return bot_.selfState().buffIsActive(buff);
+    return bot_.selfState()->buffIsActive(buff);
   }), copyOfBuffsToUse.end());
 
   if (copyOfBuffsToUse.empty()) {
@@ -728,7 +728,7 @@ std::optional<sro::scalar_types::ReferenceObjectId> Training::getNextBuffToCast(
   // Choose one that isnt active, on cooldown, or already used
   for (int i=0; i<copyOfBuffsToUse.size(); ++i) {
     const auto buff = copyOfBuffsToUse.at(i);
-    if (bot_.selfState().skillEngine.alreadyTriedToCastSkill(buff)) {
+    if (bot_.selfState()->skillEngine.alreadyTriedToCastSkill(buff)) {
       continue;
     }
     if (bot_.similarSkillIsAlreadyActive(buff)) {
@@ -806,7 +806,7 @@ std::optional<Training::TargetAndAttackSkill> Training::getTargetAndAttackSkill(
       {sro::entity::MonsterRarity::kChampion, false},
       {sro::entity::MonsterRarity::kGeneral, false},
     };
-    const bool isAttackingUs = (monster->targetGlobalId && *monster->targetGlobalId == bot_.selfState().globalId);
+    const bool isAttackingUs = (monster->targetGlobalId && *monster->targetGlobalId == bot_.selfState()->globalId);
     int index=0;
     for (const auto &i : monsterPriorities) {
       if (i.rarity == monster->rarity && i.isAttacking == isAttackingUs) {
@@ -819,13 +819,13 @@ std::optional<Training::TargetAndAttackSkill> Training::getTargetAndAttackSkill(
   };
 
   // Choose the highest priority monster (lowest priority value, tiebreak with which is closer)
-  const auto currentPosition = bot_.selfState().position();
-  const auto currentLevel = bot_.selfState().getCurrentLevel();
+  const auto currentPosition = bot_.selfState()->position();
+  const auto currentLevel = bot_.selfState()->getCurrentLevel();
   auto tmpMonsterList = monsters;
   std::sort(tmpMonsterList.begin(), tmpMonsterList.end(), [&](const entity::Monster *lhs, const entity::Monster *rhs) {
     // Prefer monsters which are currently attacking us.
-    const bool lhsIsAttackingUs = lhs->targetGlobalId && *lhs->targetGlobalId == bot_.selfState().globalId;
-    const bool rhsIsAttackingUs = rhs->targetGlobalId && *rhs->targetGlobalId == bot_.selfState().globalId;
+    const bool lhsIsAttackingUs = lhs->targetGlobalId && *lhs->targetGlobalId == bot_.selfState()->globalId;
+    const bool rhsIsAttackingUs = rhs->targetGlobalId && *rhs->targetGlobalId == bot_.selfState()->globalId;
     if (lhsIsAttackingUs == rhsIsAttackingUs) {
       // Prefer monsters closest to our level.
       const auto lhsLevel = bot_.gameData().characterData().getCharacterById(lhs->refObjId).lvl;

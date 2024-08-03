@@ -1,8 +1,9 @@
-#ifndef PACKETPROCESSOR_HPP_
-#define PACKETPROCESSOR_HPP_
+#ifndef PACKET_PROCESSOR_HPP_
+#define PACKET_PROCESSOR_HPP_
 
 #include "broker/eventBroker.hpp"
 #include "broker/packetBroker.hpp"
+#include "entity/self.hpp"
 // #include "packet/parsing/clientAgentActionDeselectRequest.hpp"
 // #include "packet/parsing/clientAgentActionSelectRequest.hpp"
 #include "packet/parsing/clientAgentActionCommandRequest.hpp"
@@ -87,7 +88,7 @@ public:
                   const pk2::GameData &gameData);
 
   void initialize();
-  void handlePacket(const PacketContainer &packet) const;
+  void handlePacket(const PacketContainer &packet);
 private:
   const SessionId sessionId_;
   state::WorldState &worldState_;
@@ -95,6 +96,8 @@ private:
   broker::EventBroker &eventBroker_;
   const pk2::GameData &gameData_;
   packet::parsing::PacketParser packetParser_{worldState_.entityTracker(), gameData_};
+  std::optional<sro::scalar_types::EntityGlobalId> selfGlobalId_;
+  std::shared_ptr<entity::Self> getSelfEntity() const;
 
   // BEGIN DEBUGGING SkillBegin/SkillEnd
   struct TrackedSkill {
@@ -124,7 +127,7 @@ private:
   void serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const;
   void serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const;
   void clientItemMoveReceived(const packet::parsing::ParsedClientItemMove &packet) const;
-  void serverAgentCharacterDataReceived(const packet::parsing::ServerAgentCharacterData &packet) const;
+  void serverAgentCharacterDataReceived(const packet::parsing::ServerAgentCharacterData &packet);
   void serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const;
   void serverAgentInventoryStorageDataReceived(const packet::parsing::ParsedServerAgentInventoryStorageData &packet) const;
   void serverAgentEntityUpdateHwanLevelReceived(packet::parsing::ServerAgentEntityUpdateHwanLevel &packet) const;
@@ -172,7 +175,7 @@ private:
   void serverAgentBuffLinkReceived(const packet::parsing::ServerAgentBuffLink &packet) const;
   void serverAgentBuffRemoveReceived(const packet::parsing::ServerAgentBuffRemove &packet) const;
   void serverAgentChatUpdateReceived(const packet::parsing::ServerAgentChatUpdate &packet) const;
-  void serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet) const;
+  void serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet);
   void serverAgentResurrectOptionReceived(const packet::parsing::ServerAgentResurrectOption &packet) const;
 
   std::optional<std::chrono::milliseconds> getItemCooldownMs(const storage::ItemExpendable &item) const;
@@ -180,4 +183,4 @@ private:
   void printCommandQueues() const;
 };
 
-#endif // PACKETPROCESSOR_HPP_
+#endif // PACKET_PROCESSOR_HPP_

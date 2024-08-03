@@ -14,17 +14,17 @@ namespace packet::parsing {
 class ServerAgentActionSelectResponse : public ParsedPacket {
 public:
   ServerAgentActionSelectResponse(const PacketContainer &packet, const state::EntityTracker &entityTracker);
-  uint8_t result() const;
-  uint16_t errorCode() const;
-  sro::scalar_types::EntityGlobalId globalId() const;
-  enums::VitalInfoFlag vitalInfoMask() const;
-  uint32_t hp() const;
+  uint8_t result() const { return result_; }
+  uint16_t errorCode() const { return errorCode_; }
+  sro::scalar_types::EntityGlobalId globalId() const { return globalId_; }
+  enums::VitalInfoFlag vitalInfoMask() const { return vitalInfoMask_; }
+  uint32_t hp() const { return hp_; }
 private:
   uint8_t result_;
   uint16_t errorCode_;
   sro::scalar_types::EntityGlobalId globalId_;
   enums::VitalInfoFlag vitalInfoMask_;
-  uint32_t hp_;
+  uint32_t hp_; //a
 };
 
 } // namespace packet::parsing

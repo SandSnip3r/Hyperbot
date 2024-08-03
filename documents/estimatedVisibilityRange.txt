@@ -1,0 +1,6 @@
+// According to Daxter:
+//  maximum possible should be around 905
+//  given that you can at most see almost 2 blocks across
+
+Actual max measured:
+894.504

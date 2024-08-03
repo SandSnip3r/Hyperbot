@@ -97,7 +97,6 @@ public:
   virtual void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker);
   void movementTimerCompleted(broker::EventBroker &eventBroker);
 protected:
-  mutable std::mutex mutex_;
   bool moving_;
 
   // Only cancels movement timers and sets internal state; does not send any events.

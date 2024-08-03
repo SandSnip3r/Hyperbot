@@ -46,21 +46,21 @@ EntityType Entity::entityType() const  {
 }
 
 void MobileEntity::initializeAsMoving(const sro::Position &destinationPosition) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   this->moving_ = true;
   this->startedMovingTime = std::chrono::high_resolution_clock::now();
   this->destinationPosition = destinationPosition;
 }
 
 void MobileEntity::initializeAsMoving(sro::Angle destinationAngle) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   this->moving_ = true;
   this->startedMovingTime = std::chrono::high_resolution_clock::now();
   this->angle_ = destinationAngle;
 }
 
 void MobileEntity::registerGeometryBoundary(std::unique_ptr<Geometry> geometry, broker::EventBroker &eventBroker) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   if (geometry_) {
     throw std::runtime_error("MobileEntity already holds geometry");
   }
@@ -71,7 +71,7 @@ void MobileEntity::registerGeometryBoundary(std::unique_ptr<Geometry> geometry, 
 }
 
 void MobileEntity::resetGeometryBoundary(broker::EventBroker &eventBroker) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   if (geometry_) {
     geometry_.reset();
   }
@@ -79,7 +79,7 @@ void MobileEntity::resetGeometryBoundary(broker::EventBroker &eventBroker) {
 }
 
 void MobileEntity::cancelEvents(broker::EventBroker &eventBroker) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   privateCancelEvents(eventBroker);
 }
 
@@ -88,13 +88,13 @@ bool MobileEntity::moving() const {
 }
 
 sro::Position MobileEntity::position() const {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   const auto currentTime = std::chrono::high_resolution_clock::now();
   return interpolateCurrentPosition(currentTime);
 }
 
 float MobileEntity::currentSpeed() const {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   return privateCurrentSpeed();
 }
 
@@ -105,7 +105,7 @@ sro::Position MobileEntity::positionAfterTime(float seconds) const {
 
 void MobileEntity::setSpeed(float walkSpeed, float runSpeed, broker::EventBroker &eventBroker) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   if (walkSpeed == this->walkSpeed && runSpeed == this->runSpeed) {
     // Didn't actually change
     return;
@@ -124,7 +124,7 @@ void MobileEntity::setSpeed(float walkSpeed, float runSpeed, broker::EventBroker
 }
 
 void MobileEntity::setAngle(sro::Angle angle, broker::EventBroker &eventBroker) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   if (moving()) {
     throw std::runtime_error("We're moving and changing our angle");
   }
@@ -134,7 +134,7 @@ void MobileEntity::setAngle(sro::Angle angle, broker::EventBroker &eventBroker) 
 
 void MobileEntity::setMotionState(entity::MotionState motionState, broker::EventBroker &eventBroker) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   bool changedSpeed{false};
   if (this->lastMotionState && *this->lastMotionState == entity::MotionState::kWalk && motionState == entity::MotionState::kRun) {
     // Entity changed from walking to running
@@ -170,13 +170,13 @@ void MobileEntity::setMotionState(entity::MotionState motionState, broker::Event
 }
 
 void MobileEntity::setStationaryAtPosition(const sro::Position &position, broker::EventBroker &eventBroker) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   privateSetStationaryAtPosition(position, eventBroker);
 }
 
 void MobileEntity::syncPosition(const sro::Position &position, broker::EventBroker &eventBroker) {
   const auto currentTime = std::chrono::high_resolution_clock::now();
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   if (moving()) {
     if (destinationPosition) {
       privateSetMovingToDestination(position, *destinationPosition, eventBroker);
@@ -190,17 +190,17 @@ void MobileEntity::syncPosition(const sro::Position &position, broker::EventBrok
 }
 
 void MobileEntity::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   privateSetMovingToDestination(sourcePosition, destinationPosition, eventBroker);
 }
 
 void MobileEntity::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   privateSetMovingTowardAngle(sourcePosition, angle, eventBroker);
 }
 
 void MobileEntity::movementTimerCompleted(broker::EventBroker &eventBroker) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::unique_lock<std::mutex> lock(mutex_);
   if (!movingEventId) {
     throw std::runtime_error("MobileEntity: Movement timer completed, but had no running timer");
   }

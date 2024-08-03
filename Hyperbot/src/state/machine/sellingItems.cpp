@@ -54,7 +54,7 @@ void SellingItems::onUpdate(const event::Event *event) {
   }
 
   uint16_t quantity{1};
-  auto &inventory = bot_.selfState().inventory;
+  auto &inventory = bot_.selfState()->inventory;
   const auto currentSlot = slotsToSell_[nextToSellIndex_];
   if (!inventory.hasItem(currentSlot)) {
     throw std::runtime_error(absl::StrFormat("Trying to sell item at slot %d, but no item in this slot", currentSlot));
@@ -64,7 +64,7 @@ void SellingItems::onUpdate(const event::Event *event) {
     quantity = expItem->quantity;
   }
   VLOG(1) << absl::StreamFormat("Sell item at slot %d (x%d)", currentSlot, quantity);
-  const auto sellPacket = packet::building::ClientAgentInventoryOperationRequest::sellPacket(currentSlot, quantity, bot_.selfState().talkingGidAndOption->first);
+  const auto sellPacket = packet::building::ClientAgentInventoryOperationRequest::sellPacket(currentSlot, quantity, bot_.selfState()->talkingGidAndOption->first);
   bot_.packetBroker().injectPacket(sellPacket, PacketContainer::Direction::kClientToServer);
   waitingOnASell_ = true;
 }

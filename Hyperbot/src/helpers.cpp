@@ -24,6 +24,7 @@ float secondsToTravel(const sro::Position &srcPosition, const sro::Position &des
   return distance / currentSpeed;
 }
 
+// `inventorySize` is the number of slots in the inventory, not the number of items in the inventory. `inventoryItemMap` will contain anywhere from 0 to `inventorySize` items.
 void initializeInventory(storage::Storage &inventory, uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<storage::Item>> &inventoryItemMap) {
   // TODO: If there are already items here, there are very few cases when the existing data would be different than the new data
   //  One possible such case is if the server adds an item to our storage, we would need to teleport to see it

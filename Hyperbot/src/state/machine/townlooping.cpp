@@ -21,8 +21,8 @@ Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
   buildNpcList();
 
   // Figure out which town we'll townloop in
-  const auto &regionData = bot_.gameData().refRegion().getRegion(bot_.selfState().position().regionId());
-  if (bot_.selfState().inTown()) {
+  const auto &regionData = bot_.gameData().refRegion().getRegion(bot_.selfState()->position().regionId());
+  if (bot_.selfState()->inTown()) {
     // Which town are we in?
     if (regionData.areaName == "Town_Cons") {
       // Town is Constantinople
@@ -82,7 +82,7 @@ void Townlooping::onUpdate(const event::Event *event) {
       // We just finished with an npc, advance our state.
       ++currentNpcIndex_;
       if (done()) {
-        // No more Npcs, done with townloop
+        // No more Npcs, done with townloop npc
         LOG(INFO) << "No more npcs to visit, done with townloop";
         return;
       }
@@ -101,7 +101,7 @@ void Townlooping::onUpdate(const event::Event *event) {
   if (event != nullptr) {
     // Originally, I thought that once we received the Character Data packet, we were spawned and could begin to act, but It seems like we cannot do anything for a little time after that. The server wont even ack our sent packets. Instead, it seems that we consistently get a state update packet shortly after spawning. We'll use that as an indication that we've spawned and can begin taking actions. For non-GM characters, the first body state is BodyState::kUntouchable.
     if (const auto *bodyStateChangedEvent = dynamic_cast<const event::EntityBodyStateChanged*>(event)) {
-      if (bodyStateChangedEvent->globalId == bot_.selfState().globalId) {
+      if (bodyStateChangedEvent->globalId == bot_.selfState()->globalId) {
         waitingForSpawn_ = false;
       }
     } else if (const auto *resurrectOption = dynamic_cast<const event::ResurrectOption*>(event)) {
@@ -118,13 +118,13 @@ void Townlooping::onUpdate(const event::Event *event) {
   }
 
   // First, check if we're out of town and have a return scroll to use
-  if (!bot_.worldState().selfState().inTown()) {
+  if (!bot_.selfState()->inTown()) {
     // Not in town
-    if (bot_.selfState().lifeState == sro::entity::LifeState::kDead) {
+    if (bot_.selfState()->lifeState == sro::entity::LifeState::kDead) {
       // We're dead, wait for resurrection option message.
       return;
     } else {
-      const auto returnScrollSlots = bot_.selfState().inventory.findItemsOfCategory({type_id::categories::kReturnScroll});
+      const auto returnScrollSlots = bot_.selfState()->inventory.findItemsOfCategory({type_id::categories::kReturnScroll});
       if (!returnScrollSlots.empty()) {
         if (sanityCheckUsedReturnScroll_) {
           throw std::runtime_error("We already used a return scroll and want to use another. Something is wrong");
@@ -156,7 +156,7 @@ void Townlooping::onUpdate(const event::Event *event) {
 
     if (buffData.targetRequired) {
       // TODO: We assume this buff is for ourself
-      castSkillBuilder.withTarget(bot_.selfState().globalId);
+      castSkillBuilder.withTarget(bot_.selfState()->globalId);
     }
 
     setChildStateMachine(castSkillBuilder.create());
@@ -193,7 +193,7 @@ void Townlooping::buildBuffList() {
 
   // Remove skills which we don't even have.
   buffsToUse_.erase(std::remove_if(buffsToUse_.begin(), buffsToUse_.end(), [&](const auto &skillId) {
-    return !bot_.selfState().haveSkill(skillId);
+    return !bot_.selfState()->haveSkill(skillId);
   }), buffsToUse_.end());
 
   // Move all buffs which require a weapon at all times to the end
@@ -231,7 +231,7 @@ void Townlooping::buildSellList() {
     type_id::categories::kAmmo
   };
   slotsToSell_.clear();
-  const auto &inventory = bot_.selfState().inventory;
+  const auto &inventory = bot_.selfState()->inventory;
   for (sro::scalar_types::StorageIndexType i=0; i<inventory.size(); ++i) {
     if (inventory.hasItem(i)) {
       if (inventory.getItem(i)->isOneOf(kTypesToSell)) {
@@ -257,7 +257,7 @@ std::optional<sro::scalar_types::ReferenceObjectId> Townlooping::getNextBuffToCa
   auto copyOfBuffsToUse = buffsToUse_;
   // Remove all buffs which are currently active.
   copyOfBuffsToUse.erase(std::remove_if(copyOfBuffsToUse.begin(), copyOfBuffsToUse.end(), [&](const auto &buff) {
-    return bot_.selfState().buffIsActive(buff);
+    return bot_.selfState()->buffIsActive(buff);
   }), copyOfBuffsToUse.end());
 
   if (copyOfBuffsToUse.empty()) {
@@ -265,10 +265,10 @@ std::optional<sro::scalar_types::ReferenceObjectId> Townlooping::getNextBuffToCa
     return {};
   }
 
-  // Choose one that isnt active, on cooldown, or already used
+  // Choose one that isn't active, on cooldown, or already used
   for (int i=0; i<copyOfBuffsToUse.size(); ++i) {
     const auto buff = copyOfBuffsToUse.at(i);
-    if (bot_.selfState().skillEngine.alreadyTriedToCastSkill(buff)) {
+    if (bot_.selfState()->skillEngine.alreadyTriedToCastSkill(buff)) {
       continue;
     }
     if (bot_.similarSkillIsAlreadyActive(buff)) {

@@ -14,10 +14,7 @@ ServerAgentActionSelectResponse::ServerAgentActionSelectResponse(const PacketCon
 
   // Success
   globalId_ = stream.Read<sro::scalar_types::EntityGlobalId>();
-  const auto *entity = entityTracker.getEntity(globalId_);
-  if (!entity) {
-    throw std::runtime_error("Selected entity that we're not tracking");
-  }
+  std::shared_ptr<entity::Entity> entity = entityTracker.getEntity(globalId_);
   if (entity->typeId1 == 1) { // TODO: Move to new type id categories
     // Character
     vitalInfoMask_ = stream.Read<enums::VitalInfoFlag>();
@@ -27,25 +24,5 @@ ServerAgentActionSelectResponse::ServerAgentActionSelectResponse(const PacketCon
     // TODO: Talk options follow, don't care for now
   } // TODO: else if (entity->typeId1 == 4) { // Talk options
 }
-
-uint8_t ServerAgentActionSelectResponse::result() const {
-  return result_;
-}
-
-uint16_t ServerAgentActionSelectResponse::errorCode() const {
-  return errorCode_;
-}
-
-sro::scalar_types::EntityGlobalId ServerAgentActionSelectResponse::globalId() const {
-  return globalId_;
-}
-
-enums::VitalInfoFlag ServerAgentActionSelectResponse::vitalInfoMask() const {
-  return vitalInfoMask_;
-}
-
-uint32_t ServerAgentActionSelectResponse::hp() const {
-  return hp_;
-}
-
+// a
 } // namespace packet::parsing

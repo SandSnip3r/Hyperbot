@@ -29,11 +29,12 @@ void Botting::setTrainingSpotFromConfig() {
 }
 
 void Botting::initializeChildState() {
+  std::shared_ptr<entity::Self> selfEntity = bot_.selfState();
   // if we're out of supplies, we must go to town
   //  there must already be some logic somewhere to determine if we need to go to town, reuse that
   // if we're already in town, initialize as Townlooping
   //  there's a chance we have everything we need, then Townlooping will immediately finish and we'll move onto the next state as per the normal flow
-  if (bot_.selfState().inTown() || bot_.needToGoToTown()) {
+  if (selfEntity->inTown() || bot_.needToGoToTown()) {
     LOG(INFO) << "Initializing state as Townlooping";
     setChildStateMachine<Townlooping>();
   } else {
@@ -63,7 +64,8 @@ void Botting::onUpdate(const event::Event *event) {
       setChildStateMachine<Training>(trainingAreaGeometry_->clone());
     } else if (dynamic_cast<Training*>(childState_.get())) {
       // Done training, go back to town
-      if (bot_.selfState().lifeState == sro::entity::LifeState::kDead) {
+      std::shared_ptr<entity::Self> selfEntity = bot_.selfState();
+      if (selfEntity->lifeState == sro::entity::LifeState::kDead) {
         // We died. For now, we let Townlooping figure out what to do, since Training didn't want to handle it.
       }
       setChildStateMachine<Townlooping>();

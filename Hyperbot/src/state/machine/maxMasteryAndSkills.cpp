@@ -27,10 +27,11 @@ MaxMasteryAndSkills::~MaxMasteryAndSkills() {
 }
 
 void MaxMasteryAndSkills::onUpdate(const event::Event *event) {
+  std::shared_ptr<entity::Self> selfEntity = bot_.selfState();
   if (event != nullptr) {
     if (auto *leveledUpMastery = dynamic_cast<const event::LearnMasterySuccess*>(event)) {
       if (leveledUpMastery->masteryId == masteryId_) {
-        VLOG(1) << absl::StreamFormat("Mastery is now level %d", bot_.selfState().getMasteryLevel(masteryId_));
+        VLOG(1) << absl::StreamFormat("Mastery is now level %d", selfEntity->getMasteryLevel(masteryId_));
         resetTimeout();
       }
     } else if (auto *leveledUpSkill = dynamic_cast<const event::LearnSkillSuccess*>(event)) {
@@ -63,8 +64,8 @@ void MaxMasteryAndSkills::onUpdate(const event::Event *event) {
   }
 
   // First, max mastery level.
-  const uint8_t currentMasteryLevel = bot_.selfState().getMasteryLevel(masteryId_);
-  const uint8_t currentLevel = bot_.selfState().getCurrentLevel();
+  const uint8_t currentMasteryLevel = selfEntity->getMasteryLevel(masteryId_);
+  const uint8_t currentLevel = selfEntity->getCurrentLevel();
   if (currentMasteryLevel < currentLevel) {
     // Still need to level up mastery.
     VLOG(1) << absl::StreamFormat("Mastery is level %d, character level is %d. Sending packet to level up mastery", currentMasteryLevel, currentLevel);
@@ -75,7 +76,7 @@ void MaxMasteryAndSkills::onUpdate(const event::Event *event) {
 
   if (!skillTree_.initialized()) {
     VLOG(1) << "Mastery matches current level. Leveling up skills";
-    const std::vector<packet::structures::Skill> ourSkills = bot_.selfState().skills();
+    const std::vector<packet::structures::Skill> ourSkills = selfEntity->skills();
     std::vector<sro::scalar_types::ReferenceSkillId> ourSkillIds;
     for (const packet::structures::Skill &skill : ourSkills) {
       ourSkillIds.push_back(skill.id);

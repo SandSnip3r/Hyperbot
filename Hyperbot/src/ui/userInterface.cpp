@@ -102,11 +102,11 @@ void UserInterface::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kWalkingPathUpdated, eventHandleFunction);
 }
 
-void UserInterface::handleEvent(const event::Event *event) {
+void UserInterface::handleEvent(const event::Event *event) {/* 
   if (worldState_ == nullptr) {
     throw std::runtime_error("User interface received an event, but does not yet have a pointer to the world state");
   }
-  std::unique_lock<std::mutex> selfStateLock(worldState_->selfState().selfMutex);
+  std::unique_lock<std::mutex> worldStateLock(worldState_->mutex);
 
   try {
     const auto eventCode = event->eventCode;
@@ -295,7 +295,7 @@ void UserInterface::handleEvent(const event::Event *event) {
   } catch (std::exception &ex) {
     LOG(WARNING) << absl::StreamFormat("Error while handling event %s: \"%s\"", event::toString(event->eventCode), ex.what());
   }
-}
+ */}
 
 void UserInterface::run() {
   // Run request receiver
@@ -344,7 +344,7 @@ void UserInterface::handleRequest(const zmq::message_t &request) {
   }
 }
 
-void UserInterface::handleSelfSpawned() {
+void UserInterface::handleSelfSpawned() {/* 
   const auto &regionName = gameData_.textZoneNameData().getRegionName(worldState_->selfState().position().regionId());
 
   broadcastCharacterSpawn();
@@ -369,9 +369,9 @@ void UserInterface::handleSelfSpawned() {
       broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, inventorySlotIndex);
     }
   }
-}
+ */}
 
-void UserInterface::handleCosSpawned(const event::CosSpawned &event) {
+void UserInterface::handleCosSpawned(const event::CosSpawned &event) {/* 
   // Send COS inventory
   auto it = worldState_->selfState().cosInventoryMap.find(event.cosGlobalId);
   if (it == worldState_->selfState().cosInventoryMap.end()) {
@@ -384,7 +384,7 @@ void UserInterface::handleCosSpawned(const event::CosSpawned &event) {
       broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCosInventory, cosInventory, inventorySlotIndex);
     }
   }
-}
+ */}
 
 void UserInterface::handleEntitySpawned(const event::EntitySpawned &event) {
   const bool trackingEntity = worldState_->entityTracker().trackingEntity(event.globalId);
@@ -392,9 +392,9 @@ void UserInterface::handleEntitySpawned(const event::EntitySpawned &event) {
     // Received entity spawned event, but we're not tracking this entity
     return;
   }
-  const auto &entity = worldState_->getEntity<entity::Entity>(event.globalId);
-  broadcastEntitySpawned(&entity);
-  if (const auto *characterEntity = dynamic_cast<const entity::Character*>(&entity)) {
+  std::shared_ptr<const entity::Entity> entity = worldState_->getEntity<entity::Entity>(event.globalId);
+  broadcastEntitySpawned(entity.get());
+  if (const auto *characterEntity = dynamic_cast<const entity::Character*>(entity.get())) {
     if (characterEntity->lifeState == sro::entity::LifeState::kDead) {
       // Entity spawned in as dead
       // TODO: Create a more comprehensive entity proto which contains life state
@@ -404,7 +404,7 @@ void UserInterface::handleEntitySpawned(const event::EntitySpawned &event) {
 
 }
 
-void UserInterface::handleEntityMovementBegan(const event::EntityMovementBegan &event) {
+void UserInterface::handleEntityMovementBegan(const event::EntityMovementBegan &event) {/* 
   const entity::MobileEntity &mobileEntity = worldState_->getEntity<entity::MobileEntity>(event.globalId);
   if (!mobileEntity.moving()) {
     // Got an entity movement began event, but it is not moving
@@ -426,9 +426,9 @@ void UserInterface::handleEntityMovementBegan(const event::EntityMovementBegan &
       broadcastEntityMovementBegan(event.globalId, currentPosition, mobileEntity.angle(), mobileEntity.currentSpeed());
     }
   }
-}
+ */}
 
-void UserInterface::handleEntityMovementEnded(const event::EntityMovementEnded &event) {
+void UserInterface::handleEntityMovementEnded(const event::EntityMovementEnded &event) {/* 
   const entity::MobileEntity &mobileEntity = worldState_->getEntity<entity::MobileEntity>(event.globalId);
   if (event.globalId == worldState_->selfState().globalId) {
     // TODO: We ought to combine these two UI functions
@@ -436,9 +436,9 @@ void UserInterface::handleEntityMovementEnded(const event::EntityMovementEnded &
   } else {
     broadcastEntityMovementEnded(event.globalId, mobileEntity.position());
   }
-}
+ */}
 
-void UserInterface::handleEntityPositionUpdated(sro::scalar_types::EntityGlobalId globalId) {
+void UserInterface::handleEntityPositionUpdated(sro::scalar_types::EntityGlobalId globalId) {/* 
   const entity::MobileEntity &mobileEntity = worldState_->getEntity<entity::MobileEntity>(globalId);
   if (mobileEntity.moving()) {
     // Should never happen while moving
@@ -452,51 +452,51 @@ void UserInterface::handleEntityPositionUpdated(sro::scalar_types::EntityGlobalI
   } else {
     broadcastEntityPositionChanged(mobileEntity.globalId, currentPosition);
   }
-}
+ */}
 
-void UserInterface::handleEntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId globalId) {
+void UserInterface::handleEntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId globalId) {/* 
   if (globalId == worldState_->selfState().globalId) {
     // We only send the angle of the controlled character to the UI
     const entity::MobileEntity &mobileEntity = worldState_->getEntity<entity::MobileEntity>(globalId);
     broadcastNotMovingAngleChangedUpdate(mobileEntity.angle());
   }
-}
+ */}
 
-void UserInterface::handleStorageInitialized() {
+void UserInterface::handleStorageInitialized() {/* 
   for (sro::scalar_types::StorageIndexType storageSlotIndex=0; storageSlotIndex<worldState_->selfState().storage.size(); ++storageSlotIndex) {
     if (worldState_->selfState().storage.hasItem(storageSlotIndex)) {
       broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kStorage, worldState_->selfState().storage, storageSlotIndex);
     }
   }
-}
+ */}
 
-void UserInterface::handleGuildStorageInitialized() {
+void UserInterface::handleGuildStorageInitialized() {/* 
   for (sro::scalar_types::StorageIndexType storageSlotIndex=0; storageSlotIndex<worldState_->selfState().guildStorage.size(); ++storageSlotIndex) {
     if (worldState_->selfState().guildStorage.hasItem(storageSlotIndex)) {
       broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, storageSlotIndex);
     }
   }
-}
+ */}
 
-void UserInterface::handleInventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent) {
+void UserInterface::handleInventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent) {/* 
   if (inventoryUpdatedEvent.srcSlotNum) {
     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.srcSlotNum);
   }
   if (inventoryUpdatedEvent.destSlotNum) {
     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.destSlotNum);
   }
-}
+ */}
 
-void UserInterface::handleAvatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent) {
+void UserInterface::handleAvatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent) {/* 
   if (avatarInventoryUpdatedEvent.srcSlotNum) {
     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.srcSlotNum);
   }
   if (avatarInventoryUpdatedEvent.destSlotNum) {
     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.destSlotNum);
   }
-}
+ */}
 
-void UserInterface::handleCosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent) {
+void UserInterface::handleCosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent) {/* 
   auto it = worldState_->selfState().cosInventoryMap.find(cosInventoryUpdatedEvent.globalId);
   if (it == worldState_->selfState().cosInventoryMap.end()) {
     // COS inventory updated, but not tracking this COS
@@ -509,25 +509,25 @@ void UserInterface::handleCosInventoryUpdated(const event::CosInventoryUpdated &
   if (cosInventoryUpdatedEvent.destSlotNum) {
     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.destSlotNum);
   }
-}
+ */}
 
-void UserInterface::handleStorageUpdated(const event::StorageUpdated &storageUpdatedEvent) {
+void UserInterface::handleStorageUpdated(const event::StorageUpdated &storageUpdatedEvent) {/* 
   if (storageUpdatedEvent.srcSlotNum) {
     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.srcSlotNum);
   }
   if (storageUpdatedEvent.destSlotNum) {
     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.destSlotNum);
   }
-}
+ */}
 
-void UserInterface::handleGuildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent) {
+void UserInterface::handleGuildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent) {/* 
   if (guildStorageUpdatedEvent.srcSlotNum) {
     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.srcSlotNum);
   }
   if (guildStorageUpdatedEvent.destSlotNum) {
     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.destSlotNum);
   }
-}
+ */}
 
 void UserInterface::handleWalkingPathUpdated(const event::WalkingPathUpdated &walkingPathUpdatedEvent) {
   std::vector<sro::Position> waypointSroPositions;

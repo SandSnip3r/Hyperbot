@@ -38,17 +38,14 @@ Bot::Bot(SessionId sessionId,
          const pk2::GameData &gameData,
          Proxy &proxy,
          broker::PacketBroker &packetBroker,
-         broker::EventBroker &eventBroker) :
+         broker::EventBroker &eventBroker,
+         state::WorldState &worldState) :
       sessionId_(sessionId),
       gameData_(gameData),
       proxy_(proxy),
       packetBroker_(packetBroker),
-      eventBroker_(eventBroker) {
-  std::ifstream estVisRangeFile{kEstVisRangeFilename};
-  if (estVisRangeFile) {
-    estVisRangeFile >> worldState_.selfState().estimatedVisibilityRange;
-    LOG(INFO) << "Parsed estimated visibility range from file as " << worldState_.selfState().estimatedVisibilityRange;
-  }
+      eventBroker_(eventBroker),
+      worldState_(worldState) {
 }
 
 void Bot::initialize() {
@@ -113,12 +110,11 @@ const state::EntityTracker& Bot::entityTracker() const {
   return worldState_.entityTracker();
 }
 
-state::Self& Bot::selfState() {
-  return worldState_.selfState();
-}
-
-const state::Self& Bot::selfState() const {
-  return worldState_.selfState();
+std::shared_ptr<entity::Self> Bot::selfState() const {
+  if (!selfGlobalId_) {
+    throw std::runtime_error("Trying to get self entity, but don't know our global ID");
+  }
+  return worldState_.getEntity<entity::Self>(*selfGlobalId_);
 }
 
 void Bot::subscribeToEvents() {
@@ -202,8 +198,7 @@ void Bot::subscribeToEvents() {
 }
 
 void Bot::handleEvent(const event::Event *event) {
-  std::unique_lock<std::mutex> selfStateLock(worldState_.selfState().selfMutex);
-
+  std::unique_lock<std::mutex> worldStateLock(worldState_.mutex);
   try {
     const auto eventCode = event->eventCode;
     switch (eventCode) {
@@ -282,7 +277,7 @@ void Bot::handleEvent(const event::Event *event) {
       }
       case event::EventCode::kEntityHpChanged: {
         const event::EntityHpChanged &castedEvent = dynamic_cast<const event::EntityHpChanged&>(*event);
-        if (castedEvent.globalId == worldState_.selfState().globalId) {
+        if (selfGlobalId_ && castedEvent.globalId == *selfGlobalId_) {
           handleVitalsChanged();
         }
         break;
@@ -475,9 +470,12 @@ void Bot::onUpdate(const event::Event *event) {
     }
   }
 
-  if (!worldState_.selfState().trainingIsActive) {
-    // Not training, nothing else to do
-    return;
+  if (selfGlobalId_) {
+    std::shared_ptr<entity::Self> selfEntity = selfState();
+    if (!selfEntity->trainingIsActive) {
+      // Not training, nothing else to do
+      return;
+    }
   }
 
   if (bottingStateMachine_ && !bottingStateMachine_->done()) {
@@ -498,7 +496,8 @@ void Bot::handleRequestStopTraining() {
 }
 
 void Bot::startTraining() {
-  if (worldState_.selfState().trainingIsActive) {
+  std::shared_ptr<entity::Self> selfEntity = selfState();
+  if (selfEntity->trainingIsActive) {
     LOG(INFO) << "Asked to start training, but we're already training";
     return;
   }
@@ -508,7 +507,7 @@ void Bot::startTraining() {
   }
 
   LOG(INFO) << "Starting training";
-  worldState_.selfState().trainingIsActive = true;
+  selfEntity->trainingIsActive = true;
   eventBroker_.publishEvent(event::EventCode::kTrainingStarted);
   // TODO: Should we stop whatever we're doing?
   //  For example, if we're running, stop where we are.
@@ -522,11 +521,12 @@ void Bot::startTraining() {
 }
 
 void Bot::stopTraining() {
-  if (worldState_.selfState().trainingIsActive) {
+  std::shared_ptr<entity::Self> selfEntity = selfState();
+  if (selfEntity->trainingIsActive) {
     // TODO: Need to cleanup current action to avoid leaving the client in a bad state
     //  Ex. Need to close a shop npc dialog
     LOG(INFO) << "Stopping training";
-    worldState_.selfState().trainingIsActive = false;
+    selfEntity->trainingIsActive = false;
     eventBroker_.publishEvent(event::EventCode::kTrainingStopped);
     bottingStateMachine_.reset();
   } else {
@@ -563,10 +563,11 @@ void Bot::handleChatCommand(const event::ChatReceived &event) {
         bool added = false;
         for (std::string_view thingToMax : thingsToMax) {
           if (thingToMax == "str" || thingToMax == "int") {
-            if (selfState().getAvailableStatPoints() > 0) {
+            std::shared_ptr<entity::Self> selfEntity = selfState();
+            if (selfEntity->getAvailableStatPoints() > 0) {
               const state::machine::StatPointType type = (thingToMax == "str" ? state::machine::StatPointType::kStr : state::machine::StatPointType::kInt);
-              LOG(INFO) << "Have " << selfState().getAvailableStatPoints() << " stat points for " << static_cast<int>(type);
-              concurrentStateMachines_.emplace<state::machine::ApplyStatPoints>(std::vector<state::machine::StatPointType>(selfState().getAvailableStatPoints(), type));
+              LOG(INFO) << "Have " << selfEntity->getAvailableStatPoints() << " stat points for " << static_cast<int>(type);
+              concurrentStateMachines_.emplace<state::machine::ApplyStatPoints>(std::vector<state::machine::StatPointType>(selfEntity->getAvailableStatPoints(), type));
               added = true;
             } else {
               LOG(INFO) << "No available stat points for " << thingToMax;
@@ -617,8 +618,8 @@ void Bot::handleInjectPacket(const event::InjectPacket &castedEvent) {
 // ============================================================================================================================
 
 void Bot::handleEntityMovementBegan(const event::EntityMovementBegan &event) {
-  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(event.globalId);
-  if (!mobileEntity.moving()) {
+  std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(event.globalId);
+  if (!mobileEntity->moving()) {
     // TODO: Maybe we ought to move this check at the source of the event and get rid of this
     throw std::runtime_error("Got an entity movement began event, but it is not moving");
   }
@@ -626,8 +627,8 @@ void Bot::handleEntityMovementBegan(const event::EntityMovementBegan &event) {
 }
 
 void Bot::handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId) {
-  entity::MobileEntity &mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
-  mobileEntity.movementTimerCompleted(eventBroker_);
+  std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
+  mobileEntity->movementTimerCompleted(eventBroker_);
 }
 
 void Bot::handleEntityEnteredGeometry(const event::EntityEnteredGeometry &event) {
@@ -643,7 +644,16 @@ void Bot::handleEntityExitedGeometry(const event::EntityExitedGeometry &event) {
 // ============================================================================================================================
 
 void Bot::handleSpawned(const event::Event *event) {
-  LOG(INFO) << "Spawned at position " << worldState_.selfState().position();
+  const event::SelfSpawned *selfSpawnedEvent = dynamic_cast<const event::SelfSpawned*>(event);
+  if (selfSpawnedEvent == nullptr) {
+    throw std::runtime_error("Failed to cast SelfSpawned event");
+  }
+  LOG(INFO) << "Saving self global ID as " << selfSpawnedEvent->globalId;
+  selfGlobalId_ = selfSpawnedEvent->globalId;
+  {
+    std::shared_ptr<entity::Self> selfEntity = selfState();
+    LOG(INFO) << "Spawned at position " << selfEntity->position();
+  }
 
   // // Only construct an autopotion state machine once the character is logged in.
   // if (currentCharacterConfig() != nullptr) {
@@ -655,10 +665,13 @@ void Bot::handleSpawned(const event::Event *event) {
 }
 
 void Bot::handleVitalsChanged() {
-  if (!worldState_.selfState().maxHp() || !worldState_.selfState().maxMp()) {
-    // Dont yet know our max
-    return;
-  }
+  {
+    std::shared_ptr<entity::Self> selfEntity = selfState();
+    if (!selfEntity->maxHp() || !selfEntity->maxMp()) {
+      // Dont yet know our max
+      return;
+    }
+    }
   onUpdate();
 }
 
@@ -671,15 +684,16 @@ void Bot::handleStatesChanged() {
 // ============================================================================================================================
 
 void Bot::handleSkillEnded(const event::SkillEnded &event) {
-  if (event.casterGlobalId == worldState_.selfState().globalId) {
+  if (selfGlobalId_ && event.casterGlobalId == *selfGlobalId_) {
     // LOG(INFO) << "Our skill \"" << gameData_.getSkillName(event.skillRefId) << "\" ended";
     onUpdate(&event);
   }
 }
 
 void Bot::handleSkillCooldownEnded(const event::SkillCooldownEnded &event) {
+  std::shared_ptr<entity::Self> selfEntity = selfState();
   // LOG(INFO) << "Skill " << event.skillRefId << "(" << gameData_.getSkillName(event.skillRefId) << ") cooldown ended";
-  worldState_.selfState().skillEngine.skillCooldownEnded(event.skillRefId);
+  selfEntity->skillEngine.skillCooldownEnded(event.skillRefId);
   onUpdate();
 }
 
@@ -693,29 +707,14 @@ void Bot::entitySpawned(const event::EntitySpawned &event) {
     // TODO: Maybe we ought to move this check at the source of the event and get rid of this
     throw std::runtime_error(absl::StrFormat("Received entity spawned event, but we are not tracking entity %d", event.globalId));
   }
-  {
-    // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.
-    // According to Daxter:
-    //  maximum possible should be around 905
-    //  given that you can at most see almost 2 blocks across
-    const auto &entity = worldState_.getEntity<entity::Entity>(event.globalId);
-    const auto distanceToEntity = sro::position_math::calculateDistance2d(worldState_.selfState().position(), entity.position());
-    if (distanceToEntity > worldState_.selfState().estimatedVisibilityRange) {
-      LOG(INFO) << "Bumping up estimated visibility range to " << distanceToEntity;
-      worldState_.selfState().estimatedVisibilityRange = distanceToEntity;
-      std::ofstream estVisRangeFile{kEstVisRangeFilename};
-      if (estVisRangeFile) {
-        estVisRangeFile << worldState_.selfState().estimatedVisibilityRange;
-      }
-    }
-  }
   onUpdate(&event);
 }
 
 void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
-  if (event.globalId == selfState().globalId) {
+  if (selfGlobalId_ && event.globalId == *selfGlobalId_) {
+    std::shared_ptr<entity::Self> selfEntity = selfState();
     // Our body state changed
-    if (selfState().bodyState() == packet::enums::BodyState::kInvisibleGm) {
+    if (selfEntity->bodyState() == packet::enums::BodyState::kInvisibleGm) {
       // For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
       // Set self as visible
       LOG(INFO) << "Setting self as visible";
@@ -736,21 +735,32 @@ void Bot::itemUseTimedOut(const event::ItemUseTimeout &event) {
 }
 
 void Bot::handleKnockbackStunEnded() {
-  selfState().stunnedFromKnockback = false;
+  {
+    std::shared_ptr<entity::Self> selfEntity = selfState();
+    selfEntity->stunnedFromKnockback = false;
+  }
   onUpdate();
 }
 
 void Bot::handleKnockdownStunEnded() {
-  selfState().stunnedFromKnockdown = false;
+  {
+    std::shared_ptr<entity::Self> selfEntity = selfState();
+    selfEntity->stunnedFromKnockdown = false;
+  }
   onUpdate();
 }
 
 void Bot::handleItemCooldownEnded(const event::ItemCooldownEnded &event) {
-  selfState().itemCooldownEnded(event.typeId);
+  {
+    std::shared_ptr<entity::Self> selfEntity = selfState();
+    selfEntity->itemCooldownEnded(event.typeId);
+  }
   onUpdate(&event);
 }
 
 void Bot::handleGameReset(const event::Event *event) {
+  LOG(INFO) << "Bot stops tracking self";
+  selfGlobalId_.reset();
   if (autoPotionStateMachine_) {
     // Destroy autopotion when we despawn.
     autoPotionStateMachine_.reset();
@@ -759,9 +769,9 @@ void Bot::handleGameReset(const event::Event *event) {
 }
 
 void Bot::setCurrentPositionAsTrainingCenter() {
-  // proto::config::CharacterConfig *characterConfig = config_.getCharacterConfig(worldState_.selfState().name);
+  // proto::config::CharacterConfig *characterConfig = config_.getCharacterConfig(selfState().name);
   // proto::config::TrainingConfig *trainingConfig = characterConfig->mutable_training_config();
-  // const auto currentPosition = worldState_.selfState().position();
+  // const auto currentPosition = selfState().position();
   // proto_convert::positionToProto(currentPosition, *trainingConfig->mutable_center());
   // config_.save();
   // eventBroker_.publishEvent<event::ConfigUpdated>(config_.configProto());
@@ -774,7 +784,7 @@ void Bot::handleLearnedSkill(const event::LearnSkillSuccess &event) {
   //   return;
   // }
   // // If this skill is in our config, update it with the new one.
-  // auto *characterConfig = config_.getCharacterConfig(worldState_.selfState().name);
+  // auto *characterConfig = config_.getCharacterConfig(selfState().name);
   // if (characterConfig == nullptr) {
   //   return;
   // }
@@ -844,8 +854,9 @@ bool Bot::needToGoToTown() const {
 }
 
 bool Bot::similarSkillIsAlreadyActive(sro::scalar_types::ReferenceObjectId skillRefId) const {
+  std::shared_ptr<entity::Self> selfEntity = selfState();
   const auto &givenSkillData = gameData_.skillData().getSkillById(skillRefId);
-  const auto activeBuffs = selfState().activeBuffs();
+  const auto activeBuffs = selfEntity->activeBuffs();
   for (const auto activeBuffId : activeBuffs) {
     const auto &activeBuffData = gameData_.skillData().getSkillById(activeBuffId);
     if (givenSkillData.actionOverlap == activeBuffData.actionOverlap) {
@@ -861,26 +872,27 @@ bool Bot::similarSkillIsAlreadyActive(sro::scalar_types::ReferenceObjectId skill
 }
 
 bool Bot::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
+  std::shared_ptr<entity::Self> selfEntity = selfState();
   const auto &skillData = gameData().skillData().getSkillById(skillRefId);
   // TODO: Keep track if we're wearing a full protector or garment set and reduce the MP requirement by 10%/20% respectively.
-  const auto currentMp = selfState().currentMp();
+  const auto currentMp = selfEntity->currentMp();
   if (skillData.consumeMP > currentMp ||
-      (selfState().maxMp() && skillData.consumeMPRatio > (static_cast<double>(currentMp) / *selfState().maxMp()) * 100)) {
+      (selfEntity->maxMp() && skillData.consumeMPRatio > (static_cast<double>(currentMp) / *selfEntity->maxMp()) * 100)) {
     // Not enough MP to cast.
     LOG(INFO) << "Not enough MP to cast skill " << gameData().getSkillName(skillRefId);
     return false;
   }
-  const auto currentHp = selfState().currentHp();
+  const auto currentHp = selfEntity->currentHp();
   if (skillData.consumeHP > currentHp ||
-      (selfState().maxHp() && skillData.consumeHPRatio > (static_cast<double>(currentHp) / *selfState().maxHp()) * 100)) {
+      (selfEntity->maxHp() && skillData.consumeHPRatio > (static_cast<double>(currentHp) / *selfEntity->maxHp()) * 100)) {
     // Not enough HP to cast.
     LOG(INFO) << "Not enough HP to cast skill " << gameData().getSkillName(skillRefId);
     return false;
   }
-  if (selfState().skillEngine.skillIsOnCooldown(skillRefId)) {
+  if (selfEntity->skillEngine.skillIsOnCooldown(skillRefId)) {
     return false;
   }
-  if (selfState().stunnedFromKnockback || selfState().stunnedFromKnockdown) {
+  if (selfEntity->stunnedFromKnockback || selfEntity->stunnedFromKnockdown) {
     // Stunned from KB or KD, cannot use this skill
     // TODO: Maybe there are some skills which can be used while knocked down
     return false;
@@ -889,10 +901,11 @@ bool Bot::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
 }
 
 std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestination(const sro::Position &destinationPosition) const {
+  std::shared_ptr<entity::Self> selfEntity = selfState();
   // Since we can only move to positions on whole integers, find the closest possible point to the destination position while also accounting for the transformation that happens to the packet while being converted to be sent over the network
   const auto networkReadyPos = packet::building::NetworkReadyPosition::roundToNearest(destinationPosition);
   const sro::Position closestDestinationPosition = networkReadyPos.asSroPosition();
-  if (sro::position_math::calculateDistance2d(selfState().position(), closestDestinationPosition) <= sqrt(0.5)) {
+  if (sro::position_math::calculateDistance2d(selfEntity->position(), closestDestinationPosition) <= sqrt(0.5)) {
     // Already at destination
     return {};
   }
@@ -982,7 +995,7 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
   pathfinder.setTimeout(std::chrono::milliseconds(150));
   std::string debugPath;
   try {
-    const sro::Position currentPosition = selfState().position();
+    const sro::Position currentPosition = selfEntity->position();
     const sro::math::Vector3 currentPositionPoint(currentPosition.xOffset(), currentPosition.yOffset(), currentPosition.zOffset());
     const auto navmeshCurrentPosition = gameData().navmeshTriangulation().transformRegionPointIntoAbsolute(currentPositionPoint, currentPosition.regionId());
 
@@ -1008,9 +1021,10 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
 }
 
 sro::scalar_types::EntityGlobalId Bot::getClosestNpcGlobalId() const {
+  std::shared_ptr<entity::Self> selfEntity = selfState();
   std::optional<uint32_t> closestNpcGId;
   float closestNpcDistance = std::numeric_limits<float>::max();
-  const auto &ourCurrentPosition = selfState().position();
+  const auto &ourCurrentPosition = selfEntity->position();
   const auto &entityMap = entityTracker().getEntityMap();
   for (const auto &entityIdObjectPair : entityMap) {
     const auto &entityPtr = entityIdObjectPair.second;

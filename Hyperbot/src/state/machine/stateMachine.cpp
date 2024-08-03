@@ -31,7 +31,7 @@ void StateMachine::stateMachineDestroyed() {
 }
 
 bool StateMachine::canMove() const {
-  return !(bot_.selfState().stunnedFromKnockback || bot_.selfState().stunnedFromKnockdown);
+  return !(bot_.selfState()->stunnedFromKnockback || bot_.selfState()->stunnedFromKnockdown);
 }
 
 void StateMachine::setChildStateMachine(std::unique_ptr<StateMachine> &&newChildStateMachine) {

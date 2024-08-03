@@ -6,7 +6,7 @@ namespace packet::parsing {
 ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   uint32_t serverTime = stream.Read<uint32_t>();
-  refObjId_ = stream.Read<uint32_t>();
+  stream.Read(refObjId_);
   uint8_t scale = stream.Read<uint8_t>();
   curLevel_ = stream.Read<uint8_t>();
   uint8_t maxLevel = stream.Read<uint8_t>();
@@ -142,7 +142,7 @@ ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet
     uint32_t themePages = stream.Read<uint32_t>();
   }
   
-  entityUniqueId_ = stream.Read<uint32_t>();
+  stream.Read(globalId_);
 
   //=====================================================================================
   //===================================== Position ======================================
@@ -248,10 +248,6 @@ ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet
   uint8_t unknownByte3 = stream.Read<uint8_t>(); //Structure changes!!!
 }
 
-uint32_t ServerAgentCharacterData::refObjId() const {
-  return refObjId_;
-}
-
 uint8_t ServerAgentCharacterData::curLevel() const {
   return curLevel_;
 }
@@ -278,10 +274,6 @@ uint16_t ServerAgentCharacterData::availableStatPoints() const {
 
 uint8_t ServerAgentCharacterData::hwanPoints() const {
   return hwanPoints_;
-}
-
-uint32_t ServerAgentCharacterData::entityUniqueId() const {
-  return entityUniqueId_;
 }
 
 uint32_t ServerAgentCharacterData::hp() const {

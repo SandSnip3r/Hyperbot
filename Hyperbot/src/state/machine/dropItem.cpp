@@ -10,7 +10,8 @@ namespace state::machine {
 
 DropItem::DropItem(Bot &bot, sro::scalar_types::StorageIndexType inventorySlot) : StateMachine(bot), inventorySlot_(inventorySlot) {
   stateMachineCreated(kName);
-  const storage::Item *item = bot_.selfState().inventory.getItem(inventorySlot_);
+  std::shared_ptr<entity::Self> selfEntity = bot_.selfState();
+  const storage::Item *item = selfEntity->inventory.getItem(inventorySlot_);
   refId_ = item->refItemId;
 }
 
@@ -26,7 +27,7 @@ void DropItem::onUpdate(const event::Event *event) {
 
   if (event) {
     if (auto *entitySpawnedEvent = dynamic_cast<const event::EntitySpawned*>(event); entitySpawnedEvent != nullptr) {
-      const auto *entity = bot_.entityTracker().getEntity(entitySpawnedEvent->globalId);
+      std::shared_ptr<const entity::Entity> entity = bot_.worldState().getEntity(entitySpawnedEvent->globalId);
       if (entity->refObjId == refId_) {
         LOG(INFO) << "Item spawned";
         // This is our item.
