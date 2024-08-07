@@ -19,6 +19,7 @@ public:
   std::optional<std::chrono::milliseconds> skillRemainingCooldown(sro::scalar_types::ReferenceObjectId skillRefId, const broker::EventBroker &eventBroker) const;
   bool alreadyTriedToCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const;
   void reset();
+  void cancelEvents(broker::EventBroker &eventBroker);
 
 private:
   std::map<sro::scalar_types::ReferenceObjectId, broker::EventBroker::EventId> skillCooldownEventIdMap_;

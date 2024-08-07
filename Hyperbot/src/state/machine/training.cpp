@@ -135,12 +135,12 @@ Training::Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeo
   getSkillsFromConfig();
 
   bot_.selfState()->setTrainingAreaGeometry(trainingAreaGeometry_->clone());
-  bot_.selfState()->registerGeometryBoundary(bot_.selfState()->trainingAreaGeometry->clone(), bot_.eventBroker());
+  bot_.selfState()->registerGeometryBoundary(bot_.selfState()->trainingAreaGeometry->clone());
   // Register training area geometry with all entities
   for (const auto &idPtrPair : bot_.worldState().entityTracker().getEntityMap()) {
     if (idPtrPair.second) {
       if (auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(idPtrPair.second.get())) {
-        mobileEntity->registerGeometryBoundary(bot_.selfState()->trainingAreaGeometry->clone(), bot_.eventBroker());
+        mobileEntity->registerGeometryBoundary(bot_.selfState()->trainingAreaGeometry->clone());
       }
     }
   }
@@ -148,11 +148,11 @@ Training::Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeo
 
 Training::~Training() {
   bot_.selfState()->resetTrainingAreaGeometry();
-  bot_.selfState()->resetGeometryBoundary(bot_.eventBroker());
+  bot_.selfState()->resetGeometryBoundary();
   for (const auto &idPtrPair : bot_.worldState().entityTracker().getEntityMap()) {
     if (idPtrPair.second) {
       if (auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(idPtrPair.second.get())) {
-        mobileEntity->resetGeometryBoundary(bot_.eventBroker());
+        mobileEntity->resetGeometryBoundary();
       }
     }
   }
@@ -167,7 +167,7 @@ void Training::onUpdate(const event::Event *event) {
   // TODO: Improve on this mechanism
   // When we recurse, we do not want to handle the same event again.
   // If we passed nullptr as our event, we would solve this problem, but we do want to pass that event to the presumably newly created child state machine.
-  // So, instead, we keep track of the events we've already handled, and only handle the event if we havent yet handled it.
+  // So, instead, we keep track of the events we've already handled, and only handle the event if we haven't yet handled it.
   // This problem is currently only unique to this state machine because this is the only one which does some event processing before forwarding the event to the child state machine.
   struct RAII {
     RAII(std::set<const event::Event*> &handledEvents, const event::Event *event) : handledEvents_(handledEvents), event_(event) {
@@ -199,7 +199,7 @@ void Training::onUpdate(const event::Event *event) {
       std::shared_ptr<entity::Entity> entity = bot_.worldState().getEntity(entitySpawnedEvent->globalId);
       if (auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(entity.get())) {
         // Register our training region boundary with the entity so that we will get events if they enter/exit
-        mobileEntity->registerGeometryBoundary(bot_.selfState()->trainingAreaGeometry->clone(), bot_.eventBroker());
+        mobileEntity->registerGeometryBoundary(bot_.selfState()->trainingAreaGeometry->clone());
       }
     } else if (const auto *entityMovementBegan = dynamic_cast<const event::EntityMovementBegan*>(event)) {
       if (walkingTargetAndAttack_ && entityMovementBegan->globalId == walkingTargetAndAttack_->targetId) {
@@ -526,11 +526,11 @@ std::tuple<Training::ItemList, Training::MonsterList> Training::getItemsAndMonst
   for (const auto &entityIdPtrPair : bot_.worldState().entityTracker().getEntityMap()) {
     if (const auto *monster = dynamic_cast<const entity::Monster*>(entityIdPtrPair.second.get())) {
       if (monster->lifeState != sro::entity::LifeState::kAlive) {
-        // Dont care about monsters that arent alive
+        // Dont care about monsters that aren't alive
         continue;
       }
-      if (monster->knowCurrentHp() && monster->currentHp() == 0) {
-        // Monster isnt dead, but has 0 hp. It's effectively dead to us.
+      if (monster->currentHpIsKnown() && monster->currentHp() == 0) {
+        // Monster isn't dead, but has 0 hp. It's effectively dead to us.
         continue;
       }
       if (wantToAttackMonster(*monster)) {

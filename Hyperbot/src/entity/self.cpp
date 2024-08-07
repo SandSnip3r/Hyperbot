@@ -28,10 +28,24 @@ bool optionalValueIsDifferentFromNewValue(const std::optional<T> &oldOptional, c
 
 } // anonymous namespace
 
-Self::Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData) : eventBroker_(eventBroker), gameData_(gameData) {
-  // TODO: Move this out of here. Move it into the Bot
-  auto eventHandleFunction = std::bind(&Self::handleEvent, this, std::placeholders::_1);
-  eventBroker_.subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
+Self::Self(const pk2::GameData &gameData, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId) :
+    gameData_(gameData)/* , globalId(globalId), refObjId(refObjId) */, jId(jId) {
+  // TODO: Assignment of globalId and refObjId could be delegated to the Entity constructor.
+  this->globalId = globalId;
+  this->refObjId = refObjId;
+  setRaceAndGender();
+}
+
+Self::~Self() {
+  cancelEvents();
+  // Cancel subscriptions.
+  if (!eventBroker_) {
+    LOG(WARNING) << "Destroying Self, but don't have an event broker";
+    return;
+  }
+  if (enteredRegionSubscriptionId_) {
+    eventBroker_->unsubscribeFromEvent(*enteredRegionSubscriptionId_);
+  }
 }
 
 void Self::handleEvent(const event::Event *event) {
@@ -39,7 +53,7 @@ void Self::handleEvent(const event::Event *event) {
     const auto eventCode = event->eventCode;
     switch (eventCode) {
       case event::EventCode::kEnteredNewRegion:
-        enteredRegion();
+        enteredRegion(event);
         break;
     }
   } catch (std::exception &ex) {
@@ -47,26 +61,58 @@ void Self::handleEvent(const event::Event *event) {
   }
 }
 
-void Self::initialize(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId) {
-  this->globalId = globalId;
-  this->refObjId = refObjId;
-  this->jId = jId;
-  setRaceAndGender();
-
-  maxHp_.reset();
-  maxMp_.reset();
-
-  spawned_ = true;
-  haveOpenedStorageSinceTeleport = false;
-}
-
 void Self::initializeCurrentHp(uint32_t hp) {
   currentHp_ = hp;
 }
 
+void Self::initializeCurrentMp(uint32_t mp) {
+  currentMp_ = mp;
+}
+
+void Self::initializeCurrentLevel(uint8_t currentLevel) {
+  currentLevel_ = currentLevel;
+}
+
+void Self::initializeSkillPoints(uint32_t skillPoints) {
+  skillPoints_ = skillPoints;
+}
+
+void Self::initializeAvailableStatPoints(uint16_t statPoints) {
+  availableStatPoints_ = statPoints;
+}
+
+void Self::initializeHwanPoints(uint8_t hwanPoints) {
+  hwanPoints_ = hwanPoints;
+}
+
+void Self::initializeCurrentExpAndSpExp(uint64_t currentExperience, uint64_t currentSpExperience) {
+  currentExperience_ = currentExperience;
+  currentSpExperience_ = currentSpExperience;
+}
+
+void Self::initializeBodyState(packet::enums::BodyState bodyState) {
+  bodyState_ = bodyState;
+}
+
+void Self::initializeGold(uint64_t goldAmount) {
+  gold_ = goldAmount;
+}
+
+void Self::initializeEventBroker(broker::EventBroker &eventBroker) {
+  PlayerCharacter::initializeEventBroker(eventBroker);
+
+  // Subscribe to events.
+  auto eventHandleFunction = std::bind(&Self::handleEvent, this, std::placeholders::_1);
+  enteredRegionSubscriptionId_ = eventBroker_->subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
+}
+
 void Self::setCurrentLevel(uint8_t currentLevel) {
   currentLevel_ = currentLevel;
-  eventBroker_.publishEvent(event::EventCode::kCharacterLevelUpdated);
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kCharacterLevelUpdated);
+  } else {
+    LOG(WARNING) << "Trying to publish kCharacterLevelUpdated, but don't have event broker";
+  }
 }
 
 void Self::setHwanLevel(uint8_t hwanLevel) {
@@ -75,18 +121,30 @@ void Self::setHwanLevel(uint8_t hwanLevel) {
 
 void Self::setSkillPoints(uint32_t skillPoints) {
   skillPoints_ = skillPoints;
-  eventBroker_.publishEvent(event::EventCode::kCharacterSkillPointsUpdated);
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kCharacterSkillPointsUpdated);
+  } else {
+    LOG(WARNING) << "Trying to publish kCharacterSkillPointsUpdated, but don't have event broker";
+  }
 }
 
 void Self::setAvailableStatPoints(uint16_t statPoints) {
   availableStatPoints_ = statPoints;
-  eventBroker_.publishEvent(event::EventCode::kCharacterAvailableStatPointsUpdated);
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kCharacterAvailableStatPointsUpdated);
+  } else {
+    LOG(WARNING) << "Trying to publish kCharacterAvailableStatPointsUpdated, but don't have event broker";
+  }
 }
 
 void Self::setCurrentExpAndSpExp(uint64_t currentExperience, uint64_t currentSpExperience) {
   currentExperience_ = currentExperience;
   currentSpExperience_ = currentSpExperience;
-  eventBroker_.publishEvent(event::EventCode::kCharacterExperienceUpdated);
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kCharacterExperienceUpdated);
+  } else {
+    LOG(WARNING) << "Trying to publish kCharacterExperienceUpdated, but don't have event broker";
+  }
 }
 
 void Self::setHwanSpeed(float hwanSpeed) {
@@ -95,25 +153,38 @@ void Self::setHwanSpeed(float hwanSpeed) {
 
 void Self::setBodyState(packet::enums::BodyState bodyState) {
   bodyState_ = bodyState;
-  eventBroker_.publishEvent<event::EntityBodyStateChanged>(globalId);
+  if (eventBroker_) {
+    eventBroker_->publishEvent<event::EntityBodyStateChanged>(globalId);
+  } else {
+    LOG(WARNING) << "Trying to publish EntityBodyStateChanged, but don't have event broker";
+  }
 }
 
 void Self::setHwanPoints(uint8_t hwanPoints) {
   hwanPoints_ = hwanPoints;
-  eventBroker_.publishEvent(event::EventCode::kHwanPointsUpdated);
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kHwanPointsUpdated);
+  } else {
+    LOG(WARNING) << "Trying to publish kHwanPointsUpdated, but don't have event broker";
+  }
 }
 
-void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) {
-  MobileEntity::setMovingToDestination(sourcePosition, destinationPosition, eventBroker);
-  checkIfWillLeaveRegionAndSetTimer(eventBroker);
+void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition) {
+  PlayerCharacter::setMovingToDestination(sourcePosition, destinationPosition);
+  checkIfWillLeaveRegionAndSetTimer();
 }
 
-void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) {
-  MobileEntity::setMovingTowardAngle(sourcePosition, angle, eventBroker);
-  checkIfWillLeaveRegionAndSetTimer(eventBroker);
+void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle) {
+  PlayerCharacter::setMovingTowardAngle(sourcePosition, angle);
+  checkIfWillLeaveRegionAndSetTimer();
 }
 
-void Self::checkIfWillLeaveRegionAndSetTimer(broker::EventBroker &eventBroker) {
+void Self::checkIfWillLeaveRegionAndSetTimer() {
+  // TODO: This function is a little wonky. It is triggered when we leave our previous region, but when calculating our current position, we might calculate a position still in the previous region. We'll only be slightly in that previous region, so we'll end up setting a super tiny timer.
+  if (!eventBroker_) {
+    LOG(WARNING) << "Trying to check if will leave region, but have no event broker";
+    return;
+  }
   if (!moving()) {
     // Not moving, nothing to do
     return;
@@ -129,17 +200,17 @@ void Self::checkIfWillLeaveRegionAndSetTimer(broker::EventBroker &eventBroker) {
     const auto zSectorDiff = destinationPosition->zSector() - currentPosition.zSector();
     const auto xDiff = (destinationPosition->xOffset() - currentPosition.xOffset()) + xSectorDiff * 1920.0;
     const auto zDiff = (destinationPosition->zOffset() - currentPosition.zOffset()) + zSectorDiff * 1920.0;
-    calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(currentPosition, xDiff, zDiff, eventBroker);
+    calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(currentPosition, xDiff, zDiff);
   } else {
     const auto angleRadians = pathfinder::math::k2Pi * static_cast<double>(angle_) / std::numeric_limits<uint16_t>::max();
     const double kLenToExtend = sqrt(2 * 1920.0 * 1920.0) + 1;
     const double xAdd = kLenToExtend * cos(angleRadians);
     const double yAdd = kLenToExtend * sin(angleRadians);
-    calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(currentPosition, xAdd, yAdd, eventBroker);
+    calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(currentPosition, xAdd, yAdd);
   }
 }
 
-void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const sro::Position &currentPosition, double dx, double dy, broker::EventBroker &eventBroker) {
+void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const sro::Position &currentPosition, double dx, double dy) {
   pathfinder::Vector trajectoryPoint0{currentPosition.xOffset(), currentPosition.zOffset()}, trajectoryPoint1{currentPosition.xOffset()+dx, currentPosition.zOffset()+dy};
   std::array<std::pair<pathfinder::Vector, pathfinder::Vector>, 4> regionBoundaries = {
     std::make_pair(pathfinder::Vector(0.0, 0.0), pathfinder::Vector(1920.0, 0.0)),
@@ -163,30 +234,59 @@ void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(c
   sro::Position intersectionPos(currentPosition.regionId(), static_cast<float>(intersectionPoint->x()), 0.0f, static_cast<float>(intersectionPoint->y()));
   // Start timer
   const auto seconds = helpers::secondsToTravel(currentPosition, intersectionPos, currentSpeed());
-  enteredNewRegionEventId_ = eventBroker.publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)), event::EventCode::kEnteredNewRegion);
+  if (!eventBroker_) {
+    // This should not be null because the calling function should check.
+    throw std::runtime_error("Will collide with region boundary, but do not have an event broker.");
+  }
+  enteredNewRegionEventId_ = eventBroker_->publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)), event::EventCode::kEnteredNewRegion);
 }
 
-void Self::enteredRegion() {
+void Self::enteredRegion(const event::Event *event) {
+  if (enteredNewRegionEventId_ && event->eventId == *enteredNewRegionEventId_) {
+    enteredNewRegionEventId_.reset();
+  }
   if (!moving()) {
     // No work to do
     return;
   }
   // Do this check based on where we currently are
   const auto currentPosition = position();
-  checkIfWillLeaveRegionAndSetTimer(eventBroker_);
+  checkIfWillLeaveRegionAndSetTimer();
 }
 
-void Self::cancelMovement(broker::EventBroker &eventBroker) {
-  MobileEntity::cancelMovement(eventBroker);
+void Self::cancelEvents() {
+  if (!eventBroker_) {
+    LOG(WARNING) << "Trying to cancel events, but don't have an event broker";
+    return;
+  }
+  for (const auto &typeEventIdPair : itemCooldownEventIdMap_) {
+    eventBroker_->cancelDelayedEvent(typeEventIdPair.second);
+  }
   if (enteredNewRegionEventId_) {
-    eventBroker_.cancelDelayedEvent(*enteredNewRegionEventId_);
+    eventBroker_->cancelDelayedEvent(*enteredNewRegionEventId_);
+  }
+  skillEngine.cancelEvents(*eventBroker_);
+}
+
+void Self::cancelMovement() {
+  PlayerCharacter::cancelMovement();
+  if (enteredNewRegionEventId_) {
+    if (eventBroker_) {
+      eventBroker_->cancelDelayedEvent(*enteredNewRegionEventId_);
+    } else {
+      LOG(WARNING) << "Trying to cancel entered new region event, but don't have an event broker";
+    }
     enteredNewRegionEventId_.reset();
   }
 }
 
 void Self::setCurrentMp(uint32_t mp) {
-  mp_ = mp;
-  eventBroker_.publishEvent(event::EventCode::kMpChanged);
+  currentMp_ = mp;
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kMpChanged);
+  } else {
+    LOG(WARNING) << "Trying to publish kMpChanged, but don't have event broker";
+  }
 }
 
 void Self::setMaxHpMp(uint32_t maxHp, uint32_t maxMp) {
@@ -195,7 +295,11 @@ void Self::setMaxHpMp(uint32_t maxHp, uint32_t maxMp) {
   maxHp_ = maxHp;
   maxMp_ = maxMp;
   if (changed) {
-    eventBroker_.publishEvent(event::EventCode::kMaxHpMpChanged);
+    if (eventBroker_) {
+      eventBroker_->publishEvent(event::EventCode::kMaxHpMpChanged);
+    } else {
+      LOG(WARNING) << "Trying to publish kMaxHpMpChanged, but don't have event broker";
+    }
   }
 }
 
@@ -212,14 +316,22 @@ void Self::setStatPoints(uint16_t strPoints, uint16_t intPoints) {
       throw std::runtime_error("Used more points than available stat points");
     }
     availableStatPoints_ -= pointsUsed;
-    eventBroker_.publishEvent(event::EventCode::kCharacterAvailableStatPointsUpdated);
+    if (eventBroker_) {
+      eventBroker_->publishEvent(event::EventCode::kCharacterAvailableStatPointsUpdated);
+    } else {
+      LOG(WARNING) << "Trying to publish kCharacterAvailableStatPointsUpdated, but don't have event broker";
+    }
   }
   if (changed) {
-    eventBroker_.publishEvent(event::EventCode::kStatsChanged);
+    if (eventBroker_) {
+      eventBroker_->publishEvent(event::EventCode::kStatsChanged);
+    } else {
+      LOG(WARNING) << "Trying to publish kStatsChanged, but don't have event broker";
+    }
   }
 }
 
-void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels, broker::EventBroker &eventBroker) {
+void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels) {
   const auto oldStateBitmask = this->stateBitmask();
   uint32_t newlyReceivedStates = (oldStateBitmask ^ stateBitmask) & stateBitmask;
   uint32_t expiredStates = (oldStateBitmask ^ stateBitmask) & oldStateBitmask;
@@ -262,7 +374,11 @@ void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &state
     }
   }
   // TODO: Only send this event if the states actually changed
-  eventBroker.publishEvent(event::EventCode::kStatesChanged);
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kStatesChanged);
+  } else {
+    LOG(WARNING) << "Trying to publish kStatesChanged, but don't have event broker";
+  }
 }
 
 void Self::setStateBitmask(uint32_t stateBitmask) {
@@ -298,7 +414,11 @@ void Self::learnSkill(sro::scalar_types::ReferenceSkillId skillId) {
     const auto &existingSkillData = gameData_.skillData().getSkillById(skill.id);
     if (newSkillData.groupId == existingSkillData.groupId) {
       // Overwrite this skill.
-      eventBroker_.publishEvent<event::LearnSkillSuccess>(skillId, skill.id);
+      if (eventBroker_) {
+        eventBroker_->publishEvent<event::LearnSkillSuccess>(skillId, skill.id);
+      } else {
+        LOG(WARNING) << "Trying to publish LearnSkillSuccess, but don't have event broker";
+      }
       skill.id = skillId;
       foundSkill = true;
       break;
@@ -307,7 +427,11 @@ void Self::learnSkill(sro::scalar_types::ReferenceSkillId skillId) {
   if (!foundSkill) {
     // Did not find existing skill with this group ID, create new.
     skills_.emplace_back(skillId, /*enabled=*/true);
-    eventBroker_.publishEvent<event::LearnSkillSuccess>(skillId);
+    if (eventBroker_) {
+      eventBroker_->publishEvent<event::LearnSkillSuccess>(skillId);
+    } else {
+      LOG(WARNING) << "Trying to publish LearnSkillSuccess, but don't have event broker";
+    }
   }
 }
 
@@ -328,25 +452,41 @@ void Self::learnMastery(sro::scalar_types::ReferenceMasteryId masteryId, uint8_t
     }
     masteries_.emplace_back(masteryId, masteryLevel);
   }
-  eventBroker_.publishEvent<event::LearnMasterySuccess>(masteryId);
+  if (eventBroker_) {
+    eventBroker_->publishEvent<event::LearnMasterySuccess>(masteryId);
+  } else {
+    LOG(WARNING) << "Trying to publish LearnMasterySuccess, but don't have event broker";
+  }
 }
 
 void Self::setGold(uint64_t goldAmount) {
   gold_ = goldAmount;
-  eventBroker_.publishEvent(event::EventCode::kInventoryGoldUpdated);
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kInventoryGoldUpdated);
+  } else {
+    LOG(WARNING) << "Trying to publish kInventoryGoldUpdated, but don't have event broker";
+  }
 }
 
 void Self::setStorageGold(uint64_t goldAmount) {
   storageGold_ = goldAmount;
-  eventBroker_.publishEvent(event::EventCode::kStorageGoldUpdated);
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kStorageGoldUpdated);
+  } else {
+    LOG(WARNING) << "Trying to publish kStorageGoldUpdated, but don't have event broker";
+  }
 }
 
 void Self::setGuildStorageGold(uint64_t goldAmount) {
   guildStorageGold_ = goldAmount;
-  eventBroker_.publishEvent(event::EventCode::kGuildStorageGoldUpdated);
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kGuildStorageGoldUpdated);
+  } else {
+    LOG(WARNING) << "Trying to publish kGuildStorageGoldUpdated, but don't have event broker";
+  }
 }
 
-void Self::usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milliseconds> cooldown, broker::EventBroker &eventBroker) {
+void Self::usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milliseconds> cooldown) {
   // For now, we figure out the cooldown duration right here. Maybe in the future, it should be passed into this function.
   if (itemCooldownEventIdMap_.find(typeData) != itemCooldownEventIdMap_.end()) {
     // This should never happen if all cooldowns are accurate.
@@ -361,9 +501,13 @@ void Self::usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milli
     return;
   }
 
-  // Publish a delayed event for when the cooldown ends.
-  const auto itemCooldownDelayedEventId = eventBroker.publishDelayedEvent<event::ItemCooldownEnded>(*cooldown, typeData);
-  itemCooldownEventIdMap_.emplace(typeData, itemCooldownDelayedEventId);
+  if (eventBroker_) {
+    // Publish a delayed event for when the cooldown ends.
+    const auto itemCooldownDelayedEventId = eventBroker_->publishDelayedEvent<event::ItemCooldownEnded>(*cooldown, typeData);
+    itemCooldownEventIdMap_.emplace(typeData, itemCooldownDelayedEventId);
+  } else {
+    LOG(WARNING) << "Trying to publish delayed item cooldown ended, but don't have event broker";
+  }
 }
 
 void Self::itemCooldownEnded(type_id::TypeId itemTypeData) {
@@ -378,10 +522,6 @@ void Self::itemCooldownEnded(type_id::TypeId itemTypeData) {
 // =========================================================================================================
 // =================================================Getters=================================================
 // =========================================================================================================
-
-EntityType Self::entityType() const {
-  return EntityType::kSelf;
-}
 
 bool Self::spawned() const {
   return spawned_;
@@ -473,7 +613,7 @@ uint8_t Self::hwanPoints() const {
 }
 
 uint32_t Self::currentMp() const {
-  return mp_;
+  return currentMp_;
 }
 
 std::optional<uint32_t> Self::maxHp() const {
@@ -611,12 +751,20 @@ void Self::resetUserPurchaseRequest() {
 
 void Self::setTrainingAreaGeometry(std::unique_ptr<Geometry> &&geometry) {
   trainingAreaGeometry = std::move(geometry);
-  eventBroker_.publishEvent(event::EventCode::kTrainingAreaSet);
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kTrainingAreaSet);
+  } else {
+    LOG(WARNING) << "Trying to publish kTrainingAreaSet, but don't have event broker";
+  }
 }
 
 void Self::resetTrainingAreaGeometry() {
   trainingAreaGeometry.reset();
-  eventBroker_.publishEvent(event::EventCode::kTrainingAreaReset);
+  if (eventBroker_) {
+    eventBroker_->publishEvent(event::EventCode::kTrainingAreaReset);
+  } else {
+    LOG(WARNING) << "Trying to publish kTrainingAreaReset, but don't have event broker";
+  }
 }
 
 // =================================================================================================

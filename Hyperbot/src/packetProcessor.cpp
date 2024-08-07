@@ -1,6 +1,8 @@
 #include "packetProcessor.hpp"
 
 #include "entity/entity.hpp"
+#include "entity/item.hpp"
+#include "entity/monster.hpp"
 #include "helpers.hpp"
 #include "packet/building/clientAgentActionCommandRequest.hpp"
 #include "packet/opcode.hpp"
@@ -350,21 +352,21 @@ void PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::Serv
     }
     if (mobileEntity->angle() != packet.angle()) {
       // Changed angle while running
-      mobileEntity->setMovingTowardAngle(std::nullopt, packet.angle(), eventBroker_);
+      mobileEntity->setMovingTowardAngle(std::nullopt, packet.angle());
     }
   } else {
-    mobileEntity->setAngle(packet.angle(), eventBroker_);
+    mobileEntity->setAngle(packet.angle());
   }
 }
 
 void PacketProcessor::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const {
   std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
-  mobileEntity->syncPosition(packet.position(), eventBroker_);
+  mobileEntity->syncPosition(packet.position());
 }
 
 void PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const {
   std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
-  mobileEntity->setStationaryAtPosition(packet.position(), eventBroker_);
+  mobileEntity->setStationaryAtPosition(packet.position());
 }
 
 void PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::ServerAgentEntityUpdateMovement &packet) const {
@@ -375,9 +377,9 @@ void PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::S
     sourcePosition = packet.sourcePosition();
   }
   if (packet.hasDestination()) {
-    mobileEntity->setMovingToDestination(sourcePosition, packet.destinationPosition(), eventBroker_);
+    mobileEntity->setMovingToDestination(sourcePosition, packet.destinationPosition());
   } else {
-    mobileEntity->setMovingTowardAngle(sourcePosition, packet.angle(), eventBroker_);
+    mobileEntity->setMovingTowardAngle(sourcePosition, packet.angle());
   }
 }
 
@@ -394,37 +396,55 @@ void PacketProcessor::clientItemMoveReceived(const packet::parsing::ParsedClient
   }
 }
 
+void initializeSelfFromCharacterDataPacket(entity::Self &self, const packet::parsing::ServerAgentCharacterData &packet) {
+  self.initializeCurrentHp(packet.hp());
+  self.initializeCurrentMp(packet.mp());
+  self.setHwanLevel(packet.hwanLevel());
+  self.initializeCurrentLevel(packet.curLevel());
+  self.initializeSkillPoints(packet.skillPoints());
+  self.initializeAvailableStatPoints(packet.availableStatPoints());
+  self.initializeHwanPoints(packet.hwanPoints());
+  self.initializeCurrentExpAndSpExp(packet.currentExperience(), packet.currentSpExperience());
+  self.setMasteriesAndSkills(packet.masteries(), packet.skills());
+
+  // Position
+  // TODO: Handle the case when the character spawns in a moving state
+  self.initializePosition(packet.position());
+  // self.setStationaryAtPosition(packet.position());
+  self.initializeAngle(packet.angle());
+
+  // State
+  self.setLifeState(packet.lifeState());
+  self.setMotionState(packet.motionState());
+  self.initializeBodyState(packet.bodyState());
+
+  // Buffs
+  // TODO: If we spawn with any active buffs, add them
+  // worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken());
+
+  // Speed
+  self.setSpeed(packet.walkSpeed(), packet.runSpeed());
+  self.setHwanSpeed(packet.hwanSpeed());
+  self.name = packet.characterName();
+  self.initializeGold(packet.gold());
+  const auto inventorySize = packet.inventorySize();
+  const auto &inventoryItemMap = packet.inventoryItemMap();
+  helpers::initializeInventory(self.inventory, inventorySize, inventoryItemMap);
+  const auto avatarInventorySize = packet.avatarInventorySize();
+  const auto &avatarInventoryItemMap = packet.avatarInventoryItemMap();
+  helpers::initializeInventory(self.avatarInventory, avatarInventorySize, avatarInventoryItemMap);
+}
+
 void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::ServerAgentCharacterData &packet) {
-  // *#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
-  // *#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
-  // *#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
-  /* TODO:
-  ** Setting data in the entity::Self class causes events to be sent, however, here we have not yet sent the self-spawned event.
-  */
-  // *#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
-  // *#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
-  // *#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
   LOG(INFO) << "Saving self global ID as " << packet.globalId();
   selfGlobalId_ = packet.globalId();
   
-  std::shared_ptr<entity::Self> selfEntity = std::make_shared<entity::Self>(eventBroker_, gameData_);
-  resetDataBecauseCharacterSpawned();
-
-  selfEntity->initialize(packet.globalId(), packet.refObjId(), packet.jId());
-  selfEntity->initializeCurrentHp(packet.hp());
-  selfEntity->setCurrentMp(packet.mp());
-  selfEntity->setHwanLevel(packet.hwanLevel());
-  selfEntity->setCurrentLevel(packet.curLevel());
-  selfEntity->setSkillPoints(packet.skillPoints());
-  selfEntity->setAvailableStatPoints(packet.availableStatPoints());
-  selfEntity->setHwanPoints(packet.hwanPoints());
-  selfEntity->setCurrentExpAndSpExp(packet.currentExperience(), packet.currentSpExperience());
-  selfEntity->setMasteriesAndSkills(packet.masteries(), packet.skills());
   if (VLOG_IS_ON(1)) {
-    // for (const auto &m : packet.masteries()) {
-    //   const auto &mastery = gameData_.masteryData().getMasteryById(m.id);
-    //   VLOG(1) << "Mastery " << mastery.masteryNameCode << "(" << m.id << ") is level " << (int)m.level;
-    // }
+    VLOG(1) << "Masteries:";
+    for (const auto &m : packet.masteries()) {
+      const auto &mastery = gameData_.masteryData().getMasteryById(m.id);
+      VLOG(1) << "  Mastery " << mastery.masteryNameCode << "(" << m.id << ") is level " << (int)m.level;
+    }
     std::vector<std::pair<std::string, pk2::ref::Skill::Param1Type>> skillTypes = {
       // TODO: These labels are wrong!
       {"Melee skills", pk2::ref::Skill::Param1Type::kMelee},
@@ -456,35 +476,12 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
     }
   }
 
-  // Position
-  // TODO: Handle the case when the character spawns in a moving state
-  selfEntity->setStationaryAtPosition(packet.position(), eventBroker_);
-  selfEntity->initializeAngle(packet.angle());
-
-  // State
-  selfEntity->setLifeState(packet.lifeState(), eventBroker_);
-  selfEntity->setMotionState(packet.motionState(), eventBroker_);
-  selfEntity->setBodyState(packet.bodyState());
-
-  // Buffs
-  // TODO: If we spawn with any active buffs, add them
-  // worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken());
-
-  // Speed
-  selfEntity->setSpeed(packet.walkSpeed(), packet.runSpeed(), eventBroker_);
-  selfEntity->setHwanSpeed(packet.hwanSpeed());
-  selfEntity->name = packet.characterName();
-  selfEntity->setGold(packet.gold());
-  const auto inventorySize = packet.inventorySize();
-  const auto &inventoryItemMap = packet.inventoryItemMap();
-  helpers::initializeInventory(selfEntity->inventory, inventorySize, inventoryItemMap);
-  const auto avatarInventorySize = packet.avatarInventorySize();
-  const auto &avatarInventoryItemMap = packet.avatarInventoryItemMap();
-  helpers::initializeInventory(selfEntity->avatarInventory, avatarInventorySize, avatarInventoryItemMap);
-
+  std::shared_ptr<entity::Self> selfEntity = std::make_shared<entity::Self>(gameData_, packet.globalId(), packet.refObjId(), packet.jId());
+  initializeSelfFromCharacterDataPacket(*selfEntity.get(), packet);
   VLOG(1) << "GID:" << selfEntity->globalId << ", and we have " << selfEntity->currentHp() << " hp and " << selfEntity->currentMp() << " mp";
+  selfEntity->initializeEventBroker(eventBroker_);
   worldState_.entityTracker().trackEntity(std::move(selfEntity));
-  eventBroker_.publishEvent<event::SelfSpawned>(sessionId_, packet.globalId());
+  eventBroker_.publishEvent<event::SelfSpawned>(sessionId_, packet.globalId()); // TODO: Replace this with a call to entitySpawned.
 }
 
 void PacketProcessor::serverAgentCosDataReceived(const packet::parsing::ServerAgentCosData &packet) const {
@@ -534,11 +531,11 @@ void PacketProcessor::serverAgentEntityUpdateHwanLevelReceived(packet::parsing::
 void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const {
   if (packet.stateType() == packet::enums::StateType::kMotionState) {
     std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
-    mobileEntity->setMotionState(static_cast<entity::MotionState>(packet.state()), eventBroker_);
+    mobileEntity->setMotionState(static_cast<entity::MotionState>(packet.state()));
   } else if (packet.stateType() == packet::enums::StateType::kLifeState) {
     std::shared_ptr<entity::Character> characterEntity = worldState_.getEntity<entity::Character>(packet.globalId());
     const auto newLifeState = static_cast<sro::entity::LifeState>(packet.state());
-    characterEntity->setLifeState(newLifeState, eventBroker_);
+    characterEntity->setLifeState(newLifeState);
   } else if (selfGlobalId_ && packet.globalId() == *selfGlobalId_) {
     if (packet.stateType() == packet::enums::StateType::kBodyState) {
       std::shared_ptr<entity::Self> selfEntity = getSelfEntity();
@@ -549,12 +546,12 @@ void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
 
 void PacketProcessor::serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const {
   std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
-  mobileEntity->setSpeed(packet.walkSpeed(), packet.runSpeed(), eventBroker_);
+  mobileEntity->setSpeed(packet.walkSpeed(), packet.runSpeed());
 }
 
 void PacketProcessor::serverAgentEntityRemoveOwnershipReceived(const packet::parsing::ServerAgentEntityRemoveOwnership &packet) const {
   std::shared_ptr<entity::Item> itemEntity = worldState_.getEntity<entity::Item>(packet.globalId());
-  itemEntity->removeOwnership(eventBroker_);
+  itemEntity->removeOwnership();
 }
 
 void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsing::ServerAgentEntityUpdateStatus &packet) const {
@@ -563,7 +560,7 @@ void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsin
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoHp)) {
       // Our HP changed
       if (selfEntity->currentHp() != packet.newHpValue()) { // TODO: Move check inside of entity::Self::setCurrentHp.
-        selfEntity->setCurrentHp(packet.newHpValue(), eventBroker_);
+        selfEntity->setCurrentHp(packet.newHpValue());
       }
     }
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoMp)) {
@@ -577,13 +574,13 @@ void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsin
       // Our states changed
       auto stateBitmask = packet.stateBitmask();
       auto stateLevels = packet.stateLevels();
-      selfEntity->updateStates(stateBitmask, stateLevels, eventBroker_);
+      selfEntity->updateStates(stateBitmask, stateLevels);
     }
   } else {
     // Not for my character
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoHp)) {
       std::shared_ptr<entity::Character> character = worldState_.getEntity<entity::Character>(packet.globalId());
-      character->setCurrentHp(packet.newHpValue(), eventBroker_);
+      character->setCurrentHp(packet.newHpValue());
     }
   }
 }
@@ -591,8 +588,8 @@ void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsin
 void PacketProcessor::serverAgentEntityDamageEffectReceived(const packet::parsing::ServerAgentEntityDamageEffect &packet) const {
   std::shared_ptr<entity::Entity> entity = worldState_.getEntity(packet.globalId());
   if (auto *entityAsCharacter = dynamic_cast<entity::Character*>(entity.get())) {
-    if (entityAsCharacter->knowCurrentHp()) {
-      entityAsCharacter->setCurrentHp(std::max<uint32_t>(0, entityAsCharacter->currentHp() - packet.effectDamage()), eventBroker_);
+    if (entityAsCharacter->currentHpIsKnown()) {
+      entityAsCharacter->setCurrentHp(std::max<uint32_t>(0, entityAsCharacter->currentHp() - packet.effectDamage()));
     }
   }
   // This packet only comes for effects which we deal.
@@ -612,7 +609,12 @@ void PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::Par
 void PacketProcessor::serverAgentCharacterUpdateStatsReceived(const packet::parsing::ServerAgentCharacterUpdateStats &packet) const {
   std::shared_ptr<entity::Self> selfEntity = getSelfEntity();
   selfEntity->setMaxHpMp(packet.maxHp(), packet.maxMp());
-  selfEntity->setStatPoints(packet.strPoints(), packet.intPoints());
+  try {
+    selfEntity->setStatPoints(packet.strPoints(), packet.intPoints());
+  } catch (const std::exception &ex) {
+    // TODO: Known issue.
+    LOG(WARNING) << absl::StreamFormat("Incorrect logic in entity::Self::setStatPoints: \"%s\"", ex.what());
+  }
 }
 
 void PacketProcessor::serverAgentCharacterIncreaseIntResponseReceived(const packet::parsing::ServerAgentCharacterIncreaseIntResponse &packet) const {
@@ -672,7 +674,7 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     expendableItemPtr->quantity = packet.remainingCount();
     // Figure out the cooldown of this item.
     const auto itemCooldown = getItemCooldownMs(*expendableItemPtr);
-    selfEntity->usedAnItem(packet.typeData(), itemCooldown, eventBroker_);
+    selfEntity->usedAnItem(packet.typeData(), itemCooldown);
     eventBroker_.publishEvent<event::InventoryUpdated>(packet.slotNum(), std::nullopt);
   } else if (dynamic_cast<const storage::ItemCosAbilitySummoner*>(itemPtr) == nullptr &&
               dynamic_cast<const storage::ItemCosGrowthSummoner*>(itemPtr) == nullptr) {
@@ -966,6 +968,7 @@ void PacketProcessor::serverAgentEntityDespawnReceived(const packet::parsing::Se
 }
 
 void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) const {
+  entity->initializeEventBroker(eventBroker_);
   worldState_.entityTracker().trackEntity(entity);
   eventBroker_.publishEvent<event::EntitySpawned>(entity->globalId);
 
@@ -978,9 +981,9 @@ void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) cons
   if (mobileEntity->moving()) {
     if (mobileEntity->destinationPosition) {
       // Entity spawned and is moving to a destination
-      mobileEntity->setMovingToDestination(mobileEntity->position(), *mobileEntity->destinationPosition, eventBroker_);
+      mobileEntity->setMovingToDestination(mobileEntity->position(), *mobileEntity->destinationPosition);
     } else {
-      mobileEntity->setMovingTowardAngle(mobileEntity->position(), mobileEntity->angle(), eventBroker_);
+      mobileEntity->setMovingTowardAngle(mobileEntity->position(), mobileEntity->angle());
     }
   }
 }
@@ -989,17 +992,9 @@ void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId
   if (!worldState_.entityTracker().trackingEntity(globalId)) {
     // TODO: Once eventzones are handled, this check can be removed;
     //  getEntity will throw
-    LOG(INFO) << "Entity despawned, but we're not tracking it";
+    LOG(WARNING) << "Entity despawned, but we're not tracking it";
     return;
   }
-  // Before destroying an entity, see if we have a running movement timer to cancel
-  std::shared_ptr<entity::Entity> entity = worldState_.getEntity(globalId);
-  auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(entity.get());
-  if (mobileEntity != nullptr) {
-    // Is a mobile entity
-    mobileEntity->cancelEvents(eventBroker_);
-  }
-
   // Destroy entity
   worldState_.entityTracker().stopTrackingEntity(globalId);
   eventBroker_.publishEvent<event::EntityDespawned>(globalId);
@@ -1067,7 +1062,7 @@ void PacketProcessor::serverAgentSelectResponseReceived(const packet::parsing::S
     // Selected a monster
     if (flags::isSet(packet.vitalInfoMask(), packet::enums::VitalInfoFlag::kVitalInfoHp)) {
       // Received monster's current HP
-      monster->setCurrentHp(packet.hp(), eventBroker_);
+      monster->setCurrentHp(packet.hp());
     }
   }
   eventBroker_.publishEvent(event::EventCode::kEntitySelected);
@@ -1569,7 +1564,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         // Will stop you if you're running
         std::shared_ptr<entity::MobileEntity> casterAsMobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.casterGlobalId());
         if (casterAsMobileEntity->moving()) {
-          casterAsMobileEntity->setStationaryAtPosition(casterAsMobileEntity->position(), eventBroker_);
+          casterAsMobileEntity->setStationaryAtPosition(casterAsMobileEntity->position());
         }
         break;
       }
@@ -1676,7 +1671,7 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
       flags::isSet(action.actionFlag, packet::enums::ActionFlag::kSprint))) {
     // Entity teleported or sprinted to a new position. Sprints are actually teleports on the server side, even though the skill actually has a duration. The duration is only used for animation
     std::shared_ptr<entity::MobileEntity> casterAsMobileEntity = worldState_.getEntity<entity::MobileEntity>(*casterGlobalId);
-    casterAsMobileEntity->setStationaryAtPosition(action.position, eventBroker_);
+    casterAsMobileEntity->setStationaryAtPosition(action.position);
   }
 
   auto nameOfEntity = [&](auto gid) -> std::string {
@@ -1700,7 +1695,7 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
       if (auto *character = dynamic_cast<entity::Character*>(targetEntity.get())) {
         if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKill)) {
           // Effectively killed it, but I don't know if it makes sense to change the life state right now
-          character->setCurrentHp(0, eventBroker_);
+          character->setCurrentHp(0);
           if (casterGlobalId && selfGlobalId_ && *casterGlobalId == *selfGlobalId_) {
             eventBroker_.publishEvent<event::KilledEntity>(hitObject.targetGlobalId);
           }
@@ -1717,12 +1712,12 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
               LOG(INFO) << "      " << nameOfEntity(hitObject.targetGlobalId) << " has been hit with effect: " << static_cast<packet::enums::AbnormalStateFlag>(hitResult.effect);
             }
           }
-          if (character->knowCurrentHp()) {
+          if (character->currentHpIsKnown()) {
             // Can only update the character's hp if we know what it currently is
             if (hitResult.damage >= character->currentHp()) {
-              character->setCurrentHp(0, eventBroker_);
+              character->setCurrentHp(0);
             } else {
-              character->setCurrentHp(character->currentHp() - hitResult.damage, eventBroker_);
+              character->setCurrentHp(character->currentHp() - hitResult.damage);
             }
           }
         }
@@ -1730,7 +1725,7 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
       if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockback) ||
           flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
         if (auto *targetAsMobileEntity = dynamic_cast<entity::MobileEntity*>(targetEntity.get())) {
-          targetAsMobileEntity->setStationaryAtPosition(hitResult.position, eventBroker_);
+          targetAsMobileEntity->setStationaryAtPosition(hitResult.position);
           if (selfGlobalId_ && hitObject.targetGlobalId == *selfGlobalId_) {
             std::shared_ptr<entity::Self> selfEntity = getSelfEntity();
             // We are the target
@@ -1821,9 +1816,7 @@ void PacketProcessor::serverAgentChatUpdateReceived(const packet::parsing::Serve
 }
 
 void PacketProcessor::serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet) {
-  LOG(INFO) << "entityTracker stops tracking self";
   worldState_.entityTracker().stopTrackingEntity(*selfGlobalId_);
-  LOG(INFO) << "PacketProcessor stops tracking self";
   selfGlobalId_.reset();
   eventBroker_.publishEvent(event::EventCode::kGameReset);
 }

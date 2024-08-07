@@ -627,8 +627,9 @@ void Bot::handleEntityMovementBegan(const event::EntityMovementBegan &event) {
 }
 
 void Bot::handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId) {
+  // TODO: This seems like it would be more appropriately handled exclusively inside the MobileEntity.
   std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(globalId);
-  mobileEntity->movementTimerCompleted(eventBroker_);
+  mobileEntity->movementTimerCompleted();
 }
 
 void Bot::handleEntityEnteredGeometry(const event::EntityEnteredGeometry &event) {
@@ -875,9 +876,8 @@ bool Bot::canCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {
   std::shared_ptr<entity::Self> selfEntity = selfState();
   const auto &skillData = gameData().skillData().getSkillById(skillRefId);
   // TODO: Keep track if we're wearing a full protector or garment set and reduce the MP requirement by 10%/20% respectively.
-  const auto currentMp = selfEntity->currentMp();
-  if (skillData.consumeMP > currentMp ||
-      (selfEntity->maxMp() && skillData.consumeMPRatio > (static_cast<double>(currentMp) / *selfEntity->maxMp()) * 100)) {
+  if (skillData.consumeMP > selfEntity->currentMp() ||
+      (selfEntity->maxMp() && skillData.consumeMPRatio > (static_cast<double>(selfEntity->currentMp()) / *selfEntity->maxMp()) * 100)) {
     // Not enough MP to cast.
     LOG(INFO) << "Not enough MP to cast skill " << gameData().getSkillName(skillRefId);
     return false;

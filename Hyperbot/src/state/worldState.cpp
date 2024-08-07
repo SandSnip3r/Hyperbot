@@ -1,5 +1,8 @@
 #include "worldState.hpp"
 
+#include "entity/character.hpp"
+#include "entity/playerCharacter.hpp"
+
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
@@ -27,7 +30,7 @@ void WorldState::addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar
       VLOG(1) << "Handling a buff for a non-player character";
     }
     buffTokenToEntityAndSkillIdMap_.emplace(std::piecewise_construct, std::forward_as_tuple(tokenId), std::forward_as_tuple(globalId, skillRefId));
-    character->addBuff(skillRefId, tokenId, durationMs, eventBroker_);
+    character->addBuff(skillRefId, tokenId, durationMs);
     VLOG(1) << "Buff with token " << tokenId << " added";
   } else {
     throw std::runtime_error("Got a buff for a non-character.");
@@ -52,7 +55,7 @@ void WorldState::removeBuffs(const std::vector<uint32_t> &tokenIds) {
     if (character == nullptr) {
       throw std::runtime_error("Only tracking buffs for Characters, how did this get here?");
     }
-    character->removeBuff(buffTokenDataIt->second.skillRefId, tokenId, eventBroker_);
+    character->removeBuff(buffTokenDataIt->second.skillRefId, tokenId);
     buffTokenToEntityAndSkillIdMap_.erase(buffTokenDataIt);
   }
 }

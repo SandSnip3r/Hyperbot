@@ -1,7 +1,7 @@
 #ifndef PACKET_PARSING_SERVER_AGENT_CHARACTER_DATA_HPP
 #define PACKET_PARSING_SERVER_AGENT_CHARACTER_DATA_HPP
 
-#include "entity/entity.hpp"
+#include "entity/mobileEntity.hpp"
 #include "parsedPacket.hpp"
 #include "../enums./packetEnums.hpp"
 #include "../structures/packetInnerStructures.hpp"
@@ -9,12 +9,14 @@
 #include "../../pk2/skillData.hpp"
 #include "../../shared/silkroad_security.h"
 
+#include <silkroad_lib/entity.h>
 #include <silkroad_lib/position.h>
 #include <silkroad_lib/scalar_types.h>
 
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <vector>
 
 namespace packet::parsing {
   

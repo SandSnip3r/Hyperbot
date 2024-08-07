@@ -1,7 +1,7 @@
 #ifndef PACKET_BUILDING_SERVER_AGENT_ENTITY_SPAWN_HPP_
 #define PACKET_BUILDING_SERVER_AGENT_ENTITY_SPAWN_HPP_
 
-#include "entity/entity.hpp"
+#include "entity/mobileEntity.hpp"
 #include "packet/opcode.hpp"
 
 #include "../../shared/silkroad_security.h"

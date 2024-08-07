@@ -3,7 +3,7 @@
 
 #include "broker/eventBroker.hpp"
 #include "broker/timerManager.hpp"
-#include "entity/entity.hpp"
+#include "entity/playerCharacter.hpp"
 #include "entity/geometry.hpp"
 #include "pk2/gameData.hpp"
 #include "packet/enums/packetEnums.hpp"
@@ -46,11 +46,21 @@ enum class Gender {
 //  Or, when we're doing game logic
 class Self : public PlayerCharacter {
 public:
-  Self(broker::EventBroker &eventBroker, const pk2::GameData &gameData);
-  virtual ~Self() = default;
-  void initialize(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId);
+  Self(const pk2::GameData &gameData, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId);
+  ~Self() override;
 
+  // The initialize functions are meant to be called during construction. No events will be published during these.
   void initializeCurrentHp(uint32_t hp);
+  void initializeCurrentMp(uint32_t mp);
+  void initializeCurrentLevel(uint8_t currentLevel);
+  void initializeSkillPoints(uint32_t skillPoints);
+  void initializeAvailableStatPoints(uint16_t statPoints);
+  void initializeHwanPoints(uint8_t hwanPoints);
+  void initializeCurrentExpAndSpExp(uint64_t currentExperience, uint64_t currentSpExperience);
+  void initializeBodyState(packet::enums::BodyState bodyState);
+  void initializeGold(uint64_t goldAmount);
+
+  void initializeEventBroker(broker::EventBroker &eventBroker) override;
                   
   // Setters
   void setCurrentLevel(uint8_t currentLevel);
@@ -63,13 +73,13 @@ public:
   void setBodyState(packet::enums::BodyState bodyState);
   void setHwanPoints(uint8_t hwanPoints);
 
-  void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition, broker::EventBroker &eventBroker) override;
-  void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle, broker::EventBroker &eventBroker) override;
+  void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition) override;
+  void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle) override;
 
   void setCurrentMp(uint32_t mp);
   void setMaxHpMp(uint32_t maxHp, uint32_t maxMp);
   void setStatPoints(uint16_t strPoints, uint16_t intPoints);
-  void updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels, broker::EventBroker &eventBroker);
+  void updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels);
   void setStateBitmask(uint32_t stateBitmask);
   void setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect);
   void setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level);
@@ -82,11 +92,11 @@ public:
   void setStorageGold(uint64_t goldAmount);
   void setGuildStorageGold(uint64_t goldAmount);
 
-  void usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milliseconds> cooldown, broker::EventBroker &eventBroker);
+  void usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milliseconds> cooldown);
   void itemCooldownEnded(type_id::TypeId itemTypeData);
 
   // Getters
-  EntityType entityType() const override;
+  EntityType entityType() const override { return EntityType::kSelf; }
   bool spawned() const;
   Race race() const;
   Gender gender() const;
@@ -116,6 +126,9 @@ public:
   packet::enums::BodyState bodyState() const;
   uint8_t hwanPoints() const;
   
+  // Self's HP is always known.
+  bool currentHpIsKnown() const override { return true; }
+  // Self's MP is always known.
   uint32_t currentMp() const;
   std::optional<uint32_t> maxHp() const;
   std::optional<uint32_t> maxMp() const;
@@ -157,7 +170,7 @@ public:
 
   // mutable std::mutex selfMutex;
 
-  bool spawned_{false};
+  bool spawned_{true}; // TODO: Remove
   
   // Character info
 private:
@@ -189,7 +202,7 @@ public:
 
   // Health
 private:
-  uint32_t mp_;
+  uint32_t currentMp_;
   std::optional<uint32_t> maxHp_;
   std::optional<uint32_t> maxMp_;
   std::optional<uint16_t> strPoints_;
@@ -237,6 +250,7 @@ public:
   void resetTrainingAreaGeometry();
 
   // Skills
+  // TODO: Skill cooldowns transcend the lifetime of the self entity (or any entity). This should not exist inside the entity.
   state::SkillEngine skillEngine;
 
   // Misc
@@ -248,15 +262,16 @@ public:
   bool inTown() const;
 
 private:
-  broker::EventBroker &eventBroker_;
   const pk2::GameData &gameData_;
+  std::optional<broker::EventBroker::SubscriptionId> enteredRegionSubscriptionId_;
 
   void setRaceAndGender();
-  void calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const sro::Position &currentPosition, double dx, double dy, broker::EventBroker &eventBroker);
+  void calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const sro::Position &currentPosition, double dx, double dy);
   void handleEvent(const event::Event *event);
-  void enteredRegion();
-  void cancelMovement(broker::EventBroker &eventBroker);
-  void checkIfWillLeaveRegionAndSetTimer(broker::EventBroker &eventBroker);
+  void enteredRegion(const event::Event *event);
+  void cancelEvents();
+  void cancelMovement() override;
+  void checkIfWillLeaveRegionAndSetTimer();
 
   // Known delay for potion cooldown
   int potionDelayMs_;

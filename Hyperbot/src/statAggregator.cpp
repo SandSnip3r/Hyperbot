@@ -1,6 +1,9 @@
+#include "entity/monster.hpp"
 #include "statAggregator.hpp"
 
 #include "../../common/Common.h"
+
+#include <silkroad_lib/entity.h>
 
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 

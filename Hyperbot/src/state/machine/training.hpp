@@ -6,6 +6,8 @@
 
 #include "entity/entity.hpp"
 #include "entity/geometry.hpp"
+#include "entity/item.hpp"
+#include "entity/monster.hpp"
 
 #include <silkroad_lib/position.h>
 #include <silkroad_lib/scalar_types.h>

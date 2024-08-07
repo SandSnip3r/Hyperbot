@@ -1,5 +1,7 @@
 #include "serverGatewayLoginResponse.hpp"
 
+#include <absl/log/log.h>
+
 namespace packet::parsing {
 
 ServerGatewayLoginResponse::ServerGatewayLoginResponse(const PacketContainer &packet) :

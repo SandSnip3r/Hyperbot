@@ -59,4 +59,10 @@ void SkillEngine::reset() {
   acceptedCommandQueue.clear();
 }
 
+void SkillEngine::cancelEvents(broker::EventBroker &eventBroker) {
+  for (const auto refEventPair : skillCooldownEventIdMap_) {
+    eventBroker.cancelDelayedEvent(refEventPair.second);
+  }
+}
+
 } // namespace state

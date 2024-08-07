@@ -25,8 +25,7 @@ size_t getAddress(std::function<T(U...)> f) {
 
 namespace broker {
 
-// TODO: Whenever publishing an event, an ID should be returned. This same ID should be stored in the event.
-
+// If the EventBroker thread calls back into subscribe or unsubscribe, this will crash, due to reacquisition of the subscriber map mutex.
 class EventBroker {
 public:
   using EventId = event::Event::EventId;
@@ -80,6 +79,8 @@ public:
   std::optional<std::chrono::milliseconds> timeRemainingOnDelayedEvent(EventId eventId) const;
   std::optional<TimerEndTimePoint> delayedEventEndTime(EventId eventId) const;
   SubscriptionId subscribeToEvent(event::EventCode eventCode, EventHandleFunction &&handleFunc);
+
+  // Will block until any events currently being sent to any subscribers are complete due to a lock on the subscriber map.
   void unsubscribeFromEvent(SubscriptionId id);
 private:
   SubscriptionId subscriptionIdCounter_{0};

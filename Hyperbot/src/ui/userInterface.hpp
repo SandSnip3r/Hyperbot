@@ -2,11 +2,13 @@
 #define UI_USERINTERFACE_HPP_
 
 #include "entity/entity.hpp"
+#include "entity/geometry.hpp"
 #include "broker/eventBroker.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 #include "storage/storage.hpp"
 
 #include "ui-proto/broadcast.pb.h"
+#include <silkroad_lib/entity.h>
 #include <silkroad_lib/position.h>
 #include <silkroad_lib/scalar_types.h>
 #include <zmq.hpp>

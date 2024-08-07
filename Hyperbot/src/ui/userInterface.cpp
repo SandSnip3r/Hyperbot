@@ -1,5 +1,10 @@
 #include "userInterface.hpp"
 
+#include "entity/character.hpp"
+#include "entity/entity.hpp"
+#include "entity/geometry.hpp"
+#include "entity/item.hpp"
+#include "entity/monster.hpp"
 #include "pk2/gameData.hpp"
 #include "proto_convert/convert.hpp"
 #include "state/worldState.hpp"

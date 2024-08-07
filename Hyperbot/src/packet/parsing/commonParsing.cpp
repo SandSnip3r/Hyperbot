@@ -1,4 +1,11 @@
 #include "commonParsing.hpp"
+#include "entity/character.hpp"
+#include "entity/entity.hpp"
+#include "entity/item.hpp"
+#include "entity/monster.hpp"
+#include "entity/nonplayerCharacter.hpp"
+#include "entity/playerCharacter.hpp"
+#include "entity/portal.hpp"
 #include "type_id/categories.hpp"
 #include "type_id/typeCategory.hpp"
 

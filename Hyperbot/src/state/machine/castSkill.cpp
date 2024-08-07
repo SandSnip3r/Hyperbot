@@ -210,11 +210,9 @@ void CastSkill::onUpdate(const event::Event *event) {
             // TODO: This block makes an assumption that this is an attack on another entity
             if (targetGlobalId_) {
               if (std::shared_ptr<entity::Entity> entity = bot_.worldState().getEntity(*targetGlobalId_); const auto *characterEntity = dynamic_cast<const entity::Character*>(entity.get())) {
-                if (characterEntity->knowCurrentHp()) {
-                  if (characterEntity->currentHp() == 0) {
-                    // Entity is dead
-                    wasLastPieceOfSkill = true;
-                  }
+                if (characterEntity->currentHpIsKnown() && characterEntity->currentHp() == 0) {
+                  // Entity is dead
+                  wasLastPieceOfSkill = true;
                 }
               }
             }
