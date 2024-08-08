@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -37,8 +38,11 @@ private:
     EventSubscription(SubscriptionId subId, EventHandleFunction &&func) : id(subId), handleFunction(func) {}
     SubscriptionId id;
     EventHandleFunction handleFunction;
+    std::mutex mutex;
+    int currentCallerCount{0};
+    std::condition_variable conditionVariable;
   };
-  using PacketSubscriptionMap = absl::flat_hash_map<event::EventCode, std::vector<EventSubscription>>;
+  using SubscriptionMapType = absl::flat_hash_map<event::EventCode, std::vector<EventSubscription*>>;
 public:
   void runAsync();
 
@@ -83,10 +87,14 @@ public:
   // Will block until any events currently being sent to any subscribers are complete due to a lock on the subscriber map.
   void unsubscribeFromEvent(SubscriptionId id);
 private:
+  // This is used for providing unique subscription IDs. Protected by subscriptionMutex_.
   SubscriptionId subscriptionIdCounter_{0};
-  std::atomic<EventId> eventIdCounter_{0};
-  PacketSubscriptionMap subscriptions_;
+  // This maps events to subscriptions to these events. Protected by subscriptionMutex_.
+  SubscriptionMapType subscriptionMap_;
+  // This is the home of subscriptions. We require pointer stability as well as disallow copy construction/assignment. Protected by subscriptionMutex_.
+  std::vector<std::unique_ptr<EventSubscription>> subscriptionMasterList_;
   std::mutex subscriptionMutex_;
+  std::atomic<EventId> eventIdCounter_{0};
   TimerManager timerManager_;
   absl::flat_hash_map<EventId, TimerManager::TimerId> timerIdMap_;
   mutable std::mutex timerIdMapMutex_;

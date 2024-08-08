@@ -2,6 +2,7 @@
 
 #include <absl/log/log.h>
 
+#include <algorithm>
 #include <string>
 
 namespace broker {
@@ -45,11 +46,11 @@ std::optional<EventBroker::TimerEndTimePoint> EventBroker::delayedEventEndTime(E
 
 EventBroker::SubscriptionId EventBroker::subscribeToEvent(event::EventCode eventCode, EventHandleFunction &&handleFunc) {
   std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
-  auto subscriptionIt = subscriptions_.find(eventCode);
-  if (subscriptionIt == subscriptions_.end()) {
-    auto itBoolResult = subscriptions_.emplace(eventCode, std::vector<EventSubscription>());
+  auto subscriptionIt = subscriptionMap_.find(eventCode);
+  if (subscriptionIt == subscriptionMap_.end()) {
+    auto itBoolResult = subscriptionMap_.emplace(eventCode, std::vector<EventSubscription*>());
     if (!itBoolResult.second) {
-      throw std::runtime_error("EventBroker::subscribeToEvent: Unable to subscribe to event "+std::to_string(static_cast<int>(eventCode)));
+      throw std::runtime_error(absl::StrFormat("EventBroker::subscribeToEvent: Unable to subscribe to event %d", static_cast<int>(eventCode)));
     } else {
       subscriptionIt = itBoolResult.first;
     }
@@ -66,19 +67,50 @@ EventBroker::SubscriptionId EventBroker::subscribeToEvent(event::EventCode event
   }
 
   const SubscriptionId thisSubscriptionId = subscriptionIdCounter_++;
-  subscriptionIt->second.emplace_back(thisSubscriptionId, std::move(handleFunc));
+  // Store the actual subscription in subscriptionMasterList_.
+  subscriptionMasterList_.emplace_back(std::make_unique<EventSubscription>(thisSubscriptionId, std::move(handleFunc)));
+  // Add a subscription map entry pointing to the created subscription.
+  subscriptionIt->second.emplace_back(subscriptionMasterList_.back().get());
   return thisSubscriptionId;
 }
 
 void EventBroker::unsubscribeFromEvent(SubscriptionId id) {
+  auto removeSubscription = [this](std::vector<EventSubscription*> &subscriptionList, std::vector<EventSubscription*>::iterator subscriptionIt, std::unique_lock<std::mutex> &thisSubscriptionLock) {
+    const SubscriptionId subscriptionId = (*subscriptionIt)->id;
+    // Remove the pointer to the EventSubscription object from the map.
+    subscriptionList.erase(subscriptionIt);
+    // Also remove the actual EventSubscription object from the list of subscriptions.
+    auto it = std::find_if(subscriptionMasterList_.begin(), subscriptionMasterList_.end(), [&subscriptionId](const std::unique_ptr<EventSubscription> &subscription) {
+      return subscription->id == subscriptionId;
+    });
+    if (it == subscriptionMasterList_.end()) {
+      throw std::runtime_error("Trying to unsubscribe but this subscription does not exist in the master list");
+    }
+    thisSubscriptionLock.unlock();
+    subscriptionMasterList_.erase(it);
+  };
   std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
-  for (auto &eventSubscriptionPair : subscriptions_) {
+  for (SubscriptionMapType::value_type &eventSubscriptionPair : subscriptionMap_) {
     // For each event code
-    auto &subscriptionList = eventSubscriptionPair.second;
+    std::vector<EventSubscription*> &subscriptionList = eventSubscriptionPair.second;
     for (auto subscriptionIt=subscriptionList.begin(), end=subscriptionList.end(); subscriptionIt!=end; ++subscriptionIt) {
-      if (subscriptionIt->id == id) {
-        // This is the one we want to unsubscribe from
-        subscriptionList.erase(subscriptionIt);
+      EventSubscription *thisSubscription = *subscriptionIt;
+      if (thisSubscription->id == id) {
+        // This is the one we want to unsubscribe from.
+        // Another thread (it can only be the thread owned by EventBroker) might be currently calling a callback of this subscriber. To avoid issues where we could remove a subscription but still end up calling a callback for that subscription, we need to wait until all currently active callbacks of this subscription are done.
+        std::unique_lock<std::mutex> thisSubscriptionLock(thisSubscription->mutex);
+        if (thisSubscription->currentCallerCount == 0) {
+          // Nobody is calling this subscription; done.
+          removeSubscription(subscriptionList, subscriptionIt, thisSubscriptionLock);
+          return;
+        }
+        // Someone is calling this subscription, wait until they complete and notify us.
+        thisSubscription->conditionVariable.wait(thisSubscriptionLock, [&](){
+          // Return true if we're done waiting.
+          return thisSubscription->currentCallerCount == 0;
+        });
+        // Nobody is calling this subscription anymore; done.
+        removeSubscription(subscriptionList, subscriptionIt, thisSubscriptionLock);
         return;
       }
     }
@@ -86,6 +118,7 @@ void EventBroker::unsubscribeFromEvent(SubscriptionId id) {
 }
 
 void EventBroker::publishEvent(std::unique_ptr<event::Event> event) {
+  // It might seem weird that we release the data from the unique_ptr here and then rewrap it later once it comes back from the TimerManager in EventBroker::timerFinished. However, this is because the std::function, which we pass to the TimerManager, requires the ability to be copy constructed, which unique_ptr disallows.
   timerManager_.triggerInstantTimer(std::bind(&EventBroker::instantTimerFinished, this, event.release()));
 }
 
@@ -99,13 +132,28 @@ TimerManager::TimerId EventBroker::registerTimer(TimerEndTimePoint endTime, std:
 
 void EventBroker::notifySubscribers(std::unique_ptr<event::Event> event) {
   // For each subscription pass the event to the EventHandleFunction
-  std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
-  auto eventSubscriptionsIt = subscriptions_.find(event->eventCode);
-  if (eventSubscriptionsIt != subscriptions_.end()) {
-    auto &eventSubscriptions = eventSubscriptionsIt->second;
-    for (auto &eventSubscription : eventSubscriptions) {
-      eventSubscription.handleFunction(event.get());
+  std::vector<EventSubscription*> subscribersToNotify;
+  {
+    std::unique_lock<std::mutex> subscriptionLock(subscriptionMutex_);
+    auto eventSubscriptionsIt = subscriptionMap_.find(event->eventCode);
+    if (eventSubscriptionsIt != subscriptionMap_.end()) {
+      std::vector<EventSubscription*> &eventSubscriptions = eventSubscriptionsIt->second;
+      for (EventSubscription *eventSubscription : eventSubscriptions) {
+        // Rather than call the callback while holding the subscription mutex, we will copy the subscription objects for this event, release the lock, then call them.
+        std::unique_lock<std::mutex> thisSubscriptionLock(eventSubscription->mutex);
+        // While we hold the lock increment the caller count.
+        ++eventSubscription->currentCallerCount;
+        subscribersToNotify.emplace_back(eventSubscription);
+      }
     }
+  }
+  for (EventSubscription *eventSubscription : subscribersToNotify) {
+    eventSubscription->handleFunction(event.get());
+    {
+      std::unique_lock<std::mutex> thisSubscriptionLock(eventSubscription->mutex);
+      --eventSubscription->currentCallerCount;
+    }
+    eventSubscription->conditionVariable.notify_one();
   }
 }
 
