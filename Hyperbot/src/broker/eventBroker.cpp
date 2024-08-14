@@ -149,11 +149,15 @@ void EventBroker::notifySubscribers(std::unique_ptr<event::Event> event) {
   }
   for (EventSubscription *eventSubscription : subscribersToNotify) {
     eventSubscription->handleFunction(event.get());
+    bool shouldNotify;
     {
       std::unique_lock<std::mutex> thisSubscriptionLock(eventSubscription->mutex);
       --eventSubscription->currentCallerCount;
+      shouldNotify = (eventSubscription->currentCallerCount == 0);
     }
-    eventSubscription->conditionVariable.notify_one();
+    if (shouldNotify) {
+      eventSubscription->conditionVariable.notify_one();
+    }
   }
 }
 
