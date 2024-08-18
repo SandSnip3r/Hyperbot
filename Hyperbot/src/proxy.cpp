@@ -140,9 +140,11 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
     boost::system::error_code ec;
     if (connectToAgent) {
       // Connect to the agent server
+      VLOG(1) << "Received connection; connecting to the agent server";
       ec = serverConnection.Connect(agentIP_, agentPort_);
     } else {
       // Connect to the gateway server
+      VLOG(1) << "Received connection; connecting to the gateway server";
       ec = serverConnection.Connect(gatewayAddress_, gatewayPort_);
     }
 

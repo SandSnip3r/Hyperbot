@@ -57,7 +57,10 @@ protected:
   state::WorldState &worldState_;
   PacketProcessor packetProcessor_{sessionId_, worldState_, packetBroker_, eventBroker_, gameData_};
   // StatAggregator statAggregator_{worldState_, eventBroker_};
-  std::optional<sro::scalar_types::EntityGlobalId> selfGlobalId_;
+
+  // We track ourself by a pointer to the self entity. Alternatively, we could use the global ID and look up the entity each time. We do not use the global ID because the entity could be removed from the entity tracker before we receive the despawn event.
+  // std::optional<sro::scalar_types::EntityGlobalId> selfGlobalId_;
+  std::shared_ptr<entity::Self> selfEntity_;
 
 private:
   std::unique_ptr<state::machine::StateMachine> loginStateMachine_;
@@ -82,22 +85,8 @@ private:
 
   // Debug help
   void handleInjectPacket(const event::InjectPacket &castedEvent);
-  // Login events
-  void handleLoggedIn(const event::Event *event);
-  // Movement events
-  void handleMovementTimerEnded();
-  void handleSpeedUpdated();
-  void handleMovementBegan();
-  void handleMovementEnded();
-  void handleEntityMovementBegan(const event::EntityMovementBegan &event);
-  void handleEntityMovementTimerEnded(sro::scalar_types::EntityGlobalId globalId);
-  void handleEntityEnteredGeometry(const event::EntityEnteredGeometry &event);
-  void handleEntityExitedGeometry(const event::EntityExitedGeometry &event);
   // Character info events
   void handleSpawned(const event::Event *event);
-  void handleCosSpawned(const event::CosSpawned &event);
-  void handleVitalsChanged();
-  void handleStatesChanged();
 
   // Skills
   void handleSkillEnded(const event::SkillEnded &event);
@@ -106,7 +95,6 @@ private:
   // Misc
   void entitySpawned(const event::EntitySpawned &event);
   void handleBodyStateChanged(const event::EntityBodyStateChanged &event);
-  void itemUseTimedOut(const event::ItemUseTimeout &event);
   void handleKnockbackStunEnded();
   void handleKnockdownStunEnded();
   void handleItemCooldownEnded(const event::ItemCooldownEnded &event);

@@ -21,10 +21,17 @@ void Session::setCharacterToLogin(std::string_view characterName) {
 }
 
 void Session::initialize() {
+  if (initialized_) {
+    throw std::runtime_error("Session::initialize already initialized");
+  }
   bot_.initialize();
+  initialized_ = true;
 }
 
 void Session::runAsync() {
+  if (!initialized_) {
+    throw std::runtime_error("Session::runAsync called before Session::initialize");
+  }
   loader_.startClient(proxy_.getOurListeningPort()); //throws if problem starting client & injecting
   proxyThread_ = std::thread(std::bind(&Proxy::run, &proxy_));
   // proxy_.run(); //throws if socket issues, blocks

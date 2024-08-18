@@ -14,7 +14,8 @@ namespace broker {
 class TimerManager {
 public:
   using TimerId = uint32_t;
-  using TimePoint = std::chrono::high_resolution_clock::time_point;
+  using Clock = std::chrono::high_resolution_clock;
+  using TimePoint = Clock::time_point;
 
   void runAsync();
   TimerId registerTimer(std::chrono::milliseconds timerDuration, std::function<void()> timerCompletedFunction);

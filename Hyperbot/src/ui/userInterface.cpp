@@ -327,7 +327,7 @@ void UserInterface::handleRequest(const zmq::message_t &request) {
     case proto::request::RequestMessage::BodyCase::kPacketData: {
         const proto::request::PacketToInject &packet = requestMsg.packetdata();
         const event::InjectPacket::Direction dir = (packet.direction() == proto::request::PacketToInject::kClientToServer) ? event::InjectPacket::Direction::kClientToServer : event::InjectPacket::Direction::kServerToClient;
-        eventBroker_.publishEvent<event::InjectPacket>(dir, packet.opcode(), packet.data());
+        eventBroker_.publishEvent<event::InjectPacket>(dir, static_cast<uint16_t>(packet.opcode()), packet.data());
         break;
       }
     case proto::request::RequestMessage::BodyCase::kDoAction: {

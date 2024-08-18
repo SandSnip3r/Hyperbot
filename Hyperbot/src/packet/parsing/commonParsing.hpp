@@ -27,6 +27,7 @@ void parseItem(storage::ItemMagicPop &item, StreamUtility &stream);
 void parseItem(storage::Item *item, StreamUtility &stream);
 structures::SkillAction parseSkillAction(StreamUtility &stream);
 sro::Position parsePosition(StreamUtility &stream);
+// TODO: Until the entity is moved into the EntityTracker, the entity should be in a std::unique_ptr.
 std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
                                            const pk2::CharacterData &characterData,
                                            const pk2::ItemData &itemData,

@@ -5,7 +5,8 @@
 
 namespace type_id::categories {
 
-// TODO: I think this can become a lot more managable if TypeCategory was turned into a constexpr class.
+// TODO: I think this can become a lot more manageable if TypeCategory was turned into a constexpr class.
+// TODO: Provide a function to give a category name string from TypeId.
 
 extern const TypeCategory kCharacter;
   extern const TypeCategory kPlayerCharacter;

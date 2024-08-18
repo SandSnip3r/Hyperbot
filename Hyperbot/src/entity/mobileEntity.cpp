@@ -13,6 +13,12 @@ namespace entity {
 
 MobileEntity::~MobileEntity() {
   cancelEvents();
+  if (movementTimerEndedSubscription_) {
+    if (!eventBroker_) {
+      throw std::runtime_error("Deconstructing MobileEntity; have open subscription but no event broker");
+    }
+    eventBroker_->unsubscribeFromEvent(*movementTimerEndedSubscription_);
+  }
 }
 
 void MobileEntity::initializeAsMoving(const sro::Position &destinationPosition) {
@@ -35,6 +41,29 @@ void MobileEntity::initializeEventBroker(broker::EventBroker &eventBroker) {
     checkIfWillCrossGeometryBoundary();
   }
   // TODO: If we're moving to a destination, start a timer for arrival.
+
+  if (movementTimerEndedSubscription_) {
+    throw std::runtime_error("MobileEntity is already subscribed to events. Trying to subscribe again.");
+  }
+  auto handleFunction = std::bind(&MobileEntity::handleEvent, this, std::placeholders::_1);
+  movementTimerEndedSubscription_ = eventBroker.subscribeToEvent(event::EventCode::kEntityMovementTimerEnded, handleFunction);
+}
+
+void MobileEntity::handleEvent(const event::Event *event) {
+  if (event == nullptr) {
+    throw std::runtime_error("MobileEntity::handleEvent given null event");
+  }
+  try {
+    if (const auto *movementTimerEndedEvent = dynamic_cast<const event::EntityMovementTimerEnded*>(event); movementTimerEndedEvent != nullptr) {
+      if (movementTimerEndedEvent->globalId == globalId) {
+        movementTimerCompleted();
+      }
+    } else {
+      LOG(WARNING) << "Unhandled event received: " << event::toString(event->eventCode);
+    }
+  } catch (std::exception &ex) {
+    LOG(INFO) << absl::StreamFormat("Error while handling event: \"%s\"", ex.what());
+  }
 }
 
 void MobileEntity::registerGeometryBoundary(std::unique_ptr<Geometry> geometry) {

@@ -34,6 +34,7 @@ public:
   const state::WorldState& getWorldState() const;
 private:
   SessionId sessionId_{createUniqueSessionId()};
+  bool initialized_{false};
   const pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
   Loader loader_;

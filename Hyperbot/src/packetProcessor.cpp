@@ -264,15 +264,6 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
   return;
 }
 
-void PacketProcessor::resetDataBecauseCharacterSpawned() const {
-  // TODO: If we're tracking our self entity already, delete it.
-  // // On teleport, COS will have different globalIds
-  // selfEntity_->cosInventoryMap.clear();
-  // // Reset existing buffs
-  // selfEntity_->clearBuffs();
-  // selfEntity_->skillEngine.reset();
-}
-
 // ============================================================================================================================
 // ===============================================Login process packet handling================================================
 // ============================================================================================================================
@@ -479,8 +470,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   std::shared_ptr<entity::Self> selfEntity = std::make_shared<entity::Self>(gameData_, packet.globalId(), packet.refObjId(), packet.jId());
   initializeSelfFromCharacterDataPacket(*selfEntity.get(), packet);
   VLOG(1) << "GID:" << selfEntity->globalId << ", and we have " << selfEntity->currentHp() << " hp and " << selfEntity->currentMp() << " mp";
-  selfEntity->initializeEventBroker(eventBroker_);
-  worldState_.entityTracker().trackEntity(std::move(selfEntity));
+  worldState_.entityTracker().entitySpawned(std::move(selfEntity), eventBroker_);
   eventBroker_.publishEvent<event::SelfSpawned>(sessionId_, packet.globalId()); // TODO: Replace this with a call to entitySpawned.
 }
 
@@ -968,17 +958,25 @@ void PacketProcessor::serverAgentEntityDespawnReceived(const packet::parsing::Se
 }
 
 void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) const {
-  entity->initializeEventBroker(eventBroker_);
-  worldState_.entityTracker().trackEntity(entity);
-  eventBroker_.publishEvent<event::EntitySpawned>(entity->globalId);
+  const bool firstTimeSeeingEntity = worldState_.entityTracker().entitySpawned(entity, eventBroker_);
+  if (!firstTimeSeeingEntity) {
+    // Already aware of this entity, not going to do anything else.
+    return;
+  }
 
-  // Check if the entity spawned in as already moving
-  auto *mobileEntity = dynamic_cast<entity::MobileEntity*>(entity.get());
-  if (mobileEntity == nullptr) {
+  const sro::scalar_types::EntityGlobalId entityGlobalId = entity->globalId;
+  // After this point, do not use `entity` anymore. If the same entity was already being tracked, we should instead be using the entity that is held in the entity tracker.
+  entity.reset();
+
+  // TODO: Figure out whether or not it makes sense to execute the below code if the entity is already being tracked.
+  // Check if the entity spawned in as already moving.
+  std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.entityTracker().getEntity<entity::MobileEntity>(entityGlobalId);
+  if (!mobileEntity) {
     // Non-mobile, nothing to do
     return;
   }
   if (mobileEntity->moving()) {
+    LOG(INFO) << "Entity is moving, making some changes";
     if (mobileEntity->destinationPosition) {
       // Entity spawned and is moving to a destination
       mobileEntity->setMovingToDestination(mobileEntity->position(), *mobileEntity->destinationPosition);
@@ -996,8 +994,7 @@ void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId
     return;
   }
   // Destroy entity
-  worldState_.entityTracker().stopTrackingEntity(globalId);
-  eventBroker_.publishEvent<event::EntityDespawned>(globalId);
+  worldState_.entityTracker().entityDespawned(globalId, eventBroker_);
 }
 
 void PacketProcessor::serverAgentSkillLearnResponseReceived(const packet::parsing::ServerAgentSkillLearnResponse &packet) const {
@@ -1816,7 +1813,7 @@ void PacketProcessor::serverAgentChatUpdateReceived(const packet::parsing::Serve
 }
 
 void PacketProcessor::serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet) {
-  worldState_.entityTracker().stopTrackingEntity(*selfGlobalId_);
+  worldState_.entityTracker().entityDespawned(*selfGlobalId_, eventBroker_);
   selfGlobalId_.reset();
   eventBroker_.publishEvent(event::EventCode::kGameReset);
 }

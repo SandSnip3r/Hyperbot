@@ -17,6 +17,7 @@ public:
   void onUpdate(const event::Event *event) override;
   bool done() const override;
 private:
+  bool done_{false};
   // These functions return `true` if an item was used, `false` otherwise.
   bool tryUsePurificationPill();
   bool tryUseHpPotion();

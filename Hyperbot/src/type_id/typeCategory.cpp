@@ -2,7 +2,8 @@
 
 #include "helpers.hpp"
 
-#include <sstream>
+#include <absl/strings/str_format.h>
+
 #include <stdexcept>
 
 namespace type_id {
@@ -50,10 +51,8 @@ TypeId TypeCategory::getTypeId() const {
 }
 
 std::string toString(TypeId typeId) {
-  std::stringstream ss;
   const auto [tId1, tId2, tId3, tId4] = helpers::type_id::splitTypeId(typeId);
-  ss << static_cast<int>(tId1) << ',' << static_cast<int>(tId2) << ',' << static_cast<int>(tId3) << ',' << static_cast<int>(tId4);
-  return ss.str();
+  return absl::StrFormat("%d,%d,%d,%d", tId1, tId2, tId3, tId4);
 }
 
 uint16_t makeTypeId(const uint16_t typeId1, const uint16_t typeId2, const uint16_t typeId3, const uint16_t typeId4) {

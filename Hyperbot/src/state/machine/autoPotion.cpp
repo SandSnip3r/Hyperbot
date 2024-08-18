@@ -26,6 +26,10 @@ void AutoPotion::onUpdate(const event::Event *event) {
           }
         }
       }
+    } else if (event->eventCode == event::EventCode::kGameReset) {
+      // Self despawned, done.
+      done_ = true;
+      return;
     }
   }
 
@@ -73,8 +77,7 @@ void AutoPotion::onUpdate(const event::Event *event) {
 }
 
 bool AutoPotion::done() const {
-  // Autopotion is never done
-  return false;
+  return done_;
 }
 
 bool AutoPotion::tryUsePurificationPill() {

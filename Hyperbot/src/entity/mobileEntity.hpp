@@ -67,8 +67,9 @@ public:
   virtual void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition);
   virtual void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle);
   void movementTimerCompleted();
+  void handleEvent(const event::Event *event);
 protected:
-  bool moving_;
+  bool moving_{false};
 
   // Only cancels movement timers and sets internal state; does not send any events.
   void privateCancelEvents();
@@ -79,6 +80,7 @@ protected:
   void privateSetMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition);
   void privateSetMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle);
 private:
+  std::optional<broker::EventBroker::SubscriptionId> movementTimerEndedSubscription_;
   std::unique_ptr<Geometry> geometry_;
   std::optional<broker::EventBroker::EventId> enterGeometryEventId_;
   std::optional<broker::EventBroker::EventId> exitGeometryEventId_;

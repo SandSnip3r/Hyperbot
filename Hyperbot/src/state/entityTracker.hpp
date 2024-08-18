@@ -1,8 +1,11 @@
 #ifndef STATE_ENTITY_TRACKER_HPP_
 #define STATE_ENTITY_TRACKER_HPP_
 
+#include "broker/eventBroker.hpp"
 #include "entity/entity.hpp"
 #include "packet/parsing/parsedPacket.hpp"
+
+#include <absl/container/flat_hash_map.h>
 
 #include <map>
 #include <memory>
@@ -14,8 +17,12 @@ namespace state {
   
 class EntityTracker {
 public:
-  void trackEntity(std::shared_ptr<entity::Entity> entity);
-  void stopTrackingEntity(sro::scalar_types::EntityGlobalId globalId);
+  // When an entity spawns, call this to hold on to the entity. Since multiple characters can see the spawning of a single entity, if the entity is already tracked, a "reference count" is incremented.
+  // Returns `true` if this tracks a new entity, `false` if this entity is already being tracked.
+  bool entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker);
+  // When an entity despawns, call this to release the entity. Since multiple characters can see the despawning of a single entity, a "reference count" is decremented. If that count hits 0, the entity is deleted.
+  void entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker);
+
   bool trackingEntity(sro::scalar_types::EntityGlobalId globalId) const;
   // std::shared_ptr<entity::Entity> getEntity(sro::scalar_types::EntityGlobalId globalId) const;
 
@@ -39,8 +46,11 @@ public:
   size_t size() const;
   const std::map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>>& getEntityMap() const; // TODO: Remove
 private:
+  // Guards `entityMap_` and `entityReferenceCountMap_`.
   mutable std::mutex entityMapMutex_;
+
   std::map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>> entityMap_; // TODO: absl::flat_hash_map
+  absl::flat_hash_map<sro::scalar_types::EntityGlobalId, int> entityReferenceCountMap_;
 };
 
 } // namespace state

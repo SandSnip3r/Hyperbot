@@ -110,7 +110,6 @@ private:
   // END DEBUGGING SkillBegin/SkillEnd
 
   void subscribeToPackets();
-  void resetDataBecauseCharacterSpawned() const;
 
   // Packet handle functions
   //  In principal, each of these functions should only update the state and maybe publish an event.

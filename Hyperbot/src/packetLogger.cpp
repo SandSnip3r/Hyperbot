@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <thread>
 
 namespace {
 
@@ -76,7 +77,7 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
   const int kBytesPerLine{20};
 
   std::stringstream ss;
-  ss << '[' << msSinceEpoch << "] ";
+  ss << '[' << msSinceEpoch << "] " << std::this_thread::get_id() << " ";
   if (direction == PacketContainer::Direction::kClientToServer) {
     ss << " (C->S)";
   } else if (direction == PacketContainer::Direction::kServerToClient) {

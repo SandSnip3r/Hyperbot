@@ -254,14 +254,20 @@ std::string_view toString(EventCode eventCode) {
   if (eventCode == EventCode::kShardListReceived) {
     return "ShardListReceived";
   }
+  if (eventCode == EventCode::kGatewayLoginResponseReceived) {
+    return "GatewayLoginResponseReceived";
+  }
   if (eventCode == EventCode::kConnectedToAgentServer) {
     return "ConnectedToAgentServer";
+  }
+  if (eventCode == EventCode::kCharacterListReceived) {
+    return "CharacterListReceived";
   }
   if (eventCode == EventCode::kIbuvChallengeReceived) {
     return "IbuvChallengeReceived";
   }
-  if (eventCode == EventCode::kCharacterListReceived) {
-    return "CharacterListReceived";
+  if (eventCode == EventCode::kCharacterSelectionJoinSuccess) {
+    return "CharacterSelectionJoinSuccess";
   }
   LOG(WARNING) << absl::StreamFormat("Asking for string for unknown event %d", static_cast<int>(eventCode));
   return "UNKNOWN";
@@ -320,6 +326,9 @@ InjectPacket::InjectPacket(EventId id, InjectPacket::Direction dir, uint16_t op,
 
 CosSpawned::CosSpawned(EventId id, sro::scalar_types::EntityGlobalId cosGId) :
     Event(id, EventCode::kCosSpawned), cosGlobalId(cosGId) {}
+
+EnteredNewRegion::EnteredNewRegion(EventId id, sro::scalar_types::EntityGlobalId globalId) :
+    Event(id, EventCode::kEnteredNewRegion), globalId(globalId) {}
 
 EntitySpawned::EntitySpawned(EventId id, sro::scalar_types::EntityGlobalId globalId) :
     Event(id, EventCode::kEntitySpawned), globalId(globalId) {}
@@ -393,8 +402,8 @@ EntityOwnershipRemoved::EntityOwnershipRemoved(EventId id, sro::scalar_types::En
 StateMachineCreated::StateMachineCreated(EventId id, const std::string &name) :
     Event(id, EventCode::kStateMachineCreated), stateMachineName(name) {}
 
-ItemCooldownEnded::ItemCooldownEnded(EventId id, type_id::TypeId tId) :
-    Event(id, EventCode::kItemCooldownEnded), typeId(tId) {}
+ItemCooldownEnded::ItemCooldownEnded(EventId eventId, sro::scalar_types::EntityGlobalId globalId, type_id::TypeId typeId) :
+    Event(eventId, EventCode::kItemCooldownEnded), globalId(globalId), typeId(typeId) {}
 
 WalkingPathUpdated::WalkingPathUpdated(EventId id, const std::vector<packet::building::NetworkReadyPosition> &waypoints) :
     Event(id, EventCode::kWalkingPathUpdated), waypoints(waypoints) {}

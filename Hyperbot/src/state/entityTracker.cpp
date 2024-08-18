@@ -6,21 +6,54 @@
 
 namespace state {
 
-void EntityTracker::trackEntity(std::shared_ptr<entity::Entity> entity) {
-  std::unique_lock<std::mutex> entityMapLockGuard(entityMapMutex_);
-  if (entityMap_.find(entity->globalId) != entityMap_.end()) {
-    throw std::runtime_error(absl::StrFormat("EntityTracker::trackEntity; Entity ID %d already exists", entity->globalId));
+bool EntityTracker::entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker) {
+  {
+    std::unique_lock<std::mutex> entityMapLockGuard(entityMapMutex_);
+    int &entityReferenceCount = entityReferenceCountMap_[entity->globalId];
+    ++entityReferenceCount;
+    if (entityReferenceCount > 1) {
+      auto it = entityMap_.find(entity->globalId);
+      VLOG(2) << "Already tracking " << entity::toString(entity->entityType()) << " entity " << entity->globalId << " as a " << entity::toString(it->second->entityType());
+      // TODO: Evaluate if this is a more descriptive version of that entity. I think the only case when this happens is if we want to promote a PlayerCharacter to a Self.
+      // TODO: Update entity with any potentially new information in this entity.
+      return false;
+    }
+    VLOG(1) << "Tracking new " << entity::toString(entity->entityType()) << " entity " << entity->globalId;
+    entity->initializeEventBroker(eventBroker);
+    entityMap_.emplace(entity->globalId, entity);
   }
-  entityMap_.emplace(entity->globalId, entity);
+
+  if (entity->entityType() != entity::EntityType::kSelf) {
+    // TODO: Once we remove the distinct Self spawned / Self despawned events, this check can be removed and we can publish this event for all entities.
+    eventBroker.publishEvent<event::EntitySpawned>(entity->globalId);
+  }
+  return true;
 }
 
-void EntityTracker::stopTrackingEntity(sro::scalar_types::EntityGlobalId globalId) {
-  std::unique_lock<std::mutex> entityMapLockGuard(entityMapMutex_);
-  auto it = entityMap_.find(globalId);
-  if (it != entityMap_.end()) {
-    entityMap_.erase(it);
-  } else {
-    throw std::runtime_error(absl::StrFormat("EntityTracker::stopTrackingEntity; Entity ID %d does not exist", globalId));
+void EntityTracker::entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker) {
+  bool publishEvent;
+  {
+    std::unique_lock<std::mutex> entityMapLockGuard(entityMapMutex_);
+    int &entityReferenceCount = entityReferenceCountMap_[globalId];
+    --entityReferenceCount;
+    if (entityReferenceCount != 0) {
+      auto it = entityMap_.find(globalId);
+      VLOG(2) << "Not the last one to see " << entity::toString(it->second->entityType()) << " " << globalId;
+      // There are other characters who can still see this entity. Do not delete it.
+      return;
+    }
+    auto it = entityMap_.find(globalId);
+    if (it != entityMap_.end()) {
+      VLOG(1) << "Last one to see " << entity::toString(it->second->entityType()) << " entity " << globalId << ", deleting";
+      publishEvent = (it->second->entityType() != entity::EntityType::kSelf);
+      entityMap_.erase(it);
+    } else {
+      throw std::runtime_error(absl::StrFormat("EntityTracker::entityDespawned; Entity ID %d does not exist", globalId));
+    }
+  }
+  if (publishEvent) {
+    // TODO: Once we remove the distinct Self spawned / Self despawned events, this check can be removed and we can publish this event for all entities.
+    eventBroker.publishEvent<event::EntityDespawned>(globalId);
   }
 }
 

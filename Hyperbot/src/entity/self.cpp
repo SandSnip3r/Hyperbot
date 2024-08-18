@@ -49,15 +49,19 @@ Self::~Self() {
 }
 
 void Self::handleEvent(const event::Event *event) {
+  if (event == nullptr) {
+    throw std::runtime_error("Self::handleEvent given null event");
+  }
   try {
-    const auto eventCode = event->eventCode;
-    switch (eventCode) {
-      case event::EventCode::kEnteredNewRegion:
+    if (const auto *enteredNewRegionEvent = dynamic_cast<const event::EnteredNewRegion*>(event); enteredNewRegionEvent != nullptr) {
+      if (enteredNewRegionEvent->globalId == globalId) {
         enteredRegion(event);
-        break;
+      }
+    } else {
+      LOG(WARNING) << "Unhandled event received: " << event::toString(event->eventCode);
     }
   } catch (std::exception &ex) {
-    LOG(INFO) << "Error while handling event!\n  " << ex.what();
+    LOG(INFO) << absl::StreamFormat("Error while handling event: \"%s\"", ex.what());
   }
 }
 
@@ -102,6 +106,9 @@ void Self::initializeEventBroker(broker::EventBroker &eventBroker) {
   PlayerCharacter::initializeEventBroker(eventBroker);
 
   // Subscribe to events.
+  if (enteredRegionSubscriptionId_) {
+    throw std::runtime_error("Self is already subscribed to events. Trying to subscribe again.");
+  }
   auto eventHandleFunction = std::bind(&Self::handleEvent, this, std::placeholders::_1);
   enteredRegionSubscriptionId_ = eventBroker_->subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
 }
@@ -238,7 +245,7 @@ void Self::calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(c
     // This should not be null because the calling function should check.
     throw std::runtime_error("Will collide with region boundary, but do not have an event broker.");
   }
-  enteredNewRegionEventId_ = eventBroker_->publishDelayedEvent(std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)), event::EventCode::kEnteredNewRegion);
+  enteredNewRegionEventId_ = eventBroker_->publishDelayedEvent<event::EnteredNewRegion>(std::chrono::milliseconds(static_cast<uint64_t>(seconds*1000)), globalId);
 }
 
 void Self::enteredRegion(const event::Event *event) {
@@ -503,7 +510,7 @@ void Self::usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milli
 
   if (eventBroker_) {
     // Publish a delayed event for when the cooldown ends.
-    const auto itemCooldownDelayedEventId = eventBroker_->publishDelayedEvent<event::ItemCooldownEnded>(*cooldown, typeData);
+    const auto itemCooldownDelayedEventId = eventBroker_->publishDelayedEvent<event::ItemCooldownEnded>(*cooldown, globalId, typeData);
     itemCooldownEventIdMap_.emplace(typeData, itemCooldownDelayedEventId);
   } else {
     LOG(WARNING) << "Trying to publish delayed item cooldown ended, but don't have event broker";
@@ -515,7 +522,7 @@ void Self::itemCooldownEnded(type_id::TypeId itemTypeData) {
   if (it != itemCooldownEventIdMap_.end()) {
     itemCooldownEventIdMap_.erase(it);
   } else {
-    LOG(INFO) << "Item cooldown ended, but we're not tracking it!?";
+    LOG(INFO) << absl::StreamFormat("Item (%s) cooldown ended, but we're not tracking it", type_id::toString(itemTypeData));
   }
 }
 

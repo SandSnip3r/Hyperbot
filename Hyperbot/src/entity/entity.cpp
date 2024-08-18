@@ -28,4 +28,23 @@ sro::Angle Entity::angle() const {
   return angle_;
 }
 
+std::string_view toString(EntityType entityType) {
+  if (entityType == EntityType::kSelf) {
+    return "Self";
+  } else if (entityType == EntityType::kCharacter) {
+    return "Character";
+  } else if (entityType == EntityType::kPlayerCharacter) {
+    return "PlayerCharacter";
+  } else if (entityType == EntityType::kNonplayerCharacter) {
+    return "NonplayerCharacter";
+  } else if (entityType == EntityType::kMonster) {
+    return "Monster";
+  } else if (entityType == EntityType::kItem) {
+    return "Item";
+  } else if (entityType == EntityType::kPortal) {
+    return "Portal";
+  }
+  throw std::runtime_error("Invalid EntityType");
+}
+
 } // namespace entity

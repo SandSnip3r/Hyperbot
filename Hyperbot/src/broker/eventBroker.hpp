@@ -60,7 +60,7 @@ public:
     // Abstract away TimerManager's IDs.
     const EventId eventId = getNextUniqueEventId();
     std::unique_ptr<event::Event> event = std::make_unique<EventType>(eventId, std::forward<Args>(args)...);
-    VLOG(1) << absl::StreamFormat("Created event #%d, %s", event->eventId, event::toString(event->eventCode));
+    VLOG(1) << absl::StreamFormat("Created delayed event #%d, %s, which triggers in %dms", event->eventId, event::toString(event->eventCode), delay.count());
     TimerManager::TimerId timerId = registerTimer(delay, std::move(event));
     addTimerIdMapping(eventId, timerId);
     return eventId;
@@ -71,7 +71,7 @@ public:
     // Abstract away TimerManager's IDs.
     const EventId eventId = getNextUniqueEventId();
     std::unique_ptr<event::Event> event = std::make_unique<EventType>(eventId, std::forward<Args>(args)...);
-    VLOG(1) << absl::StreamFormat("Created event #%d, %s", event->eventId, event::toString(event->eventCode));
+    VLOG(1) << absl::StreamFormat("Created delayed event #%d, %s, which triggers in %dms", event->eventId, event::toString(event->eventCode), std::chrono::duration_cast<std::chrono::milliseconds>(endTime-TimerManager::Clock::now()).count());
     TimerManager::TimerId timerId = registerTimer(endTime, std::move(event));
     addTimerIdMapping(eventId, timerId);
     return eventId;

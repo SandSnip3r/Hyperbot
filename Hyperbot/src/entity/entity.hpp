@@ -7,6 +7,7 @@
 #include <silkroad_lib/scalar_types.h>
 
 #include <cstdint>
+#include <string_view>
 
 namespace entity {
 
@@ -38,6 +39,8 @@ protected:
   sro::Angle angle_;
   broker::EventBroker *eventBroker_{nullptr};
 };
+
+std::string_view toString(EntityType entityType);
 
 } // namespace entity
 

@@ -269,6 +269,13 @@ public:
   virtual ~CosSpawned() = default;
 };
 
+struct EnteredNewRegion : public Event {
+public:
+  EnteredNewRegion(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EnteredNewRegion() = default;
+};
+
 struct EntitySpawned : public Event {
 public:
   EntitySpawned(EventId id, sro::scalar_types::EntityGlobalId globalId);
@@ -446,7 +453,8 @@ public:
 
 struct ItemCooldownEnded : public Event {
 public:
-  ItemCooldownEnded(EventId id, type_id::TypeId tId);
+  ItemCooldownEnded(EventId eventId, sro::scalar_types::EntityGlobalId globalId, type_id::TypeId typeId);
+  const sro::scalar_types::EntityGlobalId globalId;
   const type_id::TypeId typeId;
   virtual ~ItemCooldownEnded() = default;
 };

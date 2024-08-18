@@ -171,7 +171,7 @@ void EventBroker::delayedTimerFinished(event::Event *event) {
 }
 
 void EventBroker::timerFinished(event::Event *event) {
-  VLOG(1) << "Publishing event " << event::toString(event->eventCode);
+  VLOG(1) << absl::StreamFormat("Event #%d %s triggered", event->eventId, event::toString(event->eventCode));
   // Take the raw pointer and move it into a unique_pointer
   notifySubscribers(std::unique_ptr<event::Event>(event));
 }
