@@ -1,5 +1,5 @@
-#ifndef STATE_MACHINE_STATEMACHINE_HPP_
-#define STATE_MACHINE_STATEMACHINE_HPP_
+#ifndef STATE_MACHINE_STATE_MACHINE_HPP_
+#define STATE_MACHINE_STATE_MACHINE_HPP_
 
 #include "broker/eventBroker.hpp"
 #include "packet/opcode.hpp"
@@ -22,6 +22,8 @@ class StateMachine {
 public:
   StateMachine(Bot &bot);
   virtual ~StateMachine();
+
+  // When this is called, `Bot` will have already processed the event.
   virtual void onUpdate(const event::Event *event) = 0;
   virtual bool done() const = 0; // TODO: rename to isDone
 protected:
@@ -48,4 +50,4 @@ std::ostream& operator<<(std::ostream &stream, Npc npc);
 
 } // namespace state::machine
 
-#endif // STATE_MACHINE_STATEMACHINE_HPP_
+#endif // STATE_MACHINE_STATE_MACHINE_HPP_

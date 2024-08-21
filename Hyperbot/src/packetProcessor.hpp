@@ -96,7 +96,7 @@ private:
   broker::EventBroker &eventBroker_;
   const pk2::GameData &gameData_;
   packet::parsing::PacketParser packetParser_{worldState_.entityTracker(), gameData_};
-  std::optional<sro::scalar_types::EntityGlobalId> selfGlobalId_;
+  std::shared_ptr<entity::Self> selfEntity_;
   std::shared_ptr<entity::Self> getSelfEntity() const;
 
   // BEGIN DEBUGGING SkillBegin/SkillEnd

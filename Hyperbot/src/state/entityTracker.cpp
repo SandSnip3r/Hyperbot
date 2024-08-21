@@ -22,16 +22,11 @@ bool EntityTracker::entitySpawned(std::shared_ptr<entity::Entity> entity, broker
     entity->initializeEventBroker(eventBroker);
     entityMap_.emplace(entity->globalId, entity);
   }
-
-  if (entity->entityType() != entity::EntityType::kSelf) {
-    // TODO: Once we remove the distinct Self spawned / Self despawned events, this check can be removed and we can publish this event for all entities.
-    eventBroker.publishEvent<event::EntitySpawned>(entity->globalId);
-  }
+  eventBroker.publishEvent<event::EntitySpawned>(entity->globalId);
   return true;
 }
 
 void EntityTracker::entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker) {
-  bool publishEvent;
   {
     std::unique_lock<std::mutex> entityMapLockGuard(entityMapMutex_);
     int &entityReferenceCount = entityReferenceCountMap_[globalId];
@@ -45,16 +40,12 @@ void EntityTracker::entityDespawned(sro::scalar_types::EntityGlobalId globalId, 
     auto it = entityMap_.find(globalId);
     if (it != entityMap_.end()) {
       VLOG(1) << "Last one to see " << entity::toString(it->second->entityType()) << " entity " << globalId << ", deleting";
-      publishEvent = (it->second->entityType() != entity::EntityType::kSelf);
       entityMap_.erase(it);
     } else {
       throw std::runtime_error(absl::StrFormat("EntityTracker::entityDespawned; Entity ID %d does not exist", globalId));
     }
   }
-  if (publishEvent) {
-    // TODO: Once we remove the distinct Self spawned / Self despawned events, this check can be removed and we can publish this event for all entities.
-    eventBroker.publishEvent<event::EntityDespawned>(globalId);
-  }
+  eventBroker.publishEvent<event::EntityDespawned>(globalId);
 }
 
 bool EntityTracker::trackingEntity(sro::scalar_types::EntityGlobalId globalId) const {
@@ -80,7 +71,7 @@ size_t EntityTracker::size() const {
   return entityMap_.size();
 }
 
-const std::map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>>& EntityTracker::getEntityMap() const {
+const absl::flat_hash_map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>>& EntityTracker::getEntityMap() const {
   return entityMap_;
 }
 

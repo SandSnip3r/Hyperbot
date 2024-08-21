@@ -7,7 +7,6 @@
 
 #include <absl/container/flat_hash_map.h>
 
-#include <map>
 #include <memory>
 #include <mutex>
 #include <type_traits>
@@ -24,7 +23,6 @@ public:
   void entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker);
 
   bool trackingEntity(sro::scalar_types::EntityGlobalId globalId) const;
-  // std::shared_ptr<entity::Entity> getEntity(sro::scalar_types::EntityGlobalId globalId) const;
 
   template<typename EntityType = entity::Entity>
   std::shared_ptr<EntityType> getEntity(sro::scalar_types::EntityGlobalId globalId) const {
@@ -44,12 +42,12 @@ public:
   }
 
   size_t size() const;
-  const std::map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>>& getEntityMap() const; // TODO: Remove
+  const absl::flat_hash_map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>>& getEntityMap() const; // TODO: Remove
 private:
   // Guards `entityMap_` and `entityReferenceCountMap_`.
   mutable std::mutex entityMapMutex_;
 
-  std::map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>> entityMap_; // TODO: absl::flat_hash_map
+  absl::flat_hash_map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>> entityMap_;
   absl::flat_hash_map<sro::scalar_types::EntityGlobalId, int> entityReferenceCountMap_;
 };
 

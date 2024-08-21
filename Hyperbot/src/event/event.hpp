@@ -103,7 +103,6 @@ enum class EventCode {
 
   kGmCommandTimedOut,
   kChatReceived,
-  kGameReset,
   kSetCurrentPositionAsTrainingCenter,
   kResurrectOption,
   kLearnMasterySuccess,

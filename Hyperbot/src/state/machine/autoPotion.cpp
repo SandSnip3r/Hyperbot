@@ -8,7 +8,7 @@
 
 namespace state::machine {
 
-AutoPotion::AutoPotion(Bot &bot) : StateMachine(bot) {
+AutoPotion::AutoPotion(Bot &bot) : StateMachine(bot), selfGlobalId_(bot_.selfState()->globalId) {
   if (bot_.config() == nullptr) {
     throw std::runtime_error("Cannot construct AutoPotion state machine if Bot does not have a config");
   }
@@ -26,10 +26,12 @@ void AutoPotion::onUpdate(const event::Event *event) {
           }
         }
       }
-    } else if (event->eventCode == event::EventCode::kGameReset) {
-      // Self despawned, done.
-      done_ = true;
-      return;
+    } else if (const auto *entityDespawned = dynamic_cast<const event::EntityDespawned*>(event)) {
+      if (entityDespawned->globalId == selfGlobalId_) {
+        // Self despawned, done.
+        done_ = true;
+        return;
+      }
     }
   }
 

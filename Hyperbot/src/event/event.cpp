@@ -230,9 +230,6 @@ std::string_view toString(EventCode eventCode) {
   if (eventCode == EventCode::kChatReceived) {
     return "ChatReceived";
   }
-  if (eventCode == EventCode::kGameReset) {
-    return "GameReset";
-  }
   if (eventCode == EventCode::kSetCurrentPositionAsTrainingCenter) {
     return "SetCurrentPositionAsTrainingCenter";
   }

@@ -86,19 +86,18 @@ private:
   // Debug help
   void handleInjectPacket(const event::InjectPacket &castedEvent);
   // Character info events
-  void handleSpawned(const event::Event *event);
+  void handleSelfSpawned(const event::Event *event);
+  void handleEntityDespawned(const event::EntityDespawned &event);
 
   // Skills
   void handleSkillEnded(const event::SkillEnded &event);
   void handleSkillCooldownEnded(const event::SkillCooldownEnded &event);
 
   // Misc
-  void entitySpawned(const event::EntitySpawned &event);
   void handleBodyStateChanged(const event::EntityBodyStateChanged &event);
   void handleKnockbackStunEnded();
   void handleKnockdownStunEnded();
   void handleItemCooldownEnded(const event::ItemCooldownEnded &event);
-  void handleGameReset(const event::Event *event);
   void setCurrentPositionAsTrainingCenter();
   void handleLearnedSkill(const event::LearnSkillSuccess &event);
 

@@ -17,6 +17,7 @@ public:
   void onUpdate(const event::Event *event) override;
   bool done() const override;
 private:
+  const sro::scalar_types::EntityGlobalId selfGlobalId_;
   bool done_{false};
   // These functions return `true` if an item was used, `false` otherwise.
   bool tryUsePurificationPill();

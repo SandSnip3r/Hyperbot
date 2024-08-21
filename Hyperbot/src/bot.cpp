@@ -169,7 +169,6 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kAlchemyTimedOut, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kGmCommandTimedOut, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kChatReceived, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kGameReset, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kSetCurrentPositionAsTrainingCenter, eventHandleFunction);
   // eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
   // eventBroker_.subscribeToEvent(event::EventCode::kConfigUpdated, eventHandleFunction);
@@ -216,14 +215,14 @@ void Bot::handleEvent(const event::Event *event) {
 
       // Character info events
       case event::EventCode::kSelfSpawned: {
-        handleSpawned(event);
+        handleSelfSpawned(event);
         break;
       }
 
       // Misc
-      case event::EventCode::kEntitySpawned: {
-        const auto &castedEvent = dynamic_cast<const event::EntitySpawned&>(*event);
-        entitySpawned(castedEvent);
+      case event::EventCode::kEntityDespawned: {
+        const auto &castedEvent = dynamic_cast<const event::EntityDespawned&>(*event);
+        handleEntityDespawned(castedEvent);
         break;
       }
       case event::EventCode::kEntityBodyStateChanged: {
@@ -259,10 +258,6 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kChatReceived: {
         const auto &castedEvent = dynamic_cast<const event::ChatReceived&>(*event);
         handleChatCommand(castedEvent);
-        break;
-      }
-      case event::EventCode::kGameReset: {
-        handleGameReset(event);
         break;
       }
       case event::EventCode::kSetCurrentPositionAsTrainingCenter: {
@@ -305,7 +300,6 @@ void Bot::onUpdate(const event::Event *event) {
     try {
       autoPotionStateMachine_->onUpdate(event);
       if (autoPotionStateMachine_->done()) {
-        LOG(INFO) << "Autopotion is done. Resetting";
         autoPotionStateMachine_.reset();
       }
     } catch (std::exception &ex) {
@@ -454,7 +448,7 @@ void Bot::handleInjectPacket(const event::InjectPacket &castedEvent) {
 // ===============================================Character info packet handling===============================================
 // ============================================================================================================================
 
-void Bot::handleSpawned(const event::Event *event) {
+void Bot::handleSelfSpawned(const event::Event *event) {
   const event::SelfSpawned *selfSpawnedEvent = dynamic_cast<const event::SelfSpawned*>(event);
   if (selfSpawnedEvent == nullptr) {
     throw std::runtime_error("Failed to cast SelfSpawned event");
@@ -467,10 +461,21 @@ void Bot::handleSpawned(const event::Event *event) {
 
   // Construct an autopotion state machine once the character is logged in.
   if (config_) {
-    LOG(INFO) << "Constructing autopotion";
     autoPotionStateMachine_ = std::make_unique<state::machine::AutoPotion>(*this);
   } else {
     LOG(WARNING) << "Not constructing AutoPotion because we have no character config";
+  }
+}
+
+void Bot::handleEntityDespawned(const event::EntityDespawned &event) {
+  // This function handles the despawning of Self.
+  if (!selfEntity_) {
+    // Don't have a self entity. Cannot be us despawning.
+    return;
+  }
+  if (event.globalId == selfEntity_->globalId) {
+    // Self despawned, stop tracking.
+    selfEntity_.reset();
   }
 }
 
@@ -505,14 +510,6 @@ void Bot::handleSkillCooldownEnded(const event::SkillCooldownEnded &event) {
 // ============================================================Misc============================================================
 // ============================================================================================================================
 
-void Bot::entitySpawned(const event::EntitySpawned &event) {
-  const bool trackingEntity = worldState_.entityTracker().trackingEntity(event.globalId);
-  if (!trackingEntity) {
-    // TODO: Maybe we ought to move this check at the source of the event and get rid of this
-    throw std::runtime_error(absl::StrFormat("Received entity spawned event, but we are not tracking entity %d", event.globalId));
-  }
-}
-
 void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
   std::shared_ptr<entity::Self> selfEntity = selfState();
   if (!selfEntity) {
@@ -524,7 +521,7 @@ void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
     if (selfEntity->bodyState() == packet::enums::BodyState::kInvisibleGm) {
       // For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
       // Set self as visible
-      LOG(INFO) << "Setting self as visible";
+      VLOG(1) << "Setting self as visible";
       const auto setVisiblePacket = packet::building::ClientAgentOperatorRequest::toggleInvisible();
       packetBroker_.injectPacket(setVisiblePacket, PacketContainer::Direction::kClientToServer);
 
@@ -562,11 +559,6 @@ void Bot::handleItemCooldownEnded(const event::ItemCooldownEnded &event) {
   if (event.globalId == selfEntity->globalId) {
     selfEntity->itemCooldownEnded(event.typeId);
   }
-}
-
-void Bot::handleGameReset(const event::Event *event) {
-  LOG(INFO) << "Bot stops tracking self";
-  selfEntity_.reset();
 }
 
 void Bot::setCurrentPositionAsTrainingCenter() {
