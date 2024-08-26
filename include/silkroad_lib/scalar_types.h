@@ -11,6 +11,7 @@ using ReferenceSkillId = uint32_t;
 using ReferenceMasteryId = uint32_t;
 using StorageIndexType = uint8_t;
 using OptLevelType = uint8_t;
+using BuffTokenType = uint32_t;
 
 } // namespace sro::scalar_types
 
