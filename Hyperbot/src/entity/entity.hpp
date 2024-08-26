@@ -7,7 +7,12 @@
 #include <silkroad_lib/scalar_types.h>
 
 #include <cstdint>
+#include <string>
 #include <string_view>
+
+namespace pk2 {
+class GameData;
+} // namespace pk2
 
 namespace entity {
 
@@ -34,10 +39,13 @@ public:
   sro::Angle angle() const;
   virtual ~Entity() = default;
   virtual EntityType entityType() const = 0;
+  std::string toString() const { return toStringImpl(nullptr); }
+  std::string toString(const pk2::GameData &gameData) const { return toStringImpl(&gameData); }
 protected:
   sro::Position position_;
   sro::Angle angle_;
   broker::EventBroker *eventBroker_{nullptr};
+  virtual std::string toStringImpl(const pk2::GameData *gameData) const;
 };
 
 std::string_view toString(EntityType entityType);

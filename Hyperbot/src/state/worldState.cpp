@@ -20,18 +20,49 @@ const state::EntityTracker& WorldState::entityTracker() const {
   return entityTracker_;
 }
 
-void WorldState::addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, int32_t durationMs) {
+bool WorldState::entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker) {
+  bool spawned = entityTracker_.entitySpawned(entity, eventBroker);
+  if (!spawned) {
+    return false;
+  }
+  // This is a new entity. Check if it has any active buffs.
+  if (const auto *character = dynamic_cast<const entity::Character*>(entity.get()); character != nullptr) {
+    for (const auto &tokenDataPair : character->buffDataMap) {
+      buffTokenToEntityAndSkillIdMap_.emplace(std::piecewise_construct, std::forward_as_tuple(tokenDataPair.first), std::forward_as_tuple(character->globalId, tokenDataPair.second.skillRefId));
+    }
+  }
+  return true;
+}
+
+bool WorldState::entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker) {
+  const bool despawned = entityTracker_.entityDespawned(globalId, eventBroker);
+  if (!despawned) {
+    return false;
+  }
+  // We despawned this entity, remove any buff tokens we were tracking.
+  auto it = buffTokenToEntityAndSkillIdMap_.begin();
+  while (it != buffTokenToEntityAndSkillIdMap_.end()) {
+    if (it->second.globalId == globalId) {
+      it = buffTokenToEntityAndSkillIdMap_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  return true;
+}
+
+void WorldState::addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::BuffTokenType tokenId, entity::Character::BuffData::ClockType::time_point castTime) {
   VLOG(1) << "There are " << buffTokenToEntityAndSkillIdMap_.size() << " buffs tracked in WordState";
   // For now, we only care about PlayerCharacters
   // TODO: add buffs for others
   std::shared_ptr<entity::Entity> entity = getEntity(globalId);
   if (auto *character = dynamic_cast<entity::Character*>(entity.get())) {
-    if (!dynamic_cast<entity::PlayerCharacter*>(entity.get())) {
-      VLOG(1) << "Handling a buff for a non-player character";
+    if (dynamic_cast<const entity::PlayerCharacter*>(entity.get()) == nullptr) {
+      VLOG(1) << "Handling a buff for a non-player character; it is a " << entity::toString(entity->entityType());
     }
     buffTokenToEntityAndSkillIdMap_.emplace(std::piecewise_construct, std::forward_as_tuple(tokenId), std::forward_as_tuple(globalId, skillRefId));
-    character->addBuff(skillRefId, tokenId, durationMs);
-    VLOG(1) << "Buff with token " << tokenId << " added";
+    character->addBuff(skillRefId, tokenId, castTime);
+    VLOG(1) << absl::StreamFormat("Buff %s with token %d added to %s", gameData_.getSkillName(skillRefId), tokenId, entity->toString());
   } else {
     throw std::runtime_error("Got a buff for a non-character.");
   }
@@ -40,7 +71,7 @@ void WorldState::addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar
   }));
 }
 
-void WorldState::removeBuffs(const std::vector<uint32_t> &tokenIds) {
+void WorldState::removeBuffs(const std::vector<sro::scalar_types::BuffTokenType> &tokenIds) {
   VLOG(1) << absl::StreamFormat("Known tokens: [ %s ]", absl::StrJoin(buffTokenToEntityAndSkillIdMap_, ", ", [](std::string *out, const auto data){
     out->append(std::to_string(data.first));
   }));
@@ -55,6 +86,7 @@ void WorldState::removeBuffs(const std::vector<uint32_t> &tokenIds) {
     if (character == nullptr) {
       throw std::runtime_error("Only tracking buffs for Characters, how did this get here?");
     }
+    VLOG(1) << absl::StreamFormat("Removing buff %s with token %d from %s", gameData_.getSkillName(buffTokenDataIt->second.skillRefId), tokenId, entity->toString());
     character->removeBuff(buffTokenDataIt->second.skillRefId, tokenId);
     buffTokenToEntityAndSkillIdMap_.erase(buffTokenDataIt);
   }

@@ -483,7 +483,7 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   std::shared_ptr<entity::Self> selfEntity = std::make_shared<entity::Self>(gameData_, packet.globalId(), packet.refObjId(), packet.jId());
   initializeSelfFromCharacterDataPacket(*selfEntity.get(), packet);
   VLOG(1) << "GID:" << selfEntity->globalId << ", and we have " << selfEntity->currentHp() << " hp and " << selfEntity->currentMp() << " mp";
-  worldState_.entityTracker().entitySpawned(std::move(selfEntity), eventBroker_);
+  worldState_.entitySpawned(std::move(selfEntity), eventBroker_);
   selfEntity_ = worldState_.entityTracker().getEntity<entity::Self>(packet.globalId());
   LOG(INFO) << "Self entity saved with ID " << selfEntity_->globalId;
 
@@ -966,7 +966,7 @@ void PacketProcessor::serverAgentEntityDespawnReceived(const packet::parsing::Se
 
 void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) const {
   const sro::scalar_types::EntityGlobalId entityGlobalId = entity->globalId;
-  const bool firstTimeSeeingEntity = worldState_.entityTracker().entitySpawned(std::move(entity), eventBroker_);
+  const bool firstTimeSeeingEntity = worldState_.entitySpawned(std::move(entity), eventBroker_);
   if (!firstTimeSeeingEntity) {
     // TODO: Does it make sense to execute the below code if the entity is already being tracked?
     // Already aware of this entity, not going to do anything else.
@@ -1000,7 +1000,7 @@ void PacketProcessor::entityDespawned(sro::scalar_types::EntityGlobalId globalId
     return;
   }
   // Destroy entity
-  worldState_.entityTracker().entityDespawned(globalId, eventBroker_);
+  worldState_.entityDespawned(globalId, eventBroker_);
 }
 
 void PacketProcessor::serverAgentSkillLearnResponseReceived(const packet::parsing::ServerAgentSkillLearnResponse &packet) const {
@@ -1763,17 +1763,17 @@ void PacketProcessor::handleKnockedBackOrKnockedDown() const {
 }
 
 void PacketProcessor::serverAgentBuffAddReceived(const packet::parsing::ServerAgentBuffAdd &packet) const {
+  entity::Character::BuffData::ClockType::time_point currentTime = entity::Character::BuffData::ClockType::now();
   const auto skillName = gameData_.getSkillName(packet.skillRefId());
   if (packet.activeBuffToken() == 0) {
     // No buff remove will be received when this expires
     //  Seems to be only for debuffs
-    //  Weirdly, it's also sent for Sprint Assault.
-    LOG(INFO) << "Skipping buff \"" << skillName << "\" for " << packet.globalId() << " with tokenId: " << packet.activeBuffToken();
+    //  Weirdly, it's also sent for Sprint Assault and Integrity.
+    VLOG(1) << "Skipping buff \"" << skillName << "\" for " << worldState_.getEntity(packet.globalId())->toString() << " with tokenId: " << packet.activeBuffToken();
     return;
   }
-  VLOG(1) << "Buff \"" << skillName << "(" << packet.skillRefId() << ")\" added to " << packet.globalId() << " with tokenId: " << packet.activeBuffToken();
-  const auto &skillData = gameData_.skillData().getSkillById(packet.skillRefId());
-  worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken(), skillData.duration());
+  VLOG(1) << "Buff \"" << skillName << "(" << packet.skillRefId() << ")\" added to " << worldState_.getEntity(packet.globalId())->toString() << " with tokenId: " << packet.activeBuffToken();
+  worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken(), currentTime);
 }
 
 void PacketProcessor::serverAgentBuffLinkReceived(const packet::parsing::ServerAgentBuffLink &packet) const {
@@ -1799,7 +1799,7 @@ void PacketProcessor::serverAgentChatUpdateReceived(const packet::parsing::Serve
 }
 
 void PacketProcessor::serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet) {
-  worldState_.entityTracker().entityDespawned(selfEntity_->globalId, eventBroker_);
+  worldState_.entityDespawned(selfEntity_->globalId, eventBroker_);
   selfEntity_.reset();
 }
 

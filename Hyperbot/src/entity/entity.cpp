@@ -5,6 +5,7 @@
 #include <silkroad_lib/position_math.h>
 
 #include <absl/log/log.h>
+#include <absl/strings/str_format.h>
 
 namespace entity {
 
@@ -26,6 +27,10 @@ sro::Position Entity::position() const {
 
 sro::Angle Entity::angle() const {
   return angle_;
+}
+
+std::string Entity::toStringImpl(const pk2::GameData *gameData) const {
+  return absl::StrFormat("entity %d", globalId);
 }
 
 std::string_view toString(EntityType entityType) {

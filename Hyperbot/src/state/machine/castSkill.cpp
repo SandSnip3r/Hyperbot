@@ -342,23 +342,29 @@ void CastSkill::onUpdate(const event::Event *event) {
       // Imbue is already active
       // Check the remaining duration of this buff, it it's less than the ping time, we ought to re-cast since it might expire before we cast the actual attack.
       constexpr const int kEstimatedPingMs = 100; // TODO: Get from a centralized location.
-      const auto buffRemainingTime = bot_.selfState()->buffMsRemaining(*imbueSkillRefId_);
-      if (buffRemainingTime < kEstimatedPingMs) {
-        // Imbue might end before our skill-use packet even gets to the server
-        const auto skillRemainingCooldown = bot_.selfState()->skillEngine.skillRemainingCooldown(*imbueSkillRefId_, bot_.eventBroker());
-        if (skillRemainingCooldown) {
-          if (skillRemainingCooldown->count() > kEstimatedPingMs) {
-            // Imbue has too much remaining cooldown to request it be cast (accounting for ping time)
-            return;
+      std::optional<entity::Character::BuffData::ClockType::time_point> buffCastTime = bot_.selfState()->buffCastTime(*imbueSkillRefId_);
+      if (buffCastTime) {
+        const int32_t elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(entity::Character::BuffData::ClockType::now()-*buffCastTime).count();
+        const int32_t buffRemainingTimeMs = bot_.gameData().skillData().getSkillById(*imbueSkillRefId_).durationMs() - elapsedMs;
+        if (buffRemainingTimeMs < kEstimatedPingMs) {
+          // Imbue might end before our skill-use packet even gets to the server
+          const auto skillRemainingCooldown = bot_.selfState()->skillEngine.skillRemainingCooldown(*imbueSkillRefId_, bot_.eventBroker());
+          if (skillRemainingCooldown) {
+            if (skillRemainingCooldown->count() > kEstimatedPingMs) {
+              // Imbue has too much remaining cooldown to request it be cast (accounting for ping time)
+              return;
+            }
           }
+          // Imbue does not have too long of a cooldown
+          // TODO: Add a data structure that tracks skills which were successfully cast, which should give us a buff, but for when we haven't yet received BuffBegin. Like a "anticipated buffs" list.
+          CastSkillStateMachineBuilder builder(bot_, *imbueSkillRefId_);
+          setChildStateMachine(builder.create());
+          onUpdate(event);
+          // If the timing overlaps, the buff will not be removed and re-added. Instead, the new buff will be added, there will be a brief moment where we have two instances of the same buff, and then the old one will be removed.
+          return;
         }
-        // Imbue does not have too long of a cooldown
-        // TODO: Add a data structure that tracks skills which were successfully cast, which should give us a buff, but for when we haven't yet received BuffBegin. Like a "anticipated buffs" list.
-        CastSkillStateMachineBuilder builder(bot_, *imbueSkillRefId_);
-        setChildStateMachine(builder.create());
-        onUpdate(event);
-        // If the timing overlaps, the buff will not be removed and re-added. Instead, the new buff will be added, there will be a brief moment where we have two instances of the same buff, and then the old one will be removed.
-        return;
+      } else {
+        LOG(WARNING) << absl::StreamFormat("Do not know cast time of imbue %s for character %s", bot_.gameData().getSkillName(*imbueSkillRefId_), bot_.selfState()->toString());
       }
     }
   }

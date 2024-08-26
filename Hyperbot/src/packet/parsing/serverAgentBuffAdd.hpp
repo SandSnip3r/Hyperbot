@@ -13,13 +13,13 @@ namespace packet::parsing {
 class ServerAgentBuffAdd : public ParsedPacket {
 public:
   ServerAgentBuffAdd(const PacketContainer &packet, const pk2::SkillData &skillData);
-  sro::scalar_types::EntityGlobalId globalId() const;
-  sro::scalar_types::ReferenceObjectId skillRefId() const;
-  uint32_t activeBuffToken() const;
+  sro::scalar_types::EntityGlobalId globalId() const { return globalId_; }
+  sro::scalar_types::ReferenceObjectId skillRefId() const { return skillRefId_; }
+  sro::scalar_types::BuffTokenType activeBuffToken() const { return activeBuffToken_; }
 private:
   sro::scalar_types::EntityGlobalId globalId_;
   sro::scalar_types::ReferenceObjectId skillRefId_;
-  uint32_t activeBuffToken_;
+  sro::scalar_types::BuffTokenType activeBuffToken_;
 };
 
 } // namespace packet::parsing

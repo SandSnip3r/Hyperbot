@@ -20,7 +20,8 @@ public:
   // Returns `true` if this tracks a new entity, `false` if this entity is already being tracked.
   bool entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker);
   // When an entity despawns, call this to release the entity. Since multiple characters can see the despawning of a single entity, a "reference count" is decremented. If that count hits 0, the entity is deleted.
-  void entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker);
+  // Returns `true` if this deletes the entity, `false` if this entity is still being tracked.
+  bool entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker);
 
   bool trackingEntity(sro::scalar_types::EntityGlobalId globalId) const;
 

@@ -101,7 +101,9 @@ struct Skill {
   bool isInstant() const;
   bool isTele() const;
   bool isPseudoinstant() const;
-  int32_t duration() const;
+
+  // Returns the duration of the skill in milliseconds.
+  int32_t durationMs() const;
 
   enum class Param1Type {
     kMelee = 0,

@@ -2,11 +2,14 @@
 #define STATE_WORLD_STATE_HPP_
 
 #include "broker/eventBroker.hpp"
+#include "entity/character.hpp"
+#include "entity/entity.hpp"
 #include "entityTracker.hpp"
 #include "pk2/gameData.hpp"
 
 #include <silkroad_lib/scalar_types.h>
 
+#include <memory>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
@@ -18,9 +21,11 @@ public:
   WorldState(const pk2::GameData &gameData, broker::EventBroker &eventBroker);
   state::EntityTracker& entityTracker();
   const state::EntityTracker& entityTracker() const;
+  bool entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker);
+  bool entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker);
 
-  void addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, int32_t durationMs);
-  void removeBuffs(const std::vector<uint32_t> &tokenIds);
+  void addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::BuffTokenType tokenId, entity::Character::BuffData::ClockType::time_point castTime);
+  void removeBuffs(const std::vector<sro::scalar_types::BuffTokenType> &tokenIds);
 
   template<typename EntityType = entity::Entity>
   std::shared_ptr<EntityType> getEntity(sro::scalar_types::EntityGlobalId globalId) const {
@@ -39,7 +44,7 @@ private:
     sro::scalar_types::EntityGlobalId globalId;
     sro::scalar_types::ReferenceObjectId skillRefId;
   };
-  std::unordered_map<uint32_t, BuffInfo> buffTokenToEntityAndSkillIdMap_;
+  std::unordered_map<sro::scalar_types::BuffTokenType, BuffInfo> buffTokenToEntityAndSkillIdMap_;
 };
 
 } // namespace state

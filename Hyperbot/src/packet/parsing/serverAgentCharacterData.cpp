@@ -188,6 +188,9 @@ ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet
   runSpeed_ = stream.Read<float>();
   hwanSpeed_ = stream.Read<float>();
   uint8_t buffCount = stream.Read<uint8_t>();
+  if (buffCount > 0) {
+    LOG(INFO) << "Spawned with " << buffCount << " buffs!";
+  }
   for (int i=0; i<buffCount; ++i) {
     // We seem to always spawn with 0 buffs
     uint32_t refSkillId = stream.Read<uint32_t>();

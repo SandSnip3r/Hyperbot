@@ -93,7 +93,7 @@ bool Skill::isPseudoinstant() const {
           std::find(params.begin(), params.end(), kDuraVal) != params.end());
 }
 
-int32_t Skill::duration() const {
+int32_t Skill::durationMs() const {
   auto it = std::find(params.begin(), params.end(), kDuraVal);
   if (it == params.end()) {
     throw std::runtime_error("Trying to get duration of skill which does not have a DURA param");

@@ -10,6 +10,7 @@
 #include "type_id/typeCategory.hpp"
 
 #include <silkroad_lib/position_math.h>
+#include <silkroad_lib/scalar_types.h>
 
 #include <absl/log/log.h>
 
@@ -492,10 +493,10 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
     uint8_t buffCount = stream.Read<uint8_t>();
     for (int i=0; i<buffCount; ++i) {
       uint32_t skillRefId = stream.Read<uint32_t>();
-      uint32_t token = stream.Read<uint32_t>();
+      sro::scalar_types::BuffTokenType token = stream.Read<sro::scalar_types::BuffTokenType>();
+      characterPtr->addBuff(skillRefId, token);
       if (!skillData.haveSkillWithId(skillRefId)) {
-        throw std::runtime_error("Parsing ServerAgentGroupSpawn, found buff which we have no data on"); // TODO: Add skill id to error
-        // TODO: Also, I think we need to print this error when we catch the exception
+        throw std::runtime_error(absl::StrFormat("Parsing ServerAgentGroupSpawn, found buff (%d) which we have no data on", skillRefId));
       }
       const auto &skill = skillData.getSkillById(skillRefId);
       if (skill.isEfta()) {
@@ -511,7 +512,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
       uint16_t nameLength = stream.Read<uint16_t>();
       playerCharacterPtr->name = stream.Read_Ascii(nameLength);
 
-      uint8_t jobType = stream.Read<uint8_t>(); // 0=None, 1=Trader, 2=Tief, 3=Hunter
+      uint8_t jobType = stream.Read<uint8_t>(); // 0=None, 1=Trader, 2=Thief, 3=Hunter
       uint8_t jobLevel = stream.Read<uint8_t>();
       uint8_t murderState = stream.Read<uint8_t>(); //0=White (Neutral), 1=Purple (Assaulter), 2=Red (Murder)
       bool isRiding = stream.Read<uint8_t>();

@@ -5,6 +5,7 @@
 #include "broker/eventBroker.hpp"
 
 #include <silkroad_lib/entity.h>
+#include <silkroad_lib/scalar_types.h>
 
 #include <chrono>
 #include <cstdint>
@@ -27,16 +28,17 @@ public:
 
   // ---- Buffs ----
   struct BuffData {
+    using ClockType = std::chrono::high_resolution_clock;
     sro::scalar_types::ReferenceObjectId skillRefId;
-    std::chrono::high_resolution_clock::time_point endTimePoint;
+    std::optional<ClockType::time_point> castTime;
   };
   // Maps TokenId to BuffData
-  std::map<uint32_t, BuffData> buffDataMap;
+  std::map<sro::scalar_types::BuffTokenType, BuffData> buffDataMap;
   std::set<sro::scalar_types::ReferenceObjectId> activeBuffs() const;
   bool buffIsActive(sro::scalar_types::ReferenceObjectId skillRefId) const;
-  int buffMsRemaining(sro::scalar_types::ReferenceObjectId skillRefId) const;
-  void addBuff(sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId, int32_t durationMs);
-  void removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, uint32_t tokenId);
+  std::optional<BuffData::ClockType::time_point> buffCastTime(sro::scalar_types::ReferenceObjectId skillRefId) const;
+  void addBuff(sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::BuffTokenType tokenId, std::optional<BuffData::ClockType::time_point> castTime = std::nullopt);
+  void removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::BuffTokenType tokenId);
   void clearBuffs();
   EntityType entityType() const override { return EntityType::kCharacter; }
 protected:

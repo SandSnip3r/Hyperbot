@@ -14,6 +14,8 @@ public:
   using SkillMap = std::unordered_map<ref::SkillId,ref::Skill>;
   void addSkill(ref::Skill &&skill);
   bool haveSkillWithId(sro::scalar_types::ReferenceObjectId id) const;
+
+  // Throws if we have no such skill.
   const ref::Skill& getSkillById(sro::scalar_types::ReferenceObjectId id) const;
   int32_t getSkillTotalDuration(sro::scalar_types::ReferenceObjectId id) const;
   const SkillMap::size_type size() const;

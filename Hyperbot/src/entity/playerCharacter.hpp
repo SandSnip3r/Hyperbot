@@ -11,6 +11,8 @@ class PlayerCharacter : public Character {
 public:
   std::string name;
   EntityType entityType() const override { return EntityType::kPlayerCharacter; }
+protected:
+  std::string toStringImpl(const pk2::GameData *gameData) const override;
 };
 
 } // namespace entity

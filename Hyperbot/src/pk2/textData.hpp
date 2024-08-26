@@ -3,7 +3,8 @@
 
 #include "../../../common/pk2/ref/text.hpp"
 
-#include <map>
+#include <absl/container/flat_hash_map.h>
+
 #include <optional>
 #include <string>
 
@@ -22,9 +23,14 @@ public:
   // Expecting names like Pacheon, Wizard, Rogue, Fire, etc. Case matters.
   std::optional<std::string> getMasteryNameCodeIfExists(const std::string &masteryName) const;
 private:
-  std::map<std::string, std::string> itemNames_;
-  std::map<std::string, std::string> skillNames_;
-  std::map<std::string, std::string> masteryNames_;
+  using MapType = absl::flat_hash_map<std::string, std::string>;
+  MapType itemNames_;
+  MapType skillNames_;
+  MapType masteryNames_;
+
+  const std::string* privateGetItemName(const std::string &nameStrID128) const;
+  const std::string* privateGetSkillName(const std::string &uiSkillName) const;
+  const std::string* privateGetMasteryName(const std::string &masteryNameCode) const;
 };
 
 } // namespace pk2
