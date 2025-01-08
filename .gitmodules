@@ -1,9 +1,3 @@
 [submodule "Pathfinder"]
 	path = Pathfinder
 	url = git@github.com:SandSnip3r/Pathfinder.git
-[submodule "SilkroadLib"]
-	path = SilkroadLib
-	url = /mnt/c/Users/Victor/Documents/Development/SilkroadLib
-[submodule "Hyperbot/ui-proto"]
-	path = Hyperbot/ui-proto
-	url = file:///mnt/c/Users/Victor/Documents/Development/hyperbot-ui-proto
