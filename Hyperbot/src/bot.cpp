@@ -238,23 +238,8 @@ void Bot::handleEvent(const event::Event *event) {
         handleKnockdownStunEnded();
         break;
       }
-      case event::EventCode::kItemCooldownEnded: {
-        const auto &castedEvent = dynamic_cast<const event::ItemCooldownEnded&>(*event);
-        handleItemCooldownEnded(castedEvent);
-        break;
-      }
 
       // Skills
-      case event::EventCode::kSkillEnded: {
-        const auto &castedEvent = dynamic_cast<const event::SkillEnded&>(*event);
-        handleSkillEnded(castedEvent);
-        break;
-      }
-      case event::EventCode::kSkillCooldownEnded: {
-        const auto &castedEvent = dynamic_cast<const event::SkillCooldownEnded&>(*event);
-        handleSkillCooldownEnded(castedEvent);
-        break;
-      }
       case event::EventCode::kChatReceived: {
         const auto &castedEvent = dynamic_cast<const event::ChatReceived&>(*event);
         handleChatCommand(castedEvent);
@@ -480,33 +465,6 @@ void Bot::handleEntityDespawned(const event::EntityDespawned &event) {
 }
 
 // ============================================================================================================================
-// ===========================================================Skills===========================================================
-// ============================================================================================================================
-
-void Bot::handleSkillEnded(const event::SkillEnded &event) {
-  std::shared_ptr<entity::Self> selfEntity = selfState();
-  if (!selfEntity) {
-    LOG(WARNING) << "Skill ended, but self is not spawned";
-    return;
-  }
-  if (event.casterGlobalId != selfEntity->globalId) {
-    // Skill ended, but it is not for us.
-    return;
-  }
-  // LOG(INFO) << "Our skill \"" << gameData_.getSkillName(event.skillRefId) << "\" ended";
-}
-
-void Bot::handleSkillCooldownEnded(const event::SkillCooldownEnded &event) {
-  std::shared_ptr<entity::Self> selfEntity = selfState();
-  if (!selfEntity) {
-    LOG(WARNING) << "Skill cooldown ended, but self is not spawned";
-    return;
-  }
-  // LOG(INFO) << "Skill " << event.skillRefId << "(" << gameData_.getSkillName(event.skillRefId) << ") cooldown ended";
-  selfEntity->skillEngine.skillCooldownEnded(event.skillRefId);
-}
-
-// ============================================================================================================================
 // ============================================================Misc============================================================
 // ============================================================================================================================
 
@@ -548,17 +506,6 @@ void Bot::handleKnockdownStunEnded() {
     return;
   }
   selfEntity->stunnedFromKnockdown = false;
-}
-
-void Bot::handleItemCooldownEnded(const event::ItemCooldownEnded &event) {
-  std::shared_ptr<entity::Self> selfEntity = selfState();
-  if (!selfEntity) {
-    LOG(WARNING) << "Item cooldown ended, but self is not spawned";
-    return;
-  }
-  if (event.globalId == selfEntity->globalId) {
-    selfEntity->itemCooldownEnded(event.typeId);
-  }
 }
 
 void Bot::setCurrentPositionAsTrainingCenter() {

@@ -14,6 +14,9 @@ std::string_view toString(EventCode eventCode) {
   if (eventCode == EventCode::kCosSpawned) {
     return "CosSpawned";
   }
+  if (eventCode == EventCode::kInternalItemCooldownEnded) {
+    return "InternalItemCooldownEnded";
+  }
   if (eventCode == EventCode::kItemCooldownEnded) {
     return "ItemCooldownEnded";
   }
@@ -31,6 +34,9 @@ std::string_view toString(EventCode eventCode) {
   }
   if (eventCode == EventCode::kStatesChanged) {
     return "StatesChanged";
+  }
+  if (eventCode == EventCode::kInternalSkillCooldownEnded) {
+    return "InternalSkillCooldownEnded";
   }
   if (eventCode == EventCode::kSkillCooldownEnded) {
     return "SkillCooldownEnded";
@@ -297,8 +303,11 @@ CharacterSelectionJoinSuccess::CharacterSelectionJoinSuccess(EventId id, Session
 SelfSpawned::SelfSpawned(EventId id, SessionId sessionId, sro::scalar_types::EntityGlobalId globalId) :
     Event(id, EventCode::kSelfSpawned), sessionId(sessionId), globalId(globalId) {}
 
-SkillCooldownEnded::SkillCooldownEnded(EventId id, sro::scalar_types::ReferenceSkillId skillId) :
-    Event(id, EventCode::kSkillCooldownEnded), skillRefId(skillId) {}
+InternalSkillCooldownEnded::InternalSkillCooldownEnded(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillId) :
+    Event(id, EventCode::kInternalSkillCooldownEnded), globalId(globalId), skillRefId(skillId) {}
+
+SkillCooldownEnded::SkillCooldownEnded(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillId) :
+    Event(id, EventCode::kSkillCooldownEnded), globalId(globalId), skillRefId(skillId) {}
 
 InventoryUpdated::InventoryUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) :
     Event(id, EventCode::kInventoryUpdated), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
@@ -398,6 +407,9 @@ EntityOwnershipRemoved::EntityOwnershipRemoved(EventId id, sro::scalar_types::En
 
 StateMachineCreated::StateMachineCreated(EventId id, const std::string &name) :
     Event(id, EventCode::kStateMachineCreated), stateMachineName(name) {}
+
+InternalItemCooldownEnded::InternalItemCooldownEnded(EventId eventId, sro::scalar_types::EntityGlobalId globalId, type_id::TypeId typeId) :
+    Event(eventId, EventCode::kInternalItemCooldownEnded), globalId(globalId), typeId(typeId) {}
 
 ItemCooldownEnded::ItemCooldownEnded(EventId eventId, sro::scalar_types::EntityGlobalId globalId, type_id::TypeId typeId) :
     Event(eventId, EventCode::kItemCooldownEnded), globalId(globalId), typeId(typeId) {}

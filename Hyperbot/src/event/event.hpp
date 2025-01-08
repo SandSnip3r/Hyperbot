@@ -19,12 +19,14 @@ namespace event {
 enum class EventCode {
   kSelfSpawned,
   kCosSpawned,
+  kInternalItemCooldownEnded,
   kItemCooldownEnded,
   kEntityHpChanged,
   kMpChanged,
   kMaxHpMpChanged,
   kStatsChanged,
   kStatesChanged,
+  kInternalSkillCooldownEnded,
   kSkillCooldownEnded,
   kInventoryUpdated,
   kAvatarInventoryUpdated,
@@ -194,9 +196,20 @@ public:
   virtual ~SelfSpawned() = default;
 };
 
+// This event is intended only for an entity to subscribe to.
+struct InternalSkillCooldownEnded : public Event {
+public:
+  InternalSkillCooldownEnded(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillId);
+  const sro::scalar_types::EntityGlobalId globalId;
+  const sro::scalar_types::ReferenceSkillId skillRefId;
+  virtual ~InternalSkillCooldownEnded() = default;
+};
+
+// This is the event that an entity publishes after it handles InternalSkillColldownEnded.
 struct SkillCooldownEnded : public Event {
 public:
-  SkillCooldownEnded(EventId id, sro::scalar_types::ReferenceSkillId skillId);
+  SkillCooldownEnded(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillId);
+  const sro::scalar_types::EntityGlobalId globalId;
   const sro::scalar_types::ReferenceSkillId skillRefId;
   virtual ~SkillCooldownEnded() = default;
 };
@@ -448,6 +461,14 @@ public:
   StateMachineCreated(EventId id, const std::string &name);
   const std::string stateMachineName;
   virtual ~StateMachineCreated() = default;
+};
+
+struct InternalItemCooldownEnded : public Event {
+public:
+  InternalItemCooldownEnded(EventId eventId, sro::scalar_types::EntityGlobalId globalId, type_id::TypeId typeId);
+  const sro::scalar_types::EntityGlobalId globalId;
+  const type_id::TypeId typeId;
+  virtual ~InternalItemCooldownEnded() = default;
 };
 
 struct ItemCooldownEnded : public Event {

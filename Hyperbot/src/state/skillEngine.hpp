@@ -6,6 +6,8 @@
 
 #include <silkroad_lib/scalar_types.h>
 
+#include <absl/container/flat_hash_map.h>
+
 #include <cstdint>
 #include <vector>
 
@@ -22,7 +24,7 @@ public:
   void cancelEvents(broker::EventBroker &eventBroker);
 
 private:
-  std::map<sro::scalar_types::ReferenceObjectId, broker::EventBroker::EventId> skillCooldownEventIdMap_;
+  absl::flat_hash_map<sro::scalar_types::ReferenceObjectId, broker::EventBroker::EventId> skillCooldownEventIdMap_;
 
 public:
   struct SkillInfo {

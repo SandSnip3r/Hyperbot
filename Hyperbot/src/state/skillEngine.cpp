@@ -14,7 +14,9 @@ void SkillEngine::skillCooldownBegin(sro::scalar_types::ReferenceObjectId skillR
 void SkillEngine::skillCooldownEnded(sro::scalar_types::ReferenceObjectId skillRefId) {
   const auto it = skillCooldownEventIdMap_.find(skillRefId);
   if (it == skillCooldownEventIdMap_.end()) {
-    throw std::runtime_error("Skill cooldown ended, but we weren't tracking this skill's cooldown");
+    // Skill cooldown ended, but we weren't tracking this skill's cooldown.
+    LOG(WARNING) << "Skill cooldown ended, but we weren't tracking this skill's cooldown.";
+    return;
   }
   skillCooldownEventIdMap_.erase(it);
 }

@@ -1307,6 +1307,7 @@ ActionReuseDelay is the skill's cooldown
 */
 
 void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const {
+  const broker::EventBroker::ClockType::time_point currentTime = broker::EventBroker::ClockType::now();
   VLOG(4) << "***** Skill Begin *****";
   if (packet.result() == 2) {
     // Error
@@ -1490,8 +1491,12 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         selfEntity_->skillEngine.acceptedCommandQueue.at(*indexOfOurSkill).wasExecuted = true;
         if (isRootSkill && !skillIsCommonAttack) {
           // Set a timer for when the skill cooldown ends. We only do this for the root piece of the skill. If this is a chain and later piece has a cooldown too, it is probably just the same cooldown that we already set a timer for when we cast the root.
-          const auto cooldownEndTimerId = eventBroker_.publishDelayedEvent<event::SkillCooldownEnded>(std::chrono::milliseconds(skillData.actionReuseDelay), packet.refSkillId());
-          selfEntity_->skillEngine.skillCooldownBegin(packet.refSkillId(), cooldownEndTimerId);
+          // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+          // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+          // TODO: Move the sending of this event into the entity!
+          // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+          // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+          selfEntity_->skillCooldownBegin(packet.refSkillId(), currentTime + std::chrono::milliseconds(skillData.actionReuseDelay));
         }
         if (skillData.basicActivity == 1) {
           // No "End" will come for Basic_Activity == 1, delete the item from the accepted command queue
@@ -1527,7 +1532,8 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     }
   } else {
     // Caster is not us
-    if (std::shared_ptr<entity::Entity> entity = worldState_.getEntity(packet.casterGlobalId()); auto *monster = dynamic_cast<entity::Monster*>(entity.get())) {
+    std::shared_ptr<entity::Entity> entity = worldState_.getEntity(packet.casterGlobalId());
+    if (auto *monster = dynamic_cast<entity::Monster*>(entity.get()); monster != nullptr) {
       // Caster is a monster, track who the monster is targeting
       monster->targetGlobalId = packet.targetGlobalId();
     }

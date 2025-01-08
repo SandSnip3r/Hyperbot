@@ -93,7 +93,9 @@ public:
   void setGuildStorageGold(uint64_t goldAmount);
 
   void usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milliseconds> cooldown);
+private:
   void itemCooldownEnded(type_id::TypeId itemTypeData);
+public:
 
   // Getters
   EntityType entityType() const override { return EntityType::kSelf; }
@@ -252,6 +254,7 @@ public:
   // Skills
   // TODO: Skill cooldowns transcend the lifetime of the self entity (or any entity). This should not exist inside the entity.
   state::SkillEngine skillEngine;
+  void skillCooldownBegin(sro::scalar_types::ReferenceSkillId skillId, broker::EventBroker::ClockType::time_point cooldownEndTime);
 
   // Misc
   // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.
@@ -263,7 +266,7 @@ public:
 
 private:
   const pk2::GameData &gameData_;
-  std::optional<broker::EventBroker::SubscriptionId> enteredRegionSubscriptionId_;
+  std::vector<broker::EventBroker::SubscriptionId> eventSubscriptionIds_;
 
   void setRaceAndGender();
   void calculateTimeUntilCollisionWithRegionBoundaryAndPublishDelayedEvent(const sro::Position &currentPosition, double dx, double dy);

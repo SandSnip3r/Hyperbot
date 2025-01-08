@@ -89,10 +89,6 @@ private:
   void handleSelfSpawned(const event::Event *event);
   void handleEntityDespawned(const event::EntityDespawned &event);
 
-  // Skills
-  void handleSkillEnded(const event::SkillEnded &event);
-  void handleSkillCooldownEnded(const event::SkillCooldownEnded &event);
-
   // Misc
   void handleBodyStateChanged(const event::EntityBodyStateChanged &event);
   void handleKnockbackStunEnded();

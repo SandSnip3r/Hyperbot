@@ -43,8 +43,8 @@ Self::~Self() {
     LOG(WARNING) << "Destroying Self, but don't have an event broker";
     return;
   }
-  if (enteredRegionSubscriptionId_) {
-    eventBroker_->unsubscribeFromEvent(*enteredRegionSubscriptionId_);
+  for (broker::EventBroker::SubscriptionId subscriptionId : eventSubscriptionIds_) {
+    eventBroker_->unsubscribeFromEvent(subscriptionId);
   }
 }
 
@@ -56,6 +56,15 @@ void Self::handleEvent(const event::Event *event) {
     if (const auto *enteredNewRegionEvent = dynamic_cast<const event::EnteredNewRegion*>(event); enteredNewRegionEvent != nullptr) {
       if (enteredNewRegionEvent->globalId == globalId) {
         enteredRegion(event);
+      }
+    } else if (const auto *skillCooldownEnded = dynamic_cast<const event::InternalSkillCooldownEnded*>(event); skillCooldownEnded != nullptr) {
+      if (skillCooldownEnded->globalId == globalId) {
+        skillEngine.skillCooldownEnded(skillCooldownEnded->skillRefId);
+        eventBroker_->publishEvent<event::SkillCooldownEnded>(globalId, skillCooldownEnded->skillRefId);
+      }
+    } else if (const auto *itemCooldownEndedEvent = dynamic_cast<const event::InternalItemCooldownEnded*>(event); itemCooldownEndedEvent != nullptr) {
+      if (itemCooldownEndedEvent->globalId == globalId) {
+        itemCooldownEnded(itemCooldownEndedEvent->typeId);
       }
     } else {
       LOG(WARNING) << "Unhandled event received: " << event::toString(event->eventCode);
@@ -106,11 +115,13 @@ void Self::initializeEventBroker(broker::EventBroker &eventBroker) {
   PlayerCharacter::initializeEventBroker(eventBroker);
 
   // Subscribe to events.
-  if (enteredRegionSubscriptionId_) {
+  if (!eventSubscriptionIds_.empty()) {
     throw std::runtime_error("Self is already subscribed to events. Trying to subscribe again.");
   }
   auto eventHandleFunction = std::bind(&Self::handleEvent, this, std::placeholders::_1);
-  enteredRegionSubscriptionId_ = eventBroker_->subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
+  eventSubscriptionIds_.emplace_back(eventBroker_->subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction));
+  eventSubscriptionIds_.emplace_back(eventBroker_->subscribeToEvent(event::EventCode::kInternalSkillCooldownEnded, eventHandleFunction));
+  eventSubscriptionIds_.emplace_back(eventBroker_->subscribeToEvent(event::EventCode::kInternalItemCooldownEnded, eventHandleFunction));
 }
 
 void Self::setCurrentLevel(uint8_t currentLevel) {
@@ -510,7 +521,7 @@ void Self::usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milli
 
   if (eventBroker_) {
     // Publish a delayed event for when the cooldown ends.
-    const auto itemCooldownDelayedEventId = eventBroker_->publishDelayedEvent<event::ItemCooldownEnded>(*cooldown, globalId, typeData);
+    const auto itemCooldownDelayedEventId = eventBroker_->publishDelayedEvent<event::InternalItemCooldownEnded>(*cooldown, globalId, typeData);
     itemCooldownEventIdMap_.emplace(typeData, itemCooldownDelayedEventId);
   } else {
     LOG(WARNING) << "Trying to publish delayed item cooldown ended, but don't have event broker";
@@ -521,6 +532,7 @@ void Self::itemCooldownEnded(type_id::TypeId itemTypeData) {
   auto it = itemCooldownEventIdMap_.find(itemTypeData);
   if (it != itemCooldownEventIdMap_.end()) {
     itemCooldownEventIdMap_.erase(it);
+    eventBroker_->publishEvent<event::ItemCooldownEnded>(globalId, itemTypeData);
   } else {
     LOG(INFO) << absl::StreamFormat("Item (%s) cooldown ended, but we're not tracking it", type_id::toString(itemTypeData));
   }
@@ -772,6 +784,16 @@ void Self::resetTrainingAreaGeometry() {
   } else {
     LOG(WARNING) << "Trying to publish kTrainingAreaReset, but don't have event broker";
   }
+}
+
+// =================================================================================================
+
+void Self::skillCooldownBegin(sro::scalar_types::ReferenceSkillId skillId, broker::EventBroker::ClockType::time_point cooldownEndTime) {
+  if (eventBroker_ == nullptr) {
+    throw std::runtime_error("Registering skill cooldown event, but do not have an event broker");
+  }
+  const broker::EventBroker::EventId cooldownEndTimerId = eventBroker_->publishDelayedEvent<event::InternalSkillCooldownEnded>(cooldownEndTime, globalId, skillId);
+  skillEngine.skillCooldownBegin(skillId, cooldownEndTimerId);
 }
 
 // =================================================================================================

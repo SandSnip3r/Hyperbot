@@ -30,6 +30,7 @@ namespace broker {
 class EventBroker {
 public:
   using EventId = event::Event::EventId;
+  using ClockType = TimerManager::ClockType;
   using TimerEndTimePoint = TimerManager::TimePoint;
   using SubscriptionId = int;
 private:
@@ -71,7 +72,7 @@ public:
     // Abstract away TimerManager's IDs.
     const EventId eventId = getNextUniqueEventId();
     std::unique_ptr<event::Event> event = std::make_unique<EventType>(eventId, std::forward<Args>(args)...);
-    VLOG(1) << absl::StreamFormat("Created delayed event #%d, %s, which triggers in %dms", event->eventId, event::toString(event->eventCode), std::chrono::duration_cast<std::chrono::milliseconds>(endTime-TimerManager::Clock::now()).count());
+    VLOG(1) << absl::StreamFormat("Created delayed event #%d, %s, which triggers in %dms", event->eventId, event::toString(event->eventCode), std::chrono::duration_cast<std::chrono::milliseconds>(endTime-ClockType::now()).count());
     TimerManager::TimerId timerId = registerTimer(endTime, std::move(event));
     addTimerIdMapping(eventId, timerId);
     return eventId;
