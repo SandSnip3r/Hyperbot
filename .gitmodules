@@ -1,3 +1,3 @@
 [submodule "Pathfinder"]
-	path = Pathfinder
+	path = bot/Pathfinder
 	url = git@github.com:SandSnip3r/Pathfinder.git
