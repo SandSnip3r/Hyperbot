@@ -410,7 +410,6 @@ find_package(Boost 1.67.0 REQUIRED COMPONENTS thread regex)
 include_directories(${Boost_INCLUDE_DIRS})
 
 include(FindProtobuf)
-add_subdirectory(ui-proto)
 include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}
   ${Protobuf_INCLUDE_DIRS}
