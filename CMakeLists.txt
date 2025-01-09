@@ -4,3 +4,4 @@ project(HyperbotTopLevel)
 
 add_subdirectory(bot)
 add_subdirectory(SilkroadLib)
+add_subdirectory(ui-proto)

@@ -4,7 +4,7 @@
 #include "broker/eventBroker.hpp"
 #include "state/worldState.hpp"
 
-#include "ui-proto/stats.pb.h"
+#include <ui-proto/stats.pb.h>
 
 #include <fstream>
 #include <string>

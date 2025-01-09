@@ -4,7 +4,7 @@
 #include "broker/eventBroker.hpp"
 #include "stateMachine.hpp"
 
-#include "../../../common/pk2/ref/skill.hpp"
+#include "../../../../common/pk2/ref/skill.hpp"
 
 #include <silkroad_lib/scalar_types.h>
 

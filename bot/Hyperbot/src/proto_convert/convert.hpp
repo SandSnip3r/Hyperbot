@@ -1,7 +1,7 @@
 #ifndef PROTO_CONVERT_CONVERT_HPP_
 #define PROTO_CONVERT_CONVERT_HPP_
 
-#include "ui-proto/position.pb.h"
+#include <ui-proto/position.pb.h>
 
 #include <silkroad_lib/position.h>
 

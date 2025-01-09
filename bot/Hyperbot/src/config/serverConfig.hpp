@@ -1,7 +1,7 @@
 #ifndef CONFIG_SERVER_CONFIG_HPP_
 #define CONFIG_SERVER_CONFIG_HPP_
 
-#include "ui-proto/server_config.pb.h"
+#include <ui-proto/server_config.pb.h>
 
 // #include <absl/strings/string_view.h>
 

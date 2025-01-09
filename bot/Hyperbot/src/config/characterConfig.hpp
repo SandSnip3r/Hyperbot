@@ -1,7 +1,7 @@
 #ifndef CONFIG_CHARACTER_CONFIG_HPP_
 #define CONFIG_CHARACTER_CONFIG_HPP_
 
-#include "ui-proto/character_config.pb.h"
+#include <ui-proto/character_config.pb.h>
 
 #include <filesystem>
 // #include <optional>

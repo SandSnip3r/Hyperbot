@@ -554,8 +554,7 @@ target_link_libraries(${PROJECT_NAME}
   PRIVATE
     ${Boost_LIBRARIES}
     Pathfinder
-    proto
-    ${PROTOBUF_LIBRARIES}
+    ui-proto
     cppzmq
     cppzmq-static
     SilkroadLib
