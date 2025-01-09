@@ -1,0 +1,178 @@
+syntax = "proto3";
+
+import "entity.proto";
+import "position.proto";
+
+import "google/protobuf/empty.proto";
+
+package proto.broadcast;
+
+// Enums
+
+enum ItemLocation {
+  kCharacterInventory = 0;
+  kAvatarInventory = 1;
+  kCosInventory = 2;
+  kStorage = 3;
+  kGuildStorage = 4;
+}
+
+enum LifeState {
+  kEmbryo = 0;
+  kAlive = 1;
+  kDead = 2;
+  kGone = 3;
+};
+
+// Messages
+
+message CharacterHpUpdate {
+  uint32 currentHp = 1;
+}
+
+message CharacterMpUpdate {
+  uint32 currentMp = 1;
+}
+
+message CharacterMaxHpMpUpdate {
+  uint32 maxHp = 1;
+  uint32 maxMp = 2;
+}
+
+message CharacterLevelUpdate {
+  int32 level = 1;
+  int64 expRequired = 2;
+}
+
+message CharacterExperienceUpdate {
+  uint64 currentExperience = 1;
+  uint32 currentSpExperience = 2;
+}
+
+message CharacterSpUpdate {
+  uint32 skillPoints = 1;
+}
+
+message CharacterNameUpdate {
+  string name = 1;
+}
+
+message GoldAmountUpdate {
+  uint64 goldAmount = 1;
+  ItemLocation goldLocation = 2;
+}
+
+message RegionNameUpdate {
+  string name = 1;
+}
+
+message CharacterPositionChanged {
+  position.Position position = 1;
+}
+
+message CharacterMovementBegan {
+  position.Position currentPosition = 1;
+  oneof destination {
+    position.Position destinationPosition = 2;
+    uint32 destinationAngle = 3;
+  }
+  float speed = 4;
+}
+
+message CharacterMovementEnded {
+  position.Position currentPosition = 1;
+}
+
+message CharacterNotMovingAngleChanged {
+  uint32 angle = 1;
+}
+
+message ItemUpdate {
+  ItemLocation itemLocation = 1;
+  uint32 slotIndex = 2;
+  uint32 quantity = 3;
+  optional string itemName = 4;
+}
+
+message EntitySpawned {
+  uint32 globalId = 1;
+  position.Position position = 2;
+  entity.Entity entity = 3;
+}
+
+message EntityDespawned {
+  uint32 globalId = 1;
+}
+
+message EntityPositionChanged {
+  uint32 globalId = 1;
+  position.Position position = 2;
+}
+
+message EntityMovementBegan {
+  uint32 globalId = 1;
+  CharacterMovementBegan characterMovementBegan = 2;
+}
+
+message EntityMovementEnded {
+  uint32 globalId = 1;
+  CharacterMovementEnded characterMovementEnded = 2;
+}
+
+message EntityLifeStateChanged {
+  uint32 globalId = 1;
+  LifeState lifeState = 2;
+}
+
+message Circle {
+  position.Position center = 1;
+  float radius = 2;
+}
+
+message TrainingAreaSet {
+  oneof geometry {
+    Circle circle = 1;
+  }
+}
+
+message StateMachineCreated {
+  string name = 1;
+}
+
+message WalkingPathUpdated {
+  repeated position.Position waypoints = 1;
+}
+
+// Broadcast message
+
+message BroadcastMessage {
+  oneof body {
+    google.protobuf.Empty launch = 1;
+    google.protobuf.Empty characterSpawn = 2;
+    CharacterHpUpdate characterHpUpdate = 3;
+    CharacterMpUpdate characterMpUpdate = 4;
+    CharacterMaxHpMpUpdate characterMaxHpMpUpdate = 5;
+    CharacterLevelUpdate characterLevelUpdate = 6;
+    CharacterExperienceUpdate characterExperienceUpdate = 7;
+    CharacterSpUpdate characterSpUpdate = 8;
+    CharacterNameUpdate characterNameUpdate = 9;
+    GoldAmountUpdate goldAmountUpdate = 10;
+    CharacterPositionChanged characterPositionChanged = 11;
+    CharacterMovementBegan characterMovementBegan = 12;
+    CharacterMovementEnded characterMovementEnded = 13;
+    CharacterNotMovingAngleChanged characterNotMovingAngleChanged = 14;
+    RegionNameUpdate regionNameUpdate = 15;
+    ItemUpdate itemUpdate = 16;
+    EntitySpawned entitySpawned = 17;
+    EntityDespawned entityDespawned = 18;
+    EntityPositionChanged entityPositionChanged = 19;
+    EntityMovementBegan entityMovementBegan = 20;
+    EntityMovementEnded entityMovementEnded = 21;
+    EntityLifeStateChanged entityLifeStateChanged = 22;
+    TrainingAreaSet trainingAreaSet = 23;
+    google.protobuf.Empty trainingAreaReset = 24;
+    StateMachineCreated stateMachineCreated = 25;
+    google.protobuf.Empty stateMachineDestroyed = 26;
+    WalkingPathUpdated walkingPathUpdated = 27;
+  }
+}

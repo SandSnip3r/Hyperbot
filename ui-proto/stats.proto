@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+import "entity.proto";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+package proto.stats;
+
+message FileData {
+  uint32 proto_version_number = 1;
+  string filename = 2;
+}
+
+message CharacterEntry {
+  repeated FileData files = 1;
+}
+
+message StatFileRegistry {
+  map<string, CharacterEntry> character_entries = 1;
+}
+
+message DeathEvent {
+  optional entity.Entity killer = 1;
+}
+
+message StatEvent {
+  google.protobuf.Timestamp timestamp = 1;
+  oneof payload {
+    uint64 gold_updated = 2;
+    entity.Entity entity_killed = 3;
+    uint32 damage_dealt = 4;
+    uint32 level_updated = 5;
+
+    // This value represents SP experience. Each full skill point is 400 sp experience. So the amount of SP the character has is this value / 400.
+    uint64 skillpoint_updated = 6;
+    uint64 experience_updated = 7;
+    DeathEvent died = 8;
+
+    // This value represents the item's reference id.
+    uint32 drop_gained = 9;
+    google.protobuf.Empty start_training = 10;
+    google.protobuf.Empty stop_training = 11;
+  }
+}

@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+import "position.proto";
+
+package proto.character_config;
+
+message AutopotionConfig {
+  double hp_threshold = 1;
+  double mp_threshold = 2;
+  double vigor_hp_threshold = 3;
+  double vigor_mp_threshold = 4;
+  bool use_universal_pills = 5;
+  bool use_purification_pills = 6;
+}
+
+message TrainingConfig {
+  position.Position center = 1;
+  double radius = 2;
+  repeated uint32 training_attack_skill_ids = 3;
+  repeated uint32 training_buff_skill_ids = 4;
+  repeated uint32 nontraining_buff_skill_ids = 5;
+}
+
+message CharacterConfig {
+  string character_name = 1;
+  string username = 2;
+  string password = 3;
+  AutopotionConfig autopotion_config = 4;
+  TrainingConfig training_config = 5;
+}

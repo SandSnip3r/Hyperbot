@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package proto.request;
+
+message PacketToInject {
+  enum Direction {
+    kClientToServer = 0;
+    kServerToClient = 1;
+  }
+  Direction direction = 1;
+  uint32 opcode = 2;
+  bytes data = 3;
+}
+
+message DoAction {
+  enum Action {
+    kStartTraining = 0;
+    kStopTraining = 1;
+  }
+  Action action = 1;
+};
+
+message RequestMessage {
+  oneof body {
+    PacketToInject packetData = 1;
+    DoAction doAction = 2;
+    google.protobuf.Empty setCurrentPositionAsTrainingCenter = 3;
+  }
+}
