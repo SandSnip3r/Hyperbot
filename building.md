@@ -30,6 +30,7 @@
    - Pass the path to the Solution file created by CMake
       - Probably `Hyperbot.sln` in your current directory
    - Final command example: `/mnt/c/Program\ Files\ \(x86\)/Microsoft\ Visual\ Studio/2019/Community/MSBuild/Current/Bin/MSBuild.exe Hyperbot.sln`
+   - Note that the build will create a Debug directory at the top level of the project, this is where Hyperbot.exe exists
 
 ## Using Visual Studio
 

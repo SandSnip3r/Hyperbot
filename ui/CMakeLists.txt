@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.20)
 
 project(hyperbot-ui VERSION 0.1 LANGUAGES CXX C)
 
@@ -13,13 +13,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FindProtobuf)
 add_subdirectory(gli)
-add_subdirectory(proto)
-add_subdirectory(Pathfinder)
-add_subdirectory(SilkroadLib)
 
 find_package(cppzmq CONFIG REQUIRED)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets LinguistTools)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets LinguistTools)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
 find_package(Qt6 COMPONENTS OpenGLWidgets REQUIRED)
 
@@ -112,8 +109,7 @@ PRIVATE
   cppzmq
   cppzmq-static
   gli
-  proto
-  ${PROTOBUF_LIBRARIES}
+  ui-proto
   SilkroadLib
 )
 

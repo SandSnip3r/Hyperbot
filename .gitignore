@@ -21,3 +21,8 @@ bld/
 #wwwroot/
 
 .vscode/
+
+CMakeUserPresets.json
+CMakeLists.txt.user
+x64_build/
+qtbuild/
