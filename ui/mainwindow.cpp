@@ -7,7 +7,7 @@
 #include "textureToImage.hpp"
 #include "./ui_mainwindow.h"
 
-#include "proto/config.pb.h"
+#include "ui-proto/old_config.pb.h"
 
 #include <silkroad_lib/game_constants.h>
 #include <silkroad_lib/position_math.h>
@@ -41,7 +41,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
   // Requester is a req/rep socket to the bot to cause actions
   requester_.connect();
-  // temp();
 
   // TODO: Reorganize
   // Start timer to update entities positions
@@ -49,42 +48,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
   connect(entityMovementUpdateTimer_, &QTimer::timeout, this, &MainWindow::entityMovementTimerTriggered);
   entityMovementUpdateTimer_->setInterval(1000/60.0);
   entityMovementUpdateTimer_->start();
-}
-
-void MainWindow::temp() {
-  return;
-  proto::config::Config config;
-  config.set_client_path("C:\\Users\\Victor\\Documents\\Development\\Daxter Silkroad server files\\Silkroad Client");
-  config.set_character_to_login("IP_Man");
-  {
-    const std::string kCharacterName{"IP_Man"};
-    const std::string kUsername{"5"};
-    const std::string kPassword{"0"};
-    proto::config::CharacterConfig *characterConfig = config.add_character_configs();
-    characterConfig->set_character_name(kCharacterName);
-    characterConfig->set_username(kUsername);
-    characterConfig->set_password(kPassword);
-    proto::config::AutopotionConfig *autopotionConfig = characterConfig->mutable_autopotion_config();
-    autopotionConfig->set_hp_threshold(0.90);
-    autopotionConfig->set_mp_threshold(0.90);
-    autopotionConfig->set_vigor_hp_threshold(0.45);
-    autopotionConfig->set_vigor_mp_threshold(0.30);
-  }
-  {
-    const std::string kCharacterName{"_Nuked_"};
-    const std::string kUsername{"4"};
-    const std::string kPassword{"0"};
-    proto::config::CharacterConfig *characterConfig = config.add_character_configs();
-    characterConfig->set_character_name(kCharacterName);
-    characterConfig->set_username(kUsername);
-    characterConfig->set_password(kPassword);
-    proto::config::AutopotionConfig *autopotionConfig = characterConfig->mutable_autopotion_config();
-    autopotionConfig->set_hp_threshold(0.90);
-    autopotionConfig->set_mp_threshold(0.90);
-    autopotionConfig->set_vigor_hp_threshold(0.45);
-    autopotionConfig->set_vigor_mp_threshold(0.30);
-  }
-  requester_.sendConfig(config);
 }
 
 MainWindow::~MainWindow() {

@@ -4,7 +4,8 @@
 #include "eventHandler.hpp"
 #include "requester.hpp"
 
-#include "proto/config.pb.h"
+#include "ui-proto/old_config.pb.h"
+#include "ui-proto/character_config.pb.h"
 
 #include <QGroupBox>
 
@@ -24,20 +25,20 @@ public:
 
   void saveAndSendConfig();
 public slots:
-  void configReceived(proto::config::Config config);
+  void configReceived(proto::old_config::Config config);
 
 private:
   Ui::CharacterConfig *ui;
   EventHandler *eventHandler_{nullptr};
   Requester *requester_{nullptr};
-  std::optional<proto::config::Config> config_;
+  std::optional<proto::old_config::Config> config_;
 
-  const proto::config::CharacterConfig* getCurrentCharacterConfig() const;
-  proto::config::CharacterConfig* getMutableCurrentCharacterConfig();
-  void populateUiFromConfig(const proto::config::CharacterConfig &config);
+  const proto::character_config::CharacterConfig* getCurrentCharacterConfig() const;
+  proto::character_config::CharacterConfig* getMutableCurrentCharacterConfig();
+  void populateUiFromConfig(const proto::character_config::CharacterConfig &config);
   void updateConfigFromUi();
-  void updateAutopotionConfigFromUi(proto::config::AutopotionConfig &autopotionConfig);
-  void updateTrainingConfigFromUi(proto::config::TrainingConfig &trainingConfig);
+  void updateAutopotionConfigFromUi(proto::character_config::AutopotionConfig &autopotionConfig);
+  void updateTrainingConfigFromUi(proto::character_config::TrainingConfig &trainingConfig);
 };
 
 #endif // CHARACTERCONFIG_H

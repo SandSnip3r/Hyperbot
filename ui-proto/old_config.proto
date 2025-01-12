@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "character_config.proto";
+
+package proto.old_config;
+
+message Config {
+  optional string client_path = 1;
+  optional string character_to_login = 2;
+  repeated character_config.CharacterConfig character_configs = 3;
+}

@@ -61,8 +61,6 @@ private:
 
   QTimer *entityMovementUpdateTimer_{nullptr};
 
-  void temp();
-
   void initializeUi();
   QPixmap parseRegionMinimapPixmapFromPk2(sro::pk2::Pk2ReaderModern &pk2Reader, sro::Sector xSector, sro::Sector ySector);
   QPixmap loadDdjAsQPixmap(sro::pk2::Pk2ReaderModern &pk2Reader, const std::string &path);

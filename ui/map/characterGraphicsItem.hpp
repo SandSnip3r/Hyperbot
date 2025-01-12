@@ -1,7 +1,7 @@
 #ifndef MAP_CHARACTER_GRAPHICS_ITEM_HPP_
 #define MAP_CHARACTER_GRAPHICS_ITEM_HPP_
 
-#include "proto/entity.pb.h"
+#include "ui-proto/entity.pb.h"
 
 #include <QGraphicsItem>
 #include <QPainter>

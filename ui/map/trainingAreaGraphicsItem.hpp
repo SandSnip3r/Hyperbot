@@ -1,7 +1,7 @@
 #ifndef MAP_TRAINING_AREA_GRAPHICS_ITEM_HPP_
 #define MAP_TRAINING_AREA_GRAPHICS_ITEM_HPP_
 
-#include "proto/broadcast.pb.h"
+#include "ui-proto/broadcast.pb.h"
 
 #include <QGraphicsItem>
 #include <QPainter>

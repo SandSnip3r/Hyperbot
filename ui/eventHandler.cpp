@@ -1,6 +1,6 @@
 #include "eventHandler.hpp"
 
-#include "proto/position.pb.h"
+#include "ui-proto/position.pb.h"
 
 namespace {
 
@@ -260,10 +260,10 @@ void EventHandler::handle(const proto::broadcast::BroadcastMessage &message) {
         emit walkingPathUpdated(waypoints);
         break;
       }
-    case proto::broadcast::BroadcastMessage::BodyCase::kConfig: {
-        const proto::broadcast::Config &msg = message.config();
-        emit configReceived(msg.config());
-      }
+    // case proto::broadcast::BroadcastMessage::BodyCase::kConfig: {
+    //     const proto::broadcast::Config &msg = message.config();
+    //     emit configReceived(msg.config());
+    //   }
     default:
       // Unknown case. Might be a malformed message
       break;

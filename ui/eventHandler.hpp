@@ -1,8 +1,8 @@
 #ifndef EVENT_HANDLER_HPP_
 #define EVENT_HANDLER_HPP_
 
-#include "proto/broadcast.pb.h"
-#include "proto/config.pb.h"
+#include "ui-proto/broadcast.pb.h"
+// #include "ui-proto/old_config.pb.h"
 
 #include <silkroad_lib/entity.h>
 #include <silkroad_lib/position.h>
@@ -61,7 +61,7 @@ signals:
   void stateMachineCreated(std::string name);
   void stateMachineDestroyed();
   void walkingPathUpdated(std::vector<sro::Position> waypoints);
-  void configReceived(proto::config::Config config);
+  // void configReceived(proto::old_config::Config config);
 private:
   zmq::context_t &context_;
   std::atomic<bool> run_;

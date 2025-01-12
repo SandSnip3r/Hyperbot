@@ -489,6 +489,7 @@ if(MSVC)
                 /Gy
             >
             /permissive-;
+            /FS;
             /std:c++17;
             /sdl;
             /W3;
@@ -508,6 +509,7 @@ if(MSVC)
                 /Gy
             >
             /permissive-;
+            /FS;
             /std:c++17;
             /sdl;
             /W3;

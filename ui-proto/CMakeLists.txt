@@ -13,6 +13,7 @@ set(PROTO_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/broadcast.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/character_config.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/entity.proto"
+  "${CMAKE_CURRENT_SOURCE_DIR}/old_config.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/position.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/request.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/server_config.proto"

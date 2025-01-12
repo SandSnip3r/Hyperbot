@@ -1,5 +1,5 @@
 [submodule "Pathfinder"]
-	path = bot/Pathfinder
+	path = Pathfinder
 	url = git@github.com:SandSnip3r/Pathfinder.git
 [submodule "ui/gli"]
 	path = ui/gli

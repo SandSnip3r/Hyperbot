@@ -1,7 +1,7 @@
 #ifndef PACKET_LIST_WIDGET_ITEM_HPP_
 #define PACKET_LIST_WIDGET_ITEM_HPP_
 
-#include "proto/request.pb.h"
+#include "ui-proto/request.pb.h"
 
 #include <QListWidgetItem>
 

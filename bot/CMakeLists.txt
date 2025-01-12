@@ -87,6 +87,5 @@ enable_testing()
 ################################################################################
 # Sub-projects
 ################################################################################
-add_subdirectory(Pathfinder)
 add_subdirectory(Hyperbot)
 add_subdirectory(loaderDll)

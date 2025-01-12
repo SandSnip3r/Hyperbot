@@ -1,8 +1,8 @@
 #ifndef REQUESTER_HPP_
 #define REQUESTER_HPP_
 
-#include "proto/config.pb.h"
-#include "proto/request.pb.h"
+#include "ui-proto/old_config.pb.h"
+#include "ui-proto/request.pb.h"
 
 #include <zmq.hpp>
 
@@ -15,7 +15,7 @@ class Requester : public QObject {
 public:
   Requester(zmq::context_t &context);
   void connect();
-  void sendConfig(const proto::config::Config &config);
+  void sendConfig(const proto::old_config::Config &config);
   void injectPacket(proto::request::PacketToInject::Direction packetDirection, uint16_t opcode, const std::string &rawBytes);
   void setCurrentPositionAsTrainingCenter();
   void startTraining();

@@ -8,10 +8,11 @@ void Requester::connect() {
   socket_.connect("tcp://localhost:5555");
 }
 
-void Requester::sendConfig(const proto::config::Config &config) {
-  proto::request::RequestMessage requestMessage;
-  *requestMessage.mutable_config() = config;
-  serializeSendAndRecvAck(requestMessage);
+void Requester::sendConfig(const proto::old_config::Config &config) {
+  throw std::runtime_error("Not implemented");
+  // proto::request::RequestMessage requestMessage;
+  // *requestMessage.mutable_config() = config;
+  // serializeSendAndRecvAck(requestMessage);
 }
 
 void Requester::injectPacket(proto::request::PacketToInject::Direction packetDirection, uint16_t opcode, const std::string &rawBytes) {

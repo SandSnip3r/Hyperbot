@@ -443,7 +443,7 @@ void initializeSelfFromCharacterDataPacket(entity::Self &self, const packet::par
 }
 
 void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::ServerAgentCharacterData &packet) {
-  if (VLOG_IS_ON(1)) {
+  if (ABSL_VLOG_IS_ON(1)) {
     VLOG(1) << "Masteries:";
     for (const auto &m : packet.masteries()) {
       const auto &mastery = gameData_.masteryData().getMasteryById(m.id);

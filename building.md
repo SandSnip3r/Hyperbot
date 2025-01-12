@@ -43,3 +43,7 @@
    - I think this runs Ninja to generate build files in the output directory defined in `CMakeSettings.json`
    - If there are files in this output directory already, it could cause issues in Visual Studio
 6. Build -> Build All
+
+## Building Hyperbot UI Using Qt Creator
+
+Under the Projects tab, find the Build & Run settings. Under Initial Configuration of the Build section, add your `CMAKE_TOOLCHAIN_FILE` if necessary (is necessary for vcpkg builds). Under Build  Steps, under Targets, unselect "all". Select "hyperbot-ui" and "ui-proto". Under the Run section, change "Run configuration" to "hyperbot-ui".
