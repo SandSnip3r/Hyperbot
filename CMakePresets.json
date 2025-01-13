@@ -10,7 +10,7 @@
       "displayName": "Win32 configure step with vcpkg toolchain",
       "generator": "Visual Studio 16 2019",
       "architecture": "Win32",
-      "binaryDir": "${sourceDir}/win32_build",
+      "binaryDir": "${sourceDir}/build_win32",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "C:/Users/Victor/Documents/Development/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake"
       }
@@ -20,7 +20,7 @@
       "displayName": "x64 configure step with vcpkg toolchain and Qt path",
       "generator": "Visual Studio 16 2019",
       "architecture": "x64",
-      "binaryDir": "${sourceDir}/x64_build",
+      "binaryDir": "${sourceDir}/build_x64",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "C:/Users/Victor/Documents/Development/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "CMAKE_PREFIX_PATH": "C:/Qt/6.2.4/msvc2019_64"
@@ -30,7 +30,7 @@
       "name": "x64_ninja_config",
       "displayName": "x64 configure step with vcpkg toolchain and Qt path",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/x64_build",
+      "binaryDir": "${sourceDir}/build_x64",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "C:/Users/Victor/Documents/Development/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "CMAKE_PREFIX_PATH": "C:/Qt/6.2.4/msvc2019_64"

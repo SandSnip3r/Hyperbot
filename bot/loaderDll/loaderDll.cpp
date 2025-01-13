@@ -3,6 +3,8 @@
 // This project based on my Silkroad development series guides:
 // http://www.elitepvpers.de/forum/sro-guides-templates/271405-guide-silkroad-development-series.html
 
+#if defined(_WIN32) && !defined(_WIN64)
+
 //-------------------------------------------------------------------------
 
 #include <windows.h>
@@ -1224,3 +1226,5 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
 }
 
 //-------------------------------------------------------------------------
+
+#endif

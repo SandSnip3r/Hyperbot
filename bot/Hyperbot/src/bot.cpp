@@ -739,8 +739,10 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
   };
 
   constexpr const double kAgentRadius{3.14};
-  pathfinder::Pathfinder<sro::navmesh::triangulation::NavmeshTriangulation> pathfinder(gameData().navmeshTriangulation(), kAgentRadius);
-  pathfinder.setTimeout(std::chrono::milliseconds(150));
+  pathfinder::PathfinderConfig pathfinderConfig(pathfinder::PathfinderAlgorithm::kPolyanya);
+  pathfinderConfig.setAgentRadius(kAgentRadius);
+  pathfinderConfig.setTimeout(std::chrono::milliseconds(150));
+  pathfinder::Pathfinder<sro::navmesh::triangulation::NavmeshTriangulation> pathfinder(gameData().navmeshTriangulation(), pathfinderConfig);
   std::string debugPath;
   try {
     const sro::Position currentPosition = selfEntity->position();

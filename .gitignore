@@ -27,3 +27,4 @@ CMakeLists.txt.user
 x64_build/
 qtbuild/
 win32_build/
+build*/
