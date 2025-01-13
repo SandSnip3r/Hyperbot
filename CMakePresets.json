@@ -16,25 +16,10 @@
       }
     },
     {
-      "name": "x64_config",
-      "displayName": "x64 configure step with vcpkg toolchain and Qt path",
-      "generator": "Visual Studio 16 2019",
-      "architecture": "x64",
-      "binaryDir": "${sourceDir}/build_x64",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "C:/Users/Victor/Documents/Development/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_PREFIX_PATH": "C:/Qt/6.2.4/msvc2019_64"
-      }
-    },
-    {
-      "name": "x64_ninja_config",
-      "displayName": "x64 configure step with vcpkg toolchain and Qt path",
+      "name": "linux_x64_config",
+      "displayName": "x64 configure step for Linux",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build_x64",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "C:/Users/Victor/Documents/Development/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_PREFIX_PATH": "C:/Qt/6.2.4/msvc2019_64"
-      }
+      "binaryDir": "${sourceDir}/build_liunx_x64"
     }
   ],
   "buildPresets": [
@@ -45,9 +30,9 @@
       "configuration": "Debug"
     },
     {
-      "name": "x64",
+      "name": "linux_x64",
       "displayName": "x64 build step",
-      "configurePreset": "x64_config",
+      "configurePreset": "linux_x64_config",
       "configuration": "Debug"
     }
   ]

@@ -13,7 +13,7 @@ int64_t file_tell(FILE * file);
 
 int file_remove(const char * filename);
 
-std::vector<uint8_t> file_tovector(const char * filename);
+// std::vector<uint8_t> file_tovector(const char * filename);
 
 } // namespace sro::shared_io
 
