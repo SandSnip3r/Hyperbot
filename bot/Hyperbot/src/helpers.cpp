@@ -1,6 +1,6 @@
 #include "helpers.hpp"
 
-#include "../../common/Common.h"
+#include "../../common/common.h"
 
 #include <silkroad_lib/position.h>
 #include <silkroad_lib/position_math.h>

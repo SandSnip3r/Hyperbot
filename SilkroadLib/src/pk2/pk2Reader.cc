@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 namespace sro::pk2 {
 
@@ -98,7 +99,11 @@ bool PK2Reader::Open(const char * filename) {
 		return false;
 	}
 
+#if defined(_WIN32)
 	fopen_s(&m_file, filename, "rb");
+#else
+	m_file = std::fopen(filename, "rb");
+#endif
 	if (m_file == 0) {
 		m_error.str(""); m_error << "Could not open the file \"" << filename << "\".";
 		return false;

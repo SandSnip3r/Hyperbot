@@ -1,6 +1,8 @@
 #include "position_math.h"
 #include "navmesh/navmesh.h"
 
+#include <algorithm>
+#include <cmath>
 #include <chrono>
 #include <iostream>
 #include <stack>
@@ -8,7 +10,7 @@
 #include <unordered_set>
 
 namespace sro::navmesh {
-  
+
 namespace {
 bool heightInTriangle(const math::Vector3 &point, const math::Vector3 &vertex0, const math::Vector3 &vertex1, const math::Vector3 &vertex2, float &height) {
   const float denom = (vertex1.z-vertex2.z)*(vertex0.x-vertex2.x) + (vertex2.x-vertex1.x)*(vertex0.z-vertex2.z);
@@ -156,14 +158,14 @@ void Navmesh::addObjectInstance(const ObjectInstance &instance) {
   for (int i=0; i<instance.globalEdgeLinks.size(); ++i) {
     const auto &oLink = instance.globalEdgeLinks[i];
     auto &eoLink = existingInstance.globalEdgeLinks[i];
-    if (oLink.linkedObjId != eoLink.linkedObjId && oLink.linkedObjId != -1) { 
+    if (oLink.linkedObjId != eoLink.linkedObjId && oLink.linkedObjId != -1) {
       eoLink.linkedObjId = oLink.linkedObjId;
       eoLink.linkedObjGlobalId = oLink.linkedObjGlobalId;
     }
-    if (oLink.linkedObjEdgeId != eoLink.linkedObjEdgeId && oLink.linkedObjEdgeId != -1) { 
+    if (oLink.linkedObjEdgeId != eoLink.linkedObjEdgeId && oLink.linkedObjEdgeId != -1) {
       eoLink.linkedObjEdgeId = oLink.linkedObjEdgeId;
     }
-    if (oLink.edgeId != eoLink.edgeId && oLink.edgeId != -1) { 
+    if (oLink.edgeId != eoLink.edgeId && oLink.edgeId != -1) {
       eoLink.edgeId = oLink.edgeId;
     }
   }
@@ -325,7 +327,7 @@ void Navmesh::postProcess() {
       }
     };
 
-    
+
     uint32_t areaId=0;
     for (size_t i=0; i<objectResource.cells.size(); ++i) {
       if (visitedCells.find(i) == visitedCells.end()) {

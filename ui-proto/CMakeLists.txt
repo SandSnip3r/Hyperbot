@@ -20,11 +20,14 @@ set(PROTO_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/stats.proto"
 )
 
+set(PROTOBUF_EXTRA_FLAGS "--experimental_allow_proto3_optional")
+
 protobuf_generate_cpp(
   PROTO_SRCS
   PROTO_HEADER
   ${PROTO_FILES}
   PROTOC_OUT_DIR "${GENERATED_PROTO_DIR}/ui-proto"
+  PROTOC_OPTIONS "${PROTOBUF_EXTRA_FLAGS}"
 )
 
 add_library(ui-proto STATIC

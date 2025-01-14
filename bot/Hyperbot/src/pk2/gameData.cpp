@@ -15,6 +15,7 @@
 #include <fstream>
 #include <map>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 namespace pk2 {
@@ -488,7 +489,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
         }
       }
       // Now, add each tab within each group to the NPC's shop
-      
+
       uint8_t tabCount=0;
       for (const auto tabGroup : tabGroups) {
         for (const auto &shopTab : shopTabs) {

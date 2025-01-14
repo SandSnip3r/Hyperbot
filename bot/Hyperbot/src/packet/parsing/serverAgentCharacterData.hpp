@@ -3,11 +3,11 @@
 
 #include "entity/mobileEntity.hpp"
 #include "parsedPacket.hpp"
-#include "../enums./packetEnums.hpp"
-#include "../structures/packetInnerStructures.hpp"
-#include "../../pk2/itemData.hpp"
-#include "../../pk2/skillData.hpp"
-#include "../../shared/silkroad_security.h"
+#include "packet/enums/packetEnums.hpp"
+#include "packet/structures/packetInnerStructures.hpp"
+#include "pk2/itemData.hpp"
+#include "pk2/skillData.hpp"
+#include "shared/silkroad_security.h"
 
 #include <silkroad_lib/entity.h>
 #include <silkroad_lib/position.h>
@@ -19,7 +19,7 @@
 #include <vector>
 
 namespace packet::parsing {
-  
+
 class ServerAgentCharacterData : public ParsedPacket {
 public:
   ServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData);

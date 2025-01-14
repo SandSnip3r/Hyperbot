@@ -3,8 +3,6 @@
 // This project based on my Silkroad development series guides:
 // http://www.elitepvpers.de/forum/sro-guides-templates/271405-guide-silkroad-development-series.html
 
-#if defined(_WIN32) && !defined(_WIN64)
-
 //-------------------------------------------------------------------------
 
 #include <windows.h>
@@ -12,7 +10,7 @@
 #include "../common/common.h"
 #include "../common/pk2/divisionInfo.hpp"
 #include "../common/pk2/parsing/parsing.hpp"
-#include "../Common/detours/detours.h"
+#include "../common/detours/detours.h"
 
 #include <silkroad_lib/pk2/pk2ReaderModern.h>
 
@@ -1226,5 +1224,3 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
 }
 
 //-------------------------------------------------------------------------
-
-#endif

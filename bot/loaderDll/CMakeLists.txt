@@ -6,8 +6,8 @@ set(PROJECT_NAME loaderDll)
 set(Common
     "../common/blowfish.cpp"
     "../common/blowfish.h"
-    "../common/Common.cpp"
-    "../common/Common.h"
+    "../common/common.cpp"
+    "../common/common.h"
     "../common/pk2/division.cpp"
     "../common/pk2/division.hpp"
     "../common/pk2/divisionInfo.cpp"

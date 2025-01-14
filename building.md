@@ -47,3 +47,31 @@
 ## Building Hyperbot UI Using Qt Creator
 
 Under the Projects tab, find the Build & Run settings. Under Initial Configuration of the Build section, add your `CMAKE_TOOLCHAIN_FILE` if necessary (is necessary for vcpkg builds). Under Build  Steps, under Targets, unselect "all". Select "hyperbot-ui" and "ui-proto". Under the Run section, change "Run configuration" to "hyperbot-ui".
+
+## Building Hyperbot on Linux
+
+### Install Boost
+```
+sudo apt-get install libboost-all-dev
+```
+
+### Install ZMQ
+```
+sudo apt-get install libczmq-dev
+wget https://github.com/zeromq/cppzmq/archive/refs/tags/v4.10.0.tar.gz
+tar -zxvf v4.10.0.tar.gz
+cppzmq-4.10.0/
+mkdir build
+cd build
+cmake ../
+sudo make -j4 install
+```
+
+### Install Protobuf
+```
+sudo apt-get install protobuf-compiler libprotobuf-dev
+```
+
+### Make sure cmake is up to date
+
+https://askubuntu.com/a/865294

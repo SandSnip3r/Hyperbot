@@ -10,13 +10,13 @@ project(Hyperbot LANGUAGES CXX C)
 # Set target arch type if empty. Visual studio solution generator provides it.
 ################################################################################
 if(NOT CMAKE_VS_PLATFORM_NAME)
-    set(CMAKE_VS_PLATFORM_NAME "Win32")
+  set(CMAKE_VS_PLATFORM_NAME "Win32")
 endif()
 message("${CMAKE_VS_PLATFORM_NAME} architecture in use")
 
 if(NOT ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64"
      OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32"))
-    # message(FATAL_ERROR "${CMAKE_VS_PLATFORM_NAME} arch is not supported!")
+  # message(FATAL_ERROR "${CMAKE_VS_PLATFORM_NAME} arch is not supported!")
 endif()
 
 ################################################################################
@@ -88,4 +88,7 @@ enable_testing()
 # Sub-projects
 ################################################################################
 add_subdirectory(Hyperbot)
-add_subdirectory(loaderDll)
+
+if ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
+  add_subdirectory(loaderDll)
+endif()

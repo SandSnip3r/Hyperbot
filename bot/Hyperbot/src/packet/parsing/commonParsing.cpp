@@ -91,7 +91,7 @@ std::shared_ptr<storage::Item> parseGenericItem(StreamUtility &stream, const pk2
 structures::RentInfo parseRentInfo(StreamUtility &stream) {
   structures::RentInfo rentInfo;
   rentInfo.rentType = stream.Read<uint32_t>();
-  
+
   if (rentInfo.rentType == 1) {
     rentInfo.canDelete = stream.Read<uint16_t>();
     rentInfo.periodBeginTime = stream.Read<uint32_t>();
@@ -121,7 +121,7 @@ void parseItem(storage::ItemEquipment &item, StreamUtility &stream) {
     magParam.type = stream.Read<uint32_t>();
     magParam.value = stream.Read<uint32_t>();
   }
-  
+
   uint8_t bindingOptionType1 = stream.Read<uint8_t>(); // Weird useless byte (to represent Socket)
   uint8_t bindingOptionCount1 = stream.Read<uint8_t>();
   for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount1; ++bindingOptionIndex) {
@@ -131,7 +131,7 @@ void parseItem(storage::ItemEquipment &item, StreamUtility &stream) {
     socketOption.id = stream.Read<uint32_t>();
     socketOption.nParam1 = stream.Read<uint32_t>();
   }
-  
+
   uint8_t bindingOptionType2 = stream.Read<uint8_t>(); // Weird useless byte (to represent Advanced Elixir)
   uint8_t bindingOptionCount2 = stream.Read<uint8_t>();
   for (int bindingOptionIndex=0; bindingOptionIndex<bindingOptionCount2; ++bindingOptionIndex) {
@@ -143,7 +143,7 @@ void parseItem(storage::ItemEquipment &item, StreamUtility &stream) {
   }
 }
 
-void parseItemCosSummoner(storage::ItemCosGrowthSummoner *cosSummoner, StreamUtility &stream) {  
+void parseItemCosSummoner(storage::ItemCosGrowthSummoner *cosSummoner, StreamUtility &stream) {
   cosSummoner->lifeState = static_cast<storage::CosLifeState>(stream.Read<uint8_t>());
   if (cosSummoner->lifeState != storage::CosLifeState::kInactive) {
     cosSummoner->refObjID = stream.Read<uint32_t>();
@@ -276,10 +276,10 @@ void parseItem(storage::Item *item, StreamUtility &stream) {
 
 structures::SkillAction parseSkillAction(StreamUtility &stream) {
   auto parseInt32Pos = [](auto &stream) {
-    const auto regionId = stream.Read<sro::RegionId>();
-    const auto xOffset = stream.Read<int32_t>();
-    const auto yOffset = stream.Read<int32_t>();
-    const auto zOffset = stream.Read<int32_t>();
+    const auto regionId = stream.template Read<sro::RegionId>();
+    const auto xOffset = stream.template Read<int32_t>();
+    const auto yOffset = stream.template Read<int32_t>();
+    const auto zOffset = stream.template Read<int32_t>();
     return sro::Position(regionId, xOffset, yOffset, zOffset);
   };
   structures::SkillAction skillAction;

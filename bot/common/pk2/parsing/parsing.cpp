@@ -4,6 +4,7 @@
 
 #include <array>
 #include <codecvt>
+#include <cstring>
 #include <sstream>
 
 namespace pk2::parsing {

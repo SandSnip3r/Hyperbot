@@ -1,6 +1,6 @@
 #include "loader.hpp"
 
-#include "../../common/Common.h"
+#include "../../common/common.h"
 
 #include <absl/log/log.h>
 
@@ -11,6 +11,7 @@
 #include <sstream>
 
 Loader::Loader(std::string_view clientPath, const pk2::DivisionInfo &divisionInfo) : kDivisionInfo_(divisionInfo) {
+#if defined(_WIN32)
   // TODO: Ensure this dll path is updated for release builds
   // Note: We assume that the DLL is in our current directory
   dllPath_ = std::filesystem::current_path() / "loaderDll.dll";
@@ -24,9 +25,12 @@ Loader::Loader(std::string_view clientPath, const pk2::DivisionInfo &divisionInf
   if (!std::filesystem::exists(clientPath_)) {
     throw std::runtime_error("sro_client.exe does not exist");
   }
+#endif
 }
 
 namespace {
+
+#if defined(_WIN32)
 
 class Murderer {
 public:
@@ -54,9 +58,12 @@ public:
 };
 std::vector<int> Murderer::processIds_;
 
+#endif
+
 } // anonymous namespace
 
 void Loader::startClient(uint16_t proxyListeningPort) {
+#if defined(_WIN32)
   WSADATA wsaData = { 0 };
   WSAStartup(MAKEWORD(2, 2), &wsaData);
   STARTUPINFOA si = { 0 };
@@ -100,6 +107,9 @@ void Loader::startClient(uint16_t proxyListeningPort) {
   // Kill the process when we exit
   Murderer::addProcessToKillOnExit(pi.dwProcessId);
   signal(SIGINT, &Murderer::signalHandler);
+#else
+  throw std::runtime_error("Cannot start client on non-Windows systems");
+#endif
 }
 
 // void Loader::killClient() {}

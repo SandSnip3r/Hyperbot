@@ -5,15 +5,17 @@ project(HyperbotTopLevel)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+find_package(GTest CONFIG)
+
 message("CMAKE_SIZEOF_VOID_P: ${CMAKE_SIZEOF_VOID_P}")
 message("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
 
-if ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
+# if ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
   message(STATUS "Configuring Hyperbot")
   add_subdirectory(bot)
-else()
-  message(STATUS "Skipping Hyperbot")
-endif()
+# else()
+  # message(STATUS "Skipping Hyperbot")
+# endif()
 
 set(ABSL_PROPAGATE_CXX_STD ON)
 add_subdirectory(abseil-cpp)
