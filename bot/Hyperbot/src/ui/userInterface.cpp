@@ -309,7 +309,11 @@ void UserInterface::run() {
   while (1) {
     // Wait for a request
     zmq::message_t request;
-    socket.recv(request, zmq::recv_flags::none);
+    zmq::recv_result_t receiveResult = socket.recv(request, zmq::recv_flags::none);
+    if (!receiveResult) {
+      LOG(WARNING) << "Error receiving message";
+      continue;
+    }
 
     handleRequest(request);
 

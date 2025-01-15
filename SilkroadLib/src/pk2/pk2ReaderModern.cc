@@ -42,7 +42,7 @@ std::vector<uint8_t> Pk2ReaderModern::getEntryData(PK2Entry &entry) { // TODO: T
   if (!result) {
     throw std::runtime_error("PK2Reader failed to extract data from entry \""+std::string(entry.name)+"\" (PK2Reader: \""+pk2Reader_.GetError()+"\")");
   }
-  return data; 
+  return data;
 }
 
 std::vector<char> Pk2ReaderModern::getEntryDataChar(PK2Entry &entry) {

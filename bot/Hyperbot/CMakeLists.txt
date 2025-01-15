@@ -573,6 +573,7 @@ endif()
 # ==============================================================================
 # =================================== Tests ====================================
 # ==============================================================================
+find_package(GTest REQUIRED)
 
 add_executable(
   new_test_name_todo_rename
@@ -583,7 +584,7 @@ target_link_libraries(
   new_test_name_todo_rename
   Pathfinder
   SilkroadLib
-  gtest_main
+  GTest::Main
 )
 
 target_include_directories(new_test_name_todo_rename PRIVATE

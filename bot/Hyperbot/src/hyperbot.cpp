@@ -6,6 +6,7 @@
 #include "ui/userInterface.hpp"
 
 void Hyperbot::run() {
+  VLOG(1) << "Running Hyperbot";
   parseConfig();
 
   ui::UserInterface userInterface{gameData_, eventBroker_};
@@ -43,7 +44,9 @@ void Hyperbot::run() {
 
 void Hyperbot::parseConfig() {
   const auto appDataDirectory = helpers::getAppDataDirectory();
+  VLOG(2) << absl::StreamFormat("Parsing Hyperbot config at \"%s\"", appDataDirectory);
   serverConfig_.initialize(appDataDirectory);
+  VLOG(2) << "Finished parsing config";
 }
 
 void Hyperbot::initializeGameData() {

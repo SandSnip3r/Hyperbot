@@ -8,7 +8,6 @@
 #include "shared/silkroad_security.h"
 #include "../../common/pk2/divisionInfo.hpp"
 
-#include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/asio.hpp>
 
@@ -58,7 +57,7 @@ private:
 
 	//Starts accepting new connections
 	void PostAccept(uint32_t count = 1);
-	
+
 	//Handles new connections
 	void HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, const boost::system::error_code & error);
 

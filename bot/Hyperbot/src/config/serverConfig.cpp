@@ -12,6 +12,7 @@
 namespace config {
 
 void ServerConfig::initialize(const std::filesystem::path &pathToConfig) {
+  VLOG(2) << "Initializing ServerConfig";
   std::filesystem::path configFileFilePath = pathToConfig / kConfigFileFilename;
 
   std::ios_base::openmode fileOpenMode = std::ios::in;
@@ -22,7 +23,12 @@ void ServerConfig::initialize(const std::filesystem::path &pathToConfig) {
 
   std::ifstream configFileIn(configFileFilePath, fileOpenMode);
   if (!configFileIn) {
+    LOG(WARNING) << "Server config does not exist. Constructing and using empty config";
+    // TODO: Construct and save an empty config in such a case
+    return;
+
     throw std::runtime_error("ServerConfig file does not exist");
+
     // // ServerConfig file does not exist, create a new one with our default constructed proto
     // save();
     // return;

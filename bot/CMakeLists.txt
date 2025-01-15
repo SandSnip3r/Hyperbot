@@ -1,41 +1,39 @@
-cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
-
 set(CMAKE_SYSTEM_VERSION 10.0 CACHE STRING "" FORCE)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 project(Hyperbot LANGUAGES CXX C)
 
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
 ################################################################################
-if(NOT CMAKE_VS_PLATFORM_NAME)
-  set(CMAKE_VS_PLATFORM_NAME "Win32")
-endif()
-message("${CMAKE_VS_PLATFORM_NAME} architecture in use")
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  if(NOT CMAKE_VS_PLATFORM_NAME)
+    set(CMAKE_VS_PLATFORM_NAME "Win32")
+  endif()
+  message("${CMAKE_VS_PLATFORM_NAME} architecture in use")
 
-if(NOT ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64"
-     OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32"))
-  # message(FATAL_ERROR "${CMAKE_VS_PLATFORM_NAME} arch is not supported!")
+  if(NOT ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64"
+      OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32"))
+    # message(FATAL_ERROR "${CMAKE_VS_PLATFORM_NAME} arch is not supported!")
+  endif()
 endif()
 
 ################################################################################
 # Global configuration types
 ################################################################################
 set(CMAKE_CONFIGURATION_TYPES
-    "Debug"
-    "Release"
-    CACHE STRING "" FORCE
+  "Debug"
+  "Release"
+  CACHE STRING "" FORCE
 )
 
 ################################################################################
 # Global compiler options
 ################################################################################
 if(MSVC)
-    # remove default flags provided with CMake for MSVC
-    set(CMAKE_CXX_FLAGS "")
-    set(CMAKE_CXX_FLAGS_DEBUG "")
-    set(CMAKE_CXX_FLAGS_RELEASE "")
+  # remove default flags provided with CMake for MSVC
+  set(CMAKE_CXX_FLAGS "")
+  set(CMAKE_CXX_FLAGS_DEBUG "")
+  set(CMAKE_CXX_FLAGS_RELEASE "")
 endif()
 
 ################################################################################
@@ -61,9 +59,9 @@ endif()
 # Nuget packages function stub.
 ################################################################################
 function(use_package TARGET PACKAGE VERSION)
-    message(WARNING "No implementation of use_package. Create yours. "
-                    "Package \"${PACKAGE}\" with version \"${VERSION}\" "
-                    "for target \"${TARGET}\" is ignored!")
+  message(WARNING "No implementation of use_package. Create yours. "
+                  "Package \"${PACKAGE}\" with version \"${VERSION}\" "
+                  "for target \"${TARGET}\" is ignored!")
 endfunction()
 
 ################################################################################

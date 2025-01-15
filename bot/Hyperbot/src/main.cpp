@@ -25,6 +25,7 @@ void initializeLogging();
 int main(int argc, char **argv) {
   absl::ParseCommandLine(argc, argv);
   initializeLogging();
+  VLOG(1) << "Abseil logging initialized";
 
   try {
     Hyperbot hyperbot;
