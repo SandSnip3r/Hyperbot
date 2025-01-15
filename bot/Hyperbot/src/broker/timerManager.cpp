@@ -1,10 +1,15 @@
 #include "timerManager.hpp"
 
+#include <absl/log/log.h>
+
 #include <algorithm>
 
 namespace broker {
 
 void TimerManager::runAsync() {
+  if (thr_.joinable()) {
+    throw std::runtime_error("TimerManager::runAsync called while already running");
+  }
   thr_ = std::thread(&TimerManager::run, this);
 }
 
@@ -180,11 +185,14 @@ void TimerManager::timerFinished(const Timer &timer) {
 }
 
 TimerManager::~TimerManager() {
-  keepRunning_ = false;
-  // Wake up the thread if it's waiting for something
-  cv_.notify_one();
-  // Wait for it to finish
-  thr_.join();
+  VLOG(1) << "Destructing TimerManager";
+  if (thr_.joinable()) {
+    keepRunning_ = false;
+    // Wake up the thread if it's waiting for something
+    cv_.notify_one();
+    // Wait for it to finish
+    thr_.join();
+  }
 }
 
 bool operator<(const TimerManager::Timer &lhs, const TimerManager::Timer &rhs) {

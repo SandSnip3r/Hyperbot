@@ -2,9 +2,12 @@
 #define SESSION_HPP_
 
 #include "bot.hpp"
-#include "loader.hpp"
 #include "proxy.hpp"
 #include "sessionId.hpp"
+
+#if defined(_WIN32)
+#include "loader.hpp"
+#endif
 
 #include "broker/packetBroker.hpp"
 #include "pk2/gameData.hpp"
@@ -14,7 +17,6 @@
 #include <functional>
 #include <string>
 #include <string_view>
-#include <thread>
 
 // Session is a facilitator that:
 //  - Starts the Proxy
@@ -27,7 +29,7 @@ public:
           std::string_view clientPath,
           broker::EventBroker &eventBroker,
           state::WorldState &worldState);
-  ~Session();
+  ~Session() = default;
   void setCharacterToLogin(std::string_view characterName);
   void initialize();
   void runAsync();
@@ -37,11 +39,12 @@ private:
   bool initialized_{false};
   const pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
+#if defined(_WIN32)
   Loader loader_;
+#endif
   broker::PacketBroker packetBroker_;
   Proxy proxy_{gameData_, packetBroker_};
   Bot bot_;
-  std::thread proxyThread_;
 
   static std::atomic<SessionId> nextSessionId;
   static SessionId createUniqueSessionId();

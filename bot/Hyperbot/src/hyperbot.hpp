@@ -5,10 +5,9 @@
 #include "config/serverConfig.hpp"
 #include "pk2/gameData.hpp"
 
-#include <string>
-
 class Hyperbot {
 public:
+  ~Hyperbot();
   void run();
 private:
   config::ServerConfig serverConfig_;

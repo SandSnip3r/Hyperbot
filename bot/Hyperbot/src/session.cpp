@@ -6,14 +6,10 @@ Session::Session(const pk2::GameData &gameData,
                  state::WorldState &worldState) :
     gameData_(gameData),
     eventBroker_(eventBroker),
+#if defined(_WIN32)
     loader_(clientPath, gameData_.divisionInfo()),
+#endif
     bot_(sessionId_, gameData_, proxy_, packetBroker_, eventBroker_, worldState) {
-}
-
-Session::~Session() {
-  proxy_.stop();
-  proxyThread_.join();
-  // loader_.killClient();
 }
 
 void Session::setCharacterToLogin(std::string_view characterName) {
@@ -32,9 +28,10 @@ void Session::runAsync() {
   if (!initialized_) {
     throw std::runtime_error("Session::runAsync called before Session::initialize");
   }
-  loader_.startClient(proxy_.getOurListeningPort()); //throws if problem starting client & injecting
-  proxyThread_ = std::thread(std::bind(&Proxy::run, &proxy_));
-  // proxy_.run(); //throws if socket issues, blocks
+#if defined(_WIN32)
+  loader_.startClient(proxy_.getOurListeningPort()); // Throws if problem starting client & injecting
+#endif
+  proxy_.runAsync();
 }
 
 const state::WorldState& Session::getWorldState() const {

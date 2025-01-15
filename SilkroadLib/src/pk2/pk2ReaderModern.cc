@@ -1,5 +1,8 @@
 #include "pk2/pk2ReaderModern.h"
 
+#include <absl/log/log.h>
+#include <absl/strings/str_format.h>
+
 #include <filesystem>
 #include <stdexcept>
 
@@ -7,11 +10,11 @@ namespace sro::pk2 {
 
 Pk2ReaderModern::Pk2ReaderModern(const fs::path &pk2Path) : pk2Path_(pk2Path) {
   if (!fs::exists(pk2Path_)) {
-    throw std::runtime_error("PK2 file \""+pk2Path_.string()+"\" does not exist");
+    throw std::runtime_error(absl::StrFormat("PK2 file \"%s\" does not exist", pk2Path_.string()));
   }
   bool pk2OpenResult = pk2Reader_.Open(pk2Path_.string().c_str());
   if (!pk2OpenResult) {
-    throw std::runtime_error("PK2Reader failed to open pk2 file \""+pk2Path_.string()+"\" (PK2Reader: \""+pk2Reader_.GetError()+"\")");
+    throw std::runtime_error(absl::StrFormat("PK2Reader failed to open pk2 file \"%s\" (PK2Reader: \"%s\")", pk2Path_.string(), pk2Reader_.GetError()));
   }
 }
 

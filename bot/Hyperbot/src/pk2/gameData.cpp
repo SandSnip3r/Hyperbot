@@ -9,6 +9,8 @@
 #include <silkroad_lib/pk2/pk2.h>
 
 #include <absl/log/log.h>
+#include <absl/strings/str_format.h>
+#include <absl/strings/str_join.h>
 #include <absl/strings/str_split.h>
 
 #include <functional>
@@ -41,7 +43,8 @@ void GameData::parseSilkroadFiles(const std::filesystem::path &clientPath) {
 
 void GameData::parseData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   VLOG(1) << "Parsing Data.pk2";
-  parseNavmeshData(pk2Reader);
+  // TODO: We're not currently using navmesh data. Once the memory leak in triangle.c is resolved, reenable this.
+  // parseNavmeshData(pk2Reader);
   parseRegionInfo(pk2Reader);
   VLOG(1) << "Done parsing Data.pk2";
 }
@@ -49,13 +52,21 @@ void GameData::parseData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 void GameData::parseMedia(sro::pk2::Pk2ReaderModern &pk2Reader) {
   VLOG(1) << "Parsing Media.pk2";
   std::vector<std::thread> thrs;
+  VLOG(2) << "Parsing Gateway Port";
   parseGatewayPort(pk2Reader);
+  VLOG(2) << "Parsing Division Info";
   parseDivisionInfo(pk2Reader);
+  VLOG(2) << "Parsing Shop Data";
   parseShopData(pk2Reader);
+  VLOG(2) << "Parsing Magic Option Data";
   parseMagicOptionData(pk2Reader);
+  VLOG(2) << "Parsing Level Data";
   parseLevelData(pk2Reader);
+  VLOG(2) << "Parsing Ref Region";
   parseRefRegion(pk2Reader);
+  VLOG(2) << "Parsing Text Data";
   parseTextData(pk2Reader);
+  VLOG(2) << "Parsing Character, Item, Skill, and Teleport Data in multiple threads";
   thrs.emplace_back(&GameData::parseCharacterData, this, std::ref(pk2Reader));
   thrs.emplace_back(&GameData::parseItemData, this, std::ref(pk2Reader));
   thrs.emplace_back(&GameData::parseSkillData, this, std::ref(pk2Reader));
@@ -529,9 +540,13 @@ void GameData::parseRefRegion(sro::pk2::Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseTextData(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(3) << "Parsing Text Zone Name";
   parseTextZoneName(pk2Reader);
+  VLOG(3) << "Parsing Text";
   parseText(pk2Reader);
+  VLOG(3) << "Parsing Mastery Data";
   parseMasteryData(pk2Reader);
+  VLOG(3) << "Parsing Text Ui System";
   parseTextUiSystem(pk2Reader);
 }
 
@@ -553,7 +568,7 @@ void GameData::parseText(sro::pk2::Pk2ReaderModern &pk2Reader) {
     VLOG(1) << absl::StreamFormat("Parsing file \"%s\"", textDataPath);
     sro::pk2::PK2Entry textEntry = pk2Reader.getEntry(textDataPath);
     auto textData = pk2Reader.getEntryData(textEntry);
-    auto textLines = parsing::fileDataToStringLines2(textData);
+    auto textLines = parsing::fileDataToStringLines(textData);
     parseDataFile2<ref::Text>(textLines, parsing::isValidTextDataLine, parsing::parseTextLine, std::bind(&TextData::addItem, &textData_, std::placeholders::_1));
   }
 }
@@ -601,13 +616,14 @@ void GameData::parseTextUiSystem(sro::pk2::Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseNavmeshData(sro::pk2::Pk2ReaderModern &pk2Reader) {
-  VLOG(1) << "Parsing navmesh data";
+  VLOG(2) << "Parsing navmesh data";
   sro::pk2::NavmeshParser navmeshParser(pk2Reader);
   navmesh_ = navmeshParser.parseNavmesh();
   navmeshTriangulation_ = sro::navmesh::triangulation::NavmeshTriangulation(*navmesh_);
 }
 
 void GameData::parseRegionInfo(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(2) << "Parsing region info";
   const std::string kRegionInfoEntryName = "regioninfo.txt";
   sro::pk2::PK2Entry regionInfoEntry = pk2Reader.getEntry(kRegionInfoEntryName);
   auto regionInfoData = pk2Reader.getEntryData(regionInfoEntry);

@@ -45,6 +45,7 @@ private:
   };
   using SubscriptionMapType = absl::flat_hash_map<event::EventCode, std::vector<EventSubscription*>>;
 public:
+  ~EventBroker();
   void runAsync();
 
   template<typename EventType, typename... Args>

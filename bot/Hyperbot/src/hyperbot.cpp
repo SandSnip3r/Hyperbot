@@ -5,6 +5,10 @@
 #include "state/worldState.hpp"
 #include "ui/userInterface.hpp"
 
+#include <absl/log/log.h>
+
+#include <stdexcept>
+
 void Hyperbot::run() {
   VLOG(1) << "Running Hyperbot";
   parseConfig();
@@ -34,12 +38,17 @@ void Hyperbot::run() {
     userInterface.broadcastLaunch();
     session.runAsync();
     session2.runAsync();
+    VLOG(1) << "Session(s) running. Main thread now blocks.";
     while (1) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   } catch (const std::exception &ex) {
     LOG(INFO) << "Error while running session: \"" << ex.what() << '"';
   }
+}
+
+Hyperbot::~Hyperbot() {
+  VLOG(1) << "Destructing Hyperbot";
 }
 
 void Hyperbot::parseConfig() {

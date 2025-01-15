@@ -13,6 +13,7 @@
 #include <silkroad_lib/scalar_types.h>
 #include <zmq.hpp>
 
+#include <atomic>
 #include <optional>
 #include <string_view>
 
@@ -38,6 +39,7 @@ public:
 
   void broadcastLaunch();
 private:
+  std::atomic<bool> keepRunning_;
   zmq::context_t context_;
   zmq::socket_t publisher_{context_, zmq::socket_type::pub};
   const pk2::GameData &gameData_; // TODO: Remove. The actual UserInterface needs this anyways

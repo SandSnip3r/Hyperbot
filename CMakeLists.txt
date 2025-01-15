@@ -5,8 +5,8 @@ project(HyperbotTopLevel)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
+add_compile_options(-fsanitize=address)
+add_link_options(-fsanitize=address)
 
 find_package(GTest CONFIG)
 

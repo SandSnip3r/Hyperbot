@@ -52,7 +52,7 @@ void ServerConfig::initialize(const std::filesystem::path &pathToConfig) {
   }
 
   clientPath_ = serverConfig.client_path();
-  LOG(INFO) << absl::StreamFormat("Parsed client path as \"%s\".", clientPath_);
+  LOG(INFO) << absl::StreamFormat("Parsed client path as \"%s\"", clientPath_);
 }
 
 // void Config::save() {

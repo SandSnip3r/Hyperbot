@@ -8,6 +8,7 @@
 #include <absl/strings/str_format.h>
 
 #include <charconv>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>

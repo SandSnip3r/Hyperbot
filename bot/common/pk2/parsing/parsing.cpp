@@ -9,6 +9,73 @@
 
 namespace pk2::parsing {
 
+namespace {
+
+/**
+ * Append a single Unicode codepoint `cp` to `out` in UTF-8 form.
+ * Assumes cp <= 0x10FFFF (valid Unicode range).
+ */
+void appendCodepoint(std::string& out, uint32_t cp) {
+  if (cp <= 0x7F) {
+    out.push_back(static_cast<char>(cp));
+  } else if (cp <= 0x7FF) {
+    out.push_back(static_cast<char>(0xC0 | ((cp >> 6) & 0x1F)));
+    out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+  } else if (cp <= 0xFFFF) {
+    out.push_back(static_cast<char>(0xE0 | ((cp >> 12) & 0x0F)));
+    out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+    out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+  } else {
+    out.push_back(static_cast<char>(0xF0 | ((cp >> 18) & 0x07)));
+    out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+    out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+    out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+  }
+}
+
+/**
+ * Convert a sequence of little-endian UTF-16 code units to a UTF-8 string.
+ * Handles surrogate pairs but does not attempt any advanced Unicode
+ * normalization, error detection, etc.
+ */
+std::string utf16leToUtf8(const uint16_t* data, size_t count) {
+  std::string out;
+  out.reserve(count); // Minimum safe reservation
+
+  for (size_t i = 0; i < count; ++i) {
+    uint16_t w1 = data[i];
+
+    // Check for a leading surrogate
+    if (w1 >= 0xD800 && w1 <= 0xDBFF) {
+      // Make sure we have a trailing surrogate
+      if (i + 1 < count) {
+        uint16_t w2 = data[i + 1];
+        if (w2 >= 0xDC00 && w2 <= 0xDFFF) {
+          // Valid surrogate pair
+          uint32_t codePoint = 0x10000
+                              + ((static_cast<uint32_t>(w1) & 0x3FF) << 10)
+                              + (static_cast<uint32_t>(w2) & 0x3FF);
+          appendCodepoint(out, codePoint);
+          ++i; // Skip the next code unit (w2) as well
+          continue;
+        }
+      }
+      // If we get here: malformed surrogate pair; handle or throw
+      // For simplicity, we’ll just treat it as a replacement character U+FFFD
+      appendCodepoint(out, 0xFFFD);
+    } else if (w1 >= 0xDC00 && w1 <= 0xDFFF) {
+      // Trailing surrogate without a leading; also malformed
+      appendCodepoint(out, 0xFFFD);
+    } else {
+      // Basic Multilingual Plane code unit
+      appendCodepoint(out, w1);
+    }
+  }
+  return out;
+}
+
+} // anonymous namespace
+
 std::string fileDataToString(const std::vector<uint8_t> &data) {
   // TODO: This is UTF16-LE, Improve this function using a proper conversion
   //  This function takes roughly twice as long as the parsing function
@@ -34,46 +101,86 @@ std::string fileDataToString(const std::vector<uint8_t> &data) {
   return result;
 }
 
+// std::vector<std::string> fileDataToStringLines(const std::vector<uint8_t> &data) {
+//   std::vector<std::string> lines;
+
+//   // Convert data to std::wstring
+//   std::wstring wstr;
+//   wstr.resize(data.size()/2);
+//   std::memcpy(wstr.data(), data.data(), data.size());
+
+//   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter;
+
+//   std::wistringstream is16(wstr);
+//   is16.imbue(std::locale(is16.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>()));
+//   is16.seekg(1, std::ios::beg);
+//   std::wstring wline;
+//   std::string u8line;
+//   while (getline(is16, wline)) {
+//     if (wline.empty()) {
+//       continue;
+//     }
+//     u8line = converter.to_bytes(wline);
+//     if (u8line.back() == '\r') {
+//       u8line.pop_back();
+//     }
+//     lines.emplace_back(std::move(u8line));
+//   }
+//   return lines;
+// }
+
+// Converts the raw UTF-16LE data to UTF-8 lines.
 std::vector<std::string> fileDataToStringLines(const std::vector<uint8_t> &data) {
+  // 1. If the file contains a BOM (0xFF 0xFE), skip it
+  size_t offset = 0;
+  if (data.size() >= 2 && data[0] == 0xFF && data[1] == 0xFE) {
+    offset = 2;
+  }
+
+  // 2. Convert the raw bytes into 16-bit code units (little-endian)
+  if ((data.size() - offset) % 2 != 0) {
+    throw std::runtime_error("Invalid file: size is not multiple of 2 bytes.");
+  }
+  const size_t u16Count = (data.size() - offset) / 2;
+  std::vector<uint16_t> u16Buffer(u16Count);
+  for (size_t i = 0; i < u16Count; ++i) {
+    // data is little-endian: low byte, then high byte
+    uint16_t low  = data[offset + 2*i + 0];
+    uint16_t high = data[offset + 2*i + 1];
+    u16Buffer[i]  = static_cast<uint16_t>((high << 8) | low);
+  }
+
+  // 3. Convert the entire UTF-16 buffer to a single UTF-8 string
+  std::string utf8 = utf16leToUtf8(u16Buffer.data(), u16Buffer.size());
+
+  // 4. Split UTF-8 string by newline into individual lines
   std::vector<std::string> lines;
-
-  // Convert data to std::wstring
-  std::wstring wstr;
-  wstr.resize(data.size()/2);
-  std::memcpy(wstr.data(), data.data(), data.size());
-
-  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter;
-
-  std::wistringstream is16(wstr);
-  is16.imbue(std::locale(is16.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>()));
-  is16.seekg(1, std::ios::beg);
-  std::wstring wline;
-  std::string u8line;
-  while (getline(is16, wline)) {
-    if (wline.empty()) {
-      continue;
+  std::istringstream iss(utf8);
+  std::string line;
+  while (std::getline(iss, line)) {
+    // Trim trailing '\r' if needed
+    if (!line.empty() && line.back() == '\r') {
+      line.pop_back();
     }
-    u8line = converter.to_bytes(wline);
-    if (u8line.back() == '\r') {
-      u8line.pop_back();
+    if (!line.empty()) {
+      lines.push_back(line);
     }
-    lines.emplace_back(std::move(u8line));
   }
   return lines;
 }
 
-std::vector<std::string> fileDataToStringLines2(const std::vector<uint8_t> &data) {
-  // Convert data to std::wstring
-  std::wstring wstr;
-  wstr.resize(data.size()/2-1);
-  std::memcpy(wstr.data(), data.data()+2, data.size()-2);
+// std::vector<std::string> fileDataToStringLines2(const std::vector<uint8_t> &data) {
+//   // Convert data to std::wstring
+//   std::wstring wstr;
+//   wstr.resize(data.size()/2-1);
+//   std::memcpy(wstr.data(), data.data()+2, data.size()-2);
 
-  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter;
-  std::string result;
-  result = converter.to_bytes(wstr);
-  auto lines = split(result, "\r\n");
-  return lines;
-}
+//   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter;
+//   std::string result;
+//   result = converter.to_bytes(wstr);
+//   auto lines = split(result, "\r\n");
+//   return lines;
+// }
 
 namespace {
 class Decryptor {

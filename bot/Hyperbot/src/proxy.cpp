@@ -39,6 +39,9 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
 Proxy::~Proxy() {
   // Stop everything (shutting down)
   stop();
+  if (thr_.joinable()) {
+    thr_.join();
+  }
 }
 
 void Proxy::inject(const PacketContainer &packet, const PacketContainer::Direction direction) {
@@ -59,6 +62,13 @@ void Proxy::inject(const PacketContainer &packet, const PacketContainer::Directi
   }
 }
 
+void Proxy::runAsync() {
+  if (thr_.joinable()) {
+    throw std::runtime_error("Proxy::runAsync called while already running");
+  }
+  thr_ = std::thread(&Proxy::run, this);
+}
+
 void Proxy::run() {
   // Start processing network events
   while(true) {
@@ -73,7 +83,7 @@ void Proxy::run() {
         // No more work
         break;
       }
-      
+
       // Prevent high CPU usage
       boost::this_thread::sleep(boost::posix_time::milliseconds(1));
     } catch (const std::exception &ex) {

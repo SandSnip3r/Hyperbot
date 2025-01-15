@@ -7,6 +7,10 @@
 
 namespace broker {
 
+EventBroker::~EventBroker() {
+  VLOG(1) << "Destructing EventBroker";
+}
+
 void EventBroker::runAsync() {
   timerManager_.runAsync();
 }
@@ -123,6 +127,7 @@ void EventBroker::publishEvent(std::unique_ptr<event::Event> event) {
 }
 
 TimerManager::TimerId EventBroker::registerTimer(std::chrono::milliseconds delay, std::unique_ptr<event::Event> event) {
+  // TODO: Rather than giving the event to a std::function, we should instead have an object that we give the event to which is also callable. If the object is destroyed, the event should be destroyed as well.
   return timerManager_.registerTimer(delay, std::bind(&EventBroker::delayedTimerFinished, this, event.release()));
 }
 

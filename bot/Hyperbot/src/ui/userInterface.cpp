@@ -39,7 +39,11 @@ UserInterface::UserInterface(const pk2::GameData &gameData, broker::EventBroker 
 }
 
 UserInterface::~UserInterface() {
-  thr_.join();
+  VLOG(1) << "Destructing UserInterface";
+  if (thr_.joinable()) {
+    keepRunning_ = false;
+    thr_.join();
+  }
 }
 
 void UserInterface::initialize() {
@@ -51,11 +55,15 @@ void UserInterface::setWorldState(const state::WorldState &worldState) {
 }
 
 void UserInterface::runAsync() {
+  if (thr_.joinable()) {
+    throw std::runtime_error("UserInterface::runAsync called while already running");
+  }
   // Set up publisher
   try {
     publisher_.bind("tcp://*:5556");
 
     // Run the request receiver in another thread
+    keepRunning_ = true;
     thr_ = std::thread(&UserInterface::run, this);
   } catch (const std::exception &ex) {
     LOG(INFO) << "Exception while binding to UI: \"" << ex.what() << "\"";
@@ -306,9 +314,16 @@ void UserInterface::run() {
   // Run request receiver
   zmq::socket_t socket(context_, zmq::socket_type::rep);
   socket.bind("tcp://*:5555");
-  while (1) {
+  while (keepRunning_) {
     // Wait for a request
     zmq::message_t request;
+    zmq::pollitem_t items[] = {{socket, 0, ZMQ_POLLIN, 0}};
+    std::chrono::duration timeout = std::chrono::milliseconds{100};
+    zmq::poll(&items[0], 1, timeout);
+    if ((items[0].revents & ZMQ_POLLIN) == 0) {
+      // Did not receive anything yet.
+      continue;
+    }
     zmq::recv_result_t receiveResult = socket.recv(request, zmq::recv_flags::none);
     if (!receiveResult) {
       LOG(WARNING) << "Error receiving message";

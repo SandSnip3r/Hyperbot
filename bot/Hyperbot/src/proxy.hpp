@@ -15,6 +15,7 @@
 #include <mutex>
 #include <optional>
 #include <set>
+#include <thread>
 
 //Networking class (handles connections)
 class Proxy {
@@ -22,7 +23,7 @@ public:
 	Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port=0);
 	~Proxy();
 	void inject(const PacketContainer &packet, const PacketContainer::Direction direction);
-  void run();
+  void runAsync();
   uint16_t getOurListeningPort() const;
   void blockOpcode(packet::Opcode opcode);
   void unblockOpcode(packet::Opcode opcode);
@@ -44,6 +45,7 @@ private:
   const int kPacketProcessDelayMs{10};
 	PacketLogger packetLogger{"C:\\Users\\Victor\\Documents\\Development\\packet-logs\\"};
   std::optional<PacketContainer> characterInfoPacketContainer_, groupSpawnPacketContainer_, storagePacketContainer_, guildStoragePacketContainer_;
+  std::thread thr_;
 
 	//Accepts TCP connections
 	boost::asio::ip::tcp::acceptor acceptor;
@@ -62,6 +64,8 @@ private:
 	void HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, const boost::system::error_code & error);
 
 	void ProcessPackets(const boost::system::error_code & error);
+
+  void run();
 };
 
 #endif
