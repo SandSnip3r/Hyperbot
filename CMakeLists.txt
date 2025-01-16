@@ -13,19 +13,10 @@ find_package(GTest CONFIG)
 message("CMAKE_SIZEOF_VOID_P: ${CMAKE_SIZEOF_VOID_P}")
 message("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
 
-# if ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
-  message(STATUS "Configuring Hyperbot")
-  add_subdirectory(bot)
-# else()
-  # message(STATUS "Skipping Hyperbot")
-# endif()
-
-set(ABSL_PROPAGATE_CXX_STD ON)
-add_subdirectory(abseil-cpp)
-
+add_subdirectory(bot)
 add_subdirectory(silkroad_lib)
+add_subdirectory(third_party)
 add_subdirectory(ui_proto)
-add_subdirectory(Pathfinder)
 
 option(BUILD_UI "Enable building the UI with Qt" ON)
 # cmake -DBUILD_UI=OFF ..
