@@ -46,7 +46,7 @@
 
 ## Building Hyperbot UI Using Qt Creator
 
-Under the Projects tab, find the Build & Run settings. Under Initial Configuration of the Build section, add your `CMAKE_TOOLCHAIN_FILE` if necessary (is necessary for vcpkg builds). Under Build  Steps, under Targets, unselect "all". Select "hyperbot-ui" and "ui-proto". Under the Run section, change "Run configuration" to "hyperbot-ui".
+Under the Projects tab, find the Build & Run settings. Under Initial Configuration of the Build section, add your `CMAKE_TOOLCHAIN_FILE` if necessary (is necessary for vcpkg builds). Under Build  Steps, under Targets, unselect "all". Select "hyperbot-ui" and "ui_proto". Under the Run section, change "Run configuration" to "hyperbot-ui".
 
 ## Building Hyperbot on Linux
 

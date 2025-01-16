@@ -1,7 +1,7 @@
 #include "characterconfig.h"
 #include "ui_characterconfig.h"
 
-#include "ui-proto/position.pb.h"
+#include "ui_proto/position.pb.h"
 
 #include <QString>
 

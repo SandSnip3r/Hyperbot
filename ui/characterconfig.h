@@ -4,8 +4,8 @@
 #include "eventHandler.hpp"
 #include "requester.hpp"
 
-#include "ui-proto/old_config.pb.h"
-#include "ui-proto/character_config.pb.h"
+#include "ui_proto/old_config.pb.h"
+#include "ui_proto/character_config.pb.h"
 
 #include <QGroupBox>
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(HyperbotTopLevel)
+project(hyperbot_top_level)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -23,8 +23,8 @@ message("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
 set(ABSL_PROPAGATE_CXX_STD ON)
 add_subdirectory(abseil-cpp)
 
-add_subdirectory(SilkroadLib)
-add_subdirectory(ui-proto)
+add_subdirectory(silkroad_lib)
+add_subdirectory(ui_proto)
 add_subdirectory(Pathfinder)
 
 option(BUILD_UI "Enable building the UI with Qt" ON)

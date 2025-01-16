@@ -109,8 +109,8 @@ PRIVATE
   cppzmq
   cppzmq-static
   gli
-  ui-proto
-  SilkroadLib
+  ui_proto
+  silkroad_lib
 )
 
 set_target_properties(hyperbot-ui PROPERTIES

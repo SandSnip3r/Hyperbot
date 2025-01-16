@@ -1,8 +1,8 @@
 #ifndef EVENT_HANDLER_HPP_
 #define EVENT_HANDLER_HPP_
 
-#include "ui-proto/broadcast.pb.h"
-// #include "ui-proto/old_config.pb.h"
+#include "ui_proto/broadcast.pb.h"
+// #include "ui_proto/old_config.pb.h"
 
 #include <silkroad_lib/entity.h>
 #include <silkroad_lib/position.h>

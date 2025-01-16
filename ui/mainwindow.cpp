@@ -7,7 +7,7 @@
 #include "textureToImage.hpp"
 #include "./ui_mainwindow.h"
 
-#include "ui-proto/old_config.pb.h"
+#include "ui_proto/old_config.pb.h"
 
 #include <silkroad_lib/game_constants.h>
 #include <silkroad_lib/position_math.h>

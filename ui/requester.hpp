@@ -1,8 +1,8 @@
 #ifndef REQUESTER_HPP_
 #define REQUESTER_HPP_
 
-#include "ui-proto/old_config.pb.h"
-#include "ui-proto/request.pb.h"
+#include "ui_proto/old_config.pb.h"
+#include "ui_proto/request.pb.h"
 
 #include <zmq.hpp>
 

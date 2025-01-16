@@ -3,7 +3,7 @@
 
 #include "common.hpp"
 
-#include "ui-proto/entity.pb.h"
+#include "ui_proto/entity.pb.h"
 
 #include <silkroad_lib/entity.h>
 #include <silkroad_lib/scalar_types.h>

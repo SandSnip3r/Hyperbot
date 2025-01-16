@@ -1,6 +1,6 @@
 #include "eventHandler.hpp"
 
-#include "ui-proto/position.pb.h"
+#include "ui_proto/position.pb.h"
 
 namespace {
 

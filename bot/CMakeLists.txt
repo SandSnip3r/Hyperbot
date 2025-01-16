@@ -1,6 +1,6 @@
 set(CMAKE_SYSTEM_VERSION 10.0 CACHE STRING "" FORCE)
 
-project(Hyperbot LANGUAGES CXX C)
+project(hyperbot LANGUAGES CXX C)
 
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
@@ -85,7 +85,7 @@ enable_testing()
 ################################################################################
 # Sub-projects
 ################################################################################
-add_subdirectory(Hyperbot)
+add_subdirectory(hyperbot)
 
 if ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
   add_subdirectory(loaderDll)
