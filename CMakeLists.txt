@@ -5,10 +5,14 @@ project(hyperbot_top_level)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-add_compile_options(-fsanitize=address)
-add_link_options(-fsanitize=address)
+option(USE_ASAN "Enable AddressSanitizer" OFF)
 
-find_package(GTest CONFIG)
+if(USE_ASAN)
+  add_compile_options(-fsanitize=address)
+  add_link_options(-fsanitize=address)
+endif()
+
+find_package(GTest REQUIRED)
 
 message("CMAKE_SIZEOF_VOID_P: ${CMAKE_SIZEOF_VOID_P}")
 message("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")

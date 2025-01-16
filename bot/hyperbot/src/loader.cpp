@@ -14,7 +14,7 @@ Loader::Loader(std::string_view clientPath, const pk2::DivisionInfo &divisionInf
 #if defined(_WIN32)
   // TODO: Ensure this dll path is updated for release builds
   // Note: We assume that the DLL is in our current directory
-  dllPath_ = std::filesystem::current_path() / "loaderDll.dll";
+  dllPath_ = std::filesystem::current_path() / "loader_dll.dll";
   if (!std::filesystem::exists(dllPath_)) {
     throw std::runtime_error("loaderDll.dll does not exist next to executable");
   }

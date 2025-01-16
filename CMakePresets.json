@@ -12,14 +12,18 @@
       "architecture": "Win32",
       "binaryDir": "${sourceDir}/build_win32",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "C:/Users/Victor/Documents/Development/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        "CMAKE_TOOLCHAIN_FILE": "C:/Users/Victor/Documents/Development/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "USE_ASAN": "OFF"
       }
     },
     {
       "name": "linux_x64_config",
       "displayName": "x64 configure step for Linux",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build_liunx_x64"
+      "binaryDir": "${sourceDir}/build_liunx_x64",
+      "cacheVariables": {
+        "USE_ASAN": "ON"
+      }
     }
   ],
   "buildPresets": [
