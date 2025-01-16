@@ -1,0 +1,197 @@
+#include "commonBuilding.hpp"
+
+namespace packet::building {
+
+NetworkReadyPosition::NetworkReadyPosition(const sro::Position &pos) : convertedPosition_(truncateForNetwork(pos)) {
+}
+
+NetworkReadyPosition NetworkReadyPosition::roundToNearest(const sro::Position &pos) {
+  const sro::Position roundedPos(pos.regionId(), std::round(pos.xOffset()), std::round(pos.yOffset()), std::round(pos.zOffset()));
+  return NetworkReadyPosition(roundedPos);
+}
+
+sro::Position NetworkReadyPosition::asSroPosition() const {
+  return convertedPosition_;
+}
+
+sro::Position NetworkReadyPosition::truncateForNetwork(const sro::Position &pos) {
+  // x,y,z are truncated, not rounded
+  if (pos.isDungeon()) {
+    return {
+              pos.regionId(),
+              static_cast<float>(static_cast<uint32_t>(pos.xOffset())),
+              static_cast<float>(static_cast<uint32_t>(pos.yOffset())),
+              static_cast<float>(static_cast<uint32_t>(pos.zOffset()))
+           };
+  } else {
+    return {
+              pos.regionId(),
+              static_cast<float>(static_cast<uint16_t>(pos.xOffset())),
+              static_cast<float>(static_cast<uint16_t>(pos.yOffset())),
+              static_cast<float>(static_cast<uint16_t>(pos.zOffset()))
+           };
+  }
+}
+
+void writeGenericItem(StreamUtility &stream, const storage::Item &item) {
+  if (!item.itemInfo) {
+    throw std::runtime_error("Trying to build item, but item info is null");
+  }
+  // 01 // success
+  // 0e // add item by server
+  // 1e // target slot
+  // 00 // reason
+  // 00 00 00 00 // rent type
+  // 00 00 00 08 // ref id (seems wrong?)
+  // 00 00 // stack count
+  // 00 00 00 // ????
+
+  // [39972761] StreamUtility::Write:109: Writing something of size 1
+  // [39972762] StreamUtility::Write:109: Writing something of size 1
+  // [39972763] StreamUtility::Write:109: Writing something of size 1
+  // [39972763] StreamUtility::Write:109: Writing something of size 4
+  // [39972764] StreamUtility::Write:109: Writing something of size 4
+  // [39972765] StreamUtility::Write:109: Writing something of size 4
+  // [39972766] StreamUtility::Write:109: Writing something of size 2
+  // 01 0e 1e 00 00 00 00 00 00 00 00 08 00 00 00 32 00
+
+  stream.Write<uint32_t>(0); // RentType
+  stream.Write<>(item.refItemId);
+
+  if(item.itemInfo->typeId1 == 3) {
+    //CGItem        
+    if(item.itemInfo->typeId2 == 1) {
+      // TODO: !!!!!!
+      throw std::runtime_error("Not yet implemented, would crash");
+      // //CGItemEquip
+      // 1   byte    item.OptLevel
+      // 8   ulong   item.Variance
+      // 4   uint    item.Data       //Durability
+      // 1   byte    item.MagParamNum
+      // for(int paramIndex = 0; paramIndex < item.MagParamNum; paramIndex++) {
+      //   4   uint    magParam.Type
+      //   4   uint    magParam.Value                
+      // }
+
+      // 1   byte    bindingOptionType   //1 = Socket
+      // 1   byte    bindingOptionCount
+      // for (int bindingOptionIndex = 0; bindingOptionIndex < bindingOptionCount; bindingOptionIndex++) {
+      //   1   byte bindingOption.Slot
+      //   4   uint bindingOption.ID
+      //   4   uint bindingOption.nParam1
+      // }
+
+      // 1   byte    bindingOptionType   //2 = Advanced elixir
+      // 1   byte    bindingOptionCount
+      // for (int bindingOptionIndex = 0; bindingOptionIndex < bindingOptionCount; bindingOptionIndex++) {
+      //   1   byte bindingOption.Slot
+      //   4   uint bindingOption.ID
+      //   4   uint bindingOption.OptValue
+      // }            
+    } else if(item.itemInfo->typeId2 == 2) {
+      // TODO: !!!!!!!!
+      throw std::runtime_error("Not yet implemented, would crash");
+      // //CGItemContainer        
+      // if(item.itemInfo->typeId3 == 1) {                                
+      //   //CGItemCOSSummoner
+      //   1   byte    State   // 1 = Inactive, 2 = Summoned, 3 = Active, 4 = Dead
+      //   if(State != 1) {                    
+      //     4   uint    RefObjID
+      //     2   ushort  Name.Length
+      //     *   string  Name
+      //     if(item.itemInfo->typeId4 == 4) {
+      //       //ITEM_COS_P (Ability)
+      //       4   uint    SecondsToRentEndTime
+      //     }
+      //     1   byte    timedJobCount
+      //     foreach(timedJobCount) {
+      //       //_TimedJobForPet
+      //       1   byte    Category
+      //       4   uint    JobID   //Category3 = RefSkillID, Category5 = RefItemID
+      //       4   uint    TimeToKeep
+      //       if(Category == 5) {
+      //         4   uint    Data1
+      //         1   byte    Data2
+      //       }
+      //     }
+      //   }
+      // } else if(item.itemInfo->typeId3 == 2) {
+      //   //CGItemMonsterCapsule
+      //   4   uint    RefObjID
+      // } else if(item.itemInfo->typeId3 == 3) {
+      //   //CGItemStorage
+      //   4   uint    Quantity        //Do not confuse with StackCount, this indicates the amount of elixirs in the cube
+      // }
+    } else if(item.itemInfo->typeId2 == 3) {
+      //CGItemExpendable
+      const auto *itemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(&item);
+      if (itemAsExpendable == nullptr) {
+        throw std::runtime_error("We thought we had an expendable item, but we do not");
+      }
+
+      stream.Write<>(itemAsExpendable->quantity); // Stack count
+
+      if(item.itemInfo->typeId3 == 11) {
+        if(item.itemInfo->typeId4 == 1 || item.itemInfo->typeId4 == 2) {
+          // TODO: !!!!!!
+          throw std::runtime_error("Not yet implemented, would crash");
+          // //MAGICSTONE, ATTRSTONE
+          // 1   byte    AttributeAssimilationProbability //stored in OptLevel
+        }
+      } else if(item.itemInfo->typeId3 == 14 && item.itemInfo->typeId4 == 2) {
+        // TODO: !!!!!!
+        throw std::runtime_error("Not yet implemented, would crash");
+        // //ITEM_MALL_GACHA_CARD_WIN
+        // //ITEM_MALL_GACHA_CARD_LOSE
+        // 1   byte    item.MagParamCount
+        // for (int paramIndex = 0; paramIndex < MagParamNum; paramIndex++) {
+        //   4   uint magParam.Type
+        //   4   uint magParam.Value
+        // }
+      }
+    }
+  }
+}
+
+void writePosition(StreamUtility &stream, const sro::Position &position) {
+  stream.Write(position.regionId());
+  stream.Write(position.xOffset());
+  stream.Write(position.yOffset());
+  stream.Write(position.zOffset());
+}
+
+void writeSkillAction(StreamUtility &stream, const structures::SkillAction &action) {
+  stream.Write<>(action.actionFlag);
+  if (flags::isSet(action.actionFlag, enums::ActionFlag::kAttack)) {
+    const uint8_t hitObjectsCount = action.hitObjects.size();
+    uint8_t successiveHitCount = 0;
+    if (hitObjectsCount != 0) {
+      successiveHitCount = action.hitObjects.front().hits.size();
+    }
+    stream.Write<>(successiveHitCount);
+    stream.Write<>(hitObjectsCount);
+
+    for (int i=0; i<action.hitObjects.size(); ++i) {
+      writeHitObject(stream, action.hitObjects.at(i));
+    }
+  }
+}
+
+void writeHitObject(StreamUtility &stream, const structures::SkillActionHitObject &hitObject) {
+  stream.Write<>(hitObject.targetGlobalId);
+  for (int i=0; i<hitObject.hits.size(); ++i) {
+    writeHit(stream, hitObject.hits.at(i));
+  }
+}
+
+void writeHit(StreamUtility &stream, const structures::SkillActionHitResult &hit) {
+  stream.Write<>(hit.hitResultFlag);
+
+  // TODO: Move to setter function for SkillActionHitResult object
+  uint32_t damageData = (hit.damage << 8) | static_cast<uint8_t>(hit.damageFlag);
+  stream.Write<>(damageData);
+
+  stream.Write<uint32_t>(hit.effect);
+}
+
+} // namespace packet::building
