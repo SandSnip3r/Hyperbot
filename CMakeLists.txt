@@ -22,6 +22,10 @@ add_subdirectory(silkroad_lib)
 add_subdirectory(third_party)
 add_subdirectory(ui_proto)
 
+if ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
+  add_subdirectory(loader_dll)
+endif()
+
 option(BUILD_UI "Enable building the UI with Qt" ON)
 # cmake -DBUILD_UI=OFF ..
 

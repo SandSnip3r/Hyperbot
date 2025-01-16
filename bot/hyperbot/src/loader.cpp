@@ -1,6 +1,7 @@
 #include "loader.hpp"
 
-#include "../../common/common.h"
+#include <silkroad_lib/edx_labs.h>
+#include <silkroad_lib/file_util.h>
 
 #include <absl/log/log.h>
 
@@ -16,7 +17,7 @@ Loader::Loader(std::string_view clientPath, const pk2::DivisionInfo &divisionInf
   // Note: We assume that the DLL is in our current directory
   dllPath_ = std::filesystem::current_path() / "loader_dll.dll";
   if (!std::filesystem::exists(dllPath_)) {
-    throw std::runtime_error("loaderDll.dll does not exist next to executable");
+    throw std::runtime_error("loader_dll.dll does not exist next to executable");
   }
   clientPath_ = std::filesystem::path(clientPath) / "sro_client.exe";
   std::stringstream args;
@@ -70,7 +71,7 @@ void Loader::startClient(uint16_t proxyListeningPort) {
   PROCESS_INFORMATION pi = { 0 };
 
   // Launch the client in a suspended state so we can patch it
-  bool result = edxLabs::CreateSuspendedProcess(clientPath_.string(), arguments_, si, pi);
+  bool result = sro::edx_labs::CreateSuspendedProcess(clientPath_.string(), arguments_, si, pi);
   if (result == false) {
     throw std::runtime_error("Could not start \""+clientPath_.string()+"\"");
   }
@@ -79,7 +80,7 @@ void Loader::startClient(uint16_t proxyListeningPort) {
   {
     // Write to a file (<Client PID>.txt) the port that the client should connect to
     // TODO: Replace %APPDATA% with %TEMP% to prevent stray file buildup
-    const auto appDataDirectoryPath = getAppDataPath();
+    const auto appDataDirectoryPath = sro::file_util::getAppDataPath();
     if (appDataDirectoryPath.empty()) {
       throw std::runtime_error("Unable to find %APPDATA%\n");
     }
@@ -93,7 +94,7 @@ void Loader::startClient(uint16_t proxyListeningPort) {
   }
 
   // Inject the DLL so we can have some fun
-  result = (FALSE != edxLabs::InjectDLL(pi.hProcess, dllPath_.string().c_str(), "OnInject", static_cast<DWORD>(edxLabs::GetEntryPoint(clientPath_.string().c_str())), false));
+  result = (FALSE != sro::edx_labs::InjectDLL(pi.hProcess, dllPath_.string().c_str(), "OnInject", static_cast<DWORD>(sro::edx_labs::GetEntryPoint(clientPath_.string().c_str())), false));
   if (result == false) {
     TerminateThread(pi.hThread, 0);
     throw std::runtime_error("Could not inject into the Silkroad client process");

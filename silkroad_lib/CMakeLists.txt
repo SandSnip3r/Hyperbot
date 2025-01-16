@@ -2,7 +2,9 @@ project(silkroad_lib VERSION 0.1 LANGUAGES CXX)
 
 set(PROJECT_SOURCES
   src/blowfish.cc
+  src/edx_labs.cc
   src/entity.cc
+  src/file_util.cc
   src/position.cc
   src/position_math.cc
   src/shared_io.cc

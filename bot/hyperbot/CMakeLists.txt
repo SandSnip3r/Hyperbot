@@ -4,10 +4,6 @@ set(PROJECT_NAME hyperbot)
 # Source groups
 ################################################################################
 set(no_group_source_files
-  "../common/blowfish.cpp"
-  "../common/blowfish.h"
-  "../common/common.cpp"
-  "../common/common.h"
   "../common/pk2/division.cpp"
   "../common/pk2/division.hpp"
   "../common/pk2/divisionInfo.cpp"

@@ -1,6 +1,6 @@
-#pragma once
+#ifndef SRO_EDX_LABS_H_
+#define SRO_EDX_LABS_H_
 
-#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -8,9 +8,7 @@
 #include <windows.h>
 #endif
 
-std::filesystem::path getAppDataPath();
-
-namespace edxLabs {
+namespace sro::edx_labs {
 
 #if defined(_WIN32)
 
@@ -166,4 +164,6 @@ public:
 
 #endif
 
-} // namespace edxLabs
+} // namespace sro::edx_labs
+
+#endif // SRO_EDX_LABS_H_

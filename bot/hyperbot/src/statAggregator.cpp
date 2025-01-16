@@ -1,9 +1,8 @@
 #include "entity/monster.hpp"
 #include "statAggregator.hpp"
 
-#include "../../common/common.h"
-
 #include <silkroad_lib/entity.h>
+#include <silkroad_lib/file_util.h>
 
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 
@@ -123,7 +122,7 @@ void StatAggregator::printParsedFiles(const proto::stats::StatFileRegistry &regi
         LOG(INFO) << "    File \"" << fileData.filename() << "\" has wrong version number: " << fileData.proto_version_number();
         continue;
       }
-      const auto statsPath = getAppDataPath() / fileData.filename();
+      const auto statsPath = sro::file_util::getAppDataPath() / fileData.filename();
       std::ifstream statsFile(statsPath, std::ios::binary);
       if (!statsFile) {
         LOG(INFO) << "    Cannot open \"" << statsPath.string() << "\"";
@@ -163,7 +162,7 @@ void StatAggregator::initialize(const std::string &characterName) {/*
 
   // Open the registry file
   // TODO: Find the registry filename elsewhere
-  const auto appDataDirectoryPath = getAppDataPath();
+  const auto appDataDirectoryPath = sro::file_util::getAppDataPath();
   const auto statRegistryPath = appDataDirectoryPath / "stat_registry";
 
   proto::stats::StatFileRegistry registry;

@@ -7,18 +7,18 @@
 
 #include <windows.h>
 #include <windowsx.h>
-#include "../common/common.h"
 #include "../common/pk2/divisionInfo.hpp"
 #include "../common/pk2/parsing/parsing.hpp"
 #include "../common/detours/detours.h"
 
+#include <silkroad_lib/edx_labs.h>
+#include <silkroad_lib/file_util.h>
 #include <silkroad_lib/pk2/pk2ReaderModern.h>
 
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
-using namespace edxLabs;
 
 //-------------------------------------------------------------------------
 
@@ -360,7 +360,7 @@ namespace nsEnglishCaptcha
 void modifyRoutelist() {
   uint16_t botPort;
   {
-    const auto appDataDirectoryPath = getAppDataPath();
+    const auto appDataDirectoryPath = sro::file_util::getAppDataPath();
     auto portInfoFilePath = appDataDirectoryPath / (std::to_string(GetCurrentProcessId())+".txt");
     {
       std::ifstream portInfoFile(portInfoFilePath);

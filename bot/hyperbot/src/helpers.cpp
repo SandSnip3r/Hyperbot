@@ -1,14 +1,13 @@
 #include "helpers.hpp"
 
-#include "../../common/common.h"
-
+#include <silkroad_lib/file_util.h>
 #include <silkroad_lib/position.h>
 #include <silkroad_lib/position_math.h>
 
 namespace helpers {
 
 std::filesystem::path getAppDataDirectory() {
-  const auto appDataDirectoryPath = getAppDataPath();
+  const auto appDataDirectoryPath = sro::file_util::getAppDataPath();
   if (appDataDirectoryPath.empty()) {
     throw std::runtime_error("Unable to find %APPDATA%\n");
   }
