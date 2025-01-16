@@ -19,7 +19,7 @@ private:
 	FILE * m_file;
 	PK2Header m_header;
 	int64_t m_root_offset;
-	Blowfish m_blowfish;
+	blowfish::Blowfish m_blowfish;
 	std::stringstream m_error;
 	std::map<std::string, PK2Entry> m_cache;
 
@@ -57,7 +57,7 @@ public:
 	// you want to search from the root, make sure entry is a zero'ed out object.
 	bool GetEntry(const char * pathname, PK2Entry & entry);
 
-	// Returns true if a list of entries exists at the 'parent'. This will return the 
+	// Returns true if a list of entries exists at the 'parent'. This will return the
 	// "current directory" of the direct child of the parent. Children of any entries
 	// in this list must be 'explored' manually.
 	bool GetEntries(PK2Entry & parent, std::list<PK2Entry> & entries);
@@ -69,7 +69,7 @@ public:
 	bool ForEachEntryDo(bool (* UserFunc)(PK2Reader *, const std::string &, PK2EntryBlock &, void *), void * userdata);
 
 	// Extracts the current entry to memory. Returns true on success and false on failure.
-	// Users are advised to use on common buffer to reduce the need for frequent memory 
+	// Users are advised to use on common buffer to reduce the need for frequent memory
 	// reallocations on the vector side.
 	bool ExtractToMemory(PK2Entry & entry, std::vector<uint8_t> & buffer);
   bool ExtractToMemoryChar(PK2Entry & entry, std::vector<char> & buffer);

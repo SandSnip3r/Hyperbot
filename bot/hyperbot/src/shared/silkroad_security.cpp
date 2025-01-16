@@ -1,5 +1,7 @@
 #include "silkroad_security.h"
 
+#include <silkroad_lib/blowfish.h>
+
 #include <boost/random.hpp>
 
 #include <exception>
@@ -183,7 +185,7 @@ struct SilkroadSecurityData
   bool m_client_security;
   uint8_t m_security_flag;
   TFlags * m_security_flags;
-  Blowfish m_blowfish;
+  sro::blowfish::Blowfish m_blowfish;
   std::string m_identity_name;
   uint8_t m_identity_flag;
   bool m_accepted_handshake;

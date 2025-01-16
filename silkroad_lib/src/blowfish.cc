@@ -184,7 +184,7 @@ static uint32_t bf_S[4][256] =
 
 //-----------------------------------------------------------------------------
 
-namespace sro {
+namespace sro::blowfish {
 
 void BlowfishPIMPL::Blowfish_encipher( uint32_t *xl, uint32_t *xr )
 {
@@ -467,4 +467,4 @@ bool Blowfish::Decode( const void * const input_ptr, int32_t input_size, void * 
 
 //-----------------------------------------------------------------------------
 
-} // namespace sro
+} // namespace sro::blowfish
