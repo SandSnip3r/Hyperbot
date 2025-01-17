@@ -17,7 +17,7 @@
       }
     },
     {
-      "name": "linux_x64_config",
+      "name": "linux_x64",
       "displayName": "x64 configure step for Linux",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build_liunx_x64",
@@ -36,7 +36,7 @@
     {
       "name": "linux_x64",
       "displayName": "x64 build step",
-      "configurePreset": "linux_x64_config",
+      "configurePreset": "linux_x64",
       "configuration": "Debug"
     }
   ]
