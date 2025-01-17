@@ -14,9 +14,29 @@ set(PROJECT_SOURCES
   src/navmesh/triangulation/navmeshTriangulation.cc
   src/navmesh/triangulation/singleRegionNavmeshTriangulation.cc
   src/navmesh/triangulation/singleRegionNavmeshTriangulationState.cc
+  src/pk2/divisionInfo.cc
   src/pk2/navmeshParser.cc
   src/pk2/pk2Reader.cc
   src/pk2/pk2ReaderModern.cc
+  src/pk2/parsing/parsing.cc
+  src/pk2/parsing/regionInfoParser.cc
+  src/pk2/regionInfo.cc
+  src/pk2/ref/character.cc
+  src/pk2/ref/item.cc
+  src/pk2/ref/level.cc
+  src/pk2/ref/magicOption.cc
+  src/pk2/ref/mappingShopGroup.cc
+  src/pk2/ref/mappingShopWithTab.cc
+  src/pk2/ref/mastery.cc
+  src/pk2/ref/region.cc
+  src/pk2/ref/scrapOfPackageItem.cc
+  src/pk2/ref/shopGood.cc
+  src/pk2/ref/shopGroup.cc
+  src/pk2/ref/shopTab.cc
+  src/pk2/ref/skill.cc
+  src/pk2/ref/teleport.cc
+  src/pk2/ref/text.cc
+  src/pk2/ref/textZoneName.cc
 )
 
 include_directories(

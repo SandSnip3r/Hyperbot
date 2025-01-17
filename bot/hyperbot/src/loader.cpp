@@ -11,7 +11,7 @@
 #include <functional>
 #include <sstream>
 
-Loader::Loader(std::string_view clientPath, const pk2::DivisionInfo &divisionInfo) : kDivisionInfo_(divisionInfo) {
+Loader::Loader(std::string_view clientPath, const sro::pk2::DivisionInfo &divisionInfo) : kDivisionInfo_(divisionInfo) {
 #if defined(_WIN32)
   // TODO: Ensure this dll path is updated for release builds
   // Note: We assume that the DLL is in our current directory

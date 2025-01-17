@@ -2,7 +2,7 @@
 #define PACKET_PARSING_SERVER_AGENT_ENTITY_UPDATE_MOVE_SPEED_HPP
 
 #include "parsedPacket.hpp"
-#include "../enums/packetEnums.hpp"
+#include "packet/enums/packetEnums.hpp"
 
 #include <silkroad_lib/scalar_types.h>
 
@@ -10,7 +10,7 @@
 #include <string>
 
 namespace packet::parsing {
-  
+
 class ServerAgentEntityUpdateMoveSpeed : public ParsedPacket {
 public:
   ServerAgentEntityUpdateMoveSpeed(const PacketContainer &packet);

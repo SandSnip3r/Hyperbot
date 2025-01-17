@@ -2,8 +2,7 @@
 #define PACKET_PARSING_SERVER_AGENT_INVENTORY_REPAIR_REPSONSE_HPP_
 
 #include "parsedPacket.hpp"
-
-#include "../../shared/silkroad_security.h"
+#include "shared/silkroad_security.h"
 
 #include <optional>
 

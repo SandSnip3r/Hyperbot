@@ -2,8 +2,8 @@
 #define PACKET_BUILDING_COMMON_HPP_
 
 #include "packet/structures/packetInnerStructures.hpp"
+#include "shared/stream_utility.h"
 #include "storage/item.hpp"
-#include "../../shared/stream_utility.h"
 
 #include <silkroad_lib/position.h>
 

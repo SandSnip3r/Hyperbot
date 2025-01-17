@@ -2,13 +2,13 @@
 #define PACKET_PARSING_CLIENT_AGENT_ACTION_COMMAND_REQUEST_HPP
 
 #include "parsedPacket.hpp"
-#include "../enums/packetEnums.hpp"
-#include "../structures/packetInnerStructures.hpp"
+#include "packet/enums/packetEnums.hpp"
+#include "packet/structures/packetInnerStructures.hpp"
 
 #include <cstdint>
 
 namespace packet::parsing {
-  
+
 class ClientAgentActionCommandRequest : public ParsedPacket {
 public:
   ClientAgentActionCommandRequest(const PacketContainer &packet);

@@ -1,7 +1,7 @@
 #ifndef PK2_MEDIA_TELEPORT_DATA_HPP
 #define PK2_MEDIA_TELEPORT_DATA_HPP
 
-#include "../../../common/pk2/ref/teleport.hpp"
+#include <silkroad_lib/pk2/ref/teleport.h>
 
 #include <unordered_map>
 
@@ -9,10 +9,10 @@ namespace pk2 {
 
 class TeleportData {
 public:
-	using TeleportMap = std::unordered_map<ref::TeleportId,ref::Teleport>;
-	void addTeleport(ref::Teleport &&teleport);
-	bool haveTeleportWithId(ref::TeleportId id) const;
-	const ref::Teleport& getTeleportById(ref::TeleportId id) const;
+	using TeleportMap = std::unordered_map<sro::pk2::ref::TeleportId,sro::pk2::ref::Teleport>;
+	void addTeleport(sro::pk2::ref::Teleport &&teleport);
+	bool haveTeleportWithId(sro::pk2::ref::TeleportId id) const;
+	const sro::pk2::ref::Teleport& getTeleportById(sro::pk2::ref::TeleportId id) const;
 	const TeleportMap::size_type size() const;
 private:
 	TeleportMap teleports_;

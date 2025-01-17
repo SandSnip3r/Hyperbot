@@ -1,7 +1,7 @@
 #ifndef PK2_MAGIC_OPTION_DATA_HPP_
 #define PK2_MAGIC_OPTION_DATA_HPP_
 
-#include "../../../common/pk2/ref/magicOption.hpp"
+#include <silkroad_lib/pk2/ref/magicOption.h>
 
 #include <unordered_map>
 
@@ -9,9 +9,9 @@ namespace pk2 {
 
 class MagicOptionData {
 public:
-	using MagicOptionMap = std::unordered_map<ref::MagicOptionId, ref::MagicOption>;
-	void addItem(ref::MagicOption &&magOpt);
-	const ref::MagicOption& getMagicOptionById(ref::MagicOptionId id) const;
+	using MagicOptionMap = std::unordered_map<sro::pk2::ref::MagicOptionId, sro::pk2::ref::MagicOption>;
+	void addItem(sro::pk2::ref::MagicOption &&magOpt);
+	const sro::pk2::ref::MagicOption& getMagicOptionById(sro::pk2::ref::MagicOptionId id) const;
 private:
 	MagicOptionMap magicOptions_;
 };

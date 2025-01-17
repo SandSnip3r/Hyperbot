@@ -2,15 +2,15 @@
 #define PACKET_PARSING_SERVER_AGENT_SKILL_BEGIN_HPP
 
 #include "parsedPacket.hpp"
-#include "../enums/packetEnums.hpp"
-#include "../../pk2/skillData.hpp"
+#include "packet/enums/packetEnums.hpp"
+#include "pk2/skillData.hpp"
 
 #include <silkroad_lib/scalar_types.h>
 
 #include <cstdint>
 
 namespace packet::parsing {
-  
+
 class ServerAgentSkillBegin : public ParsedPacket {
 public:
   ServerAgentSkillBegin(const PacketContainer &packet);

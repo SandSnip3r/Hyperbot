@@ -606,8 +606,8 @@ bool Bot::similarSkillIsAlreadyActive(sro::scalar_types::ReferenceObjectId skill
       // These two cannot be active at the same time
       return true;
     }
-    if (givenSkillData.hasParam(pk2::ref::skill_param::kHaste) &&
-        activeBuffData.hasParam(pk2::ref::skill_param::kHaste)) {
+    if (givenSkillData.hasParam(sro::pk2::ref::skill_param::kHaste) &&
+        activeBuffData.hasParam(sro::pk2::ref::skill_param::kHaste)) {
       return true;
     }
   }

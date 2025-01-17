@@ -1,5 +1,5 @@
-#include "../opcode.hpp"
-#include "../../shared/silkroad_security.h"
+#include "packet/opcode.hpp"
+#include "shared/silkroad_security.h"
 
 #include <array>
 #include <string>

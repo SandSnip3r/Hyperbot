@@ -4,8 +4,7 @@
 #include "broker/eventBroker.hpp"
 #include "stateMachine.hpp"
 
-#include "../../../../common/pk2/ref/skill.hpp"
-
+#include <silkroad_lib/pk2/ref/skill.h>
 #include <silkroad_lib/scalar_types.h>
 
 #include <optional>
@@ -13,7 +12,7 @@
 namespace state::machine {
 
 // TODO: This feels like a weird home for this function.
-std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &skillData, const Bot &bot);
+std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const sro::pk2::ref::Skill &skillData, const Bot &bot);
 std::optional<uint8_t> getInventorySlotOfShield(const Bot &bot);
 
 class CastSkillStateMachineBuilder {

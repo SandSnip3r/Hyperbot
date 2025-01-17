@@ -4,8 +4,8 @@
 #include "entity/entity.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 #include "pk2/itemData.hpp"
+#include "shared/stream_utility.h"
 #include "storage/item.hpp"
-#include "../../shared/stream_utility.h"
 
 #include <silkroad_lib/position.h>
 

@@ -3,35 +3,16 @@ set(PROJECT_NAME loader_dll)
 ################################################################################
 # Source groups
 ################################################################################
-set(Common
-  "../common/pk2/division.cpp"
-  "../common/pk2/division.hpp"
-  "../common/pk2/divisionInfo.cpp"
-  "../common/pk2/divisionInfo.hpp"
-  "../common/pk2/parsing/parsing.cpp"
-  "../common/pk2/parsing/parsing.hpp"
-  "../common/pk2/ref/character.cpp"
-  "../common/pk2/ref/character.hpp"
-  "../common/pk2/ref/item.cpp"
-  "../common/pk2/ref/item.hpp"
-  "../common/pk2/ref/skill.cpp"
-  "../common/pk2/ref/skill.hpp"
-  "../common/pk2/ref/teleport.cpp"
-  "../common/pk2/ref/teleport.hpp"
-  "../common/shared_io.cpp"
-  "../common/shared_io.h"
-)
-source_group("Common" FILES ${Common})
 
-set(Common__detours
-  "../common/detours/creatwth.cpp"
-  "../common/detours/detours.cpp"
-  "../common/detours/detours.h"
-  "../common/detours/disasm.cpp"
-  "../common/detours/image.cpp"
-  "../common/detours/modules.cpp"
+set(detours
+  "detours/creatwth.cpp"
+  "detours/detours.cpp"
+  "detours/detours.h"
+  "detours/disasm.cpp"
+  "detours/image.cpp"
+  "detours/modules.cpp"
 )
-source_group("Common\\detours" FILES ${Common__detours})
+source_group("Common\\detours" FILES ${detours})
 
 set(Source_Files
   "loaderDll.cpp"
@@ -39,8 +20,7 @@ set(Source_Files
 source_group("Source Files" FILES ${Source_Files})
 
 set(ALL_FILES
-  ${Common}
-  ${Common__detours}
+  ${detours}
   ${Source_Files}
 )
 

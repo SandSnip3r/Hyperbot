@@ -5,8 +5,7 @@
 
 #include "pk2/itemData.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
-
-#include "../../shared/silkroad_security.h"
+#include "shared/silkroad_security.h"
 
 namespace packet::parsing {
 

@@ -1,5 +1,9 @@
 #include "file_util.h"
 
+#if defined(_WIN32)
+#include <shlobj.h>
+#endif
+
 namespace sro::file_util {
 
 std::filesystem::path getAppDataPath() {

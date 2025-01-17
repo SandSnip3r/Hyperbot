@@ -1,7 +1,8 @@
 #include "shared_io.h"
-#include <stdlib.h>
 
-#ifdef _WIN32
+#include <cstdlib>
+
+#if defined(_WIN32)
 	#include <windows.h>
 #else
 	#include <dirent.h>
@@ -9,34 +10,38 @@
 
 namespace sro::shared_io {
 
-int file_seek(FILE * file, int64_t offset, int orgin) {
-#ifdef _WIN32
+int file_seek(std::FILE *file, int64_t offset, int orgin) {
+#if defined(_WIN32)
 	return _fseeki64(file, offset, orgin);
 #else
-	return fseek(file, offset, orgin);
+	return std::fseek(file, offset, orgin);
 #endif
 }
 
-int64_t file_tell(FILE * file) {
-#ifdef _WIN32
+int64_t file_tell(std::FILE * file) {
+#if defined(_WIN32)
 	return _ftelli64(file);
 #else
-	return ftell(file);
+	return std::ftell(file);
 #endif
 }
 
 int file_remove(const char * filename) {
-#ifdef _WIN32
+#if defined(_WIN32)
 	return DeleteFileA(filename);
 #else
-	return remove(filename);
+	return std::remove(filename);
 #endif
 }
 
 // std::vector<uint8_t> file_tovector(const char * filename) {
 // 	std::vector<uint8_t> contents;
-// 	FILE * infile = 0;
+// 	std::FILE * infile = 0;
+// #if defined(_WIN32)
 // 	fopen_s(&infile, filename, "rb");
+// #else
+// 	infile = fopen(filename, "rb");
+// #endif
 // 	if(infile == 0) {
 // 		return contents;
 // 	}

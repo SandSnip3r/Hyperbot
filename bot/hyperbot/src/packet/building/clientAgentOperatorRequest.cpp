@@ -1,5 +1,5 @@
 #include "clientAgentOperatorRequest.hpp"
-#include "../enums/packetEnums.hpp"
+#include "packet/enums/packetEnums.hpp"
 
 namespace packet::building {
 

@@ -1,6 +1,6 @@
 #include "serverAgentEntityUpdateExperience.hpp"
 
-#include "../enums/packetEnums.hpp"
+#include "packet/enums/packetEnums.hpp"
 
 #include <type_traits>
 

@@ -1,6 +1,6 @@
 #include "packet/opcode.hpp"
 
-#include "../../shared/silkroad_security.h"
+#include "shared/silkroad_security.h"
 
 #include <silkroad_lib/position.h>
 #include <silkroad_lib/scalar_types.h>

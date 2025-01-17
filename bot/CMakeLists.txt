@@ -65,11 +65,6 @@ function(use_package TARGET PACKAGE VERSION)
 endfunction()
 
 ################################################################################
-# Common utils
-################################################################################
-include(CMake/Utils.cmake)
-
-################################################################################
 # Additional Global Settings(add specific info there)
 ################################################################################
 include(CMake/GlobalSettingsInclude.cmake OPTIONAL)

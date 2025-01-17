@@ -2,7 +2,7 @@
 #define PACKET_PARSING_CLIENT_AGENT_CHARACTER_MOVE_REQUEST_HPP
 
 #include "parsedPacket.hpp"
-#include "../enums/packetEnums.hpp"
+#include "packet/enums/packetEnums.hpp"
 
 #include <silkroad_lib/position.h>
 
@@ -10,7 +10,7 @@
 #include <optional>
 
 namespace packet::parsing {
-  
+
 class ClientAgentCharacterMoveRequest : public ParsedPacket {
 public:
   ClientAgentCharacterMoveRequest(const PacketContainer &packet);

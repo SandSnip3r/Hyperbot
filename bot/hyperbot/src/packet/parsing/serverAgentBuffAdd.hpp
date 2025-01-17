@@ -2,14 +2,14 @@
 #define PACKET_PARSING_CLIENT_AGENT_BUFF_ADD_HPP
 
 #include "parsedPacket.hpp"
-#include "../../pk2/skillData.hpp"
+#include "pk2/skillData.hpp"
 
 #include <silkroad_lib/scalar_types.h>
 
 #include <cstdint>
 
 namespace packet::parsing {
-  
+
 class ServerAgentBuffAdd : public ParsedPacket {
 public:
   ServerAgentBuffAdd(const PacketContainer &packet, const pk2::SkillData &skillData);

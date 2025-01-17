@@ -2,8 +2,8 @@
 #define PACKET_PARSING_PACKET_PARSER_H_
 
 #include "parsedPacket.hpp"
-#include "../../pk2/gameData.hpp"
-#include "../../shared/silkroad_security.h"
+#include "pk2/gameData.hpp"
+#include "shared/silkroad_security.h"
 #include "state/entityTracker.hpp"
 
 #include <memory>

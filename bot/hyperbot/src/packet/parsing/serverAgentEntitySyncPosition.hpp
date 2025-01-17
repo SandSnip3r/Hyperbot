@@ -2,8 +2,8 @@
 #define PACKET_PARSING_SERVER_AGENT_ENTITY_SYNC_POSITION_HPP
 
 #include "parsedPacket.hpp"
-#include "../enums/packetEnums.hpp"
-#include "../structures/packetInnerStructures.hpp"
+#include "packet/enums/packetEnums.hpp"
+#include "packet/structures/packetInnerStructures.hpp"
 
 #include <silkroad_lib/position.h>
 

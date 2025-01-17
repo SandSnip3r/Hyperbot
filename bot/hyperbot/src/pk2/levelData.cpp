@@ -4,11 +4,11 @@
 
 namespace pk2 {
 
-void LevelData::addLevelItem(ref::Level &&level) {
+void LevelData::addLevelItem(sro::pk2::ref::Level &&level) {
   Levels_.emplace(level.lvl, level);
 }
 
-const ref::Level& LevelData::getLevel(uint8_t lvl) const {
+const sro::pk2::ref::Level& LevelData::getLevel(uint8_t lvl) const {
   auto it = Levels_.find(lvl);
   if (it == Levels_.end()) {
     throw std::runtime_error(absl::StrFormat("Trying to get level (%d) that does not exist", lvl));

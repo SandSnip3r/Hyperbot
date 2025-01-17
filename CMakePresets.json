@@ -6,7 +6,7 @@
   },
   "configurePresets": [
     {
-      "name": "win32_config",
+      "name": "win32",
       "displayName": "Win32 configure step with vcpkg toolchain",
       "generator": "Visual Studio 16 2019",
       "architecture": "Win32",
@@ -30,7 +30,7 @@
     {
       "name": "win32",
       "displayName": "Win32 build step",
-      "configurePreset": "win32_config",
+      "configurePreset": "win32",
       "configuration": "Debug"
     },
     {

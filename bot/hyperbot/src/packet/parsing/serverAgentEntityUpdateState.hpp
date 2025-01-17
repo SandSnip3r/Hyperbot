@@ -2,7 +2,7 @@
 #define PACKET_PARSING_SERVER_AGENT_ENTITY_UPDATE_STATE_HPP
 
 #include "parsedPacket.hpp"
-#include "../enums/packetEnums.hpp"
+#include "packet/enums/packetEnums.hpp"
 
 #include <silkroad_lib/scalar_types.h>
 

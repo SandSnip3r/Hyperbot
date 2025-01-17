@@ -1,6 +1,6 @@
-#include "../enums/packetEnums.hpp"
-#include "../opcode.hpp"
-#include "../../shared/silkroad_security.h"
+#include "packet/enums/packetEnums.hpp"
+#include "packet/opcode.hpp"
+#include "shared/silkroad_security.h"
 
 #ifndef PACKET_BUILDING_SERVER_AGENT_CHAT_UPDATE_HPP
 #define PACKET_BUILDING_SERVER_AGENT_CHAT_UPDATE_HPP

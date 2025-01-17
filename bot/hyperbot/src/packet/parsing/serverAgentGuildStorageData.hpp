@@ -2,13 +2,14 @@
 #define PACKET_PARSING_SERVER_AGENT_GUILD_STORAGE_DATA_HPP
 
 #include "parsedPacket.hpp"
-#include "../../pk2/itemData.hpp"
-#include "../../shared/silkroad_security.h"
+#include "pk2/itemData.hpp"
+#include "shared/silkroad_security.h"
 
 #include <map>
+#include <memory>
 
 namespace packet::parsing {
-  
+
 class ServerAgentGuildStorageData : public ParsedPacket {
 public:
   ServerAgentGuildStorageData(const PacketContainer &packet, const pk2::ItemData &itemData);

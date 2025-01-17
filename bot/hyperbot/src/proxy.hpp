@@ -6,7 +6,8 @@
 #include "broker/packetBroker.hpp"
 #include "pk2/gameData.hpp"
 #include "shared/silkroad_security.h"
-#include "../../common/pk2/divisionInfo.hpp"
+
+#include <silkroad_lib/pk2/divisionInfo.h>
 
 #include <boost/make_shared.hpp>
 #include <boost/asio.hpp>
@@ -34,7 +35,7 @@ public:
 private:
   uint16_t ourListeningPort_;
   uint16_t gatewayPort_;
-  const pk2::DivisionInfo divisionInfo_;
+  const sro::pk2::DivisionInfo divisionInfo_;
   broker::PacketBroker &packetBroker_;
   std::string gatewayAddress_;
   std::string agentIP_;

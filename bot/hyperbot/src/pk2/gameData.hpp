@@ -7,17 +7,17 @@
 #include "magicOptionData.hpp"
 #include "masteryData.hpp"
 #include "refRegion.hpp"
-#include "regionInfo.hpp"
 #include "shopData.hpp"
 #include "skillData.hpp"
 #include "teleportData.hpp"
 #include "textData.hpp"
 #include "textZoneNameData.hpp"
-#include "../../../common/pk2/divisionInfo.hpp"
 
 #include <silkroad_lib/navmesh/navmesh.h>
 #include <silkroad_lib/navmesh/triangulation/navmeshTriangulation.h>
+#include <silkroad_lib/pk2/divisionInfo.h>
 #include <silkroad_lib/pk2/pk2ReaderModern.h>
+#include <silkroad_lib/pk2/regionInfo.h>
 
 #include <filesystem>
 #include <memory>
@@ -32,7 +32,7 @@ public:
   // Opens Media.PK2 and Data.PK2, parses game data into memory, then closes Media.pk2 and Data.PK2
   void parseSilkroadFiles(const std::filesystem::path &clientPath);
   const uint16_t gatewayPort() const;
-  const DivisionInfo& divisionInfo() const;
+  const sro::pk2::DivisionInfo& divisionInfo() const;
   const CharacterData& characterData() const;
   const ItemData& itemData() const;
   const ShopData& shopData() const;
@@ -45,18 +45,18 @@ public:
   const TextZoneNameData& textZoneNameData() const;
   const TeleportData& teleportData() const;
   const sro::navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
-  const RegionInfo& regionInfo() const;
+  const sro::pk2::RegionInfo& regionInfo() const;
 
   std::string getSkillName(sro::scalar_types::ReferenceObjectId skillRefId) const;
   std::string getItemName(sro::scalar_types::ReferenceObjectId itemRefId) const;
-  std::string getMasteryName(pk2::ref::MasteryId masteryId) const;
+  std::string getMasteryName(sro::pk2::ref::MasteryId masteryId) const;
 
   // Expecting names like Pacheon, WIZARD, roGue, fiRE, etc. Case does not matter.
-  pk2::ref::MasteryId getMasteryId(std::string masteryName) const;
+  sro::pk2::ref::MasteryId getMasteryId(std::string masteryName) const;
 private:
   std::mutex printMutex_;
   uint16_t gatewayPort_;
-  DivisionInfo divisionInfo_;
+  sro::pk2::DivisionInfo divisionInfo_;
   CharacterData characterData_;
   ItemData itemData_;
   ShopData shopData_;
@@ -72,7 +72,7 @@ private:
   std::optional<sro::navmesh::Navmesh> navmesh_;
   std::optional<sro::navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
 
-  RegionInfo regionInfo_;
+  sro::pk2::RegionInfo regionInfo_;
 
   void parseData(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseNavmeshData(sro::pk2::Pk2ReaderModern &pk2Reader);

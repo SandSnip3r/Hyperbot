@@ -2,12 +2,12 @@
 #define PACKET_PARSING_SEVER_AGENT_ACTION_TALK_RESPONSE_HPP
 
 #include "parsedPacket.hpp"
-#include "../enums/packetEnums.hpp"
+#include "packet/enums/packetEnums.hpp"
 
 #include <cstdint>
 
 namespace packet::parsing {
-  
+
 class ServerAgentActionTalkResponse : public ParsedPacket {
 public:
   ServerAgentActionTalkResponse(const PacketContainer &packet);
@@ -15,7 +15,7 @@ public:
 
   packet::enums::TalkOption talkOption() const;
   uint8_t isSpecialtyTime() const;
-  
+
   uint16_t errorCode() const;
 private:
   uint8_t result_;

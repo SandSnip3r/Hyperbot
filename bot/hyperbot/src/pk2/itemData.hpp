@@ -1,7 +1,7 @@
 #ifndef PK2_MEDIA_ITEM_DATA_HPP_
 #define PK2_MEDIA_ITEM_DATA_HPP_
 
-#include "../../../common/pk2/ref/item.hpp"
+#include <silkroad_lib/pk2/ref/item.h>
 
 #include <unordered_map>
 
@@ -9,11 +9,11 @@ namespace pk2 {
 
 class ItemData {
 public:
-	using ItemMap = std::unordered_map<ref::ItemId, ref::Item>;
-	void addItem(ref::Item &&item);
-	bool haveItemWithId(ref::ItemId id) const;
-	const ref::Item& getItemById(ref::ItemId id) const;
-	const ref::Item& getItemByCodeName128(const std::string &codeName) const;
+	using ItemMap = std::unordered_map<sro::pk2::ref::ItemId, sro::pk2::ref::Item>;
+	void addItem(sro::pk2::ref::Item &&item);
+	bool haveItemWithId(sro::pk2::ref::ItemId id) const;
+	const sro::pk2::ref::Item& getItemById(sro::pk2::ref::ItemId id) const;
+	const sro::pk2::ref::Item& getItemByCodeName128(const std::string &codeName) const;
 	const ItemMap::size_type size() const;
 private:
 	ItemMap items_;

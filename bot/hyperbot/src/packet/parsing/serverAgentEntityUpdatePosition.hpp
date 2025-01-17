@@ -2,15 +2,15 @@
 #define PACKET_PARSING_SERVER_AGENT_ENTITY_UPDATE_POSITION_HPP
 
 #include "parsedPacket.hpp"
-#include "../enums/packetEnums.hpp"
-#include "../structures/packetInnerStructures.hpp"
+#include "packet/enums/packetEnums.hpp"
+#include "packet/structures/packetInnerStructures.hpp"
 
 #include <silkroad_lib/position.h>
 
 #include <cstdint>
 
 namespace packet::parsing {
-  
+
 class ServerAgentEntityUpdatePosition : public ParsedPacket {
 public:
   ServerAgentEntityUpdatePosition(const PacketContainer &packet);

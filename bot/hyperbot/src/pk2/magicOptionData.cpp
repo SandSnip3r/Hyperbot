@@ -2,11 +2,11 @@
 
 namespace pk2 {
 
-void MagicOptionData::addItem(ref::MagicOption &&magOpt) {
+void MagicOptionData::addItem(sro::pk2::ref::MagicOption &&magOpt) {
   magicOptions_.emplace(magOpt.id, magOpt);
 }
 
-const ref::MagicOption& MagicOptionData::getMagicOptionById(ref::MagicOptionId id) const {
+const sro::pk2::ref::MagicOption& MagicOptionData::getMagicOptionById(sro::pk2::ref::MagicOptionId id) const {
   auto it = magicOptions_.find(id);
   if (it == magicOptions_.end()) {
     throw std::runtime_error("Trying to get magic option that does not exist");

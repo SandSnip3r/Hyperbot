@@ -1,7 +1,7 @@
 #include "packet/opcode.hpp"
 #include "packet/enums/packetEnums.hpp"
 
-#include "../../shared/silkroad_security.h"
+#include "shared/silkroad_security.h"
 
 #ifndef PACKET_BUILDING_CLIENT_AGENT_ACTION_TALK_REQUEST_HPP
 #define PACKET_BUILDING_CLIENT_AGENT_ACTION_TALK_REQUEST_HPP

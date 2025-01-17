@@ -7,11 +7,11 @@
 
 namespace pk2 {
 
-void MasteryData::addMastery(pk2::ref::Mastery &&mastery) {
+void MasteryData::addMastery(sro::pk2::ref::Mastery &&mastery) {
   masteries_.emplace(mastery.masteryId, mastery);
 }
 
-const pk2::ref::Mastery& MasteryData::getMasteryById(pk2::ref::MasteryId id) const {
+const sro::pk2::ref::Mastery& MasteryData::getMasteryById(sro::pk2::ref::MasteryId id) const {
   auto it = masteries_.find(id);
   if (it == masteries_.end()) {
     throw std::runtime_error("Trying to get non-existent mastery with id "+std::to_string(id));
@@ -19,7 +19,7 @@ const pk2::ref::Mastery& MasteryData::getMasteryById(pk2::ref::MasteryId id) con
   return it->second;
 }
 
-pk2::ref::MasteryId MasteryData::getMasteryIdByMasteryNameCode(std::string_view masteryNameCode) const {
+sro::pk2::ref::MasteryId MasteryData::getMasteryIdByMasteryNameCode(std::string_view masteryNameCode) const {
   for (const auto &idMasteryPair : masteries_) {
     if (idMasteryPair.second.masteryNameCode == masteryNameCode) {
       return idMasteryPair.first;

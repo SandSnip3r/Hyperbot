@@ -62,7 +62,7 @@ packet::enums::AbnormalStateFlag fromBitNum(int n) {
   return static_cast<packet::enums::AbnormalStateFlag>(uint32_t(1) << n);
 }
 
-std::shared_ptr<storage::Item> createItemFromScrap(const pk2::ref::ScrapOfPackageItem &itemScrap, const pk2::ref::Item &itemRef) {
+std::shared_ptr<storage::Item> createItemFromScrap(const sro::pk2::ref::ScrapOfPackageItem &itemScrap, const sro::pk2::ref::Item &itemRef) {
   std::shared_ptr<storage::Item> item(storage::newItemByTypeData(itemRef));
 
   storage::ItemExpendable *itemExpendable;
@@ -120,11 +120,11 @@ namespace type_id {
 
 namespace {
 
-bool isPill(const pk2::ref::Item &itemInfo) {
+bool isPill(const sro::pk2::ref::Item &itemInfo) {
   return (itemInfo.typeId1 == 3 && itemInfo.typeId2 == 3 && itemInfo.typeId3 == 2);
 }
 
-bool isPotion(const pk2::ref::Item &itemInfo) {
+bool isPotion(const sro::pk2::ref::Item &itemInfo) {
   return (itemInfo.typeId1 == 3 && itemInfo.typeId2 == 3 && itemInfo.typeId3 == 1);
 }
 

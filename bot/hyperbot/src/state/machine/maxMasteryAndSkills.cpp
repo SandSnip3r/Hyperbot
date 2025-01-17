@@ -15,7 +15,7 @@
 
 namespace state::machine {
 
-MaxMasteryAndSkills::MaxMasteryAndSkills(Bot &bot, pk2::ref::MasteryId id) : StateMachine(bot), masteryId_(id) {
+MaxMasteryAndSkills::MaxMasteryAndSkills(Bot &bot, sro::pk2::ref::MasteryId id) : StateMachine(bot), masteryId_(id) {
   stateMachineCreated(kName);
   pushBlockedOpcode(packet::Opcode::kClientAgentSkillMasteryLearnRequest);
   pushBlockedOpcode(packet::Opcode::kClientAgentSkillLearnRequest);
@@ -120,15 +120,15 @@ void MaxMasteryAndSkills::resetTimeout() {
 
 namespace internal {
 
-void SkillTree::initialize(const pk2::SkillData &skillData, pk2::ref::MasteryId masteryId, uint8_t masteryLevel, const std::vector<sro::scalar_types::ReferenceSkillId> &knownSkillIds) {
+void SkillTree::initialize(const pk2::SkillData &skillData, sro::pk2::ref::MasteryId masteryId, uint8_t masteryLevel, const std::vector<sro::scalar_types::ReferenceSkillId> &knownSkillIds) {
   // Get all skills for this mastery.
   auto skills = skillData.getSkillIdsForMastery(masteryId);
   VLOG(3) << absl::StreamFormat("All skills for mastery: [%s]", absl::StrJoin(skills, ","));
 
   // Gather a list of all skills which are part of a chain and not the first in the chain.
-  absl::flat_hash_set<pk2::ref::SkillId> nonRootChainSkills;
-  for (const pk2::ref::SkillId skillId : skills) {
-    const pk2::ref::Skill &skill = skillData.getSkillById(skillId);
+  absl::flat_hash_set<sro::pk2::ref::SkillId> nonRootChainSkills;
+  for (const sro::pk2::ref::SkillId skillId : skills) {
+    const sro::pk2::ref::Skill &skill = skillData.getSkillById(skillId);
     if (skill.basicChainCode != 0) {
       nonRootChainSkills.insert(skill.basicChainCode);
     }
@@ -160,8 +160,8 @@ void SkillTree::initialize(const pk2::SkillData &skillData, pk2::ref::MasteryId 
 
   // Create groups of skills (using GroupId).
   // Create a dependency map between groups; some groups must be completed before others.
-  absl::flat_hash_map<pk2::ref::Skill::GroupId, std::vector<pk2::ref::SkillId>> groupToSkillsMap;
-  absl::flat_hash_map<pk2::ref::Skill::GroupId, absl::flat_hash_set<pk2::ref::Skill::GroupId>> groupDependencyMap;
+  absl::flat_hash_map<sro::pk2::ref::Skill::GroupId, std::vector<sro::pk2::ref::SkillId>> groupToSkillsMap;
+  absl::flat_hash_map<sro::pk2::ref::Skill::GroupId, absl::flat_hash_set<sro::pk2::ref::Skill::GroupId>> groupDependencyMap;
   for (const auto skillId : skills) {
     const auto &skill = skillData.getSkillById(skillId);
     groupToSkillsMap[skill.groupId].push_back(skillId);
@@ -178,16 +178,16 @@ void SkillTree::initialize(const pk2::SkillData &skillData, pk2::ref::MasteryId 
 
   // Sort skills by level in their groups.
   for (auto &groupSkillsPair : groupToSkillsMap) {
-    std::sort(groupSkillsPair.second.begin(), groupSkillsPair.second.end(), [&](const pk2::ref::SkillId lhsSkillId, const pk2::ref::SkillId rhsSkillId) {
-      const pk2::ref::Skill &lhsSkill = skillData.getSkillById(lhsSkillId);
-      const pk2::ref::Skill &rhsSkill = skillData.getSkillById(rhsSkillId);
+    std::sort(groupSkillsPair.second.begin(), groupSkillsPair.second.end(), [&](const sro::pk2::ref::SkillId lhsSkillId, const sro::pk2::ref::SkillId rhsSkillId) {
+      const sro::pk2::ref::Skill &lhsSkill = skillData.getSkillById(lhsSkillId);
+      const sro::pk2::ref::Skill &rhsSkill = skillData.getSkillById(rhsSkillId);
       return lhsSkill.reqCommonMasteryLevel1 < rhsSkill.reqCommonMasteryLevel1;
     });
   }
 
   // Remove skills which we already know. We do this separately, because when we remove a skill, we also need to remove every skill lower level than it, within its group.
   for (auto &groupSkillsPair : groupToSkillsMap) {
-    std::vector<pk2::ref::SkillId> &skillIds = groupSkillsPair.second;
+    std::vector<sro::pk2::ref::SkillId> &skillIds = groupSkillsPair.second;
     for (int i=skillIds.size()-1; i>=0; --i) {
       if (absl::c_linear_search(knownSkillIds, skillIds.at(i))) {
         // Already know this skill. Delete everything before it.
@@ -207,17 +207,17 @@ void SkillTree::initialize(const pk2::SkillData &skillData, pk2::ref::MasteryId 
   // Create a group ordering.
   // Things which have no entry in `groupDependencyMap` depend on nothing.
   // Things which are not depended on are the last to level up (root).
-  std::vector<pk2::ref::Skill::GroupId> groupOrdering;
-  std::set<pk2::ref::Skill::GroupId> allGroups; // Must be an ordered container for c_set_difference.
+  std::vector<sro::pk2::ref::Skill::GroupId> groupOrdering;
+  std::set<sro::pk2::ref::Skill::GroupId> allGroups; // Must be an ordered container for c_set_difference.
   for (const auto& [groupId, skills] : groupToSkillsMap) {
     allGroups.insert(groupId);
   }
   while (!allGroups.empty()) {
-    std::set<pk2::ref::Skill::GroupId> groupsThatDependOnSomething; // Must be an ordered container for c_set_difference.
+    std::set<sro::pk2::ref::Skill::GroupId> groupsThatDependOnSomething; // Must be an ordered container for c_set_difference.
     for (const auto &groupAndSetPair : groupDependencyMap) {
       groupsThatDependOnSomething.insert(groupAndSetPair.first);
     }
-    absl::flat_hash_set<pk2::ref::Skill::GroupId> groupsThatDependOnNothing;
+    absl::flat_hash_set<sro::pk2::ref::Skill::GroupId> groupsThatDependOnNothing;
     absl::c_set_difference(allGroups, groupsThatDependOnSomething, std::inserter(groupsThatDependOnNothing, groupsThatDependOnNothing.end()));
     for (const auto groupId : groupsThatDependOnNothing) {
       groupOrdering.push_back(groupId);

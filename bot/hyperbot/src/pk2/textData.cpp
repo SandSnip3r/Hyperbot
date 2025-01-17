@@ -28,7 +28,7 @@ const std::string kItemPrefix{"SN_ITEM"};
 
 namespace pk2 {
 
-void TextData::addItem(ref::Text &&text) {
+void TextData::addItem(sro::pk2::ref::Text &&text) {
   if (text.service == 0) {
     // Not in service, skipping
     return;

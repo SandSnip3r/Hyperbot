@@ -1,6 +1,6 @@
 
 #include "packet/opcode.hpp"
-#include "../../shared/silkroad_security.h"
+#include "shared/silkroad_security.h"
 
 #ifndef PACKET_BUILDING_CLIENT_AGENT_ACTION_DESELECT_REQUEST_HPP_
 #define PACKET_BUILDING_CLIENT_AGENT_ACTION_DESELECT_REQUEST_HPP_

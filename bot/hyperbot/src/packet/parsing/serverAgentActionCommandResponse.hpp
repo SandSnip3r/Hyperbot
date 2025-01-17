@@ -2,12 +2,12 @@
 #define PACKET_PARSING_SERVER_AGENT_ACTION_COMMAND_RESPONSE_HPP
 
 #include "parsedPacket.hpp"
-#include "../enums/packetEnums.hpp"
+#include "packet/enums/packetEnums.hpp"
 
 #include <cstdint>
 
 namespace packet::parsing {
-  
+
 class ServerAgentActionCommandResponse : public ParsedPacket {
 public:
   ServerAgentActionCommandResponse(const PacketContainer &packet);

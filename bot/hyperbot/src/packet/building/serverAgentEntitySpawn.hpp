@@ -4,7 +4,7 @@
 #include "entity/mobileEntity.hpp"
 #include "packet/opcode.hpp"
 
-#include "../../shared/silkroad_security.h"
+#include "shared/silkroad_security.h"
 
 namespace packet::building {
 

@@ -3,7 +3,8 @@
 
 #include "pk2/gameData.hpp"
 #include "type_id/typeCategory.hpp"
-#include "../../../common/pk2/ref/item.hpp"
+
+#include <silkroad_lib/pk2/ref/item.h>
 
 #include <cstdint>
 #include <memory>
@@ -26,7 +27,7 @@ class Item {
 public:
   uint32_t refItemId;
   const ItemType type;
-  const pk2::ref::Item *itemInfo{nullptr};
+  const sro::pk2::ref::Item *itemInfo{nullptr};
   type_id::TypeId typeId() const;
   bool isA(const type_id::TypeCategory &typeCategory) const;
   bool isOneOf(const std::vector<type_id::TypeCategory> &typeCategories) const;
@@ -90,7 +91,7 @@ public:
   CosLifeState lifeState;
   uint32_t refObjID; // Wolfs, for example, have an object for each level wolf, so you can know the stats of the wolf
   std::string name;
-  std::vector<CosJob> jobs;  
+  std::vector<CosJob> jobs;
 protected:
   ItemCosGrowthSummoner(ItemType type);
 };
@@ -139,7 +140,7 @@ public:
   std::vector<ItemMagicParam> magicParams;
 };
 
-std::shared_ptr<storage::Item> newItemByTypeData(const pk2::ref::Item &item);
+std::shared_ptr<storage::Item> newItemByTypeData(const sro::pk2::ref::Item &item);
 std::shared_ptr<storage::Item> cloneItem(const storage::Item *item);
 
 void print(const Item *item);

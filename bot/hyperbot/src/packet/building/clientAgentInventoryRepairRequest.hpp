@@ -1,5 +1,5 @@
 #include "packet/opcode.hpp"
-#include "../../shared/silkroad_security.h"
+#include "shared/silkroad_security.h"
 
 #ifndef PACKET_BUILDING_CLIENT_AGENT_INVENTORY_REPAIR_REQUEST_HPP
 #define PACKET_BUILDING_CLIENT_AGENT_INVENTORY_REPAIR_REQUEST_HPP

@@ -1,8 +1,8 @@
 #ifndef BROKER_SYSTEM_HPP
 #define BROKER_SYSTEM_HPP
 
-#include "../packet/opcode.hpp"
-#include "../shared/silkroad_security.h"
+#include "packet/opcode.hpp"
+#include "shared/silkroad_security.h"
 
 #include <functional>
 #include <unordered_map>

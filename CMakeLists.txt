@@ -5,6 +5,8 @@ project(hyperbot_top_level)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+include(CMake/Utils.cmake)
+
 option(USE_ASAN "Enable AddressSanitizer" OFF)
 
 if(USE_ASAN)

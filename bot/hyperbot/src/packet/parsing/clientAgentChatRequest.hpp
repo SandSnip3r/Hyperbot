@@ -2,13 +2,13 @@
 #define PACKET_PARSING_CLIENT_AGENT_CHAT_REQUEST_HPP
 
 #include "parsedPacket.hpp"
-#include "../enums/packetEnums.hpp"
+#include "packet/enums/packetEnums.hpp"
 
 #include <cstdint>
 #include <string>
 
 namespace packet::parsing {
-  
+
 class ClientAgentChatRequest : public ParsedPacket {
 public:
   ClientAgentChatRequest(const PacketContainer &packet);

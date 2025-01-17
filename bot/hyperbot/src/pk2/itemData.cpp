@@ -4,15 +4,15 @@
 
 namespace pk2 {
 
-void ItemData::addItem(ref::Item &&item) {
+void ItemData::addItem(sro::pk2::ref::Item &&item) {
   items_.emplace(item.id, item);
 }
 
-bool ItemData::haveItemWithId(ref::ItemId id) const {
+bool ItemData::haveItemWithId(sro::pk2::ref::ItemId id) const {
   return (items_.find(id) != items_.end());
 }
 
-const ref::Item& ItemData::getItemById(ref::ItemId id) const {
+const sro::pk2::ref::Item& ItemData::getItemById(sro::pk2::ref::ItemId id) const {
   auto it = items_.find(id);
   if (it == items_.end()) {
     throw std::runtime_error("ItemData::getItemById Trying to get non-existent item with id "+std::to_string(id));
@@ -20,7 +20,7 @@ const ref::Item& ItemData::getItemById(ref::ItemId id) const {
   return it->second;
 }
 
-const ref::Item& ItemData::getItemByCodeName128(const std::string &codeName) const {
+const sro::pk2::ref::Item& ItemData::getItemByCodeName128(const std::string &codeName) const {
   auto it = std::find_if(items_.begin(), items_.end(), [&codeName](const auto &keyValuePair) {
     return (keyValuePair.second.codeName128 == codeName);
   });

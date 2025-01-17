@@ -1,7 +1,7 @@
 #ifndef PK2_TEXT_DATA_HPP_
 #define PK2_TEXT_DATA_HPP_
 
-#include "../../../common/pk2/ref/text.hpp"
+#include <silkroad_lib/pk2/ref/text.h>
 
 #include <absl/container/flat_hash_map.h>
 
@@ -12,7 +12,7 @@ namespace pk2 {
 
 class TextData {
 public:
-  void addItem(ref::Text &&text);
+  void addItem(sro::pk2::ref::Text &&text);
   const std::string& getItemName(const std::string &nameStrID128) const;
   const std::string& getSkillName(const std::string &uiSkillName) const;
   const std::string& getMasteryName(const std::string &masteryNameCode) const;

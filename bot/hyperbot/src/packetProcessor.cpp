@@ -449,12 +449,12 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
       const auto &mastery = gameData_.masteryData().getMasteryById(m.id);
       VLOG(1) << "  Mastery " << mastery.masteryNameCode << "(" << m.id << ") is level " << (int)m.level;
     }
-    std::vector<std::pair<std::string, pk2::ref::Skill::Param1Type>> skillTypes = {
+    std::vector<std::pair<std::string, sro::pk2::ref::Skill::Param1Type>> skillTypes = {
       // TODO: These labels are wrong!
-      {"Melee skills", pk2::ref::Skill::Param1Type::kMelee},
-      {"Ranged skills", pk2::ref::Skill::Param1Type::kRanged},
-      {"Buffs", pk2::ref::Skill::Param1Type::kBuff},
-      {"Passive skills", pk2::ref::Skill::Param1Type::kPassive},
+      {"Melee skills", sro::pk2::ref::Skill::Param1Type::kMelee},
+      {"Ranged skills", sro::pk2::ref::Skill::Param1Type::kRanged},
+      {"Buffs", sro::pk2::ref::Skill::Param1Type::kBuff},
+      {"Passive skills", sro::pk2::ref::Skill::Param1Type::kPassive},
     };
     for (const auto &i : skillTypes) {
       std::stringstream ss;
@@ -1343,7 +1343,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     // Track this mf
     const bool expectEnd = [&]() -> bool {
       const auto &skillData = gameData_.skillData().getSkillById(packet.refSkillId());
-      if (skillData.param1Type() == pk2::ref::Skill::Param1Type::kBuff) {
+      if (skillData.param1Type() == sro::pk2::ref::Skill::Param1Type::kBuff) {
         // It seems that buffs always have an end.
         return true;
       } else {
@@ -1509,7 +1509,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       // LOG(INFO) << "WARNING: accepted command queue empty";
     }
     bool expectSkillEnd{false};
-    if (skillData.param1Type() == pk2::ref::Skill::Param1Type::kBuff) {
+    if (skillData.param1Type() == sro::pk2::ref::Skill::Param1Type::kBuff) {
       // SkillEnd will always come for buffs
       expectSkillEnd = true;
     } else if (skillData.actionPreparingTime + skillData.actionCastingTime > 0) {

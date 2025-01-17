@@ -7,9 +7,8 @@
 #include "storage/item.hpp"
 #include "storage/storage.hpp"
 
-#include "../../common/pk2/ref/item.hpp"
-#include "../../common/pk2/ref/scrapOfPackageItem.hpp"
-
+#include <silkroad_lib/pk2/ref/item.h>
+#include <silkroad_lib/pk2/ref/scrapOfPackageItem.h>
 #include <silkroad_lib/position.h>
 
 #include <filesystem>
@@ -25,7 +24,7 @@ void initializeInventory(storage::Storage &inventory, uint8_t inventorySize, con
 void printItem(uint8_t slot, const storage::Item *item, const pk2::GameData &gameData);
 int toBitNum(packet::enums::AbnormalStateFlag stateFlag);
 packet::enums::AbnormalStateFlag fromBitNum(int n);
-std::shared_ptr<storage::Item> createItemFromScrap(const pk2::ref::ScrapOfPackageItem &itemScrap, const pk2::ref::Item &itemRef);
+std::shared_ptr<storage::Item> createItemFromScrap(const sro::pk2::ref::ScrapOfPackageItem &itemScrap, const sro::pk2::ref::Item &itemRef);
 
 namespace type_id {
 

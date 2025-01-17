@@ -62,15 +62,15 @@ uint16_t makeTypeId(const uint16_t typeId1, const uint16_t typeId2, const uint16
          (typeId4 << 11);
 }
 
-TypeId getTypeId(const pk2::ref::Character &character) {
+TypeId getTypeId(const sro::pk2::ref::Character &character) {
   return makeTypeId(character.typeId1, character.typeId2, character.typeId3, character.typeId4);
 }
 
-TypeId getTypeId(const pk2::ref::Item &item) {
+TypeId getTypeId(const sro::pk2::ref::Item &item) {
   return makeTypeId(item.typeId1, item.typeId2, item.typeId3, item.typeId4);
 }
 
-TypeId getTypeId(const pk2::ref::Teleport &teleport) {
+TypeId getTypeId(const sro::pk2::ref::Teleport &teleport) {
   return makeTypeId(teleport.typeId1, teleport.typeId2, teleport.typeId3, teleport.typeId4);
 }
 

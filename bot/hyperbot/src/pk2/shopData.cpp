@@ -6,7 +6,7 @@ namespace pk2 {
 
 Tab::Tab(const std::string &tabName) : name_(tabName) {}
 
-void Tab::addPackageAtSlot(ref::ScrapOfPackageItem package, uint8_t slotNum) {
+void Tab::addPackageAtSlot(sro::pk2::ref::ScrapOfPackageItem package, uint8_t slotNum) {
   if (packageMap_.find(slotNum) != packageMap_.end()) {
     LOG(WARNING) << "Warning! Overwriting item in tab " << name_ << " at slot " << (int)slotNum;
   }
@@ -17,11 +17,11 @@ bool Tab::havePackage(uint8_t slotNum) const {
   return (packageMap_.find(slotNum) != packageMap_.end());
 }
 
-const ref::ScrapOfPackageItem& Tab::getPackage(uint8_t slotNum) const {
+const sro::pk2::ref::ScrapOfPackageItem& Tab::getPackage(uint8_t slotNum) const {
   return packageMap_.at(slotNum);
 }
 
-const std::map<uint8_t, pk2::ref::ScrapOfPackageItem>& Tab::getPackageMap() const {
+const std::map<uint8_t, sro::pk2::ref::ScrapOfPackageItem>& Tab::getPackageMap() const {
   return packageMap_;
 }
 
@@ -49,7 +49,7 @@ void ShopData::addTabToNpc(const std::string &npcCodeName, uint8_t tabNum, Tab t
   tabList[tabNum] = tab;
 }
 
-ref::ScrapOfPackageItem ShopData::getItemFromNpc(const std::string &npcCodeName, uint8_t tabNum, uint8_t slotNum) const {
+sro::pk2::ref::ScrapOfPackageItem ShopData::getItemFromNpc(const std::string &npcCodeName, uint8_t tabNum, uint8_t slotNum) const {
   const auto it = npcTabs_.find(npcCodeName);
   if (it == npcTabs_.end()) {
     // TODO: Better error handling strategy

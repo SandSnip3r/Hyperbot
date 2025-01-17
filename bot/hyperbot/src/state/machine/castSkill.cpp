@@ -12,7 +12,7 @@
 
 namespace state::machine {
 
-std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const pk2::ref::Skill &skillData, const Bot &bot) {
+std::optional<uint8_t> getInventorySlotOfWeaponForSkill(const sro::pk2::ref::Skill &skillData, const Bot &bot) {
   // TODO: Skill might not require a weapon
   const uint8_t kWeaponInventorySlot{6};
   std::vector<type_id::TypeCategory> possibleWeapons;

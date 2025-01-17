@@ -4,7 +4,7 @@
 #include "packet/opcode.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 
-#include "../../shared/silkroad_security.h"
+#include "shared/silkroad_security.h"
 
 #include <silkroad_lib/scalar_types.h>
 

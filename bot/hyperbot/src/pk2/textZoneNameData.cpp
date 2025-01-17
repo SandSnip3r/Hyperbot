@@ -18,7 +18,7 @@ bool isInt(std::string_view str) {
 
 } // anonymous namespace
 
-void TextZoneNameData::addItem(ref::TextZoneName &&item) {
+void TextZoneNameData::addItem(sro::pk2::ref::TextZoneName &&item) {
   if (item.service != 0 && isInt(item.key)) {
     uint16_t regionId = stoi(item.key);
     regionNames_.emplace(regionId, item.english);

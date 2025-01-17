@@ -2,7 +2,7 @@
 #define PACKET_PARSING_SERVER_AGENT_ENTITY_UPDATE_MOVEMENT_HPP
 
 #include "parsedPacket.hpp"
-#include "../enums/packetEnums.hpp"
+#include "packet/enums/packetEnums.hpp"
 
 #include <silkroad_lib/position.h>
 
@@ -11,7 +11,7 @@
 #include <string>
 
 namespace packet::parsing {
-  
+
 class ServerAgentEntityUpdateMovement : public ParsedPacket {
 public:
   ServerAgentEntityUpdateMovement(const PacketContainer &packet);

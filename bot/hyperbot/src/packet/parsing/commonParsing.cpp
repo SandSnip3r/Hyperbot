@@ -11,6 +11,7 @@
 
 #include <silkroad_lib/position_math.h>
 #include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/pk2/ref/item.h>
 
 #include <absl/log/log.h>
 
@@ -78,7 +79,7 @@ std::shared_ptr<storage::Item> parseGenericItem(StreamUtility &stream, const pk2
   if (!itemData.haveItemWithId(refItemId)) {
     throw std::runtime_error("Unable to parse packet. Encountered an item (id:"+std::to_string(refItemId)+") for which we have no data on.");
   }
-  const pk2::ref::Item &itemRef = itemData.getItemById(refItemId);
+  const sro::pk2::ref::Item &itemRef = itemData.getItemById(refItemId);
   std::shared_ptr<storage::Item> parsedItem{storage::newItemByTypeData(itemRef)};
   if (!parsedItem) {
     throw std::runtime_error("Unable to create an item object for item");

@@ -2,8 +2,7 @@
 #define PACKET_PARSING_SERVER_AGENT_INVENTORY_UPDATE_DURABILITY_HPP_
 
 #include "parsedPacket.hpp"
-
-#include "../../shared/silkroad_security.h"
+#include "shared/silkroad_security.h"
 
 namespace packet::parsing {
 

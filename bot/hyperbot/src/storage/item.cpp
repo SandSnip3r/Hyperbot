@@ -92,14 +92,14 @@ ItemExpendable::ItemExpendable(ItemType type) : Item(type) {}
 ItemStone::ItemStone() : ItemExpendable(ItemType::kItemStone) {}
 ItemMagicPop::ItemMagicPop() : ItemExpendable(ItemType::kItemMagicPop) {}
 
-std::shared_ptr<storage::Item> newItemByTypeData(const pk2::ref::Item &item) {
+std::shared_ptr<storage::Item> newItemByTypeData(const sro::pk2::ref::Item &item) {
   std::shared_ptr<storage::Item> storageItemPtr;
   if (item.typeId1 == 3) {
     if (item.typeId2 == 1) {
       // CGItemEquip
       storageItemPtr.reset(new ItemEquipment());
     } else if (item.typeId2 == 2) {
-      if (item.typeId3 == 1) {                                
+      if (item.typeId3 == 1) {
         // CGItemCOSSummoner
         if (item.typeId4 == 2) {
           storageItemPtr.reset(new ItemCosAbilitySummoner());

@@ -4,7 +4,7 @@
 #include "packet/opcode.hpp"
 #include "packet/enums/packetEnums.hpp"
 
-#include "../../shared/silkroad_security.h"
+#include "shared/silkroad_security.h"
 
 namespace packet::building {
 

@@ -1,11 +1,10 @@
 #include "gameData.hpp"
 
-#include "pk2/parsing/regionInfoParser.hpp"
-#include "../../../common/pk2/parsing/parsing.hpp"
-
 #include "math_helpers.h"
 
 #include <silkroad_lib/pk2/navmeshParser.h>
+#include <silkroad_lib/pk2/parsing/parsing.h>
+#include <silkroad_lib/pk2/parsing/regionInfoParser.h>
 #include <silkroad_lib/pk2/pk2.h>
 
 #include <absl/log/log.h>
@@ -81,7 +80,7 @@ const uint16_t GameData::gatewayPort() const {
   return gatewayPort_;
 }
 
-const DivisionInfo& GameData::divisionInfo() const {
+const sro::pk2::DivisionInfo& GameData::divisionInfo() const {
   return divisionInfo_;
 }
 
@@ -136,29 +135,29 @@ const sro::navmesh::triangulation::NavmeshTriangulation& GameData::navmeshTriang
   return navmeshTriangulation_.value();
 }
 
-const RegionInfo& GameData::regionInfo() const {
+const sro::pk2::RegionInfo& GameData::regionInfo() const {
   return regionInfo_;
 }
 
 std::string GameData::getSkillName(sro::scalar_types::ReferenceObjectId skillRefId) const {
-  const pk2::ref::Skill &skill = skillData_.getSkillById(skillRefId);
+  const sro::pk2::ref::Skill &skill = skillData_.getSkillById(skillRefId);
   const std::optional<std::string> maybeName = textData_.getSkillNameIfExists(skill.uiSkillName);
   return (maybeName ? *maybeName : "UNKNOWN_SKILL");
 }
 
 std::string GameData::getItemName(sro::scalar_types::ReferenceObjectId itemRefId) const {
-  const pk2::ref::Item &item = itemData_.getItemById(itemRefId);
+  const sro::pk2::ref::Item &item = itemData_.getItemById(itemRefId);
   const std::optional<std::string> maybeName = textData_.getItemNameIfExists(item.nameStrID128);
   return (maybeName ? *maybeName : "UNKNOWN_ITEM");
 }
 
-std::string GameData::getMasteryName(pk2::ref::MasteryId masteryId) const {
-  const pk2::ref::Mastery &masteryDataObj = masteryData_.getMasteryById(masteryId);
+std::string GameData::getMasteryName(sro::pk2::ref::MasteryId masteryId) const {
+  const sro::pk2::ref::Mastery &masteryDataObj = masteryData_.getMasteryById(masteryId);
   const std::optional<std::string> maybeName = textData_.getMasteryNameIfExists(masteryDataObj.masteryNameCode);
   return (maybeName ? *maybeName : "UNKNOWN_MASTERY");
 }
 
-pk2::ref::MasteryId GameData::getMasteryId(std::string masteryName) const {
+sro::pk2::ref::MasteryId GameData::getMasteryId(std::string masteryName) const {
   std::transform(masteryName.begin(), masteryName.end(), masteryName.begin(), [](unsigned char c) { return std::tolower(c); });
   masteryName[0] = std::toupper(masteryName[0]);
   std::optional<std::string> maybeNameCode = textData_.getMasteryNameCodeIfExists(masteryName);
@@ -172,14 +171,14 @@ void GameData::parseGatewayPort(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kGatePortEntryName = "GATEPORT.TXT";
   sro::pk2::PK2Entry gatePortEntry = pk2Reader.getEntry(kGatePortEntryName);
   auto gatePortData = pk2Reader.getEntryData(gatePortEntry);
-  gatewayPort_ = parsing::parseGatePort(gatePortData);
+  gatewayPort_ = sro::pk2::parsing::parseGatePort(gatePortData);
 }
 
 void GameData::parseDivisionInfo(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kDivisionInfoEntryName = "DIVISIONINFO.TXT";
   sro::pk2::PK2Entry divisionInfoEntry = pk2Reader.getEntry(kDivisionInfoEntryName);
   auto divisionInfoData = pk2Reader.getEntryData(divisionInfoEntry);
-  divisionInfo_ = parsing::parseDivisionInfo(divisionInfoData);
+  divisionInfo_ = sro::pk2::parsing::parseDivisionInfo(divisionInfoData);
 }
 
 namespace {
@@ -227,7 +226,7 @@ void parseDataFile2(const std::vector<std::string> &lines,
 std::string getFileDataAsString(sro::pk2::Pk2ReaderModern &pk2Reader, const std::string &path) {
   sro::pk2::PK2Entry entry = pk2Reader.getEntry(path);
   auto entryData = pk2Reader.getEntryData(entry);
-  return parsing::fileDataToString(entryData);
+  return sro::pk2::parsing::fileDataToString(entryData);
 }
 
 } // namespace (anonymous)
@@ -239,9 +238,9 @@ void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   sro::pk2::PK2Entry masterCharacterdataEntry = pk2Reader.getEntry(kMasterCharacterdataPath);
 
   auto masterCharacterdataData = pk2Reader.getEntryData(masterCharacterdataEntry);
-  // auto masterCharacterdataStr = parsing::fileDataToString(masterCharacterdataData);
-  // auto characterdataFilenames = parsing::split(masterCharacterdataStr, "\r\n");
-  auto characterdataFilenames = parsing::fileDataToStringLines(masterCharacterdataData);
+  // auto masterCharacterdataStr = sro::pk2::parsing::fileDataToString(masterCharacterdataData);
+  // auto characterdataFilenames = sro::pk2::parsing::split(masterCharacterdataStr, "\r\n");
+  auto characterdataFilenames = sro::pk2::parsing::fileDataToStringLines(masterCharacterdataData);
 
   {
     std::unique_lock<std::mutex> lock(printMutex_);
@@ -251,11 +250,11 @@ void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
     auto characterdataPath = kTextdataDirectory + characterdataFilename;
     sro::pk2::PK2Entry characterdataEntry = pk2Reader.getEntry(characterdataPath);
     auto characterdataData = pk2Reader.getEntryData(characterdataEntry);
-    // auto characterdataStr = parsing::fileDataToString(characterdataData);
-    auto characterdataLines = parsing::fileDataToStringLines(characterdataData);
+    // auto characterdataStr = sro::pk2::parsing::fileDataToString(characterdataData);
+    auto characterdataLines = sro::pk2::parsing::fileDataToStringLines(characterdataData);
     try {
-      parseDataFile2<ref::Character>(characterdataLines, parsing::isValidCharacterdataLine, parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
-      // parseDataFile<ref::Character>(characterdataStr, parsing::isValidCharacterdataLine, parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
+      parseDataFile2<sro::pk2::ref::Character>(characterdataLines, sro::pk2::parsing::isValidCharacterdataLine, sro::pk2::parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
+      // parseDataFile<sro::pk2::ref::Character>(characterdataStr, sro::pk2::parsing::isValidCharacterdataLine, sro::pk2::parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
     } catch (std::exception &ex) {
       LOG(WARNING) << "Exception while parsing character data: \"" << ex.what() << '"';
     }
@@ -271,7 +270,7 @@ void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kMasterItemdataName = "itemdata.txt";
   const std::string kMasterItemdataPath = kTextdataDirectory + kMasterItemdataName;
   auto masterItemdataStr = getFileDataAsString(pk2Reader, kMasterItemdataPath);
-  auto itemdataFilenames = parsing::split(masterItemdataStr, "\r\n");
+  auto itemdataFilenames = sro::pk2::parsing::split(masterItemdataStr, "\r\n");
 
   {
     std::unique_lock<std::mutex> lock(printMutex_);
@@ -280,7 +279,7 @@ void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   for (auto itemdataFilename : itemdataFilenames) {
     auto itemdataPath = kTextdataDirectory + itemdataFilename;
     auto itemdataStr = getFileDataAsString(pk2Reader, itemdataPath);
-    parseDataFile<ref::Item>(itemdataStr, parsing::isValidItemdataLine, parsing::parseItemdataLine, std::bind(&ItemData::addItem, &itemData_, std::placeholders::_1));
+    parseDataFile<sro::pk2::ref::Item>(itemdataStr, sro::pk2::parsing::isValidItemdataLine, sro::pk2::parsing::parseItemdataLine, std::bind(&ItemData::addItem, &itemData_, std::placeholders::_1));
   }
   {
     std::unique_lock<std::mutex> lock(printMutex_);
@@ -294,7 +293,7 @@ void GameData::parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kMasterSkilldataName = "skilldataenc.txt";
   const std::string kMasterSkilldataPath = kTextdataDirectory + kMasterSkilldataName;
   auto masterSkilldataStr = getFileDataAsString(pk2Reader, kMasterSkilldataPath);
-  auto skilldataFilenames = parsing::split(masterSkilldataStr, "\r\n");
+  auto skilldataFilenames = sro::pk2::parsing::split(masterSkilldataStr, "\r\n");
 
   {
     std::unique_lock<std::mutex> lock(printMutex_);
@@ -305,9 +304,9 @@ void GameData::parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader) {
     sro::pk2::PK2Entry skilldataEntry = pk2Reader.getEntry(skilldataPath);
     auto skilldataData = pk2Reader.getEntryData(skilldataEntry);
     // Decrypt this skill data
-    parsing::decryptSkillData(skilldataData);
-    auto skilldataStr = parsing::fileDataToString(skilldataData);
-    parseDataFile<ref::Skill>(skilldataStr, parsing::isValidSkilldataLine, parsing::parseSkilldataLine, std::bind(&SkillData::addSkill, &skillData_, std::placeholders::_1));
+    sro::pk2::parsing::decryptSkillData(skilldataData);
+    auto skilldataStr = sro::pk2::parsing::fileDataToString(skilldataData);
+    parseDataFile<sro::pk2::ref::Skill>(skilldataStr, sro::pk2::parsing::isValidSkilldataLine, sro::pk2::parsing::parseSkilldataLine, std::bind(&SkillData::addSkill, &skillData_, std::placeholders::_1));
   }
   {
     std::unique_lock<std::mutex> lock(printMutex_);
@@ -324,7 +323,7 @@ void GameData::parseTeleportData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   }
   auto teleportDataPath = kTextdataDirectory + kTeleportDataFilename;
   auto teleportDataStr = getFileDataAsString(pk2Reader, teleportDataPath);
-  parseDataFile<ref::Teleport>(teleportDataStr, parsing::isValidTeleportbuildingLine, parsing::parseTeleportbuildingLine, std::bind(&TeleportData::addTeleport, &teleportData_, std::placeholders::_1));
+  parseDataFile<sro::pk2::ref::Teleport>(teleportDataStr, sro::pk2::parsing::isValidTeleportbuildingLine, sro::pk2::parsing::parseTeleportbuildingLine, std::bind(&TeleportData::addTeleport, &teleportData_, std::placeholders::_1));
   {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(1) << "  Cached " << teleportData_.size() << " teleport(s)";
@@ -333,17 +332,17 @@ void GameData::parseTeleportData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 
 void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   // Maps Package name to item data
-  std::map<std::string, ref::ScrapOfPackageItem> scrapOfPackageItemMap;
+  std::map<std::string, sro::pk2::ref::ScrapOfPackageItem> scrapOfPackageItemMap;
   // Maps a ShopTabGroup(I think an option within the NPC's dialog) to N tabs
-  std::vector<ref::ShopTab> shopTabs;
+  std::vector<sro::pk2::ref::ShopTab> shopTabs;
   // List of NPC->ShopGroup
-  std::vector<ref::ShopGroup> shopGroups;
+  std::vector<sro::pk2::ref::ShopGroup> shopGroups;
   // List of Tab->Good
-  std::vector<ref::ShopGood> shopGoods;
+  std::vector<sro::pk2::ref::ShopGood> shopGoods;
   // List of ShopGroup->Shop
-  std::vector<ref::MappingShopGroup> mappingShopGroups;
+  std::vector<sro::pk2::ref::MappingShopGroup> mappingShopGroups;
   // List of Shop->ShopTabGroup
-  std::vector<ref::MappingShopWithTab> mappingShopWithTabs;
+  std::vector<sro::pk2::ref::MappingShopWithTab> mappingShopWithTabs;
 
   const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
 
@@ -357,7 +356,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   }
   auto scrapOfPackageItemPath = kTextdataDirectory + kScrapOfPackageItemFilename;
   auto scrapOfPackageItemStr = getFileDataAsString(pk2Reader, scrapOfPackageItemPath);
-  parseDataFile<ref::ScrapOfPackageItem>(scrapOfPackageItemStr, parsing::isValidScrapOfPackageItemLine, parsing::parseScrapOfPackageItemLine, [&scrapOfPackageItemMap](ref::ScrapOfPackageItem &&package){
+  parseDataFile<sro::pk2::ref::ScrapOfPackageItem>(scrapOfPackageItemStr, sro::pk2::parsing::isValidScrapOfPackageItemLine, sro::pk2::parsing::parseScrapOfPackageItemLine, [&scrapOfPackageItemMap](sro::pk2::ref::ScrapOfPackageItem &&package){
     scrapOfPackageItemMap.emplace(package.refPackageItemCodeName, std::move(package));
   });
   {
@@ -375,7 +374,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   }
   auto shopTabPath = kTextdataDirectory + kShopTabFilename;
   auto shopTabStr = getFileDataAsString(pk2Reader, shopTabPath);
-  parseDataFile<ref::ShopTab>(shopTabStr, parsing::isValidShopTabLine, parsing::parseShopTabLine, [&shopTabs](ref::ShopTab &&tab){
+  parseDataFile<sro::pk2::ref::ShopTab>(shopTabStr, sro::pk2::parsing::isValidShopTabLine, sro::pk2::parsing::parseShopTabLine, [&shopTabs](sro::pk2::ref::ShopTab &&tab){
     shopTabs.emplace_back(std::move(tab));
   });
   {
@@ -393,7 +392,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   }
   auto shopGroupPath = kTextdataDirectory + kShopGroupFilename;
   auto shopGroupStr = getFileDataAsString(pk2Reader, shopGroupPath);
-  parseDataFile<ref::ShopGroup>(shopGroupStr, parsing::isValidShopGroupLine, parsing::parseShopGroupLine, [&shopGroups](ref::ShopGroup &&group){
+  parseDataFile<sro::pk2::ref::ShopGroup>(shopGroupStr, sro::pk2::parsing::isValidShopGroupLine, sro::pk2::parsing::parseShopGroupLine, [&shopGroups](sro::pk2::ref::ShopGroup &&group){
     shopGroups.emplace_back(std::move(group));
   });
   {
@@ -411,7 +410,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   }
   auto shopGoodsPath = kTextdataDirectory + kShopGoodsFilename;
   auto shopGoodsStr = getFileDataAsString(pk2Reader, shopGoodsPath);
-  parseDataFile<ref::ShopGood>(shopGoodsStr, parsing::isValidShopGoodLine, parsing::parseShopGoodLine, [&shopGoods](ref::ShopGood &&good){
+  parseDataFile<sro::pk2::ref::ShopGood>(shopGoodsStr, sro::pk2::parsing::isValidShopGoodLine, sro::pk2::parsing::parseShopGoodLine, [&shopGoods](sro::pk2::ref::ShopGood &&good){
     shopGoods.emplace_back(std::move(good));
   });
   {
@@ -429,7 +428,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   }
   auto mappingShopGroupPath = kTextdataDirectory + kMappingShopGroupFilename;
   auto mappingShopGroupStr = getFileDataAsString(pk2Reader, mappingShopGroupPath);
-  parseDataFile<ref::MappingShopGroup>(mappingShopGroupStr, parsing::isValidMappingShopGroupLine, parsing::parseMappingShopGroupLine, [&mappingShopGroups](ref::MappingShopGroup &&mapping){
+  parseDataFile<sro::pk2::ref::MappingShopGroup>(mappingShopGroupStr, sro::pk2::parsing::isValidMappingShopGroupLine, sro::pk2::parsing::parseMappingShopGroupLine, [&mappingShopGroups](sro::pk2::ref::MappingShopGroup &&mapping){
     mappingShopGroups.emplace_back(std::move(mapping));
   });
   {
@@ -447,7 +446,7 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   }
   auto mappingShopWithTabPath = kTextdataDirectory + kMappingShopWithTabFilename;
   auto mappingShopWithTabStr = getFileDataAsString(pk2Reader, mappingShopWithTabPath);
-  parseDataFile<ref::MappingShopWithTab>(mappingShopWithTabStr, parsing::isValidMappingShopWithTabLine, parsing::parseMappingShopWithTabLine, [&mappingShopWithTabs](ref::MappingShopWithTab &&mapping){
+  parseDataFile<sro::pk2::ref::MappingShopWithTab>(mappingShopWithTabStr, sro::pk2::parsing::isValidMappingShopWithTabLine, sro::pk2::parsing::parseMappingShopWithTabLine, [&mappingShopWithTabs](sro::pk2::ref::MappingShopWithTab &&mapping){
     mappingShopWithTabs.emplace_back(std::move(mapping));
   });
   {
@@ -524,19 +523,19 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 void GameData::parseMagicOptionData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kMagicOptionDataPath = "server_dep\\silkroad\\textdata\\magicoption.txt";
   auto magicOptionStr = getFileDataAsString(pk2Reader, kMagicOptionDataPath);
-  parseDataFile<ref::MagicOption>(magicOptionStr, parsing::isValidMagicOptionDataLine, parsing::parseMagicOptionDataLine, std::bind(&MagicOptionData::addItem, &magicOptionData_, std::placeholders::_1));
+  parseDataFile<sro::pk2::ref::MagicOption>(magicOptionStr, sro::pk2::parsing::isValidMagicOptionDataLine, sro::pk2::parsing::parseMagicOptionDataLine, std::bind(&MagicOptionData::addItem, &magicOptionData_, std::placeholders::_1));
 }
 
 void GameData::parseLevelData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kLevelDataPath = "server_dep\\silkroad\\textdata\\leveldata.txt";
   auto levelDataStr = getFileDataAsString(pk2Reader, kLevelDataPath);
-  parseDataFile<ref::Level>(levelDataStr, parsing::isValidLevelDataLine, parsing::parseLevelDataLine, std::bind(&LevelData::addLevelItem, &levelData_, std::placeholders::_1));
+  parseDataFile<sro::pk2::ref::Level>(levelDataStr, sro::pk2::parsing::isValidLevelDataLine, sro::pk2::parsing::parseLevelDataLine, std::bind(&LevelData::addLevelItem, &levelData_, std::placeholders::_1));
 }
 
 void GameData::parseRefRegion(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kRefRegionPath = "server_dep\\silkroad\\textdata\\refregion.txt";
   auto refRegionStr = getFileDataAsString(pk2Reader, kRefRegionPath);
-  parseDataFile<ref::Region>(refRegionStr, parsing::isValidRefRegionLine, parsing::parseRefRegionLine, std::bind(&RefRegion::addRegion, &refRegion_, std::placeholders::_1));
+  parseDataFile<sro::pk2::ref::Region>(refRegionStr, sro::pk2::parsing::isValidRefRegionLine, sro::pk2::parsing::parseRefRegionLine, std::bind(&RefRegion::addRegion, &refRegion_, std::placeholders::_1));
 }
 
 void GameData::parseTextData(sro::pk2::Pk2ReaderModern &pk2Reader) {
@@ -553,7 +552,7 @@ void GameData::parseTextData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 void GameData::parseTextZoneName(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kTextZoneNamePath = "server_dep\\silkroad\\textdata\\textzonename.txt";
   auto textZoneNameStr = getFileDataAsString(pk2Reader, kTextZoneNamePath);
-  parseDataFile<ref::TextZoneName>(textZoneNameStr, parsing::isValidTextDataLine, parsing::parseTextZoneNameLine, std::bind(&TextZoneNameData::addItem, &textZoneNameData_, std::placeholders::_1));
+  parseDataFile<sro::pk2::ref::TextZoneName>(textZoneNameStr, sro::pk2::parsing::isValidTextDataLine, sro::pk2::parsing::parseTextZoneNameLine, std::bind(&TextZoneNameData::addItem, &textZoneNameData_, std::placeholders::_1));
 }
 
 void GameData::parseText(sro::pk2::Pk2ReaderModern &pk2Reader) {
@@ -562,14 +561,14 @@ void GameData::parseText(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kMasterTextDataPath = kTextdataDirectory + kMasterTextDataName;
   sro::pk2::PK2Entry masterTextDataEntry = pk2Reader.getEntry(kMasterTextDataPath);
   auto masterTextDataData = pk2Reader.getEntryData(masterTextDataEntry);
-  auto textDataFilenames = parsing::fileDataToStringLines(masterTextDataData);
+  auto textDataFilenames = sro::pk2::parsing::fileDataToStringLines(masterTextDataData);
   for (auto textDataFilename : textDataFilenames) {
     auto textDataPath = kTextdataDirectory + textDataFilename;
     VLOG(1) << absl::StreamFormat("Parsing file \"%s\"", textDataPath);
     sro::pk2::PK2Entry textEntry = pk2Reader.getEntry(textDataPath);
     auto textData = pk2Reader.getEntryData(textEntry);
-    auto textLines = parsing::fileDataToStringLines(textData);
-    parseDataFile2<ref::Text>(textLines, parsing::isValidTextDataLine, parsing::parseTextLine, std::bind(&TextData::addItem, &textData_, std::placeholders::_1));
+    auto textLines = sro::pk2::parsing::fileDataToStringLines(textData);
+    parseDataFile2<sro::pk2::ref::Text>(textLines, sro::pk2::parsing::isValidTextDataLine, sro::pk2::parsing::parseTextLine, std::bind(&TextData::addItem, &textData_, std::placeholders::_1));
   }
 }
 
@@ -577,16 +576,16 @@ void GameData::parseMasteryData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kPath = "server_dep\\silkroad\\textdata\\skillmasterydata.txt";
   sro::pk2::PK2Entry entry = pk2Reader.getEntry(kPath);
   const auto data = pk2Reader.getEntryData(entry);
-  const auto lines = parsing::fileDataToStringLines(data);
+  const auto lines = sro::pk2::parsing::fileDataToStringLines(data);
   // TODO: Template on the add function instead
-  parseDataFile2<ref::Mastery>(lines, parsing::isValidMasteryLine, parsing::parseMasteryLine, std::bind(&MasteryData::addMastery, &masteryData_, std::placeholders::_1));
+  parseDataFile2<sro::pk2::ref::Mastery>(lines, sro::pk2::parsing::isValidMasteryLine, sro::pk2::parsing::parseMasteryLine, std::bind(&MasteryData::addMastery, &masteryData_, std::placeholders::_1));
 }
 
 void GameData::parseTextUiSystem(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kPath = "server_dep\\silkroad\\textdata\\textuisystem.txt";
   sro::pk2::PK2Entry entry = pk2Reader.getEntry(kPath);
   const auto data = pk2Reader.getEntryData(entry);
-  const auto lines = parsing::fileDataToStringLines(data);
+  const auto lines = sro::pk2::parsing::fileDataToStringLines(data);
   bool isMasteryNameSection{false};
   for (const std::string &line : lines) {
     if (line.size() >= 2 && line[0] == '/' && line[1] == '/') {
@@ -605,8 +604,8 @@ void GameData::parseTextUiSystem(sro::pk2::Pk2ReaderModern &pk2Reader) {
       // Is not a section header.
       if (isMasteryNameSection) {
         // This is the section we care about.
-        if (parsing::isValidTextDataLine(line)) {
-          textData_.addItem(parsing::parseTextLine(line));
+        if (sro::pk2::parsing::isValidTextDataLine(line)) {
+          textData_.addItem(sro::pk2::parsing::parseTextLine(line));
         } else {
           throw std::runtime_error(absl::StrFormat("When parsing textuisystem.txt for mastery names, encountered \"%s\" which is not a valid text data line", line));
         }
@@ -627,7 +626,7 @@ void GameData::parseRegionInfo(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kRegionInfoEntryName = "regioninfo.txt";
   sro::pk2::PK2Entry regionInfoEntry = pk2Reader.getEntry(kRegionInfoEntryName);
   auto regionInfoData = pk2Reader.getEntryData(regionInfoEntry);
-  regionInfo_ = parsing::parseRegionInfo(regionInfoData);
+  regionInfo_ = sro::pk2::parsing::parseRegionInfo(regionInfoData);
 }
 
 } // namespace pk2

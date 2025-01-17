@@ -5,15 +5,16 @@
 
 //-------------------------------------------------------------------------
 
-#include <windows.h>
-#include <windowsx.h>
-#include "../common/pk2/divisionInfo.hpp"
-#include "../common/pk2/parsing/parsing.hpp"
-#include "../common/detours/detours.h"
+#include "detours/detours.h"
 
 #include <silkroad_lib/edx_labs.h>
 #include <silkroad_lib/file_util.h>
+#include <silkroad_lib/pk2/divisionInfo.h>
 #include <silkroad_lib/pk2/pk2ReaderModern.h>
+#include <silkroad_lib/pk2/parsing/parsing.h>
+
+#include <windows.h>
+#include <windowsx.h>
 
 #include <filesystem>
 #include <fstream>
@@ -24,7 +25,7 @@
 
 HINSTANCE gInstance = 0;
 DWORD languageFlag = 0;
-pk2::DivisionInfo gDivisionInfo;
+sro::pk2::DivisionInfo gDivisionInfo;
 bool bDoLanguagePatch = true;
 bool bDoMulticlient = true;
 bool bDoZoomhack = true;
@@ -302,32 +303,32 @@ namespace nsEnglishCaptcha
     b1[0] = pImageCode[0];
     b1[1] = pImageCode[1];
     b1[2] = 0;
-    newImageCode[0] = edxLabs::HexStringToInteger(b1);
+    newImageCode[0] = sro::edx_labs::HexStringToInteger(b1);
 
     b2[0] = pImageCode[2];
     b2[1] = pImageCode[3];
     b2[2] = 0;
-    newImageCode[1] = edxLabs::HexStringToInteger(b2);
+    newImageCode[1] = sro::edx_labs::HexStringToInteger(b2);
 
     b3[0] = pImageCode[4];
     b3[1] = pImageCode[5];
     b3[2] = 0;
-    newImageCode[2] = edxLabs::HexStringToInteger(b3);
+    newImageCode[2] = sro::edx_labs::HexStringToInteger(b3);
 
     b4[0] = pImageCode[6];
     b4[1] = pImageCode[7];
     b4[2] = 0;
-    newImageCode[3] = edxLabs::HexStringToInteger(b4);
+    newImageCode[3] = sro::edx_labs::HexStringToInteger(b4);
 
     b5[0] = pImageCode[8];
     b5[1] = pImageCode[9];
     b5[2] = 0;
-    newImageCode[4] = edxLabs::HexStringToInteger(b5);
+    newImageCode[4] = sro::edx_labs::HexStringToInteger(b5);
 
     b6[0] = pImageCode[10];
     b6[1] = pImageCode[11];
     b6[2] = 0;
-    newImageCode[5] = edxLabs::HexStringToInteger(b6);
+    newImageCode[5] = sro::edx_labs::HexStringToInteger(b6);
 
     newImageCode[6] = 0;
 
@@ -380,7 +381,7 @@ void modifyRoutelist() {
 
     // MessageBox(0, ("Redirecting gateway to " + defaultGatewayIP + " " + std::to_string(botPort)).c_str(), "Redirect", MB_OK);
 
-    std::vector<std::string> tokens = TokenizeString(defaultGatewayIP, " .");
+    std::vector<std::string> tokens = sro::edx_labs::TokenizeString(defaultGatewayIP, " .");
     if (tokens.size() != 4) {
       MessageBox(0, "Please enter an IP in the format 0.0.0.0", "Fatal Error", MB_ICONERROR);
       return;
@@ -406,7 +407,7 @@ void modifyRoutelist() {
           struct in_addr addr;
           addr.s_addr = *(u_long *)remoteHost->h_addr_list[0];
           std::string hostip = inet_ntoa(addr);
-          tokens = TokenizeString(hostip, ".");
+          tokens = sro::edx_labs::TokenizeString(hostip, ".");
           routeArray[routeListCount].srcA = atoi(tokens[0].c_str());
           routeArray[routeListCount].srcB = atoi(tokens[1].c_str());
           routeArray[routeListCount].srcC = atoi(tokens[2].c_str());
@@ -430,7 +431,7 @@ void modifyRoutelist() {
 
     // MessageBox(0, ("Redirecting agent to " + defaultAgentIP + " " + std::to_string(botPort)).c_str(), "Redirect", MB_OK);
 
-    std::vector<std::string> tokens = TokenizeString(defaultAgentIP, " .");
+    std::vector<std::string> tokens = sro::edx_labs::TokenizeString(defaultAgentIP, " .");
 
     if (tokens.size() != 4) {
       MessageBox(0, "Please enter an IP in the format 0.0.0.0", "Fatal Error", MB_ICONERROR);
@@ -471,7 +472,7 @@ void UserOnInject()
     sro::pk2::Pk2ReaderModern pk2Reader(mpk2);
     auto divisionInfoEntry = pk2Reader.getEntry("DIVISIONINFO.TXT");
     auto divisionInfoData = pk2Reader.getEntryData(divisionInfoEntry);
-    gDivisionInfo = pk2::parsing::parseDivisionInfo(divisionInfoData);
+    gDivisionInfo = sro::pk2::parsing::parseDivisionInfo(divisionInfoData);
   } catch (std::exception &ex) {
     std::string errorMsg = ex.what();
     errorMsg = "The DivisionInfo could not be parsed.\nError: \"" + errorMsg + "\"";
@@ -562,7 +563,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
   CreateMutexA(0, 0, "Ready");
 
   BYTE peHeader[4096];
-  edxLabs::ReadBytes(PtrToUlong(exeInstance), peHeader, 4096);
+  sro::edx_labs::ReadBytes(PtrToUlong(exeInstance), peHeader, 4096);
   PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)peHeader;
 #define MakePtr(cast, ptr, addValue) (cast)((DWORD)(ptr)+(DWORD)(addValue))
   PIMAGE_NT_HEADERS pNTHeader = MakePtr(PIMAGE_NT_HEADERS, dosHeader, dosHeader->e_lfanew);
@@ -615,10 +616,10 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
   }
 
   codePtr = (LPBYTE)malloc(codeSize);
-  edxLabs::ReadBytes(codeStart, codePtr, codeSize);
+  sro::edx_labs::ReadBytes(codeStart, codePtr, codeSize);
 
   dataPtr = (LPBYTE)malloc(dataSize);
-  edxLabs::ReadBytes(dataStart, dataPtr, dataSize);
+  sro::edx_labs::ReadBytes(dataStart, dataPtr, dataSize);
 
   std::vector<LONGLONG> results;
 
@@ -632,7 +633,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
         0x8B, 0x4C, 0x24, 0x04, 0x81, 0xE1, 0xFF, 0xFF,
         0xFF, 0x7F
       };
-      results = FindSignature(securitySeedSig, 0, sizeof(securitySeedSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(securitySeedSig, 0, sizeof(securitySeedSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -643,7 +644,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       printf("secSeedAddr: 0x%X\n", secSeedAddr);
 
       BYTE patch1[] = { 0xB9, 0x33, 0x00, 0x00, 0x00, 0x90, 0x90, 0x90, 0x90, 0x90 };
-      WriteBytes(secSeedAddr, patch1, sizeof(patch1));
+      sro::edx_labs::WriteBytes(secSeedAddr, patch1, sizeof(patch1));
 
       printf("\n");
     } while (false);
@@ -679,7 +680,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
         0x5F, 0x00, 0x46, 0x00, 0x49, 0x00, 0x4C, 0x00,
         0x54, 0x00, 0x45, 0x00, 0x52, 0x00, 0x00, 0x00
       };
-      results = FindSignature(abuseFilterStringSig, 0, sizeof(abuseFilterStringSig), dataPtr, dataSize);
+      results = sro::edx_labs::FindSignature(abuseFilterStringSig, 0, sizeof(abuseFilterStringSig), dataPtr, dataSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -697,7 +698,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       };
       memcpy(abuseFilterSig + 1, &logicalAddress1, 4);
 
-      results = FindSignature(abuseFilterSig, 0, sizeof(abuseFilterSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(abuseFilterSig, 0, sizeof(abuseFilterSig), codePtr, codeSize);
       if (results.size() <= 3)
       {
         printf("%i results were returned. 4 or more were expected. Please use an updated signature.\n", results.size());
@@ -711,7 +712,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
         printf("patchAddress: 0x%X\n", patchAddress);
 
         BYTE patch1[] = { 0xEB };
-        WriteBytes(patchAddress, patch1, sizeof(patch1));
+        sro::edx_labs::WriteBytes(patchAddress, patch1, sizeof(patch1));
       }
 
       printf("\n");
@@ -750,7 +751,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       DWORD physicalLauncherStringAddress = 0;
       DWORD logicalLauncherStringAddress = 0;
 
-      results = FindSignature(koreanLanguageStringSig, 0, sizeof(koreanLanguageStringSig), dataPtr, dataSize);
+      results = sro::edx_labs::FindSignature(koreanLanguageStringSig, 0, sizeof(koreanLanguageStringSig), dataPtr, dataSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -758,7 +759,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       }
       physicalKoreanStringAddress = (DWORD)(results[0] + dataStart);
 
-      results = FindSignature(chineseLanguageStringSig, 0, sizeof(chineseLanguageStringSig), dataPtr, dataSize);
+      results = sro::edx_labs::FindSignature(chineseLanguageStringSig, 0, sizeof(chineseLanguageStringSig), dataPtr, dataSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -766,7 +767,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       }
       physicalChineseStringAddress = (DWORD)(results[0] + dataStart);
 
-      results = FindSignature(taiwanLanguageStringSig, 0, sizeof(taiwanLanguageStringSig), dataPtr, dataSize);
+      results = sro::edx_labs::FindSignature(taiwanLanguageStringSig, 0, sizeof(taiwanLanguageStringSig), dataPtr, dataSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -774,7 +775,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       }
       physicalTaiwanStringAddress = (DWORD)(results[0] + dataStart);
 
-      results = FindSignature(japanLanguageStringSig, 0, sizeof(japanLanguageStringSig), dataPtr, dataSize);
+      results = sro::edx_labs::FindSignature(japanLanguageStringSig, 0, sizeof(japanLanguageStringSig), dataPtr, dataSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -782,7 +783,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       }
       physicalJapanStringAddress = (DWORD)(results[0] + dataStart);
 
-      results = FindSignature(englishLanguageStringSig, 0, sizeof(englishLanguageStringSig), dataPtr, dataSize);
+      results = sro::edx_labs::FindSignature(englishLanguageStringSig, 0, sizeof(englishLanguageStringSig), dataPtr, dataSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -790,7 +791,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       }
       physicalEnglishStringAddress = (DWORD)(results[0] + dataStart);
 
-      results = FindSignature(vietnamLanguageStringSig, 0, sizeof(vietnamLanguageStringSig), dataPtr, dataSize);
+      results = sro::edx_labs::FindSignature(vietnamLanguageStringSig, 0, sizeof(vietnamLanguageStringSig), dataPtr, dataSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -809,7 +810,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       BYTE languageStringLoadSig[] = { 0xBE, 0x00, 0x00, 0x00, 0x00 };
 
       memcpy(languageStringLoadSig + 1, &physicalKoreanStringAddress, 4);
-      results = FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -818,7 +819,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       logicalKoreanStringAddress = (DWORD)(results[0] + codeStart);
 
       memcpy(languageStringLoadSig + 1, &physicalChineseStringAddress, 4);
-      results = FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -827,7 +828,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       logicalChineseStringAddress = (DWORD)(results[0] + codeStart);
 
       memcpy(languageStringLoadSig + 1, &physicalTaiwanStringAddress, 4);
-      results = FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -836,7 +837,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       logicalTaiwanStringAddress = (DWORD)(results[0] + codeStart);
 
       memcpy(languageStringLoadSig + 1, &physicalJapanStringAddress, 4);
-      results = FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -845,7 +846,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       logicalJapanStringAddress = (DWORD)(results[0] + codeStart);
 
       memcpy(languageStringLoadSig + 1, &physicalEnglishStringAddress, 4);
-      results = FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -854,7 +855,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       logicalEnglishStringAddress = (DWORD)(results[0] + codeStart);
 
       memcpy(languageStringLoadSig + 1, &physicalVietnamStringAddress, 4);
-      results = FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(languageStringLoadSig, 0, sizeof(languageStringLoadSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -886,18 +887,18 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       printf("\n");
 
       BYTE patch1[] = { 0xEB };
-      WriteBytes(logicalKoreanStringAddress, patch1, sizeof(patch1));
-      WriteBytes(logicalChineseStringAddress, patch1, sizeof(patch1));
-      WriteBytes(logicalTaiwanStringAddress, patch1, sizeof(patch1));
-      WriteBytes(logicalJapanStringAddress, patch1, sizeof(patch1));
-      WriteBytes(logicalVietnamStringAddress, patch1, sizeof(patch1));
+      sro::edx_labs::WriteBytes(logicalKoreanStringAddress, patch1, sizeof(patch1));
+      sro::edx_labs::WriteBytes(logicalChineseStringAddress, patch1, sizeof(patch1));
+      sro::edx_labs::WriteBytes(logicalTaiwanStringAddress, patch1, sizeof(patch1));
+      sro::edx_labs::WriteBytes(logicalJapanStringAddress, patch1, sizeof(patch1));
+      sro::edx_labs::WriteBytes(logicalVietnamStringAddress, patch1, sizeof(patch1));
 
       BYTE patch2[] = { 0x90, 0x90 };
-      WriteBytes(logicalEnglishStringAddress, patch2, sizeof(patch2));
+      sro::edx_labs::WriteBytes(logicalEnglishStringAddress, patch2, sizeof(patch2));
 
       BYTE charSelectStringSig[] = { 0x43, 0x68, 0x61, 0x72, 0x53, 0x65, 0x6C, 0x65, 0x63, 0x74, 0x00 };
 
-      results = FindSignature(charSelectStringSig, 0, sizeof(charSelectStringSig), dataPtr, dataSize);
+      results = sro::edx_labs::FindSignature(charSelectStringSig, 0, sizeof(charSelectStringSig), dataPtr, dataSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -909,7 +910,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
 
       BYTE charSelectStringLoadSig[] = { 0x68, 0x00, 0x00, 0x00, 0x00 };
       memcpy(charSelectStringLoadSig + 1, &physicalCharSelectStringAddress, 4);
-      results = FindSignature(charSelectStringLoadSig, 0, sizeof(charSelectStringLoadSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(charSelectStringLoadSig, 0, sizeof(charSelectStringLoadSig), codePtr, codeSize);
       if (results.size() != 2)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 2);
@@ -931,7 +932,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
 
       BYTE launcherStringSig[] = { 0x50, 0x6C, 0x65, 0x61, 0x73, 0x65, 0x20, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x65, 0x20, 0x74, 0x68, 0x65, 0x20, 0x22, 0x53, 0x69, 0x6C, 0x6B, 0x72, 0x6F, 0x61, 0x64, 0x2E, 0x65, 0x78, 0x65, 0x2E, 0x22, 0x00 };
 
-      results = FindSignature(launcherStringSig, 0, sizeof(launcherStringSig), dataPtr, dataSize);
+      results = sro::edx_labs::FindSignature(launcherStringSig, 0, sizeof(launcherStringSig), dataPtr, dataSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -943,7 +944,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
 
       BYTE launcherStringLoadSig[] = { 0x68, 0x00, 0x00, 0x00, 0x00 };
       memcpy(launcherStringLoadSig + 1, &physicalLauncherStringAddress, 4);
-      results = FindSignature(launcherStringLoadSig, 0, sizeof(launcherStringLoadSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(launcherStringLoadSig, 0, sizeof(launcherStringLoadSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -959,7 +960,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       printf("codecaveAddr: 0x%X\n", codecaveAddr);
       printf("customMultiAddr: 0x%X\n", nsEnglishPatch::customLangAddr);
 
-      CreateCodeCave(codecaveAddr, 7, nsEnglishPatch::codecave_EnglishPatch);
+      sro::edx_labs::CreateCodeCave(codecaveAddr, 7, nsEnglishPatch::codecave_EnglishPatch);
 
       printf("\n");
     } while (false);
@@ -975,7 +976,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
         0x8B, 0x84, 0xEE, 0x1C, 0x01, 0x00, 0x00, 0x3B,
         0x44, 0x24, 0x14
       };
-      results = FindSignature(nudePatchSig, 0, sizeof(nudePatchSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(nudePatchSig, 0, sizeof(nudePatchSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -986,7 +987,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       printf("nudePatchAddr: 0x%X\n", nudePatchAddr);
 
       BYTE patch1[] = { 0x90, 0x90 };
-      WriteBytes(nudePatchAddr, patch1, sizeof(patch1));
+      sro::edx_labs::WriteBytes(nudePatchAddr, patch1, sizeof(patch1));
 
       printf("\n");
     } while (false);
@@ -1002,7 +1003,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
         0xDF, 0xE0, 0xF6, 0xC4, 0x41, 0x7A, 0x08, 0xD9,
         0x9E
       };
-      results = FindSignature(zoomHackSig, 0, sizeof(zoomHackSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(zoomHackSig, 0, sizeof(zoomHackSig), codePtr, codeSize);
       if (results.size() != 2)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 2);
@@ -1013,7 +1014,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       printf("zoomHackAddr: 0x%X\n", zoomHackAddr);
 
       BYTE patch1[] = { 0xEB };
-      WriteBytes(zoomHackAddr, patch1, sizeof(patch1));
+      sro::edx_labs::WriteBytes(zoomHackAddr, patch1, sizeof(patch1));
 
       printf("\n");
     } while (false);
@@ -1039,7 +1040,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
         0x2F, 0x2F, 0x2F, 0x2F, 0x2F, 0x2F, 0x2F, 0x2F,
         0x2F, 0x2F, 0x00
       };
-      results = FindSignature(mutexStringSig, 0, sizeof(mutexStringSig), dataPtr, dataSize);
+      results = sro::edx_labs::FindSignature(mutexStringSig, 0, sizeof(mutexStringSig), dataPtr, dataSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -1055,7 +1056,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       };
       memcpy(mutexSig + 1, &mutexStringAddress, 4);
 
-      results = FindSignature(mutexSig, 0, sizeof(mutexSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(mutexSig, 0, sizeof(mutexSig), codePtr, codeSize);
       if (results.size() != 2)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 2);
@@ -1067,11 +1068,11 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       printf("patchAddress: 0x%X\n", patchAddress);
 
       BYTE patch1[] = { 0xEB };
-      WriteBytes(patchAddress, patch1, sizeof(patch1));
+      sro::edx_labs::WriteBytes(patchAddress, patch1, sizeof(patch1));
 
       BYTE macAddressSig[] = { 0x6A, 0x06, 0x8D, 0x44, 0x24, 0x48, 0x50, 0x8B, 0xCF };
 
-      results = FindSignature(macAddressSig, 0, sizeof(macAddressSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(macAddressSig, 0, sizeof(macAddressSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -1090,11 +1091,11 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       printf("callOffset: 0x%X\n", callOffset);
       printf("callAddr: 0x%X\n", callAddr);
 
-      CreateCodeCave(codecaveAddr, 5, nsMulticlient::codecave_Multiclient);
+      sro::edx_labs::CreateCodeCave(codecaveAddr, 5, nsMulticlient::codecave_Multiclient);
 
       BYTE bindSig[] = { 0x74, 0x3D, 0x68, 0xA3, 0x3D, 0x00, 0x00 };
 
-      results = FindSignature(bindSig, 0, sizeof(bindSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(bindSig, 0, sizeof(bindSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -1105,7 +1106,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       printf("bindSigAddr: 0x%X\n", bindSigAddr);
 
       BYTE patch2[] = { 0xB8, 0x01, 0x00, 0x00, 0x00, 0xC3 };
-      WriteBytes(bindSigAddr, patch2, sizeof(patch2));
+      sro::edx_labs::WriteBytes(bindSigAddr, patch2, sizeof(patch2));
 
       printf("\n");
     } while (false);
@@ -1124,7 +1125,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
         0x41, 0x00, 0x54, 0x00, 0x54, 0x00, 0x49, 0x00,
         0x4E, 0x00, 0x47, 0x00, 0x00, 0x00
       };
-      results = FindSignature(chattingStringSig, 0, sizeof(chattingStringSig), dataPtr, dataSize);
+      results = sro::edx_labs::FindSignature(chattingStringSig, 0, sizeof(chattingStringSig), dataPtr, dataSize);
       if (results.size() != 1)
       {
         printf("[%s] %i results were returned. Only %i were expected. Please use an updated signature.\n", "chattingStringSig", results.size(), 1);
@@ -1140,7 +1141,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       };
       memcpy(chattingSig + 1, &chattingStringPhysicalAddress, 4);
 
-      results = FindSignature(chattingSig, 0, sizeof(chattingSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(chattingSig, 0, sizeof(chattingSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("[%s] %i results were returned. Only %i were expected. Please use an updated signature.\n", "chattingSig", results.size(), 1);
@@ -1167,7 +1168,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
         0x00, 0x00, 0x00, 0x01
       };
 
-      results = FindSignature(patchSig, patchSigWildcard, sizeof(patchSig), codePtr + newSearchAddrOffset, 0x200);
+      results = sro::edx_labs::FindSignature(patchSig, patchSigWildcard, sizeof(patchSig), codePtr + newSearchAddrOffset, 0x200);
       if (results.size() != 1)
       {
         printf("[%s] %i results were returned. Only %i were expected. Please use an updated signature.\n", "patchSig", results.size(), 1);
@@ -1180,7 +1181,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
 
       DWORD patchLogicalAddress = (DWORD)(newSearchAddrOffset + results[0] + codeStart + sizeof(patchSig));
       printf("patchLogicalAddress: 0x%X\n", patchLogicalAddress);
-      CreateCodeCave(patchLogicalAddress, 6, nsHookInput::codecave_HookInput);
+      sro::edx_labs::CreateCodeCave(patchLogicalAddress, 6, nsHookInput::codecave_HookInput);
 
       printf("\n");
     } while (false);
@@ -1194,7 +1195,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
       {
         0x66, 0xC7, 0x00, 0x23, 0x63
       };
-      results = FindSignature(imgCodeSig, 0, sizeof(imgCodeSig), codePtr, codeSize);
+      results = sro::edx_labs::FindSignature(imgCodeSig, 0, sizeof(imgCodeSig), codePtr, codeSize);
       if (results.size() != 1)
       {
         printf("%i results were returned. Only %i were expected. Please use an updated signature.\n", results.size(), 1);
@@ -1211,7 +1212,7 @@ DWORD WINAPI InjectionThread(LPVOID lpParam)
 
       nsEnglishCaptcha::AppendStringFunc = (FARPROC)callAddr;
 
-      edxLabs::CreateCodeCave(ImgCodeCaveAddr, 5, nsEnglishCaptcha::codecave_EnglishCaptcha);
+      sro::edx_labs::CreateCodeCave(ImgCodeCaveAddr, 5, nsEnglishCaptcha::codecave_EnglishCaptcha);
 
       printf("\n");
     } while (false);

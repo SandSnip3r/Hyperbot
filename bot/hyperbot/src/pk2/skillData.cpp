@@ -6,7 +6,7 @@
 
 namespace pk2 {
 
-void SkillData::addSkill(ref::Skill &&skill) {
+void SkillData::addSkill(sro::pk2::ref::Skill &&skill) {
   skills_.emplace(skill.id, skill);
 }
 
@@ -14,7 +14,7 @@ bool SkillData::haveSkillWithId(sro::scalar_types::ReferenceObjectId id) const {
   return (skills_.find(id) != skills_.end());
 }
 
-const ref::Skill& SkillData::getSkillById(sro::scalar_types::ReferenceObjectId id) const {
+const sro::pk2::ref::Skill& SkillData::getSkillById(sro::scalar_types::ReferenceObjectId id) const {
   auto it = skills_.find(id);
   if (it == skills_.end()) {
     throw std::runtime_error("Trying to get non-existent skill with id "+std::to_string(id));
@@ -59,8 +59,8 @@ sro::scalar_types::ReferenceObjectId SkillData::getRootSkillRefId(sro::scalar_ty
   return id;
 }
 
-std::vector<ref::SkillId> SkillData::getSkillIdsForMastery(sro::scalar_types::ReferenceMasteryId masteryId) const {
-  std::vector<ref::SkillId> result;
+std::vector<sro::pk2::ref::SkillId> SkillData::getSkillIdsForMastery(sro::scalar_types::ReferenceMasteryId masteryId) const {
+  std::vector<sro::pk2::ref::SkillId> result;
   for (auto &skillIdSkillPair : skills_) {
     if (skillIdSkillPair.second.reqCommonMastery1 == masteryId ||
         skillIdSkillPair.second.reqCommonMastery2 == masteryId) {
