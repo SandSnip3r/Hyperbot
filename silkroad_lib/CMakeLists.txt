@@ -2,7 +2,6 @@ project(silkroad_lib VERSION 0.1 LANGUAGES CXX)
 
 set(PROJECT_SOURCES
   src/blowfish.cc
-  src/edx_labs.cc
   src/entity.cc
   src/file_util.cc
   src/position.cc
@@ -38,6 +37,12 @@ set(PROJECT_SOURCES
   src/pk2/ref/text.cc
   src/pk2/ref/textZoneName.cc
 )
+
+if ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
+  list(APPEND PROJECT_SOURCES
+    src/edx_labs.cc
+  )
+endif()
 
 include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}
