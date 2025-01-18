@@ -1,8 +1,9 @@
-set(PROJECT_NAME loader_dll)
+project(loader_dll LANGUAGES CXX)
 
 ################################################################################
 # Source groups
 ################################################################################
+include(CMake/Utils.cmake)
 
 set(detours
   "detours/creatwth.cpp"

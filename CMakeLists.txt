@@ -5,8 +5,6 @@ project(hyperbot_top_level)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-include(CMake/Utils.cmake)
-
 option(USE_ASAN "Enable AddressSanitizer" OFF)
 
 if(USE_ASAN)
@@ -29,7 +27,6 @@ if ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
 endif()
 
 option(BUILD_UI "Enable building the UI with Qt" ON)
-# cmake -DBUILD_UI=OFF ..
 
 if(BUILD_UI)
   find_package(Qt6 COMPONENTS Core Gui Widgets LinguistTools OpenGLWidgets QUIET)
