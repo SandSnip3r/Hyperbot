@@ -1,5 +1,9 @@
 project(hyperbot LANGUAGES CXX C)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
   add_definitions(-D_WIN32_WINNT=0x0501)
 endif()
@@ -370,15 +374,14 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/src"
 )
 
-target_link_libraries(${PROJECT_NAME}
-  PRIVATE
-    ${Boost_LIBRARIES}
-    Pathfinder
-    ui_proto
-    cppzmq
-    silkroad_lib
-    absl::flags
-    absl::flags_parse
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  ${Boost_LIBRARIES}
+  Pathfinder
+  ui_proto
+  cppzmq
+  silkroad_lib
+  absl::flags
+  absl::flags_parse
 )
 
 # ==============================================================================
