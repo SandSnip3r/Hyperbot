@@ -2,7 +2,7 @@ project(ui_proto LANGUAGES CXX)
 
 find_package(Protobuf REQUIRED)
 
-include_directories(${Protobuf_INCLUDE_DIRS})
+# include_directories(${Protobuf_INCLUDE_DIRS})
 
 # Root for generated files
 set(GENERATED_PROTO_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
@@ -16,6 +16,7 @@ set(PROTO_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/old_config.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/position.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/request.proto"
+  "${CMAKE_CURRENT_SOURCE_DIR}/rl_ui_config.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/server_config.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/stats.proto"
 )
@@ -36,13 +37,14 @@ add_library(${PROJECT_NAME} STATIC
 )
 
 target_include_directories(${PROJECT_NAME}
-  PUBLIC
-    "${GENERATED_PROTO_DIR}"
-  PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}"
+PUBLIC
+  "${GENERATED_PROTO_DIR}"
+  ${Protobuf_INCLUDE_DIRS}  # Add Protobuf includes as PUBLIC
+PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 target_link_libraries(${PROJECT_NAME}
-  PUBLIC
-    ${Protobuf_LIBRARIES}
+PUBLIC
+  protobuf::libprotobuf
 )

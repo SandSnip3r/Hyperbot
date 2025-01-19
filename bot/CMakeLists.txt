@@ -363,7 +363,7 @@ add_executable(${PROJECT_NAME}
 
 if (MSVC)
   target_compile_options(${PROJECT_NAME} PRIVATE
-    /FS;
+    /FS
   )
 endif()
 

@@ -14,9 +14,6 @@ endif()
 
 find_package(GTest REQUIRED)
 
-message("CMAKE_SIZEOF_VOID_P: ${CMAKE_SIZEOF_VOID_P}")
-message("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
-
 add_subdirectory(bot)
 add_subdirectory(silkroad_lib)
 add_subdirectory(third_party)
@@ -34,6 +31,7 @@ if(BUILD_UI)
   if(Qt6_FOUND)
     message(STATUS "Qt6 found, enabling UI build.")
     add_subdirectory(ui)
+    add_subdirectory(rl_ui)
   else()
     message(WARNING "Qt not found. Skipping UI build.")
   endif()
