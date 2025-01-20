@@ -3,13 +3,12 @@
 Session::Session(const pk2::GameData &gameData,
                  std::string_view clientPath,
                  broker::EventBroker &eventBroker,
-                 state::WorldState &worldState) :
+                 state::WorldState &worldState,
+                 ClientManagerInterface &clientManagerInterface) :
     gameData_(gameData),
     eventBroker_(eventBroker),
-#if defined(_WIN32)
-    loader_(clientPath, gameData_.divisionInfo()),
-#endif
-    bot_(sessionId_, gameData_, proxy_, packetBroker_, eventBroker_, worldState) {
+    bot_(sessionId_, gameData_, proxy_, packetBroker_, eventBroker_, worldState),
+    clientManagerInterface_(clientManagerInterface) {
 }
 
 void Session::setCharacterToLogin(std::string_view characterName) {
@@ -28,10 +27,8 @@ void Session::runAsync() {
   if (!initialized_) {
     throw std::runtime_error("Session::runAsync called before Session::initialize");
   }
-#if defined(_WIN32)
-  loader_.startClient(proxy_.getOurListeningPort()); // Throws if problem starting client & injecting
-#endif
   proxy_.runAsync();
+  clientId_ = clientManagerInterface_.startClient(proxy_.getOurListeningPort());
 }
 
 const state::WorldState& Session::getWorldState() const {

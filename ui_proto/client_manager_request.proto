@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package proto.client_manager_request;
+
+message StartClient {
+  int32 port_to_connect_to = 1;
+}
+
+message KillClient {
+  int32 client_id = 1;
+}
+
+message Request {
+  oneof body {
+    StartClient start_client = 1;
+    KillClient kill_client = 2;
+  }
+}
+
+message Error {
+  string message = 1;
+}
+
+message ClientStarted {
+  int32 client_id = 1;
+}
+
+message Response {
+  oneof body {
+    ClientStarted client_started = 1;
+    Error error = 2;
+  }
+}

@@ -1,5 +1,6 @@
 #include "hyperbot.hpp"
 
+#include "clientManagerInterface.hpp"
 #include "helpers.hpp"
 #include "session.hpp"
 #include "state/worldState.hpp"
@@ -13,8 +14,11 @@ void Hyperbot::run() {
   VLOG(1) << "Running Hyperbot";
   parseConfig();
 
-  ui::UserInterface userInterface{gameData_, eventBroker_};
+  zmq::context_t context;
+
+  ui::UserInterface userInterface{context, gameData_, eventBroker_};
   userInterface.initialize();
+  ClientManagerInterface clientManagerInterface(context);
 
   eventBroker_.runAsync();
   userInterface.runAsync();
@@ -25,8 +29,8 @@ void Hyperbot::run() {
   state::WorldState worldState{gameData_, eventBroker_};
 
   try {
-    Session session{gameData_, serverConfig_.clientPath(), eventBroker_, worldState};
-    Session session2{gameData_, serverConfig_.clientPath(), eventBroker_, worldState};
+    Session session{gameData_, serverConfig_.clientPath(), eventBroker_, worldState, clientManagerInterface};
+    Session session2{gameData_, serverConfig_.clientPath(), eventBroker_, worldState, clientManagerInterface};
     session.initialize();
     session2.initialize();
 

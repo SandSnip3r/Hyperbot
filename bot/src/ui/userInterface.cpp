@@ -34,7 +34,7 @@ proto::broadcast::LifeState lifeStateToProto(sro::entity::LifeState lifeState) {
 
 namespace ui {
 
-UserInterface::UserInterface(const pk2::GameData &gameData, broker::EventBroker &eventBroker) : gameData_(gameData), eventBroker_(eventBroker) {
+UserInterface::UserInterface(zmq::context_t &context, const pk2::GameData &gameData, broker::EventBroker &eventBroker) : context_(context), gameData_(gameData), eventBroker_(eventBroker) {
   //
 }
 

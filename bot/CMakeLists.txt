@@ -26,6 +26,8 @@ add_executable(${PROJECT_NAME}
   src/broker/packetBroker.hpp
   src/broker/timerManager.cpp
   src/broker/timerManager.hpp
+  src/clientManagerInterface.cpp
+  src/clientManagerInterface.hpp
   src/config/characterConfig.cpp
   src/config/characterConfig.hpp
   src/config/serverConfig.cpp
