@@ -4,7 +4,7 @@
 
 #include <absl/log/log.h>
 
-HyperbotConnect::HyperbotConnect(Config &&config, QWidget *parent) : QMainWindow(parent), ui(new Ui::HyperbotConnect), config_(config) {
+HyperbotConnect::HyperbotConnect(Config &&config, Hyperbot &hyperbot, QWidget *parent) : QMainWindow(parent), ui(new Ui::HyperbotConnect), config_(config), hyperbot_(hyperbot) {
   ui->setupUi(this);
   ui->ipAddressLineEdit->setText(QString::fromStdString(config.proto().ip_address()));
   ui->portLineEdit->setText(QString::number(config.proto().port()));
@@ -13,6 +13,7 @@ HyperbotConnect::HyperbotConnect(Config &&config, QWidget *parent) : QMainWindow
 }
 
 HyperbotConnect::~HyperbotConnect() {
+  std::cout << "Deconstructing HyperbotConnect" << std::endl;
   delete ui;
 }
 
@@ -25,10 +26,12 @@ void HyperbotConnect::connectClicked() {
   config_.save();
 
   // Try to connect to the bot.
-  Hyperbot bot;
-  bot.connect(ipAddress, port);
-  MainWindow *mw = new MainWindow();
-  mw->setBot(std::move(bot));
+  bool connected = hyperbot_.connect(ipAddress, port);
+  if (!connected) {
+    LOG(WARNING) << "Failed to connect to bot";
+    return;
+  }
+  MainWindow *mw = new MainWindow(hyperbot_);
   mw->show();
   close();
 }

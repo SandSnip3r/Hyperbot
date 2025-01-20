@@ -15,12 +15,11 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 
 public:
-  MainWindow(QWidget *parent = nullptr);
+  MainWindow(Hyperbot &hyperbot, QWidget *parent = nullptr);
   ~MainWindow();
-  void setBot(Hyperbot &&bot);
 
 private:
   Ui::MainWindow *ui;
-  Hyperbot hyperbot_;
+  Hyperbot &hyperbot_;
 };
 #endif // MAINWINDOW_HPP_

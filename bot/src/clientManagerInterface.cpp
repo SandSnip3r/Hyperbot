@@ -18,7 +18,7 @@ ClientManagerInterface::ClientId ClientManagerInterface::startClient(int32_t lis
 
   VLOG(2) << "Message sent, now awaiting reply";
   zmq::message_t reply;
-  std::optional<size_t> receiveResult = socket_.recv(reply, zmq::recv_flags::none);
+  std::optional<zmq::recv_result_t> receiveResult = socket_.recv(reply, zmq::recv_flags::none);
   if (!receiveResult) {
     throw std::runtime_error("ClientManagerInterface: Failed to receive reply while trying to start sro_client");
   }
@@ -52,7 +52,7 @@ void ClientManagerInterface::sendClientStartRequest(int32_t port) {
 
   VLOG(3) << "Sending:\n" << request.DebugString();
 
-  std::optional<size_t> sendResult = socket_.send(zmq::message_t(request.SerializeAsString()), zmq::send_flags::none);
+  std::optional<zmq::send_result_t> sendResult = socket_.send(zmq::message_t(request.SerializeAsString()), zmq::send_flags::none);
   if (!sendResult) {
     throw std::runtime_error("ClientManagerInterface: Failed to send message to start sro_client");
   }

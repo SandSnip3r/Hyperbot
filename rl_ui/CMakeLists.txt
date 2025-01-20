@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+find_package(cppzmq CONFIG REQUIRED)
 
 set(PROJECT_SOURCES
   main.cpp
@@ -48,6 +49,8 @@ target_link_libraries(rl_ui PRIVATE
   absl::flags_parse
   absl::log
   absl::log_initialize
+  absl::strings
+  cppzmq
   Qt${QT_VERSION_MAJOR}::Widgets
   silkroad_lib
   ui_proto

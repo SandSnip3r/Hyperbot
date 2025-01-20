@@ -2,6 +2,7 @@
 #define HYPERBOTCONNECT_HPP_
 
 #include "config.hpp"
+#include "hyperbot.hpp"
 
 #include <QMainWindow>
 
@@ -13,7 +14,7 @@ class HyperbotConnect : public QMainWindow {
   Q_OBJECT
 
 public:
-  explicit HyperbotConnect(Config &&config, QWidget *parent = nullptr);
+  explicit HyperbotConnect(Config &&config, Hyperbot &hyperbot, QWidget *parent = nullptr);
   ~HyperbotConnect();
 
 signals:
@@ -22,6 +23,7 @@ private slots:
 private:
   Ui::HyperbotConnect *ui;
   Config config_;
+  Hyperbot &hyperbot_;
 };
 
 #endif // HYPERBOTCONNECT_HPP_

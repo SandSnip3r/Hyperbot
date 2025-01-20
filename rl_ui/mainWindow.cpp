@@ -3,15 +3,10 @@
 
 #include <absl/log/log.h>
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
+MainWindow::MainWindow(Hyperbot &hyperbot, QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow), hyperbot_(hyperbot) {
   ui->setupUi(this);
 }
 
 MainWindow::~MainWindow() {
   delete ui;
-}
-
-void MainWindow::setBot(Hyperbot &&bot) {
-  LOG(INFO) << "Set bot";
-  hyperbot_ = std::move(bot);
 }

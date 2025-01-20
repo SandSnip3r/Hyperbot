@@ -1,4 +1,5 @@
 #include "config.hpp"
+#include "hyperbot.hpp"
 #include "hyperbotConnect.hpp"
 // #include "mainwindow.h"
 
@@ -35,9 +36,11 @@ int main(int argc, char *argv[]) {
   Config config(configFileFilePath);
   config.load();
 
+  Hyperbot bot;
+
   QApplication a(argc, argv);
   // Note: QApplication must be constructed before any QWidget.
-  HyperbotConnect *hc = new HyperbotConnect(std::move(config));
+  HyperbotConnect *hc = new HyperbotConnect(std::move(config), bot);
   hc->show();
   return a.exec();
 }
