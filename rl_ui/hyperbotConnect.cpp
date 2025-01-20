@@ -3,22 +3,93 @@
 #include "ui_hyperbotconnect.h"
 
 #include <absl/log/log.h>
+#include <absl/log/log_sink_registry.h>
+#include <absl/strings/str_format.h>
+#include <absl/time/time.h>
+
+#include <QDateTime>
+
+namespace {
+
+// Helper function to convert absl::Time to QDateTime in local time
+QDateTime abslTimeToQDateTime(absl::Time absl_time) {
+  // Abseil's UnixEpoch is 1970-01-01T00:00:00Z
+  absl::Time unix_epoch = absl::UnixEpoch();
+  absl::Duration delta = absl_time - unix_epoch;
+
+  // Get total seconds and nanoseconds since Unix epoch
+  int64_t seconds = absl::ToInt64Seconds(delta);
+  int64_t nanos = absl::ToInt64Nanoseconds(delta) % 1000000000;
+
+  // Create QDateTime from seconds since epoch
+  QDateTime qdt = QDateTime::fromSecsSinceEpoch(seconds, Qt::LocalTime);
+
+  // Add remaining milliseconds (nanos / 1,000,000)
+  qdt = qdt.addMSecs(static_cast<int>(nanos / 1000000));
+
+  return qdt;
+}
+
+} // anonymous namespace
+
+namespace internal {
+
+void MyLogSink::Send(const absl::LogEntry& entry) {
+  if (entry.verbosity() >= 0) {
+    // Do not write vlogs to the UI.
+    return;
+  }
+
+  absl::Time timestamp = entry.timestamp();
+  QDateTime qdt = abslTimeToQDateTime(timestamp);
+
+  // Format the QDateTime as desired
+  QString formatted_time = qdt.toString("HH:mm:ss");
+  QString logMessage = QString::fromStdString(absl::StrFormat("[%s]: %s", formatted_time.toStdString(), entry.text_message()));
+  QMetaObject::invokeMethod(loggingTextEdit_, "append", Qt::AutoConnection, Q_ARG(QString, logMessage));
+}
+
+} // namespace internal
 
 HyperbotConnect::HyperbotConnect(Config &&config, Hyperbot &hyperbot, QWidget *parent) : QMainWindow(parent), ui(new Ui::HyperbotConnect), config_(config), hyperbot_(hyperbot) {
+  setAttribute(Qt::WA_DeleteOnClose);
   ui->setupUi(this);
+  registerLogSink();
+
+  ui->cancelButton->setEnabled(false);
+
+  // We must have a valid config at this point, initialize the UI with the data from it.
   ui->ipAddressLineEdit->setText(QString::fromStdString(config.proto().ip_address()));
   ui->portLineEdit->setText(QString::number(config.proto().port()));
+
+  // Connect the UI controls.
   connect(ui->connectButton, &QPushButton::clicked, this, &HyperbotConnect::connectClicked);
-  connect(ui->cancelButton, &QPushButton::clicked, this, &HyperbotConnect::close);
+  connect(ui->cancelButton, &QPushButton::clicked, this, &HyperbotConnect::cancelClicked);
+
+  // Connect Hyperbot's connection signals.
+  connect(&hyperbot_, &Hyperbot::connected, this, &HyperbotConnect::handleConnected);
+  connect(&hyperbot_, &Hyperbot::connectionFailed, this, &HyperbotConnect::handleConnectionFailed);
+  connect(&hyperbot_, &Hyperbot::connectionCancelled, this, &HyperbotConnect::handleConnectionCancelled);
 }
 
 HyperbotConnect::~HyperbotConnect() {
-  std::cout << "Deconstructing HyperbotConnect" << std::endl;
+  if (myLogSink_ != nullptr) {
+    absl::RemoveLogSink(myLogSink_);
+    delete myLogSink_;
+  }
   delete ui;
 }
 
+void HyperbotConnect::registerLogSink() {
+  if (myLogSink_ != nullptr) {
+    throw std::runtime_error("Log sink already registered");
+  }
+  myLogSink_ = new internal::MyLogSink(ui->logTextEdit);
+  absl::AddLogSink(myLogSink_);
+}
+
 void HyperbotConnect::connectClicked() {
-  LOG(INFO) << "Connect button clicked";
+  VLOG(1) << "Connect button clicked";
   std::string ipAddress = ui->ipAddressLineEdit->text().toStdString();
   int32_t port = ui->portLineEdit->text().toInt();
   config_.proto().set_ip_address(ipAddress);
@@ -26,11 +97,31 @@ void HyperbotConnect::connectClicked() {
   config_.save();
 
   // Try to connect to the bot.
-  bool connected = hyperbot_.connect(ipAddress, port);
-  if (!connected) {
-    LOG(WARNING) << "Failed to connect to bot";
-    return;
-  }
+  ui->cancelButton->setEnabled(true);
+  ui->connectButton->setEnabled(false);
+  hyperbot_.tryConnectAsync(ipAddress, port);
+}
+
+void HyperbotConnect::cancelClicked() {
+  VLOG(1) << "Cancel button clicked";
+  ui->cancelButton->setEnabled(false);
+  hyperbot_.cancelConnect();
+}
+
+void HyperbotConnect::handleConnectionFailed() {
+  LOG(WARNING) << "Failed to connect to bot";
+  ui->connectButton->setEnabled(true);
+  ui->cancelButton->setEnabled(false);
+}
+
+void HyperbotConnect::handleConnectionCancelled() {
+  LOG(WARNING) << "Cancelled connection to bot";
+  ui->connectButton->setEnabled(true);
+  ui->cancelButton->setEnabled(false);
+}
+
+void HyperbotConnect::handleConnected() {
+  LOG(INFO) << "Connected to bot";
   MainWindow *mw = new MainWindow(hyperbot_);
   mw->show();
   close();

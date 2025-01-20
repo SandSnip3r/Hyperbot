@@ -27,5 +27,6 @@ message RequestMessage {
     PacketToInject packetData = 1;
     DoAction doAction = 2;
     google.protobuf.Empty setCurrentPositionAsTrainingCenter = 3;
+    google.protobuf.Empty ping = 4;
   }
 }

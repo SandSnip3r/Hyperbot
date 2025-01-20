@@ -3,16 +3,33 @@
 
 #include <zmq.hpp>
 
+#include <QObject>
+
+#include <atomic>
 #include <cstdint>
 #include <string_view>
+#include <thread>
 
-class Hyperbot {
+class Hyperbot : public QObject {
+  Q_OBJECT
 public:
+  ~Hyperbot();
   // Tries to connect to the Hyperbot server. Returns true if successful.
-  bool connect(std::string_view ipAddress, int32_t port);
+  void tryConnectAsync(std::string_view ipAddress, int32_t port);
+  void cancelConnect();
+
+signals:
+  void connected();
+  void connectionFailed();
+  void connectionCancelled();
+
 private:
   zmq::context_t context_;
-  zmq::socket_t socket_{context_, zmq::socket_type::req};
+  zmq::socket_t socket_;
+  std::thread connectionThread_;
+  std::atomic<bool> tryToConnect_;
+
+  void tryConnect();
 };
 
 #endif // HYPERBOT_HPP_

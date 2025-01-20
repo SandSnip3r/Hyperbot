@@ -10,17 +10,17 @@
 Config::Config(const std::filesystem::path &filePath) : filePath_(filePath) {}
 
 void Config::load() {
-  LOG(INFO) << "Looking for config at " << filePath_;
+  VLOG(1) << "Looking for config at " << filePath_;
   std::ios_base::openmode fileOpenMode = std::ios::in;
   if constexpr (kProtobufSavedAsBinary_) {
     // Reading file as binary
     fileOpenMode |= std::ios::binary;
-    LOG(INFO) << "Reading config as binary";
+    VLOG(1) << "Reading config as binary";
   }
 
   std::ifstream configFileIn(filePath_, fileOpenMode);
   if (!configFileIn) {
-    LOG(INFO) << "Config does not exist. Constructing and using empty config";
+    VLOG(1) << "Config does not exist. Constructing and using empty config";
     makeAndSaveDefaultConfig();
     return;
   }
@@ -36,7 +36,7 @@ void Config::load() {
     success = google::protobuf::TextFormat::Parse(&pbIStream, &proto_);
   }
 
-  LOG(INFO) << "Successfully found config file";
+  VLOG(1) << "Successfully found config file";
 
   if (!success) {
     LOG(WARNING) << "Config file open, but could not parse. Overwriting with default config";
@@ -45,10 +45,10 @@ void Config::load() {
 }
 
 void Config::save() const {
-  LOG(INFO) << "Saving config:\n" << proto_.DebugString();
+  VLOG(1) << "Saving config:\n" << proto_.DebugString();
   std::ios_base::openmode fileOpenMode = std::ios::out | std::ios::trunc;
   if constexpr (kProtobufSavedAsBinary_) {
-    LOG(INFO) << "  Saving as binary";
+    VLOG(1) << "  Saving as binary";
     // Writing file as binary
     fileOpenMode |= std::ios::binary;
   }
@@ -72,7 +72,7 @@ void Config::save() const {
     throw std::runtime_error("Could not write config to file");
   }
 
-  LOG(INFO) << "Successfully saved config";
+  VLOG(1) << "Successfully saved config";
 }
 
 void Config::makeAndSaveDefaultConfig() {

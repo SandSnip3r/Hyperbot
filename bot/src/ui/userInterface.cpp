@@ -334,7 +334,7 @@ void UserInterface::run() {
 
     // Immediately respond with an acknowledgement
     const std::string response{"ack"};
-    socket.send(zmq::buffer(response), zmq::send_flags::none);
+    socket.send(zmq::message_t(response), zmq::send_flags::none);
   }
 }
 
@@ -360,6 +360,10 @@ void UserInterface::handleRequest(const zmq::message_t &request) {
       }
     case proto::request::RequestMessage::BodyCase::kSetCurrentPositionAsTrainingCenter: {
         eventBroker_.publishEvent(event::EventCode::kSetCurrentPositionAsTrainingCenter);
+        break;
+      }
+    case proto::request::RequestMessage::BodyCase::kPing: {
+        LOG(INFO) << "Received ping";
         break;
       }
     default:
