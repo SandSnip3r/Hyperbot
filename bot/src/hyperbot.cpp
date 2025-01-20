@@ -30,18 +30,18 @@ void Hyperbot::run() {
 
   try {
     Session session{gameData_, serverConfig_.clientPath(), eventBroker_, worldState, clientManagerInterface};
-    Session session2{gameData_, serverConfig_.clientPath(), eventBroker_, worldState, clientManagerInterface};
+    // Session session2{gameData_, serverConfig_.clientPath(), eventBroker_, worldState, clientManagerInterface};
     session.initialize();
-    session2.initialize();
+    // session2.initialize();
 
     // Do not call any other Session functions before the UI's WorldState is set.
     userInterface.setWorldState(worldState);
 
-    session.setCharacterToLogin("_Nuked_");
-    session2.setCharacterToLogin("IP_Man");
+    // session.setCharacterToLogin("_Nuked_");
+    // session2.setCharacterToLogin("IP_Man");
     userInterface.broadcastLaunch();
     session.runAsync();
-    session2.runAsync();
+    // session2.runAsync();
     VLOG(1) << "Session(s) running. Main thread now blocks.";
     while (1) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
