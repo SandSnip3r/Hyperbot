@@ -12,7 +12,7 @@ Hyperbot::~Hyperbot() {
 }
 
 void Hyperbot::tryConnectAsync(std::string_view ipAddress, int32_t port) {
-  LOG(INFO) << absl::StrFormat("Connecting to bot at %s:%d", ipAddress, port);
+  LOG(INFO) << absl::StrFormat("Connecting to Hyperbot at %s:%d.", ipAddress, port);
 
   socket_ = zmq::socket_t(context_, zmq::socket_type::req);
   socket_.connect(absl::StrFormat("tcp://%s:%d", ipAddress, port));
@@ -42,25 +42,24 @@ void Hyperbot::tryConnect() {
   std::optional<zmq::send_result_t> sendResult = socket_.send(zmqMsg, zmq::send_flags::none);
 
   if (!sendResult.has_value()) {
-    LOG(WARNING) << "Failed to send message to bot";
+    LOG(WARNING) << "Failed to send message to Hyperbot.";
     connectionFailed();
     return;
   }
 
-  LOG(INFO) << "Awaiting connection";
-  constexpr int kAttemptCount = 3;
+  LOG(INFO) << "Awaiting connection.";
+  constexpr int kAttemptCount = 5;
   for (int i=0; i<kAttemptCount; ++i) {
     VLOG(1) << "Attempt " << i;
     if (!tryToConnect_) {
-      LOG(INFO) << "Connection cancelled";
       connectionCancelled();
       return;
     }
     if (i > 0) {
-      LOG(INFO) << "No reply from bot. Retrying...";
+      LOG(INFO) << "No reply from Hyperbot. Retrying... (attempt "  << i+1 << '/' << kAttemptCount << ").";
     }
     // Poll for a reply.
-    std::chrono::milliseconds timeout(1000);
+    std::chrono::milliseconds timeout(2000);
     std::vector<zmq::pollitem_t> items = { { socket_, 0, ZMQ_POLLIN, 0 } };
     const int pollResult = zmq::poll(items, timeout);
     if (pollResult == 1) {
@@ -72,7 +71,7 @@ void Hyperbot::tryConnect() {
       continue;
     }
 
-    LOG(WARNING) << "No reply from bot. Giving up.";
+    LOG(WARNING) << "No reply from Hyperbot. Giving up.";
     connectionFailed();
     return;
   }
@@ -82,7 +81,7 @@ void Hyperbot::tryConnect() {
   zmq::message_t reply;
   std::optional<zmq::recv_result_t> receiveResult = socket_.recv(reply, zmq::recv_flags::none);
   if (!receiveResult.has_value()) {
-    LOG(WARNING) << "Failed to receive reply from bot";
+    LOG(WARNING) << "Failed to receive reply from Hyperbot.";
     connectionFailed();
     return;
   }

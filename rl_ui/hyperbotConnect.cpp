@@ -59,7 +59,7 @@ HyperbotConnect::HyperbotConnect(Config &&config, Hyperbot &hyperbot, QWidget *p
   ui->cancelButton->setEnabled(false);
 
   // We must have a valid config at this point, initialize the UI with the data from it.
-  ui->ipAddressLineEdit->setText(QString::fromStdString(config.proto().ip_address()));
+  ui->addressLineEdit->setText(QString::fromStdString(config.proto().ip_address()));
   ui->portLineEdit->setText(QString::number(config.proto().port()));
 
   // Connect the UI controls.
@@ -90,16 +90,16 @@ void HyperbotConnect::registerLogSink() {
 
 void HyperbotConnect::connectClicked() {
   VLOG(1) << "Connect button clicked";
-  std::string ipAddress = ui->ipAddressLineEdit->text().toStdString();
+  std::string address = ui->addressLineEdit->text().toStdString();
   int32_t port = ui->portLineEdit->text().toInt();
-  config_.proto().set_ip_address(ipAddress);
+  config_.proto().set_ip_address(address);
   config_.proto().set_port(port);
   config_.save();
 
   // Try to connect to the bot.
   ui->cancelButton->setEnabled(true);
   ui->connectButton->setEnabled(false);
-  hyperbot_.tryConnectAsync(ipAddress, port);
+  hyperbot_.tryConnectAsync(address, port);
 }
 
 void HyperbotConnect::cancelClicked() {
@@ -109,19 +109,19 @@ void HyperbotConnect::cancelClicked() {
 }
 
 void HyperbotConnect::handleConnectionFailed() {
-  LOG(WARNING) << "Failed to connect to bot";
+  LOG(INFO) << "Failed to connect to Hyperbot.";
   ui->connectButton->setEnabled(true);
   ui->cancelButton->setEnabled(false);
 }
 
 void HyperbotConnect::handleConnectionCancelled() {
-  LOG(WARNING) << "Cancelled connection to bot";
+  LOG(INFO) << "Cancelled connection to Hyperbot.";
   ui->connectButton->setEnabled(true);
   ui->cancelButton->setEnabled(false);
 }
 
 void HyperbotConnect::handleConnected() {
-  LOG(INFO) << "Connected to bot";
+  LOG(INFO) << "Connected to Hyperbot.";
   MainWindow *mw = new MainWindow(hyperbot_);
   mw->show();
   close();

@@ -15,6 +15,7 @@
 #include <absl/strings/str_format.h>
 
 #include <QApplication>
+#include <QStyleFactory>
 
 #include <charconv>
 #include <iostream>
@@ -29,7 +30,7 @@ int main(int argc, char *argv[]) {
   absl::ParseCommandLine(argc, argv);
   initializeLogging();
 
-  LOG(INFO) << "Looking for config...";
+  VLOG(1) << "Looking for config...";
   const auto appDataDirectory = getAppDataDirectory();
   constexpr std::string_view kConfigFileFilename{"rl_ui_config"};
   std::filesystem::path configFileFilePath = appDataDirectory / kConfigFileFilename;
@@ -39,9 +40,11 @@ int main(int argc, char *argv[]) {
   Hyperbot bot;
 
   QApplication a(argc, argv);
+  a.setStyle(QStyleFactory::create("Fusion"));
   // Note: QApplication must be constructed before any QWidget.
   HyperbotConnect *hc = new HyperbotConnect(std::move(config), bot);
   hc->show();
+  // HyperbotConnect will be deleted by Qt when the window is closed.
   return a.exec();
 }
 

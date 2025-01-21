@@ -15,7 +15,7 @@ void Config::load() {
   if constexpr (kProtobufSavedAsBinary_) {
     // Reading file as binary
     fileOpenMode |= std::ios::binary;
-    VLOG(1) << "Reading config as binary";
+    VLOG(2) << "Reading config as binary";
   }
 
   std::ifstream configFileIn(filePath_, fileOpenMode);
@@ -48,7 +48,7 @@ void Config::save() const {
   VLOG(1) << "Saving config:\n" << proto_.DebugString();
   std::ios_base::openmode fileOpenMode = std::ios::out | std::ios::trunc;
   if constexpr (kProtobufSavedAsBinary_) {
-    VLOG(1) << "  Saving as binary";
+    VLOG(2) << "  Saving as binary";
     // Writing file as binary
     fileOpenMode |= std::ios::binary;
   }
@@ -77,7 +77,7 @@ void Config::save() const {
 
 void Config::makeAndSaveDefaultConfig() {
   proto_ = proto::rl_ui_config::Config();
-  proto_.set_ip_address("127.0.0.1");
-  proto_.set_port(2235);
+  proto_.set_ip_address(std::string(kDefaultIpAddress_));
+  proto_.set_port(kDefaultPort_);
   save();
 }

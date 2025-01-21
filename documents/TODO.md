@@ -7,3 +7,4 @@
 - Use .cpp & .hpp in silkroad_lib
 - Fix paths in tools/*.py
 - It would be really nice to have a local list of known characters
+- Add UI element to toggle packet logging to console
