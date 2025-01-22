@@ -1,7 +1,7 @@
 #ifndef PK2_MAGIC_OPTION_DATA_HPP_
 #define PK2_MAGIC_OPTION_DATA_HPP_
 
-#include <silkroad_lib/pk2/ref/magicOption.h>
+#include <silkroad_lib/pk2/ref/magicOption.hpp>
 
 #include <unordered_map>
 

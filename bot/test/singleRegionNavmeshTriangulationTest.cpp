@@ -1,4 +1,4 @@
-#include <silkroad_lib/navmesh/triangulation/singleRegionNavmeshTriangulation.h>
+#include <silkroad_lib/navmesh/triangulation/singleRegionNavmeshTriangulation.hpp>
 
 #include <gtest/gtest.h>
 

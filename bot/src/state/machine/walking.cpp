@@ -3,7 +3,7 @@
 #include "bot.hpp"
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 
-#include <silkroad_lib/position_math.h>
+#include <silkroad_lib/position_math.hpp>
 
 #include <absl/log/log.h>
 

@@ -6,9 +6,9 @@
 // From Pathfinder
 #include "math_helpers.h"
 
-#include <silkroad_lib/position_math.h>
-#include <silkroad_lib/constants.h>
-#include <silkroad_lib/entity.h>
+#include <silkroad_lib/position_math.hpp>
+#include <silkroad_lib/constants.hpp>
+#include <silkroad_lib/entity.hpp>
 
 #include <absl/log/log.h>
 

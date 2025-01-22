@@ -1,7 +1,7 @@
 #ifndef PK2_MEDIA_TELEPORT_DATA_HPP
 #define PK2_MEDIA_TELEPORT_DATA_HPP
 
-#include <silkroad_lib/pk2/ref/teleport.h>
+#include <silkroad_lib/pk2/ref/teleport.hpp>
 
 #include <unordered_map>
 

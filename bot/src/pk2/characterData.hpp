@@ -1,7 +1,7 @@
 #ifndef PK2_MEDIA_CHARACTER_DATA_HPP_
 #define PK2_MEDIA_CHARACTER_DATA_HPP_
 
-#include <silkroad_lib/pk2/ref/character.h>
+#include <silkroad_lib/pk2/ref/character.hpp>
 
 #include <unordered_map>
 

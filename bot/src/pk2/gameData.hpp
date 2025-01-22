@@ -13,11 +13,11 @@
 #include "textData.hpp"
 #include "textZoneNameData.hpp"
 
-#include <silkroad_lib/navmesh/navmesh.h>
-#include <silkroad_lib/navmesh/triangulation/navmeshTriangulation.h>
-#include <silkroad_lib/pk2/divisionInfo.h>
-#include <silkroad_lib/pk2/pk2ReaderModern.h>
-#include <silkroad_lib/pk2/regionInfo.h>
+#include <silkroad_lib/navmesh/navmesh.hpp>
+#include <silkroad_lib/navmesh/triangulation/navmeshTriangulation.hpp>
+#include <silkroad_lib/pk2/divisionInfo.hpp>
+#include <silkroad_lib/pk2/pk2ReaderModern.hpp>
+#include <silkroad_lib/pk2/regionInfo.hpp>
 
 #include <filesystem>
 #include <memory>

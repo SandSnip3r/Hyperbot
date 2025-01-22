@@ -1,8 +1,8 @@
 #ifndef NAVMESHVIEW_H
 #define NAVMESHVIEW_H
 
-#include <silkroad_lib/math/vector3.h>
-#include <silkroad_lib/navmesh/triangulation/navmeshTriangulation.h>
+#include <silkroad_lib/math/vector3.hpp>
+#include <silkroad_lib/navmesh/triangulation/navmeshTriangulation.hpp>
 
 #include <QAction>
 #include <QFrame>

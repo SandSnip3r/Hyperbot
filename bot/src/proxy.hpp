@@ -7,7 +7,7 @@
 #include "pk2/gameData.hpp"
 #include "shared/silkroad_security.h"
 
-#include <silkroad_lib/pk2/divisionInfo.h>
+#include <silkroad_lib/pk2/divisionInfo.hpp>
 
 #include <boost/make_shared.hpp>
 #include <boost/asio.hpp>

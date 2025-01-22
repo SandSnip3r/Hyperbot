@@ -2,8 +2,8 @@
 
 #include "shared/silkroad_security.h"
 
-#include <silkroad_lib/position.h>
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/position.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 #ifndef PACKET_BUILDING_CLIENT_AGENT_OPERATOR_REQUEST_HPP_
 #define PACKET_BUILDING_CLIENT_AGENT_OPERATOR_REQUEST_HPP_

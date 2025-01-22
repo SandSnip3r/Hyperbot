@@ -1,7 +1,7 @@
 #ifndef PK2_MASTERY_DATA_HPP
 #define PK2_MASTERY_DATA_HPP
 
-#include <silkroad_lib/pk2/ref/mastery.h>
+#include <silkroad_lib/pk2/ref/mastery.hpp>
 
 #include <unordered_map>
 

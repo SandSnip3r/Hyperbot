@@ -1,7 +1,7 @@
 #ifndef PK2_SHOP_DATA_HPP_
 #define PK2_SHOP_DATA_HPP_
 
-#include <silkroad_lib/pk2/ref/scrapOfPackageItem.h>
+#include <silkroad_lib/pk2/ref/scrapOfPackageItem.hpp>
 
 #include <map>
 #include <string>

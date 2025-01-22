@@ -3,7 +3,7 @@
 #include "packet/enums/packetEnums.hpp"
 #include "packet/parsing/commonParsing.hpp"
 
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 namespace packet::parsing {
 

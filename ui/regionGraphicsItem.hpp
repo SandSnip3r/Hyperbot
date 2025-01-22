@@ -1,8 +1,8 @@
 #ifndef REGIONGRAPHICSITEM_H
 #define REGIONGRAPHICSITEM_
 
-#include <silkroad_lib/navmesh/navmesh.h>
-#include <silkroad_lib/navmesh/triangulation/singleRegionNavmeshTriangulation.h>
+#include <silkroad_lib/navmesh/navmesh.hpp>
+#include <silkroad_lib/navmesh/triangulation/singleRegionNavmeshTriangulation.hpp>
 
 #include <QGraphicsItem>
 #include <QGraphicsSimpleTextItem>

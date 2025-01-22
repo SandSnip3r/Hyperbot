@@ -5,8 +5,8 @@
 
 #include "broker/eventBroker.hpp"
 
-#include <silkroad_lib/scalar_types.h>
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/scalar_types.hpp>
+#include <silkroad_lib/position.hpp>
 
 #include <optional>
 

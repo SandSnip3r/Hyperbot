@@ -5,7 +5,7 @@
 #include "packet/structures/packetInnerStructures.hpp"
 #include "sessionId.hpp"
 
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <cstdint>
 #include <optional>

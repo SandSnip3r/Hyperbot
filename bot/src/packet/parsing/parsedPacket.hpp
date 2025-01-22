@@ -10,7 +10,7 @@
 #include "shared/silkroad_security.h"
 #include "storage/item.hpp"
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 #include <array>
 #include <map>

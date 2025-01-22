@@ -15,8 +15,8 @@
 // Pathfinder
 #include "math_helpers.h"
 
-#include <silkroad_lib/constants.h>
-#include <silkroad_lib/position_math.h>
+#include <silkroad_lib/constants.hpp>
+#include <silkroad_lib/position_math.hpp>
 
 #include <absl/log/log.h>
 #include <absl/strings/str_join.h>

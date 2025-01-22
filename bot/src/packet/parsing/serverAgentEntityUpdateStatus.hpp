@@ -4,7 +4,7 @@
 #include "packet/parsing/parsedPacket.hpp"
 #include "packet/enums/packetEnums.hpp"
 
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <cstdint>
 #include <vector>

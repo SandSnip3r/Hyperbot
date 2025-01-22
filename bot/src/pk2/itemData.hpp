@@ -1,7 +1,7 @@
 #ifndef PK2_MEDIA_ITEM_DATA_HPP_
 #define PK2_MEDIA_ITEM_DATA_HPP_
 
-#include <silkroad_lib/pk2/ref/item.h>
+#include <silkroad_lib/pk2/ref/item.hpp>
 
 #include <unordered_map>
 

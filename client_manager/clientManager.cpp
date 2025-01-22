@@ -2,10 +2,10 @@
 
 #include <ui_proto/client_manager_request.pb.h>
 
-#include <silkroad_lib/file_util.h>
-#include <silkroad_lib/pk2/parsing/parsing.h>
-#include <silkroad_lib/pk2/pk2.h>
-#include <silkroad_lib/pk2/pk2ReaderModern.h>
+#include <silkroad_lib/file_util.hpp>
+#include <silkroad_lib/pk2/parsing/parsing.hpp>
+#include <silkroad_lib/pk2/pk2.hpp>
+#include <silkroad_lib/pk2/pk2ReaderModern.hpp>
 
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>

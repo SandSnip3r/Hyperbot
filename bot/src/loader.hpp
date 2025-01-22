@@ -1,7 +1,7 @@
 #ifndef LOADER_HPP_
 #define LOADER_HPP_
 
-#include <silkroad_lib/pk2/divisionInfo.h>
+#include <silkroad_lib/pk2/divisionInfo.hpp>
 
 #include <filesystem>
 #include <string>

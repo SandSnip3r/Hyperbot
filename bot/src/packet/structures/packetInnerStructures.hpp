@@ -4,8 +4,8 @@
 #include "packet/enums/packetEnums.hpp"
 #include "storage/item.hpp"
 
-#include <silkroad_lib/position.h>
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/position.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <cmath>
 #include <cstdint>

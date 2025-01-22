@@ -1,7 +1,7 @@
 #ifndef ENTITY_GEOMETRY_HPP_
 #define ENTITY_GEOMETRY_HPP_
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 #include <memory>
 #include <optional>

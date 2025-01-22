@@ -3,7 +3,7 @@
 
 #include "shared/silkroad_security.h"
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 #ifndef PACKET_BUILDING_CLIENT_AGENT_FREE_PVP_UPDATE_REQUEST_HPP_
 #define PACKET_BUILDING_CLIENT_AGENT_FREE_PVP_UPDATE_REQUEST_HPP_

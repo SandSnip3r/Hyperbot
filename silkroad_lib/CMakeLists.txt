@@ -1,46 +1,46 @@
 project(silkroad_lib VERSION 0.1 LANGUAGES CXX)
 
 set(PROJECT_SOURCES
-  src/blowfish.cc
-  src/entity.cc
-  src/file_util.cc
-  src/position.cc
-  src/position_math.cc
-  src/shared_io.cc
-  src/math/matrix4x4.cc
-  src/math/vector3.cc
-  src/navmesh/navmesh.cc
-  src/navmesh/triangulation/navmeshTriangulation.cc
-  src/navmesh/triangulation/singleRegionNavmeshTriangulation.cc
-  src/navmesh/triangulation/singleRegionNavmeshTriangulationState.cc
-  src/pk2/divisionInfo.cc
-  src/pk2/navmeshParser.cc
-  src/pk2/pk2Reader.cc
-  src/pk2/pk2ReaderModern.cc
-  src/pk2/parsing/parsing.cc
-  src/pk2/parsing/regionInfoParser.cc
-  src/pk2/regionInfo.cc
-  src/pk2/ref/character.cc
-  src/pk2/ref/item.cc
-  src/pk2/ref/level.cc
-  src/pk2/ref/magicOption.cc
-  src/pk2/ref/mappingShopGroup.cc
-  src/pk2/ref/mappingShopWithTab.cc
-  src/pk2/ref/mastery.cc
-  src/pk2/ref/region.cc
-  src/pk2/ref/scrapOfPackageItem.cc
-  src/pk2/ref/shopGood.cc
-  src/pk2/ref/shopGroup.cc
-  src/pk2/ref/shopTab.cc
-  src/pk2/ref/skill.cc
-  src/pk2/ref/teleport.cc
-  src/pk2/ref/text.cc
-  src/pk2/ref/textZoneName.cc
+  src/blowfish.cpp
+  src/entity.cpp
+  src/file_util.cpp
+  src/position.cpp
+  src/position_math.cpp
+  src/shared_io.cpp
+  src/math/matrix4x4.cpp
+  src/math/vector3.cpp
+  src/navmesh/navmesh.cpp
+  src/navmesh/triangulation/navmeshTriangulation.cpp
+  src/navmesh/triangulation/singleRegionNavmeshTriangulation.cpp
+  src/navmesh/triangulation/singleRegionNavmeshTriangulationState.cpp
+  src/pk2/divisionInfo.cpp
+  src/pk2/navmeshParser.cpp
+  src/pk2/pk2Reader.cpp
+  src/pk2/pk2ReaderModern.cpp
+  src/pk2/parsing/parsing.cpp
+  src/pk2/parsing/regionInfoParser.cpp
+  src/pk2/regionInfo.cpp
+  src/pk2/ref/character.cpp
+  src/pk2/ref/item.cpp
+  src/pk2/ref/level.cpp
+  src/pk2/ref/magicOption.cpp
+  src/pk2/ref/mappingShopGroup.cpp
+  src/pk2/ref/mappingShopWithTab.cpp
+  src/pk2/ref/mastery.cpp
+  src/pk2/ref/region.cpp
+  src/pk2/ref/scrapOfPackageItem.cpp
+  src/pk2/ref/shopGood.cpp
+  src/pk2/ref/shopGroup.cpp
+  src/pk2/ref/shopTab.cpp
+  src/pk2/ref/skill.cpp
+  src/pk2/ref/teleport.cpp
+  src/pk2/ref/text.cpp
+  src/pk2/ref/textZoneName.cpp
 )
 
 if ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
   list(APPEND PROJECT_SOURCES
-    src/edx_labs.cc
+    src/edx_labs.cpp
   )
 endif()
 
@@ -78,7 +78,7 @@ set(TEST_NAME ${PROJECT_NAME}_test)
 
 add_executable(
   ${TEST_NAME}
-  test/test.cc
+  test/test.cpp
 )
 
 target_link_libraries(

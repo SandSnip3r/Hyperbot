@@ -1,7 +1,7 @@
 #include "commonParsing.hpp"
 #include "parsedPacket.hpp"
 
-#include <silkroad_lib/position_math.h>
+#include <silkroad_lib/position_math.hpp>
 
 #include <absl/log/log.h>
 
@@ -27,7 +27,7 @@ const std::array<packet::structures::vitals::AbnormalState, 32>& ParsedServerAge
   return states_;
 }
 
-ParsedServerAgentAbnormalInfo::ParsedServerAgentAbnormalInfo(const PacketContainer &packet) : ParsedPacket(packet) { 
+ParsedServerAgentAbnormalInfo::ParsedServerAgentAbnormalInfo(const PacketContainer &packet) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   stateBitmask_ = stream.Read<uint32_t>();
   for (uint32_t i=0; i<32; ++i) {

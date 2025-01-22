@@ -4,7 +4,7 @@
 #include "parsedPacket.hpp"
 #include "packet/enums/packetEnums.hpp"
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 #include <cstdint>
 #include <optional>

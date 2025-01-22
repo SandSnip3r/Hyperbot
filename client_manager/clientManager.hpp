@@ -1,8 +1,8 @@
 #ifndef CLIENTMANAGER_HPP_
 #define CLIENTMANAGER_HPP_
 
-#include <silkroad_lib/edx_labs.h>
-#include <silkroad_lib/pk2/divisionInfo.h>
+#include <silkroad_lib/edx_labs.hpp>
+#include <silkroad_lib/pk2/divisionInfo.hpp>
 
 #include <zmq.hpp>
 

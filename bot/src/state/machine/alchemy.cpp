@@ -11,7 +11,7 @@
 #include "state/machine/pickItem.hpp"
 #include "state/machine/walking.hpp"
 
-#include <silkroad_lib/position_math.h>
+#include <silkroad_lib/position_math.hpp>
 
 #include <absl/log/log.h>
 

@@ -3,11 +3,11 @@
 
 #include "parsedPacket.hpp"
 
-#include <silkroad_lib/position.h>
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/position.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 namespace packet::parsing {
-  
+
 class ServerAgentEntityUpdateAngle : public ParsedPacket {
 public:
   ServerAgentEntityUpdateAngle(const PacketContainer &packet);

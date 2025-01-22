@@ -5,7 +5,7 @@
 
 #include "entity/geometry.hpp"
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 namespace state::machine {
 

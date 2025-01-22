@@ -3,7 +3,7 @@
 #include "hyperbotConnect.hpp"
 // #include "mainwindow.h"
 
-#include <silkroad_lib/file_util.h>
+#include <silkroad_lib/file_util.hpp>
 
 #include <absl/flags/flag.h>
 #include <absl/flags/parse.h>

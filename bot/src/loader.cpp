@@ -1,7 +1,7 @@
 #include "loader.hpp"
 
-#include <silkroad_lib/edx_labs.h>
-#include <silkroad_lib/file_util.h>
+#include <silkroad_lib/edx_labs.hpp>
+#include <silkroad_lib/file_util.hpp>
 
 #include <absl/log/log.h>
 

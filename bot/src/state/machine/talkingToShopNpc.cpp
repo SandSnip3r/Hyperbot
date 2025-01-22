@@ -7,7 +7,7 @@
 #include "packet/building/clientAgentInventoryRepairRequest.hpp"
 #include "sellingItems.hpp"
 
-#include <silkroad_lib/position_math.h>
+#include <silkroad_lib/position_math.hpp>
 
 #include <absl/log/log.h>
 

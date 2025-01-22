@@ -5,12 +5,12 @@
 #include "packet/parsing/parsedPacket.hpp"
 #include "state/entityTracker.hpp"
 
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <cstdint>
 
 namespace packet::parsing {
-  
+
 class ServerAgentActionSelectResponse : public ParsedPacket {
 public:
   ServerAgentActionSelectResponse(const PacketContainer &packet, const state::EntityTracker &entityTracker);

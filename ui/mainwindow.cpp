@@ -9,10 +9,10 @@
 
 #include "ui_proto/old_config.pb.h"
 
-#include <silkroad_lib/game_constants.h>
-#include <silkroad_lib/position_math.h>
-#include <silkroad_lib/pk2/pk2ReaderModern.h>
-#include <silkroad_lib/pk2/navmeshParser.h>
+#include <silkroad_lib/game_constants.hpp>
+#include <silkroad_lib/position_math.hpp>
+#include <silkroad_lib/pk2/pk2ReaderModern.hpp>
+#include <silkroad_lib/pk2/navmeshParser.hpp>
 
 #include <QDir>
 #include <QImage>

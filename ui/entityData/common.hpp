@@ -1,7 +1,7 @@
 #ifndef ENTITY_DATA_COMMON_HPP_
 #define ENTITY_DATA_COMMON_HPP_
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 #include <chrono>
 #include <variant>

@@ -2,10 +2,10 @@
 
 #include "math_helpers.h"
 
-#include <silkroad_lib/pk2/navmeshParser.h>
-#include <silkroad_lib/pk2/parsing/parsing.h>
-#include <silkroad_lib/pk2/parsing/regionInfoParser.h>
-#include <silkroad_lib/pk2/pk2.h>
+#include <silkroad_lib/pk2/navmeshParser.hpp>
+#include <silkroad_lib/pk2/parsing/parsing.hpp>
+#include <silkroad_lib/pk2/parsing/regionInfoParser.hpp>
+#include <silkroad_lib/pk2/pk2.hpp>
 
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>

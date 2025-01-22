@@ -5,7 +5,7 @@
 #include "math_helpers.h"
 #include "vector.h"
 
-#include <silkroad_lib/position_math.h>
+#include <silkroad_lib/position_math.hpp>
 
 namespace entity {
 

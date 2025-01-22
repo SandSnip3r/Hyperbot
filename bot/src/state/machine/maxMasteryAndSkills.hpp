@@ -6,8 +6,8 @@
 #include "pk2/skillData.hpp"
 #include "stateMachine.hpp"
 
-#include <silkroad_lib/pk2/ref/mastery.h>
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/pk2/ref/mastery.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <cstdint>
 #include <optional>

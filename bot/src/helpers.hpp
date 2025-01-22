@@ -7,9 +7,9 @@
 #include "storage/item.hpp"
 #include "storage/storage.hpp"
 
-#include <silkroad_lib/pk2/ref/item.h>
-#include <silkroad_lib/pk2/ref/scrapOfPackageItem.h>
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/pk2/ref/item.hpp>
+#include <silkroad_lib/pk2/ref/scrapOfPackageItem.hpp>
+#include <silkroad_lib/position.hpp>
 
 #include <filesystem>
 #include <map>

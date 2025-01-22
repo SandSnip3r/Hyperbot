@@ -5,7 +5,7 @@
 #include "packet/enums/packetEnums.hpp"
 #include "pk2/skillData.hpp"
 
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <cstdint>
 

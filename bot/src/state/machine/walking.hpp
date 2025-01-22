@@ -5,7 +5,7 @@
 #include "broker/eventBroker.hpp"
 #include "packet/building/commonBuilding.hpp"
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 #include <optional>
 #include <vector>

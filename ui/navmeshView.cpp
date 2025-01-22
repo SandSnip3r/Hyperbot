@@ -1,8 +1,8 @@
 #include "navmeshView.hpp"
 #include "regionGraphicsItem.hpp"
 
-#include <silkroad_lib/position_math.h>
-#include <silkroad_lib/math/matrix4x4.h>
+#include <silkroad_lib/position_math.hpp>
+#include <silkroad_lib/math/matrix4x4.hpp>
 
 #include <QGridLayout>
 #include <QMenu>

@@ -5,7 +5,7 @@
 #include "shared/stream_utility.h"
 #include "storage/item.hpp"
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 namespace packet::building {
 

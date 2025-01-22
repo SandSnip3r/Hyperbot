@@ -9,9 +9,9 @@
 #include "type_id/categories.hpp"
 #include "type_id/typeCategory.hpp"
 
-#include <silkroad_lib/position_math.h>
-#include <silkroad_lib/scalar_types.h>
-#include <silkroad_lib/pk2/ref/item.h>
+#include <silkroad_lib/position_math.hpp>
+#include <silkroad_lib/scalar_types.hpp>
+#include <silkroad_lib/pk2/ref/item.hpp>
 
 #include <absl/log/log.h>
 

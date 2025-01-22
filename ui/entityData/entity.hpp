@@ -5,8 +5,8 @@
 
 #include "ui_proto/entity.pb.h"
 
-#include <silkroad_lib/entity.h>
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/entity.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <optional>
 

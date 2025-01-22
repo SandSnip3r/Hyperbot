@@ -1,9 +1,9 @@
 #ifndef TYPE_ID_TYPE_CATEGORY_HPP_
 #define TYPE_ID_TYPE_CATEGORY_HPP_
 
-#include <silkroad_lib/pk2/ref/character.h>
-#include <silkroad_lib/pk2/ref/item.h>
-#include <silkroad_lib/pk2/ref/teleport.h>
+#include <silkroad_lib/pk2/ref/character.hpp>
+#include <silkroad_lib/pk2/ref/item.hpp>
+#include <silkroad_lib/pk2/ref/teleport.hpp>
 
 #include <cstdint>
 #include <optional>

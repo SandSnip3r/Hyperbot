@@ -1,8 +1,8 @@
 #include "helpers.hpp"
 #include "mobileEntity.hpp"
 
-#include <silkroad_lib/position_math.h>
-#include <silkroad_lib/constants.h>
+#include <silkroad_lib/position_math.hpp>
+#include <silkroad_lib/constants.hpp>
 
 #include <absl/log/log.h>
 

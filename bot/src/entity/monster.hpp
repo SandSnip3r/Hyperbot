@@ -4,8 +4,8 @@
 #include "nonplayerCharacter.hpp"
 #include "pk2/characterData.hpp"
 
-#include <silkroad_lib/entity.h>
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/entity.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <optional>
 

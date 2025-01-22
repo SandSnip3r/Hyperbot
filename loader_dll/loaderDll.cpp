@@ -7,11 +7,11 @@
 
 #include "detours/detours.h"
 
-#include <silkroad_lib/edx_labs.h>
-#include <silkroad_lib/file_util.h>
-#include <silkroad_lib/pk2/divisionInfo.h>
-#include <silkroad_lib/pk2/pk2ReaderModern.h>
-#include <silkroad_lib/pk2/parsing/parsing.h>
+#include <silkroad_lib/edx_labs.hpp>
+#include <silkroad_lib/file_util.hpp>
+#include <silkroad_lib/pk2/divisionInfo.hpp>
+#include <silkroad_lib/pk2/pk2ReaderModern.hpp>
+#include <silkroad_lib/pk2/parsing/parsing.hpp>
 
 #include <windows.h>
 #include <windowsx.h>

@@ -3,7 +3,7 @@
 
 #include "shared/silkroad_security.h"
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 #ifndef PACKET_BUILDING_CLIENT_AGENT_CHARACTER_MOVE_REQUEST_HPP
 #define PACKET_BUILDING_CLIENT_AGENT_CHARACTER_MOVE_REQUEST_HPP

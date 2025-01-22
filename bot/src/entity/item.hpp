@@ -3,7 +3,7 @@
 
 #include "entity.hpp"
 
-#include <silkroad_lib/entity.h>
+#include <silkroad_lib/entity.hpp>
 
 #include <cstdint>
 #include <optional>

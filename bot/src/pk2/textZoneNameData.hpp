@@ -1,7 +1,7 @@
 #ifndef PK2_TEXT_ZONE_NAME_DATA_HPP_
 #define PK2_TEXT_ZONE_NAME_DATA_HPP_
 
-#include <silkroad_lib/pk2/ref/textZoneName.h>
+#include <silkroad_lib/pk2/ref/textZoneName.hpp>
 
 #include <cstdint>
 #include <unordered_map>

@@ -1,8 +1,8 @@
 #ifndef PK2_REF_REGION_HPP_
 #define PK2_REF_REGION_HPP_
 
-#include <silkroad_lib/pk2/ref/region.h>
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/pk2/ref/region.hpp>
+#include <silkroad_lib/position.hpp>
 
 #include <unordered_map>
 

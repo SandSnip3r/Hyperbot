@@ -1,8 +1,8 @@
 #ifndef PK2_MEDIA_SKILL_DATA_HPP
 #define PK2_MEDIA_SKILL_DATA_HPP
 
-#include <silkroad_lib/pk2/ref/skill.h>
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/pk2/ref/skill.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <unordered_map>
 

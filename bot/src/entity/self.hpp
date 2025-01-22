@@ -13,8 +13,8 @@
 #include "storage/buybackQueue.hpp"
 #include "storage/storage.hpp"
 
-#include <silkroad_lib/position.h>
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/position.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <array>
 #include <chrono>
@@ -61,7 +61,7 @@ public:
   void initializeGold(uint64_t goldAmount);
 
   void initializeEventBroker(broker::EventBroker &eventBroker) override;
-                  
+
   // Setters
   void setCurrentLevel(uint8_t currentLevel);
   void setHwanLevel(uint8_t hwanLevel);
@@ -127,7 +127,7 @@ public:
   float hwanSpeed() const;
   packet::enums::BodyState bodyState() const;
   uint8_t hwanPoints() const;
-  
+
   // Self's HP is always known.
   bool currentHpIsKnown() const override { return true; }
   // Self's MP is always known.
@@ -136,7 +136,7 @@ public:
   std::optional<uint32_t> maxMp() const;
   std::optional<uint16_t> strPoints() const;
   std::optional<uint16_t> intPoints() const;
-  
+
   uint32_t stateBitmask() const;
   std::array<uint16_t,6> legacyStateEffects() const;
   std::array<uint8_t,32> modernStateLevels() const;
@@ -173,7 +173,7 @@ public:
   // mutable std::mutex selfMutex;
 
   bool spawned_{true}; // TODO: Remove
-  
+
   // Character info
 private:
   uint8_t currentLevel_;

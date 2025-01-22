@@ -3,7 +3,7 @@
 
 #include <ui_proto/position.pb.h>
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 namespace proto_convert {
 

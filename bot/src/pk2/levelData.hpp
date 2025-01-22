@@ -1,7 +1,7 @@
 #ifndef PK2_LEVEL_DATA_HPP_
 #define PK2_LEVEL_DATA_HPP_
 
-#include <silkroad_lib/pk2/ref/level.h>
+#include <silkroad_lib/pk2/ref/level.hpp>
 
 #include <unordered_map>
 

@@ -6,7 +6,7 @@
 
 #include "shared/silkroad_security.h"
 
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 namespace packet::building {
 

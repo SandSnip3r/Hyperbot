@@ -7,7 +7,7 @@
 #include "entityTracker.hpp"
 #include "pk2/gameData.hpp"
 
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <memory>
 #include <mutex>

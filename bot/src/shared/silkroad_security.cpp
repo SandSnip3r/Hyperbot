@@ -1,6 +1,6 @@
 #include "silkroad_security.h"
 
-#include <silkroad_lib/blowfish.h>
+#include <silkroad_lib/blowfish.hpp>
 
 #include <boost/random.hpp>
 

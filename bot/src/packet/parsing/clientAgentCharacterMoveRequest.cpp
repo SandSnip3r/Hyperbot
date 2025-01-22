@@ -1,6 +1,6 @@
 #include "clientAgentCharacterMoveRequest.hpp"
 
-#include <silkroad_lib/position_math.h>
+#include <silkroad_lib/position_math.hpp>
 
 #include <utility>
 

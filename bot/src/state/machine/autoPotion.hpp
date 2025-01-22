@@ -4,7 +4,7 @@
 #include "stateMachine.hpp"
 #include "type_id/typeCategory.hpp"
 
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 namespace state::machine {
 

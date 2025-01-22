@@ -4,7 +4,7 @@
 #include "common.hpp"
 #include "entity.hpp"
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 #include <cstdint>
 #include <optional>

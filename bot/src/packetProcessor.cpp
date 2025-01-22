@@ -8,7 +8,7 @@
 #include "packet/opcode.hpp"
 #include "type_id/categories.hpp"
 
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/position.hpp>
 
 #include <absl/algorithm/container.h>
 #include <absl/container/flat_hash_set.h>

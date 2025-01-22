@@ -4,8 +4,8 @@
 #include "mobileEntity.hpp"
 #include "broker/eventBroker.hpp"
 
-#include <silkroad_lib/entity.h>
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/entity.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <chrono>
 #include <cstdint>

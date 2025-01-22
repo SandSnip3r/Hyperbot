@@ -1,7 +1,7 @@
 #ifndef PK2_TEXT_DATA_HPP_
 #define PK2_TEXT_DATA_HPP_
 
-#include <silkroad_lib/pk2/ref/text.h>
+#include <silkroad_lib/pk2/ref/text.hpp>
 
 #include <absl/container/flat_hash_map.h>
 

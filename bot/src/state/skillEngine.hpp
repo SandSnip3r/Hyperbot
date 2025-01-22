@@ -4,7 +4,7 @@
 #include "broker/eventBroker.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <absl/container/flat_hash_map.h>
 

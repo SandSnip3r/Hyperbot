@@ -1,0 +1,5 @@
+#include "pk2/ref/shopGroup.hpp"
+
+namespace sro::pk2::ref {
+
+} // namespace sro::pk2::ref

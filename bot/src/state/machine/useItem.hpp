@@ -6,7 +6,7 @@
 
 #include "type_id/typeCategory.hpp"
 
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <optional>
 #include <string>

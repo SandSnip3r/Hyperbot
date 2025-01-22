@@ -2,8 +2,8 @@
 #include "serverAgentEntitySpawn.hpp"
 #include "entity/entity.hpp"
 
-#include <silkroad_lib/entity.h>
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/entity.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 namespace packet::building {
 
@@ -16,7 +16,7 @@ PacketContainer ServerAgentEntitySpawn::packet(const ServerAgentEntitySpawn::Inp
   stream.Write<uint8_t>(0); // hwanLevel
   stream.Write<uint8_t>(0); // pvpCape
   stream.Write<uint8_t>(0); // autoInverstExp
-  
+
   stream.Write<uint8_t>(0x6d); // inventorySize
   stream.Write<uint8_t>(0x07); // inventoryItemCount
 
@@ -100,7 +100,7 @@ PacketContainer ServerAgentEntitySpawn::packet(const ServerAgentEntitySpawn::Inp
   // stream.Write<uint32_t>(0x0000021f); // token
   // // Buff 1
   // stream.Write<uint32_t>(0x0000741b); // skillRefId
-  // stream.Write<uint32_t>(0x00000221); // token  
+  // stream.Write<uint32_t>(0x00000221); // token
 
   const std::string name = "_Nuked_";
   if (name.length() > std::numeric_limits<uint16_t>::max()) {

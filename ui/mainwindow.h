@@ -9,9 +9,9 @@
 #include "map/trainingAreaGraphicsItem.hpp"
 #include "requester.hpp"
 
-#include <silkroad_lib/navmesh/navmesh.h>
-#include <silkroad_lib/navmesh/triangulation/navmeshTriangulation.h>
-#include <silkroad_lib/position.h>
+#include <silkroad_lib/navmesh/navmesh.hpp>
+#include <silkroad_lib/navmesh/triangulation/navmeshTriangulation.hpp>
+#include <silkroad_lib/position.hpp>
 
 #include <zmq.hpp>
 

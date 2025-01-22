@@ -4,7 +4,7 @@
 #include "pk2/gameData.hpp"
 #include "type_id/typeCategory.hpp"
 
-#include <silkroad_lib/pk2/ref/item.h>
+#include <silkroad_lib/pk2/ref/item.hpp>
 
 #include <cstdint>
 #include <memory>

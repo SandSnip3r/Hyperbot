@@ -9,8 +9,8 @@
 #include "entity/item.hpp"
 #include "entity/monster.hpp"
 
-#include <silkroad_lib/position.h>
-#include <silkroad_lib/scalar_types.h>
+#include <silkroad_lib/position.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <memory>
 #include <optional>
