@@ -17,9 +17,9 @@ pascalCaseClassName = sys.argv[1]
 camelCaseClassName = pascalCaseClassName[0].lower() + pascalCaseClassName[1:]
 macroCaseClassName = strToMacroCase(camelCaseClassName)
 
-cmakeFilePath = '../Hyperbot/CMakeLists.txt'
-projectFileSourceLine = '    "src/state/machine/{}.cpp"'
-projectFileHeaderLine = '    "src/state/machine/{}.hpp"'
+cmakeFilePath = '../bot/CMakeLists.txt'
+projectFileSourceLine = '  src/state/machine/{}.cpp'
+projectFileHeaderLine = '  src/state/machine/{}.hpp'
 
 # Append the file paths to the project file
 with open(cmakeFilePath, 'a') as projectFile:
@@ -27,8 +27,8 @@ with open(cmakeFilePath, 'a') as projectFile:
   projectFile.write('\n'+projectFileHeaderLine.format(camelCaseClassName))
   print("Lines written to {}, please go move them into the proper location".format(cmakeFilePath))
 
-sourceFilePath = '../Hyperbot/src/state/machine/{}.cpp'
-headerFilePath = '../Hyperbot/src/state/machine/{}.hpp'
+sourceFilePath = '../bot/src/state/machine/{}.cpp'
+headerFilePath = '../bot/src/state/machine/{}.hpp'
 headerTemplate = '#ifndef STATE_MACHINE_{macroClassName}_HPP_\n'\
                  '#define STATE_MACHINE_{macroClassName}_HPP_\n'\
                  '\n'\
