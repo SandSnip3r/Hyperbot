@@ -57,6 +57,7 @@
 #include "packet/parsing/serverAgentSkillMasteryLearnResponse.hpp"
 #include "packet/parsing/serverGatewayLoginIbuvChallenge.hpp"
 #include "packet/parsing/serverGatewayLoginResponse.hpp"
+#include "packet/parsing/serverGatewayPatchResponse.hpp"
 #include "packet/parsing/serverGatewayShardListResponse.hpp"
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
@@ -115,6 +116,7 @@ private:
   //  In principal, each of these functions should only update the state and maybe publish an event.
   //  All member functions are const because this class should hold no state.
   void frameworkMessageIdentifyReceived(const packet::parsing::FrameworkMessageIdentify &packet) const;
+  void serverGatewayPatchResponseReceived(const packet::parsing::ServerGatewayPatchResponse &packet) const;
   void serverGatewayShardListResponseReceived(const packet::parsing::ServerGatewayShardListResponse &packet) const;
   void serverGatewayLoginResponseReceived(const packet::parsing::ServerGatewayLoginResponse &packet) const;
   void serverGatewayLoginIbuvChallengeReceived(const packet::parsing::ServerGatewayLoginIbuvChallenge &packet) const;

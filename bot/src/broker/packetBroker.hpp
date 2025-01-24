@@ -1,5 +1,5 @@
-#ifndef BROKER_SYSTEM_HPP
-#define BROKER_SYSTEM_HPP
+#ifndef BROKER_PACKET_BROKER_HPP_
+#define BROKER_PACKET_BROKER_HPP_
 
 #include "packet/opcode.hpp"
 #include "shared/silkroad_security.h"
@@ -35,4 +35,4 @@ public:
 
 } // namespace broker
 
-#endif // BROKER_SYSTEM_HPP
+#endif // BROKER_PACKET_BROKER_HPP_

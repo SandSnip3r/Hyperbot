@@ -24,7 +24,7 @@ int64_t getMsSinceEpoch() {
 } // anonymous namespace
 
 const bool PacketLogger::kLogToFile = false;
-const bool PacketLogger::kLogToConsole = false;
+const bool PacketLogger::kLogToConsole = true;
 
 PacketLogger::PacketLogger(const std::string &logDirectoryPath) : logFileDirectoryPath_(logDirectoryPath), logFilePath_(getLogFilePath()) {
   if (kLogToFile) {

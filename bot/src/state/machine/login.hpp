@@ -1,14 +1,9 @@
 #ifndef STATE_MACHINE_LOGIN_HPP_
 #define STATE_MACHINE_LOGIN_HPP_
 
-// #include "broker/eventBroker.hpp"
-#include "stateMachine.hpp"
+#include "characterLoginInfo.hpp"
+#include "state/machine/stateMachine.hpp"
 
-// #include "type_id/typeCategory.hpp"
-
-// #include <silkroad_lib/scalar_types.hpp>
-
-// #include <optional>
 #include <array>
 #include <cstdint>
 #include <string>
@@ -18,7 +13,7 @@ namespace state::machine {
 
 class Login : public StateMachine {
 public:
-  Login(Bot &bot, std::string_view username, std::string_view password, std::string_view characterName);
+  Login(Bot &bot, const CharacterLoginInfo &characterLoginInfo);
   ~Login() override;
   void onUpdate(const event::Event *event) override;
   bool done() const override;

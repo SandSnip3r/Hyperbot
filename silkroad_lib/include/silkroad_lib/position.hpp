@@ -30,6 +30,7 @@ public:
   float yOffset() const;
   float zOffset() const;
   GameCoordinate toGameCoordinate() const;
+  std::string toString() const;
 private:
   RegionId regionId_{0};
   float xOffset_{0};

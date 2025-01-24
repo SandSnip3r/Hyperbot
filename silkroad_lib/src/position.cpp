@@ -2,6 +2,8 @@
 #include "position.hpp"
 #include "position_math.hpp"
 
+#include <absl/strings/str_format.h>
+
 #include <cmath>
 
 namespace sro {
@@ -46,6 +48,16 @@ GameCoordinate Position::toGameCoordinate() const {
   using sro::game_constants::kRegionSize;
   return { static_cast<int>((xSector() - 135) * kRegionSize/10.0 + xOffset() / 10.0),
            static_cast<int>((zSector() - 92) * kRegionSize/10.0 + zOffset() / 10.0) };
+}
+
+std::string Position::toString() const {
+  std::string regionDetails;
+  if (isDungeon()) {
+    regionDetails = absl::StrFormat("d-%d", dungeonId());
+  } else {
+    regionDetails = absl::StrFormat("%d,%d", xSector(), zSector());
+  }
+  return absl::StrFormat("{%d(%s) %.3f,%.3f,%.3f}", regionId_, regionDetails, xOffset_, yOffset_, zOffset_);
 }
 
 void Position::normalize() {

@@ -109,6 +109,7 @@ void PacketProcessor::subscribeToPackets() {
   // Server packets
   //   Login packets
   // packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentAuthRequest, packetHandleFunction); // TODO: Do we want to see this packet?
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayPatchResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayShardListResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayLoginResponse, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kFrameworkMessageIdentify, packetHandleFunction);
@@ -177,6 +178,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
     // Do a quick check to see if any packets are coming while Self is despawned.
     static const absl::flat_hash_set<packet::Opcode> expectedOpcodes = {
       packet::Opcode::kFrameworkMessageIdentify,
+      packet::Opcode::kServerGatewayPatchResponse,
       packet::Opcode::kServerGatewayShardListResponse,
       packet::Opcode::kServerGatewayLoginResponse,
       packet::Opcode::kFrameworkMessageIdentify,
@@ -210,6 +212,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
   try {
     // Login packet handlers
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::FrameworkMessageIdentify, frameworkMessageIdentifyReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerGatewayPatchResponse, serverGatewayPatchResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerGatewayShardListResponse, serverGatewayShardListResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerGatewayLoginResponse, serverGatewayLoginResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerGatewayLoginIbuvChallenge, serverGatewayLoginIbuvChallengeReceived);
@@ -291,6 +294,11 @@ void PacketProcessor::frameworkMessageIdentifyReceived(const packet::parsing::Fr
     // Connected to agentserver.
     eventBroker_.publishEvent<event::ConnectedToAgentServer>(sessionId_);
   }
+}
+
+void PacketProcessor::serverGatewayPatchResponseReceived(const packet::parsing::ServerGatewayPatchResponse &packet) const {
+  VLOG(1) << "Gateway patch response received, result: " << static_cast<int>(packet.result());
+  eventBroker_.publishEvent<event::GatewayPatchResponseReceived>(sessionId_);
 }
 
 void PacketProcessor::serverGatewayShardListResponseReceived(const packet::parsing::ServerGatewayShardListResponse &packet) const {

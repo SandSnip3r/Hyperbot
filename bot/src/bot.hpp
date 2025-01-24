@@ -2,6 +2,7 @@
 #define BOT_HPP_
 
 #include "broker/packetBroker.hpp"
+#include "characterLoginInfo.hpp"
 #include "config/characterConfig.hpp"
 #include "entity/self.hpp"
 #include "event/event.hpp"
@@ -16,6 +17,7 @@
 #include "state/machine/concurrentStateMachines.hpp"
 #include "state/machine/stateMachine.hpp"
 
+#include <future>
 #include <optional>
 #include <memory>
 #include <string_view>
@@ -33,7 +35,7 @@ public:
       state::WorldState &worldState);
 
   void initialize();
-  void setCharacterToLogin(std::string_view characterName);
+  void setCharacter(const CharacterLoginInfo &characterLoginInfo);
   const config::CharacterConfig* config() const;
   const pk2::GameData& gameData() const;
   Proxy& proxy() const;
@@ -63,6 +65,7 @@ protected:
   std::shared_ptr<entity::Self> selfEntity_;
 
 private:
+  CharacterLoginInfo characterLoginInfo_;
   std::unique_ptr<state::machine::StateMachine> loginStateMachine_;
   std::unique_ptr<state::machine::StateMachine> autoPotionStateMachine_;
   std::unique_ptr<state::machine::StateMachine> bottingStateMachine_;
@@ -104,6 +107,15 @@ public:
   std::vector<packet::building::NetworkReadyPosition> calculatePathToDestination(const sro::Position &destinationPosition) const;
   sro::scalar_types::EntityGlobalId getClosestNpcGlobalId() const;
 
+  // Interface for RL training.
+  std::future<void> getFutureForClientOpening();
+  bool loggedIn() const;
+  std::future<void> logIn();
+
+private:
+  // Data for RL training interface.
+  std::promise<void> clientOpenPromise_;
+  std::optional<std::promise<void>> loggedInPromise_;
 };
 
 #endif

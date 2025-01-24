@@ -56,6 +56,7 @@
 #include "serverAgentSkillMasteryLearnResponse.hpp"
 #include "serverGatewayLoginIbuvChallenge.hpp"
 #include "serverGatewayLoginResponse.hpp"
+#include "serverGatewayPatchResponse.hpp"
 #include "serverGatewayShardListResponse.hpp"
 
 #include "packet/opcode.hpp"
@@ -89,6 +90,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ClientAgentActionSelectRequest>(packet);
       case Opcode::kClientAgentActionTalkRequest:
         return std::make_unique<ClientAgentActionTalkRequest>(packet);
+      case Opcode::kServerGatewayPatchResponse:
+        return std::make_unique<ServerGatewayPatchResponse>(packet);
       case Opcode::kServerGatewayShardListResponse:
         return std::make_unique<ServerGatewayShardListResponse>(packet);
       case Opcode::kServerGatewayLoginResponse:

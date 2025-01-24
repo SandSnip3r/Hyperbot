@@ -51,14 +51,12 @@ Bot::Bot(SessionId sessionId,
 void Bot::initialize() {
   subscribeToEvents();
   packetProcessor_.initialize();
+  proxy_.blockOpcode(packet::Opcode::kClientGatewayShardListRequest);
+  proxy_.blockOpcode(packet::Opcode::kClientGatewayShardListPingRequest);
 }
 
-void Bot::setCharacterToLogin(std::string_view characterName) {
-  loadConfig(characterName);
-  if (config_) {
-    config::LoginInfo loginInfo = config_->getLoginInfo();
-    loginStateMachine_ = std::make_unique<state::machine::Login>(*this, loginInfo.username, loginInfo.password, characterName);
-  }
+void Bot::setCharacter(const CharacterLoginInfo &characterLoginInfo) {
+  characterLoginInfo_ = characterLoginInfo;
 }
 
 void Bot::loadConfig(std::string_view characterName) {
@@ -120,6 +118,7 @@ void Bot::subscribeToEvents() {
   // Debug help
   eventBroker_.subscribeToEvent(event::EventCode::kInjectPacket, eventHandleFunction);
   // Login events
+  eventBroker_.subscribeToEvent(event::EventCode::kGatewayPatchResponseReceived, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kShardListReceived, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kGatewayLoginResponseReceived, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kConnectedToAgentServer, eventHandleFunction);
@@ -196,6 +195,17 @@ void Bot::handleEvent(const event::Event *event) {
     // Do special handling for specific events before calling onUpdate.
     const auto eventCode = event->eventCode;
     switch (eventCode) {
+      // Login
+      case event::EventCode::kGatewayPatchResponseReceived: {
+        LOG(INFO) << "kGatewayPatchResponseReceived";
+        clientOpenPromise_.set_value();
+        break;
+      }
+      case event::EventCode::kShardListReceived: {
+        // Shard list
+        break;
+      }
+
       // Bot actions from UI
       case event::EventCode::kRequestStartTraining: {
         handleRequestStartTraining();
@@ -271,7 +281,6 @@ void Bot::handleEvent(const event::Event *event) {
 
 void Bot::onUpdate(const event::Event *event) {
   if (loginStateMachine_) {
-    VLOG(1) << "Calling into login state machine " << sessionId() << " with event " << event::toString(event->eventCode);
     loginStateMachine_->onUpdate(event);
     if (loginStateMachine_->done()) {
       loginStateMachine_.reset();
@@ -380,6 +389,12 @@ void Bot::handleChatCommand(const event::ChatReceived &event) {
       } else if (command == "stop") {
         // Stop training
         stopTraining();
+      } else if (command == "print_location") {
+        if (selfEntity_) {
+          LOG(INFO) << "Position: " << selfEntity_->position().toString();
+        } else {
+          LOG(INFO) << "Have no self. Cannot print location.";
+        }
       } else if (std::smatch maxMatchResults; std::regex_match(command, maxMatchResults, maxRegex)) {
         const std::string maxMatch = maxMatchResults.str(1);
         std::vector<std::string_view> thingsToMax = absl::StrSplit(maxMatch, ' ');
@@ -449,6 +464,12 @@ void Bot::handleSelfSpawned(const event::Event *event) {
     autoPotionStateMachine_ = std::make_unique<state::machine::AutoPotion>(*this);
   } else {
     LOG(WARNING) << "Not constructing AutoPotion because we have no character config";
+  }
+
+  if (loggedInPromise_) {
+    VLOG(1) << "Spawned, setting logged in promise";
+    loggedInPromise_->set_value();
+    loggedInPromise_.reset();
   }
 }
 
@@ -800,4 +821,37 @@ sro::scalar_types::EntityGlobalId Bot::getClosestNpcGlobalId() const {
     throw std::runtime_error("There is no NPC within range, weird");
   }
   return *closestNpcGId;
+}
+
+// ============================================================================================================================
+// =========================================================RL training========================================================
+// ============================================================================================================================
+
+std::future<void> Bot::getFutureForClientOpening() {
+  return clientOpenPromise_.get_future();
+}
+
+bool Bot::loggedIn() const {
+  return selfEntity_ != nullptr;
+}
+
+std::future<void> Bot::logIn() {
+  if (loggedInPromise_.has_value()) {
+    throw std::runtime_error("Already have a pending promise for logging in");
+  }
+  // Create the promise.
+  loggedInPromise_.emplace();
+
+  if (selfEntity_) {
+    // Already logged in & spawned.
+    VLOG(1) << "Already logged in";
+    loggedInPromise_->set_value();
+    std::future<void> future = loggedInPromise_->get_future();
+    loggedInPromise_.reset();
+    return future;
+  }
+
+  // Not yet logged in. We'll set the promise when we receive the SelfSpawned event.
+  loginStateMachine_ = std::make_unique<state::machine::Login>(*this, characterLoginInfo_);
+  return loggedInPromise_->get_future();
 }

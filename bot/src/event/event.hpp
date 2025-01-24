@@ -112,10 +112,14 @@ enum class EventCode {
   kLearnSkillError,
   kTimeout,
 
+  kLoginCompleted,
+  // ===============================Reinforcement Learning==============================
+  kRlStartPvp,
   // ===================================State updates===================================
   kStateUpdated = 0x1000,
   // Login state updates
   kServerAuthSuccess,
+  kGatewayPatchResponseReceived,
   kShardListReceived,
   kGatewayLoginResponseReceived,
   kConnectedToAgentServer,
@@ -136,62 +140,67 @@ public:
   virtual ~Event() = default;
 };
 
-struct ServerAuthSuccess : public Event {
+struct SessionSpecificEvent : public Event {
+public:
+  explicit SessionSpecificEvent(EventId id, EventCode code, SessionId sessionId);
+  const SessionId sessionId;
+  virtual ~SessionSpecificEvent() = default;
+};
+
+struct ServerAuthSuccess : public SessionSpecificEvent {
 public:
   ServerAuthSuccess(EventId id, SessionId sessionId);
-  const SessionId sessionId;
   virtual ~ServerAuthSuccess() = default;
 };
 
-struct ShardListReceived : public Event {
+struct GatewayPatchResponseReceived : public SessionSpecificEvent {
+public:
+  GatewayPatchResponseReceived(EventId id, SessionId sessionId);
+  virtual ~GatewayPatchResponseReceived() = default;
+};
+
+struct ShardListReceived : public SessionSpecificEvent {
 public:
   ShardListReceived(EventId id, SessionId sessionId, const std::vector<packet::structures::Shard> &shards);
-  const SessionId sessionId;
   const std::vector<packet::structures::Shard> shards;
   virtual ~ShardListReceived() = default;
 };
 
-struct IbuvChallengeReceived : public Event {
+struct IbuvChallengeReceived : public SessionSpecificEvent {
 public:
   IbuvChallengeReceived(EventId id, SessionId sessionId);
-  const SessionId sessionId;
   virtual ~IbuvChallengeReceived() = default;
 };
 
-struct GatewayLoginResponseReceived : public Event {
+struct GatewayLoginResponseReceived : public SessionSpecificEvent {
 public:
   GatewayLoginResponseReceived(EventId id, SessionId sessionId, uint32_t agentServerToken);
-  const SessionId sessionId;
   const uint32_t agentServerToken;
   virtual ~GatewayLoginResponseReceived() = default;
 };
 
-struct ConnectedToAgentServer : public Event {
+struct ConnectedToAgentServer : public SessionSpecificEvent {
 public:
   ConnectedToAgentServer(EventId id, SessionId sessionId);
-  const SessionId sessionId;
   virtual ~ConnectedToAgentServer() = default;
 };
 
-struct CharacterListReceived : public Event {
+struct CharacterListReceived : public SessionSpecificEvent {
 public:
   CharacterListReceived(EventId id, SessionId sessionId, const std::vector<packet::structures::character_selection::Character> &characters);
-  const SessionId sessionId;
   const std::vector<packet::structures::character_selection::Character> characters;
   virtual ~CharacterListReceived() = default;
 };
 
-struct CharacterSelectionJoinSuccess : public Event {
+struct CharacterSelectionJoinSuccess : public SessionSpecificEvent {
 public:
   CharacterSelectionJoinSuccess(EventId id, SessionId sessionId);
-  const SessionId sessionId;
   virtual ~CharacterSelectionJoinSuccess() = default;
 };
 
-struct SelfSpawned : public Event {
+struct SelfSpawned : public SessionSpecificEvent {
 public:
   SelfSpawned(EventId id, SessionId sessionId, sro::scalar_types::EntityGlobalId globalId);
-  const SessionId sessionId;
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~SelfSpawned() = default;
 };

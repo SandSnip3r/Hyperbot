@@ -26,6 +26,7 @@ add_executable(${PROJECT_NAME}
   src/broker/packetBroker.hpp
   src/broker/timerManager.cpp
   src/broker/timerManager.hpp
+  src/characterLoginInfo.hpp
   src/clientManagerInterface.cpp
   src/clientManagerInterface.hpp
   src/config/characterConfig.cpp
@@ -251,6 +252,8 @@ add_executable(${PROJECT_NAME}
   src/packet/parsing/serverGatewayLoginIbuvChallenge.hpp
   src/packet/parsing/serverGatewayLoginResponse.cpp
   src/packet/parsing/serverGatewayLoginResponse.hpp
+  src/packet/parsing/serverGatewayPatchResponse.cpp
+  src/packet/parsing/serverGatewayPatchResponse.hpp
   src/packet/parsing/serverGatewayShardListResponse.cpp
   src/packet/parsing/serverGatewayShardListResponse.hpp
   src/packet/structures/packetInnerStructures.hpp
@@ -286,6 +289,12 @@ add_executable(${PROJECT_NAME}
   src/proto_convert/convert.hpp
   src/proxy.cpp
   src/proxy.hpp
+  src/rl/ai/baseIntelligence.cpp
+  src/rl/ai/baseIntelligence.hpp
+  src/rl/ai/randomIntelligence.cpp
+  src/rl/ai/randomIntelligence.hpp
+  src/rl/rlTrainingManager.cpp
+  src/rl/rlTrainingManager.hpp
   src/session.cpp
   src/session.hpp
   src/sessionId.hpp

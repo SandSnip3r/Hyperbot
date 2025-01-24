@@ -1,5 +1,5 @@
-#ifndef EVENT_TIMER_MANAGER_HPP_
-#define EVENT_TIMER_MANAGER_HPP_
+#ifndef BROKER_TIMER_MANAGER_HPP_
+#define BROKER_TIMER_MANAGER_HPP_
 
 #include <chrono>
 #include <condition_variable>
@@ -57,4 +57,4 @@ bool operator>(const TimerManager::Timer &lhs, const TimerManager::Timer &rhs);
 
 } // namespace broker
 
-#endif // EVENT_TIMER_MANAGER_HPP_
+#endif // BROKER_TIMER_MANAGER_HPP_

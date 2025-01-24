@@ -18,8 +18,11 @@ std::string toString(Opcode opcode) {
   if (opcode == Opcode::kClientGatewayPatchRequest) {
     return "ClientGatewayPatchRequest";
   }
-  if (opcode == Opcode::LOGIN_CLIENT_SERVERLIST_REQUEST) {
-    return "LOGIN_CLIENT_SERVERLIST_REQUEST";
+  if (opcode == Opcode::kClientGatewayShardListRequest) {
+    return "ClientGatewayShardListRequest";
+  }
+  if (opcode == Opcode::kClientGatewayShardListPingRequest) {
+    return "ClientGatewayShardListPingRequest";
   }
   if (opcode == Opcode::kClientGatewayLoginRequest) {
     return "ClientGatewayLoginRequest";
@@ -41,6 +44,9 @@ std::string toString(Opcode opcode) {
   }
   if (opcode == Opcode::LOGIN_SERVER_LAUNCHER) {
     return "LOGIN_SERVER_LAUNCHER";
+  }
+  if (opcode == Opcode::kServerGatewayPatchResponse) {
+    return "ServerGatewayPatchResponse";
   }
   if (opcode == Opcode::kServerGatewayShardListResponse) {
     return "ServerGatewayShardListResponse";

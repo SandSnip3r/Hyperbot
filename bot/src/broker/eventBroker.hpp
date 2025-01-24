@@ -1,5 +1,5 @@
-#ifndef EVENT_EVENT_BROKER_HPP_
-#define EVENT_EVENT_BROKER_HPP_
+#ifndef BROKER_EVENT_BROKER_HPP_
+#define BROKER_EVENT_BROKER_HPP_
 
 #include "event/event.hpp"
 #include "timerManager.hpp"
@@ -117,4 +117,4 @@ private:
 
 } // namespace broker
 
-#endif // EVENT_EVENT_BROKER_HPP_
+#endif // BROKER_EVENT_BROKER_HPP_

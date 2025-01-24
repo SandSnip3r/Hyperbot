@@ -10,6 +10,9 @@
 ClientManagerInterface::ClientManagerInterface(zmq::context_t &context) : context_(context) {
   socket_ = zmq::socket_t(context_, zmq::socket_type::req);
   socket_.bind("tcp://*:2235");
+
+  // // When this process is killed, send requests to kill any open clients.
+  // signal(SIGINT, &ClientManagerInterface::signalHandler);
 }
 
 ClientManagerInterface::ClientId ClientManagerInterface::startClient(int32_t listeningPort) {
@@ -33,6 +36,7 @@ ClientManagerInterface::ClientId ClientManagerInterface::startClient(int32_t lis
   switch (response.body_case()) {
     case proto::client_manager_request::Response::BodyCase::kClientStarted: {
       const int32_t clientId = response.client_started().client_id();
+      // saveClientId(clientId);
       return clientId;
     }
     case proto::client_manager_request::Response::BodyCase::kError: {
@@ -59,4 +63,20 @@ void ClientManagerInterface::sendClientStartRequest(int32_t port) {
 }
 
 // void ClientManagerInterface::handleReply(zmq::message_t reply) {
+// }
+
+// void ClientManagerInterface::saveClientId(ClientId clientId) {
+//   // std::unique_lock<std::mutex> lock(runningClientListMutex_);
+//   LOG(INFO) << "Saving client " << clientId << " to be killed later";
+//   runningClients_.push_back(clientId);
+// }
+
+// std::vector<ClientManagerInterface::ClientId> ClientManagerInterface::runningClients_;
+
+// void ClientManagerInterface::signalHandler(int signal) {
+//   // std::unique_lock<std::mutex> lock(runningClientListMutex_);
+//   for (ClientId clientId : runningClients_) {
+//     LOG(INFO) << "Killing client " << clientId;
+//   }
+//   exit(0);
 // }

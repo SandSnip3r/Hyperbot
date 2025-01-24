@@ -251,6 +251,9 @@ std::string_view toString(EventCode eventCode) {
   if (eventCode == EventCode::kTimeout) {
     return "Timeout";
   }
+  if (eventCode == EventCode::kRlStartPvp) {
+    return "RlStartPvp";
+  }
   if (eventCode == EventCode::kStateUpdated) {
     return "StateUpdated";
   }
@@ -279,29 +282,35 @@ std::string_view toString(EventCode eventCode) {
 Event::Event(EventId id, EventCode code) :
     eventId(id), eventCode(code) {}
 
+SessionSpecificEvent::SessionSpecificEvent(EventId id, EventCode code, SessionId sessionId) :
+    Event(id, code), sessionId(sessionId) {}
+
 ServerAuthSuccess::ServerAuthSuccess(EventId id, SessionId sessionId) :
-    Event(id, EventCode::kServerAuthSuccess), sessionId(sessionId) {}
+    SessionSpecificEvent(id, EventCode::kServerAuthSuccess, sessionId) {}
+
+GatewayPatchResponseReceived::GatewayPatchResponseReceived(EventId id, SessionId sessionId) :
+    SessionSpecificEvent(id, EventCode::kGatewayPatchResponseReceived, sessionId) {}
 
 ShardListReceived::ShardListReceived(EventId id, SessionId sessionId, const std::vector<packet::structures::Shard> &shards) :
-    Event(id, EventCode::kShardListReceived), sessionId(sessionId), shards(shards) {}
+    SessionSpecificEvent(id, EventCode::kShardListReceived, sessionId), shards(shards) {}
 
 IbuvChallengeReceived::IbuvChallengeReceived(EventId id, SessionId sessionId) :
-    Event(id, EventCode::kIbuvChallengeReceived), sessionId(sessionId) {}
+    SessionSpecificEvent(id, EventCode::kIbuvChallengeReceived, sessionId) {}
 
 GatewayLoginResponseReceived::GatewayLoginResponseReceived(EventId id, SessionId sessionId, uint32_t agentServerToken) :
-    Event(id, EventCode::kGatewayLoginResponseReceived), sessionId(sessionId), agentServerToken(agentServerToken) {}
+    SessionSpecificEvent(id, EventCode::kGatewayLoginResponseReceived, sessionId), agentServerToken(agentServerToken) {}
 
 ConnectedToAgentServer::ConnectedToAgentServer(EventId id, SessionId sessionId) :
-    Event(id, EventCode::kConnectedToAgentServer), sessionId(sessionId) {}
+    SessionSpecificEvent(id, EventCode::kConnectedToAgentServer, sessionId) {}
 
 CharacterListReceived::CharacterListReceived(EventId id, SessionId sessionId, const std::vector<packet::structures::character_selection::Character> &characters) :
-    Event(id, EventCode::kCharacterListReceived), sessionId(sessionId), characters(characters) {}
+    SessionSpecificEvent(id, EventCode::kCharacterListReceived, sessionId), characters(characters) {}
 
 CharacterSelectionJoinSuccess::CharacterSelectionJoinSuccess(EventId id, SessionId sessionId) :
-    Event(id, EventCode::kCharacterSelectionJoinSuccess), sessionId(sessionId) {}
+    SessionSpecificEvent(id, EventCode::kCharacterSelectionJoinSuccess, sessionId) {}
 
 SelfSpawned::SelfSpawned(EventId id, SessionId sessionId, sro::scalar_types::EntityGlobalId globalId) :
-    Event(id, EventCode::kSelfSpawned), sessionId(sessionId), globalId(globalId) {}
+    SessionSpecificEvent(id, EventCode::kSelfSpawned, sessionId), globalId(globalId) {}
 
 InternalSkillCooldownEnded::InternalSkillCooldownEnded(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillId) :
     Event(id, EventCode::kInternalSkillCooldownEnded), globalId(globalId), skillRefId(skillId) {}

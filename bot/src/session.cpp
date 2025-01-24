@@ -1,7 +1,6 @@
 #include "session.hpp"
 
 Session::Session(const pk2::GameData &gameData,
-                 std::string_view clientPath,
                  broker::EventBroker &eventBroker,
                  state::WorldState &worldState,
                  ClientManagerInterface &clientManagerInterface) :
@@ -11,8 +10,8 @@ Session::Session(const pk2::GameData &gameData,
     clientManagerInterface_(clientManagerInterface) {
 }
 
-void Session::setCharacterToLogin(std::string_view characterName) {
-  bot_.setCharacterToLogin(characterName);
+void Session::setCharacter(const CharacterLoginInfo &characterLoginInfo) {
+  bot_.setCharacter(characterLoginInfo);
 }
 
 void Session::initialize() {
@@ -33,6 +32,10 @@ void Session::runAsync() {
 
 const state::WorldState& Session::getWorldState() const {
   return bot_.worldState();
+}
+
+Bot& Session::getBot() {
+  return bot_;
 }
 
 std::atomic<SessionId> Session::nextSessionId{0};

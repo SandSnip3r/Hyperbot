@@ -25,9 +25,14 @@ message ClientStarted {
   int32 client_id = 1;
 }
 
+message ClientKilled {
+  int32 client_id = 1;
+}
+
 message Response {
   oneof body {
     ClientStarted client_started = 1;
-    Error error = 2;
+    ClientKilled client_killed = 2;
+    Error error = 3;
   }
 }
