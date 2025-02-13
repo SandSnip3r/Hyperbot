@@ -25,7 +25,7 @@ int64_t getMsSinceEpoch() {
 } // anonymous namespace
 
 const bool PacketLogger::kLogToFile = false;
-const bool PacketLogger::kLogToConsole = true;
+const bool PacketLogger::kLogToConsole = false;
 
 PacketLogger::PacketLogger(const std::string &logDirectoryPath) : logFileDirectoryPath_(logDirectoryPath), logFilePath_(getLogFilePath()) {
   if (kLogToFile) {
@@ -103,13 +103,7 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
     }
     ss << '\n';
     if (lineNum == 0) {
-      const std::string kOpcodeStr = packet::toString(static_cast<packet::Opcode>(packet.opcode));
-      if (kOpcodeStr.size() >= indentSize) {
-        ss << kOpcodeStr.substr(0, indentSize);
-      } else {
-        ss << kOpcodeStr;
-        ss << std::string(indentSize-kOpcodeStr.size(), ' ');
-      }
+      ss << packet::toString(static_cast<packet::Opcode>(packet.opcode));
     } else {
       ss << std::string(indentSize, ' ');
     }

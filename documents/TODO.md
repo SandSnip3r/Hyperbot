@@ -9,5 +9,3 @@
 - Add UI element to toggle packet logging to console
 - Kill clients on shutdown
 - Auto relogin when a character disconnects
-- Use x-macros for opcode.hpp/toString(Opcode)
-- Use x-macros for event.hpp/toString(Event)

@@ -14,119 +14,107 @@
 #include <variant>
 #include <vector>
 
+#define EVENT_EVENTCODE_LIST(F) \
+  F(SelfSpawned) \
+  F(CosSpawned) \
+  F(InternalItemCooldownEnded) \
+  F(ItemCooldownEnded) \
+  F(EntityHpChanged) \
+  F(MpChanged) \
+  F(MaxHpMpChanged) \
+  F(StatsChanged) \
+  F(StatesChanged) \
+  F(InternalSkillCooldownEnded) \
+  F(SkillCooldownEnded) \
+  F(InventoryUpdated) \
+  F(AvatarInventoryUpdated) \
+  F(CosInventoryUpdated) \
+  F(StorageUpdated) \
+  F(GuildStorageUpdated) \
+  F(SkillCastAboutToEnd) \
+  F(ItemUseFailed) \
+  F(InjectPacket) \
+  F(RequestStartTraining) \
+  F(RequestStopTraining) \
+  F(TrainingStarted) \
+  F(TrainingStopped) \
+  F(EntityDeselected) \
+  F(EntitySelected) \
+  F(NpcTalkStart) \
+  F(StorageInitialized) \
+  F(GuildStorageInitialized) \
+  F(RepairSuccessful) \
+  F(InventoryGoldUpdated) \
+  F(StorageGoldUpdated) \
+  F(GuildStorageGoldUpdated) \
+  F(CharacterLevelUpdated) \
+  F(CharacterSkillPointsUpdated) \
+  F(CharacterAvailableStatPointsUpdated) \
+  F(CharacterExperienceUpdated) \
+  F(EnteredNewRegion) \
+  F(EntitySpawned) \
+  F(EntityDespawned) \
+  F(EntityMovementEnded) \
+  F(EntityOwnershipRemoved) \
+  F(StateMachineCreated) \
+  F(StateMachineDestroyed) \
+  F(SkillBegan) \
+  F(SkillEnded) \
+  F(DealtDamage) \
+  F(KilledEntity) \
+  F(OurSkillFailed) \
+  F(PlayerCharacterBuffAdded) \
+  F(PlayerCharacterBuffRemoved) \
+  F(OurCommandError) \
+  F(ItemUseTimeout) \
+  F(SkillCastTimeout) \
+  F(EntityMovementBegan) \
+  F(StateMachineActiveTooLong) \
+  F(EntityMovementTimerEnded) \
+  F(EntityPositionUpdated) \
+  F(EntityNotMovingAngleChanged) \
+  F(EntityBodyStateChanged) \
+  F(EntityLifeStateChanged) \
+  F(EntityEnteredGeometry) \
+  F(EntityExitedGeometry) \
+  F(TrainingAreaSet) \
+  F(TrainingAreaReset) \
+  F(KnockedBack) \
+  F(KnockedDown) \
+  F(KnockbackStunEnded) \
+  F(KnockdownStunEnded) \
+  F(MovementRequestTimedOut) \
+  F(WalkingPathUpdated) \
+  F(InventoryItemUpdated) \
+  F(HwanPointsUpdated) \
+  F(AlchemyCompleted) \
+  F(AlchemyTimedOut) \
+  F(GmCommandTimedOut) \
+  F(ChatReceived) \
+  F(SetCurrentPositionAsTrainingCenter) \
+  F(ResurrectOption) \
+  F(LearnMasterySuccess) \
+  F(LearnSkillSuccess) \
+  F(LearnSkillError) \
+  F(Timeout) \
+  F(LoginCompleted) \
+  F(RlStartPvp) \
+  F(StateUpdated) \
+  F(ServerAuthSuccess) \
+  F(GatewayPatchResponseReceived) \
+  F(ShardListReceived) \
+  F(GatewayLoginResponseReceived) \
+  F(ConnectedToAgentServer) \
+  F(CharacterListReceived) \
+  F(IbuvChallengeReceived) \
+  F(CharacterSelectionJoinSuccess)
+
 namespace event {
 
 enum class EventCode {
-  kSelfSpawned,
-  kCosSpawned,
-  kInternalItemCooldownEnded,
-  kItemCooldownEnded,
-  kEntityHpChanged,
-  kMpChanged,
-  kMaxHpMpChanged,
-  kStatsChanged,
-  kStatesChanged,
-  kInternalSkillCooldownEnded,
-  kSkillCooldownEnded,
-  kInventoryUpdated,
-  kAvatarInventoryUpdated,
-  kCosInventoryUpdated,
-  kStorageUpdated,
-  kGuildStorageUpdated,
-  kSkillCastAboutToEnd,
-  kItemUseFailed,
-  kInjectPacket,
-  kRequestStartTraining,
-  kRequestStopTraining,
-  kTrainingStarted,
-  kTrainingStopped,
-  kEntityDeselected,
-  kEntitySelected,
-  kNpcTalkStart,
-  kStorageInitialized,
-  kGuildStorageInitialized,
-  kRepairSuccessful,
-  kInventoryGoldUpdated,
-  kStorageGoldUpdated,
-  kGuildStorageGoldUpdated,
-  kCharacterLevelUpdated,
-  kCharacterSkillPointsUpdated,
-  kCharacterAvailableStatPointsUpdated,
-  kCharacterExperienceUpdated,
-  kEnteredNewRegion,
-  kEntitySpawned,
-  kEntityDespawned,
-  kEntityMovementEnded,
-  kEntityOwnershipRemoved,
-  kStateMachineCreated,
-  kStateMachineDestroyed,
-
-  kSkillBegan,
-  kSkillEnded,
-  kDealtDamage,
-  kKilledEntity,
-  kOurSkillFailed,
-  kPlayerCharacterBuffAdded,
-  kPlayerCharacterBuffRemoved,
-  kOurCommandError,
-  kItemUseTimeout,
-  kSkillCastTimeout,
-  kEntityMovementBegan,
-  kStateMachineActiveTooLong,
-
-  // Only used to directly update movement state of entity
-  kEntityMovementTimerEnded,
-
-  // Only used to send position changed to UI
-  kEntityPositionUpdated,
-
-  kEntityNotMovingAngleChanged,
-  kEntityBodyStateChanged,
-  kEntityLifeStateChanged,
-  kEntityEnteredGeometry,
-  kEntityExitedGeometry,
-  kTrainingAreaSet,
-  kTrainingAreaReset,
-
-  kKnockedBack,
-  kKnockedDown,
-  kKnockbackStunEnded,
-  kKnockdownStunEnded,
-
-  kMovementRequestTimedOut,
-  kWalkingPathUpdated,
-
-  kInventoryItemUpdated,
-  kHwanPointsUpdated,
-
-  // Alchemy
-  kAlchemyCompleted,
-  kAlchemyTimedOut,
-
-  kGmCommandTimedOut,
-  kChatReceived,
-  kSetCurrentPositionAsTrainingCenter,
-  kResurrectOption,
-  kLearnMasterySuccess,
-  kLearnSkillSuccess,
-  kLearnSkillError,
-  kTimeout,
-
-  kLoginCompleted,
-  // ===============================Reinforcement Learning==============================
-  kRlStartPvp,
-  // ===================================State updates===================================
-  kStateUpdated = 0x1000,
-  // Login state updates
-  kServerAuthSuccess,
-  kGatewayPatchResponseReceived,
-  kShardListReceived,
-  kGatewayLoginResponseReceived,
-  kConnectedToAgentServer,
-  kCharacterListReceived,
-  kIbuvChallengeReceived,
-  kCharacterSelectionJoinSuccess,
-  // ===================================================================================
+#define F(name) k##name,
+  EVENT_EVENTCODE_LIST(F)
+#undef F
 };
 
 std::string_view toString(EventCode eventCode);

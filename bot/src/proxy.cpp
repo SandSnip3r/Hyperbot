@@ -279,7 +279,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
         }
 
         const auto opcodeAsEnum = static_cast<packet::Opcode>(packet.opcode);
-        if (opcodeAsEnum == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN) {
+        if (opcodeAsEnum == packet::Opcode::kServerAgentCharacterDataBegin) {
           // Initialize data/container
           if (characterInfoPacketContainer_) {
             // What? There's already one?
@@ -335,7 +335,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
 
         // Run packet through bot, regardless if it's blocked
         // Handle "begin", "data", and "end" pieces of split packets
-        if (opcodeAsEnum == packet::Opcode::SERVER_AGENT_CHARACTER_INFO_END) {
+        if (opcodeAsEnum == packet::Opcode::kServerAgentCharacterDataEnd) {
           // Send packet to broker
           packetBroker_.packetReceived(*characterInfoPacketContainer_, direction);
           // Reset data
@@ -355,7 +355,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
           packetBroker_.packetReceived(*guildStoragePacketContainer_, direction);
           // Reset data
           guildStoragePacketContainer_.reset();
-        } else if (opcodeAsEnum != packet::Opcode::SERVER_AGENT_CHARACTER_INFO_BEGIN &&
+        } else if (opcodeAsEnum != packet::Opcode::kServerAgentCharacterDataBegin &&
                     opcodeAsEnum != packet::Opcode::kServerAgentCharacterData &&
                     opcodeAsEnum != packet::Opcode::kServerAgentEntityGroupspawnBegin &&
                     opcodeAsEnum != packet::Opcode::kServerAgentEntityGroupspawnData &&
