@@ -301,10 +301,18 @@ void PacketProcessor::serverGatewayPatchResponseReceived(const packet::parsing::
   eventBroker_.publishEvent<event::GatewayPatchResponseReceived>(sessionId_);
 }
 
-void PacketProcessor::serverGatewayShardListResponseReceived(const packet::parsing::ServerGatewayShardListResponse &packet) const {
+void PacketProcessor::serverGatewayShardListResponseReceived(const packet::parsing::ServerGatewayShardListResponse &packet) {
   VLOG(1) << absl::StreamFormat("Shard list:\n%s", absl::StrJoin(packet.shards(), ",\n", [](std::string *out, const packet::structures::Shard &shard) {
     absl::StrAppend(out, absl::StrFormat("  { ShardID: %d, FarmID: %d, Shard Name: \"%s\", Online: %d, Capacity: %d, Is Operating? %v }", shard.shardId, shard.farmId, shard.shardName, shard.onlineCount, shard.capacity, static_cast<bool>(shard.isOperating)));
   }));
+  if (!worldState_.shardListResponse_.has_value()) {
+    worldState_.shardListResponse_.emplace(packet);
+  } else {
+    // Shard list received again. Check that it matches what we already have.
+    if (worldState_.shardListResponse_->shards() != packet.shards()) {
+      throw std::runtime_error("Received a different shard list than what we already have");
+    }
+  }
   eventBroker_.publishEvent<event::ShardListReceived>(sessionId_, packet.shards());
 }
 

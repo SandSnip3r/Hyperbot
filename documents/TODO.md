@@ -7,8 +7,7 @@
 - Get away from include & src directories in silkroad_lib
 - It would be really nice to have a local list of known characters
 - Add UI element to toggle packet logging to console
-<<<<<<< Updated upstream
 - Kill clients on shutdown
-=======
 - Auto relogin when a character disconnects
->>>>>>> Stashed changes
+- Use x-macros for opcode.hpp/toString(Opcode)
+- Use x-macros for event.hpp/toString(Event)

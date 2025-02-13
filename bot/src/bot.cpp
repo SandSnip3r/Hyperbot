@@ -21,6 +21,7 @@
 #include "state/machine/botting.hpp"
 #include "state/machine/login.hpp"
 #include "state/machine/maxMasteryAndSkills.hpp"
+#include "state/machine/walking.hpp"
 #include "type_id/categories.hpp"
 
 #include "pathfinder.h"
@@ -51,8 +52,6 @@ Bot::Bot(SessionId sessionId,
 void Bot::initialize() {
   subscribeToEvents();
   packetProcessor_.initialize();
-  proxy_.blockOpcode(packet::Opcode::kClientGatewayShardListRequest);
-  proxy_.blockOpcode(packet::Opcode::kClientGatewayShardListPingRequest);
 }
 
 void Bot::setCharacter(const CharacterLoginInfo &characterLoginInfo) {
@@ -197,8 +196,13 @@ void Bot::handleEvent(const event::Event *event) {
     switch (eventCode) {
       // Login
       case event::EventCode::kGatewayPatchResponseReceived: {
-        LOG(INFO) << "kGatewayPatchResponseReceived";
-        clientOpenPromise_.set_value();
+        // Make sure this is for our session
+        if (const auto *castedEvent = dynamic_cast<const event::GatewayPatchResponseReceived*>(event)) {
+          if (castedEvent->sessionId == sessionId_) {
+            // This is the last of the communication between the client and the server as the client opens.
+            clientOpenPromise_.set_value();
+          }
+        }
         break;
       }
       case event::EventCode::kShardListReceived: {
@@ -284,6 +288,17 @@ void Bot::onUpdate(const event::Event *event) {
     loginStateMachine_->onUpdate(event);
     if (loginStateMachine_->done()) {
       loginStateMachine_.reset();
+    }
+  }
+
+  if (movingStateMachine_) {
+    movingStateMachine_->onUpdate(event);
+    if (movingStateMachine_->done()) {
+      if (movingCompletedPromise_) {
+        movingCompletedPromise_->set_value();
+        movingCompletedPromise_.reset();
+      }
+      movingStateMachine_.reset();
     }
   }
 
@@ -827,15 +842,11 @@ sro::scalar_types::EntityGlobalId Bot::getClosestNpcGlobalId() const {
 // =========================================================RL training========================================================
 // ============================================================================================================================
 
-std::future<void> Bot::getFutureForClientOpening() {
+std::future<void> Bot::asyncOpenClient() {
   return clientOpenPromise_.get_future();
 }
 
-bool Bot::loggedIn() const {
-  return selfEntity_ != nullptr;
-}
-
-std::future<void> Bot::logIn() {
+std::future<void> Bot::asyncLogIn() {
   if (loggedInPromise_.has_value()) {
     throw std::runtime_error("Already have a pending promise for logging in");
   }
@@ -854,4 +865,21 @@ std::future<void> Bot::logIn() {
   // Not yet logged in. We'll set the promise when we receive the SelfSpawned event.
   loginStateMachine_ = std::make_unique<state::machine::Login>(*this, characterLoginInfo_);
   return loggedInPromise_->get_future();
+}
+
+std::future<void> Bot::asyncMoveTo(const sro::Position &destinationPosition) {
+  if (!loggedIn()) {
+    throw std::runtime_error("Cannot move to destination, self is not spawned");
+  }
+  if (movingStateMachine_) {
+    LOG(WARNING) << "Already have a moving state machine";
+    movingStateMachine_.reset();
+  }
+  movingStateMachine_ = std::make_unique<state::machine::Walking>(*this, std::vector<packet::building::NetworkReadyPosition>{destinationPosition});
+  movingCompletedPromise_.emplace();
+  return movingCompletedPromise_->get_future();
+}
+
+bool Bot::loggedIn() const {
+  return selfEntity_ != nullptr;
 }

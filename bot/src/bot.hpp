@@ -69,6 +69,7 @@ private:
   std::unique_ptr<state::machine::StateMachine> loginStateMachine_;
   std::unique_ptr<state::machine::StateMachine> autoPotionStateMachine_;
   std::unique_ptr<state::machine::StateMachine> bottingStateMachine_;
+  std::unique_ptr<state::machine::StateMachine> movingStateMachine_;
   state::machine::ConcurrentStateMachines concurrentStateMachines_{*this};
 
   void loadConfig(std::string_view characterName);
@@ -108,14 +109,17 @@ public:
   sro::scalar_types::EntityGlobalId getClosestNpcGlobalId() const;
 
   // Interface for RL training.
-  std::future<void> getFutureForClientOpening();
+  std::future<void> asyncOpenClient();
+  std::future<void> asyncLogIn();
+  std::future<void> asyncMoveTo(const sro::Position &destinationPosition);
+
   bool loggedIn() const;
-  std::future<void> logIn();
 
 private:
   // Data for RL training interface.
   std::promise<void> clientOpenPromise_;
   std::optional<std::promise<void>> loggedInPromise_;
+  std::optional<std::promise<void>> movingCompletedPromise_;
 };
 
 #endif

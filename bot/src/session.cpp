@@ -27,7 +27,6 @@ void Session::runAsync() {
     throw std::runtime_error("Session::runAsync called before Session::initialize");
   }
   proxy_.runAsync();
-  clientId_ = clientManagerInterface_.startClient(proxy_.getOurListeningPort());
 }
 
 const state::WorldState& Session::getWorldState() const {
@@ -36,6 +35,11 @@ const state::WorldState& Session::getWorldState() const {
 
 Bot& Session::getBot() {
   return bot_;
+}
+
+std::future<void> Session::asyncOpenClient() {
+  clientId_ = clientManagerInterface_.startClient(proxy_.getOurListeningPort());
+  return bot_.asyncOpenClient();
 }
 
 std::atomic<SessionId> Session::nextSessionId{0};

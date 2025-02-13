@@ -114,6 +114,8 @@ add_executable(${PROJECT_NAME}
   src/packet/building/clientGatewayLoginIbuvAnswer.hpp
   src/packet/building/clientGatewayLoginRequest.cpp
   src/packet/building/clientGatewayLoginRequest.hpp
+  src/packet/building/clientGatewayShardListRequest.cpp
+  src/packet/building/clientGatewayShardListRequest.hpp
   src/packet/building/commonBuilding.cpp
   src/packet/building/commonBuilding.hpp
   src/packet/building/serverAgentChatUpdate.cpp

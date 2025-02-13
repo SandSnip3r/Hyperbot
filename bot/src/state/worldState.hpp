@@ -5,12 +5,14 @@
 #include "entity/character.hpp"
 #include "entity/entity.hpp"
 #include "entityTracker.hpp"
+#include "packet/parsing/serverGatewayShardListResponse.hpp"
 #include "pk2/gameData.hpp"
 
 #include <silkroad_lib/scalar_types.hpp>
 
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -33,6 +35,7 @@ public:
   }
 
   std::mutex mutex;
+  std::optional<packet::parsing::ServerGatewayShardListResponse> shardListResponse_;
 private:
   const pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;

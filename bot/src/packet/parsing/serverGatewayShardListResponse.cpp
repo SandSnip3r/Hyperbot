@@ -1,8 +1,5 @@
 #include "serverGatewayShardListResponse.hpp"
 
-#include <absl/log/log.h>
-#include <absl/strings/str_format.h>
-
 namespace packet::parsing {
 
 ServerGatewayShardListResponse::ServerGatewayShardListResponse(const PacketContainer &packet) :
@@ -17,7 +14,6 @@ ServerGatewayShardListResponse::ServerGatewayShardListResponse(const PacketConta
     uint8_t farmId = stream.Read<uint8_t>();
     std::string farmName;
     stream.Read(farmName);
-    VLOG(1) << absl::StreamFormat("Farm \"%s\"", farmName);
   }
 
   while (true) {
@@ -32,7 +28,6 @@ ServerGatewayShardListResponse::ServerGatewayShardListResponse(const PacketConta
     stream.Read(shard.capacity);
     stream.Read(shard.isOperating);
     stream.Read(shard.farmId);
-    VLOG(1) << absl::StreamFormat("Shard \"%s\"", shard.shardName);
   }
 }
 

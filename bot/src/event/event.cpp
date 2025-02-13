@@ -5,9 +5,6 @@
 namespace event {
 
 std::string_view toString(EventCode eventCode) {
-  if (eventCode == EventCode::kServerAuthSuccess) {
-    return "ServerAuthSuccess";
-  }
   if (eventCode == EventCode::kSelfSpawned) {
     return "SelfSpawned";
   }
@@ -256,6 +253,12 @@ std::string_view toString(EventCode eventCode) {
   }
   if (eventCode == EventCode::kStateUpdated) {
     return "StateUpdated";
+  }
+  if (eventCode == EventCode::kServerAuthSuccess) {
+    return "ServerAuthSuccess";
+  }
+  if (eventCode == EventCode::kGatewayPatchResponseReceived) {
+    return "GatewayPatchResponseReceived";
   }
   if (eventCode == EventCode::kShardListReceived) {
     return "ShardListReceived";

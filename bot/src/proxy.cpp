@@ -135,48 +135,48 @@ void Proxy::PostAccept(uint32_t count) {
 
 // Handles new connections
 void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, const boost::system::error_code & error) {
-  // Error check
-  if (!error) {
-    // Close active connections
-    clientConnection.Close();
-    serverConnection.Close();
-
-    // Disable nagle
-    s->set_option(boost::asio::ip::tcp::no_delay(true));
-
-    clientConnection.Initialize(s);
-    clientConnection.security->GenerateHandshake();
-
-    boost::system::error_code ec;
-    if (connectToAgent) {
-      // Connect to the agent server
-      VLOG(1) << "Received connection; connecting to the agent server";
-      ec = serverConnection.Connect(agentIP_, agentPort_);
-    } else {
-      // Connect to the gateway server
-      VLOG(1) << "Received connection; connecting to the gateway server";
-      ec = serverConnection.Connect(gatewayAddress_, gatewayPort_);
-    }
-
-    // Error check
-    if (ec) {
-      LOG(INFO) << "Unable to connect to " << (connectToAgent ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent ? agentPort_ : gatewayPort_) << ": \"" << ec.message() << '"';
-
-      // Silkroad connection is no longer needed
-      clientConnection.Close();
-    } else {
-      clientConnection.PostRead();
-      serverConnection.PostRead();
-    }
-
-    // Next connection goes to the gateway server
-    connectToAgent = false;
-
-    // Post another accept
-    PostAccept();
-  } else {
-    LOG(INFO) << "Error accepting new connection: \"" << error.message() << '"';
+  if (error) {
+    LOG(WARNING) << "Error accepting new connection: \"" << error.message() << '"';
+    return;
   }
+
+  // Close active connections
+  clientConnection.Close();
+  serverConnection.Close();
+
+  // Disable nagle
+  s->set_option(boost::asio::ip::tcp::no_delay(true));
+
+  clientConnection.Initialize(s);
+  clientConnection.security->GenerateHandshake();
+
+  boost::system::error_code ec;
+  if (connectToAgent) {
+    // Connect to the agent server
+    VLOG(1) << absl::StreamFormat("Received connection; connecting to the agent server at %s:%d", agentIP_, agentPort_);
+    ec = serverConnection.Connect(agentIP_, agentPort_);
+  } else {
+    // Connect to the gateway server
+    VLOG(1) << absl::StreamFormat("Received connection; connecting to the gateway server at %s:%d", gatewayAddress_, gatewayPort_);
+    ec = serverConnection.Connect(gatewayAddress_, gatewayPort_);
+  }
+
+  // Error check
+  if (ec) {
+    LOG(INFO) << "Unable to connect to " << (connectToAgent ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent ? agentPort_ : gatewayPort_) << ": \"" << ec.message() << '"';
+
+    // Silkroad connection is no longer needed
+    clientConnection.Close();
+  } else {
+    clientConnection.PostRead();
+    serverConnection.PostRead();
+  }
+
+  // Next connection goes to the gateway server
+  connectToAgent = false;
+
+  // Post another accept
+  PostAccept();
 }
 
 void Proxy::ProcessPackets(const boost::system::error_code & error) {

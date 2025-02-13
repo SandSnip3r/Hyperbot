@@ -40,6 +40,8 @@ public:
   void runAsync();
   const state::WorldState& getWorldState() const;
   Bot& getBot();
+
+  std::future<void> asyncOpenClient();
 private:
   SessionId sessionId_{createUniqueSessionId()};
   bool initialized_{false};

@@ -117,7 +117,7 @@ private:
   //  All member functions are const because this class should hold no state.
   void frameworkMessageIdentifyReceived(const packet::parsing::FrameworkMessageIdentify &packet) const;
   void serverGatewayPatchResponseReceived(const packet::parsing::ServerGatewayPatchResponse &packet) const;
-  void serverGatewayShardListResponseReceived(const packet::parsing::ServerGatewayShardListResponse &packet) const;
+  void serverGatewayShardListResponseReceived(const packet::parsing::ServerGatewayShardListResponse &packet);
   void serverGatewayLoginResponseReceived(const packet::parsing::ServerGatewayLoginResponse &packet) const;
   void serverGatewayLoginIbuvChallengeReceived(const packet::parsing::ServerGatewayLoginIbuvChallenge &packet) const;
   void serverAgentAuthResponseReceived(const packet::parsing::ServerAgentAuthResponse &packet) const;

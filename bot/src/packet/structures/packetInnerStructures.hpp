@@ -22,6 +22,14 @@ struct Shard {
   uint16_t capacity;
   uint8_t isOperating;
   uint8_t farmId;
+  bool operator==(const Shard &other) const {
+    return shardId == other.shardId &&
+           shardName == other.shardName &&
+           onlineCount == other.onlineCount &&
+           capacity == other.capacity &&
+           isOperating == other.isOperating &&
+           farmId == other.farmId;
+  }
 };
 
 namespace character_selection {

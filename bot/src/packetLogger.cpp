@@ -2,6 +2,7 @@
 
 #include "packet/opcode.hpp"
 
+#include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 
 #include <chrono>
@@ -77,7 +78,6 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
   const int kBytesPerLine{20};
 
   std::stringstream ss;
-  ss << '[' << msSinceEpoch << "] " << std::this_thread::get_id() << " ";
   if (direction == PacketContainer::Direction::kClientToServer) {
     ss << " (C->S)";
   } else if (direction == PacketContainer::Direction::kServerToClient) {
@@ -128,8 +128,7 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
       ss << std::string(indentSize, ' ');
     }
   }
-  ss << '\n';
-  std::cout << ss.rdbuf() << std::flush;
+  LOG(INFO) << ss.str();
 }
 
 std::string PacketLogger::getLogFilePath() const {

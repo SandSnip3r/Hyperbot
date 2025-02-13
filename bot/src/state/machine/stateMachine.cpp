@@ -17,6 +17,7 @@ StateMachine::~StateMachine() {
 
 void StateMachine::pushBlockedOpcode(packet::Opcode opcode) {
   if (!bot_.proxy().blockingOpcode(opcode)) {
+    VLOG(1) << "Pushing blocked opcode " << packet::toString(opcode);
     bot_.proxy().blockOpcode(opcode);
     blockedOpcodes_.push_back(opcode);
   }

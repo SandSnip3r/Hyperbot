@@ -7,6 +7,7 @@
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 
 #include <silkroad_lib/position.hpp>
+#include <silkroad_lib/position_math.hpp>
 
 namespace rl {
 
@@ -24,23 +25,23 @@ RlTrainingManager::RlTrainingManager(const pk2::GameData &gameData,
 void RlTrainingManager::run() {
   // For now, explicitly have two characters fight against each other.
   Session session1(gameData_, eventBroker_, worldState_, clientManagerInterface_);
-  // Session session2(gameData_, eventBroker_, worldState_, clientManagerInterface_);
+  Session session2(gameData_, eventBroker_, worldState_, clientManagerInterface_);
 
   session1.initialize();
-  // session2.initialize();
+  session2.initialize();
 
   // Explicitly pick which characters we'll use for each session.
   CharacterLoginInfo cli1{/*username=*/"rl0", /*password=*/"0", /*characterName=*/"RL_0"};
   CharacterLoginInfo cli2{/*username=*/"rl1", /*password=*/"0", /*characterName=*/"RL_1"};
   session1.setCharacter(cli1);
-  // session2.setCharacter(cli2);
+  session2.setCharacter(cli2);
 
   // Start the sessions.
   session1.runAsync();
-  // session2.runAsync();
+  session2.runAsync();
 
   Bot &bot1 = session1.getBot();
-  // Bot &bot2 = session2.getBot();
+  Bot &bot2 = session2.getBot();
 
   // Intelligence instances exist separate from characters.
   rl::ai::RandomIntelligence randomIntelligence1;
@@ -52,14 +53,23 @@ void RlTrainingManager::run() {
                                         /*yOffset=*/-101.945,
                                         /*zOffset=*/1809.000);
 
-  auto character1Future = bot1.getFutureForClientOpening();
-  LOG(INFO) << "Waiting for client to open";
-  character1Future.wait();
-  LOG(INFO) << "Client is open";
+  auto character1ClientOpenFuture = session1.asyncOpenClient();
+  auto character2ClientOpenFuture = session2.asyncOpenClient();
+  LOG(INFO) << "Waiting for clients to open";
+  character1ClientOpenFuture.wait();
+  character2ClientOpenFuture.wait();
+  LOG(INFO) << "Clients are open";
+
+  auto character1LoginFuture = bot1.asyncLogIn();
+  auto character2LoginFuture = bot2.asyncLogIn();
+  LOG(INFO) << "Waiting for characters to log in";
+  character1LoginFuture.wait();
+  character2LoginFuture.wait();
+  LOG(INFO) << "Characters are logged in";
 
   while (true) {
-    // // Get the characters ready to fight.
-    // prepareCharactersForPvp(bot1, bot2, pvpCenterPosition);
+    // Get the characters ready to fight.
+    prepareCharactersForPvp(bot1, bot2, pvpCenterPosition);
 
     // // Reset the intelligences to prepare them for a new fight. In the future, when these contain RNNs, this will include resetting the memory cells.
     // randomIntelligence1.reset();
@@ -85,45 +95,22 @@ void RlTrainingManager::run() {
 }
 
 void RlTrainingManager::prepareCharactersForPvp(Bot &char1, Bot &char2, const sro::Position pvpPosition) {
-  std::future<void> character1Future;
-  std::future<void> character2Future;
-
-  // If the client is not open, wait for it.
-  //  TODO: Also open it.
-
-
-  // If the character is not logged in, login.
-  if (!char1.loggedIn()) {
-    LOG(INFO) << "character 1 is not logged in. logging in";
-    character1Future = char1.logIn();
-  }
-  if (character1Future.valid()) {
-    LOG(INFO) << "Waiting for character 1 to log in";
-    character1Future.wait();
-    LOG(INFO) << "Character 1 is logged in";
-  }
-  if (!char2.loggedIn()) {
-    LOG(INFO) << "character 2 is not logged in. logging in";
-    character2Future = char2.logIn();
-  }
-  if (character2Future.valid()) {
-    LOG(INFO) << "Waiting for character 2 to log in";
-    character2Future.wait();
-    LOG(INFO) << "Character 2 is logged in";
-  }
-  LOG(INFO) << "Both characters are logged in";
-
   // TODO: If the character is dead, resurrect.
   // TODO: If the character is not in pvp mode, enable pvp mode.
 
-  // Make sure we have enough potions
-  // Make sure everything is repaired
   // Move to position (each at a slight offset from the pvp position)
   LOG(INFO) << "Preparing characters for PVP";
+  auto character1MoveFuture = char1.asyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, +10.0, 0.0));
+  auto character2MoveFuture = char2.asyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, -10.0, 0.0));
   LOG(INFO) << "Moving to " << pvpPosition.toString();
-  PacketContainer movePacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(pvpPosition);
-  char1.packetBroker().injectPacket(movePacket, PacketContainer::Direction::kClientToServer);
-  char2.packetBroker().injectPacket(movePacket, PacketContainer::Direction::kClientToServer);
+  character1MoveFuture.wait();
+  character2MoveFuture.wait();
+  LOG(INFO) << "Characters are at " << pvpPosition.toString();
+
+  // TODO: Make sure we have enough potions
+
+  // TODO: Make sure everything is repaired
+
   while (1) {}
 }
 
