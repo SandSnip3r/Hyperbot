@@ -1,6 +1,7 @@
 #include "itemData.hpp"
 
 #include <algorithm>
+#include <stdexcept>
 
 namespace pk2 {
 
@@ -28,6 +29,15 @@ const sro::pk2::ref::Item& ItemData::getItemByCodeName128(const std::string &cod
     throw std::runtime_error("ItemData::getItemByCodeName128 Item with codename "+codeName+" does not exist");
   }
   return it->second;
+}
+
+sro::pk2::ref::ItemId ItemData::getItemId(std::function<bool(const sro::pk2::ref::Item&)> predicate) const {
+  for (const auto& [itemId, item] : items_) {
+    if (predicate(item)) {
+      return itemId;
+    }
+  }
+  throw std::runtime_error("ItemData::getItemId No item found matching predicate");
 }
 
 const ItemData::ItemMap::size_type ItemData::size() const {

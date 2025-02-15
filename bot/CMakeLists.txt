@@ -240,6 +240,8 @@ add_executable(${PROJECT_NAME}
   src/packet/parsing/serverAgentInventoryUpdateDurability.hpp
   src/packet/parsing/serverAgentInventoryUpdateItem.cpp
   src/packet/parsing/serverAgentInventoryUpdateItem.hpp
+  src/packet/parsing/serverAgentOperatorResponse.cpp
+  src/packet/parsing/serverAgentOperatorResponse.hpp
   src/packet/parsing/serverAgentResurrectOption.cpp
   src/packet/parsing/serverAgentResurrectOption.hpp
   src/packet/parsing/serverAgentSkillBegin.cpp
@@ -326,6 +328,10 @@ add_executable(${PROJECT_NAME}
   src/state/machine/concurrentStateMachines.hpp
   src/state/machine/dropItem.cpp
   src/state/machine/dropItem.hpp
+  src/state/machine/executeGmCommand.cpp
+  src/state/machine/executeGmCommand.hpp
+  src/state/machine/gmCommandSpawnAndPickItems.cpp
+  src/state/machine/gmCommandSpawnAndPickItems.hpp
   src/state/machine/login.cpp
   src/state/machine/login.hpp
   src/state/machine/maxMasteryAndSkills.cpp

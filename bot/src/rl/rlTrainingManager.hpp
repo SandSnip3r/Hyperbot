@@ -27,6 +27,9 @@ private:
   ClientManagerInterface &clientManagerInterface_;
   void prepareCharactersForPvp(Bot &char1, Bot &char2, const sro::Position pvpPosition);
   void pvp(Bot &char1, Bot &char2);
+
+  void buildItemRequirementList();
+  std::vector<Bot::ItemRequirement> itemRequirements_;
 };
 
 } // namespace rl

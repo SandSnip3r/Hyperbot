@@ -107,7 +107,9 @@
   F(ConnectedToAgentServer) \
   F(CharacterListReceived) \
   F(IbuvChallengeReceived) \
-  F(CharacterSelectionJoinSuccess)
+  F(CharacterSelectionJoinSuccess) \
+  F(OperatorRequestSuccess) \
+  F(OperatorRequestError)
 
 namespace event {
 
@@ -521,6 +523,18 @@ public:
   sro::scalar_types::ReferenceSkillId newSkillRefId;
   std::optional<sro::scalar_types::ReferenceSkillId> oldSkillRefId;
   virtual ~LearnSkillSuccess() = default;
+};
+
+struct OperatorRequestSuccess : public Event {
+  explicit OperatorRequestSuccess(EventId id, packet::enums::OperatorCommand operatorCommand);
+  packet::enums::OperatorCommand operatorCommand;
+  virtual ~OperatorRequestSuccess() = default;
+};
+
+struct OperatorRequestError : public Event {
+  explicit OperatorRequestError(EventId id, packet::enums::OperatorCommand operatorCommand);
+  packet::enums::OperatorCommand operatorCommand;
+  virtual ~OperatorRequestError() = default;
 };
 
 } // namespace event

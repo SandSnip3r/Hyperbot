@@ -171,6 +171,7 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentChatUpdate, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentGameReset, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentResurrectOption, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentOperatorResponse, packetHandleFunction);
 }
 
 void PacketProcessor::handlePacket(const PacketContainer &packet) {
@@ -275,6 +276,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentChatUpdate, serverAgentChatUpdateReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentGameReset, serverAgentGameResetReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentResurrectOption, serverAgentResurrectOptionReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentOperatorResponse, serverAgentOperatorResponseReceived);
   } catch (std::exception &ex) {
     LOG(INFO) << absl::StreamFormat("Error while handling packet %s: \"%s\"", packet::toString(static_cast<packet::Opcode>(packet.opcode)), ex.what());
     return;
@@ -1827,4 +1829,14 @@ void PacketProcessor::serverAgentGameResetReceived(const packet::parsing::Server
 
 void PacketProcessor::serverAgentResurrectOptionReceived(const packet::parsing::ServerAgentResurrectOption &packet) const {
   eventBroker_.publishEvent<event::ResurrectOption>(packet.option());
+}
+
+void PacketProcessor::serverAgentOperatorResponseReceived(const packet::parsing::ServerAgentOperatorResponse &packet) const {
+  if (packet.result() == 1) {
+    eventBroker_.publishEvent<event::OperatorRequestSuccess>(packet.operatorCommand());
+  } else if (packet.result() == 2) {
+    eventBroker_.publishEvent<event::OperatorRequestError>(packet.operatorCommand());
+  } else {
+    throw std::runtime_error("Unknown operator response result");
+  }
 }

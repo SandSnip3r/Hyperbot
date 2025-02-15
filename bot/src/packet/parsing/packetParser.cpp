@@ -49,6 +49,7 @@
 #include "serverAgentInventoryStorageData.hpp"
 #include "serverAgentInventoryUpdateDurability.hpp"
 #include "serverAgentInventoryUpdateItem.hpp"
+#include "serverAgentOperatorResponse.hpp"
 #include "serverAgentResurrectOption.hpp"
 #include "serverAgentSkillBegin.hpp"
 #include "serverAgentSkillEnd.hpp"
@@ -198,6 +199,8 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ServerAgentSkillMasteryLearnResponse>(packet);
       case Opcode::kServerAgentResurrectOption:
         return std::make_unique<ServerAgentResurrectOption>(packet);
+      case Opcode::kServerAgentOperatorResponse:
+        return std::make_unique<ServerAgentOperatorResponse>(packet);
     }
     LOG(WARNING) << "Warning! No packet parser found for opcode " << std::hex << (int)packet.opcode << std::dec << '(' << toString(opcode) << ")";
   } catch (std::exception &ex) {

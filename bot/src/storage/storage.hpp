@@ -11,14 +11,84 @@
 
 namespace storage {
 
+namespace detail {
+
+template<typename StoragePtr, typename ItemPtr>
+class StorageIterator {
+public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type        = std::remove_pointer_t<ItemPtr>;
+  using difference_type   = std::ptrdiff_t;
+  using pointer           = ItemPtr;
+  using reference         = value_type&;
+
+  StorageIterator(StoragePtr storage, uint8_t index) : storage_(storage), index_(index) {
+    advanceToValid();
+  }
+
+  StorageIterator& operator++() {
+    ++index_;
+    advanceToValid();
+    return *this;
+  }
+
+  StorageIterator operator++(int) {
+    StorageIterator tmp = *this;
+    ++(*this);
+    return tmp;
+  }
+
+  bool operator==(const StorageIterator& other) const {
+    return storage_ == other.storage_ && index_ == other.index_;
+  }
+
+  bool operator!=(const StorageIterator& other) const {
+    return !(*this == other);
+  }
+
+  // Now returns a reference to Item
+  reference operator*() const {
+    return *(storage_->getItem(index_));
+  }
+
+  pointer operator->() const {
+    return storage_->getItem(index_);
+  }
+
+  // Optional: Expose the slot index.
+  uint8_t slot() const { return index_; }
+
+private:
+  StoragePtr storage_;
+  uint8_t index_;
+
+  void advanceToValid() {
+    while (index_ < storage_->size() && !storage_->hasItem(index_)) {
+      ++index_;
+    }
+  }
+};
+
+}
+
 class Storage {
 public:
+  using iterator = detail::StorageIterator<Storage*, Item*>;
+  using const_iterator = detail::StorageIterator<const Storage*, const Item*>;
+
+  iterator begin() { return iterator(this, 0); }
+  iterator end()   { return iterator(this, size()); }
+
+  const_iterator begin() const { return const_iterator(this, 0); }
+  const_iterator end()   const { return const_iterator(this, size()); }
+  const_iterator cbegin() const { return const_iterator(this, 0); }
+  const_iterator cend()   const { return const_iterator(this, size()); }
 
   bool hasItem(uint8_t slot) const;
   Item* getItem(uint8_t slot);
   const Item* getItem(uint8_t slot) const;
   uint8_t size() const;
-  
+
   void clear();
   void resize(uint8_t newSize);
   void addItem(uint8_t slot, std::shared_ptr<Item> item);

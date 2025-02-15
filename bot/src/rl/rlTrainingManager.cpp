@@ -3,6 +3,7 @@
 #include "rl/ai/randomIntelligence.hpp"
 #include "rl/rlTrainingManager.hpp"
 #include "session.hpp"
+#include "type_id/categories.hpp"
 
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 
@@ -19,7 +20,7 @@ RlTrainingManager::RlTrainingManager(const pk2::GameData &gameData,
                       eventBroker_(eventBroker),
                       worldState_(worldState),
                       clientManagerInterface_(clientManagerInterface)  {
-  //
+  buildItemRequirementList();
 }
 
 void RlTrainingManager::run() {
@@ -100,14 +101,20 @@ void RlTrainingManager::prepareCharactersForPvp(Bot &char1, Bot &char2, const sr
 
   // Move to position (each at a slight offset from the pvp position)
   LOG(INFO) << "Preparing characters for PVP";
-  auto character1MoveFuture = char1.asyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, +10.0, 0.0));
-  auto character2MoveFuture = char2.asyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, -10.0, 0.0));
+  auto character1MoveFuture = char1.asyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, +25.0, 0.0));
+  auto character2MoveFuture = char2.asyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, -25.0, 0.0));
   LOG(INFO) << "Moving to " << pvpPosition.toString();
   character1MoveFuture.wait();
   character2MoveFuture.wait();
   LOG(INFO) << "Characters are at " << pvpPosition.toString();
 
-  // TODO: Make sure we have enough potions
+  // Make sure we have enough potions & other expendables.
+
+  // auto character1GetItemsFuture = char1.asyncMakeSureWeHaveItems(itemRequirements_);
+  // auto character2GetItemsFuture = char2.asyncMakeSureWeHaveItems(itemRequirements_);
+  // character1GetItemsFuture.wait();
+  // character2GetItemsFuture.wait();
+  LOG(INFO) << "Characters now have the required items";
 
   // TODO: Make sure everything is repaired
 
@@ -119,6 +126,20 @@ void RlTrainingManager::pvp(Bot &char1, Bot &char2) {
   eventBroker_.publishEvent(event::EventCode::kRlStartPvp);
 
   // Wait here until the fight is over.
+}
+
+void RlTrainingManager::buildItemRequirementList() {
+  const sro::pk2::ref::ItemId smallHpPotionRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
+    return type_id::categories::kHpPotion.contains(type_id::getTypeId(item)) && item.itemClass == 2;
+  });
+  const sro::pk2::ref::ItemId smallMpPotionRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
+    return type_id::categories::kMpPotion.contains(type_id::getTypeId(item)) && item.itemClass == 2;
+  });
+
+  constexpr int kSmallHpPotionRequiredCount = 200;
+  constexpr int kSmallMpPotionRequiredCount = 200;
+  itemRequirements_.push_back({smallHpPotionRefId, kSmallHpPotionRequiredCount});
+  itemRequirements_.push_back({smallMpPotionRefId, kSmallMpPotionRequiredCount});
 }
 
 } // namespace rl

@@ -32,6 +32,8 @@ public:
   bool isA(const type_id::TypeCategory &typeCategory) const;
   bool isOneOf(const std::vector<type_id::TypeCategory> &typeCategories) const;
   virtual ~Item() = 0; // Make base type polymorphic and uninstantiable
+
+  virtual int16_t getQuantity() const { return 1; }
 protected:
   Item(ItemType t);
 };
@@ -114,6 +116,8 @@ public:
 class ItemStorage : public Item {
 public:
   ItemStorage();
+
+  // TODO: Should this value be returned by an override of Item::quantity()
   uint32_t quantity; // This indicates the amount of elixirs in the cube
 };
 
@@ -121,6 +125,7 @@ public:
 class ItemExpendable : public Item {
 public:
   ItemExpendable();
+  int16_t getQuantity() const override { return quantity; }
   uint16_t quantity;
 protected:
   ItemExpendable(ItemType type);

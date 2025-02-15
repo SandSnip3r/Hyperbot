@@ -50,6 +50,7 @@
 #include "packet/parsing/serverAgentInventoryStorageData.hpp"
 #include "packet/parsing/serverAgentInventoryUpdateDurability.hpp"
 #include "packet/parsing/serverAgentInventoryUpdateItem.hpp"
+#include "packet/parsing/serverAgentOperatorResponse.hpp"
 #include "packet/parsing/serverAgentResurrectOption.hpp"
 #include "packet/parsing/serverAgentSkillBegin.hpp"
 #include "packet/parsing/serverAgentSkillEnd.hpp"
@@ -178,6 +179,7 @@ private:
   void serverAgentChatUpdateReceived(const packet::parsing::ServerAgentChatUpdate &packet) const;
   void serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet);
   void serverAgentResurrectOptionReceived(const packet::parsing::ServerAgentResurrectOption &packet) const;
+  void serverAgentOperatorResponseReceived(const packet::parsing::ServerAgentOperatorResponse &packet) const;
 
   std::optional<std::chrono::milliseconds> getItemCooldownMs(const storage::ItemExpendable &item) const;
   WrappedCommand wrapActionCommand(const packet::structures::ActionCommand &command) const;

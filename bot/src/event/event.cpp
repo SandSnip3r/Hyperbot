@@ -175,4 +175,10 @@ LearnMasterySuccess::LearnMasterySuccess(EventId id, sro::scalar_types::Referenc
 LearnSkillSuccess::LearnSkillSuccess(EventId id, sro::scalar_types::ReferenceSkillId newSkillId, std::optional<sro::scalar_types::ReferenceSkillId> oldSkillId) :
     Event(id, EventCode::kLearnSkillSuccess), newSkillRefId(newSkillId), oldSkillRefId(oldSkillId) {}
 
+OperatorRequestSuccess::OperatorRequestSuccess(EventId id, packet::enums::OperatorCommand operatorCommand) :
+    Event(id, EventCode::kOperatorRequestSuccess), operatorCommand(operatorCommand) {}
+
+OperatorRequestError::OperatorRequestError(EventId id, packet::enums::OperatorCommand operatorCommand) :
+    Event(id, EventCode::kOperatorRequestError), operatorCommand(operatorCommand) {}
+
 } // namespace event

@@ -19,6 +19,7 @@
 #include "state/machine/applyStatPoints.hpp"
 #include "state/machine/autoPotion.hpp"
 #include "state/machine/botting.hpp"
+#include "state/machine/gmCommandSpawnAndPickItems.hpp"
 #include "state/machine/login.hpp"
 #include "state/machine/maxMasteryAndSkills.hpp"
 #include "state/machine/walking.hpp"
@@ -30,6 +31,7 @@
 #include <silkroad_lib/position_math.hpp>
 
 #include <absl/log/log.h>
+#include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
 #include <absl/strings/str_split.h>
 
@@ -186,6 +188,8 @@ void Bot::subscribeToEvents() {
   eventBroker_.subscribeToEvent(event::EventCode::kSkillCooldownEnded, eventHandleFunction);
 
   eventBroker_.subscribeToEvent(event::EventCode::kStateMachineActiveTooLong, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kOperatorRequestSuccess, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kOperatorRequestError, eventHandleFunction);
 }
 
 void Bot::handleEvent(const event::Event *event) {
@@ -299,6 +303,17 @@ void Bot::onUpdate(const event::Event *event) {
         movingCompletedPromise_.reset();
       }
       movingStateMachine_.reset();
+    }
+  }
+
+  if (gmCommandItemsStateMachine_) {
+    gmCommandItemsStateMachine_->onUpdate(event);
+    if (gmCommandItemsStateMachine_->done()) {
+      gmCommandItemsStateMachine_.reset();
+      if (gmCommandItemsPromise_) {
+        gmCommandItemsPromise_->set_value();
+        gmCommandItemsPromise_.reset();
+      }
     }
   }
 
@@ -510,20 +525,20 @@ void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
     LOG(WARNING) << "Body state changed, but self is not spawned";
     return;
   }
-  if (event.globalId == selfEntity->globalId) {
-    // Our body state changed
-    if (selfEntity->bodyState() == packet::enums::BodyState::kInvisibleGm) {
-      // For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
-      // Set self as visible
-      VLOG(1) << "Setting self as visible";
-      const auto setVisiblePacket = packet::building::ClientAgentOperatorRequest::toggleInvisible();
-      packetBroker_.injectPacket(setVisiblePacket, PacketContainer::Direction::kClientToServer);
+  // if (event.globalId == selfEntity->globalId) {
+  //   // Our body state changed
+  //   if (selfEntity->bodyState() == packet::enums::BodyState::kInvisibleGm) {
+  //     // For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
+  //     // Set self as visible
+  //     VLOG(1) << "Setting self as visible";
+  //     const auto setVisiblePacket = packet::building::ClientAgentOperatorRequest::toggleInvisible();
+  //     packetBroker_.injectPacket(setVisiblePacket, PacketContainer::Direction::kClientToServer);
 
-      // LOG(INFO) << "Setting free pvp mode";
-      // const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
-      // packetBroker_.injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
-    }
-  }
+  //     // LOG(INFO) << "Setting free pvp mode";
+  //     // const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
+  //     // packetBroker_.injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
+  //   }
+  // }
 }
 
 void Bot::handleKnockbackStunEnded() {
@@ -880,6 +895,44 @@ std::future<void> Bot::asyncMoveTo(const sro::Position &destinationPosition) {
   return movingCompletedPromise_->get_future();
 }
 
+std::future<void> Bot::asyncMakeSureWeHaveItems(const std::vector<ItemRequirement> &itemRequirements) {
+  std::map<sro::pk2::ref::ItemId, uint16_t> missingCounts;
+  for (const auto& itemRequirement : itemRequirements) {
+    missingCounts[itemRequirement.refId] = itemRequirement.count;
+  }
+
+  for (auto &item : inventory()) {
+    for (auto& [itemId, missing] : missingCounts) {
+      if (item.refItemId == itemId) {
+        missing -= item.getQuantity();
+      }
+    }
+  }
+  LOG(INFO) << "Character " << selfState()->name << " needs the following items:";
+  for (const auto& [itemId, missing] : missingCounts) {
+    if (missing == 0) {
+      // Have enough.
+      continue;
+    }
+    LOG(INFO) << absl::StreamFormat("  %d %s", missing, gameData_.getItemName(itemId));
+  }
+  state::machine::GmCommandSpawnAndPickItems::ItemListBuilder itemListBuilder;
+  for (const auto& [itemId, missing] : missingCounts) {
+    if (missing == 0) {
+      // Have enough.
+      continue;
+    }
+    itemListBuilder.addItemRequest({itemId, missing});
+  }
+  gmCommandItemsStateMachine_ = std::make_unique<state::machine::GmCommandSpawnAndPickItems>(*this, itemListBuilder.getItemRequests());
+  gmCommandItemsPromise_.emplace();
+  return gmCommandItemsPromise_->get_future();
+}
+
 bool Bot::loggedIn() const {
   return selfEntity_ != nullptr;
+}
+
+const storage::Storage& Bot::inventory() const {
+  return selfState()->inventory;
 }

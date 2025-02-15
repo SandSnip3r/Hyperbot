@@ -45,6 +45,7 @@ public:
   state::EntityTracker& entityTracker();
   const state::EntityTracker& entityTracker() const;
   std::shared_ptr<entity::Self> selfState() const;
+  const storage::Storage& inventory() const;
   SessionId sessionId() const { return sessionId_; }
 protected:
   friend class broker::EventBroker;
@@ -70,6 +71,7 @@ private:
   std::unique_ptr<state::machine::StateMachine> autoPotionStateMachine_;
   std::unique_ptr<state::machine::StateMachine> bottingStateMachine_;
   std::unique_ptr<state::machine::StateMachine> movingStateMachine_;
+  std::unique_ptr<state::machine::StateMachine> gmCommandItemsStateMachine_;
   state::machine::ConcurrentStateMachines concurrentStateMachines_{*this};
 
   void loadConfig(std::string_view characterName);
@@ -113,6 +115,12 @@ public:
   std::future<void> asyncLogIn();
   std::future<void> asyncMoveTo(const sro::Position &destinationPosition);
 
+  struct ItemRequirement {
+    sro::pk2::ref::ItemId refId;
+    uint16_t count;
+  };
+  std::future<void> asyncMakeSureWeHaveItems(const std::vector<ItemRequirement> &itemRequirements);
+
   bool loggedIn() const;
 
 private:
@@ -120,6 +128,8 @@ private:
   std::promise<void> clientOpenPromise_;
   std::optional<std::promise<void>> loggedInPromise_;
   std::optional<std::promise<void>> movingCompletedPromise_;
+  std::optional<std::promise<void>> gmCommandItemsPromise_;
+
 };
 
 #endif
