@@ -37,8 +37,7 @@ public:
 // TODO: How do we do a common attack?
   CastSkill(Bot &bot, sro::scalar_types::ReferenceObjectId skillRefId, std::optional<sro::scalar_types::EntityGlobalId> targetGlobalId, std::optional<uint8_t> weaponSlot, std::optional<uint8_t> shieldSlot, std::optional<sro::scalar_types::ReferenceObjectId> imbueSkillRefId);
   ~CastSkill() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"CastSkill"};
   static constexpr uint8_t kWeaponInventorySlot_{6};
@@ -52,7 +51,6 @@ private:
   bool expectingSkillCommandFailure_{false};
   std::optional<broker::EventBroker::EventId> skillCastTimeoutEventId_;
   bool waitingForSkillToEnd_{false};
-  bool done_{false};
   std::string skillName() const;
 };
 

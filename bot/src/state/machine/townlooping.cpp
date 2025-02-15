@@ -49,16 +49,12 @@ Townlooping::~Townlooping() {
   stateMachineDestroyed();
 }
 
-void Townlooping::onUpdate(const event::Event *event) {
-  if (done()) {
-    return;
-  }
-
+Status Townlooping::onUpdate(const event::Event *event) {
   if (childState_) {
-    childState_->onUpdate(event);
-    if (!childState_->done()) {
+    const Status status = childState_->onUpdate(event);
+    if (status == Status::kNotDone) {
       // Child still running, nothing to do.
-      return;
+      return Status::kNotDone;
     }
     // Child state is done, figure out what to do next.
     if (dynamic_cast<Walking*>(childState_.get()) != nullptr) {
@@ -75,8 +71,7 @@ void Townlooping::onUpdate(const event::Event *event) {
           setChildStateMachine<TalkingToShopNpc>(npcsToVisit_[currentNpcIndex_], shoppingList_);
         }
       }
-      onUpdate(event);
-      return;
+      return onUpdate(event);
     } else if (dynamic_cast<TalkingToStorageNpc*>(childState_.get()) != nullptr ||
                dynamic_cast<TalkingToShopNpc*>(childState_.get()) != nullptr) {
       // We just finished with an npc, advance our state.
@@ -84,13 +79,12 @@ void Townlooping::onUpdate(const event::Event *event) {
       if (done()) {
         // No more Npcs, done with townloop npc
         LOG(INFO) << "No more npcs to visit, done with townloop";
-        return;
+        return Status::kDone;
       }
       // Update our state to walk to the next npc.
       const auto pathToNpc = bot_.calculatePathToDestination(positionOfNpc(npcsToVisit_[currentNpcIndex_]));
       setChildStateMachine<Walking>(pathToNpc);
-      onUpdate(event);
-      return;
+      return onUpdate(event);
     } else if (dynamic_cast<UseReturnScroll*>(childState_.get()) != nullptr) {
       // Finished using a return scroll
       waitingForSpawn_ = true;
@@ -109,12 +103,12 @@ void Townlooping::onUpdate(const event::Event *event) {
       const auto packet = packet::building::ClientAgentCharacterResurrect::resurrect(resurrectOption->option);
       bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
       waitingForSpawn_ = true;
-      return;
+      return Status::kNotDone;
     }
   }
 
   if (waitingForSpawn_) {
-    return;
+    return Status::kNotDone;
   }
 
   // First, check if we're out of town and have a return scroll to use
@@ -122,7 +116,7 @@ void Townlooping::onUpdate(const event::Event *event) {
     // Not in town
     if (bot_.selfState()->lifeState == sro::entity::LifeState::kDead) {
       // We're dead, wait for resurrection option message.
-      return;
+      return Status::kNotDone;
     } else {
       const auto returnScrollSlots = bot_.selfState()->inventory.findItemsOfCategory({type_id::categories::kReturnScroll});
       if (!returnScrollSlots.empty()) {
@@ -131,9 +125,8 @@ void Townlooping::onUpdate(const event::Event *event) {
         }
         // TODO: Make a decision of which to use; for now, we just use the first.
         setChildStateMachine<UseReturnScroll>(returnScrollSlots.front());
-        onUpdate(event);
         sanityCheckUsedReturnScroll_ = true;
-        return;
+        return onUpdate(event);
       }
     }
   }
@@ -160,18 +153,13 @@ void Townlooping::onUpdate(const event::Event *event) {
     }
 
     setChildStateMachine(castSkillBuilder.create());
-    onUpdate(event);
-    return;
+    return onUpdate(event);
   }
 
   // Done with buffs, walk to next NPC.
   const auto pathToNpc = bot_.calculatePathToDestination(positionOfNpc(npcsToVisit_[currentNpcIndex_]));
   setChildStateMachine<Walking>(pathToNpc);
-  onUpdate(event);
-}
-
-bool Townlooping::done() const {
-  return (npcsToVisit_.empty() || currentNpcIndex_ == npcsToVisit_.size());
+  return onUpdate(event);
 }
 
 void Townlooping::buildBuffList() {
@@ -316,6 +304,10 @@ sro::Position Townlooping::positionOfNpc(Npc npc) const {
     throw std::runtime_error("Trying to get position of NPC which does not exist");
   }
   return npcPosIt->second;
+}
+
+bool Townlooping::done() const {
+  return (npcsToVisit_.empty() || currentNpcIndex_ == npcsToVisit_.size());
 }
 
 } // namespace state::machine

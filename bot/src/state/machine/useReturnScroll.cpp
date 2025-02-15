@@ -32,15 +32,15 @@ UseReturnScroll::~UseReturnScroll() {
   stateMachineDestroyed();
 }
 
-void UseReturnScroll::onUpdate(const event::Event *event) {
+Status UseReturnScroll::onUpdate(const event::Event *event) {
   if (childState_) {
     // Have a child state, it takes priority
-    childState_->onUpdate(event);
-    if (childState_->done()) {
+    const Status status = childState_->onUpdate(event);
+    if (status == Status::kDone) {
       childState_.reset();
     } else {
       // Dont execute anything else in this function until the child state is done
-      return;
+      return Status::kNotDone;
     }
   }
 
@@ -48,15 +48,11 @@ void UseReturnScroll::onUpdate(const event::Event *event) {
   if (event != nullptr) {
     if (event->eventCode == event::EventCode::kSelfSpawned) {
       // We just teleported
-      done_ = true;
-      return;
+      return Status::kDone;
     }
     // TODO: Handle when we die
   }
-}
-
-bool UseReturnScroll::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

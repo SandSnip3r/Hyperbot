@@ -159,11 +159,7 @@ Training::~Training() {
   stateMachineDestroyed();
 }
 
-void Training::onUpdate(const event::Event *event) {
-  if (done()) {
-    LOG(INFO) << "Training's onUpdate called, but it's done";
-    return;
-  }
+Status Training::onUpdate(const event::Event *event) {
   // TODO: Improve on this mechanism
   // When we recurse, we do not want to handle the same event again.
   // If we passed nullptr as our event, we would solve this problem, but we do want to pass that event to the presumably newly created child state machine.
@@ -210,8 +206,7 @@ void Training::onUpdate(const event::Event *event) {
       if (entityLifeStateChanged->globalId == bot_.selfState()->globalId) {
         if (bot_.selfState()->lifeState == sro::entity::LifeState::kDead) {
           // We died. Cleanup and gtfo.
-          done_ = true;
-          return;
+          return Status::kDone;
         }
       }
     // } else if (const auto *configUpdated = dynamic_cast<const event::ConfigUpdated*>(event)) {
@@ -229,8 +224,8 @@ void Training::onUpdate(const event::Event *event) {
   RAII raii(handledEvents_, event);
 
   if (applyStatPointsChildStateMachine_) {
-    applyStatPointsChildStateMachine_->onUpdate(event);
-    if (applyStatPointsChildStateMachine_->done()) {
+    const Status status = applyStatPointsChildStateMachine_->onUpdate(event);
+    if (status == Status::kDone) {
       LOG(INFO) << "Done applying stat points";
       applyStatPointsChildStateMachine_.reset();
     }
@@ -238,14 +233,14 @@ void Training::onUpdate(const event::Event *event) {
 
   if (childState_) {
     // Either casting a skill, picking up an item ourself, picking up an item with COS, or walking somewhere.
-    childState_->onUpdate(event);
-    if (childState_->done()) {
+    const Status status = childState_->onUpdate(event);
+    if (status == Status::kDone) {
       childState_.reset();
     } else {
       // Child state is not yet done.
       if (dynamic_cast<Walking*>(childState_.get()) == nullptr) {
         // The Walking state machine is always interruptable. For every other state machine, we have nothing else to do in this function.
-        return;
+        return Status::kNotDone;
       }
     }
   }
@@ -253,18 +248,17 @@ void Training::onUpdate(const event::Event *event) {
   // We either have no child state, or we're walking somewhere.
   if (!bot_.selfState()->spawned()) {
     // We are not spawned, nothing to do
-    return;
+    return Status::kNotDone;
   }
 
   if (bot_.selfState()->lifeState == sro::entity::LifeState::kDead) {
     // Dead, nothing to do.
     // TODO: Maybe go to town after some time
-    return;
+    return Status::kNotDone;
   }
 
   if (bot_.needToGoToTown()) {
-    done_ = true;
-    return;
+    return Status::kDone;
   }
 
   // First, check that our buffs are all active. Use different sets of buffs for inside and outside of the training area.
@@ -278,8 +272,7 @@ void Training::onUpdate(const event::Event *event) {
   bool setNewChildState = checkBuffs(*buffList);
   if (setNewChildState) {
     // Have some buff to cast
-    onUpdate(event);
-    return;
+    return onUpdate(event);
   }
 
   // TODO: Maybe we should have an event for when we enter the training area. That would trigger training area buffs immediately once we enter.
@@ -290,7 +283,7 @@ void Training::onUpdate(const event::Event *event) {
     if (childState_ && dynamic_cast<Walking*>(childState_.get()) != nullptr) {
       // We are already walking there. Nothing else to do.
       // TODO: We assume that this Walking is to the training area.
-      return;
+      return Status::kNotDone;
     } else if (childState_) {
       throw std::runtime_error("We're not in the training area, not walking to it, all buffs are good, but we still have some child state?");
     }
@@ -303,8 +296,7 @@ void Training::onUpdate(const event::Event *event) {
     // Not in training area, navigating to the center of the training area
     const auto pathToTrainingAreaCenter = bot_.calculatePathToDestination(trainingAreaCircle->center());
     setChildStateMachine<Walking>(pathToTrainingAreaCenter);
-    onUpdate(event);
-    return;
+    return onUpdate(event);
   }
 
   // We're in the training area.
@@ -312,35 +304,33 @@ void Training::onUpdate(const event::Event *event) {
 
   setNewChildState = tryPickItem(itemsInRange);
   if (setNewChildState) {
-    onUpdate(event);
-    return;
+    return onUpdate(event);
   } else if (walkingToItemTarget_) {
     // We didn't just create a child state machine, but we are already walking to pick up an item.
-    return;
+    return Status::kNotDone;
   }
 
   setNewChildState = tryAttackMonster(monstersInRange);
   if (setNewChildState) {
-    onUpdate(event);
-    return;
+    return onUpdate(event);
   } else if (walkingTargetAndAttack_) {
     // We didn't just create a child state machine, but we are already walking to attack a target.
-    return;
+    return Status::kNotDone;
   }
 
   // TODO: Calculate if entire training geometry is visible, if so, do not explore.
   // Nothing left to do except explore the training area. Randomly walk to a point.
   if (childState_ && dynamic_cast<Walking*>(childState_.get()) != nullptr) {
     // Already walking somewhere.
-    return;
+    return Status::kNotDone;
   }
 
   setNewChildState = walkToRandomPoint();
   if (setNewChildState) {
-    onUpdate(event);
-    return;
+    return onUpdate(event);
   }
   LOG(INFO) << "Made it to the end";
+  return Status::kNotDone;
 }
 
 bool Training::tryPickItem(const ItemList &itemList) {
@@ -684,10 +674,6 @@ std::optional<sro::Position> Training::calculateWhereToWalkToAttackEntityWithSki
     }
   }
   return destinationPos;
-}
-
-bool Training::done() const {
-  return done_;
 }
 
 bool Training::wantToAttackMonster(const entity::Monster &monster) const {

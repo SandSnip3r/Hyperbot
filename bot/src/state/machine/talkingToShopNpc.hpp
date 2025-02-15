@@ -13,8 +13,7 @@ class TalkingToShopNpc : public StateMachine {
 public:
   TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell = {});
   ~TalkingToShopNpc() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"TalkingToShopNpc"};
   Npc npc_;
@@ -29,7 +28,6 @@ private:
   bool waitingForRepairResponse_{false};
   bool waitingOnStopTalkResponse_{false};
   bool waitingOnDeselectionResponse_{false};
-  bool done_{false};
 
   void figureOutWhatToBuy();
   bool needToRepair() const;

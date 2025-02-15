@@ -33,7 +33,7 @@ void Alchemy::initialize() {
   startPosition_ = bot_.selfState()->position();
 }
 
-void Alchemy::onUpdate(const event::Event *event) {
+Status Alchemy::onUpdate(const event::Event *event) {
   static constexpr const sro::scalar_types::ReferenceObjectId kElixirRefObjId = 3679;
   static constexpr const sro::scalar_types::ReferenceObjectId kPowderRefObjId = 3692;
   static constexpr const sro::scalar_types::ReferenceObjectId kLuckyStoneRefObjId = 6880;
@@ -77,12 +77,12 @@ void Alchemy::onUpdate(const event::Event *event) {
 
   if (childState_) {
     // Have a child state, it takes priority
-    childState_->onUpdate(event);
-    if (childState_->done()) {
+    const Status status = childState_->onUpdate(event);
+    if (status == Status::kDone) {
       childState_.reset();
     } else {
       // Dont execute anything else in this function until the child state is done
-      return;
+      return Status::kNotDone;
     }
   }
 
@@ -99,7 +99,7 @@ void Alchemy::onUpdate(const event::Event *event) {
           }
           // This is the item we created. Pick it up.
           setChildStateMachine<PickItem>(entitySpawnedEvent->globalId);
-          onUpdate(event);
+          return onUpdate(event);
         }
       }
     }
@@ -107,19 +107,18 @@ void Alchemy::onUpdate(const event::Event *event) {
 
   if (waitingForCreatedItem_) {
     // Still waiting on an item we created.
-    return;
+    return Status::kNotDone;
   }
 
   if (alchemyTimedOutEventId_) {
-    return;
+    return Status::kNotDone;
   }
 
   const double distance = sro::position_math::calculateDistance2d(startPosition_, bot_.selfState()->position());
   if (distance > 25.0) {
     // Need to walk back to center.
     setChildStateMachine<Walking>(std::vector<packet::building::NetworkReadyPosition>({packet::building::NetworkReadyPosition(startPosition_)}));
-    onUpdate(event);
-    return;
+    return onUpdate(event);
   }
 
   const auto &inventory = bot_.selfState()->inventory;
@@ -135,7 +134,7 @@ void Alchemy::onUpdate(const event::Event *event) {
     bot_.packetBroker().injectPacket(makeItemPacket, PacketContainer::Direction::kClientToServer);
     makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMakeItemTimedOutMs), event::EventCode::kGmCommandTimedOut);
     waitingForCreatedItem_ = kBladeRefObjId;
-    return;
+    return Status::kNotDone;
   }
   const storage::Item *item = inventory.getItem(slotsWithBlade.front());
   // What + is the blade?
@@ -144,19 +143,17 @@ void Alchemy::onUpdate(const event::Event *event) {
     // Whoa, expected item at this slot to be a blade, but it's not even a piece of equipment!
     // TODO: Somehow throw an error.
     LOG(INFO) << "Expected item at this slot (" << slotsWithBlade.front() << ") to be a blade";
-    done_ = true;
-    return;
+    return Status::kDone;
   }
   if (blade->optLevel >= goalOptLevel_) {
     // Blade is already where we want it. Done.
-    done_ = true;
-    return;
+    return Status::kDone;
   }
   if (blade->optLevel == 0) {
     // We just failed. Let's drop this sword.
     LOG(INFO) << "Want to drop blade";
     setChildStateMachine<DropItem>(slotsWithBlade.front());
-    return;
+    return onUpdate(event);
   }
 
   if constexpr (kUseLuckStones) {
@@ -182,13 +179,13 @@ void Alchemy::onUpdate(const event::Event *event) {
         bot_.packetBroker().injectPacket(makeItemPacket, PacketContainer::Direction::kClientToServer);
         makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMakeItemTimedOutMs), event::EventCode::kGmCommandTimedOut);
         waitingForCreatedItem_ = kLuckyStoneRefObjId;
-        return;
+        return Status::kNotDone;
       }
 
       const auto useStonePacket = packet::building::ClientAgentAlchemyStoneRequest::fuseStone(slotsWithBlade.front(), luckyStoneSlots.front());
       bot_.packetBroker().injectPacket(useStonePacket, PacketContainer::Direction::kClientToServer);
       alchemyTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kAlchemyTimedOutMs), event::EventCode::kAlchemyTimedOut);
-      return;
+      return Status::kNotDone;
     }
   }
 
@@ -227,7 +224,7 @@ void Alchemy::onUpdate(const event::Event *event) {
     bot_.packetBroker().injectPacket(makeItemPacket, PacketContainer::Direction::kClientToServer);
     makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMakeItemTimedOutMs), event::EventCode::kGmCommandTimedOut);
     waitingForCreatedItem_ = kElixirRefObjId;
-    return;
+    return Status::kNotDone;
   }
   if (!powderSlot) {
     // Didn't find an powder for our item.
@@ -235,7 +232,7 @@ void Alchemy::onUpdate(const event::Event *event) {
     bot_.packetBroker().injectPacket(makeItemPacket, PacketContainer::Direction::kClientToServer);
     makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMakeItemTimedOutMs), event::EventCode::kGmCommandTimedOut);
     waitingForCreatedItem_ = kPowderRefObjId;
-    return;
+    return Status::kNotDone;
   }
 
   const auto useElixirPacket = packet::building::ClientAgentAlchemyElixirRequest::fuseElixir(slotsWithBlade.front(), *elixirSlot, {*powderSlot});
@@ -247,10 +244,7 @@ void Alchemy::onUpdate(const event::Event *event) {
   // Weapon: (3,1,) 6
   // Shield: (3,1,) 4
   // Accessory: (3,1,) 5 12
-}
-
-bool Alchemy::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

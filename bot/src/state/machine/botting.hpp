@@ -13,8 +13,7 @@ class Botting : public StateMachine {
 public:
   Botting(Bot &bot);
   ~Botting() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"Botting"};
   sro::Position trainingSpotCenter_;

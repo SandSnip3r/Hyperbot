@@ -35,11 +35,9 @@ class MaxMasteryAndSkills : public StateMachine {
 public:
   MaxMasteryAndSkills(Bot &bot, sro::pk2::ref::MasteryId id);
   ~MaxMasteryAndSkills() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"MaxMasteryAndSkills"};
-  bool done_{false};
   sro::pk2::ref::MasteryId masteryId_;
   std::optional<broker::EventBroker::EventId> timeoutEventId_;
   internal::SkillTree skillTree_;

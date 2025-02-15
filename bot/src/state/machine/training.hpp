@@ -23,11 +23,9 @@ class Training : public StateMachine {
 public:
   Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeometry);
   ~Training() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"Training"};
-  bool done_{false};
   bool wantToAttackMonster(const entity::Monster &monster) const;
   void getSkillsFromConfig();
   void resetSkillLists();

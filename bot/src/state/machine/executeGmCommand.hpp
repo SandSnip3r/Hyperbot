@@ -14,12 +14,10 @@ public:
   static ExecuteGmCommand makeItem(Bot &bot, sro::scalar_types::ReferenceObjectId refItemId, uint8_t optLevelOrAmount);
 
   ~ExecuteGmCommand() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   ExecuteGmCommand(Bot &bot, packet::enums::OperatorCommand gmCommand, PacketContainer gmCommandPacket);
   static inline std::string kName{"ExecuteGmCommand"};
-  bool done_{false};
   const packet::enums::OperatorCommand gmCommand_;
   const PacketContainer gmCommandPacket_;
 };

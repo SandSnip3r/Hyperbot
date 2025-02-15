@@ -20,7 +20,7 @@ BuyingItems::~BuyingItems() {
   stateMachineDestroyed();
 }
 
-void BuyingItems::onUpdate(const event::Event *event) {
+Status BuyingItems::onUpdate(const event::Event *event) {
   if (event) {
     if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
       if (inventoryUpdatedEvent->destSlotNum) {
@@ -127,18 +127,17 @@ void BuyingItems::onUpdate(const event::Event *event) {
 
   if (waitingOnItemMovementResponse_) {
     // Waiting on a stacking, nothing to do
-    return;
+    return Status::kNotDone;
   }
 
   if (waitingOnBuyResponse_) {
     // Waiting on an item we bought, nothing to do
-    return;
+    return Status::kNotDone;
   }
 
   if (itemsToBuy_.empty()) {
     // Nothing else to buy
-    done_ = true;
-    return;
+    return Status::kDone;
   }
 
   const auto &nextPurchaseRequest = itemsToBuy_.begin()->second;
@@ -148,10 +147,7 @@ void BuyingItems::onUpdate(const event::Event *event) {
   const auto buyItemPacket = packet::building::ClientAgentInventoryOperationRequest::buyPacket(nextPurchaseRequest.tabIndex, nextPurchaseRequest.itemIndex, countToBuy, bot_.selfState()->talkingGidAndOption->first);
   bot_.packetBroker().injectPacket(buyItemPacket, PacketContainer::Direction::kClientToServer);
   waitingOnBuyResponse_ = true;
-}
-
-bool BuyingItems::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

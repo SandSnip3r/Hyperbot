@@ -3,7 +3,6 @@
 #include "bot.hpp"
 #include "entity/item.hpp"
 #include "event/event.hpp"
-// #include "packet/building/clientAgentInventoryOperationRequest.hpp"
 #include "packet/building/clientAgentOperatorRequest.hpp"
 #include "state/machine/pickItem.hpp"
 #include "state/machine/walking.hpp"
@@ -27,15 +26,15 @@ GmCommandSpawnAndPickItems::~GmCommandSpawnAndPickItems() {
   stateMachineDestroyed();
 }
 
-void GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
+Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
   if (event == nullptr) {
     // No event, nothing to do.
-    return;
+    return Status::kNotDone;
   }
 
   if (childState_) {
-    childState_->onUpdate(event);
-    if (childState_->done()) {
+    const Status status = childState_->onUpdate(event);
+    if (status == Status::kDone) {
       const bool childStateWasPick = dynamic_cast<PickItem*>(childState_.get()) != nullptr;
       const bool childStateWasWalk = dynamic_cast<Walking*>(childState_.get()) != nullptr;
       childState_.reset();
@@ -45,20 +44,25 @@ void GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
         if (bot_.selfState()->position() != originalPosition_) {
           VLOG(1) << "  Moving back to original position";
           setChildStateMachine<Walking>(std::vector<packet::building::NetworkReadyPosition>{originalPosition_});
-          onUpdate(event);
-          return;
+          return onUpdate(event);
         } else {
           // Didn't move, so we're at our original position. Spawn the next item.
           VLOG(1) << "  Spawning next item";
-          spawnNextItem();
+          const Status status = spawnNextItem();
+          if (status == Status::kDone) {
+            return Status::kDone;
+          }
         }
       } else if (childStateWasWalk) {
         VLOG(1) << "Finished walking back to center";
         // We're back at our original position. Spawn the next item.
-        spawnNextItem();
+        const Status status = spawnNextItem();
+        if (status == Status::kDone) {
+          return Status::kDone;
+        }
       }
     }
-    return;
+    return Status::kNotDone;
   }
 
   // Measured [7.99993, 20.0001]
@@ -79,19 +83,15 @@ void GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
           VLOG(1) << "Creating state machine to pick item " << bot_.gameData().getItemName(itemEntity->refObjId);
           setChildStateMachine<PickItem>(itemEntity->globalId);
           waitingForItemToSpawn_ = false;
-          onUpdate(event);
-          return;
+          return onUpdate(event);
         }
       }
     }
   }
+  return Status::kNotDone;
 }
 
-bool GmCommandSpawnAndPickItems::done() const {
-  return done_;
-}
-
-void GmCommandSpawnAndPickItems::spawnNextItem() {
+Status GmCommandSpawnAndPickItems::spawnNextItem() {
   // Skip items which we need none of.
   while (currentIndex_ < items_.size() && items_.at(currentIndex_).quantity == 0) {
     ++currentIndex_;
@@ -99,8 +99,7 @@ void GmCommandSpawnAndPickItems::spawnNextItem() {
 
   // If there are no items left, we're done.
   if (currentIndex_ >= items_.size()) {
-    done_ = true;
-    return;
+    return Status::kDone;
   }
 
   // There is some non-zero item. Spawn it.
@@ -112,6 +111,7 @@ void GmCommandSpawnAndPickItems::spawnNextItem() {
   VLOG(1) << "Sending packet for GM command to spawn " << items_.at(currentIndex_).quantity << " x " << bot_.gameData().getItemName(items_.at(currentIndex_).refItemId);
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
   waitingForItemToSpawn_ = true;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

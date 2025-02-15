@@ -12,8 +12,7 @@ class TalkingToStorageNpc : public StateMachine {
 public:
   TalkingToStorageNpc(Bot &bot);
   ~TalkingToStorageNpc() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"TalkingToStorageNpc"};
   // Hard coded npc global Id
@@ -27,7 +26,6 @@ private:
   //                                           |_______________________________________________________________|
 
   bool pendingItemMovementRequest_{false};
-  bool done_{false};
 
   void storeItems(const event::Event *event);
 };

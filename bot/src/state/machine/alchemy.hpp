@@ -16,15 +16,13 @@ class Alchemy : public StateMachine {
 public:
   Alchemy(Bot &bot);
   ~Alchemy() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static constexpr const sro::scalar_types::OptLevelType goalOptLevel_ = 200;
   static constexpr const int kAlchemyTimedOutMs{5000};
   static constexpr const int kMakeItemTimedOutMs{5000};
   static constexpr const bool kUseLuckStones{false};
   static inline std::string kName{"Alchemy"};
-  bool done_{false};
   sro::Position startPosition_;
   bool waitingForCreatedElixir_{false};
   bool waitingForCreatedPowder_{false};

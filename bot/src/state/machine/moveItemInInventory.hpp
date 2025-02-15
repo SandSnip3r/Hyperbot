@@ -11,13 +11,11 @@ class MoveItemInInventory : public StateMachine {
 public:
   MoveItemInInventory(Bot &bot, uint8_t srcSlot, uint8_t destSlot);
   ~MoveItemInInventory() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"MoveItemInInventory"};
   uint8_t srcSlot_;
   const uint8_t destSlot_;
-  bool done_{false};
   bool waitingForItemToMove_{false};
 };
 

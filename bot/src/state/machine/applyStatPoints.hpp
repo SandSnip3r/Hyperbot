@@ -18,15 +18,15 @@ class ApplyStatPoints : public StateMachine {
 public:
   ApplyStatPoints(Bot &bot, std::vector<StatPointType> statPointTypes);
   ~ApplyStatPoints() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"ApplyStatPoints"};
+  bool initialized_{false};
   std::vector<StatPointType> statPointTypes_;
   std::optional<uint16_t> lastInt_;
   std::optional<uint16_t> lastStr_;
   std::optional<broker::EventBroker::EventId> timeoutEventId_;
-  bool done_{false};
+  Status initialize();
   void success();
 };
 

@@ -36,7 +36,7 @@ UseItem::~UseItem() {
   stateMachineDestroyed();
 }
 
-void UseItem::onUpdate(const event::Event *event) {
+Status UseItem::onUpdate(const event::Event *event) {
   if (event) {
     // We don't care about any event if we haven't yet used an item
     if (const auto *itemUseFailedEvent = dynamic_cast<const event::ItemUseFailed*>(event)) {
@@ -45,12 +45,10 @@ void UseItem::onUpdate(const event::Event *event) {
           itemUseTimeoutEventId_.reset();
         if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kItemDoesNotExist) {
           LOG(INFO) << "Failed to use item because it doesnt exist";
-          done_ = true;
-          return;
+          return Status::kDone;
         } else if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kCharacterDead) {
           LOG(INFO) << "Failed to use item because we're dead";
-          done_ = true;
-          return;
+          return Status::kDone;
         } else if (itemUseFailedEvent->reason == packet::enums::InventoryErrorCode::kWaitForReuseDelay) {
         } else {
           LOG(INFO) << "Failed to use item because of unknown reason";
@@ -106,8 +104,11 @@ void UseItem::onUpdate(const event::Event *event) {
             if (!itemUseTimeoutEventId_) {
               throw std::runtime_error("Didn't have a item use timeout event");
             }
-            cleanupAndExit();
-            return;
+            if (itemUseTimeoutEventId_) {
+              bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
+              itemUseTimeoutEventId_.reset();
+            }
+            return Status::kDone;
           }
         }
       }
@@ -121,9 +122,9 @@ void UseItem::onUpdate(const event::Event *event) {
       }
     }
   }
-  
+
   if (itemUseTimeoutEventId_) {
-    return;
+    return Status::kNotDone;
   }
 
   if (!bot_.selfState()->canUseItem(itemTypeId_)) {
@@ -136,18 +137,7 @@ void UseItem::onUpdate(const event::Event *event) {
 
   // Create a delayed event that will trigger if our item never gets used.
   itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(std::chrono::milliseconds(kItemUseTimeoutMs), inventoryIndex_, itemTypeId_);
-}
-
-bool UseItem::done() const {
-  return done_;
-}
-
-void UseItem::cleanupAndExit() {
-  if (itemUseTimeoutEventId_) {
-    bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
-    itemUseTimeoutEventId_.reset();
-  }
-  done_ = true;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

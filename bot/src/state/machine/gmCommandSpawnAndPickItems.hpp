@@ -31,20 +31,15 @@ public:
 
   GmCommandSpawnAndPickItems(Bot &bot, const std::vector<ItemRequest> &items);
   ~GmCommandSpawnAndPickItems() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"GmCommandSpawnAndPickItems"};
-  // std::map<uint32_t, PurchaseRequest> itemsToBuy_;
-  // bool waitingOnBuyResponse_{false};
-  // bool waitingOnItemMovementResponse_{false};
-  bool done_{false};
   std::vector<ItemRequest> items_;
   sro::Position originalPosition_;
   bool waitingForItemToSpawn_{false};
   size_t currentIndex_{0};
 
-  void spawnNextItem();
+  Status spawnNextItem();
 };
 
 } // namespace state::machine

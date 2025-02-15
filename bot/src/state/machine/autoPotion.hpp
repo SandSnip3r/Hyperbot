@@ -14,11 +14,9 @@ namespace state::machine {
 class AutoPotion : public StateMachine {
 public:
   AutoPotion(Bot &bot);
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   const sro::scalar_types::EntityGlobalId selfGlobalId_;
-  bool done_{false};
   // These functions return `true` if an item was used, `false` otherwise.
   bool tryUsePurificationPill();
   bool tryUseHpPotion();

@@ -289,15 +289,15 @@ void Bot::handleEvent(const event::Event *event) {
 
 void Bot::onUpdate(const event::Event *event) {
   if (loginStateMachine_) {
-    loginStateMachine_->onUpdate(event);
-    if (loginStateMachine_->done()) {
+    const state::machine::Status status = loginStateMachine_->onUpdate(event);
+    if (status == state::machine::Status::kDone) {
       loginStateMachine_.reset();
     }
   }
 
   if (movingStateMachine_) {
-    movingStateMachine_->onUpdate(event);
-    if (movingStateMachine_->done()) {
+    const state::machine::Status status = movingStateMachine_->onUpdate(event);
+    if (status == state::machine::Status::kDone) {
       if (movingCompletedPromise_) {
         movingCompletedPromise_->set_value();
         movingCompletedPromise_.reset();
@@ -307,8 +307,8 @@ void Bot::onUpdate(const event::Event *event) {
   }
 
   if (gmCommandItemsStateMachine_) {
-    gmCommandItemsStateMachine_->onUpdate(event);
-    if (gmCommandItemsStateMachine_->done()) {
+    const state::machine::Status status = gmCommandItemsStateMachine_->onUpdate(event);
+    if (status == state::machine::Status::kDone) {
       gmCommandItemsStateMachine_.reset();
       if (gmCommandItemsPromise_) {
         gmCommandItemsPromise_->set_value();
@@ -322,8 +322,8 @@ void Bot::onUpdate(const event::Event *event) {
   // Highest priority is our vitals, we will try to heal even if we're not training
   if (autoPotionStateMachine_) {
     try {
-      autoPotionStateMachine_->onUpdate(event);
-      if (autoPotionStateMachine_->done()) {
+      const state::machine::Status status = autoPotionStateMachine_->onUpdate(event);
+      if (status == state::machine::Status::kDone) {
         autoPotionStateMachine_.reset();
       }
     } catch (std::exception &ex) {
@@ -337,8 +337,11 @@ void Bot::onUpdate(const event::Event *event) {
     return;
   }
 
-  if (bottingStateMachine_ && !bottingStateMachine_->done()) {
-    bottingStateMachine_->onUpdate(event);
+  if (bottingStateMachine_) {
+    const state::machine::Status status = bottingStateMachine_->onUpdate(event);
+    if (status == state::machine::Status::kDone) {
+      bottingStateMachine_.reset();
+    }
   }
 }
 

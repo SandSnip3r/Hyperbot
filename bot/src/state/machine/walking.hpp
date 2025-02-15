@@ -16,15 +16,15 @@ class Walking : public StateMachine {
 public:
   Walking(Bot &bot, const std::vector<packet::building::NetworkReadyPosition> &waypoints);
   ~Walking() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
-private:
+  Status onUpdate(const event::Event *event) override;
+  private:
   static inline std::string kName{"Walking"};
   // We set this to true once we request a movement. If this is false and we're moving, we know that the current movement is not one that we started. This lets us interrupt movements already in progress.
   bool tookAction_{false};
   std::vector<packet::building::NetworkReadyPosition> waypoints_;
   size_t currentWaypointIndex_{0};
   std::optional<broker::EventBroker::EventId> movementRequestTimeoutEventId_;
+  bool done() const;
 };
 
 } // namespace state::machine

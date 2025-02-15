@@ -12,12 +12,10 @@ class PickItem : public StateMachine {
 public:
   PickItem(Bot &bot, sro::scalar_types::EntityGlobalId targetGlobalId);
   ~PickItem() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"PickItem"};
   const sro::scalar_types::EntityGlobalId targetGlobalId_;
-  bool done_{false};
   bool waitingForItemToBePicked_{false};
 };
 

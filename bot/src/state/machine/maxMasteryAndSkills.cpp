@@ -26,7 +26,7 @@ MaxMasteryAndSkills::~MaxMasteryAndSkills() {
   stateMachineDestroyed();
 }
 
-void MaxMasteryAndSkills::onUpdate(const event::Event *event) {
+Status MaxMasteryAndSkills::onUpdate(const event::Event *event) {
   std::shared_ptr<entity::Self> selfEntity = bot_.selfState();
   if (event != nullptr) {
     if (auto *leveledUpMastery = dynamic_cast<const event::LearnMasterySuccess*>(event)) {
@@ -53,14 +53,13 @@ void MaxMasteryAndSkills::onUpdate(const event::Event *event) {
       }
     } else if (event->eventCode == event::EventCode::kLearnSkillError) {
       LOG(WARNING) << "Error learning skill. Aborting state machine";
-      done_ = true;
-      return;
+      return Status::kDone;
     }
   }
 
   if (timeoutEventId_.has_value()) {
     VLOG(3) << "Still waiting on a response to the last packet we sent";
-    return;
+    return Status::kNotDone;
   }
 
   // First, max mastery level.
@@ -71,7 +70,7 @@ void MaxMasteryAndSkills::onUpdate(const event::Event *event) {
     VLOG(1) << absl::StreamFormat("Mastery is level %d, character level is %d. Sending packet to level up mastery", currentMasteryLevel, currentLevel);
     bot_.packetBroker().injectPacket(packet::building::ClientAgentSkillMasteryLearnRequest::incrementLevel(masteryId_), PacketContainer::Direction::kBotToServer);
     timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(200), event::EventCode::kTimeout);
-    return;
+    return Status::kNotDone;
   }
 
   if (!skillTree_.initialized()) {
@@ -86,8 +85,7 @@ void MaxMasteryAndSkills::onUpdate(const event::Event *event) {
 
   if (!skillTree_.haveSkillToLearn()) {
     VLOG(1) << "No more skills to learn!";
-    done_ = true;
-    return;
+    return Status::kDone;
   }
 
   sro::scalar_types::ReferenceSkillId nextSkillId;
@@ -100,10 +98,7 @@ void MaxMasteryAndSkills::onUpdate(const event::Event *event) {
   bot_.packetBroker().injectPacket(packet::building::ClientAgentSkillLearnRequest::learnSkill(nextSkillId), PacketContainer::Direction::kBotToServer);
   currentLearningSkill_ = nextSkillId;
   timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(400), event::EventCode::kTimeout);
-}
-
-bool MaxMasteryAndSkills::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 void MaxMasteryAndSkills::resetTimeout() {

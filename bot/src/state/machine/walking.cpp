@@ -20,12 +20,7 @@ Walking::~Walking() {
   stateMachineDestroyed();
 }
 
-void Walking::onUpdate(const event::Event *event) {
-  if (done()) {
-    VLOG(1) << "Walking but done";
-    return;
-  }
-
+Status Walking::onUpdate(const event::Event *event) {
   if (event != nullptr) {
     if (const auto *movementBeganEvent = dynamic_cast<const event::EntityMovementBegan*>(event); movementBeganEvent != nullptr && movementBeganEvent->globalId == bot_.selfState()->globalId) {
       // We started to move, our movement request must've been successful
@@ -36,7 +31,7 @@ void Walking::onUpdate(const event::Event *event) {
         LOG(INFO) << "Movement began, but had no running movement request timeout timer";
       }
       // Nothing else to do here. We're now waiting for our movement to end
-      return;
+      return Status::kNotDone;
     } else if (const auto *movementEndedEvent = dynamic_cast<const event::EntityMovementEnded*>(event); movementEndedEvent != nullptr && movementEndedEvent->globalId == bot_.selfState()->globalId) {
       // If we send a request to move, but get knocked back before the MovementBegin happens, the knockback movement will send this MovementEnded event
       if (movementRequestTimeoutEventId_) {
@@ -51,7 +46,7 @@ void Walking::onUpdate(const event::Event *event) {
 
   if (tookAction_ && bot_.selfState()->moving()) {
     // Still moving, nothing to do
-    return;
+    return Status::kNotDone;
   }
 
   // We're not moving
@@ -64,7 +59,7 @@ void Walking::onUpdate(const event::Event *event) {
   }
   if (done()) {
     // Finished walking
-    return;
+    return Status::kDone;
   }
   if (updatedCurrentWaypoint) {
     bot_.eventBroker().publishEvent<event::WalkingPathUpdated>(std::vector<packet::building::NetworkReadyPosition>(waypoints_.begin()+currentWaypointIndex_-1, waypoints_.end()));
@@ -73,11 +68,11 @@ void Walking::onUpdate(const event::Event *event) {
   // Not yet done walking
   if (movementRequestTimeoutEventId_) {
     // Already asked to move, nothing to do
-    return;
+    return Status::kNotDone;
   }
 
   if (!canMove()) {
-    return;
+    return Status::kNotDone;
   }
 
   // We are not moving, we're not at the current waypoint, and there's not a pending movement request
@@ -89,6 +84,7 @@ void Walking::onUpdate(const event::Event *event) {
   const int kMovementRequestTimeoutMs{333}; // TODO: Move somewhere else and make an educated guess about what this value should be
   movementRequestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMovementRequestTimeoutMs), event::EventCode::kMovementRequestTimedOut);
   tookAction_ = true;
+  return Status::kNotDone;
 }
 
 bool Walking::done() const {

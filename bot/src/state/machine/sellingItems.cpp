@@ -17,21 +17,18 @@ SellingItems::SellingItems(Bot &bot, const std::vector<sro::scalar_types::Storag
   // Prevent the client from moving items in inventory
   pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
   VLOG(2) << "Constructed SellingItems";
-  if (slotsToSell_.empty()) {
-    LOG(WARNING) << "But no items to sell!";
-    done_ = true;
-  }
 }
 
 SellingItems::~SellingItems() {
   stateMachineDestroyed();
 }
 
-void SellingItems::onUpdate(const event::Event *event) {
-  if (done()) {
-    return;
-  }
+Status SellingItems::onUpdate(const event::Event *event) {
   VLOG(2) << "OnUpdate";
+  if (slotsToSell_.empty()) {
+    LOG(WARNING) << "No items to sell!";
+    return Status::kDone;
+  }
 
   if (event) {
     if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
@@ -46,8 +43,7 @@ void SellingItems::onUpdate(const event::Event *event) {
 
         if (nextToSellIndex_ == slotsToSell_.size()) {
           VLOG(2) << "Done selling";
-          done_ = true;
-          return;
+          return Status::kDone;
         }
       }
     }
@@ -67,10 +63,7 @@ void SellingItems::onUpdate(const event::Event *event) {
   const auto sellPacket = packet::building::ClientAgentInventoryOperationRequest::sellPacket(currentSlot, quantity, bot_.selfState()->talkingGidAndOption->first);
   bot_.packetBroker().injectPacket(sellPacket, PacketContainer::Direction::kClientToServer);
   waitingOnASell_ = true;
-}
-
-bool SellingItems::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

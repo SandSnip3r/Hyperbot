@@ -22,21 +22,21 @@ TalkingToStorageNpc::~TalkingToStorageNpc() {
   stateMachineDestroyed();
 }
 
-void TalkingToStorageNpc::onUpdate(const event::Event *event) {
+Status TalkingToStorageNpc::onUpdate(const event::Event *event) {
   if (npcInteractionState_ == NpcInteractionState::kStart) {
     // Have not yet done anything. First thing is to select the Npc
     const auto selectNpc = packet::building::ClientAgentActionSelectRequest::packet(npcGid_);
     bot_.packetBroker().injectPacket(selectNpc, PacketContainer::Direction::kClientToServer);
     // Advance state
     npcInteractionState_ = NpcInteractionState::kSelectionRequestPending;
-    return;
+    return Status::kNotDone;
   }
 
   if (npcInteractionState_ == NpcInteractionState::kSelectionRequestPending) {
     // TODO: Check if event is selection failed
     if (!bot_.selfState()->selectedEntity) {
       // Waiting for npc to be selected, nothing to do
-      return;
+      return Status::kNotDone;
     }
 
     if (*bot_.selfState()->selectedEntity != npcGid_) {
@@ -59,7 +59,7 @@ void TalkingToStorageNpc::onUpdate(const event::Event *event) {
       //   To be client-independent, we should block this request from the client and do this ourself
       npcInteractionState_ = NpcInteractionState::kStorageOpenRequestPending;
     }
-    return;
+    return Status::kNotDone;
   }
 
   if (bot_.selfState()->talkingGidAndOption) {
@@ -77,33 +77,29 @@ void TalkingToStorageNpc::onUpdate(const event::Event *event) {
 
     if (npcInteractionState_ == NpcInteractionState::kShopOpened) {
       // Still storing items, dont advance
-      return;
+      return Status::kNotDone;
     }
 
     // Done storing items
     const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(bot_.selfState()->talkingGidAndOption->first);
     bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
-    return;
+    return Status::kNotDone;
   } else if (npcInteractionState_ == NpcInteractionState::kShopOpenRequestPending || npcInteractionState_ == NpcInteractionState::kStorageOpenRequestPending) {
-    return;
+    return Status::kNotDone;
   }
 
   if (bot_.selfState()->selectedEntity) {
     // We have closed the shop, but still have the npc selected. Deselect them
     const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(*bot_.selfState()->selectedEntity);
     bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
-    return;
+    return Status::kNotDone;
   }
 
   if (!bot_.selfState()->selectedEntity) {
     // Storage closed and npc deselected, completely done
-    done_ = true;
-    return;
+    return Status::kDone;
   }
-}
-
-bool TalkingToStorageNpc::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 void TalkingToStorageNpc::storeItems(const event::Event *event) {

@@ -137,29 +137,24 @@ CastSkill::~CastSkill() {
   stateMachineDestroyed();
 }
 
-void CastSkill::onUpdate(const event::Event *event) {
-  if (done()) {
-    return;
-  }
-
+Status CastSkill::onUpdate(const event::Event *event) {
   bool megaDebug{false};
   if (event != nullptr && event->eventCode == event::EventCode::kStateMachineActiveTooLong) {
     LOG(INFO) << "We seem to be stuck. Skill name: " << skillName();
     LOG(INFO) << "expectingSkillCommandFailure_: " << expectingSkillCommandFailure_;
     LOG(INFO) << "skillCastTimeoutEventId_: " << skillCastTimeoutEventId_.has_value();
     LOG(INFO) << "waitingForSkillToEnd_: " << waitingForSkillToEnd_;
-    LOG(INFO) << "done_: " << done_;
     megaDebug = true;
   }
 
   if (childState_) {
     // Have a child state, it takes priority
-    childState_->onUpdate(event);
-    if (childState_->done()) {
+    const Status status = childState_->onUpdate(event);
+    if (status == Status::kDone) {
       childState_.reset();
     } else {
       // Dont execute anything else in this function until the child state is done
-      return;
+      return Status::kNotDone;
     }
   }
 
@@ -176,7 +171,7 @@ void CastSkill::onUpdate(const event::Event *event) {
             // TODO: How should we actually handle this error?
             // Note: This happens if our skill was queued too slowly and a common attack slipped between the cracks
             //  Lets just skip this
-            return;
+            return Status::kNotDone;
           }
           //  Should this data be stored inside "selfState"? "CurrentlyCastingSkill"? What about "instant" skills?
           //    Probably not, I think it should be in the event
@@ -195,7 +190,7 @@ void CastSkill::onUpdate(const event::Event *event) {
             // This isn't the skill we thought we were casting! Thought we were casting `skillRefId_` but this skill is `skillEndedEvent->skillRefId` with root skill id `rootSkillId`
             // TODO: How should we actually handle this error?
             //  Probably ignore?
-            return;
+            return Status::kNotDone;
           }
           // This "skill" ended, but maybe it is only one piece of a chain. Figure out if more are coming
           bool wasLastPieceOfSkill{false};
@@ -219,8 +214,7 @@ void CastSkill::onUpdate(const event::Event *event) {
           }
           if (wasLastPieceOfSkill) {
             waitingForSkillToEnd_ = false; // Do we need to set this if we're "done"?
-            done_ = true;
-            return;
+            return Status::kDone;
           }
           // This isn't the last piece of the skill; waiting
           // Note: There is a chance that this skill killed the target, but we dont know that it's dead yet
@@ -239,8 +233,7 @@ void CastSkill::onUpdate(const event::Event *event) {
               } else {
                 // We were not expecting this command error. Maybe the target died or something. Relinquish control to parent state machine.
                 VLOG(1) << "Was not expecting this command error. Killing state machine";
-                done_ = true;
-                return;
+                return Status::kDone;
               }
             }
           }
@@ -263,8 +256,7 @@ void CastSkill::onUpdate(const event::Event *event) {
         }
       } else if (event->eventCode == event::EventCode::kKnockedBack || event->eventCode == event::EventCode::kKnockedDown) {
         // We've been completely interrupted, yield
-        done_ = true;
-        return;
+        return Status::kDone;
         // TODO: I think instead it makes sense to return a status, which says something like "Interrupted", then the parent can choose to destroy us
         // We were waiting for a skill to cast or finish, this cancelled our skill
         if (skillCastTimeoutEventId_) {
@@ -281,8 +273,7 @@ void CastSkill::onUpdate(const event::Event *event) {
           }
           skillCastTimeoutEventId_.reset();
           // Relinquish control to our master.
-          done_ = true;
-          return;
+          return Status::kDone;
         }
       }
     }
@@ -291,7 +282,7 @@ void CastSkill::onUpdate(const event::Event *event) {
   if (bot_.selfState()->stunnedFromKnockback || bot_.selfState()->stunnedFromKnockdown) {
     // Cannot cast a skill right now
     if (megaDebug) LOG(INFO) << "stunned from kb or kd";
-    return;
+    return Status::kNotDone;
   }
 
   if (weaponSlot_) {
@@ -299,8 +290,7 @@ void CastSkill::onUpdate(const event::Event *event) {
     setChildStateMachine<MoveItemInInventory>(*weaponSlot_, kWeaponInventorySlot_);
     // We assume that the child state will complete successfully, so we will reset the weaponSlot_ here
     weaponSlot_.reset();
-    onUpdate(event);
-    return;
+    return onUpdate(event);
   }
 
   if (shieldSlot_) {
@@ -308,8 +298,7 @@ void CastSkill::onUpdate(const event::Event *event) {
     setChildStateMachine<MoveItemInInventory>(*shieldSlot_, kShieldInventorySlot_);
     // We assume that the child state will complete successfully, so we will reset the shieldSlot_ here
     shieldSlot_.reset();
-    onUpdate(event);
-    return;
+    return onUpdate(event);
   }
 
   // At this point, the required equipment is equipped
@@ -317,7 +306,7 @@ void CastSkill::onUpdate(const event::Event *event) {
     // Still waiting on skill
     if (megaDebug) LOG(INFO) << "still waiting on skill";
     VLOG(1) << "Still waiting on skill " << skillName() << " to complete";
-    return;
+    return Status::kNotDone;
   }
 
   // Cast imbue if it exists and is not active
@@ -333,11 +322,10 @@ void CastSkill::onUpdate(const event::Event *event) {
         // Imbue is not on cooldown; creating child CastSkill to cast it
         CastSkillStateMachineBuilder builder(bot_, *imbueSkillRefId_);
         setChildStateMachine(builder.create());
-        onUpdate(event);
-        return;
+        return onUpdate(event);
       }
       // Imbue is not active but must be on cooldown. Need to wait for it.
-      return;
+      return Status::kNotDone;
     } else {
       // Imbue is already active
       // Check the remaining duration of this buff, it it's less than the ping time, we ought to re-cast since it might expire before we cast the actual attack.
@@ -352,16 +340,15 @@ void CastSkill::onUpdate(const event::Event *event) {
           if (skillRemainingCooldown) {
             if (skillRemainingCooldown->count() > kEstimatedPingMs) {
               // Imbue has too much remaining cooldown to request it be cast (accounting for ping time)
-              return;
+              return Status::kNotDone;
             }
           }
           // Imbue does not have too long of a cooldown
           // TODO: Add a data structure that tracks skills which were successfully cast, which should give us a buff, but for when we haven't yet received BuffBegin. Like a "anticipated buffs" list.
           CastSkillStateMachineBuilder builder(bot_, *imbueSkillRefId_);
           setChildStateMachine(builder.create());
-          onUpdate(event);
           // If the timing overlaps, the buff will not be removed and re-added. Instead, the new buff will be added, there will be a brief moment where we have two instances of the same buff, and then the old one will be removed.
-          return;
+          return onUpdate(event);
         }
       } else {
         LOG(WARNING) << absl::StreamFormat("Do not know cast time of imbue %s for character %s", bot_.gameData().getSkillName(*imbueSkillRefId_), bot_.selfState()->toString());
@@ -382,10 +369,7 @@ void CastSkill::onUpdate(const event::Event *event) {
   }
   bot_.packetBroker().injectPacket(castSkillPacket, PacketContainer::Direction::kClientToServer);
   skillCastTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::SkillCastTimeout>(std::chrono::milliseconds(kSkillCastTimeoutMs), skillRefId_);
-}
-
-bool CastSkill::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 std::string CastSkill::skillName() const {

@@ -17,8 +17,7 @@ class Townlooping : public StateMachine {
 public:
   Townlooping(Bot &bot);
   ~Townlooping() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"Townlooping"};
 
@@ -44,6 +43,7 @@ private:
   void buildNpcList();
   std::optional<sro::scalar_types::ReferenceObjectId> getNextBuffToCast() const;
   sro::Position positionOfNpc(Npc npc) const;
+  bool done() const;
 };
 
 } // namespace state::machine

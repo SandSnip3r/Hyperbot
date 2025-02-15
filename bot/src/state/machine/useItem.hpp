@@ -17,16 +17,13 @@ class UseItem : public StateMachine {
 public:
   UseItem(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex);
   ~UseItem() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"UseItem"};
   sro::scalar_types::StorageIndexType inventoryIndex_;
   type_id::TypeId itemTypeId_;
   uint16_t lastKnownQuantity_;
   std::string itemName_;
-  bool done_{false};
-  void cleanupAndExit();
 
   // Item use timeout tracking
   std::optional<broker::EventBroker::EventId> itemUseTimeoutEventId_;

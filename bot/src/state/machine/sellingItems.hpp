@@ -13,14 +13,12 @@ class SellingItems : public StateMachine {
 public:
   SellingItems(Bot &bot, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell);
   ~SellingItems() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"SellingItems"};
   std::vector<sro::scalar_types::StorageIndexType> slotsToSell_;
   size_t nextToSellIndex_{0};
   bool waitingOnASell_{false};
-  bool done_{false};
 };
 
 } // namespace state::machine

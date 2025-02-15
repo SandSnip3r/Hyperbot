@@ -18,14 +18,12 @@ public:
   };
   BuyingItems(Bot &bot, const std::map<uint32_t, PurchaseRequest> &itemsToBuy);
   ~BuyingItems() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"BuyingItems"};
   std::map<uint32_t, PurchaseRequest> itemsToBuy_;
   bool waitingOnBuyResponse_{false};
   bool waitingOnItemMovementResponse_{false};
-  bool done_{false};
 };
 
 } // namespace state::machine

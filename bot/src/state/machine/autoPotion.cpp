@@ -14,7 +14,7 @@ AutoPotion::AutoPotion(Bot &bot) : StateMachine(bot), selfGlobalId_(bot_.selfSta
   }
 }
 
-void AutoPotion::onUpdate(const event::Event *event) {
+Status AutoPotion::onUpdate(const event::Event *event) {
   if (event) {
     if (const auto *lifeStateUpdateEvent = dynamic_cast<const event::EntityLifeStateChanged*>(event)) {
       if (lifeStateUpdateEvent->globalId == bot_.selfState()->globalId) {
@@ -29,29 +29,28 @@ void AutoPotion::onUpdate(const event::Event *event) {
     } else if (const auto *entityDespawned = dynamic_cast<const event::EntityDespawned*>(event)) {
       if (entityDespawned->globalId == selfGlobalId_) {
         // Self despawned, done.
-        done_ = true;
-        return;
+        return Status::kDone;
       }
     }
   }
 
   // First, prefer to defer to child state
   if (childState_) {
-    childState_->onUpdate(event);
-    if (childState_->done()) {
+    const Status status = childState_->onUpdate(event);
+    if (status == Status::kDone) {
       // Must be done using an item
       childState_.reset();
     } else {
       // Still using an item, nothing to do
-      return;
+      return Status::kNotDone;
     }
   }
 
   // We don't care about any events at the moment
 
   if (!bot_.selfState()->canUseItems()) {
-    // Nothing to do if we can't use items
-    return;
+    // Nothing to do, for now, if we can't use items.
+    return Status::kNotDone;
   }
 
   using UseFunction = std::function<bool()>;
@@ -74,12 +73,10 @@ void AutoPotion::onUpdate(const event::Event *event) {
 
   if (usedAnItem) {
     // Child State has been set, recurse
-    onUpdate(event);
+    return onUpdate(event);
   }
-}
 
-bool AutoPotion::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 bool AutoPotion::tryUsePurificationPill() {

@@ -47,15 +47,15 @@ Botting::~Botting() {
   stateMachineDestroyed();
 }
 
-void Botting::onUpdate(const event::Event *event) {
+Status Botting::onUpdate(const event::Event *event) {
   if (!childState_) {
     throw std::runtime_error("Botting must always have a child state when onUpdate is called");
   }
 
   // TODO: Handle config changes.
 
-  childState_->onUpdate(event);
-  if (childState_->done()) {
+  const Status status = childState_->onUpdate(event);
+  if (status == Status::kDone) {
     // Move on to the next thing
     if (dynamic_cast<Townlooping*>(childState_.get())) {
       // Done with the townloop, start training
@@ -74,13 +74,10 @@ void Botting::onUpdate(const event::Event *event) {
     }
     // We switched to a new child state; recurse so that we call onUpdate on the new state machine
     // TODO: Might not be ideal
-    onUpdate(event);
+    return onUpdate(event);
   }
-}
 
-bool Botting::done() const {
-  // Botting is never done
-  return false;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

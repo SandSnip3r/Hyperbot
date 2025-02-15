@@ -12,12 +12,10 @@ class DropItem : public StateMachine {
 public:
   DropItem(Bot &bot, sro::scalar_types::StorageIndexType inventorySlot);
   ~DropItem() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"DropItem"};
   sro::scalar_types::StorageIndexType inventorySlot_;
-  bool done_{false};
   sro::scalar_types::ReferenceObjectId refId_;
   bool waitingForItemToBeDropped_{false};
 };

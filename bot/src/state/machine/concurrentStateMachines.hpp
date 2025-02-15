@@ -13,8 +13,7 @@ class ConcurrentStateMachines : public StateMachine {
 public:
   using StateMachine::StateMachine;
   ~ConcurrentStateMachines() override = default;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 
   template<typename StateMachineType, typename... Args>
   void emplace(Args&&... args) {

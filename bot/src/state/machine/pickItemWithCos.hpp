@@ -11,13 +11,11 @@ class PickItemWithCos : public StateMachine {
 public:
   PickItemWithCos(Bot &bot, sro::scalar_types::EntityGlobalId cosGlobalId, sro::scalar_types::EntityGlobalId targetGlobalId);
   ~PickItemWithCos() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"PickItemWithCos"};
   const sro::scalar_types::EntityGlobalId cosGlobalId_;
   const sro::scalar_types::EntityGlobalId targetGlobalId_;
-  bool done_{false};
   bool waitingForItemToBePicked_{false};
 };
 

@@ -20,7 +20,7 @@ MoveItemInInventory::~MoveItemInInventory() {
   stateMachineDestroyed();
 }
 
-void MoveItemInInventory::onUpdate(const event::Event *event) {
+Status MoveItemInInventory::onUpdate(const event::Event *event) {
   if (event != nullptr) {
     if (const auto *inventoryUpdatedEvent = reinterpret_cast<const event::InventoryUpdated*>(event)) {
       if (inventoryUpdatedEvent->srcSlotNum && *inventoryUpdatedEvent->srcSlotNum == srcSlot_) {
@@ -31,8 +31,7 @@ void MoveItemInInventory::onUpdate(const event::Event *event) {
         }
         if (*inventoryUpdatedEvent->destSlotNum == destSlot_) {
           // Item was successfully moved
-          done_ = true;
-          return;
+          return Status::kDone;
         } else {
           // Item was moved, update where it is and try again
           LOG(INFO) << "Item was moved to somewhere else";
@@ -45,16 +44,13 @@ void MoveItemInInventory::onUpdate(const event::Event *event) {
 
   if (waitingForItemToMove_) {
     // Item hasnt moved yet, dont try again
-    return;
+    return Status::kNotDone;
   }
 
   const auto moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::withinInventoryPacket(srcSlot_, destSlot_, 1); // TODO: Figure out quantity, for now, we assume it's an equipment
   bot_.packetBroker().injectPacket(moveItemPacket, PacketContainer::Direction::kClientToServer);
   waitingForItemToMove_ = true;
-}
-
-bool MoveItemInInventory::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

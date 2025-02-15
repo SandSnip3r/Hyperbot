@@ -19,7 +19,7 @@ DropItem::~DropItem() {
   stateMachineDestroyed();
 }
 
-void DropItem::onUpdate(const event::Event *event) {
+Status DropItem::onUpdate(const event::Event *event) {
   // There are two relevant events:
   //  1. Inventory event, item leaves inventory
   //  2. Entity spawned event, item hits ground.
@@ -40,8 +40,7 @@ void DropItem::onUpdate(const event::Event *event) {
         if (*inventoryUpdatedEvent->srcSlotNum == inventorySlot_) {
           LOG(INFO) << "    is our item";
           // Is our item.
-          done_ = true;
-          return;
+          return Status::kDone;
         } else {
           LOG(INFO) << "    dropped from " << (int)*inventoryUpdatedEvent->srcSlotNum << " but we expected " << (int)inventorySlot_;
         }
@@ -50,17 +49,14 @@ void DropItem::onUpdate(const event::Event *event) {
   }
 
   if (waitingForItemToBeDropped_) {
-    return;
+    return Status::kNotDone;
   }
 
   const auto packet = packet::building::ClientAgentInventoryOperationRequest::dropItem(inventorySlot_);
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
   waitingForItemToBeDropped_ = true;
   LOG(INFO) << "Send drop packet";
-}
-
-bool DropItem::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

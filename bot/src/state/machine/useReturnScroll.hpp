@@ -11,12 +11,10 @@ class UseReturnScroll : public StateMachine {
 public:
   UseReturnScroll(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex);
   ~UseReturnScroll() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"UseReturnScroll"};
   sro::scalar_types::StorageIndexType inventoryIndex_;
-  bool done_{false};
 };
 
 } // namespace state::machine

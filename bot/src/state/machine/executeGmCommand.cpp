@@ -21,16 +21,16 @@ ExecuteGmCommand::~ExecuteGmCommand() {
   stateMachineDestroyed();
 }
 
-void ExecuteGmCommand::onUpdate(const event::Event *event) {
+Status ExecuteGmCommand::onUpdate(const event::Event *event) {
   if (event == nullptr) {
     // No event, nothing to do.
-    return;
+    return Status::kNotDone;
   }
   if (event->eventCode == event::EventCode::kOperatorRequestSuccess) {
     const auto &castedEvent = dynamic_cast<const event::OperatorRequestSuccess&>(*event);
     if (castedEvent.operatorCommand == gmCommand_) {
       LOG(INFO) << "Successfully executed GM command";
-      done_ = true;
+      return Status::kDone;
     }
   } else if (event->eventCode == event::EventCode::kOperatorRequestError) {
     const auto &castedEvent = dynamic_cast<const event::OperatorRequestError&>(*event);
@@ -38,10 +38,7 @@ void ExecuteGmCommand::onUpdate(const event::Event *event) {
       throw std::runtime_error("Failed to execute GM command!");
     }
   }
-}
-
-bool ExecuteGmCommand::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

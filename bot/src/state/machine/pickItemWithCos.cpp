@@ -14,29 +14,25 @@ PickItemWithCos::~PickItemWithCos() {
   stateMachineDestroyed();
 }
 
-void PickItemWithCos::onUpdate(const event::Event *event) {
+Status PickItemWithCos::onUpdate(const event::Event *event) {
   if (event) {
     if (const auto *entityDespawnedEvent = dynamic_cast<const event::EntityDespawned*>(event)) {
       if (entityDespawnedEvent->globalId == targetGlobalId_) {
         // The item we wanted to pick up despawned
         // Whether we picked it up or not doesn't matter; we're done either way
-        done_ = true;
-        return;
+        return Status::kDone;
       }
     }
   }
 
   if (waitingForItemToBePicked_) {
-    return;
+    return Status::kNotDone;
   }
 
   const auto packet = packet::building::ClientAgentCosCommandRequest::pickup(cosGlobalId_, targetGlobalId_);
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
   waitingForItemToBePicked_ = true;
-}
-
-bool PickItemWithCos::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

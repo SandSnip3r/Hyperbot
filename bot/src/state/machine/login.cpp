@@ -37,19 +37,18 @@ Login::~Login() {
   stateMachineDestroyed();
 }
 
-void Login::onUpdate(const event::Event *event) {
+Status Login::onUpdate(const event::Event *event) {
   // Is the character already logged in?
   if (bot_.loggedIn()) {
     VLOG(1) << "Login state machine: Character is already logged in";
-    done_ = true;
-    return;
+    return Status::kDone;
   }
 
   // Everything in this function expects an event.
   if (event == nullptr) {
     // No event, nothing to do.
     VLOG(3) << "No event, nothing to do.";
-    return;
+    return Status::kNotDone;
   }
 
   // Anything to do with logging in will be a session specific event.
@@ -57,12 +56,12 @@ void Login::onUpdate(const event::Event *event) {
   if (sessionSpecificEvent == nullptr) {
     // Not a session specific event, not relevant for logging in.
     VLOG(3) << "Not a session specific event, not relevant for logging in.";
-    return;
+    return Status::kNotDone;
   }
   if (sessionSpecificEvent->sessionId != bot_.sessionId()) {
     // Not for us.
     VLOG(3) << "Session specific event for someone else";
-    return;
+    return Status::kNotDone;
   }
 
   if (const auto *shardListReceivedEvent = dynamic_cast<const event::ShardListReceived*>(sessionSpecificEvent); shardListReceivedEvent != nullptr) {
@@ -84,7 +83,7 @@ void Login::onUpdate(const event::Event *event) {
   if (waitingOnShardList_) {
     // Have not yet received the shard list.
     VLOG(1) << "Still waiting on shard list";
-    return;
+    return Status::kNotDone;
   }
 
   if (const auto *gatewayLoginResponseReceived = dynamic_cast<const event::GatewayLoginResponseReceived*>(sessionSpecificEvent); gatewayLoginResponseReceived != nullptr) {
@@ -110,8 +109,7 @@ void Login::onUpdate(const event::Event *event) {
     });
     if (it == characterListReceivedEvent->characters.end()) {
       LOG(WARNING) << "  Unable to find character \"" << characterName_ << "\"";
-      done_ = true;
-      return;
+      return Status::kDone;
     }
 
     // Found our character, select it
@@ -126,12 +124,9 @@ void Login::onUpdate(const event::Event *event) {
     VLOG(1) << absl::StreamFormat("[%s] Successfully logged in.", characterName_);
   } else if (const auto *characterSelectionJoinSuccessEvent = dynamic_cast<const event::CharacterSelectionJoinSuccess*>(sessionSpecificEvent); characterSelectionJoinSuccessEvent != nullptr) {
     VLOG(1) << absl::StreamFormat("[%s] Successfully selected character. Login complete.", characterName_);
-    done_ = true;
+    return Status::kDone;
   }
-}
-
-bool Login::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

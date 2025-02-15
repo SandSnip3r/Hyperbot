@@ -18,14 +18,15 @@ namespace state::machine {
 
 enum class Npc { kStorage, kPotion, kGrocery, kBlacksmith, kProtector, kStable };
 
+enum class Status { kDone, kNotDone };
+
 class StateMachine {
 public:
   StateMachine(Bot &bot);
   virtual ~StateMachine();
 
   // When this is called, `Bot` will have already processed the event.
-  virtual void onUpdate(const event::Event *event) = 0;
-  virtual bool done() const = 0; // TODO: rename to isDone
+  virtual Status onUpdate(const event::Event *event) = 0;
 protected:
   Bot &bot_;
   void pushBlockedOpcode(packet::Opcode opcode);

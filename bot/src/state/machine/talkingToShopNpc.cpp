@@ -159,12 +159,7 @@ bool TalkingToShopNpc::doneWithNpc() const {
   return doneBuyingItems() && doneSellingItems() && !needToRepair();
 }
 
-void TalkingToShopNpc::onUpdate(const event::Event *event) {
-  if (done_) {
-    LOG(INFO) << "TalkingToShopNpc on update called, but we're done. This is a smell of imperfect logic";
-    return;
-  }
-
+Status TalkingToShopNpc::onUpdate(const event::Event *event) {
   if (bot_.selfState()->talkingGidAndOption) { // TODO: Move this state out to the state machine, I think.
     // We are talking to an Npc
     if (bot_.selfState()->talkingGidAndOption->first != npcGid_) {
@@ -188,18 +183,17 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
     if (!childState_) {
       throw std::runtime_error("If we reach this point, the state must be SellingItems or BuyingItems");
     }
-    childState_->onUpdate(event);
-    if (!childState_->done()) {
+    const Status status = childState_->onUpdate(event);
+    if (status == Status::kNotDone) {
       // Still selling or buying items, do not continue
-      return;
+      return Status::kNotDone;
     }
     // Done with child state machine
     if (dynamic_cast<const SellingItems*>(childState_.get()) != nullptr) {
       // Finished selling items, switch to buying items.
       doneSellingItems_ = true;
       setChildStateMachine<BuyingItems>(itemsToBuy_);
-      onUpdate(event);
-      return;
+      return onUpdate(event);
     } else {
       doneBuyingItems_ = true;
       childState_.reset();
@@ -208,14 +202,14 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
     // Done buying items at this point
     if (waitingOnStopTalkResponse_) {
       // Already deselected to close the shop, nothing else to do
-      return;
+      return Status::kNotDone;
     }
 
     // Close the shop
     const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(bot_.selfState()->talkingGidAndOption->first);
     bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
     waitingOnStopTalkResponse_ = true;
-    return;
+    return Status::kNotDone;
   } else {
     // We are not talking to an npc
     if (bot_.selfState()->selectedEntity) {
@@ -232,19 +226,19 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
         // We must deselect the npc
         if (waitingOnDeselectionResponse_) {
           // Already deselected, nothing to do
-          return;
+          return Status::kNotDone;
         }
 
         // Delect the npc
         const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(*bot_.selfState()->selectedEntity);
         bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
         waitingOnDeselectionResponse_ = true;
-        return;
+        return Status::kNotDone;
       } else {
         // We must talk to the npc
         if (waitingForTalkResponse_) {
           // Already requested talk, nothing to do
-          return;
+          return Status::kNotDone;
         }
 
         // Talk to npc
@@ -255,22 +249,21 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
     } else {
       // No Npc is selected
       if (doneWithNpc()) {
-        done_ = true;
-        return;
+        return Status::kDone;
       }
 
       // Not done with npc, repair before considering opening npc
       if (needToRepair()) {
         if (waitingForRepairResponse_) {
           // Still waiting on repair response, dont send another
-          return;
+          return Status::kNotDone;
         }
 
         // Repair
         const auto repairAllPacket = packet::building::ClientAgentInventoryRepairRequest::repairAllPacket(npcGid_);
         bot_.packetBroker().injectPacket(repairAllPacket, PacketContainer::Direction::kClientToServer);
         waitingForRepairResponse_ = true;
-        return;
+        return Status::kNotDone;
       } else if (waitingForRepairResponse_) {
         // Dont need to repair anymore, request was successful
         waitingForRepairResponse_ = false;
@@ -279,7 +272,7 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
       // Not done with npc and dont need to repair, we must need to buy items
       if (waitingForSelectionResponse_) {
         // Already requested selection, nothing to do
-        return;
+        return Status::kNotDone;
       }
 
       // Select Npc
@@ -288,10 +281,7 @@ void TalkingToShopNpc::onUpdate(const event::Event *event) {
       waitingForSelectionResponse_ = true;
     }
   }
-}
-
-bool TalkingToShopNpc::done() const {
-  return done_;
+  return Status::kNotDone;
 }
 
 } // namespace state::machine

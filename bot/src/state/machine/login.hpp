@@ -15,8 +15,7 @@ class Login : public StateMachine {
 public:
   Login(Bot &bot, const CharacterLoginInfo &characterLoginInfo);
   ~Login() override;
-  void onUpdate(const event::Event *event) override;
-  bool done() const override;
+  Status onUpdate(const event::Event *event) override;
 private:
   // TODO: The two things below do not belong here
   static inline const std::array<uint8_t,6> kMacAddress = {0,0,0,0,0,0};
@@ -27,7 +26,6 @@ private:
   const std::string password_;
   const std::string characterName_;
   std::optional<uint32_t> agentServerToken_;
-  bool done_{false};
   bool waitingOnShardList_{false};
 };
 
