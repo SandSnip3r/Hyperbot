@@ -11,15 +11,14 @@ namespace state::machine {
 
 class ExecuteGmCommand : public StateMachine {
 public:
-  static ExecuteGmCommand makeItem(Bot &bot, sro::scalar_types::ReferenceObjectId refItemId, uint8_t optLevelOrAmount);
-
+  ExecuteGmCommand(Bot &bot, packet::enums::OperatorCommand gmCommand, PacketContainer gmCommandPacket);
   ~ExecuteGmCommand() override;
   Status onUpdate(const event::Event *event) override;
 private:
-  ExecuteGmCommand(Bot &bot, packet::enums::OperatorCommand gmCommand, PacketContainer gmCommandPacket);
   static inline std::string kName{"ExecuteGmCommand"};
   const packet::enums::OperatorCommand gmCommand_;
   const PacketContainer gmCommandPacket_;
+  bool waitingForResponse_{false};
 };
 
 } // namespace state::machine

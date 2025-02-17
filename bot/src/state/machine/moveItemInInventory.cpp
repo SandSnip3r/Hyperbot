@@ -23,20 +23,22 @@ MoveItemInInventory::~MoveItemInInventory() {
 Status MoveItemInInventory::onUpdate(const event::Event *event) {
   if (event != nullptr) {
     if (const auto *inventoryUpdatedEvent = reinterpret_cast<const event::InventoryUpdated*>(event)) {
-      if (inventoryUpdatedEvent->srcSlotNum && *inventoryUpdatedEvent->srcSlotNum == srcSlot_) {
-        // The target item moved
-        waitingForItemToMove_ = false;
-        if (!inventoryUpdatedEvent->destSlotNum) {
-          throw std::runtime_error("Item was... dropped?");
-        }
-        if (*inventoryUpdatedEvent->destSlotNum == destSlot_) {
-          // Item was successfully moved
-          return Status::kDone;
-        } else {
-          // Item was moved, update where it is and try again
-          LOG(INFO) << "Item was moved to somewhere else";
-          // Even though we prevent the human from moving items, in theory, this could trigger. Maybe an inventory operation request was sent before we were constructed
-          srcSlot_ = *inventoryUpdatedEvent->destSlotNum;
+      if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
+        if (inventoryUpdatedEvent->srcSlotNum && *inventoryUpdatedEvent->srcSlotNum == srcSlot_) {
+          // The target item moved
+          waitingForItemToMove_ = false;
+          if (!inventoryUpdatedEvent->destSlotNum) {
+            throw std::runtime_error("Item was... dropped?");
+          }
+          if (*inventoryUpdatedEvent->destSlotNum == destSlot_) {
+            // Item was successfully moved
+            return Status::kDone;
+          } else {
+            // Item was moved, update where it is and try again
+            LOG(INFO) << "Item was moved to somewhere else";
+            // Even though we prevent the human from moving items, in theory, this could trigger. Maybe an inventory operation request was sent before we were constructed
+            srcSlot_ = *inventoryUpdatedEvent->destSlotNum;
+          }
         }
       }
     }

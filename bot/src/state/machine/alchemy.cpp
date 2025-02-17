@@ -61,14 +61,16 @@ Status Alchemy::onUpdate(const event::Event *event) {
       }
       waitingForCreatedItem_.reset();
     } else if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event); inventoryUpdatedEvent != nullptr) {
-      if (!inventoryUpdatedEvent->srcSlotNum) {
-        // New item appeared in our inventory, is it the item we just picked?
-        // TODO: I think this should move into PickItem, maybe optionally checked.
-        const auto *item = bot_.selfState()->inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
-        if (waitingForCreatedItem_) {
-          if (item->refItemId == *waitingForCreatedItem_) {
-            // This is the item we created.
-            waitingForCreatedItem_.reset();
+      if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
+        if (!inventoryUpdatedEvent->srcSlotNum) {
+          // New item appeared in our inventory, is it the item we just picked?
+          // TODO: I think this should move into PickItem, maybe optionally checked.
+          const auto *item = bot_.selfState()->inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
+          if (waitingForCreatedItem_) {
+            if (item->refItemId == *waitingForCreatedItem_) {
+              // This is the item we created.
+              waitingForCreatedItem_.reset();
+            }
           }
         }
       }

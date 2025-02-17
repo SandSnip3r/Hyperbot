@@ -32,18 +32,20 @@ Status SellingItems::onUpdate(const event::Event *event) {
 
   if (event) {
     if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
-      if (inventoryUpdatedEvent->srcSlotNum && inventoryUpdatedEvent->srcSlotNum == slotsToSell_[nextToSellIndex_] && !inventoryUpdatedEvent->destSlotNum) {
-        // This seems to the item sell that we're expecting
-        if (!waitingOnASell_) {
-          throw std::runtime_error("Weird, the item at our target slot disappeared");
-        }
-        VLOG(1) << "Item successfully sold from slot " << static_cast<int>(slotsToSell_[nextToSellIndex_]);
-        waitingOnASell_ = false;
-        ++nextToSellIndex_;
+      if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
+        if (inventoryUpdatedEvent->srcSlotNum && inventoryUpdatedEvent->srcSlotNum == slotsToSell_[nextToSellIndex_] && !inventoryUpdatedEvent->destSlotNum) {
+          // This seems to the item sell that we're expecting
+          if (!waitingOnASell_) {
+            throw std::runtime_error("Weird, the item at our target slot disappeared");
+          }
+          VLOG(1) << "Item successfully sold from slot " << static_cast<int>(slotsToSell_[nextToSellIndex_]);
+          waitingOnASell_ = false;
+          ++nextToSellIndex_;
 
-        if (nextToSellIndex_ == slotsToSell_.size()) {
-          VLOG(2) << "Done selling";
-          return Status::kDone;
+          if (nextToSellIndex_ == slotsToSell_.size()) {
+            VLOG(2) << "Done selling";
+            return Status::kDone;
+          }
         }
       }
     }

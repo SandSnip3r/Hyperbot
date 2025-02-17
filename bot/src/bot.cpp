@@ -19,6 +19,7 @@
 #include "state/machine/applyStatPoints.hpp"
 #include "state/machine/autoPotion.hpp"
 #include "state/machine/botting.hpp"
+#include "state/machine/executeGmCommand.hpp"
 #include "state/machine/gmCommandSpawnAndPickItems.hpp"
 #include "state/machine/login.hpp"
 #include "state/machine/maxMasteryAndSkills.hpp"
@@ -60,23 +61,8 @@ void Bot::setCharacter(const CharacterLoginInfo &characterLoginInfo) {
   characterLoginInfo_ = characterLoginInfo;
 }
 
-void Bot::loadConfig(std::string_view characterName) {
-  const auto appDataDirectory = helpers::getAppDataDirectory();
-  try {
-    config::CharacterConfig characterConfig;
-    characterConfig.initialize(appDataDirectory, characterName);
-    config_.emplace(std::move(characterConfig));
-    VLOG(1) << "Character config for " << characterName << " successfully loaded";
-  } catch (const std::exception& ex) {
-    LOG(WARNING) << absl::StreamFormat("Error parsing character config for character \"%s\": \"%s\"", characterName, ex.what());
-  }
-}
-
 const config::CharacterConfig* Bot::config() const {
-  if (config_.has_value()) {
-    return &config_.value();
-  }
-  return nullptr;
+  throw std::runtime_error("Config not yet implemented");
 }
 
 const pk2::GameData& Bot::gameData() const {
@@ -288,61 +274,7 @@ void Bot::handleEvent(const event::Event *event) {
 // ============================================================================================================================
 
 void Bot::onUpdate(const event::Event *event) {
-  if (loginStateMachine_) {
-    const state::machine::Status status = loginStateMachine_->onUpdate(event);
-    if (status == state::machine::Status::kDone) {
-      loginStateMachine_.reset();
-    }
-  }
-
-  if (movingStateMachine_) {
-    const state::machine::Status status = movingStateMachine_->onUpdate(event);
-    if (status == state::machine::Status::kDone) {
-      if (movingCompletedPromise_) {
-        movingCompletedPromise_->set_value();
-        movingCompletedPromise_.reset();
-      }
-      movingStateMachine_.reset();
-    }
-  }
-
-  if (gmCommandItemsStateMachine_) {
-    const state::machine::Status status = gmCommandItemsStateMachine_->onUpdate(event);
-    if (status == state::machine::Status::kDone) {
-      gmCommandItemsStateMachine_.reset();
-      if (gmCommandItemsPromise_) {
-        gmCommandItemsPromise_->set_value();
-        gmCommandItemsPromise_.reset();
-      }
-    }
-  }
-
-  concurrentStateMachines_.onUpdate(event);
-
-  // Highest priority is our vitals, we will try to heal even if we're not training
-  if (autoPotionStateMachine_) {
-    try {
-      const state::machine::Status status = autoPotionStateMachine_->onUpdate(event);
-      if (status == state::machine::Status::kDone) {
-        autoPotionStateMachine_.reset();
-      }
-    } catch (std::exception &ex) {
-      LOG(INFO) << "Error while running autopotion: " << ex.what();
-    }
-  }
-
-  std::shared_ptr<entity::Self> selfEntity = selfState();
-  if (selfEntity && !selfEntity->trainingIsActive) {
-    // Not training, nothing else to do
-    return;
-  }
-
-  if (bottingStateMachine_) {
-    const state::machine::Status status = bottingStateMachine_->onUpdate(event);
-    if (status == state::machine::Status::kDone) {
-      bottingStateMachine_.reset();
-    }
-  }
+  sequentialStateMachines_.onUpdate(event);
 }
 
 // ============================================================================================================================
@@ -358,47 +290,49 @@ void Bot::handleRequestStopTraining() {
 }
 
 void Bot::startTraining() {
-  std::shared_ptr<entity::Self> selfEntity = selfState();
-  if (!selfEntity) {
-    LOG(WARNING) << "Tried to start training, but self is not spawned";
-    return;
-  }
-  if (selfEntity->trainingIsActive) {
-    LOG(INFO) << "Asked to start training, but we're already training";
-    return;
-  }
+  throw std::runtime_error("Training commands are not implemented");
+  // std::shared_ptr<entity::Self> selfEntity = selfState();
+  // if (!selfEntity) {
+  //   LOG(WARNING) << "Tried to start training, but self is not spawned";
+  //   return;
+  // }
+  // if (selfEntity->trainingIsActive) {
+  //   LOG(INFO) << "Asked to start training, but we're already training";
+  //   return;
+  // }
 
-  if (bottingStateMachine_) {
-    throw std::runtime_error("Asked to start training, but already have a botting state machine");
-  }
+  // if (bottingStateMachine_) {
+  //   throw std::runtime_error("Asked to start training, but already have a botting state machine");
+  // }
 
-  LOG(INFO) << "Starting training";
-  selfEntity->trainingIsActive = true;
-  eventBroker_.publishEvent(event::EventCode::kTrainingStarted);
-  // TODO: Should we stop whatever we're doing?
-  //  For example, if we're running, stop where we are.
+  // LOG(INFO) << "Starting training";
+  // selfEntity->trainingIsActive = true;
+  // eventBroker_.publishEvent(event::EventCode::kTrainingStarted);
+  // // TODO: Should we stop whatever we're doing?
+  // //  For example, if we're running, stop where we are.
 
-  // Initialize state machine
-  bottingStateMachine_ = std::make_unique<state::machine::Botting>(*this);
-  // bottingStateMachine_ = std::make_unique<state::machine::Alchemy>(*this);
+  // // Initialize state machine
+  // bottingStateMachine_ = std::make_unique<state::machine::Botting>(*this);
+  // // bottingStateMachine_ = std::make_unique<state::machine::Alchemy>(*this);
 }
 
 void Bot::stopTraining() {
-  std::shared_ptr<entity::Self> selfEntity = selfState();
-  if (!selfEntity) {
-    LOG(WARNING) << "Tried to stop training, but self is not spawned";
-    return;
-  }
-  if (selfEntity->trainingIsActive) {
-    // TODO: Need to cleanup current action to avoid leaving the client in a bad state
-    //  Ex. Need to close a shop npc dialog
-    LOG(INFO) << "Stopping training";
-    selfEntity->trainingIsActive = false;
-    eventBroker_.publishEvent(event::EventCode::kTrainingStopped);
-    bottingStateMachine_.reset();
-  } else {
-    LOG(INFO) << "Asked to stop training, but we weren't training";
-  }
+  throw std::runtime_error("Training commands are not implemented");
+  // std::shared_ptr<entity::Self> selfEntity = selfState();
+  // if (!selfEntity) {
+  //   LOG(WARNING) << "Tried to stop training, but self is not spawned";
+  //   return;
+  // }
+  // if (selfEntity->trainingIsActive) {
+  //   // TODO: Need to cleanup current action to avoid leaving the client in a bad state
+  //   //  Ex. Need to close a shop npc dialog
+  //   LOG(INFO) << "Stopping training";
+  //   selfEntity->trainingIsActive = false;
+  //   eventBroker_.publishEvent(event::EventCode::kTrainingStopped);
+  //   bottingStateMachine_.reset();
+  // } else {
+  //   LOG(INFO) << "Asked to stop training, but we weren't training";
+  // }
 }
 
 // ============================================================================================================================
@@ -444,7 +378,7 @@ void Bot::handleChatCommand(const event::ChatReceived &event) {
             if (selfEntity->getAvailableStatPoints() > 0) {
               const state::machine::StatPointType type = (thingToMax == "str" ? state::machine::StatPointType::kStr : state::machine::StatPointType::kInt);
               LOG(INFO) << "Have " << selfEntity->getAvailableStatPoints() << " stat points for " << static_cast<int>(type);
-              concurrentStateMachines_.emplace<state::machine::ApplyStatPoints>(std::vector<state::machine::StatPointType>(selfEntity->getAvailableStatPoints(), type));
+              sequentialStateMachines_.emplace<state::machine::ApplyStatPoints>(std::vector<state::machine::StatPointType>(selfEntity->getAvailableStatPoints(), type));
             } else {
               LOG(INFO) << "No available stat points for " << thingToMax;
             }
@@ -452,7 +386,7 @@ void Bot::handleChatCommand(const event::ChatReceived &event) {
             // Is this a mastery?
             const auto masteryId = gameData_.getMasteryId(std::string(thingToMax));
             LOG(INFO) << "Asking to max mastery ID " << masteryId << " = \"" << thingToMax << "\"";
-            concurrentStateMachines_.emplace<state::machine::MaxMasteryAndSkills>(masteryId);
+            sequentialStateMachines_.emplace<state::machine::MaxMasteryAndSkills>(masteryId);
           }
         }
       }
@@ -491,19 +425,6 @@ void Bot::handleSelfSpawned(const event::Event *event) {
     return;
   }
   selfEntity_ = worldState_.getEntity<entity::Self>(selfSpawnedEvent->globalId);
-
-  // Construct an autopotion state machine once the character is logged in.
-  if (config_) {
-    autoPotionStateMachine_ = std::make_unique<state::machine::AutoPotion>(*this);
-  } else {
-    LOG(WARNING) << "Not constructing AutoPotion because we have no character config";
-  }
-
-  if (loggedInPromise_) {
-    VLOG(1) << "Spawned, setting logged in promise";
-    loggedInPromise_->set_value();
-    loggedInPromise_.reset();
-  }
 }
 
 void Bot::handleEntityDespawned(const event::EntityDespawned &event) {
@@ -528,9 +449,15 @@ void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
     LOG(WARNING) << "Body state changed, but self is not spawned";
     return;
   }
-  // if (event.globalId == selfEntity->globalId) {
-  //   // Our body state changed
-  //   if (selfEntity->bodyState() == packet::enums::BodyState::kInvisibleGm) {
+  if (event.globalId == selfEntity->globalId) {
+    // Our body state changed
+    if (selfEntity->bodyState() == packet::enums::BodyState::kInvisibleGm) {
+      // This is the last thing that comes to let us know that we're logged in & spawned.
+      if (loggedInPromise_) {
+        VLOG(1) << "Spawned, setting logged in promise";
+        loggedInPromise_->set_value();
+        loggedInPromise_.reset();
+      }
   //     // For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
   //     // Set self as visible
   //     VLOG(1) << "Setting self as visible";
@@ -540,8 +467,8 @@ void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
   //     // LOG(INFO) << "Setting free pvp mode";
   //     // const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
   //     // packetBroker_.injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
-  //   }
-  // }
+    }
+  }
 }
 
 void Bot::handleKnockbackStunEnded() {
@@ -881,54 +808,34 @@ std::future<void> Bot::asyncLogIn() {
   }
 
   // Not yet logged in. We'll set the promise when we receive the SelfSpawned event.
-  loginStateMachine_ = std::make_unique<state::machine::Login>(*this, characterLoginInfo_);
+  sequentialStateMachines_.emplace<state::machine::Login>(characterLoginInfo_);
   return loggedInPromise_->get_future();
+}
+
+std::future<void> Bot::asyncBecomeVisible() {
+  sequentialStateMachines_.emplace<state::machine::ExecuteGmCommand>(packet::enums::OperatorCommand::kInvisible, packet::building::ClientAgentOperatorRequest::toggleInvisible());
+  // TODO: Actually figure out how to know when we're done.
+  std::promise<void> promise;
+  promise.set_value();
+  return promise.get_future();
 }
 
 std::future<void> Bot::asyncMoveTo(const sro::Position &destinationPosition) {
   if (!loggedIn()) {
     throw std::runtime_error("Cannot move to destination, self is not spawned");
   }
-  if (movingStateMachine_) {
-    LOG(WARNING) << "Already have a moving state machine";
-    movingStateMachine_.reset();
-  }
-  movingStateMachine_ = std::make_unique<state::machine::Walking>(*this, std::vector<packet::building::NetworkReadyPosition>{destinationPosition});
+  sequentialStateMachines_.emplace<state::machine::Walking>(std::vector<packet::building::NetworkReadyPosition>{destinationPosition});
+  // TODO: Actually figure out how to know when we're done moving.
   movingCompletedPromise_.emplace();
+  movingCompletedPromise_->set_value();
   return movingCompletedPromise_->get_future();
 }
 
 std::future<void> Bot::asyncMakeSureWeHaveItems(const std::vector<ItemRequirement> &itemRequirements) {
-  std::map<sro::pk2::ref::ItemId, uint16_t> missingCounts;
-  for (const auto& itemRequirement : itemRequirements) {
-    missingCounts[itemRequirement.refId] = itemRequirement.count;
-  }
-
-  for (auto &item : inventory()) {
-    for (auto& [itemId, missing] : missingCounts) {
-      if (item.refItemId == itemId) {
-        missing -= item.getQuantity();
-      }
-    }
-  }
-  LOG(INFO) << "Character " << selfState()->name << " needs the following items:";
-  for (const auto& [itemId, missing] : missingCounts) {
-    if (missing == 0) {
-      // Have enough.
-      continue;
-    }
-    LOG(INFO) << absl::StreamFormat("  %d %s", missing, gameData_.getItemName(itemId));
-  }
-  state::machine::GmCommandSpawnAndPickItems::ItemListBuilder itemListBuilder;
-  for (const auto& [itemId, missing] : missingCounts) {
-    if (missing == 0) {
-      // Have enough.
-      continue;
-    }
-    itemListBuilder.addItemRequest({itemId, missing});
-  }
-  gmCommandItemsStateMachine_ = std::make_unique<state::machine::GmCommandSpawnAndPickItems>(*this, itemListBuilder.getItemRequests());
+  sequentialStateMachines_.emplace<state::machine::GmCommandSpawnAndPickItems>(itemRequirements);
+  // TODO: Actually figure out how to know when we're done.
   gmCommandItemsPromise_.emplace();
+  gmCommandItemsPromise_->set_value();
   return gmCommandItemsPromise_->get_future();
 }
 

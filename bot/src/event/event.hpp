@@ -215,7 +215,8 @@ public:
 
 struct InventoryUpdated : public Event {
 public:
-  InventoryUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  InventoryUpdated(EventId id, sro::scalar_types::EntityGlobalId globalId, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  const sro::scalar_types::EntityGlobalId globalId;
   const std::optional<int8_t> srcSlotNum;
   const std::optional<int8_t> destSlotNum;
   virtual ~InventoryUpdated() = default;

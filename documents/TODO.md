@@ -9,3 +9,8 @@
 - Add UI element to toggle packet logging to console
 - Kill clients on shutdown
 - Auto relogin when a character disconnects
+- Ensure that no state machine does any work in its constructor
+  - Bonus if we can guarantee it
+- Remove StateMachineActiveTooLong event
+- Remove StateMachine created/destroyed in ctors/dtors
+- Make StateMachine::name a virtual function

@@ -33,16 +33,18 @@ Status DropItem::onUpdate(const event::Event *event) {
         // This is our item.
       }
     } else if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event); inventoryUpdatedEvent != nullptr) {
-      LOG(INFO) << "inventory update";
-      if (!inventoryUpdatedEvent->destSlotNum) {
-        LOG(INFO) << "  is a drop";
-        // Is a item drop/delete update.
-        if (*inventoryUpdatedEvent->srcSlotNum == inventorySlot_) {
-          LOG(INFO) << "    is our item";
-          // Is our item.
-          return Status::kDone;
-        } else {
-          LOG(INFO) << "    dropped from " << (int)*inventoryUpdatedEvent->srcSlotNum << " but we expected " << (int)inventorySlot_;
+      if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
+        LOG(INFO) << "inventory update";
+        if (!inventoryUpdatedEvent->destSlotNum) {
+          LOG(INFO) << "  is a drop";
+          // Is a item drop/delete update.
+          if (*inventoryUpdatedEvent->srcSlotNum == inventorySlot_) {
+            LOG(INFO) << "    is our item";
+            // Is our item.
+            return Status::kDone;
+          } else {
+            LOG(INFO) << "    dropped from " << (int)*inventoryUpdatedEvent->srcSlotNum << " but we expected " << (int)inventorySlot_;
+          }
         }
       }
     }

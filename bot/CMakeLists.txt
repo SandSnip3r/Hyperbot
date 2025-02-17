@@ -344,6 +344,8 @@ add_executable(${PROJECT_NAME}
   src/state/machine/pickItemWithCos.hpp
   src/state/machine/sellingItems.cpp
   src/state/machine/sellingItems.hpp
+  src/state/machine/sequentialStateMachines.cpp
+  src/state/machine/sequentialStateMachines.hpp
   src/state/machine/stateMachine.cpp
   src/state/machine/stateMachine.hpp
   src/state/machine/talkingToShopNpc.cpp

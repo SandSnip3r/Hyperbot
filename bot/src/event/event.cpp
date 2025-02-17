@@ -50,8 +50,8 @@ InternalSkillCooldownEnded::InternalSkillCooldownEnded(EventId id, sro::scalar_t
 SkillCooldownEnded::SkillCooldownEnded(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillId) :
     Event(id, EventCode::kSkillCooldownEnded), globalId(globalId), skillRefId(skillId) {}
 
-InventoryUpdated::InventoryUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) :
-    Event(id, EventCode::kInventoryUpdated), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
+InventoryUpdated::InventoryUpdated(EventId id, sro::scalar_types::EntityGlobalId globalId, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) :
+    Event(id, EventCode::kInventoryUpdated), globalId(globalId), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
 
 AvatarInventoryUpdated::AvatarInventoryUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) :
     Event(id, EventCode::kAvatarInventoryUpdated), srcSlotNum(srcSlot), destSlotNum(destSlot) {}

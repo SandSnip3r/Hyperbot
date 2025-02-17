@@ -16,6 +16,7 @@
 #include "state/worldState.hpp"
 #include "state/machine/concurrentStateMachines.hpp"
 #include "state/machine/stateMachine.hpp"
+#include "state/machine/sequentialStateMachines.hpp"
 
 #include <future>
 #include <optional>
@@ -51,7 +52,6 @@ protected:
   friend class broker::EventBroker;
   void handleEvent(const event::Event *event);
 
-  std::optional<config::CharacterConfig> config_;
   const SessionId sessionId_;
   const pk2::GameData &gameData_;
   Proxy &proxy_;
@@ -67,14 +67,8 @@ protected:
 
 private:
   CharacterLoginInfo characterLoginInfo_;
-  std::unique_ptr<state::machine::StateMachine> loginStateMachine_;
-  std::unique_ptr<state::machine::StateMachine> autoPotionStateMachine_;
-  std::unique_ptr<state::machine::StateMachine> bottingStateMachine_;
-  std::unique_ptr<state::machine::StateMachine> movingStateMachine_;
-  std::unique_ptr<state::machine::StateMachine> gmCommandItemsStateMachine_;
-  state::machine::ConcurrentStateMachines concurrentStateMachines_{*this};
+  state::machine::SequentialStateMachines sequentialStateMachines_{*this};
 
-  void loadConfig(std::string_view characterName);
   void subscribeToEvents();
 
   // Main logic
@@ -113,6 +107,7 @@ public:
   // Interface for RL training.
   std::future<void> asyncOpenClient();
   std::future<void> asyncLogIn();
+  std::future<void> asyncBecomeVisible();
   std::future<void> asyncMoveTo(const sro::Position &destinationPosition);
 
   struct ItemRequirement {

@@ -693,7 +693,7 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     // Figure out the cooldown of this item.
     const auto itemCooldown = getItemCooldownMs(*expendableItemPtr);
     selfEntity_->usedAnItem(packet.typeData(), itemCooldown);
-    eventBroker_.publishEvent<event::InventoryUpdated>(packet.slotNum(), std::nullopt);
+    eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, packet.slotNum(), std::nullopt);
   } else if (dynamic_cast<const storage::ItemCosAbilitySummoner*>(itemPtr) == nullptr &&
               dynamic_cast<const storage::ItemCosGrowthSummoner*>(itemPtr) == nullptr) {
     throw std::runtime_error("Used an item, but it wasn't an expendable or COS summon");
@@ -753,7 +753,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
             // Picked item's quantity (if an expendable) is the total in the given slot
             existingExpendableItem->quantity = newExpendableItem->quantity;
             addedToStack = true;
-            eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, destSlot);
+            eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, std::nullopt, destSlot);
           }
         }
         if (!addedToStack) {
@@ -766,7 +766,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
           // This is especially weird since we already know that there was nothing in this slot
           throw std::runtime_error("Could not add item to inventory");
         }
-        eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, destSlot);
+        eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, std::nullopt, destSlot);
       }
     } else {
       LOG(INFO) << "Error: Picked an item, but the newItem is a nullptr";
@@ -776,7 +776,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
   auto removeItemFromInventory = [&, this](const auto slotIndex) {
     if (selfEntity_->inventory.hasItem(slotIndex)) {
       selfEntity_->inventory.deleteItem(slotIndex);
-      eventBroker_.publishEvent<event::InventoryUpdated>(slotIndex, std::nullopt);
+      eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, slotIndex, std::nullopt);
     } else {
       LOG(INFO) << "RemoveItemFromInventory(): There's no item in this inventory slot";
     }
@@ -787,7 +787,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
   for (const auto &movement : itemMovements) {
     if (movement.type == packet::enums::ItemMovementType::kUpdateSlotsInventory) {
       selfEntity_->inventory.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
-      eventBroker_.publishEvent<event::InventoryUpdated>(movement.srcSlot, movement.destSlot);
+      eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, movement.srcSlot, movement.destSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kUpdateSlotsChest) {
       selfEntity_->storage.moveItem(movement.srcSlot, movement.destSlot, movement.quantity);
       eventBroker_.publishEvent<event::StorageUpdated>(movement.srcSlot, movement.destSlot);
@@ -796,20 +796,20 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
       eventBroker_.publishEvent<event::GuildStorageUpdated>(movement.srcSlot, movement.destSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kChestDepositItem) {
       selfEntity_->storage.addItem(movement.destSlot, selfEntity_->inventory.withdrawItem(movement.srcSlot));
-      eventBroker_.publishEvent<event::InventoryUpdated>(movement.srcSlot, std::nullopt);
+      eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, movement.srcSlot, std::nullopt);
       eventBroker_.publishEvent<event::StorageUpdated>(std::nullopt, movement.destSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kChestWithdrawItem) {
       selfEntity_->inventory.addItem(movement.destSlot, selfEntity_->storage.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent<event::StorageUpdated>(movement.srcSlot, std::nullopt);
-      eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, movement.destSlot);
+      eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, std::nullopt, movement.destSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kGuildChestDepositItem) {
       selfEntity_->guildStorage.addItem(movement.destSlot, selfEntity_->inventory.withdrawItem(movement.srcSlot));
-      eventBroker_.publishEvent<event::InventoryUpdated>(movement.srcSlot, std::nullopt);
+      eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, movement.srcSlot, std::nullopt);
       eventBroker_.publishEvent<event::GuildStorageUpdated>(std::nullopt, movement.destSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kGuildChestWithdrawItem) {
       selfEntity_->inventory.addItem(movement.destSlot, selfEntity_->guildStorage.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent<event::GuildStorageUpdated>(movement.srcSlot, std::nullopt);
-      eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, movement.destSlot);
+      eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, std::nullopt, movement.destSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kBuyItem) {
       if (selfEntity_->haveUserPurchaseRequest()) {
         const auto userPurchaseRequest = selfEntity_->getUserPurchaseRequest();
@@ -829,13 +829,13 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
                 itemExp->quantity = movement.quantity;
               }
               selfEntity_->inventory.addItem(movement.destSlots[0], item);
-              eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, movement.destSlots[0]);
+              eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, std::nullopt, movement.destSlots[0]);
             } else {
               // Multiple destination slots, must be unstackable items like equipment
               for (auto destSlot : movement.destSlots) {
                 auto item = helpers::createItemFromScrap(itemInfo, itemRef);
                 selfEntity_->inventory.addItem(destSlot, item);
-                eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, movement.destSlot);
+                eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, std::nullopt, movement.destSlot);
               }
             }
           }
@@ -864,7 +864,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
           auto item = selfEntity_->inventory.withdrawItem(movement.srcSlot);
           selfEntity_->buybackQueue.addItem(item);
         }
-        eventBroker_.publishEvent<event::InventoryUpdated>(movement.srcSlot, std::nullopt);
+        eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, movement.srcSlot, std::nullopt);
       } else {
         LOG(INFO) << "Sold an item from a slot that we didn't have item data for";
       }
@@ -885,13 +885,13 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
                 itemExpendable->quantity -= movement.quantity;
                 dynamic_cast<storage::ItemExpendable*>(clonedItem.get())->quantity = movement.quantity;
                 selfEntity_->inventory.addItem(movement.destSlot, clonedItem);
-                eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, movement.destSlot);
+                eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, std::nullopt, movement.destSlot);
               }
             }
           }
           if (boughtBackAll) {
             selfEntity_->inventory.addItem(movement.destSlot, selfEntity_->buybackQueue.withdrawItem(movement.srcSlot));
-            eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, movement.destSlot);
+            eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, std::nullopt, movement.destSlot);
           }
         } else {
           LOG(INFO) << "Bought back item is being moved into a slot that's already occupied";
@@ -923,20 +923,20 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
     } else if (movement.type == packet::enums::ItemMovementType::kMoveItemAvatarToInventory) {
       selfEntity_->inventory.addItem(movement.destSlot, selfEntity_->avatarInventory.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent<event::AvatarInventoryUpdated>(movement.srcSlot, std::nullopt);
-      eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, movement.destSlot);
+      eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, std::nullopt, movement.destSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kMoveItemInventoryToAvatar) {
       selfEntity_->avatarInventory.addItem(movement.destSlot, selfEntity_->inventory.withdrawItem(movement.srcSlot));
-      eventBroker_.publishEvent<event::InventoryUpdated>(movement.srcSlot, std::nullopt);
+      eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, movement.srcSlot, std::nullopt);
       eventBroker_.publishEvent<event::AvatarInventoryUpdated>(std::nullopt, movement.destSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kMoveItemCosToInventory) {
       auto &cosInventory = selfEntity_->getCosInventory(movement.globalId);
       selfEntity_->inventory.addItem(movement.destSlot, cosInventory.withdrawItem(movement.srcSlot));
       eventBroker_.publishEvent<event::CosInventoryUpdated>(movement.globalId, movement.srcSlot, std::nullopt);
-      eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, movement.destSlot);
+      eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, std::nullopt, movement.destSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kMoveItemInventoryToCos) {
       auto &cosInventory = selfEntity_->getCosInventory(movement.globalId);
       cosInventory.addItem(movement.destSlot, selfEntity_->inventory.withdrawItem(movement.srcSlot));
-      eventBroker_.publishEvent<event::InventoryUpdated>(movement.srcSlot, std::nullopt);
+      eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, movement.srcSlot, std::nullopt);
       eventBroker_.publishEvent<event::CosInventoryUpdated>(movement.globalId, std::nullopt, movement.destSlot);
     } else if (movement.type == packet::enums::ItemMovementType::kUpdateSlotsInventoryCos) {
       auto &cosInventory = selfEntity_->getCosInventory(movement.globalId);
@@ -1164,9 +1164,9 @@ void PacketProcessor::serverAgentInventoryUpdateItemReceived(const packet::parsi
       const bool increased = (packet.quantity() > itemAsExpendable->quantity);
       itemAsExpendable->quantity = packet.quantity();
       if (increased) {
-        eventBroker_.publishEvent<event::InventoryUpdated>(std::nullopt, packet.slotIndex());
+        eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, std::nullopt, packet.slotIndex());
       } else {
-        eventBroker_.publishEvent<event::InventoryUpdated>(packet.slotIndex() ,std::nullopt);
+        eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, packet.slotIndex() ,std::nullopt);
       }
     } else {
       throw std::runtime_error("Item quantity updated, but this item is not an expendable");

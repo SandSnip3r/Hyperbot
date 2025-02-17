@@ -7,21 +7,23 @@
 
 namespace state::machine {
 
-ExecuteGmCommand ExecuteGmCommand::makeItem(Bot &bot, sro::scalar_types::ReferenceObjectId refItemId, uint8_t optLevelOrAmount) {
-  return ExecuteGmCommand(bot, packet::enums::OperatorCommand::kMakeItem, packet::building::ClientAgentOperatorRequest::makeItem(refItemId, optLevelOrAmount));
-}
-
 ExecuteGmCommand::ExecuteGmCommand(Bot &bot, packet::enums::OperatorCommand gmCommand, PacketContainer gmCommandPacket) : StateMachine(bot), gmCommand_(gmCommand), gmCommandPacket_(gmCommandPacket) {
-  stateMachineCreated(kName);
-  // const PacketContainer gmCommandPacket_;
-  bot_.packetBroker().injectPacket(gmCommandPacket_, PacketContainer::Direction::kClientToServer);
+  // stateMachineCreated(kName);
+  LOG(INFO) << "ExecuteGmCommand created";
 }
 
 ExecuteGmCommand::~ExecuteGmCommand() {
-  stateMachineDestroyed();
+  // stateMachineDestroyed();
 }
 
 Status ExecuteGmCommand::onUpdate(const event::Event *event) {
+  if (!waitingForResponse_) {
+    LOG(INFO) << "Injecting GM command packet";
+    bot_.packetBroker().injectPacket(gmCommandPacket_, PacketContainer::Direction::kClientToServer);
+    waitingForResponse_ = true;
+    return Status::kNotDone;
+  }
+
   if (event == nullptr) {
     // No event, nothing to do.
     return Status::kNotDone;

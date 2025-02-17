@@ -61,12 +61,20 @@ void RlTrainingManager::run() {
   character2ClientOpenFuture.wait();
   LOG(INFO) << "Clients are open";
 
+  LOG(INFO) << "Starting to log in characters";
   auto character1LoginFuture = bot1.asyncLogIn();
   auto character2LoginFuture = bot2.asyncLogIn();
   LOG(INFO) << "Waiting for characters to log in";
   character1LoginFuture.wait();
   character2LoginFuture.wait();
   LOG(INFO) << "Characters are logged in";
+
+  auto character1VisibleFuture = bot1.asyncBecomeVisible();
+  auto character2VisibleFuture = bot2.asyncBecomeVisible();
+  LOG(INFO) << "Waiting for characters to be visible";
+  character1VisibleFuture.wait();
+  character2VisibleFuture.wait();
+  LOG(INFO) << "Characters are visible";
 
   while (true) {
     // Get the characters ready to fight.
@@ -110,10 +118,10 @@ void RlTrainingManager::prepareCharactersForPvp(Bot &char1, Bot &char2, const sr
 
   // Make sure we have enough potions & other expendables.
 
-  // auto character1GetItemsFuture = char1.asyncMakeSureWeHaveItems(itemRequirements_);
-  // auto character2GetItemsFuture = char2.asyncMakeSureWeHaveItems(itemRequirements_);
-  // character1GetItemsFuture.wait();
-  // character2GetItemsFuture.wait();
+  auto character1GetItemsFuture = char1.asyncMakeSureWeHaveItems(itemRequirements_);
+  auto character2GetItemsFuture = char2.asyncMakeSureWeHaveItems(itemRequirements_);
+  character1GetItemsFuture.wait();
+  character2GetItemsFuture.wait();
   LOG(INFO) << "Characters now have the required items";
 
   // TODO: Make sure everything is repaired
@@ -135,11 +143,16 @@ void RlTrainingManager::buildItemRequirementList() {
   const sro::pk2::ref::ItemId smallMpPotionRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
     return type_id::categories::kMpPotion.contains(type_id::getTypeId(item)) && item.itemClass == 2;
   });
+  const sro::pk2::ref::ItemId mediumUniversalPillRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
+    return type_id::categories::kUniversalPill.contains(type_id::getTypeId(item)) && item.itemClass == 2;
+  });
 
   constexpr int kSmallHpPotionRequiredCount = 200;
   constexpr int kSmallMpPotionRequiredCount = 200;
+  constexpr int kMediumUniversalPillRequiredCount = 100;
   itemRequirements_.push_back({smallHpPotionRefId, kSmallHpPotionRequiredCount});
   itemRequirements_.push_back({smallMpPotionRefId, kSmallMpPotionRequiredCount});
+  itemRequirements_.push_back({mediumUniversalPillRefId, kMediumUniversalPillRequiredCount});
 }
 
 } // namespace rl
