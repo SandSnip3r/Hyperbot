@@ -43,7 +43,9 @@
 #include "packet/parsing/serverAgentEntityUpdatePosition.hpp"
 #include "packet/parsing/serverAgentEntityUpdateState.hpp"
 #include "packet/parsing/serverAgentEntityUpdateStatus.hpp"
+#include "packet/parsing/serverAgentFreePvpUpdateResponse.hpp"
 #include "packet/parsing/serverAgentGuildStorageData.hpp"
+#include "packet/parsing/serverAgentInventoryEquipCountdownStart.hpp"
 #include "packet/parsing/serverAgentInventoryItemUseResponse.hpp"
 #include "packet/parsing/serverAgentInventoryOperationResponse.hpp"
 #include "packet/parsing/serverAgentInventoryRepairResponse.hpp"
@@ -180,6 +182,8 @@ private:
   void serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet);
   void serverAgentResurrectOptionReceived(const packet::parsing::ServerAgentResurrectOption &packet) const;
   void serverAgentOperatorResponseReceived(const packet::parsing::ServerAgentOperatorResponse &packet) const;
+  void serverAgentFreePvpUpdateResponseReceived(const packet::parsing::ServerAgentFreePvpUpdateResponse &packet) const;
+  void serverAgentInventoryEquipCountdownStartReceived(const packet::parsing::ServerAgentInventoryEquipCountdownStart &packet) const;
 
   std::optional<std::chrono::milliseconds> getItemCooldownMs(const storage::ItemExpendable &item) const;
   WrappedCommand wrapActionCommand(const packet::structures::ActionCommand &command) const;

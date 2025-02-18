@@ -16,6 +16,7 @@ public:
   SequentialStateMachines(Bot &bot);
   ~SequentialStateMachines() override;
   Status onUpdate(const event::Event *event) override;
+  void push(std::unique_ptr<StateMachine> &&stateMachine);
 
   template<typename StateMachineType, typename... Args>
   void emplace(Args&&... args) {

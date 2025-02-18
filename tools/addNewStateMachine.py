@@ -61,11 +61,9 @@ sourceTemplate = '#include "{camelClassName}.hpp"\n'\
                  'namespace state::machine {{\n'\
                  '\n'\
                  '{pascalClassName}::{pascalClassName}(Bot &bot) : StateMachine(bot) {{\n'\
-                 '  stateMachineCreated(kName);\n'\
                  '}}\n'\
                  '\n'\
                  '{pascalClassName}::~{pascalClassName}() {{\n'\
-                 '  stateMachineDestroyed();\n'\
                  '}}\n'\
                  '\n'\
                  'Status {pascalClassName}::onUpdate(const event::Event *event) {{\n'\

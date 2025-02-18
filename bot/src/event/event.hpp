@@ -109,7 +109,9 @@
   F(IbuvChallengeReceived) \
   F(CharacterSelectionJoinSuccess) \
   F(OperatorRequestSuccess) \
-  F(OperatorRequestError)
+  F(OperatorRequestError) \
+  F(EquipCountdownStart) \
+  F(FreePvpUpdateSuccess)
 
 namespace event {
 
@@ -527,15 +529,29 @@ public:
 };
 
 struct OperatorRequestSuccess : public Event {
-  explicit OperatorRequestSuccess(EventId id, packet::enums::OperatorCommand operatorCommand);
+  explicit OperatorRequestSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId, packet::enums::OperatorCommand operatorCommand);
+  sro::scalar_types::EntityGlobalId globalId;
   packet::enums::OperatorCommand operatorCommand;
   virtual ~OperatorRequestSuccess() = default;
 };
 
 struct OperatorRequestError : public Event {
-  explicit OperatorRequestError(EventId id, packet::enums::OperatorCommand operatorCommand);
+  explicit OperatorRequestError(EventId id, sro::scalar_types::EntityGlobalId globalId, packet::enums::OperatorCommand operatorCommand);
+  sro::scalar_types::EntityGlobalId globalId;
   packet::enums::OperatorCommand operatorCommand;
   virtual ~OperatorRequestError() = default;
+};
+
+struct EquipCountdownStart : public Event {
+  explicit EquipCountdownStart(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EquipCountdownStart() = default;
+};
+
+struct FreePvpUpdateSuccess : public Event {
+  explicit FreePvpUpdateSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  sro::scalar_types::EntityGlobalId globalId;
+  virtual ~FreePvpUpdateSuccess() = default;
 };
 
 } // namespace event

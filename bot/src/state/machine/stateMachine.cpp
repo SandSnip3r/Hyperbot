@@ -4,7 +4,7 @@
 namespace state::machine {
 
 StateMachine::StateMachine(Bot &bot) : bot_(bot) {
-  debugEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::minutes(15), event::EventCode::kStateMachineActiveTooLong);
+  // debugEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::minutes(15), event::EventCode::kStateMachineActiveTooLong);
 }
 
 StateMachine::~StateMachine() {
@@ -12,7 +12,17 @@ StateMachine::~StateMachine() {
   for (const auto opcode : blockedOpcodes_) {
     bot_.proxy().unblockOpcode(opcode);
   }
-  bot_.eventBroker().cancelDelayedEvent(debugEventId_);
+  // bot_.eventBroker().cancelDelayedEvent(debugEventId_);
+  if (destructionPromise_.has_value()) {
+    destructionPromise_->set_value();
+  }
+}
+
+std::future<void> StateMachine::getDestructionFuture() {
+  if (!destructionPromise_.has_value()) {
+    destructionPromise_.emplace();
+  }
+  return destructionPromise_->get_future();
 }
 
 void StateMachine::pushBlockedOpcode(packet::Opcode opcode) {
@@ -29,6 +39,14 @@ void StateMachine::stateMachineCreated(const std::string &name) {
 
 void StateMachine::stateMachineDestroyed() {
   bot_.eventBroker().publishEvent(event::EventCode::kStateMachineDestroyed);
+}
+
+std::string StateMachine::characterNameForLog() const {
+  if (bot_.selfState() == nullptr) {
+    return absl::StrFormat("[NOT_LOGGED_IN]");
+  } else {
+    return absl::StrFormat("[%s]", bot_.selfState()->name);
+  }
 }
 
 bool StateMachine::canMove() const {

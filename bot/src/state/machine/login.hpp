@@ -27,6 +27,7 @@ private:
   const std::string characterName_;
   std::optional<uint32_t> agentServerToken_;
   bool waitingOnShardList_{false};
+  bool spawned_{false};
 };
 
 } // namespace state::machine

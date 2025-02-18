@@ -19,8 +19,9 @@ private:
   bool initialized_{false};
   sro::pk2::ref::ItemId targetRefId_;
   // When we pick an item, first it should despawn, then it should arrive in our inventory. Track these two separately so that if something arrives in our inventory matching the RefId before the item despawns, we know that it's not the item we're trying to pick up.
-  bool waitingForItemToDespawn_{false};
-  bool waitingForItemToArriveInInventory_{false};
+  bool sentCommand_{false};
+  bool waitingForItemToDespawn_{true};
+  bool waitingForItemToArriveInInventory_{true};
 };
 
 } // namespace state::machine

@@ -14,3 +14,4 @@
 - Remove StateMachineActiveTooLong event
 - Remove StateMachine created/destroyed in ctors/dtors
 - Make StateMachine::name a virtual function
+- Handle the case when state::machine::PickItem's target item is picked by someone else

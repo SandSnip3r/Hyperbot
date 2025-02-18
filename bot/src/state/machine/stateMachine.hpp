@@ -4,6 +4,7 @@
 #include "broker/eventBroker.hpp"
 #include "packet/opcode.hpp"
 
+#include <future>
 #include <memory>
 #include <string>
 #include <vector>
@@ -27,11 +28,15 @@ public:
 
   // When this is called, `Bot` will have already processed the event.
   virtual Status onUpdate(const event::Event *event) = 0;
+
+  std::future<void> getDestructionFuture();
 protected:
   Bot &bot_;
   void pushBlockedOpcode(packet::Opcode opcode);
   void stateMachineCreated(const std::string &name);
   void stateMachineDestroyed();
+
+  std::string characterNameForLog() const;
 
   bool canMove() const;
 
@@ -44,7 +49,8 @@ protected:
   std::unique_ptr<StateMachine> childState_;
 private:
   std::vector<packet::Opcode> blockedOpcodes_;
-  broker::EventBroker::EventId debugEventId_;
+  // broker::EventBroker::EventId debugEventId_;
+  std::optional<std::promise<void>> destructionPromise_;
 };
 
 std::ostream& operator<<(std::ostream &stream, Npc npc);

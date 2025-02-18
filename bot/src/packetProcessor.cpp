@@ -172,6 +172,8 @@ void PacketProcessor::subscribeToPackets() {
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentGameReset, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentResurrectOption, packetHandleFunction);
   packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentOperatorResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentFreePvpUpdateResponse, packetHandleFunction);
+  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryEquipCountdownStart, packetHandleFunction);
 }
 
 void PacketProcessor::handlePacket(const PacketContainer &packet) {
@@ -277,6 +279,8 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentGameReset, serverAgentGameResetReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentResurrectOption, serverAgentResurrectOptionReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentOperatorResponse, serverAgentOperatorResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentFreePvpUpdateResponse, serverAgentFreePvpUpdateResponseReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryEquipCountdownStart, serverAgentInventoryEquipCountdownStartReceived);
   } catch (std::exception &ex) {
     LOG(INFO) << absl::StreamFormat("Error while handling packet %s: \"%s\"", packet::toString(static_cast<packet::Opcode>(packet.opcode)), ex.what());
     return;
@@ -1833,10 +1837,24 @@ void PacketProcessor::serverAgentResurrectOptionReceived(const packet::parsing::
 
 void PacketProcessor::serverAgentOperatorResponseReceived(const packet::parsing::ServerAgentOperatorResponse &packet) const {
   if (packet.result() == 1) {
-    eventBroker_.publishEvent<event::OperatorRequestSuccess>(packet.operatorCommand());
+    eventBroker_.publishEvent<event::OperatorRequestSuccess>(selfEntity_->globalId, packet.operatorCommand());
   } else if (packet.result() == 2) {
-    eventBroker_.publishEvent<event::OperatorRequestError>(packet.operatorCommand());
+    eventBroker_.publishEvent<event::OperatorRequestError>(selfEntity_->globalId, packet.operatorCommand());
   } else {
     throw std::runtime_error("Unknown operator response result");
+  }
+}
+
+void PacketProcessor::serverAgentFreePvpUpdateResponseReceived(const packet::parsing::ServerAgentFreePvpUpdateResponse &packet) const {
+  if (packet.result() == 1) {
+    if (packet.globalId() == selfEntity_->globalId) {
+      eventBroker_.publishEvent<event::FreePvpUpdateSuccess>(packet.globalId());
+    }
+  }
+}
+
+void PacketProcessor::serverAgentInventoryEquipCountdownStartReceived(const packet::parsing::ServerAgentInventoryEquipCountdownStart &packet) const {
+  if (packet.globalId() == selfEntity_->globalId) {
+    eventBroker_.publishEvent<event::EquipCountdownStart>(packet.globalId());
   }
 }

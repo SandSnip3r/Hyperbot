@@ -175,10 +175,16 @@ LearnMasterySuccess::LearnMasterySuccess(EventId id, sro::scalar_types::Referenc
 LearnSkillSuccess::LearnSkillSuccess(EventId id, sro::scalar_types::ReferenceSkillId newSkillId, std::optional<sro::scalar_types::ReferenceSkillId> oldSkillId) :
     Event(id, EventCode::kLearnSkillSuccess), newSkillRefId(newSkillId), oldSkillRefId(oldSkillId) {}
 
-OperatorRequestSuccess::OperatorRequestSuccess(EventId id, packet::enums::OperatorCommand operatorCommand) :
-    Event(id, EventCode::kOperatorRequestSuccess), operatorCommand(operatorCommand) {}
+OperatorRequestSuccess::OperatorRequestSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId, packet::enums::OperatorCommand operatorCommand) :
+    Event(id, EventCode::kOperatorRequestSuccess), globalId(globalId), operatorCommand(operatorCommand) {}
 
-OperatorRequestError::OperatorRequestError(EventId id, packet::enums::OperatorCommand operatorCommand) :
-    Event(id, EventCode::kOperatorRequestError), operatorCommand(operatorCommand) {}
+OperatorRequestError::OperatorRequestError(EventId id, sro::scalar_types::EntityGlobalId globalId, packet::enums::OperatorCommand operatorCommand) :
+    Event(id, EventCode::kOperatorRequestError), globalId(globalId), operatorCommand(operatorCommand) {}
+
+EquipCountdownStart::EquipCountdownStart(EventId id, sro::scalar_types::EntityGlobalId globalId) :
+    Event(id, EventCode::kEquipCountdownStart), globalId(globalId) {}
+
+FreePvpUpdateSuccess::FreePvpUpdateSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId) :
+    Event(id, EventCode::kFreePvpUpdateSuccess), globalId(globalId) {}
 
 } // namespace event

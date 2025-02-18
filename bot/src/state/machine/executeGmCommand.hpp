@@ -19,6 +19,7 @@ private:
   const packet::enums::OperatorCommand gmCommand_;
   const PacketContainer gmCommandPacket_;
   bool waitingForResponse_{false};
+  std::optional<broker::EventBroker::EventId> eventId_;
 };
 
 } // namespace state::machine

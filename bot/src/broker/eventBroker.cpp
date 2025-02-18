@@ -31,6 +31,7 @@ bool EventBroker::cancelDelayedEvent(EventId eventId) {
   const TimerManager::TimerId timerId = getTimerId(eventId);
   bool cancelled = timerManager_.cancelTimer(timerId);
   if (cancelled) {
+    VLOG(1) << absl::StreamFormat("Cancelled event #%d", eventId);
     removeTimerIdMapping(eventId);
   } else {
     LOG(WARNING) << "Tried to cancel delayed event but failed";

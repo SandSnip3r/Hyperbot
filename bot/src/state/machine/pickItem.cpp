@@ -23,19 +23,17 @@ Status PickItem::onUpdate(const event::Event *event) {
 
   // At this point, we are within range of the item and can pick it up
   if (event) {
-    if (waitingForItemToDespawn_) {
+    if (sentCommand_ && waitingForItemToDespawn_) {
       if (const auto *entityDespawnedEvent = dynamic_cast<const event::EntityDespawned*>(event)) {
         if (entityDespawnedEvent->globalId == targetGlobalId_) {
           // The item we wanted to pick up despawned
           // Whether we picked it up or not doesn't matter; we're done either way
-          LOG(INFO) << "The item we picked despawned, but we're still going to wait for it to show up in our inventory";
+          VLOG(1) << characterNameForLog() << " " << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") despawned";
           waitingForItemToDespawn_ = false;
-          waitingForItemToArriveInInventory_ = true;
-          return Status::kNotDone;
         }
       }
     }
-    if (waitingForItemToArriveInInventory_) {
+    if (sentCommand_ && waitingForItemToArriveInInventory_) {
       if (const auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
         if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
           // Event is for us
@@ -45,8 +43,8 @@ Status PickItem::onUpdate(const event::Event *event) {
             if (item != nullptr && item->refItemId == targetRefId_) {
               // We picked up the item we wanted
               // TODO: We don't know if this is because we picked this item up, or someone else in our party picked up an item of the same type and via item distribution, we received it.
-              LOG(INFO) << "The item we picked landed in our inventory";
-              return Status::kDone;
+              VLOG(1) << characterNameForLog() << " " << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") landed in our inventory";
+              waitingForItemToArriveInInventory_ = false;
             }
           }
         }
@@ -55,14 +53,22 @@ Status PickItem::onUpdate(const event::Event *event) {
     // TODO: Handle response for CommandRequest
   }
 
-  if (waitingForItemToDespawn_ || waitingForItemToArriveInInventory_) {
+  if (sentCommand_ && !waitingForItemToDespawn_ && !waitingForItemToArriveInInventory_) {
+    return Status::kDone;
+  }
+
+  if (sentCommand_ && (waitingForItemToDespawn_ || waitingForItemToArriveInInventory_)) {
     return Status::kNotDone;
   }
 
-  const auto packet = packet::building::ClientAgentActionCommandRequest::pickup(targetGlobalId_);
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
-  waitingForItemToDespawn_ = true;
-  return Status::kNotDone;
+  if (!sentCommand_) {
+    VLOG(1) << characterNameForLog() << " " << "Sending packet to pickup " << bot_.gameData().getItemName(targetRefId_);
+    const auto packet = packet::building::ClientAgentActionCommandRequest::pickup(targetGlobalId_);
+    bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
+    sentCommand_ = true;
+    return Status::kNotDone;
+  }
+  throw std::runtime_error("Should be impossible to reach the end of PickItem::onUpdate()");
 }
 
 } // namespace state::machine

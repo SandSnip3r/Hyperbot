@@ -14,9 +14,8 @@
 #include "sessionId.hpp"
 #include "statAggregator.hpp"
 #include "state/worldState.hpp"
-#include "state/machine/concurrentStateMachines.hpp"
-#include "state/machine/stateMachine.hpp"
 #include "state/machine/sequentialStateMachines.hpp"
+#include "state/machine/stateMachine.hpp"
 
 #include <future>
 #include <optional>
@@ -90,7 +89,6 @@ private:
   void handleEntityDespawned(const event::EntityDespawned &event);
 
   // Misc
-  void handleBodyStateChanged(const event::EntityBodyStateChanged &event);
   void handleKnockbackStunEnded();
   void handleKnockdownStunEnded();
   void handleItemCooldownEnded(const event::ItemCooldownEnded &event);
@@ -106,25 +104,22 @@ public:
 
   // Interface for RL training.
   std::future<void> asyncOpenClient();
-  std::future<void> asyncLogIn();
-  std::future<void> asyncBecomeVisible();
-  std::future<void> asyncMoveTo(const sro::Position &destinationPosition);
+  std::future<void> pushAsyncLogIn();
+  std::future<void> pushAsyncBecomeVisible();
+  std::future<void> pushAsyncMoveTo(const sro::Position &destinationPosition);
+  std::future<void> pushAsyncEnablePvp();
 
   struct ItemRequirement {
     sro::pk2::ref::ItemId refId;
     uint16_t count;
   };
-  std::future<void> asyncMakeSureWeHaveItems(const std::vector<ItemRequirement> &itemRequirements);
+  std::future<void> pushAsyncMakeSureWeHaveItems(const std::vector<ItemRequirement> &itemRequirements);
 
   bool loggedIn() const;
 
 private:
   // Data for RL training interface.
   std::promise<void> clientOpenPromise_;
-  std::optional<std::promise<void>> loggedInPromise_;
-  std::optional<std::promise<void>> movingCompletedPromise_;
-  std::optional<std::promise<void>> gmCommandItemsPromise_;
-
 };
 
 #endif

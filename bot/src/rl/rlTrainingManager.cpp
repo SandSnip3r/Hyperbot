@@ -61,20 +61,27 @@ void RlTrainingManager::run() {
   character2ClientOpenFuture.wait();
   LOG(INFO) << "Clients are open";
 
-  LOG(INFO) << "Starting to log in characters";
-  auto character1LoginFuture = bot1.asyncLogIn();
-  auto character2LoginFuture = bot2.asyncLogIn();
-  LOG(INFO) << "Waiting for characters to log in";
-  character1LoginFuture.wait();
-  character2LoginFuture.wait();
-  LOG(INFO) << "Characters are logged in";
+  LOG(INFO) << "Logging in characters";
+  bot1.pushAsyncLogIn();
+  bot2.pushAsyncLogIn();
 
-  auto character1VisibleFuture = bot1.asyncBecomeVisible();
-  auto character2VisibleFuture = bot2.asyncBecomeVisible();
-  LOG(INFO) << "Waiting for characters to be visible";
-  character1VisibleFuture.wait();
-  character2VisibleFuture.wait();
-  LOG(INFO) << "Characters are visible";
+  bot1.pushAsyncBecomeVisible();
+  bot2.pushAsyncBecomeVisible();
+
+  std::future<void> character1ReadyForLoop = bot1.pushAsyncEnablePvp();
+  std::future<void> character2ReadyForLoop = bot2.pushAsyncEnablePvp();
+  character1ReadyForLoop.wait();
+  character2ReadyForLoop.wait();
+  LOG(INFO) << "Characters logged in, visible, and ready for training loop";
+
+  // auto character1VisibleFuture = bot1.asyncBecomeVisible();
+  // auto character2VisibleFuture = bot2.asyncBecomeVisible();
+  // LOG(INFO) << "Waiting for characters to be visible";
+  // character1VisibleFuture.wait();
+  // character2VisibleFuture.wait();
+  // LOG(INFO) << "Characters are visible";
+
+  // TODO: Ensure PVP mode is enabled.
 
   while (true) {
     // Get the characters ready to fight.
@@ -105,24 +112,25 @@ void RlTrainingManager::run() {
 
 void RlTrainingManager::prepareCharactersForPvp(Bot &char1, Bot &char2, const sro::Position pvpPosition) {
   // TODO: If the character is dead, resurrect.
-  // TODO: If the character is not in pvp mode, enable pvp mode.
 
   // Move to position (each at a slight offset from the pvp position)
   LOG(INFO) << "Preparing characters for PVP";
-  auto character1MoveFuture = char1.asyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, +25.0, 0.0));
-  auto character2MoveFuture = char2.asyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, -25.0, 0.0));
-  LOG(INFO) << "Moving to " << pvpPosition.toString();
-  character1MoveFuture.wait();
-  character2MoveFuture.wait();
-  LOG(INFO) << "Characters are at " << pvpPosition.toString();
+  LOG(INFO) << "First, moving to " << pvpPosition.toString();
+  char1.pushAsyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, +25.0, 0.0));
+  char2.pushAsyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, -25.0, 0.0));
 
   // Make sure we have enough potions & other expendables.
+  auto character1PreparationCompleteFuture = char1.pushAsyncMakeSureWeHaveItems(itemRequirements_);
+  auto character2PreparationCompleteFuture = char2.pushAsyncMakeSureWeHaveItems(itemRequirements_);
+  LOG(INFO) << "Waiting on characters to have the required items";
+  character1PreparationCompleteFuture.wait();
+  LOG(INFO) << "First character is done";
+  character2PreparationCompleteFuture.wait();
+  LOG(INFO) << "Characters are at " << pvpPosition.toString() << " and have the required items";
+  // TODO: We also need to ensure that the characters are not invisible.
 
-  auto character1GetItemsFuture = char1.asyncMakeSureWeHaveItems(itemRequirements_);
-  auto character2GetItemsFuture = char2.asyncMakeSureWeHaveItems(itemRequirements_);
-  character1GetItemsFuture.wait();
-  character2GetItemsFuture.wait();
-  LOG(INFO) << "Characters now have the required items";
+  LOG(INFO) << char1.selfState()->name << " pos " << char1.selfState()->position().toString();
+  LOG(INFO) << char2.selfState()->name << " pos " << char2.selfState()->position().toString();
 
   // TODO: Make sure everything is repaired
 

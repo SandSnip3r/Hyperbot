@@ -224,10 +224,14 @@ add_executable(${PROJECT_NAME}
   src/packet/parsing/serverAgentEntityUpdateState.hpp
   src/packet/parsing/serverAgentEntityUpdateStatus.cpp
   src/packet/parsing/serverAgentEntityUpdateStatus.hpp
+  src/packet/parsing/serverAgentFreePvpUpdateResponse.cpp
+  src/packet/parsing/serverAgentFreePvpUpdateResponse.hpp
   src/packet/parsing/serverAgentGameReset.cpp
   src/packet/parsing/serverAgentGameReset.hpp
   src/packet/parsing/serverAgentGuildStorageData.cpp
   src/packet/parsing/serverAgentGuildStorageData.hpp
+  src/packet/parsing/serverAgentInventoryEquipCountdownStart.cpp
+  src/packet/parsing/serverAgentInventoryEquipCountdownStart.hpp
   src/packet/parsing/serverAgentInventoryItemUseResponse.cpp
   src/packet/parsing/serverAgentInventoryItemUseResponse.hpp
   src/packet/parsing/serverAgentInventoryOperationResponse.cpp
@@ -326,8 +330,12 @@ add_executable(${PROJECT_NAME}
   src/state/machine/castSkill.hpp
   src/state/machine/concurrentStateMachines.cpp
   src/state/machine/concurrentStateMachines.hpp
+  src/state/machine/disableGmInvisible.cpp
+  src/state/machine/disableGmInvisible.hpp
   src/state/machine/dropItem.cpp
   src/state/machine/dropItem.hpp
+  src/state/machine/enablePvpMode.cpp
+  src/state/machine/enablePvpMode.hpp
   src/state/machine/executeGmCommand.cpp
   src/state/machine/executeGmCommand.hpp
   src/state/machine/gmCommandSpawnAndPickItems.cpp

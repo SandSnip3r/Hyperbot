@@ -41,8 +41,10 @@
 #include "serverAgentEntityUpdatePosition.hpp"
 #include "serverAgentEntityUpdateState.hpp"
 #include "serverAgentEntityUpdateStatus.hpp"
+#include "serverAgentFreePvpUpdateResponse.hpp"
 #include "serverAgentGameReset.hpp"
 #include "serverAgentGuildStorageData.hpp"
+#include "serverAgentInventoryEquipCountdownStart.hpp"
 #include "serverAgentInventoryItemUseResponse.hpp"
 #include "serverAgentInventoryOperationResponse.hpp"
 #include "serverAgentInventoryRepairResponse.hpp"
@@ -201,6 +203,10 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ServerAgentResurrectOption>(packet);
       case Opcode::kServerAgentOperatorResponse:
         return std::make_unique<ServerAgentOperatorResponse>(packet);
+      case Opcode::kServerAgentFreePvpUpdateResponse:
+        return std::make_unique<ServerAgentFreePvpUpdateResponse>(packet);
+      case Opcode::kServerAgentInventoryEquipCountdownStart:
+        return std::make_unique<ServerAgentInventoryEquipCountdownStart>(packet);
     }
     LOG(WARNING) << "Warning! No packet parser found for opcode " << std::hex << (int)packet.opcode << std::dec << '(' << toString(opcode) << ")";
   } catch (std::exception &ex) {

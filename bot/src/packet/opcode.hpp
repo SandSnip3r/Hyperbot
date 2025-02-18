@@ -91,7 +91,7 @@
   F(SERVER_ANIMATION_ITEM_PICKUP, 0x3036) \
   F(ServerAgentInventoryItemUseResponse, 0xB04C) \
   F(SERVER_ANIMATION_ITEM_USE, 0x305C) \
-  F(SERVER_ANIMATION_CAPE, 0x3041) \
+  F(ServerAgentInventoryEquipCountdownStart, 0x3041) \
   F(ServerAgentInventoryUpdateItem, 0x3040) \
   F(SERVER_QUIT_GAME, 0x300A) \
   F(SERVER_COUNTDOWN, 0xB005) \

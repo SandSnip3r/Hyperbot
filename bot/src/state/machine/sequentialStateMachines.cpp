@@ -26,4 +26,9 @@ Status SequentialStateMachines::onUpdate(const event::Event *event) {
   }
 }
 
+void SequentialStateMachines::push(std::unique_ptr<StateMachine> &&stateMachine) {
+  std::unique_lock lock(mutex_);
+  stateMachines_.push_back(std::move(stateMachine));
+}
+
 } // namespace state::machine

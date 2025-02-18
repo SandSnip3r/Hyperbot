@@ -8,18 +8,13 @@
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 #include "packet/building/clientAgentInventoryOperationRequest.hpp"
 #include "packet/building/clientAgentInventoryStorageOpenRequest.hpp"
-// TODO: <remove>
-// For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
-#include "packet/building/clientAgentFreePvpUpdateRequest.hpp"
-#include "packet/building/clientAgentOperatorRequest.hpp"
-#include "packet/building/clientAgentSkillMasteryLearnRequest.hpp"
-// </remove>
 #include "proto_convert/convert.hpp"
 #include "state/machine/alchemy.hpp"
 #include "state/machine/applyStatPoints.hpp"
 #include "state/machine/autoPotion.hpp"
 #include "state/machine/botting.hpp"
-#include "state/machine/executeGmCommand.hpp"
+#include "state/machine/disableGmInvisible.hpp"
+#include "state/machine/enablePvpMode.hpp"
 #include "state/machine/gmCommandSpawnAndPickItems.hpp"
 #include "state/machine/login.hpp"
 #include "state/machine/maxMasteryAndSkills.hpp"
@@ -99,83 +94,89 @@ std::shared_ptr<entity::Self> Bot::selfState() const {
 
 void Bot::subscribeToEvents() {
   auto eventHandleFunction = std::bind(&Bot::handleEvent, this, std::placeholders::_1);
-  // Bot actions from UI
-  eventBroker_.subscribeToEvent(event::EventCode::kRequestStartTraining, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kRequestStopTraining, eventHandleFunction);
-  // Debug help
-  eventBroker_.subscribeToEvent(event::EventCode::kInjectPacket, eventHandleFunction);
-  // Login events
-  eventBroker_.subscribeToEvent(event::EventCode::kGatewayPatchResponseReceived, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kShardListReceived, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kGatewayLoginResponseReceived, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kConnectedToAgentServer, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kIbuvChallengeReceived, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kServerAuthSuccess, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCharacterListReceived, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCharacterSelectionJoinSuccess, eventHandleFunction);
-  // Movement events
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementBegan, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityEnteredGeometry, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityExitedGeometry, eventHandleFunction);
-  // Character info events
-  eventBroker_.subscribeToEvent(event::EventCode::kSelfSpawned, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kItemUseFailed, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityHpChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCharacterAvailableStatPointsUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStatsChanged, eventHandleFunction);
 
-  // Misc
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityDeselected, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntitySelected, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kNpcTalkStart, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStorageInitialized, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kRepairSuccessful, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntitySpawned, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityDespawned, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityBodyStateChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityLifeStateChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kItemUseTimeout, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kSkillCastTimeout, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityOwnershipRemoved, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kKnockedBack, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kKnockedDown, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kKnockbackStunEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kKnockdownStunEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kMovementRequestTimedOut, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kItemCooldownEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kInventoryItemUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kHwanPointsUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kAlchemyCompleted, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kAlchemyTimedOut, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kGmCommandTimedOut, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kChatReceived, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kSetCurrentPositionAsTrainingCenter, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kConfigUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kResurrectOption, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kLearnMasterySuccess, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kLearnSkillSuccess, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kLearnSkillError, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kTimeout, eventHandleFunction);
+  // TODO: If this is indeed useful, instead implement a function in EventBroker that allows someone to subscribe to all events.
+#define SUBSCRIBE_TO_EVENT(name) eventBroker_.subscribeToEvent(event::EventCode::k##name, eventHandleFunction);
+  EVENT_EVENTCODE_LIST(SUBSCRIBE_TO_EVENT)
+#undef SUBSCRIBE_TO_EVENT
 
-  // Skills
-  eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kSkillEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kOurSkillFailed, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kPlayerCharacterBuffAdded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kPlayerCharacterBuffRemoved, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kOurCommandError, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kSkillCooldownEnded, eventHandleFunction);
+  // // Bot actions from UI
+  // eventBroker_.subscribeToEvent(event::EventCode::kRequestStartTraining, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kRequestStopTraining, eventHandleFunction);
+  // // Debug help
+  // eventBroker_.subscribeToEvent(event::EventCode::kInjectPacket, eventHandleFunction);
+  // // Login events
+  // eventBroker_.subscribeToEvent(event::EventCode::kGatewayPatchResponseReceived, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kShardListReceived, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kGatewayLoginResponseReceived, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kConnectedToAgentServer, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kIbuvChallengeReceived, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kServerAuthSuccess, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kCharacterListReceived, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kCharacterSelectionJoinSuccess, eventHandleFunction);
+  // // Movement events
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementEnded, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementBegan, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityEnteredGeometry, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityExitedGeometry, eventHandleFunction);
+  // // Character info events
+  // eventBroker_.subscribeToEvent(event::EventCode::kSelfSpawned, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kItemUseFailed, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityHpChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kCharacterAvailableStatPointsUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kStatsChanged, eventHandleFunction);
 
-  eventBroker_.subscribeToEvent(event::EventCode::kStateMachineActiveTooLong, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kOperatorRequestSuccess, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kOperatorRequestError, eventHandleFunction);
+  // // Misc
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityDeselected, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntitySelected, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kNpcTalkStart, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kStorageInitialized, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kRepairSuccessful, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntitySpawned, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityDespawned, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityBodyStateChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityLifeStateChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kItemUseTimeout, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kSkillCastTimeout, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityOwnershipRemoved, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kKnockedBack, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kKnockedDown, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kKnockbackStunEnded, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kKnockdownStunEnded, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kMovementRequestTimedOut, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kItemCooldownEnded, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kInventoryItemUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kHwanPointsUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kAlchemyCompleted, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kAlchemyTimedOut, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kGmCommandTimedOut, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kChatReceived, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kSetCurrentPositionAsTrainingCenter, eventHandleFunction);
+  // // eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
+  // // eventBroker_.subscribeToEvent(event::EventCode::kConfigUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kResurrectOption, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kLearnMasterySuccess, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kLearnSkillSuccess, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kLearnSkillError, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kTimeout, eventHandleFunction);
+
+  // // Skills
+  // eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kSkillEnded, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kOurSkillFailed, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kPlayerCharacterBuffAdded, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kPlayerCharacterBuffRemoved, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kOurCommandError, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kSkillCooldownEnded, eventHandleFunction);
+
+  // eventBroker_.subscribeToEvent(event::EventCode::kStateMachineActiveTooLong, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kOperatorRequestSuccess, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kOperatorRequestError, eventHandleFunction);
 }
 
 void Bot::handleEvent(const event::Event *event) {
@@ -227,11 +228,6 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kEntityDespawned: {
         const auto &castedEvent = dynamic_cast<const event::EntityDespawned&>(*event);
         handleEntityDespawned(castedEvent);
-        break;
-      }
-      case event::EventCode::kEntityBodyStateChanged: {
-        const auto &castedEvent = dynamic_cast<const event::EntityBodyStateChanged&>(*event);
-        handleBodyStateChanged(castedEvent);
         break;
       }
       case event::EventCode::kKnockbackStunEnded: {
@@ -442,34 +438,6 @@ void Bot::handleEntityDespawned(const event::EntityDespawned &event) {
 // ============================================================================================================================
 // ============================================================Misc============================================================
 // ============================================================================================================================
-
-void Bot::handleBodyStateChanged(const event::EntityBodyStateChanged &event) {
-  std::shared_ptr<entity::Self> selfEntity = selfState();
-  if (!selfEntity) {
-    LOG(WARNING) << "Body state changed, but self is not spawned";
-    return;
-  }
-  if (event.globalId == selfEntity->globalId) {
-    // Our body state changed
-    if (selfEntity->bodyState() == packet::enums::BodyState::kInvisibleGm) {
-      // This is the last thing that comes to let us know that we're logged in & spawned.
-      if (loggedInPromise_) {
-        VLOG(1) << "Spawned, setting logged in promise";
-        loggedInPromise_->set_value();
-        loggedInPromise_.reset();
-      }
-  //     // For quicker development, when we spawn in, set ourself as visible and put on a PVP cape
-  //     // Set self as visible
-  //     VLOG(1) << "Setting self as visible";
-  //     const auto setVisiblePacket = packet::building::ClientAgentOperatorRequest::toggleInvisible();
-  //     packetBroker_.injectPacket(setVisiblePacket, PacketContainer::Direction::kClientToServer);
-
-  //     // LOG(INFO) << "Setting free pvp mode";
-  //     // const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
-  //     // packetBroker_.injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
-    }
-  }
-}
 
 void Bot::handleKnockbackStunEnded() {
   std::shared_ptr<entity::Self> selfEntity = selfState();
@@ -791,52 +759,40 @@ std::future<void> Bot::asyncOpenClient() {
   return clientOpenPromise_.get_future();
 }
 
-std::future<void> Bot::asyncLogIn() {
-  if (loggedInPromise_.has_value()) {
-    throw std::runtime_error("Already have a pending promise for logging in");
-  }
-  // Create the promise.
-  loggedInPromise_.emplace();
-
-  if (selfEntity_) {
-    // Already logged in & spawned.
-    VLOG(1) << "Already logged in";
-    loggedInPromise_->set_value();
-    std::future<void> future = loggedInPromise_->get_future();
-    loggedInPromise_.reset();
-    return future;
-  }
-
-  // Not yet logged in. We'll set the promise when we receive the SelfSpawned event.
-  sequentialStateMachines_.emplace<state::machine::Login>(characterLoginInfo_);
-  return loggedInPromise_->get_future();
+std::future<void> Bot::pushAsyncLogIn() {
+  auto stateMachine = std::make_unique<state::machine::Login>(*this, characterLoginInfo_);
+  std::future<void> future = stateMachine->getDestructionFuture();
+  sequentialStateMachines_.push(std::move(stateMachine));
+  eventBroker_.publishEvent<event::StateMachineCreated>("name not important");
+  return future;
 }
 
-std::future<void> Bot::asyncBecomeVisible() {
-  sequentialStateMachines_.emplace<state::machine::ExecuteGmCommand>(packet::enums::OperatorCommand::kInvisible, packet::building::ClientAgentOperatorRequest::toggleInvisible());
-  // TODO: Actually figure out how to know when we're done.
-  std::promise<void> promise;
-  promise.set_value();
-  return promise.get_future();
+std::future<void> Bot::pushAsyncBecomeVisible() {
+  auto stateMachine = std::make_unique<state::machine::DisableGmInvisible>(*this);
+  std::future<void> future = stateMachine->getDestructionFuture();
+  sequentialStateMachines_.push(std::move(stateMachine));
+  return future;
 }
 
-std::future<void> Bot::asyncMoveTo(const sro::Position &destinationPosition) {
-  if (!loggedIn()) {
-    throw std::runtime_error("Cannot move to destination, self is not spawned");
-  }
-  sequentialStateMachines_.emplace<state::machine::Walking>(std::vector<packet::building::NetworkReadyPosition>{destinationPosition});
-  // TODO: Actually figure out how to know when we're done moving.
-  movingCompletedPromise_.emplace();
-  movingCompletedPromise_->set_value();
-  return movingCompletedPromise_->get_future();
+std::future<void> Bot::pushAsyncMoveTo(const sro::Position &destinationPosition) {
+  auto stateMachine = std::make_unique<state::machine::Walking>(*this, std::vector<packet::building::NetworkReadyPosition>{destinationPosition});
+  std::future<void> future = stateMachine->getDestructionFuture();
+  sequentialStateMachines_.push(std::move(stateMachine));
+  return future;
 }
 
-std::future<void> Bot::asyncMakeSureWeHaveItems(const std::vector<ItemRequirement> &itemRequirements) {
-  sequentialStateMachines_.emplace<state::machine::GmCommandSpawnAndPickItems>(itemRequirements);
-  // TODO: Actually figure out how to know when we're done.
-  gmCommandItemsPromise_.emplace();
-  gmCommandItemsPromise_->set_value();
-  return gmCommandItemsPromise_->get_future();
+std::future<void> Bot::pushAsyncMakeSureWeHaveItems(const std::vector<ItemRequirement> &itemRequirements) {
+  auto stateMachine = std::make_unique<state::machine::GmCommandSpawnAndPickItems>(*this, itemRequirements);
+  std::future<void> future = stateMachine->getDestructionFuture();
+  sequentialStateMachines_.push(std::move(stateMachine));
+  return future;
+}
+
+std::future<void> Bot::pushAsyncEnablePvp() {
+  auto stateMachine = std::make_unique<state::machine::EnablePvpMode>(*this);
+  std::future<void> future = stateMachine->getDestructionFuture();
+  sequentialStateMachines_.push(std::move(stateMachine));
+  return future;
 }
 
 bool Bot::loggedIn() const {
