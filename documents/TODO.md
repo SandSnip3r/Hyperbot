@@ -8,6 +8,7 @@
 - It would be really nice to have a local list of known characters
 - Add UI element to toggle packet logging to console
 - Kill clients on shutdown
+  - I should do this by detecting a missing heartbeat from the bot in the ClientManager
 - Auto relogin when a character disconnects
 - Ensure that no state machine does any work in its constructor
   - Bonus if we can guarantee it

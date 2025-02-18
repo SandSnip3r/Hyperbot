@@ -25,24 +25,24 @@ Status Walking::onUpdate(const event::Event *event) {
     if (const auto *movementBeganEvent = dynamic_cast<const event::EntityMovementBegan*>(event); movementBeganEvent != nullptr && movementBeganEvent->globalId == bot_.selfState()->globalId) {
       // We started to move, our movement request must've been successful
       if (movementRequestTimeoutEventId_) {
-        VLOG(1) << characterNameForLog() << ' ' << "Movement began, cancelling movement request timeout timer";
+        VLOG(1) << characterNameForLog() << "Movement began, cancelling movement request timeout timer";
         bot_.eventBroker().cancelDelayedEvent(*movementRequestTimeoutEventId_);
         movementRequestTimeoutEventId_.reset();
       } else {
         // TODO: This triggers because two different bots receive the movement began packet and both try to update the mobile entity.
-        VLOG(1) << characterNameForLog() << ' ' << "Movement began, but had no running movement request timeout timer";
+        VLOG(1) << characterNameForLog() << "Movement began, but had no running movement request timeout timer";
       }
       // Nothing else to do here. We're now waiting for our movement to end
       return Status::kNotDone;
     } else if (const auto *movementEndedEvent = dynamic_cast<const event::EntityMovementEnded*>(event); movementEndedEvent != nullptr && movementEndedEvent->globalId == bot_.selfState()->globalId) {
       // If we send a request to move, but get knocked back before the MovementBegin happens, the knockback movement will send this MovementEnded event
       if (movementRequestTimeoutEventId_) {
-        VLOG(1) << characterNameForLog() << ' ' << "Movement ended, cancelling delayed event";
+        VLOG(1) << characterNameForLog() << "Movement ended, cancelling delayed event";
         bot_.eventBroker().cancelDelayedEvent(*movementRequestTimeoutEventId_);
         movementRequestTimeoutEventId_.reset();
       }
     } else if (event->eventCode == event::EventCode::kMovementRequestTimedOut) {
-      VLOG(1) << characterNameForLog() << ' ' << "Movement request timed out";
+      VLOG(1) << characterNameForLog() << "Movement request timed out";
       movementRequestTimeoutEventId_.reset();
     }
   }
@@ -81,7 +81,7 @@ Status Walking::onUpdate(const event::Event *event) {
   // We are not moving, we're not at the current waypoint, and there's not a pending movement request
   // Send a request to move to the current waypoint
   const auto &currentWaypoint = waypoints_.at(currentWaypointIndex_);
-  VLOG(1) << characterNameForLog() << ' ' << "Requesting movement to " << currentWaypoint.asSroPosition() << ". We are currently at " << bot_.selfState()->position() << " which is " << sro::position_math::calculateDistance2d(currentWaypoint.asSroPosition(), bot_.selfState()->position()) << 'm';
+  VLOG(1) << characterNameForLog() << "Requesting movement to " << currentWaypoint.asSroPosition() << ". We are currently at " << bot_.selfState()->position() << " which is " << sro::position_math::calculateDistance2d(currentWaypoint.asSroPosition(), bot_.selfState()->position()) << 'm';
   const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint);
   bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
   const int kMovementRequestTimeoutMs{333}; // TODO: Move somewhere else and make an educated guess about what this value should be

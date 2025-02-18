@@ -61,6 +61,7 @@ const TypeCategory kItem{static_cast<uint8_t>(3)};
       const TypeCategory kLuckyPowder{kAlchemyReinforce.subCategory(2)};
     const TypeCategory kSpecial{kExpendable.subCategory(13)};
       const TypeCategory kResurrection{kSpecial.subCategory(6)};
+      const TypeCategory kRepair{kSpecial.subCategory(7)};
 
 const TypeCategory kStructure{static_cast<uint8_t>(4)};
 

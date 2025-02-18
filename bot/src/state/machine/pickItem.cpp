@@ -28,7 +28,7 @@ Status PickItem::onUpdate(const event::Event *event) {
         if (entityDespawnedEvent->globalId == targetGlobalId_) {
           // The item we wanted to pick up despawned
           // Whether we picked it up or not doesn't matter; we're done either way
-          VLOG(1) << characterNameForLog() << " " << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") despawned";
+          VLOG(1) << characterNameForLog() << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") despawned";
           waitingForItemToDespawn_ = false;
         }
       }
@@ -43,7 +43,7 @@ Status PickItem::onUpdate(const event::Event *event) {
             if (item != nullptr && item->refItemId == targetRefId_) {
               // We picked up the item we wanted
               // TODO: We don't know if this is because we picked this item up, or someone else in our party picked up an item of the same type and via item distribution, we received it.
-              VLOG(1) << characterNameForLog() << " " << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") landed in our inventory";
+              VLOG(1) << characterNameForLog() << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") landed in our inventory";
               waitingForItemToArriveInInventory_ = false;
             }
           }
@@ -62,7 +62,7 @@ Status PickItem::onUpdate(const event::Event *event) {
   }
 
   if (!sentCommand_) {
-    VLOG(1) << characterNameForLog() << " " << "Sending packet to pickup " << bot_.gameData().getItemName(targetRefId_);
+    VLOG(1) << characterNameForLog() << "Sending packet to pickup " << bot_.gameData().getItemName(targetRefId_);
     const auto packet = packet::building::ClientAgentActionCommandRequest::pickup(targetGlobalId_);
     bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
     sentCommand_ = true;

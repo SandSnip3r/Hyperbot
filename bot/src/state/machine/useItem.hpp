@@ -27,7 +27,7 @@ private:
 
   // Item use timeout tracking
   std::optional<broker::EventBroker::EventId> itemUseTimeoutEventId_;
-  static constexpr const int kItemUseTimeoutMs{200};
+  static constexpr const int kItemUseTimeoutMs{666};
 };
 
 } // namespace state::machine

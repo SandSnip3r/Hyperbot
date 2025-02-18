@@ -59,29 +59,18 @@ void RlTrainingManager::run() {
   LOG(INFO) << "Waiting for clients to open";
   character1ClientOpenFuture.wait();
   character2ClientOpenFuture.wait();
-  LOG(INFO) << "Clients are open";
+  LOG(INFO) << "Clients are open. Preparing characters for PVP";
 
-  LOG(INFO) << "Logging in characters";
   bot1.pushAsyncLogIn();
   bot2.pushAsyncLogIn();
-
   bot1.pushAsyncBecomeVisible();
   bot2.pushAsyncBecomeVisible();
-
   std::future<void> character1ReadyForLoop = bot1.pushAsyncEnablePvp();
   std::future<void> character2ReadyForLoop = bot2.pushAsyncEnablePvp();
+
   character1ReadyForLoop.wait();
   character2ReadyForLoop.wait();
-  LOG(INFO) << "Characters logged in, visible, and ready for training loop";
-
-  // auto character1VisibleFuture = bot1.asyncBecomeVisible();
-  // auto character2VisibleFuture = bot2.asyncBecomeVisible();
-  // LOG(INFO) << "Waiting for characters to be visible";
-  // character1VisibleFuture.wait();
-  // character2VisibleFuture.wait();
-  // LOG(INFO) << "Characters are visible";
-
-  // TODO: Ensure PVP mode is enabled.
+  LOG(INFO) << "Characters are logged in, visible, and ready for training loop";
 
   while (true) {
     // Get the characters ready to fight.
@@ -118,10 +107,16 @@ void RlTrainingManager::prepareCharactersForPvp(Bot &char1, Bot &char2, const sr
   LOG(INFO) << "First, moving to " << pvpPosition.toString();
   char1.pushAsyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, +25.0, 0.0));
   char2.pushAsyncMoveTo(sro::position_math::createNewPositionWith2dOffset(pvpPosition, -25.0, 0.0));
+  char1.pushAsyncRepair();
+  char2.pushAsyncRepair();
 
   // Make sure we have enough potions & other expendables.
   auto character1PreparationCompleteFuture = char1.pushAsyncMakeSureWeHaveItems(itemRequirements_);
   auto character2PreparationCompleteFuture = char2.pushAsyncMakeSureWeHaveItems(itemRequirements_);
+
+  // We have just pushed a bunch of state machines. In case no events are being published, we should send one just to trigger the state machines' onUpdate.
+  eventBroker_.publishEvent(event::EventCode::kDummy);
+
   LOG(INFO) << "Waiting on characters to have the required items";
   character1PreparationCompleteFuture.wait();
   LOG(INFO) << "First character is done";
@@ -131,8 +126,6 @@ void RlTrainingManager::prepareCharactersForPvp(Bot &char1, Bot &char2, const sr
 
   LOG(INFO) << char1.selfState()->name << " pos " << char1.selfState()->position().toString();
   LOG(INFO) << char2.selfState()->name << " pos " << char2.selfState()->position().toString();
-
-  // TODO: Make sure everything is repaired
 
   while (1) {}
 }

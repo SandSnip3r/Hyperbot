@@ -43,9 +43,9 @@ void StateMachine::stateMachineDestroyed() {
 
 std::string StateMachine::characterNameForLog() const {
   if (bot_.selfState() == nullptr) {
-    return absl::StrFormat("[NOT_LOGGED_IN]");
+    return absl::StrFormat("[NOT_LOGGED_IN] ");
   } else {
-    return absl::StrFormat("[%s]", bot_.selfState()->name);
+    return absl::StrFormat("[%s] ", bot_.selfState()->name);
   }
 }
 

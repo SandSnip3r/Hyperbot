@@ -3,6 +3,7 @@
 #include "packet/opcode.hpp"
 
 #include <absl/log/log.h>
+#include <absl/log/vlog_is_on.h>
 #include <absl/strings/str_format.h>
 
 #include <chrono>
@@ -25,7 +26,7 @@ int64_t getMsSinceEpoch() {
 } // anonymous namespace
 
 const bool PacketLogger::kLogToFile = false;
-const bool PacketLogger::kLogToConsole = false;
+const int PacketLogger::kLogToConsoleMinimumVlogLevel = 1;
 
 PacketLogger::PacketLogger(const std::string &logDirectoryPath) : logFileDirectoryPath_(logDirectoryPath), logFilePath_(getLogFilePath()) {
   if (kLogToFile) {
@@ -41,7 +42,10 @@ void PacketLogger::logPacket(const PacketContainer &packet, bool blocked, Packet
   if (kLogToFile) {
     logPacketToFile(msSinceEpoch, packet, blocked, direction);
   }
-  if (kLogToConsole || (std::find(opcodeConsoleLoggingWhitelist_.begin(), opcodeConsoleLoggingWhitelist_.end(), static_cast<packet::Opcode>(packet.opcode)) != opcodeConsoleLoggingWhitelist_.end())) {
+  if (VLOG_IS_ON(kLogToConsoleMinimumVlogLevel) ||
+      std::find(opcodeConsoleLoggingWhitelist_.begin(),
+                opcodeConsoleLoggingWhitelist_.end(),
+                static_cast<packet::Opcode>(packet.opcode)) != opcodeConsoleLoggingWhitelist_.end()) {
     logPacketToConsole(msSinceEpoch, packet, blocked, direction);
   }
 }

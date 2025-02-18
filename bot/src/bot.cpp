@@ -18,6 +18,7 @@
 #include "state/machine/gmCommandSpawnAndPickItems.hpp"
 #include "state/machine/login.hpp"
 #include "state/machine/maxMasteryAndSkills.hpp"
+#include "state/machine/spawnAndUseRepairHammerIfNecessary.hpp"
 #include "state/machine/walking.hpp"
 #include "type_id/categories.hpp"
 
@@ -783,6 +784,13 @@ std::future<void> Bot::pushAsyncMoveTo(const sro::Position &destinationPosition)
 
 std::future<void> Bot::pushAsyncMakeSureWeHaveItems(const std::vector<ItemRequirement> &itemRequirements) {
   auto stateMachine = std::make_unique<state::machine::GmCommandSpawnAndPickItems>(*this, itemRequirements);
+  std::future<void> future = stateMachine->getDestructionFuture();
+  sequentialStateMachines_.push(std::move(stateMachine));
+  return future;
+}
+
+std::future<void> Bot::pushAsyncRepair() {
+  auto stateMachine = std::make_unique<state::machine::SpawnAndUseRepairHammerIfNecessary>(*this);
   std::future<void> future = stateMachine->getDestructionFuture();
   sequentialStateMachines_.push(std::move(stateMachine));
   return future;

@@ -17,7 +17,7 @@ Status EnablePvpMode::onUpdate(const event::Event *event) {
   if (state_ == State::kInit) {
     const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
     bot_.packetBroker().injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
-    VLOG(1) << characterNameForLog() << ' ' << "Sending packet to enable pvp";
+    VLOG(1) << characterNameForLog() << "Sending packet to enable pvp";
     state_ = State::kSentRequest;
     return Status::kNotDone;
   } else {
@@ -27,7 +27,7 @@ Status EnablePvpMode::onUpdate(const event::Event *event) {
           if (state_ != State::kSentRequest) {
             LOG(WARNING) << "Expected to be in state \"kSentRequest\"";
           }
-          VLOG(1) << characterNameForLog() << ' ' << "Received countdown start event";
+          VLOG(1) << characterNameForLog() << "Received countdown start event";
           state_ = State::kCountdownRunning;
           return Status::kNotDone;
         }
@@ -36,7 +36,7 @@ Status EnablePvpMode::onUpdate(const event::Event *event) {
           if (state_ != State::kCountdownRunning) {
             LOG(WARNING) << "Expected to be in state \"kCountdownRunning\"";
           }
-          VLOG(1) << characterNameForLog() << ' ' << "Free pvp response success! Done.";
+          VLOG(1) << characterNameForLog() << "Free pvp response success! Done.";
           return Status::kDone;
         }
       }

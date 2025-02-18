@@ -114,6 +114,7 @@ public:
     uint16_t count;
   };
   std::future<void> pushAsyncMakeSureWeHaveItems(const std::vector<ItemRequirement> &itemRequirements);
+  std::future<void> pushAsyncRepair();
 
   bool loggedIn() const;
 

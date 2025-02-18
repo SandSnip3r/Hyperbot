@@ -111,7 +111,8 @@
   F(OperatorRequestSuccess) \
   F(OperatorRequestError) \
   F(EquipCountdownStart) \
-  F(FreePvpUpdateSuccess)
+  F(FreePvpUpdateSuccess) \
+  F(Dummy)
 
 namespace event {
 

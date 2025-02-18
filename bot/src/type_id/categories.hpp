@@ -67,6 +67,7 @@ extern const TypeCategory kItem;
       extern const TypeCategory kLuckyPowder;
     extern const TypeCategory kSpecial;
       extern const TypeCategory kResurrection;
+      extern const TypeCategory kRepair;
 
 extern const TypeCategory kStructure;
 
