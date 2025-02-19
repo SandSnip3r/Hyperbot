@@ -21,6 +21,7 @@ void Hyperbot::run() {
   userInterface.initialize();
   ClientManagerInterface clientManagerInterface(context);
 
+  clientManagerInterface.runAsync();
   eventBroker_.runAsync();
   userInterface.runAsync();
 

@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package proto.client_manager_request;
 
+import "google/protobuf/empty.proto";
+
 message StartClient {
   int32 port_to_connect_to = 1;
 }
@@ -14,6 +16,7 @@ message Request {
   oneof body {
     StartClient start_client = 1;
     KillClient kill_client = 2;
+    google.protobuf.Empty heartbeat = 3;
   }
 }
 
@@ -34,5 +37,6 @@ message Response {
     ClientStarted client_started = 1;
     ClientKilled client_killed = 2;
     Error error = 3;
+    google.protobuf.Empty heartbeat_ack = 4;
   }
 }

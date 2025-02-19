@@ -6,6 +6,7 @@
 
 #include <zmq.hpp>
 
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <map>
@@ -18,6 +19,9 @@ public:
   void run();
 private:
   using ClientId = int32_t;
+
+  // In the bot, the heartbeat should be sent every 100ms. This timeout allows for a 3x margin of error.
+  static constexpr std::chrono::milliseconds kMissedHeartbeatTimeout_{300};
 
   zmq::context_t context_;
   zmq::socket_t socket_{context_, zmq::socket_type::rep};
@@ -43,6 +47,8 @@ private:
 
   // Takes the actual process ID and returns a unique "ClientId" which can be shared.
   int32_t saveProcessId(DWORD processId);
+
+  void killAllClients();
 };
 
 #endif // CLIENTMANAGER_HPP_

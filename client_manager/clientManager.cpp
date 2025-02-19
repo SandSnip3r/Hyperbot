@@ -26,7 +26,16 @@ void ClientManager::run() {
 
   while (1) {
     zmq::message_t request;
-    VLOG(2) << "Waiting for request";
+    VLOG(4) << "Waiting for request";
+    std::vector<zmq::pollitem_t> pollItems = { { socket_, 0, ZMQ_POLLIN, 0 } };
+    int eventCount = zmq::poll(pollItems, kMissedHeartbeatTimeout_);
+    if (eventCount == 0) {
+      if (!clientIdToProcessIdMap_.empty()) {
+        LOG(INFO) << "Bot seems to have disconnected. Killing all clients.";
+        killAllClients();
+      }
+      continue;
+    }
     std::optional<zmq::recv_result_t> result = socket_.recv(request, zmq::recv_flags::none);
     if (!result) {
       throw std::runtime_error("Failed to receive from socket");
@@ -40,11 +49,11 @@ void ClientManager::run() {
       replyWithError(error);
       continue;
     }
-    VLOG(2) << "Received \"" << requestProto.DebugString() << '"';
 
     // Successfully parsed request.
     switch (requestProto.body_case()) {
       case proto::client_manager_request::Request::BodyCase::kStartClient: {
+        VLOG(4) << "Received StartClient \"" << requestProto.DebugString() << '"';
         const proto::client_manager_request::StartClient &packet = requestProto.start_client();
         LOG(INFO) << "Port to connect to: " << packet.port_to_connect_to();
         const int32_t clientId = launchClient(packet.port_to_connect_to());
@@ -55,6 +64,16 @@ void ClientManager::run() {
         std::optional<zmq::send_result_t> result = socket_.send(zmq::message_t(response.SerializeAsString()), zmq::send_flags::none);
         if (!result) {
           throw std::runtime_error("Failed to send response for StartClient");
+        }
+        break;
+      }
+      case proto::client_manager_request::Request::BodyCase::kHeartbeat: {
+        VLOG(5) << "Received Heartbeat";
+        proto::client_manager_request::Response response;
+        response.mutable_heartbeat_ack();
+        std::optional<zmq::send_result_t> result = socket_.send(zmq::message_t(response.SerializeAsString()), zmq::send_flags::none);
+        if (!result) {
+          throw std::runtime_error("Failed to send response for Heartbeat");
         }
         break;
       }
@@ -161,4 +180,23 @@ int32_t ClientManager::saveProcessId(DWORD processId) {
   VLOG(3) << "Saving process ID " << processId << " as client ID " << clientId;
   ++nextClientId_;
   return clientId;
+}
+
+void ClientManager::killAllClients() {
+  for (const auto [id, pid] : clientIdToProcessIdMap_) {
+    HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+    if (handle == NULL) {
+      // Unable to "open" process?
+    } else {
+      if (TerminateProcess(handle, -1)) {
+        // Success!
+        VLOG(1) << "Successfully killed client " << id;
+      } else {
+        // Failed...?
+        VLOG(1) << "Failed to kill client " << id;
+      }
+      CloseHandle(handle);
+    }
+  }
+  clientIdToProcessIdMap_.clear();
 }
