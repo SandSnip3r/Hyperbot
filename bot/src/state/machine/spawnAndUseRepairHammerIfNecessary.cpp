@@ -82,7 +82,7 @@ Status SpawnAndUseRepairHammerIfNecessary::onUpdate(const event::Event *event) {
   if (!haveRepairHammer_) {
     VLOG(1) << characterNameForLog() << "Need to get a repair hammer; creating state machine to spawn it with a GM command and then pick it";
     // One hammer repairs all equipment in the inventory.
-    std::vector<Bot::ItemRequirement> repairHammerRequirements{{repairHammerRefId_, 1}};
+    std::vector<common::ItemRequirement> repairHammerRequirements{{repairHammerRefId_, 1}};
     setChildStateMachine<GmCommandSpawnAndPickItems>(repairHammerRequirements);
     return onUpdate(event);
   }

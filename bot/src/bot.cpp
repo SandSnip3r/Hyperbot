@@ -18,6 +18,7 @@
 #include "state/machine/gmCommandSpawnAndPickItems.hpp"
 #include "state/machine/login.hpp"
 #include "state/machine/maxMasteryAndSkills.hpp"
+#include "state/machine/pvpAgent.hpp"
 #include "state/machine/spawnAndUseRepairHammerIfNecessary.hpp"
 #include "state/machine/walking.hpp"
 #include "type_id/categories.hpp"
@@ -93,91 +94,18 @@ std::shared_ptr<entity::Self> Bot::selfState() const {
   return selfEntity_;
 }
 
+const storage::Storage& Bot::inventory() const {
+  return selfState()->inventory;
+}
+
 void Bot::subscribeToEvents() {
   auto eventHandleFunction = std::bind(&Bot::handleEvent, this, std::placeholders::_1);
 
-  // TODO: If this is indeed useful, instead implement a function in EventBroker that allows someone to subscribe to all events.
+  // Subscribe to all events.
+  // TODO: If it is indeed useful for us to subscribe to all events, instead implement a function in EventBroker that allows someone to subscribe to all events.
 #define SUBSCRIBE_TO_EVENT(name) eventBroker_.subscribeToEvent(event::EventCode::k##name, eventHandleFunction);
   EVENT_EVENTCODE_LIST(SUBSCRIBE_TO_EVENT)
 #undef SUBSCRIBE_TO_EVENT
-
-  // // Bot actions from UI
-  // eventBroker_.subscribeToEvent(event::EventCode::kRequestStartTraining, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kRequestStopTraining, eventHandleFunction);
-  // // Debug help
-  // eventBroker_.subscribeToEvent(event::EventCode::kInjectPacket, eventHandleFunction);
-  // // Login events
-  // eventBroker_.subscribeToEvent(event::EventCode::kGatewayPatchResponseReceived, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kShardListReceived, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kGatewayLoginResponseReceived, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kConnectedToAgentServer, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kIbuvChallengeReceived, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kServerAuthSuccess, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kCharacterListReceived, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kCharacterSelectionJoinSuccess, eventHandleFunction);
-  // // Movement events
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementEnded, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementBegan, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntityEnteredGeometry, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntityExitedGeometry, eventHandleFunction);
-  // // Character info events
-  // eventBroker_.subscribeToEvent(event::EventCode::kSelfSpawned, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kItemUseFailed, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntityHpChanged, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kStatesChanged, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kCharacterAvailableStatPointsUpdated, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kStatsChanged, eventHandleFunction);
-
-  // // Misc
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntityDeselected, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntitySelected, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kNpcTalkStart, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kStorageInitialized, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kRepairSuccessful, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntitySpawned, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntityDespawned, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntityBodyStateChanged, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntityLifeStateChanged, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kItemUseTimeout, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kSkillCastTimeout, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kEntityOwnershipRemoved, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kKnockedBack, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kKnockedDown, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kKnockbackStunEnded, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kKnockdownStunEnded, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kMovementRequestTimedOut, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kItemCooldownEnded, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kInventoryItemUpdated, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kHwanPointsUpdated, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kAlchemyCompleted, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kAlchemyTimedOut, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kGmCommandTimedOut, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kChatReceived, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kSetCurrentPositionAsTrainingCenter, eventHandleFunction);
-  // // eventBroker_.subscribeToEvent(event::EventCode::kNewConfigReceived, eventHandleFunction);
-  // // eventBroker_.subscribeToEvent(event::EventCode::kConfigUpdated, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kResurrectOption, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kLearnMasterySuccess, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kLearnSkillSuccess, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kLearnSkillError, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kTimeout, eventHandleFunction);
-
-  // // Skills
-  // eventBroker_.subscribeToEvent(event::EventCode::kSkillBegan, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kSkillEnded, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kOurSkillFailed, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kPlayerCharacterBuffAdded, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kPlayerCharacterBuffRemoved, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kOurCommandError, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kSkillCooldownEnded, eventHandleFunction);
-
-  // eventBroker_.subscribeToEvent(event::EventCode::kStateMachineActiveTooLong, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kOperatorRequestSuccess, eventHandleFunction);
-  // eventBroker_.subscribeToEvent(event::EventCode::kOperatorRequestError, eventHandleFunction);
 }
 
 void Bot::handleEvent(const event::Event *event) {
@@ -271,7 +199,10 @@ void Bot::handleEvent(const event::Event *event) {
 // ============================================================================================================================
 
 void Bot::onUpdate(const event::Event *event) {
-  sequentialStateMachines_.onUpdate(event);
+  // sequentialStateMachines_.onUpdate(event);
+  if (pvpAgentStateMachine_) {
+    pvpAgentStateMachine_->onUpdate(event);
+  }
 }
 
 // ============================================================================================================================
@@ -360,32 +291,33 @@ void Bot::handleChatCommand(const event::ChatReceived &event) {
           LOG(INFO) << "Have no self. Cannot print location.";
         }
       } else if (std::smatch maxMatchResults; std::regex_match(command, maxMatchResults, maxRegex)) {
-        const std::string maxMatch = maxMatchResults.str(1);
-        std::vector<std::string_view> thingsToMax = absl::StrSplit(maxMatch, ' ');
-        thingsToMax.erase(std::remove_if(thingsToMax.begin(), thingsToMax.end(), [](const auto &s) { return s.empty(); }), thingsToMax.end());
-        LOG(INFO) << "    Want to max " << absl::StrJoin(thingsToMax, ",");
-        for (std::string_view thingToMax : thingsToMax) {
-          if (thingToMax == "str" || thingToMax == "int") {
-            std::shared_ptr<entity::Self> selfEntity = selfState();
-            if (!selfEntity) {
-              // Self is not spawned.
-              LOG(WARNING) << "Self is not spawned when trying to handle chat command";
-              return;
-            }
-            if (selfEntity->getAvailableStatPoints() > 0) {
-              const state::machine::StatPointType type = (thingToMax == "str" ? state::machine::StatPointType::kStr : state::machine::StatPointType::kInt);
-              LOG(INFO) << "Have " << selfEntity->getAvailableStatPoints() << " stat points for " << static_cast<int>(type);
-              sequentialStateMachines_.emplace<state::machine::ApplyStatPoints>(std::vector<state::machine::StatPointType>(selfEntity->getAvailableStatPoints(), type));
-            } else {
-              LOG(INFO) << "No available stat points for " << thingToMax;
-            }
-          } else {
-            // Is this a mastery?
-            const auto masteryId = gameData_.getMasteryId(std::string(thingToMax));
-            LOG(INFO) << "Asking to max mastery ID " << masteryId << " = \"" << thingToMax << "\"";
-            sequentialStateMachines_.emplace<state::machine::MaxMasteryAndSkills>(masteryId);
-          }
-        }
+        LOG(WARNING) << "Max commands are disabled";
+        // const std::string maxMatch = maxMatchResults.str(1);
+        // std::vector<std::string_view> thingsToMax = absl::StrSplit(maxMatch, ' ');
+        // thingsToMax.erase(std::remove_if(thingsToMax.begin(), thingsToMax.end(), [](const auto &s) { return s.empty(); }), thingsToMax.end());
+        // LOG(INFO) << "    Want to max " << absl::StrJoin(thingsToMax, ",");
+        // for (std::string_view thingToMax : thingsToMax) {
+        //   if (thingToMax == "str" || thingToMax == "int") {
+        //     std::shared_ptr<entity::Self> selfEntity = selfState();
+        //     if (!selfEntity) {
+        //       // Self is not spawned.
+        //       LOG(WARNING) << "Self is not spawned when trying to handle chat command";
+        //       return;
+        //     }
+        //     if (selfEntity->getAvailableStatPoints() > 0) {
+        //       const state::machine::StatPointType type = (thingToMax == "str" ? state::machine::StatPointType::kStr : state::machine::StatPointType::kInt);
+        //       LOG(INFO) << "Have " << selfEntity->getAvailableStatPoints() << " stat points for " << static_cast<int>(type);
+        //       sequentialStateMachines_.emplace<state::machine::ApplyStatPoints>(std::vector<state::machine::StatPointType>(selfEntity->getAvailableStatPoints(), type));
+        //     } else {
+        //       LOG(INFO) << "No available stat points for " << thingToMax;
+        //     }
+        //   } else {
+        //     // Is this a mastery?
+        //     const auto masteryId = gameData_.getMasteryId(std::string(thingToMax));
+        //     LOG(INFO) << "Asking to max mastery ID " << masteryId << " = \"" << thingToMax << "\"";
+        //     sequentialStateMachines_.emplace<state::machine::MaxMasteryAndSkills>(masteryId);
+        //   }
+        // }
       }
     }
   }
@@ -760,53 +692,14 @@ std::future<void> Bot::asyncOpenClient() {
   return clientOpenPromise_.get_future();
 }
 
-std::future<void> Bot::pushAsyncLogIn() {
-  auto stateMachine = std::make_unique<state::machine::Login>(*this, characterLoginInfo_);
-  std::future<void> future = stateMachine->getDestructionFuture();
-  sequentialStateMachines_.push(std::move(stateMachine));
-  eventBroker_.publishEvent<event::StateMachineCreated>("name not important");
-  return future;
-}
-
-std::future<void> Bot::pushAsyncBecomeVisible() {
-  auto stateMachine = std::make_unique<state::machine::DisableGmInvisible>(*this);
-  std::future<void> future = stateMachine->getDestructionFuture();
-  sequentialStateMachines_.push(std::move(stateMachine));
-  return future;
-}
-
-std::future<void> Bot::pushAsyncMoveTo(const sro::Position &destinationPosition) {
-  auto stateMachine = std::make_unique<state::machine::Walking>(*this, std::vector<packet::building::NetworkReadyPosition>{destinationPosition});
-  std::future<void> future = stateMachine->getDestructionFuture();
-  sequentialStateMachines_.push(std::move(stateMachine));
-  return future;
-}
-
-std::future<void> Bot::pushAsyncMakeSureWeHaveItems(const std::vector<ItemRequirement> &itemRequirements) {
-  auto stateMachine = std::make_unique<state::machine::GmCommandSpawnAndPickItems>(*this, itemRequirements);
-  std::future<void> future = stateMachine->getDestructionFuture();
-  sequentialStateMachines_.push(std::move(stateMachine));
-  return future;
-}
-
-std::future<void> Bot::pushAsyncRepair() {
-  auto stateMachine = std::make_unique<state::machine::SpawnAndUseRepairHammerIfNecessary>(*this);
-  std::future<void> future = stateMachine->getDestructionFuture();
-  sequentialStateMachines_.push(std::move(stateMachine));
-  return future;
-}
-
-std::future<void> Bot::pushAsyncEnablePvp() {
-  auto stateMachine = std::make_unique<state::machine::EnablePvpMode>(*this);
-  std::future<void> future = stateMachine->getDestructionFuture();
-  sequentialStateMachines_.push(std::move(stateMachine));
-  return future;
-}
-
 bool Bot::loggedIn() const {
   return selfEntity_ != nullptr;
 }
 
-const storage::Storage& Bot::inventory() const {
-  return selfState()->inventory;
+void Bot::asyncStandbyForPvp() {
+  // Constuct the single-and-only state machine in the Bot.
+  if (pvpAgentStateMachine_ != nullptr) {
+    throw std::runtime_error("PvpAgent state machine already set");
+  }
+  pvpAgentStateMachine_ = std::make_unique<state::machine::PvpAgent>(*this, characterLoginInfo_);
 }

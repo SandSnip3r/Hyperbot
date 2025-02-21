@@ -13,10 +13,15 @@ SequentialStateMachines::~SequentialStateMachines() {
 Status SequentialStateMachines::onUpdate(const event::Event *event) {
   std::unique_lock lock(mutex_);
   if (!stateMachines_.empty()) {
-    const Status status = stateMachines_.front()->onUpdate(event);
-    if (status == Status::kDone) {
+    Status status = stateMachines_.front()->onUpdate(event);
+    while (!stateMachines_.empty() && status == Status::kDone) {
+      VLOG(1) << "State machine is done; " << stateMachines_.size() << " left";
+      // Remove this one.
       stateMachines_.pop_front();
-      return onUpdate(event);
+      // Call the next one, if there is one.
+      if (!stateMachines_.empty()) {
+        status = stateMachines_.front()->onUpdate(event);
+      }
     }
   }
   if (stateMachines_.empty()) {

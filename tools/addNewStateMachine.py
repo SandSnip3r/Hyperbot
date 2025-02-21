@@ -33,7 +33,7 @@ headerTemplate = '#ifndef STATE_MACHINE_{macroClassName}_HPP_\n'\
                  '#define STATE_MACHINE_{macroClassName}_HPP_\n'\
                  '\n'\
                  '#include "event/event.hpp"\n'\
-                 '#include "stateMachine.hpp"\n'\
+                 '#include "state/machine/stateMachine.hpp"\n'\
                  '\n'\
                  '#include <string>\n'\
                  '\n'\

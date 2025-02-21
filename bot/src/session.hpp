@@ -2,13 +2,12 @@
 #define SESSION_HPP_
 
 #include "bot.hpp"
+#include "broker/packetBroker.hpp"
 #include "characterLoginInfo.hpp"
 #include "clientManagerInterface.hpp"
-#include "proxy.hpp"
-#include "sessionId.hpp"
-
-#include "broker/packetBroker.hpp"
+#include "common/sessionId.hpp"
 #include "pk2/gameData.hpp"
+#include "proxy.hpp"
 #include "state/worldState.hpp"
 
 #include <atomic>
@@ -40,6 +39,7 @@ public:
   void runAsync();
   const state::WorldState& getWorldState() const;
   Bot& getBot();
+  SessionId sessionId() const { return sessionId_; }
 
   std::future<void> asyncOpenClient();
 private:

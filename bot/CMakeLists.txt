@@ -29,6 +29,10 @@ add_executable(${PROJECT_NAME}
   src/characterLoginInfo.hpp
   src/clientManagerInterface.cpp
   src/clientManagerInterface.hpp
+  src/common/itemRequirement.hpp
+  src/common/pvpDescriptor.cpp
+  src/common/pvpDescriptor.hpp
+  src/common/sessionId.hpp
   src/config/characterConfig.cpp
   src/config/characterConfig.hpp
   src/config/serverConfig.cpp
@@ -301,11 +305,12 @@ add_executable(${PROJECT_NAME}
   src/rl/ai/baseIntelligence.hpp
   src/rl/ai/randomIntelligence.cpp
   src/rl/ai/randomIntelligence.hpp
+  src/rl/intelligencePool.cpp
+  src/rl/intelligencePool.hpp
   src/rl/rlTrainingManager.cpp
   src/rl/rlTrainingManager.hpp
   src/session.cpp
   src/session.hpp
-  src/sessionId.hpp
   src/shared/silkroad_security.cpp
   src/shared/silkroad_security.h
   src/shared/stream_utility.cpp
@@ -340,6 +345,8 @@ add_executable(${PROJECT_NAME}
   src/state/machine/executeGmCommand.hpp
   src/state/machine/gmCommandSpawnAndPickItems.cpp
   src/state/machine/gmCommandSpawnAndPickItems.hpp
+  src/state/machine/intelligenceActor.cpp
+  src/state/machine/intelligenceActor.hpp
   src/state/machine/login.cpp
   src/state/machine/login.hpp
   src/state/machine/maxMasteryAndSkills.cpp
@@ -350,6 +357,8 @@ add_executable(${PROJECT_NAME}
   src/state/machine/pickItem.hpp
   src/state/machine/pickItemWithCos.cpp
   src/state/machine/pickItemWithCos.hpp
+  src/state/machine/pvpAgent.cpp
+  src/state/machine/pvpAgent.hpp
   src/state/machine/sellingItems.cpp
   src/state/machine/sellingItems.hpp
   src/state/machine/sequentialStateMachines.cpp

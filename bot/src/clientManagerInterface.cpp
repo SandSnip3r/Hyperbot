@@ -16,9 +16,11 @@ ClientManagerInterface::ClientManagerInterface(zmq::context_t &context) : contex
 }
 
 ClientManagerInterface::~ClientManagerInterface() {
-  std::unique_lock lock(mutex_);
-  VLOG(1) << "Destructing";
-  shouldStop_ = true;
+  {
+    std::unique_lock lock(mutex_);
+    VLOG(1) << "Destructing";
+    shouldStop_ = true;
+  }
   conditionVariable_.notify_all();
   if (runThread_.joinable()) {
     runThread_.join();
@@ -107,13 +109,13 @@ void ClientManagerInterface::sendClientStartRequest(int32_t port) {
 void ClientManagerInterface::sendHeartbeat() {
   proto::client_manager_request::Request request;
   request.mutable_heartbeat();
-  VLOG(10) << "Sending:\n" << request.DebugString();
+  VLOG(20) << "Sending:\n" << request.DebugString();
   std::optional<zmq::send_result_t> sendResult = socket_.send(zmq::message_t(request.SerializeAsString()), zmq::send_flags::none);
   if (!sendResult) {
     throw std::runtime_error("ClientManagerInterface: Failed to send heartbeat");
   }
 
-  VLOG(10) << "Message sent, now awaiting reply";
+  VLOG(20) << "Message sent, now awaiting reply";
   zmq::message_t reply;
   std::optional<zmq::recv_result_t> receiveResult = socket_.recv(reply, zmq::recv_flags::none);
   if (!receiveResult) {
@@ -126,10 +128,10 @@ void ClientManagerInterface::sendHeartbeat() {
     throw std::runtime_error("ClientManagerInterface: Failed to parse response to heartbeat");
   }
 
-  VLOG(10) << "Received reply:\n" << response.DebugString();
+  VLOG(20) << "Received reply:\n" << response.DebugString();
   switch (response.body_case()) {
     case proto::client_manager_request::Response::BodyCase::kHeartbeatAck: {
-      VLOG(10) << "Heartbeat acknowledged";
+      VLOG(20) << "Heartbeat acknowledged";
       break;
     }
     default: {
@@ -163,7 +165,7 @@ void ClientManagerInterface::run() {
       return false;
     });
     // We've been woken up! Why?
-    VLOG(10) << "We're awake!";
+    VLOG(20) << "We're awake!";
 
     // Highest priority is to quit if we've been told to.
     if (shouldStop_) {
@@ -187,7 +189,7 @@ void ClientManagerInterface::run() {
 
     // We should not stop and there are no client open requests. We've been woken up because it has been too long since we've sent a message. Send a heartbeat.
     const auto diffMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - lastMessageSent_);
-    VLOG(10) << diffMs.count() << "ms () since last message sent. Sending heartbeat";
+    VLOG(20) << diffMs.count() << "ms () since last message sent. Sending heartbeat";
     sendHeartbeat();
     lastMessageSent_ = std::chrono::high_resolution_clock::now();
   }

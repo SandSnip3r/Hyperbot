@@ -187,4 +187,13 @@ EquipCountdownStart::EquipCountdownStart(EventId id, sro::scalar_types::EntityGl
 FreePvpUpdateSuccess::FreePvpUpdateSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId) :
     Event(id, EventCode::kFreePvpUpdateSuccess), globalId(globalId) {}
 
+PvpAgentReadyForAssignment::PvpAgentReadyForAssignment(EventId id, SessionId sessionId) :
+    Event(id, EventCode::kPvpAgentReadyForAssignment), sessionId(sessionId) {}
+
+BeginPvp::BeginPvp(EventId id, common::PvpDescriptor pvpDescriptor) :
+    Event(id, EventCode::kBeginPvp), pvpDescriptor(pvpDescriptor) {}
+
+ReadyForPvp::ReadyForPvp(EventId id, sro::scalar_types::EntityGlobalId globalId) :
+    Event(id, EventCode::kReadyForPvp), globalId(globalId) {}
+
 } // namespace event

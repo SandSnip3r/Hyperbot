@@ -14,6 +14,7 @@ namespace state::machine {
 
 class Walking : public StateMachine {
 public:
+  // TODO: Create a move constructor for the waypoints.
   Walking(Bot &bot, const std::vector<packet::building::NetworkReadyPosition> &waypoints);
   ~Walking() override;
   Status onUpdate(const event::Event *event) override;

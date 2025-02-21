@@ -34,25 +34,8 @@ void Hyperbot::run() {
   userInterface.setWorldState(worldState);
   userInterface.broadcastLaunch();
 
-  constexpr bool kDoRlTraining{true};
-  if constexpr (kDoRlTraining) {
-    rl::RlTrainingManager rlTrainingManager{gameData_, eventBroker_, worldState, clientManagerInterface};
-    rlTrainingManager.run();
-  } else {
-    Session session{gameData_, eventBroker_, worldState, clientManagerInterface};
-    // Session session2{gameData_, eventBroker_, worldState, clientManagerInterface};
-    session.initialize();
-    // session2.initialize();
-
-    // session.setCharacterToLogin("_Nuked_");
-    // session2.setCharacterToLogin("IP_Man");
-    session.runAsync();
-    // session2.runAsync();
-    VLOG(1) << "Session(s) running. Main thread now blocks.";
-    while (1) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-  }
+  rl::RlTrainingManager rlTrainingManager{gameData_, eventBroker_, worldState, clientManagerInterface};
+  rlTrainingManager.run();
 }
 
 Hyperbot::~Hyperbot() {

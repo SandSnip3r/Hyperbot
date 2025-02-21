@@ -1,9 +1,10 @@
 #ifndef EVENT_EVENT_HPP_
 #define EVENT_EVENT_HPP_
 
+#include "common/pvpDescriptor.hpp"
+#include "common/sessionId.hpp"
 #include "packet/building/commonBuilding.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
-#include "sessionId.hpp"
 
 #include <silkroad_lib/scalar_types.hpp>
 
@@ -112,6 +113,9 @@
   F(OperatorRequestError) \
   F(EquipCountdownStart) \
   F(FreePvpUpdateSuccess) \
+  F(PvpAgentReadyForAssignment) \
+  F(BeginPvp) \
+  F(ReadyForPvp) \
   F(Dummy)
 
 namespace event {
@@ -553,6 +557,24 @@ struct FreePvpUpdateSuccess : public Event {
   explicit FreePvpUpdateSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId);
   sro::scalar_types::EntityGlobalId globalId;
   virtual ~FreePvpUpdateSuccess() = default;
+};
+
+struct PvpAgentReadyForAssignment : public Event {
+  explicit PvpAgentReadyForAssignment(EventId id, SessionId sessionId);
+  SessionId sessionId;
+  virtual ~PvpAgentReadyForAssignment() = default;
+};
+
+struct BeginPvp : public Event {
+  explicit BeginPvp(EventId id, common::PvpDescriptor pvpDescriptor);
+  common::PvpDescriptor pvpDescriptor;
+  virtual ~BeginPvp() = default;
+};
+
+struct ReadyForPvp : public Event {
+  explicit ReadyForPvp(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  sro::scalar_types::EntityGlobalId globalId;
+  virtual ~ReadyForPvp() = default;
 };
 
 } // namespace event

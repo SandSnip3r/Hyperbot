@@ -42,6 +42,7 @@ Proxy::~Proxy() {
   if (thr_.joinable()) {
     thr_.join();
   }
+  VLOG(1) << "Destructing";
 }
 
 void Proxy::inject(const PacketContainer &packet, const PacketContainer::Direction direction) {
@@ -80,6 +81,7 @@ void Proxy::run() {
       if (ec) {
         LOG(INFO) << "Error running io_service: \"" << ec.message() << '"';
       } else {
+        LOG(INFO) << "No more work";
         // No more work
         break;
       }
@@ -87,7 +89,7 @@ void Proxy::run() {
       // Prevent high CPU usage
       boost::this_thread::sleep(boost::posix_time::milliseconds(1));
     } catch (const std::exception &ex) {
-      LOG(INFO) << "Exception while running io_service \"" << ex.what() << '"';
+      LOG(WARNING) << "Exception while running io_service \"" << ex.what() << '"';
     }
   }
 }

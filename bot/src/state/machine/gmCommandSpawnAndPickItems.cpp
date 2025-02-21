@@ -14,8 +14,8 @@
 
 namespace state::machine {
 
-GmCommandSpawnAndPickItems::GmCommandSpawnAndPickItems(Bot &bot, const std::vector<Bot::ItemRequirement> &items) : StateMachine(bot), items_(items) {
-  VLOG(1) << "Constructed state machine to spawn&pick: [" << absl::StrJoin(items, ", ", [this](std::string *out, const Bot::ItemRequirement &item) { absl::StrAppend(out, bot_.gameData().getItemName(item.refId), " x", item.count); }) << "]";
+GmCommandSpawnAndPickItems::GmCommandSpawnAndPickItems(Bot &bot, const std::vector<common::ItemRequirement> &items) : StateMachine(bot), items_(items) {
+  VLOG(1) << "Constructed state machine to spawn&pick: [" << absl::StrJoin(items, ", ", [this](std::string *out, const common::ItemRequirement &item) { absl::StrAppend(out, bot_.gameData().getItemName(item.refId), " x", item.count); }) << "]";
 }
 
 GmCommandSpawnAndPickItems::~GmCommandSpawnAndPickItems() {

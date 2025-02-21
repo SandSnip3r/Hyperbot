@@ -11,7 +11,7 @@
 #include "pk2/gameData.hpp"
 #include "pk2/gameData.hpp"
 #include "proxy.hpp"
-#include "sessionId.hpp"
+#include "common/sessionId.hpp"
 #include "statAggregator.hpp"
 #include "state/worldState.hpp"
 #include "state/machine/sequentialStateMachines.hpp"
@@ -66,7 +66,7 @@ protected:
 
 private:
   CharacterLoginInfo characterLoginInfo_;
-  state::machine::SequentialStateMachines sequentialStateMachines_{*this};
+  std::unique_ptr<state::machine::StateMachine> pvpAgentStateMachine_;
 
   void subscribeToEvents();
 
@@ -91,7 +91,6 @@ private:
   // Misc
   void handleKnockbackStunEnded();
   void handleKnockdownStunEnded();
-  void handleItemCooldownEnded(const event::ItemCooldownEnded &event);
   void setCurrentPositionAsTrainingCenter();
   void handleLearnedSkill(const event::LearnSkillSuccess &event);
 
@@ -104,19 +103,8 @@ public:
 
   // Interface for RL training.
   std::future<void> asyncOpenClient();
-  std::future<void> pushAsyncLogIn();
-  std::future<void> pushAsyncBecomeVisible();
-  std::future<void> pushAsyncMoveTo(const sro::Position &destinationPosition);
-  std::future<void> pushAsyncEnablePvp();
-
-  struct ItemRequirement {
-    sro::pk2::ref::ItemId refId;
-    uint16_t count;
-  };
-  std::future<void> pushAsyncMakeSureWeHaveItems(const std::vector<ItemRequirement> &itemRequirements);
-  std::future<void> pushAsyncRepair();
-
   bool loggedIn() const;
+  void asyncStandbyForPvp();
 
 private:
   // Data for RL training interface.

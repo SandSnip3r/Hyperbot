@@ -2,6 +2,7 @@
 #define STATE_MACHINE_BUYING_ITEMS_HPP_
 
 #include "bot.hpp"
+#include "common/itemRequirement.hpp"
 #include "stateMachine.hpp"
 
 #include <cstdint>
@@ -13,13 +14,14 @@ namespace state::machine {
 
 class GmCommandSpawnAndPickItems : public StateMachine {
 public:
-  GmCommandSpawnAndPickItems(Bot &bot, const std::vector<Bot::ItemRequirement> &items);
+  // TODO: Create a move constructor for the items.
+  GmCommandSpawnAndPickItems(Bot &bot, const std::vector<common::ItemRequirement> &items);
   ~GmCommandSpawnAndPickItems() override;
   Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"GmCommandSpawnAndPickItems"};
   bool initialized_{false};
-  std::vector<Bot::ItemRequirement> items_;
+  std::vector<common::ItemRequirement> items_;
   sro::Position originalPosition_;
   bool waitingForItemToSpawn_{false};
 

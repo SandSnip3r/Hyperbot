@@ -65,7 +65,7 @@
 #include "packet/parsing/packetParser.hpp"
 #include "pk2/gameData.hpp"
 #include "state/worldState.hpp"
-#include "sessionId.hpp"
+#include "common/sessionId.hpp"
 
 #define ENFORCE_PURIFICATION_PILL_COOLDOWN
 

@@ -7,8 +7,6 @@
 - Get away from include & src directories in silkroad_lib
 - It would be really nice to have a local list of known characters
 - Add UI element to toggle packet logging to console
-- Kill clients on shutdown
-  - I should do this by detecting a missing heartbeat from the bot in the ClientManager
 - Auto relogin when a character disconnects
 - Ensure that no state machine does any work in its constructor
   - Bonus if we can guarantee it
@@ -16,3 +14,10 @@
 - Remove StateMachine created/destroyed in ctors/dtors
 - Make StateMachine::name a virtual function
 - Handle the case when state::machine::PickItem's target item is picked by someone else
+- If `SequentialStateMachines` is here to stay, rename it as something like `StateMachineQueue`, to represent that once a contained state machine is complete, it is destroyed and removed from the queue
+- Change silkroad_lib dir to sro and match the project, so that the include path looks the same as the namespace
+- Create a "pvp ledger" which holds all PvpDescriptors. Rather than sending around copies of PvpDescriptors, we can instead share pointers into the ledger
+- Additionally, add move constructors for state machines which take in vectors of items, like Walking or GmCommandSpawnAndPickItems
+- In the construction of state machines, with its reference to Bot, register itself with the bot. This would make it so that I dont need to manually also write code in the Bot to hold & execute the state machine
+- In the construction of state machines, also give a pointer to the parent state machine
+- Consolidate `type_id::TypeId storage::Item::typeId()` and `TypeId type_id::getTypeId(const sro::pk2::ref::Item &item)`

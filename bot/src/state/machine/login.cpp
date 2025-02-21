@@ -17,12 +17,6 @@ namespace state::machine {
 Login::Login(Bot &bot, const CharacterLoginInfo &characterLoginInfo) : StateMachine(bot), username_(characterLoginInfo.username), password_(characterLoginInfo.password), characterName_(characterLoginInfo.characterName) {
   stateMachineCreated(kName);
   VLOG(1) << absl::StreamFormat("Constructed Login state machine for character %s", characterName_);
-  // The client will try to send the agent auth request (after we already sent the gateway auth request).
-  // TODO: Once we have clientless, blocking this packet is not necessary (but also not harmful).
-  pushBlockedOpcode(packet::Opcode::kClientAgentAuthRequest);
-  // Since this state machine is doing the login, we send these two packets. Normally the client sends them. If instead the user wants to manually log in using the client, we should let the client send them.
-  pushBlockedOpcode(packet::Opcode::kClientGatewayShardListRequest);
-  pushBlockedOpcode(packet::Opcode::kClientGatewayShardListPingRequest);
 }
 
 Login::~Login() {
@@ -30,10 +24,21 @@ Login::~Login() {
 }
 
 Status Login::onUpdate(const event::Event *event) {
-  // Is the character already logged in?
-  if (bot_.loggedIn()) {
-    VLOG(1) << "Login state machine: Character is already logged in";
-    return Status::kDone;
+  if (!initialized_) {
+    initialized_ = true;
+    // The client will try to send the agent auth request (after we already sent the gateway auth request).
+    // TODO: Once we have clientless, blocking this packet is not necessary (but also not harmful).
+    pushBlockedOpcode(packet::Opcode::kClientAgentAuthRequest);
+
+    if (bot_.worldState().shardListResponse_) {
+      VLOG(1) << "Already have shard list";
+      waitingOnShardList_ = false;
+    } else {
+      VLOG(1) << "Don't yet have a shard list, we'll get it ourself";
+      // Since this state machine is doing the login, we send these two packets. Normally the client sends them. If instead the user wants to manually log in using the client, we should let the client send them.
+      pushBlockedOpcode(packet::Opcode::kClientGatewayShardListRequest);
+      pushBlockedOpcode(packet::Opcode::kClientGatewayShardListPingRequest);
+    }
   }
 
   if (!waitingOnShardList_ && !bot_.worldState().shardListResponse_.has_value()) {
@@ -61,18 +66,23 @@ Status Login::onUpdate(const event::Event *event) {
 
     if (const auto *shardListReceivedEvent = dynamic_cast<const event::ShardListReceived*>(sessionSpecificEvent); shardListReceivedEvent != nullptr) {
       VLOG(1) << absl::StreamFormat("[%s] Received shard list for our session (session ID: %d)", characterName_, shardListReceivedEvent->sessionId);
-      // This shard list is for our session. Try to log in.
-      // TODO: For now, we just choose the first shard.
-      if (shardListReceivedEvent->shards.empty()) {
-        throw std::runtime_error("Received shard list, but it is empty");
+      if (!loginRequestSent_) {
+        // This shard list is for our session. Try to log in.
+        // TODO: For now, we just choose the first shard.
+        if (shardListReceivedEvent->shards.empty()) {
+          throw std::runtime_error("Received shard list, but it is empty");
+        }
+        if (shardListReceivedEvent->shards.size() > 1) {
+          LOG(WARNING) << "  There are multiple shards, picking the first one";
+        }
+        VLOG(1) << absl::StreamFormat("  Trying to login with username \"%s\" and password \"%s\", to shard ID %d", username_, password_, shardListReceivedEvent->shards.at(0).shardId);
+        const auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(bot_.gameData().divisionInfo().locale, username_, password_, shardListReceivedEvent->shards.at(0).shardId);
+        bot_.packetBroker().injectPacket(loginAuthPacket, PacketContainer::Direction::kBotToServer);
+        waitingOnShardList_ = false;
+        loginRequestSent_ = true;
+      } else {
+        VLOG(1) << "Already sent login request, not resending";
       }
-      if (shardListReceivedEvent->shards.size() > 1) {
-        LOG(WARNING) << "  There are multiple shards, picking the first one";
-      }
-      VLOG(1) << absl::StreamFormat("  Trying to login with username \"%s\" and password \"%s\", to shard ID %d", username_, password_, shardListReceivedEvent->shards.at(0).shardId);
-      const auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(bot_.gameData().divisionInfo().locale, username_, password_, shardListReceivedEvent->shards.at(0).shardId);
-      bot_.packetBroker().injectPacket(loginAuthPacket, PacketContainer::Direction::kBotToServer);
-      waitingOnShardList_ = false;
     }
 
     if (waitingOnShardList_) {
@@ -127,6 +137,7 @@ Status Login::onUpdate(const event::Event *event) {
     if (spawned_ && bodyStateChangedEvent->globalId == bot_.selfState()->globalId) {
       // Our body state changed. This is the last event as part of the character-spawning process.
       VLOG(1) << absl::StreamFormat("[%s] Body state changed. Login state machine complete.", characterName_);
+      return Status::kDone;
     }
   }
   return Status::kNotDone;

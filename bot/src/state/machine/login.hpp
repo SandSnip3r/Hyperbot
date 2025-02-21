@@ -25,8 +25,10 @@ private:
   const std::string username_;
   const std::string password_;
   const std::string characterName_;
+  bool initialized_{false};
   std::optional<uint32_t> agentServerToken_;
   bool waitingOnShardList_{false};
+  bool loginRequestSent_{false};
   bool spawned_{false};
 };
 
