@@ -1268,7 +1268,7 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     // Error seems to always refer to the most recent
     const auto failedCommand = selfEntity_->skillEngine.pendingCommandQueue.front();
     VLOG(4) << "Command error " << packet.errorCode() << ": " << wrapActionCommand(failedCommand);
-    eventBroker_.publishEvent<event::CommandError>(failedCommand);
+    eventBroker_.publishEvent<event::CommandError>(selfEntity_->globalId, failedCommand);
     selfEntity_->skillEngine.pendingCommandQueue.erase(selfEntity_->skillEngine.pendingCommandQueue.begin());
   } else /*if (packet.actionState() == packet::enums::ActionState::kEnd)*/ {
     // It seems like if a skill is completed without interruption, this end will come after the SkillEnd packet
@@ -1276,9 +1276,9 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     if (selfEntity_->skillEngine.acceptedCommandQueue.empty()) {
       LOG(WARNING) << "Command ended, but we had no accepted command";
       if (!selfEntity_->skillEngine.pendingCommandQueue.empty()) {
-        LOG(INFO) << " Pending command queue is not empty though, maybe we ought to pop that?";
+        VLOG(1) << " Pending command queue is not empty though, maybe we ought to pop that?";
         if (selfEntity_->skillEngine.pendingCommandQueue.front().commandType == packet::enums::CommandType::kCancel) {
-          LOG(INFO) << "  Action is a cancel, popping";
+          VLOG(1) << "  Action is a cancel, popping";
           // TODO: I am not confident in the assumption that this means that we delete the first item in the pending queue
           selfEntity_->skillEngine.pendingCommandQueue.erase(selfEntity_->skillEngine.pendingCommandQueue.begin());
         }
@@ -1289,8 +1289,8 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
       if (firstCommandIt->command.commandType == packet::enums::CommandType::kExecute &&
           firstCommandIt->command.actionType == packet::enums::ActionType::kCast &&
           !firstCommandIt->wasExecuted) {
-        LOG(INFO) << "This command (skill " << gameData_.getSkillName(firstCommandIt->command.refSkillId) << ") was never executed!!";
-        eventBroker_.publishEvent<event::CommandError>(firstCommandIt->command);
+        VLOG(1) << "This command (skill " << gameData_.getSkillName(firstCommandIt->command.refSkillId) << ") was never executed!!";
+        eventBroker_.publishEvent<event::CommandError>(selfEntity_->globalId, firstCommandIt->command);
         // TODO: Maybe this should be a different event than "CommandError"?
       }
       if (firstCommandIt->command.commandType == packet::enums::CommandType::kExecute &&
@@ -1382,19 +1382,17 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       throw std::runtime_error("Unimplemented");
     }();
     auto logNoEnd = [&](const auto skillRefId) {
-      LOG(INFO) << std::string(1000, 'L') << "\nNo end came for skill " << skillRefId << " (" << gameData_.getSkillName(skillRefId) << ")";
-      std::ofstream myFile("no_end.txt", std::ios::app);
-      if (myFile) {
-        myFile << skillRefId << ',';
-      }
-
+      // LOG(INFO) << std::string(1000, 'L') << "\nNo end came for skill " << skillRefId << " (" << gameData_.getSkillName(skillRefId) << ")";
+      // std::ofstream myFile("no_end.txt", std::ios::app);
+      // if (myFile) {
+      //   myFile << skillRefId << ',';
+      // }
     };
     // Do we already have a tracked begin for this skill? That would mean that an end never came
     for (auto it=tracked_.begin(); it!=tracked_.end();) {
       if (it->second.refSkillId == packet.refSkillId()) {
         // We already tracked this skill. This means an end never came
         if (expectEnd) {
-          LOG(INFO) << "Oh no";
           logNoEnd(it->second.refSkillId);
         }
         it = tracked_.erase(it);
@@ -1413,7 +1411,6 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       if (trackedItem.expTime <= std::chrono::high_resolution_clock::now()) {
         // This one expired
         if (trackedItem.expectEnd) {
-          LOG(INFO) << "Oh no";
           logNoEnd(trackedItem.refSkillId);
         }
         it = tracked_.erase(it);
@@ -1478,7 +1475,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         // We cast this skill
         if (*indexOfOurSkill != 0) {
           // Remove all commands before this one in the queue, those have probably been discarded by the server
-          LOG(INFO) << "Our skill is not the first in the accepted command queue.";
+          VLOG(1) << "Our skill is not the first in the accepted command queue.";
           // TODO: Should previous items be removed?
 
           //  We should in this case:
@@ -1502,7 +1499,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
           } else {
             for (int i=0; i<*indexOfOurSkill; ++i) {
               // TODO: Should we publish an event that command has been skipped?
-              LOG(INFO) << "Command #" << i << " (" << wrapActionCommand(selfEntity_->skillEngine.acceptedCommandQueue.at(i).command) << ") skipped";
+              VLOG(1) << "Command #" << i << " (" << wrapActionCommand(selfEntity_->skillEngine.acceptedCommandQueue.at(i).command) << ") skipped";
             }
             selfEntity_->skillEngine.acceptedCommandQueue.erase(selfEntity_->skillEngine.acceptedCommandQueue.begin(), selfEntity_->skillEngine.acceptedCommandQueue.begin() + *indexOfOurSkill);
             indexOfOurSkill = 0;
@@ -1848,6 +1845,7 @@ void PacketProcessor::serverAgentOperatorResponseReceived(const packet::parsing:
 void PacketProcessor::serverAgentFreePvpUpdateResponseReceived(const packet::parsing::ServerAgentFreePvpUpdateResponse &packet) const {
   if (packet.result() == 1) {
     if (packet.globalId() == selfEntity_->globalId) {
+      selfEntity_->freePvpMode = packet.mode();
       eventBroker_.publishEvent<event::FreePvpUpdateSuccess>(packet.globalId());
     }
   }

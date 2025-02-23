@@ -357,8 +357,10 @@ add_executable(${PROJECT_NAME}
   src/state/machine/pickItem.hpp
   src/state/machine/pickItemWithCos.cpp
   src/state/machine/pickItemWithCos.hpp
-  src/state/machine/pvpAgent.cpp
-  src/state/machine/pvpAgent.hpp
+  src/state/machine/pvpManager.cpp
+  src/state/machine/pvpManager.hpp
+  src/state/machine/resurrectInPlace.cpp
+  src/state/machine/resurrectInPlace.hpp
   src/state/machine/sellingItems.cpp
   src/state/machine/sellingItems.hpp
   src/state/machine/sequentialStateMachines.cpp

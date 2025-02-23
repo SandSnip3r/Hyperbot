@@ -25,6 +25,7 @@ Status SequentialStateMachines::onUpdate(const event::Event *event) {
     }
   }
   if (stateMachines_.empty()) {
+    VLOG(1) << "Last state machine is done";
     return Status::kDone;
   } else {
     return Status::kNotDone;

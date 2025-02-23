@@ -19,6 +19,10 @@ GmCommandSpawnAndPickItems::GmCommandSpawnAndPickItems(Bot &bot, const std::vect
 }
 
 GmCommandSpawnAndPickItems::~GmCommandSpawnAndPickItems() {
+  if (requestTimeoutEventId_) {
+    bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
+    requestTimeoutEventId_.reset();
+  }
 }
 
 Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
@@ -49,7 +53,7 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
   }
 
   // TODO: We should take note if our GM command was successful or not.
-  if (waitingForItemToSpawn_) {
+  if (requestTimeoutEventId_) {
     // Measured [7.99993, 20.0001]
     constexpr double closestSpawnDistance = 8;
     constexpr double farthestSpawnDistance = 20;
@@ -72,9 +76,12 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
           const double distance = sro::position_math::calculateDistance2d(bot_.selfState()->position(), itemEntity->position());
           // Make sure the spawned item is close enough to us, otherwise, it might be spawned by someone else for someone else.
           if (distance >= closestSpawnDistance-errorTolerance && distance <= farthestSpawnDistance+errorTolerance) {
-            VLOG(1) << characterNameForLog() << "Item we asked for spawned. Creating state machine to pick item " << bot_.gameData().getItemName(itemEntity->refObjId);
+            VLOG(1) << characterNameForLog() << "Item (#" << itemEntity->globalId << ") we asked for spawned. Creating state machine to pick item " << bot_.gameData().getItemName(itemEntity->refObjId);
+            if (requestTimeoutEventId_) {
+              bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
+              requestTimeoutEventId_.reset();
+            }
             setChildStateMachine<PickItem>(itemEntity->globalId);
-            waitingForItemToSpawn_ = false;
             return onUpdate(event);
           }
         }
@@ -86,13 +93,22 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
       if (castedEvent.operatorCommand == packet::enums::OperatorCommand::kMakeItem) {
         // Failed to spawn item.
         VLOG(1) << characterNameForLog() << "GM Command to spawn item failed";
-        waitingForItemToSpawn_ = false;
+        if (requestTimeoutEventId_) {
+          bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
+          requestTimeoutEventId_.reset();
+        }
         // Fall through and retry.
       }
+    } else if (event->eventCode == event::EventCode::kTimeout &&
+               requestTimeoutEventId_ &&
+               *requestTimeoutEventId_ == event->eventId) {
+      VLOG(1) << characterNameForLog() << "Timeout waiting for item to spawn. Retrying";
+      requestTimeoutEventId_.reset();
+      return spawnNextItem();
     }
   }
 
-  if (waitingForItemToSpawn_) {
+  if (requestTimeoutEventId_) {
     // We're waiting for an item to spawn. Don't spawn another item yet.
     return Status::kNotDone;
   }
@@ -127,7 +143,7 @@ Status GmCommandSpawnAndPickItems::spawnNextItem() {
   const PacketContainer packet = packet::building::ClientAgentOperatorRequest::makeItem(refId, countToSpawn);
   VLOG(1) << characterNameForLog() << "Sending packet for GM command to spawn " << countToSpawn << " x " << bot_.gameData().getItemName(refId);
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
-  waitingForItemToSpawn_ = true;
+  requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(888), event::EventCode::kTimeout);
   return Status::kNotDone;
 }
 

@@ -67,6 +67,7 @@ sourceTemplate = '#include "{camelClassName}.hpp"\n'\
                  '}}\n'\
                  '\n'\
                  'Status {pascalClassName}::onUpdate(const event::Event *event) {{\n'\
+                 '  return Status::kNotDone;\n'\
                  '}}\n'\
                  '\n'\
                  '}} // namespace state::machine\n'

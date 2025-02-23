@@ -11,21 +11,9 @@
 namespace state::machine {
 
 UseItem::UseItem(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex) : StateMachine(bot), inventoryIndex_(inventoryIndex) {
-  stateMachineCreated(kName);
+}
 
-  // Do some quick checks to make sure we have this item and can use it
-  const auto &inventory = bot_.selfState()->inventory;
-  if (!inventory.hasItem(inventoryIndex_)) {
-    throw std::runtime_error("Trying use nonexistent item in inventory");
-  }
-  const auto *item = inventory.getItem(inventoryIndex_);
-  const auto *itemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(item);
-  if (itemAsExpendable == nullptr) {
-    throw std::runtime_error("Item is not an expendable");
-  }
-  itemTypeId_ = itemAsExpendable->typeId();
-  lastKnownQuantity_ = itemAsExpendable->quantity;
-  itemName_ = bot_.gameData().getItemName(item->refItemId);
+UseItem::UseItem(Bot &bot, sro::pk2::ref::ItemId itemId) : StateMachine(bot), itemId_(itemId) {
 }
 
 UseItem::~UseItem() {
@@ -33,10 +21,13 @@ UseItem::~UseItem() {
     bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
     itemUseTimeoutEventId_.reset();
   }
-  stateMachineDestroyed();
 }
 
 Status UseItem::onUpdate(const event::Event *event) {
+  if (!initialized_) {
+    initialize();
+    initialized_ = true;
+  }
   if (event) {
     // We don't care about any event if we haven't yet used an item
     if (const auto *itemUseFailedEvent = dynamic_cast<const event::ItemUseFailed*>(event)) {
@@ -70,7 +61,7 @@ Status UseItem::onUpdate(const event::Event *event) {
                 throw std::runtime_error("This item use timeout event does not exist");
               }
               bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
-              itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(*eventEndTime, inventoryIndex_, itemTypeId_);
+              itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(*eventEndTime, *inventoryIndex_, itemTypeId_);
             }
           } else if (itemUseTimeoutEventId_) {
             // Check that item at this inventory slot decreased
@@ -134,12 +125,47 @@ Status UseItem::onUpdate(const event::Event *event) {
   }
 
   // Use item
-  const auto itemUsePacket = packet::building::ClientAgentInventoryItemUseRequest::packet(inventoryIndex_, itemTypeId_);
+  const auto itemUsePacket = packet::building::ClientAgentInventoryItemUseRequest::packet(*inventoryIndex_, itemTypeId_);
   bot_.packetBroker().injectPacket(itemUsePacket, PacketContainer::Direction::kClientToServer);
 
   // Create a delayed event that will trigger if our item never gets used.
-  itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(std::chrono::milliseconds(kItemUseTimeoutMs), inventoryIndex_, itemTypeId_);
+  // TODO: Rather than having event::ItemUseTimeout, we can just use the generic kTimeout event.
+  itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(std::chrono::milliseconds(kItemUseTimeoutMs), *inventoryIndex_, itemTypeId_);
   return Status::kNotDone;
+}
+
+void UseItem::initialize() {
+  const auto &inventory = bot_.selfState()->inventory;
+  // Do some quick checks to make sure we have this item and can use it
+  if (!inventoryIndex_) {
+    if (!itemId_) {
+      // Should not be possible because the only way to construct this object is with one of these two.
+      throw std::runtime_error("No inventory index or item ID provided");
+    }
+    // We were told to use an item but don't know where it is in our inventory.
+    for (int slot=0; slot<inventory.size(); ++slot) {
+      if (inventory.hasItem(slot)) {
+        if (inventory.getItem(slot)->refItemId == *itemId_) {
+          VLOG(1) << characterNameForLog() << "Found item in slot " << slot;
+          inventoryIndex_ = slot;
+          break;
+        }
+      }
+    }
+  } else {
+    // Given an inventory index, make sure there's an item there
+    if (!inventory.hasItem(*inventoryIndex_)) {
+      throw std::runtime_error("Trying use nonexistent item in inventory");
+    }
+  }
+  const storage::Item *item = inventory.getItem(*inventoryIndex_);
+  const storage::ItemExpendable *itemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(item);
+  if (itemAsExpendable == nullptr) {
+    throw std::runtime_error("Item is not an expendable");
+  }
+  itemTypeId_ = itemAsExpendable->typeId();
+  lastKnownQuantity_ = itemAsExpendable->quantity;
+  itemName_ = bot_.gameData().getItemName(item->refItemId);
 }
 
 } // namespace state::machine

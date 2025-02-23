@@ -31,7 +31,7 @@ bool EventBroker::cancelDelayedEvent(EventId eventId) {
   const TimerManager::TimerId timerId = getTimerId(eventId);
   bool cancelled = timerManager_.cancelTimer(timerId);
   if (cancelled) {
-    VLOG(1) << absl::StreamFormat("Cancelled event #%d", eventId);
+    VLOG(2) << absl::StreamFormat("Cancelled event #%d", eventId);
     removeTimerIdMapping(eventId);
   } else {
     LOG(WARNING) << "Tried to cancel delayed event but failed";
@@ -177,7 +177,7 @@ void EventBroker::delayedTimerFinished(event::Event *event) {
 }
 
 void EventBroker::timerFinished(event::Event *event) {
-  VLOG(1) << absl::StreamFormat("Event #%d %s triggered", event->eventId, event::toString(event->eventCode));
+  VLOG(2) << absl::StreamFormat("Event #%d %s triggered", event->eventId, event::toString(event->eventCode));
   // Take the raw pointer and move it into a unique_pointer
   notifySubscribers(std::unique_ptr<event::Event>(event));
 }

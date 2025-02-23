@@ -1,5 +1,5 @@
-#ifndef STATE_MACHINE_PVP_AGENT_HPP_
-#define STATE_MACHINE_PVP_AGENT_HPP_
+#ifndef STATE_MACHINE_PVP_MANAGER_HPP_
+#define STATE_MACHINE_PVP_MANAGER_HPP_
 
 #include "characterLoginInfo.hpp"
 #include "event/event.hpp"
@@ -9,24 +9,26 @@
 
 namespace state::machine {
 
-class PvpAgent : public StateMachine {
+class PvpManager : public StateMachine {
 public:
-  PvpAgent(Bot &bot, const CharacterLoginInfo &characterLoginInfo);
-  ~PvpAgent() override;
+  PvpManager(Bot &bot, const CharacterLoginInfo &characterLoginInfo);
+  ~PvpManager() override;
   Status onUpdate(const event::Event *event) override;
 private:
-  static inline std::string kName{"PvpAgent"};
+  static inline std::string kName{"PvpManager"};
   const CharacterLoginInfo characterLoginInfo_;
   Status initiatePvp(const event::BeginPvp &beginPvpEvent);
   Status startPvp(const event::Event *event);
+  void resetAndNotifyReadyForAssignment();
 
   sro::scalar_types::EntityGlobalId getOpponentGlobalId();
   common::PvpDescriptor pvpDescriptor_;
   bool weAreReady_{false};
   bool opponentIsReady_{false};
+  bool receivedResurrectionOption_;
 };
 
 
 } // namespace state::machine
 
-#endif // STATE_MACHINE_PVP_AGENT_HPP_
+#endif // STATE_MACHINE_PVP_MANAGER_HPP_

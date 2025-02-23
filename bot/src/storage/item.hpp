@@ -5,6 +5,7 @@
 #include "type_id/typeCategory.hpp"
 
 #include <silkroad_lib/pk2/ref/item.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -25,7 +26,7 @@ enum class ItemType {
 
 class Item {
 public:
-  uint32_t refItemId;
+  sro::scalar_types::ReferenceObjectId refItemId;
   const ItemType type;
   const sro::pk2::ref::Item *itemInfo{nullptr};
   type_id::TypeId typeId() const;

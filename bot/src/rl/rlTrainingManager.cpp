@@ -61,7 +61,7 @@ void RlTrainingManager::createSessions() {
 void RlTrainingManager::run() {
   auto eventHandleFunction = std::bind(&RlTrainingManager::onUpdate, this, std::placeholders::_1);
   // Subscribe to events.
-  eventBroker_.subscribeToEvent(event::EventCode::kPvpAgentReadyForAssignment, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kPvpManagerReadyForAssignment, eventHandleFunction);
 
   createSessions();
 
@@ -116,9 +116,9 @@ void RlTrainingManager::onUpdate(const event::Event *event) {
   std::unique_lock worldStateLock(worldState_.mutex);
 
   LOG(INFO) << "Received event " << event::toString(event->eventCode);
-  if (const auto *readyForAssignmentEvent = dynamic_cast<const event::PvpAgentReadyForAssignment*>(event); readyForAssignmentEvent != nullptr) {
+  if (const auto *readyForAssignmentEvent = dynamic_cast<const event::PvpManagerReadyForAssignment*>(event); readyForAssignmentEvent != nullptr) {
     sessionsReadyForAssignment_.push_back(readyForAssignmentEvent->sessionId);
-    LOG(INFO) << "Received PvpAgentReadyForAssignment. Now have " << sessionsReadyForAssignment_.size() << " sessions ready for assignment";
+    LOG(INFO) << "Received PvpManagerReadyForAssignment. Now have " << sessionsReadyForAssignment_.size() << " sessions ready for assignment";
     if (sessionsReadyForAssignment_.size() >= 2) {
       createAndPublishPvpDescriptor();
     }

@@ -66,7 +66,7 @@ protected:
 
 private:
   CharacterLoginInfo characterLoginInfo_;
-  std::unique_ptr<state::machine::StateMachine> pvpAgentStateMachine_;
+  std::unique_ptr<state::machine::StateMachine> pvpManagerStateMachine_;
 
   void subscribeToEvents();
 

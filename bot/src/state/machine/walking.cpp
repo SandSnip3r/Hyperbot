@@ -11,16 +11,23 @@ namespace state::machine {
 
 Walking::Walking(Bot &bot, const std::vector<packet::building::NetworkReadyPosition> &waypoints) : StateMachine(bot), waypoints_(waypoints) {
   stateMachineCreated(kName);
-  bot_.eventBroker().publishEvent<event::WalkingPathUpdated>(std::vector<packet::building::NetworkReadyPosition>(waypoints_.begin(), waypoints_.end()));
-  pushBlockedOpcode(packet::Opcode::kClientAgentCharacterMoveRequest);
 }
 
 Walking::~Walking() {
+  if (movementRequestTimeoutEventId_) {
+    bot_.eventBroker().cancelDelayedEvent(*movementRequestTimeoutEventId_);
+    movementRequestTimeoutEventId_.reset();
+  }
   bot_.eventBroker().publishEvent<event::WalkingPathUpdated>(std::vector<packet::building::NetworkReadyPosition>());
   stateMachineDestroyed();
 }
 
 Status Walking::onUpdate(const event::Event *event) {
+  if (!initialized_) {
+    initialized_ = true;
+    bot_.eventBroker().publishEvent<event::WalkingPathUpdated>(std::vector<packet::building::NetworkReadyPosition>(waypoints_.begin(), waypoints_.end()));
+    pushBlockedOpcode(packet::Opcode::kClientAgentCharacterMoveRequest);
+  }
   if (event != nullptr) {
     if (const auto *movementBeganEvent = dynamic_cast<const event::EntityMovementBegan*>(event); movementBeganEvent != nullptr && movementBeganEvent->globalId == bot_.selfState()->globalId) {
       // We started to move, our movement request must've been successful

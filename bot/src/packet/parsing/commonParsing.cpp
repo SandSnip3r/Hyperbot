@@ -368,9 +368,13 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
     }
     bool characterHasJobEquipmentInInventory = false;
     if (categories::kPlayerCharacter.contains(characterTypeId)) {
+      entity::PlayerCharacter *playerCharacterPtr = dynamic_cast<entity::PlayerCharacter*>(entity.get());
+      if (playerCharacterPtr == nullptr) {
+        throw std::runtime_error("parseSpawn, have a player character, but the entity pointer cannot be cast to a PlayerCharacter");
+      }
       uint8_t scale = stream.Read<uint8_t>();
       uint8_t hwanLevel = stream.Read<uint8_t>();
-      uint8_t pvpCape = stream.Read<uint8_t>();         //0 = None, 1 = Red, 2 = Gray, 3 = Blue, 4 = White, 5 = Orange
+      stream.Read(playerCharacterPtr->freePvpMode);
       uint8_t autoInverstExp = stream.Read<uint8_t>();  //1 = Beginner Icon, 2 = Helpful, 3 = Beginner & Helpful
 
       // Inventory

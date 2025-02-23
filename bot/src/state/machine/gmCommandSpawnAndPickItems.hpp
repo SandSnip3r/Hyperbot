@@ -2,10 +2,12 @@
 #define STATE_MACHINE_BUYING_ITEMS_HPP_
 
 #include "bot.hpp"
+#include "broker/eventBroker.hpp"
 #include "common/itemRequirement.hpp"
 #include "stateMachine.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 #include <silkroad_lib/pk2/ref/item.hpp>
@@ -23,7 +25,7 @@ private:
   bool initialized_{false};
   std::vector<common::ItemRequirement> items_;
   sro::Position originalPosition_;
-  bool waitingForItemToSpawn_{false};
+  std::optional<broker::EventBroker::EventId> requestTimeoutEventId_;
 
   Status spawnNextItem();
 };

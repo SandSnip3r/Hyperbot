@@ -18,7 +18,7 @@
 #include "state/machine/gmCommandSpawnAndPickItems.hpp"
 #include "state/machine/login.hpp"
 #include "state/machine/maxMasteryAndSkills.hpp"
-#include "state/machine/pvpAgent.hpp"
+#include "state/machine/pvpManager.hpp"
 #include "state/machine/spawnAndUseRepairHammerIfNecessary.hpp"
 #include "state/machine/walking.hpp"
 #include "type_id/categories.hpp"
@@ -200,8 +200,8 @@ void Bot::handleEvent(const event::Event *event) {
 
 void Bot::onUpdate(const event::Event *event) {
   // sequentialStateMachines_.onUpdate(event);
-  if (pvpAgentStateMachine_) {
-    pvpAgentStateMachine_->onUpdate(event);
+  if (pvpManagerStateMachine_) {
+    pvpManagerStateMachine_->onUpdate(event);
   }
 }
 
@@ -698,8 +698,8 @@ bool Bot::loggedIn() const {
 
 void Bot::asyncStandbyForPvp() {
   // Constuct the single-and-only state machine in the Bot.
-  if (pvpAgentStateMachine_ != nullptr) {
-    throw std::runtime_error("PvpAgent state machine already set");
+  if (pvpManagerStateMachine_ != nullptr) {
+    throw std::runtime_error("PvpManager state machine already set");
   }
-  pvpAgentStateMachine_ = std::make_unique<state::machine::PvpAgent>(*this, characterLoginInfo_);
+  pvpManagerStateMachine_ = std::make_unique<state::machine::PvpManager>(*this, characterLoginInfo_);
 }

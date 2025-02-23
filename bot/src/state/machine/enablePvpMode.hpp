@@ -1,9 +1,11 @@
 #ifndef STATE_MACHINE_ENABLE_PVP_MODE_HPP_
 #define STATE_MACHINE_ENABLE_PVP_MODE_HPP_
 
+#include "broker/eventBroker.hpp"
 #include "event/event.hpp"
 #include "stateMachine.hpp"
 
+#include <optional>
 #include <string>
 
 namespace state::machine {
@@ -21,6 +23,8 @@ private:
     kCountdownRunning
   };
   State state_{State::kInit};
+  std::optional<broker::EventBroker::EventId> requestTimeoutEventId_;
+  void sendRequest();
 };
 
 } // namespace state::machine

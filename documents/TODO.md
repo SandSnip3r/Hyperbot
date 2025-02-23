@@ -20,4 +20,7 @@
 - Additionally, add move constructors for state machines which take in vectors of items, like Walking or GmCommandSpawnAndPickItems
 - In the construction of state machines, with its reference to Bot, register itself with the bot. This would make it so that I dont need to manually also write code in the Bot to hold & execute the state machine
 - In the construction of state machines, also give a pointer to the parent state machine
+  - With this, and a private overridden version of onUpdate, we can catch & rethrow exceptions giving a "stack trace" of which state machine we were in
 - Consolidate `type_id::TypeId storage::Item::typeId()` and `TypeId type_id::getTypeId(const sro::pk2::ref::Item &item)`
+- Reimplement some version of pathfinding in case a character disconnects while dead and ends up back in town
+- Send pings so that if the client crashes, the character does not disconnect

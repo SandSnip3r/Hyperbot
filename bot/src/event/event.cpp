@@ -134,8 +134,8 @@ BuffAdded::BuffAdded(EventId id, sro::scalar_types::EntityGlobalId entityId, sro
 BuffRemoved::BuffRemoved(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId) :
     Event(id, EventCode::kPlayerCharacterBuffRemoved), entityGlobalId(entityId), buffRefId(buffId) {}
 
-CommandError::CommandError(EventId id, const packet::structures::ActionCommand &cmd) :
-    Event(id, EventCode::kOurCommandError), command(cmd) {}
+CommandError::CommandError(EventId id, sro::scalar_types::EntityGlobalId issuingGlobalId, const packet::structures::ActionCommand &cmd) :
+    Event(id, EventCode::kCommandError), issuingGlobalId(issuingGlobalId), command(cmd) {}
 
 ItemUseTimeout::ItemUseTimeout(EventId id, uint8_t slot, type_id::TypeId tid) :
     Event(id, EventCode::kItemUseTimeout), slotNum(slot), typeData(tid) {}
@@ -187,8 +187,8 @@ EquipCountdownStart::EquipCountdownStart(EventId id, sro::scalar_types::EntityGl
 FreePvpUpdateSuccess::FreePvpUpdateSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId) :
     Event(id, EventCode::kFreePvpUpdateSuccess), globalId(globalId) {}
 
-PvpAgentReadyForAssignment::PvpAgentReadyForAssignment(EventId id, SessionId sessionId) :
-    Event(id, EventCode::kPvpAgentReadyForAssignment), sessionId(sessionId) {}
+PvpManagerReadyForAssignment::PvpManagerReadyForAssignment(EventId id, SessionId sessionId) :
+    Event(id, EventCode::kPvpManagerReadyForAssignment), sessionId(sessionId) {}
 
 BeginPvp::BeginPvp(EventId id, common::PvpDescriptor pvpDescriptor) :
     Event(id, EventCode::kBeginPvp), pvpDescriptor(pvpDescriptor) {}

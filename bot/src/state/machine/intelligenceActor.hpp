@@ -1,11 +1,13 @@
 #ifndef STATE_MACHINE_INTELLIGENCE_ACTOR_HPP_
 #define STATE_MACHINE_INTELLIGENCE_ACTOR_HPP_
 
+#include "broker/eventBroker.hpp"
 #include "event/event.hpp"
 #include "state/machine/stateMachine.hpp"
 
 #include <silkroad_lib/pk2/ref/item.hpp>
 
+#include <optional>
 #include <string>
 
 namespace state::machine {
@@ -18,6 +20,7 @@ public:
 private:
   static inline std::string kName{"IntelligenceActor"};
   sro::scalar_types::EntityGlobalId opponentGlobalId_;
+  std::optional<broker::EventBroker::EventId> requestTimeoutEventId_;
 
   void useItem(sro::pk2::ref::ItemId refId);
 };

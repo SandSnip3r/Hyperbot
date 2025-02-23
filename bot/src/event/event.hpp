@@ -66,7 +66,7 @@
   F(OurSkillFailed) \
   F(PlayerCharacterBuffAdded) \
   F(PlayerCharacterBuffRemoved) \
-  F(OurCommandError) \
+  F(CommandError) \
   F(ItemUseTimeout) \
   F(SkillCastTimeout) \
   F(EntityMovementBegan) \
@@ -113,7 +113,7 @@
   F(OperatorRequestError) \
   F(EquipCountdownStart) \
   F(FreePvpUpdateSuccess) \
-  F(PvpAgentReadyForAssignment) \
+  F(PvpManagerReadyForAssignment) \
   F(BeginPvp) \
   F(ReadyForPvp) \
   F(Dummy)
@@ -437,7 +437,8 @@ public:
 
 struct CommandError : public Event {
 public:
-  CommandError(EventId id, const packet::structures::ActionCommand &cmd);
+  CommandError(EventId id, sro::scalar_types::EntityGlobalId issuingGlobalId, const packet::structures::ActionCommand &cmd);
+  const sro::scalar_types::EntityGlobalId issuingGlobalId;
   const packet::structures::ActionCommand command;
   virtual ~CommandError() = default;
 };
@@ -559,10 +560,10 @@ struct FreePvpUpdateSuccess : public Event {
   virtual ~FreePvpUpdateSuccess() = default;
 };
 
-struct PvpAgentReadyForAssignment : public Event {
-  explicit PvpAgentReadyForAssignment(EventId id, SessionId sessionId);
+struct PvpManagerReadyForAssignment : public Event {
+  explicit PvpManagerReadyForAssignment(EventId id, SessionId sessionId);
   SessionId sessionId;
-  virtual ~PvpAgentReadyForAssignment() = default;
+  virtual ~PvpManagerReadyForAssignment() = default;
 };
 
 struct BeginPvp : public Event {

@@ -30,7 +30,7 @@ public:
 
   void onUpdate(const event::Event *event);
 private:
-  static constexpr float kPvpStartingCenterOffset{30.0f};
+  static constexpr float kPvpStartingCenterOffset{40.0f};
   const pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
   state::WorldState &worldState_;

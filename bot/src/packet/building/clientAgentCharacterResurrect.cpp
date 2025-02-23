@@ -12,8 +12,9 @@ PacketContainer ClientAgentCharacterResurrect::resurrect(packet::enums::Resurrec
   // 1   byte    resurrectType // 1 = Regular, 2 = Beginner
   // Regular = Resurrect at the specified point. / Resurrect at the present point.
   if (option == packet::enums::ResurrectionOptionFlag::kNormal) {
-    LOG(INFO) << "Want to resurrect with option " << static_cast<int>(option) << ". Sending kAtSpecifiedPoint";
     stream.Write(packet::enums::ResurrectionOptionFlag::kAtSpecifiedPoint);
+  } else if (option == packet::enums::ResurrectionOptionFlag::kAtPresentPoint) {
+    stream.Write(packet::enums::ResurrectionOptionFlag::kAtPresentPoint);
   } else {
     throw std::runtime_error(absl::StrFormat("Invalid resurrection option %d", static_cast<int>(option)));
   }

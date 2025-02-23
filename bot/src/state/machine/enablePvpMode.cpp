@@ -11,14 +11,19 @@ EnablePvpMode::EnablePvpMode(Bot &bot) : StateMachine(bot) {
 }
 
 EnablePvpMode::~EnablePvpMode() {
+  if (requestTimeoutEventId_) {
+    bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
+    requestTimeoutEventId_.reset();
+  }
 }
 
 Status EnablePvpMode::onUpdate(const event::Event *event) {
   if (state_ == State::kInit) {
-    const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
-    bot_.packetBroker().injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
-    VLOG(1) << characterNameForLog() << "Sending packet to enable pvp";
-    state_ = State::kSentRequest;
+    if (bot_.selfState()->freePvpMode == packet::enums::FreePvpMode::kYellow) {
+      VLOG(1) << characterNameForLog() << "Already in PVP mode";
+      return Status::kDone;
+    }
+    sendRequest();
     return Status::kNotDone;
   } else {
     if (event != nullptr) {
@@ -28,6 +33,10 @@ Status EnablePvpMode::onUpdate(const event::Event *event) {
             LOG(WARNING) << "Expected to be in state \"kSentRequest\"";
           }
           VLOG(1) << characterNameForLog() << "Received countdown start event";
+          if (requestTimeoutEventId_) {
+            bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
+            requestTimeoutEventId_.reset();
+          }
           state_ = State::kCountdownRunning;
           return Status::kNotDone;
         }
@@ -39,10 +48,24 @@ Status EnablePvpMode::onUpdate(const event::Event *event) {
           VLOG(1) << characterNameForLog() << "Free pvp response success! Done.";
           return Status::kDone;
         }
+      } else if (event->eventCode == event::EventCode::kTimeout &&
+                 requestTimeoutEventId_ &&
+                 *requestTimeoutEventId_ == event->eventId) {
+        VLOG(1) << characterNameForLog() << "Free pvp response timeout. Trying again";
+        sendRequest();
+        return Status::kNotDone;
       }
     }
   }
   return Status::kNotDone;
+}
+
+void EnablePvpMode::sendRequest() {
+  const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
+  bot_.packetBroker().injectPacket(setPvpModePacket, PacketContainer::Direction::kClientToServer);
+  requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(666), event::EventCode::kTimeout);
+  VLOG(1) << characterNameForLog() << "Sending packet to enable pvp";
+  state_ = State::kSentRequest;
 }
 
 } // namespace state::machine

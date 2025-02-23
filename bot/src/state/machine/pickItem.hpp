@@ -1,9 +1,12 @@
 #ifndef STATE_MACHINE_PICK_ITEM_HPP_
 #define STATE_MACHINE_PICK_ITEM_HPP_
 
+#include "broker/eventBroker.hpp"
 #include "stateMachine.hpp"
 
 #include <silkroad_lib/scalar_types.hpp>
+
+#include <optional>
 
 namespace state::machine {
 
@@ -19,9 +22,10 @@ private:
   bool initialized_{false};
   sro::pk2::ref::ItemId targetRefId_;
   // When we pick an item, first it should despawn, then it should arrive in our inventory. Track these two separately so that if something arrives in our inventory matching the RefId before the item despawns, we know that it's not the item we're trying to pick up.
-  bool sentCommand_{false};
+  std::optional<broker::EventBroker::EventId> requestTimeoutEventId_;
   bool waitingForItemToDespawn_{true};
   bool waitingForItemToArriveInInventory_{true};
+  void tryPickItem();
 };
 
 } // namespace state::machine

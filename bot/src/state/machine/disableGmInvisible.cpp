@@ -18,6 +18,10 @@ Status DisableGmInvisible::onUpdate(const event::Event *event) {
   // At first, if we're invisible, construct a child state machine to disable it.
   if (!initialized_) {
     initialized_ = true;
+    if (bot_.selfState()->bodyState() != packet::enums::BodyState::kInvisibleGm) {
+      VLOG(1) << characterNameForLog() << "Not invisible, done";
+      return Status::kDone;
+    }
     if (bot_.selfState()->bodyState() == packet::enums::BodyState::kInvisibleGm) {
       VLOG(1) << characterNameForLog() << "Constructing child state machine";
       // We just became invisible, toggle it off.

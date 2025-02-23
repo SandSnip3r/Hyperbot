@@ -21,6 +21,7 @@ public:
   private:
   static inline std::string kName{"Walking"};
   // We set this to true once we request a movement. If this is false and we're moving, we know that the current movement is not one that we started. This lets us interrupt movements already in progress.
+  bool initialized_{false};
   bool tookAction_{false};
   std::vector<packet::building::NetworkReadyPosition> waypoints_;
   size_t currentWaypointIndex_{0};
