@@ -29,11 +29,14 @@ uint32_t Character::currentHp() const {
 }
 
 void Character::setCurrentHp(uint32_t hp) {
+  const bool changed = !currentHp_ || *currentHp_ != hp;
   currentHp_ = hp;
-  if (eventBroker_) {
-    eventBroker_->publishEvent<event::EntityHpChanged>(globalId);
-  } else {
-    LOG(WARNING) << "Trying to publish EntityHpChanged, but don't have event broker";
+  if (changed) {
+    if (eventBroker_) {
+      eventBroker_->publishEvent<event::EntityHpChanged>(globalId);
+    } else {
+      LOG(WARNING) << "Trying to publish EntityHpChanged, but don't have event broker";
+    }
   }
 }
 

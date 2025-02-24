@@ -299,11 +299,14 @@ void Self::cancelMovement() {
 }
 
 void Self::setCurrentMp(uint32_t mp) {
+  const bool changed = currentMp_ != mp;
   currentMp_ = mp;
-  if (eventBroker_) {
-    eventBroker_->publishEvent(event::EventCode::kMpChanged);
-  } else {
-    LOG(WARNING) << "Trying to publish kMpChanged, but don't have event broker";
+  if (changed) {
+    if (eventBroker_) {
+      eventBroker_->publishEvent(event::EventCode::kMpChanged);
+    } else {
+      LOG(WARNING) << "Trying to publish kMpChanged, but don't have event broker";
+    }
   }
 }
 

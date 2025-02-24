@@ -584,15 +584,11 @@ void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsin
   if (selfEntity_ && packet.globalId() == selfEntity_->globalId) {
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoHp)) {
       // Our HP changed
-      if (selfEntity_->currentHp() != packet.newHpValue()) { // TODO: Move check inside of entity::Self::setCurrentHp.
-        selfEntity_->setCurrentHp(packet.newHpValue());
-      }
+      selfEntity_->setCurrentHp(packet.newHpValue());
     }
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoMp)) {
       // Our MP changed
-      if (selfEntity_->currentMp() != packet.newMpValue()) { // TODO: Move check inside of entity::Self::setCurrentMp.
-        selfEntity_->setCurrentMp(packet.newMpValue());
-      }
+      selfEntity_->setCurrentMp(packet.newMpValue());
     }
 
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoAbnormal)) {

@@ -126,6 +126,9 @@ void RlTrainingManager::onUpdate(const event::Event *event) {
 }
 
 void RlTrainingManager::createAndPublishPvpDescriptor() {
+  if (sessionsReadyForAssignment_.size() < 2) {
+    throw std::runtime_error("Not enough sessions ready for assignment");
+  }
   SessionId char1Id = sessionsReadyForAssignment_.at(0);
   SessionId char2Id = sessionsReadyForAssignment_.at(1);
   Session &char1 = getSession(char1Id);
