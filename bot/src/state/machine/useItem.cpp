@@ -13,7 +13,7 @@ namespace state::machine {
 UseItem::UseItem(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex) : StateMachine(bot), inventoryIndex_(inventoryIndex) {
 }
 
-UseItem::UseItem(Bot &bot, sro::pk2::ref::ItemId itemId) : StateMachine(bot), itemId_(itemId) {
+UseItem::UseItem(Bot &bot, sro::scalar_types::ReferenceObjectId itemRefId) : StateMachine(bot), itemRefId_(itemRefId) {
 }
 
 UseItem::~UseItem() {
@@ -27,6 +27,9 @@ Status UseItem::onUpdate(const event::Event *event) {
   if (!initialized_) {
     initialize();
     initialized_ = true;
+  }
+  if (!inventoryIndex_ || !itemRefId_) {
+    throw std::runtime_error("UseItem: Both inventoryIndex_ and itemRefId_ must be set");
   }
   if (event) {
     // We don't care about any event if we haven't yet used an item
@@ -48,6 +51,7 @@ Status UseItem::onUpdate(const event::Event *event) {
         // TODO: This can happen if an item use failure causes us to exit out of here, construct another UseItem, and enter this function with the same event
       }
     } else if (const auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
+      // Use InventoryUpdated events to track if the item we want to use moves to a different slot.
       if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
         if (inventoryUpdatedEvent->srcSlotNum && *inventoryUpdatedEvent->srcSlotNum == inventoryIndex_) {
           // This is our item
@@ -63,46 +67,55 @@ Status UseItem::onUpdate(const event::Event *event) {
               bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
               itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(*eventEndTime, *inventoryIndex_, itemTypeId_);
             }
-          } else if (itemUseTimeoutEventId_) {
-            // Check that item at this inventory slot decreased
-            bool looksGood{false};
-            const auto *item = bot_.selfState()->inventory.getItem(*inventoryUpdatedEvent->srcSlotNum);
-            if (const auto *itemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(item)) {
-              if (itemAsExpendable->quantity == lastKnownQuantity_-1) {
-                // Item count decreased by 1, this is the usual expected case
-                looksGood = true;
-              } else {
-                // Item count didnt decrease by 1, not going to consider this a valid item use
-                {
-                  // TODO: This can happen if we send two requests before we get the first response. If we timeout and the first response was just slow.
-                  // TODO:  Solve this issue and put the exception back.
-                  looksGood = true;
-                  VLOG(1) << characterNameForLog() << "Item changed count from " << lastKnownQuantity_ << " to " << itemAsExpendable->quantity;
-                }
-                // throw std::runtime_error("Item changed count from " + std::to_string(lastKnownQuantity_) + " to " + std::to_string(itemAsExpendable->quantity));
-              }
-            } else {
-              // The item is now null
-              if (lastKnownQuantity_ == 1) {
-                // The last item disappeared, that's a successful use
-                looksGood = true;
-              } else {
-                // More than 1 (or could have been 0) items disappeared, that's unusual
-                throw std::runtime_error("Item is null, and there were " + std::to_string(lastKnownQuantity_) + " remaining");
-              }
-            }
-            if (looksGood) {
-              // Successfully used the item.
-              if (!itemUseTimeoutEventId_) {
-                throw std::runtime_error("Didn't have a item use timeout event");
-              }
-              if (itemUseTimeoutEventId_) {
-                bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
-                itemUseTimeoutEventId_.reset();
-              }
-              return Status::kDone;
-            }
           }
+        }
+      }
+    } else if (const auto *itemUseSuccessEvent = dynamic_cast<const event::ItemUseSuccess*>(event); itemUseSuccessEvent != nullptr) {
+      if (itemUseSuccessEvent->globalId == bot_.selfState()->globalId &&
+          itemUseSuccessEvent->slotNum == inventoryIndex_ &&
+          itemUseTimeoutEventId_) {
+        // Check that item at this inventory slot decreased
+        bool looksGood{false};
+        const storage::Item *item = bot_.selfState()->inventory.getItem(*inventoryIndex_);
+        if (item == nullptr) {
+          // The item is now null, that must mean that we used the last of this item.
+          if (lastKnownQuantity_ == 1) {
+            // The last item disappeared, that's a successful use
+            looksGood = true;
+          } else {
+            // More than 1 (or could have been 0) items disappeared, that's unusual
+            throw std::runtime_error("Item is null, and there were " + std::to_string(lastKnownQuantity_) + " remaining");
+          }
+        } else {
+          // Item exists.
+          const auto *itemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(item);
+          if (itemAsExpendable == nullptr) {
+            throw std::runtime_error("Used an item, but it is not an expendable");
+          }
+          if (itemAsExpendable->quantity == lastKnownQuantity_-1) {
+            // Item count decreased by 1, this is the usual expected case
+            looksGood = true;
+          } else {
+            // Item count didnt decrease by 1, not going to consider this a valid item use
+            {
+              // TODO: This can happen if we send two requests before we get the first response. If we timeout and the first response was just slow.
+              // TODO:  Solve this issue and put the exception back.
+              looksGood = true;
+              LOG(WARNING) << characterNameForLog() << "Item changed count from " << lastKnownQuantity_ << " to " << itemAsExpendable->quantity;
+            }
+            // throw std::runtime_error("Item changed count from " + std::to_string(lastKnownQuantity_) + " to " + std::to_string(itemAsExpendable->quantity));
+          }
+        }
+        if (looksGood) {
+          // Successfully used the item.
+          if (!itemUseTimeoutEventId_) {
+            throw std::runtime_error("Didn't have a item use timeout event");
+          }
+          if (itemUseTimeoutEventId_) {
+            bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
+            itemUseTimeoutEventId_.reset();
+          }
+          return Status::kDone;
         }
       }
     } else if (const auto *itemUseTimeout = dynamic_cast<const event::ItemUseTimeout*>(event)) {
@@ -138,14 +151,14 @@ void UseItem::initialize() {
   const auto &inventory = bot_.selfState()->inventory;
   // Do some quick checks to make sure we have this item and can use it
   if (!inventoryIndex_) {
-    if (!itemId_) {
+    if (!itemRefId_) {
       // Should not be possible because the only way to construct this object is with one of these two.
       throw std::runtime_error("No inventory index or item ID provided");
     }
     // We were told to use an item but don't know where it is in our inventory.
     for (int slot=0; slot<inventory.size(); ++slot) {
       if (inventory.hasItem(slot)) {
-        if (inventory.getItem(slot)->refItemId == *itemId_) {
+        if (inventory.getItem(slot)->refItemId == *itemRefId_) {
           VLOG(1) << characterNameForLog() << "Found item in slot " << slot;
           inventoryIndex_ = slot;
           break;
@@ -154,9 +167,11 @@ void UseItem::initialize() {
     }
   } else {
     // Given an inventory index, make sure there's an item there
-    if (!inventory.hasItem(*inventoryIndex_)) {
+    const storage::Item *item = inventory.getItem(*inventoryIndex_);
+    if (item == nullptr) {
       throw std::runtime_error("Trying use nonexistent item in inventory");
     }
+    itemRefId_ = item->refItemId;
   }
   const storage::Item *item = inventory.getItem(*inventoryIndex_);
   const storage::ItemExpendable *itemAsExpendable = dynamic_cast<const storage::ItemExpendable*>(item);

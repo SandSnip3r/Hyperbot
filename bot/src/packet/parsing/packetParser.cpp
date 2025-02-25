@@ -208,9 +208,9 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       case Opcode::kServerAgentInventoryEquipCountdownStart:
         return std::make_unique<ServerAgentInventoryEquipCountdownStart>(packet);
     }
-    LOG(WARNING) << "Warning! No packet parser found for opcode " << std::hex << (int)packet.opcode << std::dec << '(' << toString(opcode) << ")";
+    LOG(WARNING) << "No packet parser found for opcode " << std::hex << (int)packet.opcode << std::dec << '(' << toString(opcode) << ")";
   } catch (std::exception &ex) {
-    LOG(WARNING) << "Exception while parsing packet! \"" << ex.what() << '"';
+    LOG(ERROR) << "Exception while parsing packet! \"" << ex.what() << '"';
   }
   return nullptr;
 }

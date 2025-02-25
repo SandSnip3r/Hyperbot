@@ -256,7 +256,7 @@ void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
       parseDataFile2<sro::pk2::ref::Character>(characterdataLines, sro::pk2::parsing::isValidCharacterdataLine, sro::pk2::parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
       // parseDataFile<sro::pk2::ref::Character>(characterdataStr, sro::pk2::parsing::isValidCharacterdataLine, sro::pk2::parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
     } catch (std::exception &ex) {
-      LOG(WARNING) << "Exception while parsing character data: \"" << ex.what() << '"';
+      LOG(ERROR) << "Exception while parsing character data: \"" << ex.what() << '"';
     }
   }
   {

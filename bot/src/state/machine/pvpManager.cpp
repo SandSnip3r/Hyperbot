@@ -4,12 +4,14 @@
 #include "common/sessionId.hpp"
 #include "state/machine/disableGmInvisible.hpp"
 #include "state/machine/enablePvpMode.hpp"
+#include "state/machine/ensureFullVitalsAndNoStatuses.hpp"
 #include "state/machine/gmCommandSpawnAndPickItems.hpp"
 #include "state/machine/intelligenceActor.hpp"
 #include "state/machine/login.hpp"
 #include "state/machine/resurrectInPlace.hpp"
 #include "state/machine/spawnAndUseRepairHammerIfNecessary.hpp"
 #include "state/machine/useItem.hpp"
+#include "state/machine/waitForAllCooldownsToEnd.hpp"
 #include "state/machine/walking.hpp"
 #include "type_id/categories.hpp"
 
@@ -172,29 +174,12 @@ Status PvpManager::initiatePvp(const event::BeginPvp &beginPvpEvent) {
     waypoints.emplace_back(pvpDescriptor_.pvpPositionPlayer2);
   }
   sequentialStateMachines.emplace<state::machine::Walking>(waypoints);
-
-  // Spawn and pick a single XL Vigor potion
-  // Spawn and pick a single Special Universal Pill (medium)
-  const sro::pk2::ref::ItemId xlVigorPotionItemId = bot_.gameData().itemData().getItemId([](const sro::pk2::ref::Item &item) {
-    return type_id::categories::kVigorPotion.contains(type_id::getTypeId(item)) && item.itemClass == 5;
-  });
-  const sro::pk2::ref::ItemId mediumSpecialUniversalPillItemId = bot_.gameData().itemData().getItemId([](const sro::pk2::ref::Item &item) {
-    return type_id::categories::kUniversalPill.contains(type_id::getTypeId(item)) && item.itemClass == 5;
-  });
-  std::vector<common::ItemRequirement> fullVitalsItemRequirements = {
-    {xlVigorPotionItemId, 1},
-    {mediumSpecialUniversalPillItemId, 1}
-  };
-  sequentialStateMachines.emplace<state::machine::GmCommandSpawnAndPickItems>(fullVitalsItemRequirements);
-  // Use the XL Vigor potion
-  sequentialStateMachines.emplace<state::machine::UseItem>(xlVigorPotionItemId);
-  // Use the Special Universal Pill (medium)
-  sequentialStateMachines.emplace<state::machine::UseItem>(mediumSpecialUniversalPillItemId);
-
+  sequentialStateMachines.emplace<state::machine::EnsureFullVitalsAndNoStatuses>();
   sequentialStateMachines.emplace<state::machine::GmCommandSpawnAndPickItems>(pvpDescriptor_.itemRequirements);
   sequentialStateMachines.emplace<state::machine::SpawnAndUseRepairHammerIfNecessary>();
   sequentialStateMachines.emplace<state::machine::EnablePvpMode>();
   sequentialStateMachines.emplace<state::machine::DisableGmInvisible>();
+  sequentialStateMachines.emplace<state::machine::WaitForAllCooldownsToEnd>();
   return sequentialStateMachines.onUpdate(&beginPvpEvent);
 }
 

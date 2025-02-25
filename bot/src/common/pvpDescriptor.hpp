@@ -6,6 +6,8 @@
 #include <silkroad_lib/position.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
+#include <vector>
+
 namespace common {
 
 struct PvpDescriptor {

@@ -33,7 +33,9 @@
   F(StorageUpdated) \
   F(GuildStorageUpdated) \
   F(SkillCastAboutToEnd) \
+  F(ItemUseSuccess) \
   F(ItemUseFailed) \
+  F(ItemUseTimeout) \
   F(InjectPacket) \
   F(RequestStartTraining) \
   F(RequestStopTraining) \
@@ -67,7 +69,6 @@
   F(PlayerCharacterBuffAdded) \
   F(PlayerCharacterBuffRemoved) \
   F(CommandError) \
-  F(ItemUseTimeout) \
   F(SkillCastTimeout) \
   F(EntityMovementBegan) \
   F(StateMachineActiveTooLong) \
@@ -262,6 +263,15 @@ public:
   virtual ~GuildStorageUpdated() = default;
 };
 
+struct ItemUseSuccess : public Event {
+public:
+  ItemUseSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::StorageIndexType slotNum, sro::scalar_types::ReferenceObjectId refId);
+  sro::scalar_types::EntityGlobalId globalId;
+  sro::scalar_types::StorageIndexType slotNum;
+  sro::scalar_types::ReferenceObjectId refId;
+  virtual ~ItemUseSuccess() = default;
+};
+
 struct ItemUseFailed : public Event {
 public:
   ItemUseFailed(EventId id, uint8_t slotNum, type_id::TypeId typeId, packet::enums::InventoryErrorCode reason_param);
@@ -269,6 +279,14 @@ public:
   type_id::TypeId itemTypeId;
   packet::enums::InventoryErrorCode reason;
   virtual ~ItemUseFailed() = default;
+};
+
+struct ItemUseTimeout : public Event {
+public:
+  ItemUseTimeout(EventId id, uint8_t slot, type_id::TypeId tid);
+  const uint8_t slotNum;
+  const type_id::TypeId typeData;
+  virtual ~ItemUseTimeout() = default;
 };
 
 struct InjectPacket : public Event {
@@ -441,13 +459,6 @@ public:
   const sro::scalar_types::EntityGlobalId issuingGlobalId;
   const packet::structures::ActionCommand command;
   virtual ~CommandError() = default;
-};
-struct ItemUseTimeout : public Event {
-public:
-  ItemUseTimeout(EventId id, uint8_t slot, type_id::TypeId tid);
-  const uint8_t slotNum;
-  const type_id::TypeId typeData;
-  virtual ~ItemUseTimeout() = default;
 };
 
 struct SkillCastTimeout : public Event {

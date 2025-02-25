@@ -65,8 +65,14 @@ StorageUpdated::StorageUpdated(EventId id, const std::optional<int8_t> &srcSlot,
 GuildStorageUpdated::GuildStorageUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) :
     Event(id, EventCode::kGuildStorageUpdated), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
 
+ItemUseSuccess::ItemUseSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::StorageIndexType slotNum, sro::scalar_types::ReferenceObjectId refId) :
+    Event(id, EventCode::kItemUseSuccess), globalId(globalId), slotNum(slotNum), refId(refId) {}
+
 ItemUseFailed::ItemUseFailed(EventId id, uint8_t slotNum, type_id::TypeId typeId, packet::enums::InventoryErrorCode reason_param) :
     Event(id, EventCode::kItemUseFailed), inventorySlotNum(slotNum), itemTypeId(typeId), reason(reason_param) {}
+
+ItemUseTimeout::ItemUseTimeout(EventId id, uint8_t slot, type_id::TypeId tid) :
+    Event(id, EventCode::kItemUseTimeout), slotNum(slot), typeData(tid) {}
 
 InjectPacket::InjectPacket(EventId id, InjectPacket::Direction dir, uint16_t op, const std::string &d) :
     Event(id, EventCode::kInjectPacket), direction(dir), opcode(op), data(d) {}
@@ -136,9 +142,6 @@ BuffRemoved::BuffRemoved(EventId id, sro::scalar_types::EntityGlobalId entityId,
 
 CommandError::CommandError(EventId id, sro::scalar_types::EntityGlobalId issuingGlobalId, const packet::structures::ActionCommand &cmd) :
     Event(id, EventCode::kCommandError), issuingGlobalId(issuingGlobalId), command(cmd) {}
-
-ItemUseTimeout::ItemUseTimeout(EventId id, uint8_t slot, type_id::TypeId tid) :
-    Event(id, EventCode::kItemUseTimeout), slotNum(slot), typeData(tid) {}
 
 SkillCastTimeout::SkillCastTimeout(EventId id, sro::scalar_types::ReferenceObjectId skillId) :
     Event(id, EventCode::kSkillCastTimeout), skillId(skillId) {}

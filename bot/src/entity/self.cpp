@@ -70,7 +70,7 @@ void Self::handleEvent(const event::Event *event) {
       LOG(WARNING) << "Unhandled event received: " << event::toString(event->eventCode);
     }
   } catch (std::exception &ex) {
-    LOG(INFO) << absl::StreamFormat("Error while handling event: \"%s\"", ex.what());
+    LOG(ERROR) << absl::StreamFormat("Error while handling event: \"%s\"", ex.what());
   }
 }
 

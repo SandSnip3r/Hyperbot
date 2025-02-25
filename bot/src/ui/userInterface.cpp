@@ -66,9 +66,9 @@ void UserInterface::runAsync() {
     keepRunning_ = true;
     thr_ = std::thread(&UserInterface::run, this);
   } catch (const std::exception &ex) {
-    LOG(INFO) << "Exception while binding to UI: \"" << ex.what() << "\"";
+    LOG(ERROR) << "Exception while binding to UI: \"" << ex.what() << "\"";
   } catch (...) {
-    LOG(INFO) << "Exception while binding to UI";
+    LOG(ERROR) << "Exception while binding to UI";
   }
 }
 
@@ -306,7 +306,7 @@ void UserInterface::handleEvent(const event::Event *event) {/*
 
     LOG(WARNING) << "Unhandled event subscribed to. Code:" << static_cast<int>(eventCode);
   } catch (std::exception &ex) {
-    LOG(WARNING) << absl::StreamFormat("Error while handling event %s: \"%s\"", event::toString(event->eventCode), ex.what());
+    LOG(ERROR) << absl::StreamFormat("Error while handling event %s: \"%s\"", event::toString(event->eventCode), ex.what());
   }
  */}
 

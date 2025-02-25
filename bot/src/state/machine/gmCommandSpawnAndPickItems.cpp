@@ -52,7 +52,6 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
     }
   }
 
-  // TODO: We should take note if our GM command was successful or not.
   if (requestTimeoutEventId_) {
     // Measured [7.99993, 20.0001]
     constexpr double closestSpawnDistance = 8;

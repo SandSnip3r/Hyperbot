@@ -39,7 +39,7 @@ void StatAggregator::handleEvent(const event::Event *event) {/*
       try {
         initialize(worldState_.selfState().name);
       } catch (std::exception &ex) {
-        LOG(INFO) << "Error while initializing " << ex.what();
+        LOG(ERROR) << "Error while initializing " << ex.what();
       }
     }
   }

@@ -89,7 +89,7 @@ void Proxy::run() {
       // Prevent high CPU usage
       boost::this_thread::sleep(boost::posix_time::milliseconds(1));
     } catch (const std::exception &ex) {
-      LOG(WARNING) << "Exception while running io_service \"" << ex.what() << '"';
+      LOG(ERROR) << "Exception while running io_service \"" << ex.what() << '"';
     }
   }
 }

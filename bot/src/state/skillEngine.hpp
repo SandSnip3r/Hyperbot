@@ -25,6 +25,8 @@ public:
 
 private:
   absl::flat_hash_map<sro::scalar_types::ReferenceObjectId, broker::EventBroker::EventId> skillCooldownEventIdMap_;
+public:
+  const absl::flat_hash_map<sro::scalar_types::ReferenceObjectId, broker::EventBroker::EventId>& getSkillCooldownEventIdMap() const { return skillCooldownEventIdMap_; }
 
 public:
   struct SkillInfo {

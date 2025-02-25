@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
     Hyperbot hyperbot;
     hyperbot.run();
   } catch (const std::exception &ex) {
-    LOG(INFO) << absl::StreamFormat("Caught an exception while running Hyperbot: \"%s\". Exiting.", ex.what());
+    LOG(ERROR) << absl::StreamFormat("Caught an exception while running Hyperbot: \"%s\". Exiting.", ex.what());
     return 1;
   }
   return 0;

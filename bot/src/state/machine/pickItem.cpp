@@ -24,7 +24,7 @@ Status PickItem::onUpdate(const event::Event *event) {
   }
 
   if (bot_.selfState()->bodyState() == packet::enums::BodyState::kUntouchable) {
-    VLOG(1) << characterNameForLog() << "Cannot pick up item while untouchable";
+    VLOG(2) << characterNameForLog() << "Cannot pick up item while untouchable";
     return Status::kNotDone;
   }
 
@@ -43,6 +43,8 @@ Status PickItem::onUpdate(const event::Event *event) {
           }
           waitingForItemToDespawn_ = false;
           // TODO: If someone else picks it up, we'll be stuck here waiting for the update that the item has arrived in our inventory.
+          //  To solve this, it would be nice to have a way to communicate back to the parent state machine that picking the item failed.
+          //  Alternatively, maybe all parent state machines should be robust to pick failures.
         }
       }
     } else if (const auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
@@ -69,14 +71,13 @@ Status PickItem::onUpdate(const event::Event *event) {
     } else if (const auto *commandErrorEvent = dynamic_cast<const event::CommandError*>(event)) {
       if (commandErrorEvent->issuingGlobalId == bot_.selfState()->globalId &&
           commandErrorEvent->command.commandType == packet::enums::CommandType::kExecute &&
-          commandErrorEvent->command.actionType == packet::enums::ActionType::kPickup) {
+          commandErrorEvent->command.actionType == packet::enums::ActionType::kPickup &&
+          commandErrorEvent->command.targetGlobalId == targetGlobalId_) {
         if (requestTimeoutEventId_) {
           // We failed to pick up the item
           VLOG(1) << characterNameForLog() << "Failed to pick up " << bot_.gameData().getItemName(targetRefId_) << ". Trying again";
           bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
           requestTimeoutEventId_.reset();
-          tryPickItem();
-          return Status::kNotDone;
         }
       }
     } else if (event->eventCode == event::EventCode::kTimeout) {
@@ -84,11 +85,8 @@ Status PickItem::onUpdate(const event::Event *event) {
         // Our command timed out.
         VLOG(1) << characterNameForLog() << "Command timed out";
         requestTimeoutEventId_.reset();
-        tryPickItem();
-        return Status::kNotDone;
       }
     }
-    // TODO: Handle response for CommandRequest
   }
 
   if (!waitingForItemToDespawn_ && !waitingForItemToArriveInInventory_) {
@@ -96,22 +94,28 @@ Status PickItem::onUpdate(const event::Event *event) {
     return Status::kDone;
   }
 
-  if (requestTimeoutEventId_ && (waitingForItemToDespawn_ || waitingForItemToArriveInInventory_)) {
+  if ((waitingForItemToDespawn_ && !waitingForItemToArriveInInventory_) ||
+      (!waitingForItemToDespawn_ && waitingForItemToArriveInInventory_)) {
+    VLOG(2) << characterNameForLog() << "Waiting for item to despawn and/or arrive in inventory, one of these has already happened";
     return Status::kNotDone;
   }
 
-  if (!requestTimeoutEventId_) {
-    tryPickItem();
+  // Now, it must be the case that the item is still on the ground and not in our inventory.
+  if (requestTimeoutEventId_) {
+    // Still waiting to see if our pick request works.
     return Status::kNotDone;
   }
-  throw std::runtime_error("Should be impossible to reach the end of PickItem::onUpdate()");
+
+  // We've either never tried to pick this item, or we tried before and nothing happened.
+  tryPickItem();
+  return Status::kNotDone;
 }
 
 void PickItem::tryPickItem() {
   VLOG(1) << characterNameForLog() << "Sending packet to pickup " << bot_.gameData().getItemName(targetRefId_);
   const auto packet = packet::building::ClientAgentActionCommandRequest::pickup(targetGlobalId_);
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
-  requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(888), event::EventCode::kTimeout);
+  requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(1000), event::EventCode::kTimeout);
   VLOG(2) << characterNameForLog() << "Published timeout event " << *requestTimeoutEventId_;
 }
 

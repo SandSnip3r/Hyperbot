@@ -4,6 +4,8 @@
 #include "event/event.hpp"
 #include "stateMachine.hpp"
 
+#include <silkroad_lib/scalar_types.hpp>
+
 #include <string>
 
 namespace state::machine {
@@ -15,7 +17,7 @@ public:
   Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"SpawnAndUseRepairHammerIfNecessary"};
-  sro::pk2::ref::ItemId repairHammerRefId_;
+  sro::scalar_types::ReferenceObjectId repairHammerRefId_;
   bool initialized_{false};
   bool haveRepairHammer_{false};
 };

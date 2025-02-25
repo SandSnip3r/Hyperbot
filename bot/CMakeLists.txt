@@ -341,6 +341,8 @@ add_executable(${PROJECT_NAME}
   src/state/machine/dropItem.hpp
   src/state/machine/enablePvpMode.cpp
   src/state/machine/enablePvpMode.hpp
+  src/state/machine/ensureFullVitalsAndNoStatuses.cpp
+  src/state/machine/ensureFullVitalsAndNoStatuses.hpp
   src/state/machine/executeGmCommand.cpp
   src/state/machine/executeGmCommand.hpp
   src/state/machine/gmCommandSpawnAndPickItems.cpp
@@ -381,6 +383,8 @@ add_executable(${PROJECT_NAME}
   src/state/machine/useItem.hpp
   src/state/machine/useReturnScroll.cpp
   src/state/machine/useReturnScroll.hpp
+  src/state/machine/waitForAllCooldownsToEnd.cpp
+  src/state/machine/waitForAllCooldownsToEnd.hpp
   src/state/machine/walking.cpp
   src/state/machine/walking.hpp
   src/state/skillEngine.cpp

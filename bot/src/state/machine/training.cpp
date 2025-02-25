@@ -501,7 +501,7 @@ bool Training::walkToRandomPoint() {
       success = true;
       break;
     } catch (std::exception &ex) {
-      LOG(INFO) << "Couldn't walk to random position. Exception: " << ex.what();
+      LOG(ERROR) << "Couldn't walk to random position. Exception: " << ex.what();
     }
   }
   if (!success) {

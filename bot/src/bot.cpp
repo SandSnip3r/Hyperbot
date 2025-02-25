@@ -190,7 +190,7 @@ void Bot::handleEvent(const event::Event *event) {
     // Always call onUpdate for any event we receive.
     onUpdate(event);
   } catch (std::exception &ex) {
-    LOG(INFO) << absl::StreamFormat("Error while handling event %s: \"%s\"", event::toString(event->eventCode), ex.what());
+    LOG(ERROR) << absl::StreamFormat("Error while handling event %s: \"%s\"", event::toString(event->eventCode), ex.what());
   }
 }
 
@@ -647,7 +647,7 @@ std::vector<packet::building::NetworkReadyPosition> Bot::calculatePathToDestinat
     breakUpLongMovements(waypoints);
     return convertWaypointsToNetworkReadyPoints(waypoints);
   } catch (std::exception &ex) {
-    LOG(INFO) << "Failed trying to build path: " << debugPath;
+    LOG(ERROR) << "Failed trying to build path: " << debugPath;
     throw std::runtime_error("Cannot find path with pathfinder: \""+std::string(ex.what())+"\"");
   }
 }

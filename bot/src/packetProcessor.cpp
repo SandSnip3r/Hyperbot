@@ -201,13 +201,13 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
   try {
     parsedPacket = packetParser_.parsePacket(packet);
   } catch (std::exception &ex) {
-    LOG(INFO) << "Failed to parse packet " << std::hex << packet.opcode << std::dec << ". \"" << ex.what() << '"';
+    LOG(ERROR) << "Failed to parse packet " << std::hex << packet.opcode << std::dec << ". \"" << ex.what() << '"';
     return;
   }
 
   if (!parsedPacket) {
     // Not yet parsing this packet
-    LOG(INFO) << "Subscribed to a packet which we're not yet parsing " << std::hex << packet.opcode << std::dec;
+    LOG(WARNING) << "Subscribed to a packet which we're not yet parsing " << std::hex << packet.opcode << std::dec;
     return;
   }
   std::unique_lock<std::mutex> worldStateLock(worldState_.mutex);
@@ -282,11 +282,11 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentFreePvpUpdateResponse, serverAgentFreePvpUpdateResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentInventoryEquipCountdownStart, serverAgentInventoryEquipCountdownStartReceived);
   } catch (std::exception &ex) {
-    LOG(INFO) << absl::StreamFormat("Error while handling packet %s: \"%s\"", packet::toString(static_cast<packet::Opcode>(packet.opcode)), ex.what());
+    LOG(ERROR) << absl::StreamFormat("Error while handling packet %s: \"%s\"", packet::toString(static_cast<packet::Opcode>(packet.opcode)), ex.what());
     return;
   }
 
-  LOG(INFO) << absl::StreamFormat("Unhandled packet (%s; %#06x) subscribed to.", packet::toString(static_cast<packet::Opcode>(packet.opcode)), packet.opcode);
+  LOG(WARNING) << absl::StreamFormat("Unhandled packet (%s; %#06x) subscribed to.", packet::toString(static_cast<packet::Opcode>(packet.opcode)), packet.opcode);
   return;
 }
 
@@ -679,7 +679,10 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     throw std::runtime_error("Used an item, but it's not in our inventory");
   }
 
-  auto *itemPtr = selfEntity_->inventory.getItem(packet.slotNum());
+  storage::Item *itemPtr = selfEntity_->inventory.getItem(packet.slotNum());
+  if (itemPtr == nullptr) {
+    throw std::runtime_error("Used an item, but there is not item in this slot of our inventory");
+  }
   // Lets double check its type data
   if (packet.typeData() != itemPtr->typeId()) {
     throw std::runtime_error("Used an item, but the stored typeId doesn't match what came in the packet");
@@ -693,6 +696,7 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     // Figure out the cooldown of this item.
     const auto itemCooldown = getItemCooldownMs(*expendableItemPtr);
     selfEntity_->usedAnItem(packet.typeData(), itemCooldown);
+    eventBroker_.publishEvent<event::ItemUseSuccess>(selfEntity_->globalId, packet.slotNum(), itemPtr->refItemId);
     eventBroker_.publishEvent<event::InventoryUpdated>(selfEntity_->globalId, packet.slotNum(), std::nullopt);
   } else if (dynamic_cast<const storage::ItemCosAbilitySummoner*>(itemPtr) == nullptr &&
               dynamic_cast<const storage::ItemCosGrowthSummoner*>(itemPtr) == nullptr) {
@@ -1707,15 +1711,15 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
           }
         } else {
           if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
-            LOG(INFO) << "      Entity has been knocked down";
+            VLOG(1) << "      Entity has been knocked down";
             // TODO: Update entity state, publish knocked down event(?), publish delayed stood up event
           }
           if (flags::isSet(hitResult.damageFlag, packet::enums::DamageFlag::kEffect) && hitResult.effect != 0) {
             if (selfEntity_ && hitObject.targetGlobalId == selfEntity_->globalId) {
               // Applied an effect to us
-              LOG(INFO) << "      We have been hit with effect: " << static_cast<packet::enums::AbnormalStateFlag>(hitResult.effect);
+              VLOG(1) << "      We have been hit with effect: " << static_cast<packet::enums::AbnormalStateFlag>(hitResult.effect);
             } else {
-              LOG(INFO) << "      " << nameOfEntity(hitObject.targetGlobalId) << " has been hit with effect: " << static_cast<packet::enums::AbnormalStateFlag>(hitResult.effect);
+              VLOG(1) << "      " << nameOfEntity(hitObject.targetGlobalId) << " has been hit with effect: " << static_cast<packet::enums::AbnormalStateFlag>(hitResult.effect);
             }
           }
           if (character->currentHpIsKnown()) {
@@ -1737,7 +1741,7 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
             bool knockedBackOrKnockedDown{false};
             if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockback)) {
               constexpr const int kKnockbackStunDuration{2000};
-              LOG(INFO) << "      We were knocked back " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockbackStunDuration << "ms";
+              VLOG(1) << "      We were knocked back " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockbackStunDuration << "ms";
               selfEntity_->stunnedFromKnockback = true;
               knockedBackOrKnockedDown = true;
               // Publish knocked back event
@@ -1746,7 +1750,7 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
               eventBroker_.publishDelayedEvent(std::chrono::milliseconds(kKnockbackStunDuration), event::EventCode::kKnockbackStunEnded);
             } else if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
               constexpr const int kKnockdownStunDuration{6000};
-              LOG(INFO) << "      We were knocked down " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockdownStunDuration << "ms";
+              VLOG(1) << "      We were knocked down " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockdownStunDuration << "ms";
               selfEntity_->stunnedFromKnockdown = true;
               knockedBackOrKnockedDown = true;
               // Publish knocked down event
@@ -1774,7 +1778,7 @@ void PacketProcessor::handleKnockedBackOrKnockedDown() const {
   // It doesn't make sense to remove all pending commands as those have not even been acknowledge by the server yet
   //  The server will likely respond with an error response for them
   if (!selfEntity_->skillEngine.skillCastIdMap.empty()) {
-    LOG(INFO) << absl::StreamFormat("KB/KD with active casts: %s. Clearing", absl::StrJoin(selfEntity_->skillEngine.skillCastIdMap, ", ", [](std::string *out, auto data){
+    VLOG(1) << absl::StreamFormat("KB/KD with active casts: %s. Clearing", absl::StrJoin(selfEntity_->skillEngine.skillCastIdMap, ", ", [](std::string *out, auto data){
       out->append(std::to_string(data.first));
     }));
     // TODO: Verify if it makes sense to clear this

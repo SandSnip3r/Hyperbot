@@ -208,13 +208,13 @@ void RlTrainingManager::pvp(Bot &char1, Bot &char2) {
 }
 
 void RlTrainingManager::buildItemRequirementList() {
-  const sro::pk2::ref::ItemId smallHpPotionRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
+  const sro::scalar_types::ReferenceObjectId smallHpPotionRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
     return type_id::categories::kHpPotion.contains(type_id::getTypeId(item)) && item.itemClass == 2;
   });
-  const sro::pk2::ref::ItemId smallMpPotionRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
+  const sro::scalar_types::ReferenceObjectId smallMpPotionRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
     return type_id::categories::kMpPotion.contains(type_id::getTypeId(item)) && item.itemClass == 2;
   });
-  const sro::pk2::ref::ItemId mediumUniversalPillRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
+  const sro::scalar_types::ReferenceObjectId mediumUniversalPillRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
     return type_id::categories::kUniversalPill.contains(type_id::getTypeId(item)) && item.itemClass == 2;
   });
 

@@ -191,6 +191,7 @@ private:
   // Item use cooldowns
   std::map<type_id::TypeId, broker::EventBroker::EventId> itemCooldownEventIdMap_;
 public:
+  const std::map<type_id::TypeId, broker::EventBroker::EventId>& getItemCooldownEventIdMap() const { return itemCooldownEventIdMap_; }
 
   // Speeds
   float hwanSpeed_;
