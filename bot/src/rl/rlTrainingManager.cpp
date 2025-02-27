@@ -24,6 +24,10 @@ RlTrainingManager::RlTrainingManager(const pk2::GameData &gameData,
   buildItemRequirementList();
 }
 
+void RlTrainingManager::setUpIntelligencePool() {
+
+}
+
 void RlTrainingManager::createSessions() {
   // For now, explicitly have two characters fight against each other.
   sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
@@ -59,56 +63,17 @@ void RlTrainingManager::createSessions() {
 }
 
 void RlTrainingManager::run() {
+  setUpIntelligencePool();
+
   auto eventHandleFunction = std::bind(&RlTrainingManager::onUpdate, this, std::placeholders::_1);
   // Subscribe to events.
   eventBroker_.subscribeToEvent(event::EventCode::kPvpManagerReadyForAssignment, eventHandleFunction);
 
   createSessions();
 
-  // bot1.pushAsyncLogIn();
-  // bot2.pushAsyncLogIn();
-  // bot1.pushAsyncBecomeVisible();
-  // bot2.pushAsyncBecomeVisible();
-  // std::future<void> character1ReadyForLoop = bot1.pushAsyncEnablePvp();
-  // std::future<void> character2ReadyForLoop = bot2.pushAsyncEnablePvp();
-
-  // character1ReadyForLoop.wait();
-  // character2ReadyForLoop.wait();
-  // LOG(INFO) << "Characters are logged in, visible, and ready for training loop";
-
-  // // DW South.
-  // const sro::Position pvpCenterPosition(/*regionId=*/26009,
-  //   /*xOffset=*/1221.000,
-  //   /*yOffset=*/-101.945,
-  //   /*zOffset=*/1809.000);
-
-  // while (true) {
-  //   // Get the characters ready to fight.
-  //   prepareCharactersForPvp(bot1, bot2, pvpCenterPosition);
-
-  //   // // Reset the intelligences to prepare them for a new fight. In the future, when these contain RNNs, this will include resetting the memory cells.
-  //   // randomIntelligence1.reset();
-  //   // randomIntelligence2.reset();
-
-  //   // // Give each character an intelligence.
-  //   // randomIntelligence1.setBot(bot1);
-  //   // randomIntelligence2.setBot(bot2);
-
-  //   // // Fight.
-  //   // pvp(bot1, bot2);
-  // }
-
-  // // What information do we need here to train the RL agent?
-  // //  - S,A,R,S
-  // //    - S - State/observation
-  // //    - A - Chosen action
-  // //    - R - Reward
-  // //    - S - Next state/observation
-  // // I could publish the observations and actions as events.
-  // //  The events will need to have which character they're for/from
-  // //  The observation will need to be decipherable (to compare to the previous and calculate the reward)
+  // Block forever.
   while (1) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
 }
 
@@ -139,11 +104,11 @@ void RlTrainingManager::createAndPublishPvpDescriptor() {
   pvpDescriptor.player1GlobalId = char1.getBot().selfState()->globalId;
   pvpDescriptor.player2GlobalId = char2.getBot().selfState()->globalId;
 
-  // DW South.
-  const sro::Position pvpCenterPosition(/*regionId=*/26009,
-    /*xOffset=*/1221.000,
-    /*yOffset=*/-101.945,
-    /*zOffset=*/1809.000);
+  // Massive Pvp Area
+  const sro::Position pvpCenterPosition(/*regionId=*/sro::position_math::worldRegionIdFromSectors(1,1),
+    /*xOffset=*/960.0,
+    /*yOffset=*/ 20.0,
+    /*zOffset=*/960.0);
 
   pvpDescriptor.pvpPositionPlayer1 = sro::position_math::createNewPositionWith2dOffset(pvpCenterPosition, +kPvpStartingCenterOffset, 0.0);
   pvpDescriptor.pvpPositionPlayer2 = sro::position_math::createNewPositionWith2dOffset(pvpCenterPosition, -kPvpStartingCenterOffset, 0.0);
@@ -151,6 +116,8 @@ void RlTrainingManager::createAndPublishPvpDescriptor() {
   pvpDescriptor.itemRequirements = itemRequirements_;
 
   // TODO: Get ai pointers from the intelligencePool_ and put two into the pvpDescriptor.
+  pvpDescriptor.player1Intelligence = intelligencePool_.getRandomIntelligence();
+  pvpDescriptor.player2Intelligence = intelligencePool_.getRandomIntelligence();
 
   // ----------------------Send the PvpDescriptor----------------------
   eventBroker_.publishEvent<event::BeginPvp>(pvpDescriptor);

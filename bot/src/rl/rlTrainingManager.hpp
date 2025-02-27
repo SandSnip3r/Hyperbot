@@ -39,6 +39,8 @@ private:
   std::vector<SessionId> sessionsReadyForAssignment_;
   IntelligencePool intelligencePool_;
 
+  void setUpIntelligencePool();
+
   void createSessions();
   void createAndPublishPvpDescriptor();
   Session& getSession(SessionId sessionId);

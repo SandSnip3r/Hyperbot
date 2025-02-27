@@ -29,9 +29,9 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
     // Look for a potion use.
     if (const auto *itemUseSuccess = dynamic_cast<const event::ItemUseSuccess*>(event); itemUseSuccess != nullptr) {
       if (itemUseSuccess->globalId == bot_.selfState()->globalId && itemUseSuccess->refId == vigorPotionItemId_) {
-        VLOG(1) << characterNameForLog() << "Used a health potion, need to wait at least 5s until we can say that we're done";
+        CHAR_VLOG(1) << "Used a health potion, need to wait at least 5s until we can say that we're done";
         if (waitForPotionEventId_) {
-          VLOG(1) << characterNameForLog() << "Cancelling previous wait for potion event";
+          CHAR_VLOG(1) << "Cancelling previous wait for potion event";
           bot_.eventBroker().cancelDelayedEvent(*waitForPotionEventId_);
         }
         // TODO: If we move this out to PvpManager, we can overlap some work.
@@ -40,7 +40,7 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
     } else if (event->eventCode == event::EventCode::kTimeout &&
                waitForPotionEventId_ &&
                *waitForPotionEventId_ == event->eventId) {
-      VLOG(1) << characterNameForLog() << "Wait for potion event is done";
+      CHAR_VLOG(1) << "Wait for potion event is done";
       waitForPotionEventId_.reset();
     }
   }
@@ -51,11 +51,11 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
     if (status == Status::kNotDone) {
       return status;
     }
-    VLOG(1) << characterNameForLog() << "Child state machine is done";
+    CHAR_VLOG(1) << "Child state machine is done";
     childState_.reset();
   }
 
-  VLOG(1) << characterNameForLog() << "No child state machine. Checking vitals";
+  CHAR_VLOG(1) << "No child state machine. Checking vitals";
   std::vector<common::ItemRequirement> fullVitalsItemRequirements;
   const bool hpNotFull = bot_.selfState()->currentHp() < bot_.selfState()->maxHp();
   const bool mpNotFull = bot_.selfState()->currentMp() < bot_.selfState()->maxMp();
@@ -68,7 +68,7 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
   bool haveLegacyState = false;
   for (uint16_t legacyStateEffect : bot_.selfState()->legacyStateEffects()) {
     if (legacyStateEffect != 0) {
-      VLOG(1) << characterNameForLog() << "Has a legacy state";
+      CHAR_VLOG(1) << "Has a legacy state";
       haveLegacyState = true;
       break;
     }
@@ -80,7 +80,7 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
   bool haveModernState = false;
   for (uint8_t modernStateLevel : bot_.selfState()->modernStateLevels()) {
     if (modernStateLevel != 0) {
-      VLOG(1) << characterNameForLog() << "Has a modern state";
+      CHAR_VLOG(1) << "Has a modern state";
       haveModernState = true;
       break;
     }
@@ -90,15 +90,15 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
   }
 
   if (fullVitalsItemRequirements.empty()) {
-    VLOG(1) << characterNameForLog() << "Vitals are full and there are no statuses";
+    CHAR_VLOG(1) << "Vitals are full and there are no statuses";
     if (waitForPotionEventId_) {
-      VLOG(1) << characterNameForLog() << "Need to wait for potion to stop healing";
+      CHAR_VLOG(1) << "Need to wait for potion to stop healing";
       return Status::kNotDone;
     }
     return Status::kDone;
   }
 
-  VLOG(1) << characterNameForLog() << "Vitals are not full or there are statuses. Spawning, picking, and using " << fullVitalsItemRequirements.size() << " items";
+  CHAR_VLOG(1) << "Vitals are not full or there are statuses. Spawning, picking, and using " << fullVitalsItemRequirements.size() << " items";
   setChildStateMachine<state::machine::SequentialStateMachines>();
   state::machine::SequentialStateMachines &sequentialStateMachines = dynamic_cast<state::machine::SequentialStateMachines&>(*childState_);
   sequentialStateMachines.emplace<state::machine::GmCommandSpawnAndPickItems>(fullVitalsItemRequirements);

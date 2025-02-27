@@ -28,13 +28,13 @@ SpawnAndUseRepairHammerIfNecessary::~SpawnAndUseRepairHammerIfNecessary() {
 
 Status SpawnAndUseRepairHammerIfNecessary::onUpdate(const event::Event *event) {
   if (!initialized_) {
-    VLOG(1) << characterNameForLog() << "Initializing";
+    CHAR_VLOG(1) << "Initializing";
     initialized_ = true;
     bool needToRepair = false;
     // Check if we need to repair any items
     for (const storage::Item &item : bot_.inventory()) {
       if (const auto *equipment = dynamic_cast<const storage::ItemEquipment*>(&item); equipment != nullptr) {
-        VLOG(1) << characterNameForLog() << bot_.gameData().getItemName(equipment->refItemId) << " durability: " << equipment->durability << "/" << equipment->maxDurability(bot_.gameData());
+        CHAR_VLOG(1) << bot_.gameData().getItemName(equipment->refItemId) << " durability: " << equipment->durability << "/" << equipment->maxDurability(bot_.gameData());
         if (equipment->durability < equipment->maxDurability(bot_.gameData())) {
           needToRepair = true;
           break;
@@ -43,16 +43,16 @@ Status SpawnAndUseRepairHammerIfNecessary::onUpdate(const event::Event *event) {
     }
     if (!needToRepair) {
       // Nothing to repair.
-      VLOG(1) << characterNameForLog() << "Nothing to repair";
+      CHAR_VLOG(1) << "Nothing to repair";
       return Status::kDone;
     }
     // We need to repair.
-    VLOG(1) << characterNameForLog() << "Need to repair";
+    CHAR_VLOG(1) << "Need to repair";
 
     // Check if we already have a repair hammer.
     for (const storage::Item &item : bot_.inventory()) {
       if (isRepairHammer(*item.itemInfo)) {
-        VLOG(1) << characterNameForLog() << "Already have a hammer! Nice.";
+        CHAR_VLOG(1) << "Already have a hammer! Nice.";
         haveRepairHammer_ = true;
         break;
       }
@@ -80,7 +80,7 @@ Status SpawnAndUseRepairHammerIfNecessary::onUpdate(const event::Event *event) {
 
   // Can only get here if we need to repair or if we're called another time after reporting that we're done.
   if (!haveRepairHammer_) {
-    VLOG(1) << characterNameForLog() << "Need to get a repair hammer; creating state machine to spawn it with a GM command and then pick it";
+    CHAR_VLOG(1) << "Need to get a repair hammer; creating state machine to spawn it with a GM command and then pick it";
     // One hammer repairs all equipment in the inventory.
     std::vector<common::ItemRequirement> repairHammerRequirements{{repairHammerRefId_, 1}};
     setChildStateMachine<GmCommandSpawnAndPickItems>(repairHammerRequirements);
@@ -88,13 +88,13 @@ Status SpawnAndUseRepairHammerIfNecessary::onUpdate(const event::Event *event) {
   }
 
   // At this point, we must have a repair hammer. Check which inventory slot the hammer is at.
-  VLOG(1) << characterNameForLog() << "Have repair hammer; creating state machine to use it";
+  CHAR_VLOG(1) << "Have repair hammer; creating state machine to use it";
   std::optional<uint8_t> hammerSlot;
   for (int slot=0; slot<bot_.inventory().size(); ++slot) {
     if (bot_.inventory().hasItem(slot)) {
       const storage::Item *item = bot_.inventory().getItem(slot);
       if (isRepairHammer(*item->itemInfo)) {
-        VLOG(1) << characterNameForLog() << "Found repair hammer at slot " << slot;
+        CHAR_VLOG(1) << "Found repair hammer at slot " << slot;
         hammerSlot = slot;
         break;
       }
@@ -105,7 +105,7 @@ Status SpawnAndUseRepairHammerIfNecessary::onUpdate(const event::Event *event) {
   }
 
   // Found the hammer.
-  VLOG(1) << characterNameForLog() << "Constructing state machine to use repair hammer";
+  CHAR_VLOG(1) << "Constructing state machine to use repair hammer";
   setChildStateMachine<UseItem>(*hammerSlot);
   return onUpdate(event);
 }

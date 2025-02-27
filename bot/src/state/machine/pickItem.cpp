@@ -23,11 +23,6 @@ Status PickItem::onUpdate(const event::Event *event) {
     initialized_ = true;
   }
 
-  if (bot_.selfState()->bodyState() == packet::enums::BodyState::kUntouchable) {
-    VLOG(2) << characterNameForLog() << "Cannot pick up item while untouchable";
-    return Status::kNotDone;
-  }
-
   // At this point, we are within range of the item and can pick it up
   if (event) {
     if (const auto *entityDespawnedEvent = dynamic_cast<const event::EntityDespawned*>(event)) {
@@ -35,9 +30,9 @@ Status PickItem::onUpdate(const event::Event *event) {
         if (entityDespawnedEvent->globalId == targetGlobalId_) {
           // The item we wanted to pick up despawned
           // Whether we picked it up or not doesn't matter; we're done either way
-          VLOG(1) << characterNameForLog() << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") despawned";
+          CHAR_VLOG(1) << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") despawned";
           if (requestTimeoutEventId_) {
-            VLOG(2) << characterNameForLog() << "Cancelling timeout event " << *requestTimeoutEventId_;
+            CHAR_VLOG(2) << "Cancelling timeout event " << *requestTimeoutEventId_;
             bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
             requestTimeoutEventId_.reset();
           }
@@ -57,9 +52,9 @@ Status PickItem::onUpdate(const event::Event *event) {
             if (item != nullptr && item->refItemId == targetRefId_) {
               // We picked up the item we wanted
               // TODO: We don't know if this is because we picked this item up, or someone else in our party picked up an item of the same type and via item distribution, we received it.
-              VLOG(1) << characterNameForLog() << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") landed in our inventory";
+              CHAR_VLOG(1) << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") landed in our inventory";
               if (requestTimeoutEventId_) {
-                VLOG(2) << characterNameForLog() << "Cancelling timeout event " << *requestTimeoutEventId_;
+                CHAR_VLOG(2) << "Cancelling timeout event " << *requestTimeoutEventId_;
                 bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
                 requestTimeoutEventId_.reset();
               }
@@ -75,7 +70,7 @@ Status PickItem::onUpdate(const event::Event *event) {
           commandErrorEvent->command.targetGlobalId == targetGlobalId_) {
         if (requestTimeoutEventId_) {
           // We failed to pick up the item
-          VLOG(1) << characterNameForLog() << "Failed to pick up " << bot_.gameData().getItemName(targetRefId_) << ". Trying again";
+          CHAR_VLOG(1) << "Failed to pick up " << bot_.gameData().getItemName(targetRefId_) << ". Trying again";
           bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
           requestTimeoutEventId_.reset();
         }
@@ -83,20 +78,25 @@ Status PickItem::onUpdate(const event::Event *event) {
     } else if (event->eventCode == event::EventCode::kTimeout) {
       if (requestTimeoutEventId_ && event->eventId == *requestTimeoutEventId_) {
         // Our command timed out.
-        VLOG(1) << characterNameForLog() << "Command timed out";
+        CHAR_VLOG(1) << "Command timed out";
         requestTimeoutEventId_.reset();
       }
     }
   }
 
+  if (bot_.selfState()->bodyState() == packet::enums::BodyState::kUntouchable) {
+    CHAR_VLOG(2) << "Cannot pick up item while untouchable";
+    return Status::kNotDone;
+  }
+
   if (!waitingForItemToDespawn_ && !waitingForItemToArriveInInventory_) {
-    VLOG(1) << characterNameForLog() << "Item is despawned and in our inventory. Done";
+    CHAR_VLOG(1) << "Item is despawned and in our inventory. Done";
     return Status::kDone;
   }
 
   if ((waitingForItemToDespawn_ && !waitingForItemToArriveInInventory_) ||
       (!waitingForItemToDespawn_ && waitingForItemToArriveInInventory_)) {
-    VLOG(2) << characterNameForLog() << "Waiting for item to despawn and/or arrive in inventory, one of these has already happened";
+    CHAR_VLOG(2) << "Waiting for item to despawn and/or arrive in inventory, one of these has already happened";
     return Status::kNotDone;
   }
 
@@ -112,11 +112,11 @@ Status PickItem::onUpdate(const event::Event *event) {
 }
 
 void PickItem::tryPickItem() {
-  VLOG(1) << characterNameForLog() << "Sending packet to pickup " << bot_.gameData().getItemName(targetRefId_);
+  CHAR_VLOG(1) << "Sending packet to pickup " << bot_.gameData().getItemName(targetRefId_);
   const auto packet = packet::building::ClientAgentActionCommandRequest::pickup(targetGlobalId_);
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
   requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(1000), event::EventCode::kTimeout);
-  VLOG(2) << characterNameForLog() << "Published timeout event " << *requestTimeoutEventId_;
+  CHAR_VLOG(2) << "Published timeout event " << *requestTimeoutEventId_;
 }
 
 } // namespace state::machine

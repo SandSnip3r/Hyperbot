@@ -7,8 +7,8 @@ namespace rl::ai {
 
 class RandomIntelligence : public BaseIntelligence {
 public:
-  void onUpdate(event::Event *event) override;
-  void reset() override;
+  // void onUpdate(event::Event *event) override;
+  // void reset() override;
 };
 
 } // namespace rl::ai

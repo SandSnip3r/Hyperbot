@@ -3,6 +3,7 @@
 
 #include "broker/eventBroker.hpp"
 #include "event/event.hpp"
+#include "rl/ai/baseIntelligence.hpp"
 #include "state/machine/stateMachine.hpp"
 
 #include <silkroad_lib/pk2/ref/item.hpp>
@@ -14,7 +15,7 @@ namespace state::machine {
 
 class IntelligenceActor : public StateMachine {
 public:
-  IntelligenceActor(Bot &bot, sro::scalar_types::EntityGlobalId opponentGlobalId);
+  IntelligenceActor(Bot &bot, rl::ai::BaseIntelligence *intelligence, sro::scalar_types::EntityGlobalId opponentGlobalId);
   ~IntelligenceActor() override;
   Status onUpdate(const event::Event *event) override;
 private:

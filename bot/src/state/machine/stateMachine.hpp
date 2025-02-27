@@ -9,6 +9,12 @@
 #include <string>
 #include <vector>
 
+#define CHAR_LOG(severity) \
+  LOG(severity) << characterNameForLog() << " "
+
+#define CHAR_VLOG(verbosity) \
+  VLOG(verbosity) << characterNameForLog() << " "
+
 // Forward declarations
 class Bot;
 namespace event {

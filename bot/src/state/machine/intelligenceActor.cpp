@@ -26,7 +26,7 @@ std::mt19937 createRandomEngine() {
 
 namespace state::machine {
 
-IntelligenceActor::IntelligenceActor(Bot &bot, sro::scalar_types::EntityGlobalId opponentGlobalId) : StateMachine(bot), opponentGlobalId_(opponentGlobalId) {
+IntelligenceActor::IntelligenceActor(Bot &bot, rl::ai::BaseIntelligence *intelligence, sro::scalar_types::EntityGlobalId opponentGlobalId) : StateMachine(bot), opponentGlobalId_(opponentGlobalId) {
   LOG(INFO) << "Instantiated intelligence actor!";
 
 }
@@ -63,27 +63,27 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   if (val == 0) {
     // Cast an attack on our target.
     constexpr sro::scalar_types::ReferenceSkillId kBloodChain{339};
-    VLOG(1) << characterNameForLog() << "Sending packet to cast";
+    CHAR_VLOG(1) << "Sending packet to cast";
     bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kBloodChain, opponentGlobalId_), PacketContainer::Direction::kClientToServer);
   } else if (val == 1) {
     // Cast an attack on our target.
     constexpr sro::scalar_types::ReferenceSkillId kBillowChain{371};
-    VLOG(1) << characterNameForLog() << "Sending packet to cast";
+    CHAR_VLOG(1) << "Sending packet to cast";
     bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kBillowChain, opponentGlobalId_), PacketContainer::Direction::kClientToServer);
   } else if (val == 2) {
     // Cast an attack on our target.
     constexpr sro::scalar_types::ReferenceSkillId kBloodBladeForce{610};
-    VLOG(1) << characterNameForLog() << "Sending packet to cast";
+    CHAR_VLOG(1) << "Sending packet to cast";
     bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kBloodBladeForce, opponentGlobalId_), PacketContainer::Direction::kClientToServer);
   } else if (val == 3) {
     // Cast an attack on our target.
     constexpr sro::scalar_types::ReferenceSkillId kFlowerBloomBlade{644};
-    VLOG(1) << characterNameForLog() << "Sending packet to cast";
+    CHAR_VLOG(1) << "Sending packet to cast";
     bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kFlowerBloomBlade, opponentGlobalId_), PacketContainer::Direction::kClientToServer);
   } else if (val == 4) {
     // Cast an attack on our target.
     constexpr sro::scalar_types::ReferenceSkillId kExtremeFireForce{1380};
-    VLOG(1) << characterNameForLog() << "Sending packet to cast";
+    CHAR_VLOG(1) << "Sending packet to cast";
     bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kExtremeFireForce), PacketContainer::Direction::kClientToServer);
   } else if (val == 5) {
     // Lets use a health potion.
@@ -115,7 +115,7 @@ void IntelligenceActor::useItem(sro::pk2::ref::ItemId refId) {
     const storage::Item *item = bot_.inventory().getItem(slot);
     if (item->refItemId == refId) {
       // Use this item.
-      VLOG(1) << characterNameForLog() << "Sending packet to use item at slot " << slot;
+      CHAR_VLOG(1) << "Sending packet to use item at slot " << slot;
       bot_.packetBroker().injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slot, item->typeId()), PacketContainer::Direction::kClientToServer);
       break;
     }

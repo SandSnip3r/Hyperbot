@@ -5,6 +5,7 @@
 #include "event/event.hpp"
 #include "state/machine/stateMachine.hpp"
 
+#include <optional>
 #include <string>
 
 namespace state::machine {
@@ -20,12 +21,15 @@ private:
   Status initiatePvp(const event::BeginPvp &beginPvpEvent);
   Status startPvp(const event::Event *event);
   void resetAndNotifyReadyForAssignment();
+  void setPrepareForPvpStateMachine();
 
   sro::scalar_types::EntityGlobalId getOpponentGlobalId();
-  common::PvpDescriptor pvpDescriptor_;
+  bool initialized_{false};
+  std::optional<common::PvpDescriptor> pvpDescriptor_;
+  bool publishedThatWeAreReadyForAssignment_{false};
   bool weAreReady_{false};
   bool opponentIsReady_{false};
-  bool receivedResurrectionOption_;
+  bool receivedResurrectionOption_{false};
 };
 
 
