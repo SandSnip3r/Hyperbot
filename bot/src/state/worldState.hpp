@@ -23,7 +23,10 @@ public:
   WorldState(const pk2::GameData &gameData, broker::EventBroker &eventBroker);
   state::EntityTracker& entityTracker();
   const state::EntityTracker& entityTracker() const;
+
+  // Returns true if this is the first time we are seeing this entity.
   bool entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker);
+  // Returns true is this is the last time we are seeing this entity.
   bool entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker);
 
   void addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::BuffTokenType tokenId, entity::Character::BuffData::ClockType::time_point castTime);

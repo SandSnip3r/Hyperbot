@@ -148,6 +148,7 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
 
   // Disable nagle
   s->set_option(boost::asio::ip::tcp::no_delay(true));
+  s->set_option(boost::asio::socket_base::keep_alive(true));
 
   clientConnection.Initialize(s);
   clientConnection.security->GenerateHandshake();
@@ -217,7 +218,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
       // Send packets that are currently in the security api
       while (clientConnection.security->HasPacketToSend()) {
         if (!clientConnection.Send(clientConnection.security->GetPacketToSend())) {
-          LOG(INFO) << "Client connection Send error";
+          LOG(ERROR) << "Client connection Send error";
           break;
         }
       }

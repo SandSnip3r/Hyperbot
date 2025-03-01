@@ -18,7 +18,7 @@ private:
   bool closingConnection_{false};
 
 	//Socket
-	boost::shared_ptr<boost::asio::ip::tcp::socket> s;
+	boost::shared_ptr<boost::asio::ip::tcp::socket> boostSocket_;
 
 	//Data
 	std::vector<uint8_t> data;

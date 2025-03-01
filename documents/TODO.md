@@ -11,7 +11,7 @@
 - Ensure that no state machine does any work in its constructor
   - Bonus if we can guarantee it
 - Remove StateMachineActiveTooLong event
-- Remove StateMachine created/destroyed in ctors/dtors
+- Remove StateMachineCreated/Destroyed in ctors/dtors
 - Make StateMachine::name a virtual function
 - Handle the case when state::machine::PickItem's target item is picked by someone else
 - If `SequentialStateMachines` is here to stay, rename it as something like `StateMachineQueue`, to represent that once a contained state machine is complete, it is destroyed and removed from the queue
@@ -24,3 +24,6 @@
 - Consolidate `type_id::TypeId storage::Item::typeId()` and `TypeId type_id::getTypeId(const sro::pk2::ref::Item &item)`
 - Reimplement some version of pathfinding in case a character disconnects while dead and ends up back in town
 - Send pings so that if the client crashes, the character does not disconnect
+- Stop passing around GameData and make it a global singleton. It is a constant set of data that lots of parts of the code need to access. There's no point in passing it around everywhere
+- PacketContainer::Direction::kBotToServer is no different from PacketContainer::Direction::kClientToServer, delete it
+- Remove any active buffs before announcing that we're ready for pvp

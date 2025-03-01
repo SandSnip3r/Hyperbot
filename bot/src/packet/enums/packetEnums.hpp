@@ -117,7 +117,7 @@ enum class AbnormalStateFlag : uint32_t {
     kBurnt =        0x08,
     kPoisoned =     0x10,
     kZombie =       0x20,
-    //All effects below carry extra byte for level    
+    //All effects below carry extra byte for level
     kSleep =        0x40,
     kBind =         0x80,
     kDull =         0x100,
@@ -240,7 +240,7 @@ enum ActionState : uint8_t {
 };
 
 enum class ActionType : uint8_t {
-  kAttack = 1,
+  kAttack = 1, // Common attack
   kPickup = 2,
   kTrace = 3,
   kCast = 4,

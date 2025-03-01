@@ -3,105 +3,44 @@
 #include "bot.hpp"
 #include "packet/building/clientAgentInventoryItemUseRequest.hpp"
 #include "packet/building/clientAgentActionCommandRequest.hpp"
+#include "rl/action.hpp"
 #include "type_id/categories.hpp"
 
 #include <absl/log/log.h>
 
-#include <algorithm>
-#include <array>
-#include <functional>
-#include <random>
-
-namespace {
-
-std::mt19937 createRandomEngine() {
-  std::random_device rd;
-  std::array<int, std::mt19937::state_size> seed_data;
-  std::generate_n(seed_data.data(), seed_data.size(), std::ref(rd));
-  std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
-  return std::mt19937(seq);
-}
-
-} // namespace
-
 namespace state::machine {
 
-IntelligenceActor::IntelligenceActor(Bot &bot, rl::ai::BaseIntelligence *intelligence, sro::scalar_types::EntityGlobalId opponentGlobalId) : StateMachine(bot), opponentGlobalId_(opponentGlobalId) {
+IntelligenceActor::IntelligenceActor(Bot &bot, rl::ai::BaseIntelligence *intelligence, sro::scalar_types::EntityGlobalId opponentGlobalId) : StateMachine(bot), intelligence_(intelligence), opponentGlobalId_(opponentGlobalId) {
   LOG(INFO) << "Instantiated intelligence actor!";
-
 }
 
 IntelligenceActor::~IntelligenceActor() {
 }
 
 Status IntelligenceActor::onUpdate(const event::Event *event) {
-  static std::mt19937 randomEngine = createRandomEngine();
-
-
-  if (requestTimeoutEventId_) {
-    if (!(event->eventCode == event::EventCode::kTimeout &&
-          event->eventId == *requestTimeoutEventId_)) {
-      bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
+  if (childState_ != nullptr) {
+    // The child state machine didn't immediately finish.
+    // Run the update.
+    const Status status = childState_->onUpdate(event);
+    if (status == Status::kNotDone) {
+      // Child state is not done, nothing to do for now.
+      return status;
     }
-    requestTimeoutEventId_.reset();
+    // Child state is done, reset it then continue to get our next action.
+    childState_.reset();
   }
 
-  std::discrete_distribution actionTypeDist({
-    4, // Attack #1
-    4, // Attack #2
-    4, // Attack #3
-    4, // Attack #4
-    2, // Imbue
-    2, // Use HP potion
-    1, // Use MP potion
-    60, // Do nothing
-  });
+  // Since actions are state machines, immediately set the selected action as our current active child state machine.
+  setChildStateMachine(intelligence_->selectAction(bot_, event, opponentGlobalId_));
 
-  // Blood Blade Force:610}, {Flower Bloom Blade:644
-
-  const int val = actionTypeDist(randomEngine);
-  if (val == 0) {
-    // Cast an attack on our target.
-    constexpr sro::scalar_types::ReferenceSkillId kBloodChain{339};
-    CHAR_VLOG(1) << "Sending packet to cast";
-    bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kBloodChain, opponentGlobalId_), PacketContainer::Direction::kClientToServer);
-  } else if (val == 1) {
-    // Cast an attack on our target.
-    constexpr sro::scalar_types::ReferenceSkillId kBillowChain{371};
-    CHAR_VLOG(1) << "Sending packet to cast";
-    bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kBillowChain, opponentGlobalId_), PacketContainer::Direction::kClientToServer);
-  } else if (val == 2) {
-    // Cast an attack on our target.
-    constexpr sro::scalar_types::ReferenceSkillId kBloodBladeForce{610};
-    CHAR_VLOG(1) << "Sending packet to cast";
-    bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kBloodBladeForce, opponentGlobalId_), PacketContainer::Direction::kClientToServer);
-  } else if (val == 3) {
-    // Cast an attack on our target.
-    constexpr sro::scalar_types::ReferenceSkillId kFlowerBloomBlade{644};
-    CHAR_VLOG(1) << "Sending packet to cast";
-    bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kFlowerBloomBlade, opponentGlobalId_), PacketContainer::Direction::kClientToServer);
-  } else if (val == 4) {
-    // Cast an attack on our target.
-    constexpr sro::scalar_types::ReferenceSkillId kExtremeFireForce{1380};
-    CHAR_VLOG(1) << "Sending packet to cast";
-    bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(kExtremeFireForce), PacketContainer::Direction::kClientToServer);
-  } else if (val == 5) {
-    // Lets use a health potion.
-    const sro::pk2::ref::ItemId smallHpPotionRefId = bot_.gameData().itemData().getItemId([](const sro::pk2::ref::Item &item) {
-      return type_id::categories::kHpPotion.contains(type_id::getTypeId(item)) && item.itemClass == 2;
-    });
-    useItem(smallHpPotionRefId);
-  } else if (val == 6) {
-    // Lets use a mana potion.
-    const sro::pk2::ref::ItemId smallMpPotionRefId = bot_.gameData().itemData().getItemId([](const sro::pk2::ref::Item &item) {
-      return type_id::categories::kMpPotion.contains(type_id::getTypeId(item)) && item.itemClass == 2;
-    });
-    useItem(smallMpPotionRefId);
-  } else if (val == 7) {
-    // Skip this update.
+  // Run one update on the child state machine to let it start.
+  const Status status = childState_->onUpdate(event);
+  if (status == Status::kDone) {
+    // If the action immediately completes, deconstruct it.
+    childState_.reset();
   }
-  // Add a timeout event in case we and the opponent choose to do nothing to prevent the PVP from going stale.
-  requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(2000), event::EventCode::kTimeout);
+
+  // We are never done.
   return Status::kNotDone;
 }
 

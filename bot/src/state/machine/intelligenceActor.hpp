@@ -20,8 +20,9 @@ public:
   Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"IntelligenceActor"};
+  rl::ai::BaseIntelligence *intelligence_;
   sro::scalar_types::EntityGlobalId opponentGlobalId_;
-  std::optional<broker::EventBroker::EventId> requestTimeoutEventId_;
+  std::optional<broker::EventBroker::EventId> sleepEventId_;
 
   void useItem(sro::pk2::ref::ItemId refId);
 };

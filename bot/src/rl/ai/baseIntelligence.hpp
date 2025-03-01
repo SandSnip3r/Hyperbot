@@ -1,18 +1,23 @@
 #ifndef RL_AI_BASE_INTELLIGENCE_HPP_
 #define RL_AI_BASE_INTELLIGENCE_HPP_
 
-// #include "bot.hpp"
-// #include "event/event.hpp"
+#include "rl/action.hpp"
+
+#include <silkroad_lib/scalar_types.hpp>
+
+#include <memory>
+
+namespace event {
+struct Event;
+} // namespace event
+
+class Bot;
 
 namespace rl::ai {
 
 class BaseIntelligence {
 public:
-  // void setBot(Bot &bot) { bot_ = &bot; }
-  // virtual void onUpdate(event::Event *event) = 0;
-  // virtual void reset() = 0;
-protected:
-  // Bot *bot_{nullptr};
+virtual std::unique_ptr<Action> selectAction(Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId) = 0;
 };
 
 } // namespace rl::ai

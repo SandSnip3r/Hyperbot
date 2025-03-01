@@ -9,6 +9,7 @@
 #include "type_id/categories.hpp"
 
 #include <silkroad_lib/position.hpp>
+#include <silkroad_lib/position_math.hpp>
 
 #include <absl/algorithm/container.h>
 #include <absl/container/flat_hash_set.h>
@@ -466,11 +467,13 @@ void initializeSelfFromCharacterDataPacket(entity::Self &self, const packet::par
 
 void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::ServerAgentCharacterData &packet) {
   if (ABSL_VLOG_IS_ON(1)) {
+    // ================= Masteries =================
     VLOG(1) << "Masteries:";
     for (const auto &m : packet.masteries()) {
       const auto &mastery = gameData_.masteryData().getMasteryById(m.id);
       VLOG(1) << "  Mastery " << mastery.masteryNameCode << "(" << m.id << ") is level " << (int)m.level;
     }
+    // ================== Skills ===================
     std::vector<std::pair<std::string, sro::pk2::ref::Skill::Param1Type>> skillTypes = {
       // TODO: These labels are wrong!
       {"Melee skills", sro::pk2::ref::Skill::Param1Type::kMelee},
@@ -499,6 +502,16 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
       }
       ss << "]";
       VLOG(1) << ss.str();
+    }
+    // ================= Inventory =================
+    const auto &inventoryItemMap = packet.inventoryItemMap();
+    VLOG(1) << "Inventory:";
+    for (const auto [slotNum,itemPtr] : inventoryItemMap) {
+      if (itemPtr != nullptr) {
+        VLOG(1) << "  #" << static_cast<int>(slotNum) << ": " << itemPtr->refItemId << ',' << gameData_.getItemName(itemPtr->refItemId);
+      } else {
+        VLOG(1) << "  #" << static_cast<int>(slotNum) << ": empty";
+      }
     }
   }
 
@@ -994,8 +1007,12 @@ void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) cons
     // Already aware of this entity, not going to do anything else.
     return;
   }
-
-  // After this point, do not use `entity` anymore. If the same entity was already being tracked, we should instead use the entity that is held in the entity tracker.
+  // * ~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~ *
+  // *  After this point, do not use `entity` anymore.   *
+  // *  If the same entity was already being tracked,    *
+  // *  we should instead use the entity that is held    *
+  // *  in the entity tracker.                           *
+  // * ~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~!~ *
 
   // Check if the entity spawned in as already moving.
   std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.entityTracker().getEntity<entity::MobileEntity>(entityGlobalId);

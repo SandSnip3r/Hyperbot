@@ -2,12 +2,15 @@
 #define COMMON_PVP_DESCRIPTOR_HPP_
 
 #include "common/itemRequirement.hpp"
-#include "rl/ai/baseIntelligence.hpp"
 
 #include <silkroad_lib/position.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
 #include <vector>
+
+namespace rl::ai {
+class BaseIntelligence;
+} // namespace rl::ai
 
 namespace common {
 

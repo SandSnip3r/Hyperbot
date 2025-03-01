@@ -118,8 +118,12 @@ std::vector<uint8_t> Storage::findItemsWithTypeId(type_id::TypeId typeId) const 
   return itemList_.findItemsWithTypeId(typeId);
 }
 
-std::vector<uint8_t> Storage::findItemsWithRefId(uint32_t refId) const {
+std::vector<sro::scalar_types::StorageIndexType> Storage::findItemsWithRefId(sro::scalar_types::ReferenceObjectId refId) const {
   return itemList_.findItemsWithRefId(refId);
+}
+
+std::optional<sro::scalar_types::StorageIndexType> Storage::findFirstItemWithRefId(sro::scalar_types::ReferenceObjectId refId) const {
+  return itemList_.findFirstItemWithRefId(refId);
 }
 
 std::optional<uint8_t> Storage::firstFreeSlot() const {

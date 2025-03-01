@@ -2,6 +2,8 @@
 
 #include "helpers.hpp"
 
+#include <absl/log/log.h>
+
 namespace storage {
 
 bool ItemList::hasItem(uint8_t slot) const {
@@ -53,15 +55,25 @@ std::vector<uint8_t> ItemList::findItemsWithTypeId(type_id::TypeId typeId) const
   return slotsWithItem;
 }
 
-std::vector<uint8_t> ItemList::findItemsWithRefId(uint32_t refId) const {
-  std::vector<uint8_t> slotsWithItem;
-  for (uint8_t slotNum=0; slotNum<items_.size(); ++slotNum) {
-    const auto itemPtr = items_[slotNum];
+std::vector<sro::scalar_types::StorageIndexType> ItemList::findItemsWithRefId(sro::scalar_types::ReferenceObjectId refId) const {
+  std::vector<sro::scalar_types::StorageIndexType> slotsWithItem;
+  for (std::size_t slotNum=0; slotNum<items_.size(); ++slotNum) {
+    const std::shared_ptr<Item> &itemPtr = items_[slotNum];
     if (itemPtr && itemPtr->refItemId == refId) {
-      slotsWithItem.emplace_back(slotNum);
+      slotsWithItem.push_back(slotNum);
     }
   }
   return slotsWithItem;
+}
+
+std::optional<sro::scalar_types::StorageIndexType> ItemList::findFirstItemWithRefId(sro::scalar_types::ReferenceObjectId refId) const {
+  for (std::size_t slotNum=0; slotNum<items_.size(); ++slotNum) {
+    const std::shared_ptr<Item> &itemPtr = items_[slotNum];
+    if (itemPtr && itemPtr->refItemId == refId) {
+      return slotNum;
+    }
+  }
+  return std::nullopt;
 }
 
 std::optional<uint8_t> ItemList::firstFreeSlot() const {

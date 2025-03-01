@@ -32,6 +32,8 @@ add_executable(${PROJECT_NAME}
   src/common/itemRequirement.hpp
   src/common/pvpDescriptor.cpp
   src/common/pvpDescriptor.hpp
+  src/common/random.cpp
+  src/common/random.hpp
   src/common/sessionId.hpp
   src/config/characterConfig.cpp
   src/config/characterConfig.hpp
@@ -301,6 +303,8 @@ add_executable(${PROJECT_NAME}
   src/proto_convert/convert.hpp
   src/proxy.cpp
   src/proxy.hpp
+  src/rl/action.cpp
+  src/rl/action.hpp
   src/rl/ai/baseIntelligence.cpp
   src/rl/ai/baseIntelligence.hpp
   src/rl/ai/randomIntelligence.cpp

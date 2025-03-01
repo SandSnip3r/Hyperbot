@@ -5,7 +5,10 @@
 #include "itemList.hpp"
 #include "type_id/typeCategory.hpp"
 
+#include <silkroad_lib/scalar_types.hpp>
+
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -99,7 +102,8 @@ public:
 
   std::vector<uint8_t> findItemsOfCategory(const std::vector<type_id::TypeCategory> &categories) const;
   std::vector<uint8_t> findItemsWithTypeId(type_id::TypeId typeId) const;
-  std::vector<uint8_t> findItemsWithRefId(uint32_t refId) const;
+  std::vector<sro::scalar_types::StorageIndexType> findItemsWithRefId(sro::scalar_types::ReferenceObjectId refId) const;
+  std::optional<sro::scalar_types::StorageIndexType> findFirstItemWithRefId(sro::scalar_types::ReferenceObjectId refId) const;
   std::optional<uint8_t> firstFreeSlot() const;
 private:
   ItemList itemList_;
