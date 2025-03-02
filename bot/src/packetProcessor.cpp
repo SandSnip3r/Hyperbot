@@ -1257,7 +1257,7 @@ void PacketProcessor::serverAgentGuildStorageDataReceived(const packet::parsing:
 }
 
 void PacketProcessor::clientAgentActionCommandRequestReceived(const packet::parsing::ClientAgentActionCommandRequest &packet) const {
-  // LOG(INFO) << "Client command action received"; // COMMAND_QUEUE_DEBUG
+  VLOG(4) << "Client command action received: " << packet.actionCommand().toString();
   selfEntity_->skillEngine.pendingCommandQueue.push_back(packet.actionCommand());
   // printCommandQueues(); // COMMAND_QUEUE_DEBUG
 }
@@ -1269,6 +1269,7 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     if (selfEntity_->skillEngine.pendingCommandQueue.empty()) {
       throw std::runtime_error("Command queued, but pending command list is empty");
     }
+    VLOG(4) << "Command accepted: " << selfEntity_->skillEngine.pendingCommandQueue.front().toString();
     selfEntity_->skillEngine.acceptedCommandQueue.emplace_back(selfEntity_->skillEngine.pendingCommandQueue.front());
     selfEntity_->skillEngine.pendingCommandQueue.erase(selfEntity_->skillEngine.pendingCommandQueue.begin());
     const auto &command = selfEntity_->skillEngine.acceptedCommandQueue.back();
@@ -1303,6 +1304,7 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     } else {
       // We arent told which command ended, we just assume it was the most recent
       const auto firstCommandIt = selfEntity_->skillEngine.acceptedCommandQueue.begin();
+      VLOG(4) << selfEntity_->name << " Command end: "  << firstCommandIt->command.toString();
       if (firstCommandIt->command.commandType == packet::enums::CommandType::kExecute &&
           firstCommandIt->command.actionType == packet::enums::ActionType::kCast &&
           !firstCommandIt->wasExecuted) {
@@ -1313,6 +1315,10 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
       if (firstCommandIt->command.commandType == packet::enums::CommandType::kExecute &&
           firstCommandIt->command.actionType == packet::enums::ActionType::kCast) {
         VLOG(4) << "Skill " << gameData_.getSkillName(firstCommandIt->command.refSkillId) << " command ended";
+      }
+      if (firstCommandIt->command.commandType == packet::enums::CommandType::kExecute &&
+          firstCommandIt->command.actionType == packet::enums::ActionType::kDispel) {
+        // Dispel success.
       }
       selfEntity_->skillEngine.acceptedCommandQueue.erase(firstCommandIt);
     }

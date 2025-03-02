@@ -18,7 +18,6 @@ public:
 private:
   static inline std::string kName{"PvpManager"};
   const CharacterLoginInfo characterLoginInfo_;
-  Status initiatePvp(const event::BeginPvp &beginPvpEvent);
   Status startPvp(const event::Event *event);
   void resetAndNotifyReadyForAssignment();
   void setPrepareForPvpStateMachine();

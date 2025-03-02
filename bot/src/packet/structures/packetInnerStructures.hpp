@@ -128,6 +128,7 @@ public:
   enums::TargetType targetType;
   sro::scalar_types::EntityGlobalId targetGlobalId;
   sro::Position position;
+  std::string toString() const;
 };
 
 struct ItemMovement {

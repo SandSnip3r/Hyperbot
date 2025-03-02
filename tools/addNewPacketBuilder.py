@@ -33,8 +33,7 @@ headerTemplate = '#ifndef PACKET_BUILDING_{macroClassName}_HPP_\n'\
                  '#define PACKET_BUILDING_{macroClassName}_HPP_\n'\
                  '\n'\
                  '#include "packet/opcode.hpp"\n'\
-                 '\n'\
-                 '#include "../../shared/silkroad_security.h"\n'\
+                 '#include "shared/silkroad_security.h"\n'\
                  '\n'\
                  'namespace packet::building {{\n'\
                  '\n'\

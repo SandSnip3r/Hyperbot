@@ -2,7 +2,9 @@
 
 #include "bot.hpp"
 #include "common/sessionId.hpp"
+#include "packet/building/serverAgentEntityUpdateHwanLevel.hpp"
 #include "state/machine/disableGmInvisible.hpp"
+#include "state/machine/dispelActiveBuffs.hpp"
 #include "state/machine/enablePvpMode.hpp"
 #include "state/machine/ensureFullVitalsAndNoStatuses.hpp"
 #include "state/machine/gmCommandSpawnAndPickItems.hpp"
@@ -226,38 +228,7 @@ void PvpManager::setPrepareForPvpStateMachine() {
   setChildStateMachine<state::machine::SequentialStateMachines>();
   state::machine::SequentialStateMachines &sequentialStateMachines = dynamic_cast<state::machine::SequentialStateMachines&>(*childState_);
 
-  // The two different players need to start from different positions.
-  std::vector<packet::building::NetworkReadyPosition> waypoints;
-  if (ourPlayer(*pvpDescriptor_, bot_.selfState()->globalId) == Player::kPlayer1) {
-    waypoints.emplace_back(pvpDescriptor_->pvpPositionPlayer1);
-  } else {
-    waypoints.emplace_back(pvpDescriptor_->pvpPositionPlayer2);
-  }
-  sequentialStateMachines.emplace<state::machine::Walking>(waypoints);
-
-  sequentialStateMachines.emplace<state::machine::EnsureFullVitalsAndNoStatuses>();
-  sequentialStateMachines.emplace<state::machine::GmCommandSpawnAndPickItems>(pvpDescriptor_->itemRequirements);
-  sequentialStateMachines.emplace<state::machine::SpawnAndUseRepairHammerIfNecessary>();
-  sequentialStateMachines.emplace<state::machine::EnablePvpMode>();
-  sequentialStateMachines.emplace<state::machine::DisableGmInvisible>();
-  sequentialStateMachines.emplace<state::machine::WaitForAllCooldownsToEnd>();
-}
-
-Status PvpManager::initiatePvp(const event::BeginPvp &beginPvpEvent) {
-  // Received our assignment.
-  publishedThatWeAreReadyForAssignment_ = false;
-  pvpDescriptor_ = beginPvpEvent.pvpDescriptor;
-  // Start with a sequence of actions that will prepare the character for PVP.
-  //  1. Move to the location of the fight.
-  //  2. Make sure hp/mp are full. (if we use an hp or mp potion, we should also wait for the potion to stop healing)
-  //  3. Make sure all skills are off cooldown.
-  //  4. Make sure all items are off cooldown.
-  //  5. Get all items necessary for the fight. TODO: Get rid of extra items.
-  //  6. Repair all items.
-  //  7. Enable PVP mode.
-  //  8. Ensure we're visible.
-  setChildStateMachine<state::machine::SequentialStateMachines>();
-  state::machine::SequentialStateMachines &sequentialStateMachines = dynamic_cast<state::machine::SequentialStateMachines&>(*childState_);
+  sequentialStateMachines.emplace<state::machine::DispelActiveBuffs>();
 
   // The two different players need to start from different positions.
   std::vector<packet::building::NetworkReadyPosition> waypoints;
@@ -274,7 +245,6 @@ Status PvpManager::initiatePvp(const event::BeginPvp &beginPvpEvent) {
   sequentialStateMachines.emplace<state::machine::EnablePvpMode>();
   sequentialStateMachines.emplace<state::machine::DisableGmInvisible>();
   sequentialStateMachines.emplace<state::machine::WaitForAllCooldownsToEnd>();
-  return sequentialStateMachines.onUpdate(&beginPvpEvent);
 }
 
 Status PvpManager::startPvp(const event::Event *event) {

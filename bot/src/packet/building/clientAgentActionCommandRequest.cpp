@@ -56,15 +56,24 @@ PacketContainer ClientAgentActionCommandRequest::cast(sro::scalar_types::Referen
   return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
 }
 
-PacketContainer ClientAgentActionCommandRequest::dispel(sro::scalar_types::ReferenceObjectId refSkillId, sro::scalar_types::EntityGlobalId targetGId) {
+PacketContainer ClientAgentActionCommandRequest::dispel(sro::scalar_types::ReferenceObjectId refSkillId) {
   StreamUtility stream;
   stream.Write(enums::CommandType::kExecute);
   stream.Write(enums::ActionType::kDispel);
   stream.Write(refSkillId);
-  stream.Write(enums::TargetType::kEntity);
-  stream.Write(targetGId);
+  stream.Write(enums::TargetType::kNone);
   return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
 }
+
+// PacketContainer ClientAgentActionCommandRequest::dispel(sro::scalar_types::ReferenceObjectId refSkillId, sro::scalar_types::EntityGlobalId targetGId) {
+//   StreamUtility stream;
+//   stream.Write(enums::CommandType::kExecute);
+//   stream.Write(enums::ActionType::kDispel);
+//   stream.Write(refSkillId);
+//   stream.Write(enums::TargetType::kEntity);
+//   stream.Write(targetGId);
+//   return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
+// }
 
 PacketContainer ClientAgentActionCommandRequest::command(const structures::ActionCommand& actionCommand) {
   StreamUtility stream;

@@ -15,7 +15,7 @@ Status SequentialStateMachines::onUpdate(const event::Event *event) {
   if (!stateMachines_.empty()) {
     Status status = stateMachines_.front()->onUpdate(event);
     while (!stateMachines_.empty() && status == Status::kDone) {
-      VLOG(1) << "State machine is done; " << stateMachines_.size() << " left";
+      CHAR_VLOG(1) << "State machine is done; " << stateMachines_.size() << " left";
       // Remove this one.
       stateMachines_.pop_front();
       // Call the next one, if there is one.
@@ -25,12 +25,11 @@ Status SequentialStateMachines::onUpdate(const event::Event *event) {
     }
   }
   if (stateMachines_.empty()) {
-    VLOG(1) << "Last state machine is done";
+    CHAR_VLOG(1) << "Last state machine is done";
     return Status::kDone;
-  } else {
-    VLOG(2) << stateMachines_.size() << " state machines left. Not done";
-    return Status::kNotDone;
   }
+  CHAR_VLOG(2) << stateMachines_.size() << " state machines left. Not done";
+  return Status::kNotDone;
 }
 
 void SequentialStateMachines::push(std::unique_ptr<StateMachine> &&stateMachine) {

@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -97,6 +98,7 @@ struct Skill {
   bool isEfta() const;
   bool isImbue() const;
   bool hasParam(int32_t param) const;
+  bool hasParam(std::string_view param) const;
   std::vector<RequiredWeapon> reqi() const;
   bool isInstant() const;
   bool isTele() const;

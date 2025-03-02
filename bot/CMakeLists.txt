@@ -130,6 +130,8 @@ add_executable(${PROJECT_NAME}
   src/packet/building/serverAgentEntityDespawn.hpp
   src/packet/building/serverAgentEntitySpawn.cpp
   src/packet/building/serverAgentEntitySpawn.hpp
+  src/packet/building/serverAgentEntityUpdateHwanLevel.cpp
+  src/packet/building/serverAgentEntityUpdateHwanLevel.hpp
   src/packet/building/serverAgentEntityUpdateState.cpp
   src/packet/building/serverAgentEntityUpdateState.hpp
   src/packet/building/serverAgentInventoryOperationResponse.cpp
@@ -270,6 +272,7 @@ add_executable(${PROJECT_NAME}
   src/packet/parsing/serverGatewayPatchResponse.hpp
   src/packet/parsing/serverGatewayShardListResponse.cpp
   src/packet/parsing/serverGatewayShardListResponse.hpp
+  src/packet/structures/packetInnerStructures.cpp
   src/packet/structures/packetInnerStructures.hpp
   src/packetLogger.cpp
   src/packetLogger.hpp
@@ -311,8 +314,8 @@ add_executable(${PROJECT_NAME}
   src/rl/ai/randomIntelligence.hpp
   src/rl/intelligencePool.cpp
   src/rl/intelligencePool.hpp
-  src/rl/rlTrainingManager.cpp
-  src/rl/rlTrainingManager.hpp
+  src/rl/trainingManager.cpp
+  src/rl/trainingManager.hpp
   src/session.cpp
   src/session.hpp
   src/shared/silkroad_security.cpp
@@ -341,6 +344,8 @@ add_executable(${PROJECT_NAME}
   src/state/machine/concurrentStateMachines.hpp
   src/state/machine/disableGmInvisible.cpp
   src/state/machine/disableGmInvisible.hpp
+  src/state/machine/dispelActiveBuffs.cpp
+  src/state/machine/dispelActiveBuffs.hpp
   src/state/machine/dropItem.cpp
   src/state/machine/dropItem.hpp
   src/state/machine/enablePvpMode.cpp

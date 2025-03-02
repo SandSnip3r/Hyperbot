@@ -7,7 +7,7 @@ namespace sro::pk2::ref {
 
 namespace {
 
-uint32_t getVal(const std::string &str) {
+uint32_t getVal(std::string_view str) {
   uint32_t val = 0;
   for (int i=0; i<4 && i<str.size(); ++i) {
     val <<= 8;
@@ -62,6 +62,11 @@ bool Skill::hasParam(int32_t param) const {
     }
   }
   return false;
+}
+
+bool Skill::hasParam(std::string_view param) const {
+  int32_t paramVal = getVal(param);
+  return hasParam(paramVal);
 }
 
 std::vector<RequiredWeapon> Skill::reqi() const {

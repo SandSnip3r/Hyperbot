@@ -21,7 +21,8 @@ public:
   static PacketContainer trace(sro::scalar_types::EntityGlobalId targetGId);
   static PacketContainer cast(sro::scalar_types::ReferenceObjectId refSkillId);
   static PacketContainer cast(sro::scalar_types::ReferenceObjectId refSkillId, sro::scalar_types::EntityGlobalId targetGId);
-  static PacketContainer dispel(sro::scalar_types::ReferenceObjectId refSkillId, sro::scalar_types::EntityGlobalId targetGId);
+  static PacketContainer dispel(sro::scalar_types::ReferenceObjectId refSkillId);
+  // static PacketContainer dispel(sro::scalar_types::ReferenceObjectId refSkillId, sro::scalar_types::EntityGlobalId targetGId);
   static PacketContainer command(const structures::ActionCommand& actionCommand);
 };
 

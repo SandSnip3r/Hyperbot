@@ -27,3 +27,4 @@ bld/
 /qtbuild/
 /win32_build/
 /build*/
+tools/paramIdNumToName/main

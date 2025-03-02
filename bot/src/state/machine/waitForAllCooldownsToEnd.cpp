@@ -13,6 +13,7 @@ WaitForAllCooldownsToEnd::~WaitForAllCooldownsToEnd() {
 }
 
 Status WaitForAllCooldownsToEnd::onUpdate(const event::Event *event) {
+  // TODO(efficiency): Watch for item/skill cooldown ended events, rather than fetching this data on every event.
   const std::map<type_id::TypeId, broker::EventBroker::EventId> &itemCooldownEventIds = bot_.selfState()->getItemCooldownEventIdMap();
   const absl::flat_hash_map<sro::scalar_types::ReferenceObjectId, broker::EventBroker::EventId> &skillCooldownEventIds = bot_.selfState()->skillEngine.getSkillCooldownEventIdMap();
   if (itemCooldownEventIds.empty() && skillCooldownEventIds.empty()) {

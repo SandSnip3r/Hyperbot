@@ -117,6 +117,7 @@
   F(PvpManagerReadyForAssignment) \
   F(BeginPvp) \
   F(ReadyForPvp) \
+  F(DispelSuccess) \
   F(Dummy)
 
 namespace event {

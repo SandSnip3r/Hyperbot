@@ -2,7 +2,7 @@
 
 #include "clientManagerInterface.hpp"
 #include "helpers.hpp"
-#include "rl/rlTrainingManager.hpp"
+#include "rl/trainingManager.hpp"
 #include "session.hpp"
 #include "state/worldState.hpp"
 #include "ui/userInterface.hpp"
@@ -34,8 +34,8 @@ void Hyperbot::run() {
   userInterface.setWorldState(worldState);
   userInterface.broadcastLaunch();
 
-  rl::RlTrainingManager rlTrainingManager{gameData_, eventBroker_, worldState, clientManagerInterface};
-  rlTrainingManager.run();
+  rl::TrainingManager trainingManager{gameData_, eventBroker_, worldState, clientManagerInterface};
+  trainingManager.run();
 }
 
 Hyperbot::~Hyperbot() {

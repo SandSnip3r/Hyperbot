@@ -18,9 +18,9 @@
 
 namespace rl {
 
-class RlTrainingManager {
+class TrainingManager {
 public:
-  RlTrainingManager(const pk2::GameData &gameData,
+  TrainingManager(const pk2::GameData &gameData,
                     broker::EventBroker &eventBroker,
                     state::WorldState &worldState,
                     ClientManagerInterface &clientManagerInterface);
@@ -42,10 +42,10 @@ private:
   void setUpIntelligencePool();
 
   void createSessions();
+  common::PvpDescriptor buildPvpDescriptor(Session &char1, Session &char2);
   void createAndPublishPvpDescriptor();
   Session& getSession(SessionId sessionId);
 
-  void prepareCharactersForPvp(Bot &char1, Bot &char2, const sro::Position pvpPosition);
   void pvp(Bot &char1, Bot &char2);
 
   void buildItemRequirementList();
