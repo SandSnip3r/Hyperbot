@@ -92,7 +92,7 @@ Status Walking::onUpdate(const event::Event *event) {
   const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint);
   bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kClientToServer);
   const int kMovementRequestTimeoutMs{333}; // TODO: Move somewhere else and make an educated guess about what this value should be
-  movementRequestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMovementRequestTimeoutMs), event::EventCode::kMovementRequestTimedOut);
+  movementRequestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kMovementRequestTimedOut, std::chrono::milliseconds(kMovementRequestTimeoutMs));
   tookAction_ = true;
   return Status::kNotDone;
 }

@@ -115,7 +115,7 @@ void PickItem::tryPickItem() {
   CHAR_VLOG(1) << "Sending packet to pickup " << bot_.gameData().getItemName(targetRefId_);
   const auto packet = packet::building::ClientAgentActionCommandRequest::pickup(targetGlobalId_);
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
-  requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(1000), event::EventCode::kTimeout);
+  requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(1000));
   CHAR_VLOG(2) << "Published timeout event " << *requestTimeoutEventId_;
 }
 

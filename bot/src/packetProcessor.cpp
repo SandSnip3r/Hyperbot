@@ -1770,7 +1770,7 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
               // Publish knocked back event
               eventBroker_.publishEvent(event::EventCode::kKnockedBack);
               // Publish delayed knocked back stun completed event
-              eventBroker_.publishDelayedEvent(std::chrono::milliseconds(kKnockbackStunDuration), event::EventCode::kKnockbackStunEnded);
+              eventBroker_.publishDelayedEvent(event::EventCode::kKnockbackStunEnded, std::chrono::milliseconds(kKnockbackStunDuration));
             } else if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
               constexpr const int kKnockdownStunDuration{6000};
               VLOG(1) << "      We were knocked down " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockdownStunDuration << "ms";
@@ -1779,7 +1779,7 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
               // Publish knocked down event
               eventBroker_.publishEvent(event::EventCode::kKnockedDown);
               // Publish delayed knocked down stun completed event
-              eventBroker_.publishDelayedEvent(std::chrono::milliseconds(kKnockdownStunDuration), event::EventCode::kKnockdownStunEnded);
+              eventBroker_.publishDelayedEvent(event::EventCode::kKnockdownStunEnded, std::chrono::milliseconds(kKnockdownStunDuration));
             }
             if (knockedBackOrKnockedDown) {
               // Whatever commands we had queued should probably be cleared

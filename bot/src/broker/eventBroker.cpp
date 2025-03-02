@@ -19,11 +19,11 @@ void EventBroker::publishEvent(event::EventCode eventCode) {
   publishEvent<event::Event>(eventCode);
 }
 
-EventBroker::EventId EventBroker::publishDelayedEvent(std::chrono::milliseconds delay, event::EventCode eventCode) {
+EventBroker::EventId EventBroker::publishDelayedEvent(event::EventCode eventCode, std::chrono::milliseconds delay) {
   return publishDelayedEvent<event::Event>(delay, eventCode);
 }
 
-EventBroker::EventId EventBroker::publishDelayedEvent(TimerEndTimePoint endTime, event::EventCode eventCode) {
+EventBroker::EventId EventBroker::publishDelayedEvent(event::EventCode eventCode, TimerEndTimePoint endTime) {
   return publishDelayedEvent<event::Event>(endTime, eventCode);
 }
 

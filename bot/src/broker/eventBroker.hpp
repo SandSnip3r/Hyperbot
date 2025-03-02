@@ -78,8 +78,8 @@ public:
     addTimerIdMapping(eventId, timerId);
     return eventId;
   }
-  EventId publishDelayedEvent(std::chrono::milliseconds delay, event::EventCode eventCode);
-  EventId publishDelayedEvent(TimerEndTimePoint endTime, event::EventCode eventCode);
+  EventId publishDelayedEvent(event::EventCode eventCode, std::chrono::milliseconds delay);
+  EventId publishDelayedEvent(event::EventCode eventCode, TimerEndTimePoint endTime);
 
   bool cancelDelayedEvent(EventId eventId);
   std::optional<std::chrono::milliseconds> timeRemainingOnDelayedEvent(EventId eventId) const;

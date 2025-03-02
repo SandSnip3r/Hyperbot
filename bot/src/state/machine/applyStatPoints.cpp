@@ -90,7 +90,7 @@ Status ApplyStatPoints::onUpdate(const event::Event *event) {
     packet = packet::building::ClientAgentCharacterIncreaseStrRequest::packet();
   }
   bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
-  timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(200), event::EventCode::kTimeout);
+  timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(200));
   return Status::kNotDone;
 }
 

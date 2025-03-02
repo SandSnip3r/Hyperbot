@@ -4,7 +4,7 @@
 namespace state::machine {
 
 StateMachine::StateMachine(Bot &bot) : bot_(bot) {
-  // debugEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::minutes(15), event::EventCode::kStateMachineActiveTooLong);
+  // debugEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kStateMachineActiveTooLong, std::chrono::minutes(15));
 }
 
 StateMachine::~StateMachine() {

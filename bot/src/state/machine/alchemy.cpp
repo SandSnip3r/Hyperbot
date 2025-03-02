@@ -134,7 +134,7 @@ Status Alchemy::onUpdate(const event::Event *event) {
       nextBladePlusToSpawn_ = 1;
     }
     bot_.packetBroker().injectPacket(makeItemPacket, PacketContainer::Direction::kClientToServer);
-    makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMakeItemTimedOutMs), event::EventCode::kGmCommandTimedOut);
+    makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kGmCommandTimedOut, std::chrono::milliseconds(kMakeItemTimedOutMs));
     waitingForCreatedItem_ = kBladeRefObjId;
     return Status::kNotDone;
   }
@@ -179,14 +179,14 @@ Status Alchemy::onUpdate(const event::Event *event) {
         LOG(INFO) << "Making a lucky stone";
         const auto makeItemPacket = packet::building::ClientAgentOperatorRequest::makeItem(kLuckyStoneRefObjId, 0);
         bot_.packetBroker().injectPacket(makeItemPacket, PacketContainer::Direction::kClientToServer);
-        makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMakeItemTimedOutMs), event::EventCode::kGmCommandTimedOut);
+        makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kGmCommandTimedOut, std::chrono::milliseconds(kMakeItemTimedOutMs));
         waitingForCreatedItem_ = kLuckyStoneRefObjId;
         return Status::kNotDone;
       }
 
       const auto useStonePacket = packet::building::ClientAgentAlchemyStoneRequest::fuseStone(slotsWithBlade.front(), luckyStoneSlots.front());
       bot_.packetBroker().injectPacket(useStonePacket, PacketContainer::Direction::kClientToServer);
-      alchemyTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kAlchemyTimedOutMs), event::EventCode::kAlchemyTimedOut);
+      alchemyTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kAlchemyTimedOut, std::chrono::milliseconds(kAlchemyTimedOutMs));
       return Status::kNotDone;
     }
   }
@@ -224,7 +224,7 @@ Status Alchemy::onUpdate(const event::Event *event) {
     // Didn't find an elixir for our item.
     const auto makeItemPacket = packet::building::ClientAgentOperatorRequest::makeItem(kElixirRefObjId, 0);
     bot_.packetBroker().injectPacket(makeItemPacket, PacketContainer::Direction::kClientToServer);
-    makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMakeItemTimedOutMs), event::EventCode::kGmCommandTimedOut);
+    makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kGmCommandTimedOut, std::chrono::milliseconds(kMakeItemTimedOutMs));
     waitingForCreatedItem_ = kElixirRefObjId;
     return Status::kNotDone;
   }
@@ -232,14 +232,14 @@ Status Alchemy::onUpdate(const event::Event *event) {
     // Didn't find an powder for our item.
     const auto makeItemPacket = packet::building::ClientAgentOperatorRequest::makeItem(kPowderRefObjId, 50);
     bot_.packetBroker().injectPacket(makeItemPacket, PacketContainer::Direction::kClientToServer);
-    makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMakeItemTimedOutMs), event::EventCode::kGmCommandTimedOut);
+    makeItemTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kGmCommandTimedOut, std::chrono::milliseconds(kMakeItemTimedOutMs));
     waitingForCreatedItem_ = kPowderRefObjId;
     return Status::kNotDone;
   }
 
   const auto useElixirPacket = packet::building::ClientAgentAlchemyElixirRequest::fuseElixir(slotsWithBlade.front(), *elixirSlot, {*powderSlot});
   bot_.packetBroker().injectPacket(useElixirPacket, PacketContainer::Direction::kClientToServer);
-  alchemyTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kAlchemyTimedOutMs), event::EventCode::kAlchemyTimedOut);
+  alchemyTimedOutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kAlchemyTimedOut, std::chrono::milliseconds(kAlchemyTimedOutMs));
 
   // Figure out what kind of elixir we want.
   // Protector: (3,1,) 1 2 3 9 10 11

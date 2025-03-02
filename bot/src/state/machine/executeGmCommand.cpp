@@ -25,7 +25,7 @@ Status ExecuteGmCommand::onUpdate(const event::Event *event) {
     CHAR_VLOG(1) << "Injecting GM command packet";
     bot_.packetBroker().injectPacket(gmCommandPacket_, PacketContainer::Direction::kClientToServer);
     waitingForResponse_ = true;
-    eventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(kMillisecondsTimeout), event::EventCode::kTimeout);
+    eventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(kMillisecondsTimeout));
     return Status::kNotDone;
   }
 

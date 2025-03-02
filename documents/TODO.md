@@ -29,4 +29,3 @@
 - Remove any active buffs before announcing that we're ready for pvp
 - In the state machine which enables PVP, if it gets cancelled, start again
 - Why does the buff stuff in Character use ReferenceObjectId for skills???
-- Swap the order of (time, eventcode) in event broker's publishDelayedEvent()

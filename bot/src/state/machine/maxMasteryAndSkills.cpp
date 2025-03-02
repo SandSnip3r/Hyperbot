@@ -69,7 +69,7 @@ Status MaxMasteryAndSkills::onUpdate(const event::Event *event) {
     // Still need to level up mastery.
     VLOG(1) << absl::StreamFormat("Mastery is level %d, character level is %d. Sending packet to level up mastery", currentMasteryLevel, currentLevel);
     bot_.packetBroker().injectPacket(packet::building::ClientAgentSkillMasteryLearnRequest::incrementLevel(masteryId_), PacketContainer::Direction::kBotToServer);
-    timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(200), event::EventCode::kTimeout);
+    timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(200));
     return Status::kNotDone;
   }
 
@@ -97,7 +97,7 @@ Status MaxMasteryAndSkills::onUpdate(const event::Event *event) {
   VLOG(1) << "Sending packet to learn skill " << nextSkillId;
   bot_.packetBroker().injectPacket(packet::building::ClientAgentSkillLearnRequest::learnSkill(nextSkillId), PacketContainer::Direction::kBotToServer);
   currentLearningSkill_ = nextSkillId;
-  timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::milliseconds(400), event::EventCode::kTimeout);
+  timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(400));
   return Status::kNotDone;
 }
 

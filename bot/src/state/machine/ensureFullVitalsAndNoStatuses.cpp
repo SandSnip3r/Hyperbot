@@ -35,7 +35,7 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
           bot_.eventBroker().cancelDelayedEvent(*waitForPotionEventId_);
         }
         // TODO: If we move this out to PvpManager, we can overlap some work.
-        waitForPotionEventId_ = bot_.eventBroker().publishDelayedEvent(std::chrono::seconds(5), event::EventCode::kTimeout);
+        waitForPotionEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::seconds(5));
       }
     } else if (event->eventCode == event::EventCode::kTimeout &&
                waitForPotionEventId_ &&
