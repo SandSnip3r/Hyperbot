@@ -28,4 +28,3 @@
 - PacketContainer::Direction::kBotToServer is no different from PacketContainer::Direction::kClientToServer, delete it
 - Remove any active buffs before announcing that we're ready for pvp
 - In the state machine which enables PVP, if it gets cancelled, start again
-- Why does the buff stuff in Character use ReferenceObjectId for skills???

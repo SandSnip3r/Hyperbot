@@ -440,17 +440,17 @@ public:
 
 struct BuffAdded : public Event {
 public:
-  BuffAdded(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId);
+  BuffAdded(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceSkillId buffId);
   const sro::scalar_types::EntityGlobalId entityGlobalId;
-  const sro::scalar_types::ReferenceObjectId buffRefId;
+  const sro::scalar_types::ReferenceSkillId buffRefId;
   virtual ~BuffAdded() = default;
 };
 
 struct BuffRemoved : public Event {
 public:
-  BuffRemoved(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId);
+  BuffRemoved(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceSkillId buffId);
   const sro::scalar_types::EntityGlobalId entityGlobalId;
-  const sro::scalar_types::ReferenceObjectId buffRefId;
+  const sro::scalar_types::ReferenceSkillId buffRefId;
   virtual ~BuffRemoved() = default;
 };
 

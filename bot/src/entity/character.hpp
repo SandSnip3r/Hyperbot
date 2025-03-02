@@ -29,16 +29,16 @@ public:
   // ---- Buffs ----
   struct BuffData {
     using ClockType = std::chrono::high_resolution_clock;
-    sro::scalar_types::ReferenceObjectId skillRefId;
+    sro::scalar_types::ReferenceSkillId skillRefId;
     std::optional<ClockType::time_point> castTime;
   };
   // Maps TokenId to BuffData
   std::map<sro::scalar_types::BuffTokenType, BuffData> buffDataMap;
-  std::set<sro::scalar_types::ReferenceObjectId> activeBuffs() const;
-  bool buffIsActive(sro::scalar_types::ReferenceObjectId skillRefId) const;
-  std::optional<BuffData::ClockType::time_point> buffCastTime(sro::scalar_types::ReferenceObjectId skillRefId) const;
-  void addBuff(sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::BuffTokenType tokenId, std::optional<BuffData::ClockType::time_point> castTime = std::nullopt);
-  void removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::BuffTokenType tokenId);
+  std::set<sro::scalar_types::ReferenceSkillId> activeBuffs() const;
+  bool buffIsActive(sro::scalar_types::ReferenceSkillId skillRefId) const;
+  std::optional<BuffData::ClockType::time_point> buffCastTime(sro::scalar_types::ReferenceSkillId skillRefId) const;
+  void addBuff(sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::BuffTokenType tokenId, std::optional<BuffData::ClockType::time_point> castTime = std::nullopt);
+  void removeBuff(sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::BuffTokenType tokenId);
   void clearBuffs();
   EntityType entityType() const override { return EntityType::kCharacter; }
 protected:

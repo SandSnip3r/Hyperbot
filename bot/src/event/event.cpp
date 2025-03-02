@@ -134,10 +134,10 @@ OurSkillFailed::OurSkillFailed(EventId id, sro::scalar_types::ReferenceSkillId s
 EntityHpChanged::EntityHpChanged(EventId id, sro::scalar_types::EntityGlobalId globalId) :
     Event(id, EventCode::kEntityHpChanged), globalId(globalId) {}
 
-BuffAdded::BuffAdded(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId) :
+BuffAdded::BuffAdded(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceSkillId buffId) :
     Event(id, EventCode::kPlayerCharacterBuffAdded), entityGlobalId(entityId), buffRefId(buffId) {}
 
-BuffRemoved::BuffRemoved(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceObjectId buffId) :
+BuffRemoved::BuffRemoved(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceSkillId buffId) :
     Event(id, EventCode::kPlayerCharacterBuffRemoved), entityGlobalId(entityId), buffRefId(buffId) {}
 
 CommandError::CommandError(EventId id, sro::scalar_types::EntityGlobalId issuingGlobalId, const packet::structures::ActionCommand &cmd) :

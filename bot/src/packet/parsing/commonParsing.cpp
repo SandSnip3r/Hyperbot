@@ -497,7 +497,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
     // Buffs
     uint8_t buffCount = stream.Read<uint8_t>();
     for (int i=0; i<buffCount; ++i) {
-      uint32_t skillRefId = stream.Read<uint32_t>();
+      sro::scalar_types::ReferenceSkillId skillRefId = stream.Read<sro::scalar_types::ReferenceSkillId>();
       sro::scalar_types::BuffTokenType token = stream.Read<sro::scalar_types::BuffTokenType>();
       characterPtr->addBuff(skillRefId, token);
       if (!skillData.haveSkillWithId(skillRefId)) {

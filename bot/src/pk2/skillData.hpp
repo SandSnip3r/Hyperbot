@@ -9,16 +9,18 @@
 namespace pk2 {
 
 class SkillData {
+private:
+  using SkillMap = std::unordered_map<sro::pk2::ref::SkillId, sro::pk2::ref::Skill>;
 public:
-  using SkillMap = std::unordered_map<sro::pk2::ref::SkillId,sro::pk2::ref::Skill>;
+  using SizeType = SkillMap::size_type;
   void addSkill(sro::pk2::ref::Skill &&skill);
-  bool haveSkillWithId(sro::scalar_types::ReferenceObjectId id) const;
+  bool haveSkillWithId(sro::scalar_types::ReferenceSkillId id) const;
 
   // Throws if we have no such skill.
-  const sro::pk2::ref::Skill& getSkillById(sro::scalar_types::ReferenceObjectId id) const;
-  int32_t getSkillTotalDuration(sro::scalar_types::ReferenceObjectId id) const;
-  const SkillMap::size_type size() const;
-  sro::scalar_types::ReferenceObjectId getRootSkillRefId(sro::scalar_types::ReferenceObjectId id) const;
+  const sro::pk2::ref::Skill& getSkillById(sro::scalar_types::ReferenceSkillId id) const;
+  int32_t getSkillTotalDuration(sro::scalar_types::ReferenceSkillId id) const;
+  const SizeType size() const;
+  sro::scalar_types::ReferenceSkillId getRootSkillRefId(sro::scalar_types::ReferenceSkillId id) const;
 
   std::vector<sro::pk2::ref::SkillId> getSkillIdsForMastery(sro::scalar_types::ReferenceMasteryId masteryId) const;
 private:

@@ -29,7 +29,7 @@ public:
   // Returns true is this is the last time we are seeing this entity.
   bool entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker);
 
-  void addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::BuffTokenType tokenId, entity::Character::BuffData::ClockType::time_point castTime);
+  void addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::BuffTokenType tokenId, entity::Character::BuffData::ClockType::time_point castTime);
   void removeBuffs(const std::vector<sro::scalar_types::BuffTokenType> &tokenIds);
 
   template<typename EntityType = entity::Entity>
@@ -46,9 +46,9 @@ private:
 
   // TODO: When an entity despawns, we need to remove their entries from this map
   struct BuffInfo {
-    BuffInfo(sro::scalar_types::EntityGlobalId gId, sro::scalar_types::ReferenceObjectId refId) : globalId(gId), skillRefId(refId) {}
+    BuffInfo(sro::scalar_types::EntityGlobalId gId, sro::scalar_types::ReferenceSkillId refId) : globalId(gId), skillRefId(refId) {}
     sro::scalar_types::EntityGlobalId globalId;
-    sro::scalar_types::ReferenceObjectId skillRefId;
+    sro::scalar_types::ReferenceSkillId skillRefId;
   };
   std::unordered_map<sro::scalar_types::BuffTokenType, BuffInfo> buffTokenToEntityAndSkillIdMap_;
 };

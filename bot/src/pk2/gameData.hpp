@@ -47,9 +47,9 @@ public:
   const sro::navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
   const sro::pk2::RegionInfo& regionInfo() const;
 
-  std::string getSkillName(sro::scalar_types::ReferenceObjectId skillRefId) const;
+  std::string getSkillName(sro::scalar_types::ReferenceSkillId skillRefId) const;
   std::string getItemName(sro::scalar_types::ReferenceObjectId itemRefId) const;
-  std::string getMasteryName(sro::pk2::ref::MasteryId masteryId) const;
+  std::string getMasteryName(sro::scalar_types::ReferenceMasteryId masteryId) const;
 
   // Expecting names like Pacheon, WIZARD, roGue, fiRE, etc. Case does not matter.
   sro::pk2::ref::MasteryId getMasteryId(std::string masteryName) const;

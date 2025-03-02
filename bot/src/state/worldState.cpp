@@ -51,7 +51,7 @@ bool WorldState::entityDespawned(sro::scalar_types::EntityGlobalId globalId, bro
   return true;
 }
 
-void WorldState::addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::BuffTokenType tokenId, entity::Character::BuffData::ClockType::time_point castTime) {
+void WorldState::addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::BuffTokenType tokenId, entity::Character::BuffData::ClockType::time_point castTime) {
   VLOG(1) << "There are " << buffTokenToEntityAndSkillIdMap_.size() << " buffs tracked in WordState";
   // For now, we only care about PlayerCharacters
   // TODO: add buffs for others

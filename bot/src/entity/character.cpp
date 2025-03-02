@@ -40,15 +40,15 @@ void Character::setCurrentHp(uint32_t hp) {
   }
 }
 
-std::set<sro::scalar_types::ReferenceObjectId> Character::activeBuffs() const {
-  std::set<sro::scalar_types::ReferenceObjectId> result;
+std::set<sro::scalar_types::ReferenceSkillId> Character::activeBuffs() const {
+  std::set<sro::scalar_types::ReferenceSkillId> result;
   for (const auto &buffTokenDataPair : buffDataMap) {
     result.emplace(buffTokenDataPair.second.skillRefId);
   }
   return result;
 }
 
-bool Character::buffIsActive(sro::scalar_types::ReferenceObjectId skillRefId) const {
+bool Character::buffIsActive(sro::scalar_types::ReferenceSkillId skillRefId) const {
   for (const auto &buffTokenDataPair : buffDataMap) {
     if (buffTokenDataPair.second.skillRefId == skillRefId) {
       return true;
@@ -57,7 +57,7 @@ bool Character::buffIsActive(sro::scalar_types::ReferenceObjectId skillRefId) co
   return false;
 }
 
-std::optional<Character::BuffData::ClockType::time_point> Character::buffCastTime(sro::scalar_types::ReferenceObjectId skillRefId) const {
+std::optional<Character::BuffData::ClockType::time_point> Character::buffCastTime(sro::scalar_types::ReferenceSkillId skillRefId) const {
   for (const auto &buffTokenDataPair : buffDataMap) {
     if (buffTokenDataPair.second.skillRefId == skillRefId) {
       return buffTokenDataPair.second.castTime;
@@ -66,7 +66,7 @@ std::optional<Character::BuffData::ClockType::time_point> Character::buffCastTim
   throw std::runtime_error(absl::StrFormat("Character::buffCastTime: No buff with skill ID %d", skillRefId));
 }
 
-void Character::addBuff(sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::BuffTokenType tokenId, std::optional<BuffData::ClockType::time_point> castTime) {
+void Character::addBuff(sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::BuffTokenType tokenId, std::optional<BuffData::ClockType::time_point> castTime) {
   if (auto it = buffDataMap.find(tokenId); it != buffDataMap.end()) {
     // Already tracking this buff, nothing to do.
     // We do not overwrite the time of the existing buff data. The first time the buff data was created was most accurate. The first time we try to add this buff is the soonest the server could tell us that this buff is active. Any later packet doesn't give any new info and will be less accurate.
@@ -80,7 +80,7 @@ void Character::addBuff(sro::scalar_types::ReferenceObjectId skillRefId, sro::sc
   }
 }
 
-void Character::removeBuff(sro::scalar_types::ReferenceObjectId skillRefId, sro::scalar_types::BuffTokenType tokenId) {
+void Character::removeBuff(sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::BuffTokenType tokenId) {
   auto buffIt = buffDataMap.find(tokenId);
   if (buffIt == buffDataMap.end()) {
     throw std::runtime_error("Trying to remove buff "+std::to_string(skillRefId)+" from entity, but cannot find buff");

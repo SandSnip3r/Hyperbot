@@ -139,7 +139,7 @@ const sro::pk2::RegionInfo& GameData::regionInfo() const {
   return regionInfo_;
 }
 
-std::string GameData::getSkillName(sro::scalar_types::ReferenceObjectId skillRefId) const {
+std::string GameData::getSkillName(sro::scalar_types::ReferenceSkillId skillRefId) const {
   const sro::pk2::ref::Skill &skill = skillData_.getSkillById(skillRefId);
   const std::optional<std::string> maybeName = textData_.getSkillNameIfExists(skill.uiSkillName);
   return (maybeName ? *maybeName : "UNKNOWN_SKILL");
@@ -151,7 +151,7 @@ std::string GameData::getItemName(sro::scalar_types::ReferenceObjectId itemRefId
   return (maybeName ? *maybeName : "UNKNOWN_ITEM");
 }
 
-std::string GameData::getMasteryName(sro::pk2::ref::MasteryId masteryId) const {
+std::string GameData::getMasteryName(sro::scalar_types::ReferenceMasteryId masteryId) const {
   const sro::pk2::ref::Mastery &masteryDataObj = masteryData_.getMasteryById(masteryId);
   const std::optional<std::string> maybeName = textData_.getMasteryNameIfExists(masteryDataObj.masteryNameCode);
   return (maybeName ? *maybeName : "UNKNOWN_MASTERY");
