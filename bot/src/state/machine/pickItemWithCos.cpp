@@ -30,7 +30,7 @@ Status PickItemWithCos::onUpdate(const event::Event *event) {
   }
 
   const auto packet = packet::building::ClientAgentCosCommandRequest::pickup(cosGlobalId_, targetGlobalId_);
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
+  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
   waitingForItemToBePicked_ = true;
   return Status::kNotDone;
 }

@@ -55,7 +55,7 @@ void IntelligenceActor::useItem(sro::pk2::ref::ItemId refId) {
     if (item->refItemId == refId) {
       // Use this item.
       CHAR_VLOG(1) << "Sending packet to use item at slot " << slot;
-      bot_.packetBroker().injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slot, item->typeId()), PacketContainer::Direction::kClientToServer);
+      bot_.packetBroker().injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slot, item->typeId()), PacketContainer::Direction::kBotToServer);
       break;
     }
   }

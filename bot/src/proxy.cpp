@@ -191,7 +191,7 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
 
         // Retrieve the packet out of the security api
         const auto [packet, wasInjected] = clientConnection.security->GetPacketToRecv();
-        const auto direction = (wasInjected ? PacketContainer::Direction::kBotToServer : PacketContainer::Direction::kClientToServer);
+        const PacketContainer::Direction direction = (wasInjected ? PacketContainer::Direction::kBotToServer : PacketContainer::Direction::kClientToServer);
 
         // Check the blocked list
         // Don't block injected packets

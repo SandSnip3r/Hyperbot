@@ -330,7 +330,7 @@ void Bot::handleChatCommand(const event::ChatReceived &event) {
 void Bot::handleInjectPacket(const event::InjectPacket &castedEvent) {
   static const bool kEncrypted_ = false;
   static const bool kMassive_ = false;
-  PacketContainer::Direction direction = (castedEvent.direction == event::InjectPacket::Direction::kClientToServer) ? PacketContainer::Direction::kClientToServer : PacketContainer::Direction::kServerToClient;
+  PacketContainer::Direction direction = (castedEvent.direction == event::InjectPacket::Direction::kClientToServer) ? PacketContainer::Direction::kBotToServer : PacketContainer::Direction::kBotToClient;
   StreamUtility stream;
   for (const auto i : castedEvent.data) {
     stream.Write<uint8_t>(i);

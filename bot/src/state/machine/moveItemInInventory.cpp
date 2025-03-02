@@ -50,7 +50,7 @@ Status MoveItemInInventory::onUpdate(const event::Event *event) {
   }
 
   const auto moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::withinInventoryPacket(srcSlot_, destSlot_, 1); // TODO: Figure out quantity, for now, we assume it's an equipment
-  bot_.packetBroker().injectPacket(moveItemPacket, PacketContainer::Direction::kClientToServer);
+  bot_.packetBroker().injectPacket(moveItemPacket, PacketContainer::Direction::kBotToServer);
   waitingForItemToMove_ = true;
   return Status::kNotDone;
 }

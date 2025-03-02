@@ -367,7 +367,7 @@ Status CastSkill::onUpdate(const event::Event *event) {
     // No target
     castSkillPacket = packet::building::ClientAgentActionCommandRequest::cast(skillRefId_);
   }
-  bot_.packetBroker().injectPacket(castSkillPacket, PacketContainer::Direction::kClientToServer);
+  bot_.packetBroker().injectPacket(castSkillPacket, PacketContainer::Direction::kBotToServer);
   skillCastTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::SkillCastTimeout>(std::chrono::milliseconds(kSkillCastTimeoutMs), skillRefId_);
   return Status::kNotDone;
 }

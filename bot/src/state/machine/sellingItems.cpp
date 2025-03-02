@@ -63,7 +63,7 @@ Status SellingItems::onUpdate(const event::Event *event) {
   }
   VLOG(1) << absl::StreamFormat("Sell item at slot %d (x%d)", currentSlot, quantity);
   const auto sellPacket = packet::building::ClientAgentInventoryOperationRequest::sellPacket(currentSlot, quantity, bot_.selfState()->talkingGidAndOption->first);
-  bot_.packetBroker().injectPacket(sellPacket, PacketContainer::Direction::kClientToServer);
+  bot_.packetBroker().injectPacket(sellPacket, PacketContainer::Direction::kBotToServer);
   waitingOnASell_ = true;
   return Status::kNotDone;
 }

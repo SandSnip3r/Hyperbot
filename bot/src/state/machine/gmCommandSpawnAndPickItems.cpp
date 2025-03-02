@@ -141,7 +141,7 @@ Status GmCommandSpawnAndPickItems::spawnNextItem() {
   const uint16_t countToSpawn = std::min<uint16_t>(bot_.gameData().itemData().getItemById(refId).maxStack, std::min<uint16_t>(255, items_.front().count - currentCount));
   const PacketContainer packet = packet::building::ClientAgentOperatorRequest::makeItem(refId, countToSpawn);
   CHAR_VLOG(1) << "Sending packet for GM command to spawn " << countToSpawn << " x " << bot_.gameData().getItemName(refId);
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
+  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
   requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(888));
   return Status::kNotDone;
 }

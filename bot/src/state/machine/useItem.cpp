@@ -139,7 +139,7 @@ Status UseItem::onUpdate(const event::Event *event) {
 
   // Use item
   const auto itemUsePacket = packet::building::ClientAgentInventoryItemUseRequest::packet(*inventoryIndex_, itemTypeId_);
-  bot_.packetBroker().injectPacket(itemUsePacket, PacketContainer::Direction::kClientToServer);
+  bot_.packetBroker().injectPacket(itemUsePacket, PacketContainer::Direction::kBotToServer);
 
   // Create a delayed event that will trigger if our item never gets used.
   // TODO: Rather than having event::ItemUseTimeout, we can just use the generic kTimeout event.

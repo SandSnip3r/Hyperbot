@@ -25,6 +25,4 @@
 - Reimplement some version of pathfinding in case a character disconnects while dead and ends up back in town
 - Send pings so that if the client crashes, the character does not disconnect
 - Stop passing around GameData and make it a global singleton. It is a constant set of data that lots of parts of the code need to access. There's no point in passing it around everywhere
-- PacketContainer::Direction::kBotToServer is no different from PacketContainer::Direction::kClientToServer, delete it
-- Remove any active buffs before announcing that we're ready for pvp
 - In the state machine which enables PVP, if it gets cancelled, start again

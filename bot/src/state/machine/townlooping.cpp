@@ -101,7 +101,7 @@ Status Townlooping::onUpdate(const event::Event *event) {
     } else if (const auto *resurrectOption = dynamic_cast<const event::ResurrectOption*>(event)) {
       // Got a resurrection option; whatever the option is, we'll do it.
       const auto packet = packet::building::ClientAgentCharacterResurrect::resurrect(resurrectOption->option);
-      bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
+      bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
       waitingForSpawn_ = true;
       return Status::kNotDone;
     }

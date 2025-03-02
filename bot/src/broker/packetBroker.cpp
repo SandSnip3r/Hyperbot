@@ -23,8 +23,8 @@ void PacketBroker::packetReceived(const PacketContainer &packet, PacketContainer
     //  Not handling this case, as it's usually to spoof something in the client
     return;
   }
-  
-  
+
+
   // Check if anybody is subscribed to this packet
   auto subscriptionIt = subscriptionMap->find(static_cast<packet::Opcode>(packet.opcode));
   if (subscriptionIt != subscriptionMap->end()) {
@@ -38,6 +38,11 @@ void PacketBroker::packetReceived(const PacketContainer &packet, PacketContainer
 }
 
 void PacketBroker::injectPacket(const PacketContainer &packet, const PacketContainer::Direction packetDirection) {
+  if (packetDirection != PacketContainer::Direction::kBotToClient &&
+      packetDirection != PacketContainer::Direction::kBotToServer) {
+    // For injection, caller must use "BotToX" directions.
+    throw std::runtime_error("PacketBroker::injectPacket called with invalid direction (make sure to use kBotToClient or kBotToServer)");
+  }
   injectionFunction_(packet, packetDirection);
 }
 

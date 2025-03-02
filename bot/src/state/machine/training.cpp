@@ -468,7 +468,7 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
     }
     if (targetEntity->globalId != bot_.selfState()->globalId && (!bot_.selfState()->selectedEntity || *bot_.selfState()->selectedEntity != targetEntity->globalId)) {
       const auto selectPacket = packet::building::ClientAgentActionSelectRequest::packet(targetEntity->globalId);
-      bot_.packetBroker().injectPacket(selectPacket, PacketContainer::Direction::kClientToServer);
+      bot_.packetBroker().injectPacket(selectPacket, PacketContainer::Direction::kBotToServer);
     }
     possiblyOverwriteChildStateMachine(castSkillBuilder.create());
   }

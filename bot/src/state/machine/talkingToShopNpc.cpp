@@ -207,7 +207,7 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
 
     // Close the shop
     const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(bot_.selfState()->talkingGidAndOption->first);
-    bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
+    bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
     waitingOnStopTalkResponse_ = true;
     return Status::kNotDone;
   } else {
@@ -231,7 +231,7 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
 
         // Delect the npc
         const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(*bot_.selfState()->selectedEntity);
-        bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
+        bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
         waitingOnDeselectionResponse_ = true;
         return Status::kNotDone;
       } else {
@@ -243,7 +243,7 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
 
         // Talk to npc
         const auto openStorage = packet::building::ClientAgentActionTalkRequest::packet(*bot_.selfState()->selectedEntity, packet::enums::TalkOption::kStore);
-        bot_.packetBroker().injectPacket(openStorage, PacketContainer::Direction::kClientToServer);
+        bot_.packetBroker().injectPacket(openStorage, PacketContainer::Direction::kBotToServer);
         waitingForTalkResponse_ = true;
       }
     } else {
@@ -261,7 +261,7 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
 
         // Repair
         const auto repairAllPacket = packet::building::ClientAgentInventoryRepairRequest::repairAllPacket(npcGid_);
-        bot_.packetBroker().injectPacket(repairAllPacket, PacketContainer::Direction::kClientToServer);
+        bot_.packetBroker().injectPacket(repairAllPacket, PacketContainer::Direction::kBotToServer);
         waitingForRepairResponse_ = true;
         return Status::kNotDone;
       } else if (waitingForRepairResponse_) {
@@ -277,7 +277,7 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
 
       // Select Npc
       const auto selectNpc = packet::building::ClientAgentActionSelectRequest::packet(npcGid_);
-      bot_.packetBroker().injectPacket(selectNpc, PacketContainer::Direction::kClientToServer);
+      bot_.packetBroker().injectPacket(selectNpc, PacketContainer::Direction::kBotToServer);
       waitingForSelectionResponse_ = true;
     }
   }

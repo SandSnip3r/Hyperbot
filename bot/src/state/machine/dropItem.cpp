@@ -55,7 +55,7 @@ Status DropItem::onUpdate(const event::Event *event) {
   }
 
   const auto packet = packet::building::ClientAgentInventoryOperationRequest::dropItem(inventorySlot_);
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
+  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
   waitingForItemToBeDropped_ = true;
   LOG(INFO) << "Send drop packet";
   return Status::kNotDone;

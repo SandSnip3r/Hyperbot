@@ -89,7 +89,7 @@ Status ApplyStatPoints::onUpdate(const event::Event *event) {
     VLOG(2) << "Applying a Str stat point. Have " << bot_.selfState()->getAvailableStatPoints() << " stat point(s)";
     packet = packet::building::ClientAgentCharacterIncreaseStrRequest::packet();
   }
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kClientToServer);
+  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
   timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(200));
   return Status::kNotDone;
 }
