@@ -15,6 +15,7 @@
 
 #include <absl/algorithm/container.h>
 #include <absl/container/flat_hash_set.h>
+#include <absl/flags/flag.h>
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
@@ -29,6 +30,17 @@ do {                                                                         \
     return;                                                                  \
   }                                                                          \
 } while (false)
+
+#define CHAR_LOG(severity) \
+  LOG(severity) << characterNameForLog() << " "
+
+#define CHAR_LOG_IF(severity, condition) \
+  LOG_IF(severity, condition) << characterNameForLog() << " "
+
+#define CHAR_VLOG(verbosity) \
+  VLOG(verbosity) << characterNameForLog() << " "
+
+ABSL_FLAG(bool, log_skills, false, "Log commands & skills");
 
 WrappedCommand::WrappedCommand(const packet::structures::ActionCommand &command, const pk2::GameData &gameData) : actionCommand(command), gameData_(gameData) {
 
@@ -1260,26 +1272,26 @@ void PacketProcessor::serverAgentGuildStorageDataReceived(const packet::parsing:
 }
 
 void PacketProcessor::clientAgentActionCommandRequestReceived(const packet::parsing::ClientAgentActionCommandRequest &packet) const {
-  VLOG(4) << "Client command action received: " << packet.actionCommand().toString();
+  CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Client command action received: " << packet.actionCommand().toString();
   selfEntity_->skillEngine.pendingCommandQueue.push_back(packet.actionCommand());
-  // printCommandQueues(); // COMMAND_QUEUE_DEBUG
+  printCommandQueues();
 }
 
 void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::parsing::ServerAgentActionCommandResponse &packet) const {
-  VLOG(4) << "Received command response. " << packet.actionState();
+  CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Received command response. " << packet.actionState();
 
   if (packet.actionState() == packet::enums::ActionState::kQueued) {
     if (selfEntity_->skillEngine.pendingCommandQueue.empty()) {
       throw std::runtime_error("Command queued, but pending command list is empty");
     }
-    VLOG(4) << "Command accepted: " << selfEntity_->skillEngine.pendingCommandQueue.front().toString();
+    CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Command accepted: " << selfEntity_->skillEngine.pendingCommandQueue.front().toString();
     selfEntity_->skillEngine.acceptedCommandQueue.emplace_back(selfEntity_->skillEngine.pendingCommandQueue.front());
     selfEntity_->skillEngine.pendingCommandQueue.erase(selfEntity_->skillEngine.pendingCommandQueue.begin());
     const auto &command = selfEntity_->skillEngine.acceptedCommandQueue.back();
     if (command.command.commandType == packet::enums::CommandType::kExecute &&
         command.command.actionType == packet::enums::ActionType::kCast) {
       const auto &skillData = gameData_.skillData().getSkillById(command.command.refSkillId);
-      VLOG(4) << "Queued command is to cast skill " << gameData_.getSkillName(command.command.refSkillId);
+      CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Queued command is to cast skill " << gameData_.getSkillName(command.command.refSkillId);
     }
   } else if (packet.actionState() == packet::enums::ActionState::kError) {
     // 16388 happens when the skill is on cooldown
@@ -1288,14 +1300,14 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     }
     // Error seems to always refer to the most recent
     const auto failedCommand = selfEntity_->skillEngine.pendingCommandQueue.front();
-    VLOG(4) << "Command error " << packet.errorCode() << ": " << wrapActionCommand(failedCommand);
+    CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Command error " << packet.errorCode() << ": " << wrapActionCommand(failedCommand);
     eventBroker_.publishEvent<event::CommandError>(selfEntity_->globalId, failedCommand);
     selfEntity_->skillEngine.pendingCommandQueue.erase(selfEntity_->skillEngine.pendingCommandQueue.begin());
   } else /*if (packet.actionState() == packet::enums::ActionState::kEnd)*/ {
     // It seems like if a skill is completed without interruption, this end will come after the SkillEnd packet
     // If a skill is interrupted, this end will come BEFORE the SkillEnd packet
     if (selfEntity_->skillEngine.acceptedCommandQueue.empty()) {
-      LOG(WARNING) << "Command ended, but we had no accepted command";
+      CHAR_LOG(WARNING) << "Command ended, but we had no accepted command";
       if (!selfEntity_->skillEngine.pendingCommandQueue.empty()) {
         VLOG(1) << " Pending command queue is not empty though, maybe we ought to pop that?";
         if (selfEntity_->skillEngine.pendingCommandQueue.front().commandType == packet::enums::CommandType::kCancel) {
@@ -1307,17 +1319,17 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     } else {
       // We arent told which command ended, we just assume it was the most recent
       const auto firstCommandIt = selfEntity_->skillEngine.acceptedCommandQueue.begin();
-      VLOG(4) << selfEntity_->name << " Command end: "  << firstCommandIt->command.toString();
+      CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << selfEntity_->name << " Command end: "  << firstCommandIt->command.toString();
       if (firstCommandIt->command.commandType == packet::enums::CommandType::kExecute &&
           firstCommandIt->command.actionType == packet::enums::ActionType::kCast &&
           !firstCommandIt->wasExecuted) {
-        VLOG(1) << "This command (skill " << gameData_.getSkillName(firstCommandIt->command.refSkillId) << ") was never executed!!";
+        VLOG(1) << "This command (skill " << gameData_.getSkillName(firstCommandIt->command.refSkillId) << "(" << firstCommandIt->command.refSkillId << ")) was never executed!!";
         eventBroker_.publishEvent<event::CommandError>(selfEntity_->globalId, firstCommandIt->command);
         // TODO: Maybe this should be a different event than "CommandError"?
       }
       if (firstCommandIt->command.commandType == packet::enums::CommandType::kExecute &&
           firstCommandIt->command.actionType == packet::enums::ActionType::kCast) {
-        VLOG(4) << "Skill " << gameData_.getSkillName(firstCommandIt->command.refSkillId) << " command ended";
+        CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Skill " << gameData_.getSkillName(firstCommandIt->command.refSkillId) << "(" << firstCommandIt->command.refSkillId << ") command ended";
       }
       if (firstCommandIt->command.commandType == packet::enums::CommandType::kExecute &&
           firstCommandIt->command.actionType == packet::enums::ActionType::kDispel) {
@@ -1327,7 +1339,7 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     }
   }
 
-  // printCommandQueues(); // COMMAND_QUEUE_DEBUG
+  printCommandQueues();
 }
 
 WrappedCommand PacketProcessor::wrapActionCommand(const packet::structures::ActionCommand &command) const {
@@ -1335,16 +1347,18 @@ WrappedCommand PacketProcessor::wrapActionCommand(const packet::structures::Acti
 }
 
 void PacketProcessor::printCommandQueues() const {
-  LOG(INFO) << "-----------------------------------------------------------";
-  LOG(INFO) << "Pending command Queue:" << (selfEntity_->skillEngine.pendingCommandQueue.empty() ? " <empty>" : "");
+  std::stringstream ss;
+  ss << "-----------------------------------------------------------\n";
+  ss << "Pending command Queue:" << (selfEntity_->skillEngine.pendingCommandQueue.empty() ? " <empty>" : "") << '\n';
   for (const auto &c : selfEntity_->skillEngine.pendingCommandQueue) {
-    LOG(INFO) << "  " << wrapActionCommand(c);
+    ss << "  " << wrapActionCommand(c) << '\n';
   }
-  LOG(INFO) << "Accepted command Queue:" << (selfEntity_->skillEngine.acceptedCommandQueue.empty() ? " <empty>" : "");
+  ss << "Accepted command Queue:" << (selfEntity_->skillEngine.acceptedCommandQueue.empty() ? " <empty>" : "") << '\n';
   for (const auto &c : selfEntity_->skillEngine.acceptedCommandQueue) {
-    LOG(INFO) << "  [" << (c.wasExecuted ? 'X' : ' ') << "] " << wrapActionCommand(c.command);
+    ss << "  [" << (c.wasExecuted ? 'X' : ' ') << "] " << wrapActionCommand(c.command) << '\n';
   }
-  LOG(INFO) << "-----------------------------------------------------------";
+  ss << "-----------------------------------------------------------";
+  CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << '\n' << ss.str();
 }
 
 // Skill Notes:
@@ -1458,7 +1472,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       }
       return gameData_.getSkillName(packet.refSkillId());
     }();
-    VLOG(4) << "SkillBegin \"" << skillName << "\" (" << packet.refSkillId() << ") with preparing time: " << skillData.actionPreparingTime << ", casting time: " << skillData.actionCastingTime << ", action duration: " << skillData.actionActionDuration << ", and reuse delay: " << skillData.actionReuseDelay;
+    CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "SkillBegin \"" << skillName << "\" (" << packet.refSkillId() << ") with preparing time: " << skillData.actionPreparingTime << ", casting time: " << skillData.actionCastingTime << ", action duration: " << skillData.actionActionDuration << ", and reuse delay: " << skillData.actionReuseDelay;
     // if (!isRootSkill) {
     //   LOG(INFO) << "  Skill " << packet.refSkillId() << "'s root is " << rootSkillRefId;
     // }
@@ -1490,7 +1504,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       // TODO: Common attacks will not be found, does that matter? That means that no skill cooldown will be created for one
       if (!indexOfOurSkill) {
         // TODO: Shouldn't happen now
-        LOG(INFO) << "Couldn't find our skill in the accepted command queue";
+        CHAR_LOG(WARNING) << "Couldn't find our skill in the accepted command queue";
         // This happens for common attacks
         if (skillIsCommonAttack && !(selfEntity_->skillEngine.acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute &&
                                      selfEntity_->skillEngine.acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kAttack)) {
@@ -1564,7 +1578,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
       // We cast this skill, save the cast ID so that we can reference it later on SkillEnd
       selfEntity_->skillEngine.skillCastIdMap.emplace(std::piecewise_construct, std::forward_as_tuple(packet.castId()), std::forward_as_tuple(packet.casterGlobalId(), packet.refSkillId()));
       if (selfEntity_->skillEngine.skillCastIdMap.size() > 1) {
-        LOG(INFO) << absl::StreamFormat("Skill casts tracked: [ %s ]", absl::StrJoin(selfEntity_->skillEngine.skillCastIdMap, ", ", [](std::string *out, const auto data){
+        CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << absl::StreamFormat("Skill casts tracked: [ %s ]", absl::StrJoin(selfEntity_->skillEngine.skillCastIdMap, ", ", [](std::string *out, const auto data){
           out->append(std::to_string(data.first));
         }));
       }
@@ -1612,7 +1626,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
 }
 
 void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerAgentSkillEnd &packet) const {
-  VLOG(4) << "***** Skill End *****";
+  CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "***** Skill End *****";
   // BEGIN DEBUGGING SkillBegin/SkillEnd
   {
     auto it = tracked_.find(packet.castId());
@@ -1640,7 +1654,7 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
     // Not successful?
     VLOG(1) << absl::StreamFormat("Result == %d, error: %d. Cast ID %d", packet.result(), packet.errorCode(), packet.castId());
     if (packet.errorCode() != 0) {
-      LOG(WARNING) << "Newly seen error code!";
+      CHAR_LOG(WARNING) << "Newly seen error code!";
     }
     auto skillCastIt = selfEntity_->skillEngine.skillCastIdMap.find(packet.castId());
     if (skillCastIt != selfEntity_->skillEngine.skillCastIdMap.end()) {
@@ -1649,7 +1663,7 @@ void PacketProcessor::serverAgentSkillEndReceived(const packet::parsing::ServerA
       VLOG(2) << "Deleting tracked cast";
       selfEntity_->skillEngine.skillCastIdMap.erase(skillCastIt);
     } else {
-      LOG(WARNING) << "Skill ended with error, but we didn't track the cast";
+      CHAR_LOG(WARNING) << "Skill ended with error, but we didn't track the cast";
     }
     return;
   }
@@ -1880,5 +1894,13 @@ void PacketProcessor::serverAgentFreePvpUpdateResponseReceived(const packet::par
 void PacketProcessor::serverAgentInventoryEquipCountdownStartReceived(const packet::parsing::ServerAgentInventoryEquipCountdownStart &packet) const {
   if (packet.globalId() == selfEntity_->globalId) {
     eventBroker_.publishEvent<event::EquipCountdownStart>(packet.globalId());
+  }
+}
+
+std::string PacketProcessor::characterNameForLog() const {
+  if (selfEntity_ == nullptr) {
+    return absl::StrFormat("[NOT_LOGGED_IN]");
+  } else {
+    return absl::StrFormat("[%s]", selfEntity_->name);
   }
 }

@@ -5,6 +5,8 @@
 #include <absl/log/globals.h>
 #include <absl/log/initialize.h>
 #include <absl/log/log.h>
+#include <absl/log/log_sink.h>
+#include <absl/log/log_sink_registry.h>
 #include <absl/strings/str_format.h>
 
 #include <charconv>
@@ -23,9 +25,34 @@ using namespace std;
 
 void initializeLogging();
 
+class ColorLogSink : public absl::LogSink {
+public:
+  void Send(const absl::LogEntry& entry) override {
+    constexpr string_view kRedEscapeCode{"\033[31m"};
+    constexpr string_view kYellowEscapeCode{"\033[33m"};
+    constexpr string_view kResetEscapeCode{"\033[0m"};
+    if (entry.log_severity() == absl::LogSeverity::kError) {
+      cerr << kRedEscapeCode << entry.text_message_with_prefix() << kResetEscapeCode << endl;
+    } else if (entry.log_severity() == absl::LogSeverity::kWarning) {
+      cerr << kYellowEscapeCode << entry.text_message_with_prefix() << kResetEscapeCode << endl;
+    } else {
+      cerr << entry.text_message_with_prefix_and_newline() << flush;
+    }
+  }
+};
+
 int main(int argc, char **argv) {
   absl::ParseCommandLine(argc, argv);
   initializeLogging();
+
+  cerr << "\033[30;42m" << R"(     __  __                      __          __  )" << "\033[0m\n";
+  cerr << "\033[30;42m" << R"(    / / / /_  ______  ___  _____/ /_  ____  / /_ )" << "\033[0m\n";
+  cerr << "\033[30;42m" << R"(   / /_/ / / / / __ \/ _ \/ ___/ __ \/ __ \/ __/ )" << "\033[0m\n";
+  cerr << "\033[30;42m" << R"(  / __  / /_/ / /_/ /  __/ /  / /_/ / /_/ / /_   )" << "\033[0m\n";
+  cerr << "\033[30;42m" << R"( /_/ /_/\__, / .___/\___/_/  /_.___/\____/\__/   )" << "\033[0m\n";
+  cerr << "\033[30;42m" << R"(       /____/_/                                  )" << "\033[0m\n";
+  cerr << flush;
+
   VLOG(1) << "Abseil logging initialized";
 
   try {
@@ -62,5 +89,8 @@ void initializeLogging() {
   }
 
   // Set everything to log to stderr.
-  absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
+  // absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
+
+  static ColorLogSink colorLogSink;
+  absl::AddLogSink(&colorLogSink);
 }

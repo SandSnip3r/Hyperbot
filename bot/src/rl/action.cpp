@@ -49,7 +49,7 @@ Status CancelAction::onUpdate(const event::Event *event) {
 
 Status TargetlessSkill::onUpdate(const event::Event *event) {
   if (!sentPacket_) {
-    CHAR_VLOG(1) << "Casting " << bot_.gameData().getSkillName(skillRefId_);
+    CHAR_VLOG(1) << "Casting " << bot_.gameData().getSkillName(skillRefId_) << "(" << skillRefId_ << ")";
     bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(skillRefId_), PacketContainer::Direction::kBotToServer);
     sentPacket_ = true;
   }
@@ -58,7 +58,7 @@ Status TargetlessSkill::onUpdate(const event::Event *event) {
 
 Status TargetedSkill::onUpdate(const event::Event *event) {
   if (!sentPacket_) {
-    CHAR_VLOG(1) << "Casting " << bot_.gameData().getSkillName(skillRefId_) << " on opponent";
+    CHAR_VLOG(1) << "Casting " << bot_.gameData().getSkillName(skillRefId_) << "(" << skillRefId_ << ") on opponent";
     bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::cast(skillRefId_, targetGlobalId_), PacketContainer::Direction::kBotToServer);
     sentPacket_ = true;
   }

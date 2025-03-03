@@ -518,7 +518,7 @@ void Self::usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milli
   }
 
   if (!cooldown) {
-    LOG(INFO) << "Used an item (" << type_id::toString(typeData) << "), but we don't know its cooldown time.";
+    LOG(WARNING) << "Used an item (" << type_id::toString(typeData) << "), but we don't know its cooldown time.";
     return;
   }
 

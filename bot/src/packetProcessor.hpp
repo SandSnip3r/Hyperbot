@@ -188,6 +188,7 @@ private:
   std::optional<std::chrono::milliseconds> getItemCooldownMs(const storage::ItemExpendable &item) const;
   WrappedCommand wrapActionCommand(const packet::structures::ActionCommand &command) const;
   void printCommandQueues() const;
+  std::string characterNameForLog() const;
 };
 
 #endif // PACKET_PROCESSOR_HPP_
