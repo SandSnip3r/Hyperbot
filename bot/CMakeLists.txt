@@ -437,6 +437,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   silkroad_lib
   absl::flags
   absl::flags_parse
+  Tracy::TracyClient
 )
 
 # ==============================================================================

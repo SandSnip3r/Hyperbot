@@ -11,6 +11,8 @@
 #include <silkroad_lib/position.hpp>
 #include <silkroad_lib/position_math.hpp>
 
+#include <tracy/Tracy.hpp>
+
 #include <absl/algorithm/container.h>
 #include <absl/container/flat_hash_set.h>
 #include <absl/log/log.h>
@@ -178,6 +180,7 @@ void PacketProcessor::subscribeToPackets() {
 }
 
 void PacketProcessor::handlePacket(const PacketContainer &packet) {
+  ZoneScopedN("PacketProcessor::handlePacket");
   {
     // Do a quick check to see if any packets are coming while Self is despawned.
     static const absl::flat_hash_set<packet::Opcode> expectedOpcodes = {

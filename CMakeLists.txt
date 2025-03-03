@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 option(USE_ASAN "Enable AddressSanitizer" OFF)
+option(TRACY_ENABLE "Enable Tracy Profiler" OFF)
 
 if(USE_ASAN)
   add_compile_options(-fsanitize=address)

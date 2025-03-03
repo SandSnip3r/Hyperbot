@@ -28,6 +28,8 @@
 #include <silkroad_lib/game_constants.hpp>
 #include <silkroad_lib/position_math.hpp>
 
+#include <tracy/Tracy.hpp>
+
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
@@ -109,6 +111,7 @@ void Bot::subscribeToEvents() {
 }
 
 void Bot::handleEvent(const event::Event *event) {
+  ZoneScopedN("Bot::handleEvent");
   std::unique_lock<std::mutex> worldStateLock(worldState_.mutex);
   try {
     // Do special handling for specific events before calling onUpdate.
