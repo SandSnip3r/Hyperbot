@@ -7,6 +7,7 @@
 #include "common/itemRequirement.hpp"
 #include "pk2/gameData.hpp"
 #include "rl/intelligencePool.hpp"
+#include "rl/observation.hpp"
 #include "session.hpp"
 #include "common/sessionId.hpp"
 #include "state/worldState.hpp"
@@ -29,6 +30,7 @@ public:
   void run();
 
   void onUpdate(const event::Event *event);
+  void reportObservationAndAction(sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, int actionIndex);
 private:
   static constexpr float kPvpStartingCenterOffset{40.0f};
   const pk2::GameData &gameData_;
@@ -37,7 +39,7 @@ private:
   ClientManagerInterface &clientManagerInterface_;
   std::vector<std::unique_ptr<Session>> sessions_;
   std::vector<SessionId> sessionsReadyForAssignment_;
-  IntelligencePool intelligencePool_;
+  IntelligencePool intelligencePool_{*this};
 
   void setUpIntelligencePool();
 
@@ -50,6 +52,22 @@ private:
 
   void buildItemRequirementList();
   std::vector<common::ItemRequirement> itemRequirements_;
+
+  struct ReplayBufferEntry {
+    Observation observation;
+    int actionIndex;
+    double reward;
+    Observation nextObservation;
+  };
+
+  struct LastObservationAndAction {
+    Observation observation;
+    int actionIndex;
+  };
+
+  std::vector<ReplayBufferEntry> replayBuffer_;
+  std::map<sro::scalar_types::EntityGlobalId, LastObservationAndAction> lastObservationMap_;
+  double calculateReward(const Observation &lastObservation, const Observation &observation) const;
 };
 
 } // namespace rl

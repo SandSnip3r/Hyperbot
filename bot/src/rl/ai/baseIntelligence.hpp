@@ -2,6 +2,7 @@
 #define RL_AI_BASE_INTELLIGENCE_HPP_
 
 #include "rl/action.hpp"
+#include "rl/observation.hpp"
 
 #include <silkroad_lib/scalar_types.hpp>
 
@@ -13,13 +14,24 @@ struct Event;
 
 class Bot;
 
-namespace rl::ai {
+namespace rl {
+
+class TrainingManager;
+
+namespace ai {
 
 class BaseIntelligence {
 public:
-virtual std::unique_ptr<Action> selectAction(Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId) = 0;
+  BaseIntelligence(TrainingManager &trainingManager) : trainingManager_(trainingManager) {}
+  virtual std::unique_ptr<Action> selectAction(Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId) = 0;
+protected:
+  Observation buildObservation(const Bot &bot, const event::Event *event, sro::scalar_types::ReferenceObjectId opponentGlobalId) const;
+  void reportObservationAndAction(sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, int actionIndex);
+private:
+  TrainingManager &trainingManager_;
 };
 
-} // namespace rl::ai
+} // namespace ai
+} // namespace rl
 
 #endif // RL_AI_BASE_INTELLIGENCE_HPP_

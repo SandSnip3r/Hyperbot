@@ -6,13 +6,17 @@
 
 namespace rl {
 
+class TrainingManager;
+
 class IntelligencePool {
 public:
+  IntelligencePool(TrainingManager &trainingManager) : trainingManager_(trainingManager) {}
   ai::RandomIntelligence* getRandomIntelligence() {
     return &randomIntelligence_;
   }
 private:
-  ai::RandomIntelligence randomIntelligence_;
+  TrainingManager &trainingManager_;
+  ai::RandomIntelligence randomIntelligence_{trainingManager_};
 };
 
 } // namespace rl

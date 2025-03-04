@@ -24,6 +24,53 @@ TrainingManager::TrainingManager(const pk2::GameData &gameData,
   buildItemRequirementList();
 }
 
+void TrainingManager::run() {
+  setUpIntelligencePool();
+
+  auto eventHandleFunction = std::bind(&TrainingManager::onUpdate, this, std::placeholders::_1);
+  // Subscribe to events.
+  eventBroker_.subscribeToEvent(event::EventCode::kPvpManagerReadyForAssignment, eventHandleFunction);
+
+  createSessions();
+
+  // Block forever.
+  while (1) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  }
+}
+
+void TrainingManager::onUpdate(const event::Event *event) {
+  std::unique_lock worldStateLock(worldState_.mutex);
+
+  LOG(INFO) << "Received event " << event::toString(event->eventCode);
+  if (const auto *readyForAssignmentEvent = dynamic_cast<const event::PvpManagerReadyForAssignment*>(event); readyForAssignmentEvent != nullptr) {
+    sessionsReadyForAssignment_.push_back(readyForAssignmentEvent->sessionId);
+    LOG(INFO) << "Received PvpManagerReadyForAssignment. Now have " << sessionsReadyForAssignment_.size() << " sessions ready for assignment";
+    if (sessionsReadyForAssignment_.size() >= 2) {
+      createAndPublishPvpDescriptor();
+    }
+  }
+}
+
+void TrainingManager::reportObservationAndAction(sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, int actionIndex) {
+  auto it = lastObservationMap_.find(observerGlobalId);
+  if (it != lastObservationMap_.end()) {
+    // We have a previous observation.
+    const LastObservationAndAction &lastObservationAndAction = it->second;
+    const double reward = calculateReward(lastObservationAndAction.observation, observation);
+    // We want to store S,A,R,S' in a replay buffer.
+    replayBuffer_.push_back({lastObservationAndAction.observation, lastObservationAndAction.actionIndex, reward, observation});
+    // LOG(INFO) << "Received observation " << observation.toString() << " and action " << actionIndex;
+    // LOG(INFO) << "Previous observation " << lastObservationAndAction.observation.toString() << ". Reward: " << reward << ", replay buffer size: " << replayBuffer_.size();
+    if (replayBuffer_.size() % 1000 == 0) {
+      LOG(INFO) << "Replay buffer size: " << replayBuffer_.size();
+    }
+  } else {
+    LOG(INFO) << "Received first observation";
+  }
+  lastObservationMap_[observerGlobalId] = LastObservationAndAction{observation, actionIndex};
+}
+
 void TrainingManager::setUpIntelligencePool() {
 
 }
@@ -60,34 +107,6 @@ void TrainingManager::createSessions() {
 
   bot1.asyncStandbyForPvp();
   bot2.asyncStandbyForPvp();
-}
-
-void TrainingManager::run() {
-  setUpIntelligencePool();
-
-  auto eventHandleFunction = std::bind(&TrainingManager::onUpdate, this, std::placeholders::_1);
-  // Subscribe to events.
-  eventBroker_.subscribeToEvent(event::EventCode::kPvpManagerReadyForAssignment, eventHandleFunction);
-
-  createSessions();
-
-  // Block forever.
-  while (1) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  }
-}
-
-void TrainingManager::onUpdate(const event::Event *event) {
-  std::unique_lock worldStateLock(worldState_.mutex);
-
-  LOG(INFO) << "Received event " << event::toString(event->eventCode);
-  if (const auto *readyForAssignmentEvent = dynamic_cast<const event::PvpManagerReadyForAssignment*>(event); readyForAssignmentEvent != nullptr) {
-    sessionsReadyForAssignment_.push_back(readyForAssignmentEvent->sessionId);
-    LOG(INFO) << "Received PvpManagerReadyForAssignment. Now have " << sessionsReadyForAssignment_.size() << " sessions ready for assignment";
-    if (sessionsReadyForAssignment_.size() >= 2) {
-      createAndPublishPvpDescriptor();
-    }
-  }
 }
 
 common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Session &char2) {
@@ -162,6 +181,15 @@ void TrainingManager::buildItemRequirementList() {
   itemRequirements_.push_back({smallHpPotionRefId, kSmallHpPotionRequiredCount});
   itemRequirements_.push_back({smallMpPotionRefId, kSmallMpPotionRequiredCount});
   itemRequirements_.push_back({mediumUniversalPillRefId, kMediumUniversalPillRequiredCount});
+}
+
+double TrainingManager::calculateReward(const Observation &lastObservation, const Observation &observation) const {
+  double reward = 0.0;
+  // We get some positive reward proportional to how much our health increased, negative if it decreased.
+  reward += (static_cast<int64_t>(observation.ourHp_) - lastObservation.ourHp_) / 2660.0;
+  // We get some positive reward proportional to how much our opponent's health decreased, negative if it increased.
+  reward += (static_cast<int64_t>(lastObservation.opponentHp_) - observation.opponentHp_) / 2660.0;
+  return reward;
 }
 
 } // namespace rl

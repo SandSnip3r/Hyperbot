@@ -308,12 +308,16 @@ add_executable(${PROJECT_NAME}
   src/proxy.hpp
   src/rl/action.cpp
   src/rl/action.hpp
+  src/rl/actionBuilder.cpp
+  src/rl/actionBuilder.hpp
   src/rl/ai/baseIntelligence.cpp
   src/rl/ai/baseIntelligence.hpp
   src/rl/ai/randomIntelligence.cpp
   src/rl/ai/randomIntelligence.hpp
   src/rl/intelligencePool.cpp
   src/rl/intelligencePool.hpp
+  src/rl/observation.cpp
+  src/rl/observation.hpp
   src/rl/trainingManager.cpp
   src/rl/trainingManager.hpp
   src/session.cpp
