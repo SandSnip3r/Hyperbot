@@ -1,5 +1,7 @@
 #include "eventBroker.hpp"
 
+#include <tracy/Tracy.hpp>
+
 #include <absl/log/log.h>
 
 #include <algorithm>
@@ -137,6 +139,7 @@ TimerManager::TimerId EventBroker::registerTimer(TimerEndTimePoint endTime, std:
 }
 
 void EventBroker::notifySubscribers(std::unique_ptr<event::Event> event) {
+  ZoneScopedN("EventBroker::notifySubscribers");
   // For each subscription pass the event to the EventHandleFunction
   std::vector<EventSubscription*> subscribersToNotify;
   {

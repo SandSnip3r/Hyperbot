@@ -112,7 +112,12 @@ void Bot::subscribeToEvents() {
 
 void Bot::handleEvent(const event::Event *event) {
   ZoneScopedN("Bot::handleEvent");
-  std::unique_lock<std::mutex> worldStateLock(worldState_.mutex);
+  if (event->eventCode == event::EventCode::kInternalItemCooldownEnded ||
+      event->eventCode == event::EventCode::kInternalSkillCooldownEnded) {
+    // We have no business handling "internal" events.
+    return;
+  }
+  std::unique_lock worldStateLock(worldState_.mutex);
   try {
     // Do special handling for specific events before calling onUpdate.
     const auto eventCode = event->eventCode;

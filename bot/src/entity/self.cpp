@@ -303,7 +303,7 @@ void Self::setCurrentMp(uint32_t mp) {
   currentMp_ = mp;
   if (changed) {
     if (eventBroker_) {
-      eventBroker_->publishEvent(event::EventCode::kMpChanged);
+      eventBroker_->publishEvent<event::EntityMpChanged>(globalId);
     } else {
       LOG(WARNING) << "Trying to publish kMpChanged, but don't have event broker";
     }
@@ -396,9 +396,9 @@ void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &state
   }
   // TODO: Only send this event if the states actually changed
   if (eventBroker_) {
-    eventBroker_->publishEvent(event::EventCode::kStatesChanged);
+    eventBroker_->publishEvent<event::EntityStatesChanged>(globalId);
   } else {
-    LOG(WARNING) << "Trying to publish kStatesChanged, but don't have event broker";
+    LOG(WARNING) << "Trying to publish event::EntityStatesChanged, but don't have event broker";
   }
 }
 

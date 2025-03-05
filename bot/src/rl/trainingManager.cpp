@@ -53,22 +53,22 @@ void TrainingManager::onUpdate(const event::Event *event) {
 }
 
 void TrainingManager::reportObservationAndAction(sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, int actionIndex) {
-  auto it = lastObservationMap_.find(observerGlobalId);
-  if (it != lastObservationMap_.end()) {
-    // We have a previous observation.
-    const LastObservationAndAction &lastObservationAndAction = it->second;
-    const double reward = calculateReward(lastObservationAndAction.observation, observation);
-    // We want to store S,A,R,S' in a replay buffer.
-    replayBuffer_.push_back({lastObservationAndAction.observation, lastObservationAndAction.actionIndex, reward, observation});
-    // LOG(INFO) << "Received observation " << observation.toString() << " and action " << actionIndex;
-    // LOG(INFO) << "Previous observation " << lastObservationAndAction.observation.toString() << ". Reward: " << reward << ", replay buffer size: " << replayBuffer_.size();
-    if (replayBuffer_.size() % 1000 == 0) {
-      LOG(INFO) << "Replay buffer size: " << replayBuffer_.size();
-    }
-  } else {
-    LOG(INFO) << "Received first observation";
-  }
-  lastObservationMap_[observerGlobalId] = LastObservationAndAction{observation, actionIndex};
+  // auto it = lastObservationMap_.find(observerGlobalId);
+  // if (it != lastObservationMap_.end()) {
+  //   // We have a previous observation.
+  //   const LastObservationAndAction &lastObservationAndAction = it->second;
+  //   const double reward = calculateReward(lastObservationAndAction.observation, observation);
+  //   // We want to store S,A,R,S' in a replay buffer.
+  //   replayBuffer_.push_back({lastObservationAndAction.observation, lastObservationAndAction.actionIndex, reward, observation});
+  //   // LOG(INFO) << "Received observation " << observation.toString() << " and action " << actionIndex;
+  //   // LOG(INFO) << "Previous observation " << lastObservationAndAction.observation.toString() << ". Reward: " << reward << ", replay buffer size: " << replayBuffer_.size();
+  //   if (replayBuffer_.size() % 1000 == 0) {
+  //     LOG(INFO) << "Replay buffer size: " << replayBuffer_.size();
+  //   }
+  // } else {
+  //   LOG(INFO) << "Received first observation";
+  // }
+  // lastObservationMap_[observerGlobalId] = LastObservationAndAction{observation, actionIndex};
 }
 
 void TrainingManager::setUpIntelligencePool() {

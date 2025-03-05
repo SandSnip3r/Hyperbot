@@ -80,39 +80,39 @@ void UserInterface::broadcastLaunch() {
 }
 
 void UserInterface::subscribeToEvents() {
-  auto eventHandleFunction = std::bind(&UserInterface::handleEvent, this, std::placeholders::_1);
+  // auto eventHandleFunction = std::bind(&UserInterface::handleEvent, this, std::placeholders::_1);
 
-  eventBroker_.subscribeToEvent(event::EventCode::kSelfSpawned, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCosSpawned, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntitySpawned, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityDespawned, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityLifeStateChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityHpChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kMpChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kInventoryGoldUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStorageGoldUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageGoldUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCharacterLevelUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCharacterSkillPointsUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCharacterExperienceUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaSet, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaReset, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStateMachineCreated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStateMachineDestroyed, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementBegan, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementEnded, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityPositionUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kEntityNotMovingAngleChanged, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStorageInitialized, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageInitialized, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kAvatarInventoryUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kCosInventoryUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageUpdated, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kWalkingPathUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kSelfSpawned, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kCosSpawned, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntitySpawned, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityDespawned, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityLifeStateChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEnteredNewRegion, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityHpChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityMpChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kMaxHpMpChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kInventoryGoldUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kStorageGoldUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageGoldUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kCharacterLevelUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kCharacterSkillPointsUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kCharacterExperienceUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaSet, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kTrainingAreaReset, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kStateMachineCreated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kStateMachineDestroyed, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementBegan, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityMovementEnded, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityPositionUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kEntityNotMovingAngleChanged, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kStorageInitialized, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageInitialized, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kInventoryUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kAvatarInventoryUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kCosInventoryUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kStorageUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kGuildStorageUpdated, eventHandleFunction);
+  // eventBroker_.subscribeToEvent(event::EventCode::kWalkingPathUpdated, eventHandleFunction);
 }
 
 void UserInterface::handleEvent(const event::Event *event) {/*

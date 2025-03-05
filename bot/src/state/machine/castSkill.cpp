@@ -238,20 +238,22 @@ Status CastSkill::onUpdate(const event::Event *event) {
             }
           }
         }
-      } else if (const auto *skillFailedEvent = dynamic_cast<const event::OurSkillFailed*>(event)) {
+      } else if (const auto *skillFailedEvent = dynamic_cast<const event::SkillFailed*>(event)) {
         VLOG(2) << "Skill failed";
-        if (skillFailedEvent->skillRefId == skillRefId_) {
-          // Our skill failed to cast
-          expectingSkillCommandFailure_ = true;
-          if (!skillCastTimeoutEventId_) {
-            throw std::runtime_error("Failed to cast skill, but didn't have a timeout running for it");
-          }
-          bot_.eventBroker().cancelDelayedEvent(*skillCastTimeoutEventId_);
-          skillCastTimeoutEventId_.reset();
-          if (waitingForSkillToEnd_) {
-            // Weird, skill started, but failed
-            //  TODO: not sure if this is possible.
-            waitingForSkillToEnd_ = false;
+        if (skillFailedEvent->casterGlobalId == bot_.selfState()->globalId) {
+          if (skillFailedEvent->skillRefId == skillRefId_) {
+            // Our skill failed to cast
+            expectingSkillCommandFailure_ = true;
+            if (!skillCastTimeoutEventId_) {
+              throw std::runtime_error("Failed to cast skill, but didn't have a timeout running for it");
+            }
+            bot_.eventBroker().cancelDelayedEvent(*skillCastTimeoutEventId_);
+            skillCastTimeoutEventId_.reset();
+            if (waitingForSkillToEnd_) {
+              // Weird, skill started, but failed
+              //  TODO: not sure if this is possible.
+              waitingForSkillToEnd_ = false;
+            }
           }
         }
       } else if (event->eventCode == event::EventCode::kKnockedBack || event->eventCode == event::EventCode::kKnockedDown) {

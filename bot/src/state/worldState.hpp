@@ -10,6 +10,8 @@
 
 #include <silkroad_lib/scalar_types.hpp>
 
+#include <tracy/Tracy.hpp>
+
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -37,7 +39,7 @@ public:
     return entityTracker_.getEntity<EntityType>(globalId);
   }
 
-  std::mutex mutex;
+  TracyLockableN(std::mutex, mutex, "WorldState::mutex");
   std::optional<packet::parsing::ServerGatewayShardListResponse> shardListResponse_;
 private:
   const pk2::GameData &gameData_;

@@ -21,10 +21,10 @@
   F(InternalItemCooldownEnded) \
   F(ItemCooldownEnded) \
   F(EntityHpChanged) \
-  F(MpChanged) \
+  F(EntityMpChanged) \
   F(MaxHpMpChanged) \
   F(StatsChanged) \
-  F(StatesChanged) \
+  F(EntityStatesChanged) \
   F(InternalSkillCooldownEnded) \
   F(SkillCooldownEnded) \
   F(InventoryUpdated) \
@@ -65,10 +65,11 @@
   F(SkillEnded) \
   F(DealtDamage) \
   F(KilledEntity) \
-  F(OurSkillFailed) \
+  F(SkillFailed) \
   F(PlayerCharacterBuffAdded) \
   F(PlayerCharacterBuffRemoved) \
   F(CommandError) \
+  F(CommandSkipped) \
   F(SkillCastTimeout) \
   F(EntityMovementBegan) \
   F(StateMachineActiveTooLong) \
@@ -423,12 +424,13 @@ public:
   virtual ~KilledEntity() = default;
 };
 
-struct OurSkillFailed : public Event {
+struct SkillFailed : public Event {
 public:
-  OurSkillFailed(EventId id, sro::scalar_types::ReferenceSkillId skillId, uint16_t err);
+  SkillFailed(EventId id, sro::scalar_types::EntityGlobalId casterGlobalId, sro::scalar_types::ReferenceSkillId skillId, uint16_t err);
+  const sro::scalar_types::EntityGlobalId casterGlobalId;
   const sro::scalar_types::ReferenceSkillId skillRefId;
   const uint16_t errorCode;
-  virtual ~OurSkillFailed() = default;
+  virtual ~SkillFailed() = default;
 };
 
 struct EntityHpChanged : public Event {
@@ -436,6 +438,20 @@ public:
   EntityHpChanged(EventId id, sro::scalar_types::EntityGlobalId globalId);
   const sro::scalar_types::EntityGlobalId globalId;
   virtual ~EntityHpChanged() = default;
+};
+
+struct EntityMpChanged : public Event {
+public:
+  EntityMpChanged(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityMpChanged() = default;
+};
+
+struct EntityStatesChanged : public Event {
+public:
+  EntityStatesChanged(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~EntityStatesChanged() = default;
 };
 
 struct BuffAdded : public Event {
@@ -460,6 +476,14 @@ public:
   const sro::scalar_types::EntityGlobalId issuingGlobalId;
   const packet::structures::ActionCommand command;
   virtual ~CommandError() = default;
+};
+
+struct CommandSkipped : public Event {
+public:
+  CommandSkipped(EventId id, sro::scalar_types::EntityGlobalId issuingGlobalId, const packet::structures::ActionCommand &cmd);
+  const sro::scalar_types::EntityGlobalId issuingGlobalId;
+  const packet::structures::ActionCommand command;
+  virtual ~CommandSkipped() = default;
 };
 
 struct SkillCastTimeout : public Event {

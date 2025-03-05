@@ -128,11 +128,17 @@ DealtDamage::DealtDamage(EventId id, sro::scalar_types::EntityGlobalId sourceId,
 KilledEntity::KilledEntity(EventId id, sro::scalar_types::EntityGlobalId targetId) :
     Event(id, EventCode::kKilledEntity), targetId(targetId) {}
 
-OurSkillFailed::OurSkillFailed(EventId id, sro::scalar_types::ReferenceSkillId skillId, uint16_t err) :
-    Event(id, EventCode::kOurSkillFailed), skillRefId(skillId), errorCode(err) {}
+SkillFailed::SkillFailed(EventId id, sro::scalar_types::EntityGlobalId casterGlobalId, sro::scalar_types::ReferenceSkillId skillId, uint16_t err) :
+    Event(id, EventCode::kSkillFailed), casterGlobalId(casterGlobalId), skillRefId(skillId), errorCode(err) {}
 
 EntityHpChanged::EntityHpChanged(EventId id, sro::scalar_types::EntityGlobalId globalId) :
     Event(id, EventCode::kEntityHpChanged), globalId(globalId) {}
+
+EntityMpChanged::EntityMpChanged(EventId id, sro::scalar_types::EntityGlobalId globalId) :
+    Event(id, EventCode::kEntityMpChanged), globalId(globalId) {}
+
+EntityStatesChanged::EntityStatesChanged(EventId id, sro::scalar_types::EntityGlobalId globalId) :
+    Event(id, EventCode::kEntityStatesChanged), globalId(globalId) {}
 
 BuffAdded::BuffAdded(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceSkillId buffId) :
     Event(id, EventCode::kPlayerCharacterBuffAdded), entityGlobalId(entityId), buffRefId(buffId) {}
@@ -142,6 +148,9 @@ BuffRemoved::BuffRemoved(EventId id, sro::scalar_types::EntityGlobalId entityId,
 
 CommandError::CommandError(EventId id, sro::scalar_types::EntityGlobalId issuingGlobalId, const packet::structures::ActionCommand &cmd) :
     Event(id, EventCode::kCommandError), issuingGlobalId(issuingGlobalId), command(cmd) {}
+
+CommandSkipped::CommandSkipped(EventId id, sro::scalar_types::EntityGlobalId issuingGlobalId, const packet::structures::ActionCommand &cmd) :
+    Event(id, EventCode::kCommandSkipped), issuingGlobalId(issuingGlobalId), command(cmd) {}
 
 SkillCastTimeout::SkillCastTimeout(EventId id, sro::scalar_types::ReferenceObjectId skillId) :
     Event(id, EventCode::kSkillCastTimeout), skillId(skillId) {}
