@@ -15,6 +15,12 @@ endif()
 
 find_package(GTest REQUIRED)
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+  include_directories(${Python3_INCLUDE_DIRS})
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/pybind11/include)
+endif()
+
 add_subdirectory(bot)
 add_subdirectory(silkroad_lib)
 add_subdirectory(third_party)

@@ -257,7 +257,7 @@ Status PvpManager::startPvp(const event::Event *event) {
   } else {
     ourIntelligence = pvpDescriptor_->player2Intelligence;
   }
-  setChildStateMachine<state::machine::IntelligenceActor>(ourIntelligence, getOpponentGlobalId());
+  setChildStateMachine<state::machine::IntelligenceActor>(ourIntelligence, pvpDescriptor_->pvpId, getOpponentGlobalId());
   return childState_->onUpdate(event);
 }
 

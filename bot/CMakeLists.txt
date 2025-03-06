@@ -316,6 +316,8 @@ add_executable(${PROJECT_NAME}
   src/rl/ai/randomIntelligence.hpp
   src/rl/intelligencePool.cpp
   src/rl/intelligencePool.hpp
+  src/rl/jaxInterface.cpp
+  src/rl/jaxInterface.hpp
   src/rl/observation.cpp
   src/rl/observation.hpp
   src/rl/trainingManager.cpp
@@ -426,11 +428,18 @@ if (MSVC)
   )
 endif()
 
-
-
 target_include_directories(${PROJECT_NAME} PRIVATE
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/src"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/src"
+)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src")
+
+# This is for pybind.
+# Without it, we see a warning: "warning: ... declared with greater visibility than the type of its field"
+# https://pybind11.readthedocs.io/en/stable/faq.html#someclass-declared-with-greater-visibility-than-the-type-of-its-field-someclass-member-wattributes
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  CXX_VISIBILITY_PRESET hidden
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -442,6 +451,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   absl::flags
   absl::flags_parse
   Tracy::TracyClient
+  pybind11::embed
+  pybind11::module
 )
 
 # ==============================================================================

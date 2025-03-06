@@ -5,11 +5,13 @@
 #include "broker/eventBroker.hpp"
 #include "clientManagerInterface.hpp"
 #include "common/itemRequirement.hpp"
+#include "common/pvpDescriptor.hpp"
+#include "common/sessionId.hpp"
 #include "pk2/gameData.hpp"
 #include "rl/intelligencePool.hpp"
+#include "rl/jaxInterface.hpp"
 #include "rl/observation.hpp"
 #include "session.hpp"
-#include "common/sessionId.hpp"
 #include "state/worldState.hpp"
 
 #include <silkroad_lib/position.hpp>
@@ -30,7 +32,8 @@ public:
   void run();
 
   void onUpdate(const event::Event *event);
-  void reportObservationAndAction(sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, int actionIndex);
+  void reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, int actionIndex);
+
 private:
   static constexpr float kPvpStartingCenterOffset{40.0f};
   const pk2::GameData &gameData_;
@@ -39,11 +42,14 @@ private:
   ClientManagerInterface &clientManagerInterface_;
   std::vector<std::unique_ptr<Session>> sessions_;
   std::vector<SessionId> sessionsReadyForAssignment_;
+  common::PvpDescriptor::PvpId nextPvpId_{0};
   IntelligencePool intelligencePool_{*this};
+  JaxInterface jaxInterface_;
 
   void setUpIntelligencePool();
 
   void createSessions();
+  void train();
   common::PvpDescriptor buildPvpDescriptor(Session &char1, Session &char2);
   void createAndPublishPvpDescriptor();
   Session& getSession(SessionId sessionId);

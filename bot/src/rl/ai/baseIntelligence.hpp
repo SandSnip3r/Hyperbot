@@ -1,6 +1,7 @@
 #ifndef RL_AI_BASE_INTELLIGENCE_HPP_
 #define RL_AI_BASE_INTELLIGENCE_HPP_
 
+#include "common/pvpDescriptor.hpp"
 #include "rl/action.hpp"
 #include "rl/observation.hpp"
 
@@ -23,11 +24,11 @@ namespace ai {
 class BaseIntelligence {
 public:
   BaseIntelligence(TrainingManager &trainingManager) : trainingManager_(trainingManager) {}
-  virtual std::unique_ptr<Action> selectAction(Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId) = 0;
+  virtual std::unique_ptr<Action> selectAction(Bot &bot, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) = 0;
 protected:
   Observation buildObservation(const Bot &bot, const event::Event *event, sro::scalar_types::ReferenceObjectId opponentGlobalId) const;
-  void reportObservationAndAction(sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, int actionIndex);
-private:
+  void reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, int actionIndex);
+  private:
   TrainingManager &trainingManager_;
 };
 

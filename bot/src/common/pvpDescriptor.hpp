@@ -15,6 +15,8 @@ class BaseIntelligence;
 namespace common {
 
 struct PvpDescriptor {
+  using PvpId = uint64_t;
+  PvpId pvpId;
   sro::scalar_types::EntityGlobalId player1GlobalId;
   sro::scalar_types::EntityGlobalId player2GlobalId;
   sro::Position pvpPositionPlayer1;

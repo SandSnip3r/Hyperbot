@@ -4,7 +4,9 @@
 
 namespace rl::ai {
 
-std::unique_ptr<Action> RandomIntelligence::selectAction(Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId) {
+std::unique_ptr<Action> RandomIntelligence::selectAction(Bot &bot, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) {
+  Observation observation = buildObservation(bot, event, opponentGlobalId);
+
   int actionIndex;
   // Start with a high probability to do nothing/sleep.
   std::bernoulli_distribution sleepDist(0.85);
@@ -15,10 +17,7 @@ std::unique_ptr<Action> RandomIntelligence::selectAction(Bot &bot, const event::
     std::uniform_int_distribution<int> actionDist(0, ActionBuilder::actionSpaceSize()-1);
     actionIndex = actionDist(randomEngine_);
   }
-
-  Observation observation = buildObservation(bot, event, opponentGlobalId);
-  reportObservationAndAction(bot.selfState()->globalId, observation, actionIndex);
-
+  reportEventObservationAndAction(pvpId, bot.selfState()->globalId, event, observation, actionIndex);
   return ActionBuilder::buildAction(bot, event, opponentGlobalId, actionIndex);
 }
 

@@ -1,5 +1,7 @@
 #include "hyperbot.hpp"
 
+#include <pybind11/embed.h>
+
 #include <absl/flags/flag.h>
 #include <absl/flags/parse.h>
 #include <absl/log/globals.h>
@@ -10,6 +12,7 @@
 #include <absl/strings/str_format.h>
 
 #include <charconv>
+#include <csignal>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -54,6 +57,15 @@ int main(int argc, char **argv) {
   cerr << flush;
 
   VLOG(1) << "Abseil logging initialized";
+
+  pybind11::scoped_interpreter guard;
+  std::signal(SIGINT, SIG_DFL);
+
+  // Append the current source directory to sys.path so that we can later load any local python files. SOURCE_DIR is set from CMake.
+  pybind11::module sys = pybind11::module::import("sys");
+  const std::string sourceDir = std::string(SOURCE_DIR);
+  sys.attr("path").cast<pybind11::list>().append(sourceDir);
+  VLOG(1) << "Added \"" << sourceDir << "\" to python path";
 
   try {
     Hyperbot hyperbot;

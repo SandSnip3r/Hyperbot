@@ -9,7 +9,7 @@ namespace rl::ai {
 class RandomIntelligence : public BaseIntelligence {
 public:
   using BaseIntelligence::BaseIntelligence;
-  std::unique_ptr<Action> selectAction(Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId) override;
+  std::unique_ptr<Action> selectAction(Bot &bot, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) override;
 
 private:
   std::mt19937 randomEngine_{common::createRandomEngine()};

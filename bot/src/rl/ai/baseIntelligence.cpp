@@ -7,8 +7,8 @@ Observation BaseIntelligence::buildObservation(const Bot &bot, const event::Even
   return {bot, event, opponentGlobalId};
 }
 
-void BaseIntelligence::reportObservationAndAction(sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, int actionIndex) {
-  trainingManager_.reportObservationAndAction(observerGlobalId, observation, actionIndex);
+void BaseIntelligence::reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, int actionIndex) {
+  trainingManager_.reportEventObservationAndAction(pvpId, observerGlobalId, event, observation, actionIndex);
 }
 
 } // namespace rl::ai

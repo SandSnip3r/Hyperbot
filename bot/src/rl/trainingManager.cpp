@@ -33,9 +33,20 @@ void TrainingManager::run() {
 
   createSessions();
 
-  // Block forever.
+  train();
+}
+
+void TrainingManager::train() {
+  // Wait until we have enough samples to start training.
+  // while (1) {
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  // }
+  // We now have enough samples to start training.
+  // Train at full speed in a tight loop.
   while (1) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    // Get a S,A,R,S' tuple from the replay buffer.
+    jaxInterface_.train();
+    // jaxInterface_.train(previousObservation, action, reward, currentObservation);
   }
 }
 
@@ -52,24 +63,28 @@ void TrainingManager::onUpdate(const event::Event *event) {
   }
 }
 
-void TrainingManager::reportObservationAndAction(sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, int actionIndex) {
-  // auto it = lastObservationMap_.find(observerGlobalId);
-  // if (it != lastObservationMap_.end()) {
-  //   // We have a previous observation.
-  //   const LastObservationAndAction &lastObservationAndAction = it->second;
-  //   const double reward = calculateReward(lastObservationAndAction.observation, observation);
-  //   // We want to store S,A,R,S' in a replay buffer.
-  //   replayBuffer_.push_back({lastObservationAndAction.observation, lastObservationAndAction.actionIndex, reward, observation});
-  //   // LOG(INFO) << "Received observation " << observation.toString() << " and action " << actionIndex;
-  //   // LOG(INFO) << "Previous observation " << lastObservationAndAction.observation.toString() << ". Reward: " << reward << ", replay buffer size: " << replayBuffer_.size();
-  //   if (replayBuffer_.size() % 1000 == 0) {
-  //     LOG(INFO) << "Replay buffer size: " << replayBuffer_.size();
-  //   }
-  // } else {
-  //   LOG(INFO) << "Received first observation";
-  // }
-  // lastObservationMap_[observerGlobalId] = LastObservationAndAction{observation, actionIndex};
+void TrainingManager::reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, int actionIndex) {
+  LOG(INFO) << "[PVP #" << pvpId << "] Given event " << event::toString(event->eventCode) << " and observation " << observation.toString() << " for observer " << observerGlobalId << " and action " << actionIndex;
 }
+
+// void TrainingManager::reportObservationAndAction(sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, int actionIndex) {
+//   auto it = lastObservationMap_.find(observerGlobalId);
+//   if (it != lastObservationMap_.end()) {
+//     // We have a previous observation.
+//     const LastObservationAndAction &lastObservationAndAction = it->second;
+//     const double reward = calculateReward(lastObservationAndAction.observation, observation);
+//     // We want to store S,A,R,S' in a replay buffer.
+//     replayBuffer_.push_back({lastObservationAndAction.observation, lastObservationAndAction.actionIndex, reward, observation});
+//     // LOG(INFO) << "Received observation " << observation.toString() << " and action " << actionIndex;
+//     // LOG(INFO) << "Previous observation " << lastObservationAndAction.observation.toString() << ". Reward: " << reward << ", replay buffer size: " << replayBuffer_.size();
+//     if (replayBuffer_.size() % 1000 == 0) {
+//       LOG(INFO) << "Replay buffer size: " << replayBuffer_.size();
+//     }
+//   } else {
+//     LOG(INFO) << "Received first observation";
+//   }
+//   lastObservationMap_[observerGlobalId] = LastObservationAndAction{observation, actionIndex};
+// }
 
 void TrainingManager::setUpIntelligencePool() {
 
@@ -111,6 +126,7 @@ void TrainingManager::createSessions() {
 
 common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Session &char2) {
   common::PvpDescriptor pvpDescriptor;
+  pvpDescriptor.pvpId = nextPvpId_++;
   pvpDescriptor.player1GlobalId = char1.getBot().selfState()->globalId;
   pvpDescriptor.player2GlobalId = char2.getBot().selfState()->globalId;
 
