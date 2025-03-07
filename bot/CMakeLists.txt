@@ -451,9 +451,14 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   absl::flags
   absl::flags_parse
   Tracy::TracyClient
-  pybind11::embed
-  pybind11::module
 )
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    pybind11::embed
+    pybind11::module
+  )
+endif()
 
 # ==============================================================================
 # =================================== Tests ====================================
