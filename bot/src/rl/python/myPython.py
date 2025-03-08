@@ -3,7 +3,7 @@ import jax
 import jax.numpy as jnp
 
 class MyModel(nnx.Module):
-  def __init__(self, inSize: int, outSize: int, *, rngs: nnx.Rngs):
+  def __init__(self, inSize: int, outSize: int, rngs: nnx.Rngs):
     intermediateSize = 64
     key = rngs.params()
     self.linear1 = nnx.Linear(inSize, intermediateSize, rngs=rngs)
@@ -18,7 +18,7 @@ class MyModel(nnx.Module):
 def func(number):
   print(f'Hyperbot\'s first call into Python!!! Passed argument: {number}')
 
-def selectAction(observation, key):
-  # Return a random number in the range [0,37]
-  print(f'Given observation: "{observation}"')
-  return jax.random.randint(key, (1,), 0, 37)[0]
+@nnx.jit
+def selectAction(model, observation, key):
+  values = model(observation)
+  return jnp.argmax(values)

@@ -52,8 +52,9 @@ add_library(${PROJECT_NAME} STATIC
   ${PROJECT_SOURCES}
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC
+target_link_libraries(${PROJECT_NAME} PRIVATE
   Pathfinder
+  absl::str_format
 )
 
 # TODO: Make private

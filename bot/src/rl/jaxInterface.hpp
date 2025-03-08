@@ -20,6 +20,7 @@ private:
   static constexpr int kSeed{0};
   std::optional<pybind11::module> jaxModule_;
   std::optional<pybind11::module> randomModule_;
+  std::optional<pybind11::module> nnxModule_;
   std::optional<pybind11::object> rngKey_;
   std::optional<pybind11::object> nnxRngs_;
   std::optional<pybind11::object> modelGraph_;
