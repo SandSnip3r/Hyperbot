@@ -312,6 +312,8 @@ add_executable(${PROJECT_NAME}
   src/rl/actionBuilder.hpp
   src/rl/ai/baseIntelligence.cpp
   src/rl/ai/baseIntelligence.hpp
+  src/rl/ai/deepLearningIntelligence.cpp
+  src/rl/ai/deepLearningIntelligence.hpp
   src/rl/ai/randomIntelligence.cpp
   src/rl/ai/randomIntelligence.hpp
   src/rl/intelligencePool.cpp

@@ -11,7 +11,7 @@
 namespace state::machine {
 
 IntelligenceActor::IntelligenceActor(Bot &bot, rl::ai::BaseIntelligence *intelligence, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) : StateMachine(bot), intelligence_(intelligence), pvpId_(pvpId), opponentGlobalId_(opponentGlobalId) {
-  LOG(INFO) << "Instantiated intelligence actor!";
+  LOG(INFO) << "Instantiated " << intelligence->name() << " intelligence actor!";
 }
 
 IntelligenceActor::~IntelligenceActor() {

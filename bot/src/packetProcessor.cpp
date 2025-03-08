@@ -325,15 +325,67 @@ void PacketProcessor::serverGatewayPatchResponseReceived(const packet::parsing::
 
 void PacketProcessor::serverGatewayShardListResponseReceived(const packet::parsing::ServerGatewayShardListResponse &packet) {
   VLOG(1) << absl::StreamFormat("Shard list:\n%s", absl::StrJoin(packet.shards(), ",\n", [](std::string *out, const packet::structures::Shard &shard) {
-    absl::StrAppend(out, absl::StrFormat("  { ShardID: %d, FarmID: %d, Shard Name: \"%s\", Online: %d, Capacity: %d, Is Operating? %v }", shard.shardId, shard.farmId, shard.shardName, shard.onlineCount, shard.capacity, static_cast<bool>(shard.isOperating)));
+    absl::StrAppend(out, shard.toString());
   }));
   if (!worldState_.shardListResponse_.has_value()) {
     worldState_.shardListResponse_.emplace(packet);
   } else {
     // Shard list received again. Check that it matches what we already have.
-    if (worldState_.shardListResponse_->shards() != packet.shards()) {
+    auto validateShards = [](std::vector<packet::structures::Shard> shardsCurrent, std::vector<packet::structures::Shard> shardsNew) {
+      if (shardsCurrent.size() != shardsNew.size()) {
+        // We got a different number of shards, that is a problem.
+        return false;
+      }
+      // Sort both shard lists on shard ID, in case different packets send packets with shards in different orders.
+      std::sort(shardsCurrent.begin(), shardsCurrent.end(), [](const packet::structures::Shard &a, const packet::structures::Shard &b) {
+        return a.shardId < b.shardId;
+      });
+      std::sort(shardsNew.begin(), shardsNew.end(), [](const packet::structures::Shard &a, const packet::structures::Shard &b) {
+        return a.shardId < b.shardId;
+      });
+      // Now, compare shards elementwise.
+      for (size_t i = 0; i < shardsCurrent.size(); ++i) {
+        const packet::structures::Shard &currentShard = shardsCurrent[i];
+        const packet::structures::Shard &newShard = shardsNew[i];
+        if (currentShard.shardId != newShard.shardId) {
+          // Different shard ids is a problem.
+          return false;
+        }
+        if (currentShard.shardName != newShard.shardName) {
+          // Different shard name is a problem.
+          return false;
+        }
+        if (currentShard.capacity != newShard.capacity) {
+          // Different capacity is weird, we'll allow it for now.
+          LOG(WARNING) << absl::StreamFormat("Weird, we saved shard %s (%d) with capacity %d, but now it has capacity %d", currentShard.shardName, currentShard.shardId, currentShard.capacity, newShard.capacity);
+        }
+        if (currentShard.isOperating != newShard.isOperating) {
+          // Different operating status is a problem.
+          // TODO: If it goes from not operating to operating, we should probably be happy about that.
+          return false;
+        }
+        if (currentShard.farmId != newShard.farmId) {
+          // Not sure what farmId is, but we'll say that a difference is a problem.
+          return false;
+        }
+      }
+      return true;
+    };
+
+    const bool shardsAreSame = validateShards(worldState_.shardListResponse_->shards(), packet.shards());
+
+    if (!shardsAreSame) {
+      LOG(WARNING) << absl::StreamFormat("Current shard list:\n%s", absl::StrJoin(worldState_.shardListResponse_->shards(), ",\n", [](std::string *out, const packet::structures::Shard &shard) {
+        absl::StrAppend(out, shard.toString());
+      }));
+      LOG(WARNING) << absl::StreamFormat("New shard list:\n%s", absl::StrJoin(packet.shards(), ",\n", [](std::string *out, const packet::structures::Shard &shard) {
+        absl::StrAppend(out, shard.toString());
+      }));
       throw std::runtime_error("Received a different shard list than what we already have");
     }
+
+    // While we say the shards are the same, that's not entirely true. They might be the same shards, but the current online count might have changed. As long as the shards themselves didnt fundamentally change, we're fine. Overwrite with the new list.
+    worldState_.shardListResponse_.emplace(packet);
   }
   eventBroker_.publishEvent<event::ShardListReceived>(sessionId_, packet.shards());
 }

@@ -10,6 +10,7 @@ class RandomIntelligence : public BaseIntelligence {
 public:
   using BaseIntelligence::BaseIntelligence;
   std::unique_ptr<Action> selectAction(Bot &bot, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) override;
+  std::string_view name() const override { return "Random"; }
 
 private:
   std::mt19937 randomEngine_{common::createRandomEngine()};

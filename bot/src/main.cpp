@@ -59,6 +59,7 @@ int main(int argc, char **argv) {
   VLOG(1) << "Abseil logging initialized";
 
   pybind11::scoped_interpreter guard;
+  VLOG(1) << "Python interpreter instantiated";
   std::signal(SIGINT, SIG_DFL);
 
   // Append the current source directory to sys.path so that we can later load any local python files. SOURCE_DIR is set from CMake.
@@ -66,6 +67,17 @@ int main(int argc, char **argv) {
   const std::string sourceDir = std::string(SOURCE_DIR);
   sys.attr("path").cast<pybind11::list>().append(sourceDir);
   VLOG(1) << "Added \"" << sourceDir << "\" to python path";
+
+  VLOG(1) << "Warming up JAX";
+  // Warm-up JAX
+  pybind11::module jax = pybind11::module::import("jax");
+  // Force initialization by listing available devices.
+  pybind11::object devices = jax.attr("devices")();
+  // Optionally, log the devices.
+  VLOG(1) << "JAX devices: " << std::string(pybind11::str(devices));
+
+  pybind11::gil_scoped_release release;
+  VLOG(1) << "Python GIL released";
 
   try {
     Hyperbot hyperbot;
@@ -100,9 +112,9 @@ void initializeLogging() {
     }
   }
 
-  // Set everything to log to stderr.
-  // absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
-
   static ColorLogSink colorLogSink;
   absl::AddLogSink(&colorLogSink);
+
+  // Disable stderr logging, since we have installed our own log sink.
+  absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfinity);
 }

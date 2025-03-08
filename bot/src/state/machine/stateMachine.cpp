@@ -55,6 +55,9 @@ bool StateMachine::canMove() const {
 
 void StateMachine::setChildStateMachine(std::unique_ptr<StateMachine> &&newChildStateMachine) {
   childState_.reset();
+  if (newChildStateMachine == nullptr) {
+    throw std::runtime_error("Cannot set a nullptr child state machine");
+  }
   childState_ = std::move(newChildStateMachine);
 }
 

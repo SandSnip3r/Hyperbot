@@ -33,6 +33,7 @@ public:
 
   void onUpdate(const event::Event *event);
   void reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, int actionIndex);
+  JaxInterface& getJaxInterface() { return jaxInterface_; }
 
 private:
   static constexpr float kPvpStartingCenterOffset{40.0f};

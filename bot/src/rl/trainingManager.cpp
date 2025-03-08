@@ -31,6 +31,8 @@ void TrainingManager::run() {
   // Subscribe to events.
   eventBroker_.subscribeToEvent(event::EventCode::kPvpManagerReadyForAssignment, eventHandleFunction);
 
+  jaxInterface_.initialize();
+
   createSessions();
 
   train();
@@ -142,7 +144,7 @@ common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Sessio
   pvpDescriptor.itemRequirements = itemRequirements_;
 
   pvpDescriptor.player1Intelligence = intelligencePool_.getRandomIntelligence();
-  pvpDescriptor.player2Intelligence = intelligencePool_.getRandomIntelligence();
+  pvpDescriptor.player2Intelligence = intelligencePool_.getDeepLearningIntelligence();
 
   return pvpDescriptor;
 }
