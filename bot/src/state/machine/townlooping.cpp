@@ -14,7 +14,6 @@
 namespace state::machine {
 
 Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
-  stateMachineCreated(kName);
   buildBuffList();
   buildShoppingList();
   buildSellList();
@@ -45,9 +44,7 @@ Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
   }
 }
 
-Townlooping::~Townlooping() {
-  stateMachineDestroyed();
-}
+Townlooping::~Townlooping() {}
 
 Status Townlooping::onUpdate(const event::Event *event) {
   if (childState_) {

@@ -9,15 +9,12 @@
 namespace state::machine {
 
 DropItem::DropItem(Bot &bot, sro::scalar_types::StorageIndexType inventorySlot) : StateMachine(bot), inventorySlot_(inventorySlot) {
-  stateMachineCreated(kName);
   std::shared_ptr<entity::Self> selfEntity = bot_.selfState();
   const storage::Item *item = selfEntity->inventory.getItem(inventorySlot_);
   refId_ = item->refItemId;
 }
 
-DropItem::~DropItem() {
-  stateMachineDestroyed();
-}
+DropItem::~DropItem() {}
 
 Status DropItem::onUpdate(const event::Event *event) {
   // There are two relevant events:

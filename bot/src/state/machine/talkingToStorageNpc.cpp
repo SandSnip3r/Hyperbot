@@ -12,15 +12,12 @@
 namespace state::machine {
 
 TalkingToStorageNpc::TalkingToStorageNpc(Bot &bot) : StateMachine(bot) {
-  stateMachineCreated(kName);
   // We know we are near our npc, lets find the closest npc to us.
   // TODO: This won't always work. We don't need to get very close to an npc to talk to them, we could be closer to another npc.
   npcGid_ = bot_.getClosestNpcGlobalId();
 }
 
-TalkingToStorageNpc::~TalkingToStorageNpc() {
-  stateMachineDestroyed();
-}
+TalkingToStorageNpc::~TalkingToStorageNpc() {}
 
 Status TalkingToStorageNpc::onUpdate(const event::Event *event) {
   if (npcInteractionState_ == NpcInteractionState::kStart) {

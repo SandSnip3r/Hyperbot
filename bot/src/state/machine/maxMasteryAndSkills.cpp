@@ -16,15 +16,12 @@
 namespace state::machine {
 
 MaxMasteryAndSkills::MaxMasteryAndSkills(Bot &bot, sro::pk2::ref::MasteryId id) : StateMachine(bot), masteryId_(id) {
-  stateMachineCreated(kName);
   pushBlockedOpcode(packet::Opcode::kClientAgentSkillMasteryLearnRequest);
   pushBlockedOpcode(packet::Opcode::kClientAgentSkillLearnRequest);
   VLOG(1) << "MaxMasteryAndSkills created for mastery ID " << masteryId_;
 }
 
-MaxMasteryAndSkills::~MaxMasteryAndSkills() {
-  stateMachineDestroyed();
-}
+MaxMasteryAndSkills::~MaxMasteryAndSkills() {}
 
 Status MaxMasteryAndSkills::onUpdate(const event::Event *event) {
   std::shared_ptr<entity::Self> selfEntity = bot_.selfState();

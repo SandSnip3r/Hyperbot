@@ -16,7 +16,6 @@
 namespace state::machine {
 
 TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell) : StateMachine(bot), npc_(npc), shoppingList_(shoppingList), slotsToSell_(slotsToSell) {
-  stateMachineCreated(kName);
   // We know we are near our npc, lets find the closest npc to us.
   // TODO: This won't always work. We don't need to get very close to an npc to talk to them, we could be closer to another npc.
   npcGid_ = bot_.getClosestNpcGlobalId();
@@ -29,9 +28,7 @@ TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, i
   pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
 }
 
-TalkingToShopNpc::~TalkingToShopNpc() {
-  stateMachineDestroyed();
-}
+TalkingToShopNpc::~TalkingToShopNpc() {}
 
 void TalkingToShopNpc::figureOutWhatToBuy() {
   int remainingGold = bot_.selfState()->getGold();

@@ -18,16 +18,13 @@
 namespace state::machine {
 
 Alchemy::Alchemy(Bot &bot) : StateMachine(bot) {
-  stateMachineCreated(kName);
   // Prevent the human from moving anything
   pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
 
   initialize();
 }
 
-Alchemy::~Alchemy() {
-  stateMachineDestroyed();
-}
+Alchemy::~Alchemy() {}
 
 void Alchemy::initialize() {
   startPosition_ = bot_.selfState()->position();

@@ -15,13 +15,10 @@
 namespace state::machine {
 
 Login::Login(Bot &bot, const CharacterLoginInfo &characterLoginInfo) : StateMachine(bot), username_(characterLoginInfo.username), password_(characterLoginInfo.password), characterName_(characterLoginInfo.characterName) {
-  stateMachineCreated(kName);
   VLOG(1) << absl::StreamFormat("Constructed Login state machine for character %s", characterName_);
 }
 
-Login::~Login() {
-  stateMachineDestroyed();
-}
+Login::~Login() {}
 
 Status Login::onUpdate(const event::Event *event) {
   if (!initialized_) {

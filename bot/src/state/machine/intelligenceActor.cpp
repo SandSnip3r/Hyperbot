@@ -44,21 +44,4 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   return Status::kNotDone;
 }
 
-void IntelligenceActor::useItem(sro::pk2::ref::ItemId refId) {
-  // Find this item in our inventory.
-  for (int slot=0; slot<bot_.inventory().size(); ++slot) {
-    if (!bot_.inventory().hasItem(slot)) {
-      // No item here.
-      continue;
-    }
-    const storage::Item *item = bot_.inventory().getItem(slot);
-    if (item->refItemId == refId) {
-      // Use this item.
-      CHAR_VLOG(1) << "Sending packet to use item at slot " << slot;
-      bot_.packetBroker().injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slot, item->typeId()), PacketContainer::Direction::kBotToServer);
-      break;
-    }
-  }
-}
-
 } // namespace state::machine

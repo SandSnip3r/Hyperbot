@@ -1,7 +1,6 @@
 #ifndef STATE_MACHINE_INTELLIGENCE_ACTOR_HPP_
 #define STATE_MACHINE_INTELLIGENCE_ACTOR_HPP_
 
-#include "broker/eventBroker.hpp"
 #include "common/pvpDescriptor.hpp"
 #include "event/event.hpp"
 #include "rl/ai/baseIntelligence.hpp"
@@ -9,7 +8,6 @@
 
 #include <silkroad_lib/pk2/ref/item.hpp>
 
-#include <optional>
 #include <string>
 
 namespace state::machine {
@@ -24,9 +22,6 @@ private:
   rl::ai::BaseIntelligence *intelligence_;
   const common::PvpDescriptor::PvpId pvpId_;
   const sro::scalar_types::EntityGlobalId opponentGlobalId_;
-  std::optional<broker::EventBroker::EventId> sleepEventId_;
-
-  void useItem(sro::pk2::ref::ItemId refId);
 };
 
 } // namespace state::machine

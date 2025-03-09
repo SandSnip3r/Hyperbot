@@ -119,7 +119,6 @@ Training::Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeo
   if (bot_.config() == nullptr) {
     throw std::runtime_error("Cannot construct Training state machine if Bot does not have a config");
   }
-  stateMachineCreated(kName);
   getSkillsFromConfig();
 
   bot_.selfState()->setTrainingAreaGeometry(trainingAreaGeometry_->clone());
@@ -144,7 +143,6 @@ Training::~Training() {
       }
     }
   }
-  stateMachineDestroyed();
 }
 
 Status Training::onUpdate(const event::Event *event) {

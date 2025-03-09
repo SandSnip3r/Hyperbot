@@ -40,8 +40,6 @@ public:
 protected:
   Bot &bot_;
   void pushBlockedOpcode(packet::Opcode opcode);
-  void stateMachineCreated(const std::string &name);
-  void stateMachineDestroyed();
 
   std::string characterNameForLog() const;
 
@@ -56,7 +54,6 @@ protected:
   std::unique_ptr<StateMachine> childState_;
 private:
   std::vector<packet::Opcode> blockedOpcodes_;
-  // broker::EventBroker::EventId debugEventId_;
   std::optional<std::promise<void>> destructionPromise_;
 };
 

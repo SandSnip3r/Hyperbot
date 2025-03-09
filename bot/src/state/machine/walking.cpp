@@ -9,9 +9,7 @@
 
 namespace state::machine {
 
-Walking::Walking(Bot &bot, const std::vector<packet::building::NetworkReadyPosition> &waypoints) : StateMachine(bot), waypoints_(waypoints) {
-  stateMachineCreated(kName);
-}
+Walking::Walking(Bot &bot, const std::vector<packet::building::NetworkReadyPosition> &waypoints) : StateMachine(bot), waypoints_(waypoints) {}
 
 Walking::~Walking() {
   if (movementRequestTimeoutEventId_) {
@@ -19,7 +17,6 @@ Walking::~Walking() {
     movementRequestTimeoutEventId_.reset();
   }
   bot_.eventBroker().publishEvent<event::WalkingPathUpdated>(std::vector<packet::building::NetworkReadyPosition>());
-  stateMachineDestroyed();
 }
 
 Status Walking::onUpdate(const event::Event *event) {

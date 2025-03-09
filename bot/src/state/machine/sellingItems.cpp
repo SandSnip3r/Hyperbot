@@ -10,7 +10,6 @@
 namespace state::machine {
 
 SellingItems::SellingItems(Bot &bot, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell) : StateMachine(bot), slotsToSell_(slotsToSell) {
-  stateMachineCreated(kName);
   // We must be talking to an NPC at this point
   // Prevent the client from closing the talk dialog
   pushBlockedOpcode(packet::Opcode::kClientAgentActionDeselectRequest);
@@ -19,9 +18,7 @@ SellingItems::SellingItems(Bot &bot, const std::vector<sro::scalar_types::Storag
   VLOG(2) << "Constructed SellingItems";
 }
 
-SellingItems::~SellingItems() {
-  stateMachineDestroyed();
-}
+SellingItems::~SellingItems() {}
 
 Status SellingItems::onUpdate(const event::Event *event) {
   VLOG(2) << "OnUpdate";

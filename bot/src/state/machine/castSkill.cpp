@@ -100,7 +100,6 @@ std::unique_ptr<StateMachine> CastSkillStateMachineBuilder::create() const {
 // ========================================================================================================================================================================================================
 
 CastSkill::CastSkill(Bot &bot, sro::scalar_types::ReferenceObjectId skillRefId, std::optional<sro::scalar_types::EntityGlobalId> targetGlobalId, std::optional<uint8_t> weaponSlot, std::optional<uint8_t> shieldSlot, std::optional<sro::scalar_types::ReferenceObjectId> imbueSkillRefId) : StateMachine(bot), skillRefId_(skillRefId), targetGlobalId_(targetGlobalId), weaponSlot_(weaponSlot), shieldSlot_(shieldSlot), imbueSkillRefId_(imbueSkillRefId) {
-  stateMachineCreated(kName);
   VLOG(1) << "Constructed CastSkill for " << skillName();
   if (weaponSlot_ && *weaponSlot_ == kWeaponInventorySlot_) {
     // Weapon is already where it needs to be, dont move it
@@ -134,7 +133,6 @@ CastSkill::~CastSkill() {
     bot_.eventBroker().cancelDelayedEvent(*skillCastTimeoutEventId_);
     skillCastTimeoutEventId_.reset();
   }
-  stateMachineDestroyed();
 }
 
 Status CastSkill::onUpdate(const event::Event *event) {

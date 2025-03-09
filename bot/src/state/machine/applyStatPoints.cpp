@@ -9,13 +9,9 @@
 
 namespace state::machine {
 
-ApplyStatPoints::ApplyStatPoints(Bot &bot, std::vector<StatPointType> statPointTypes) : StateMachine(bot), statPointTypes_(statPointTypes) {
-  // stateMachineCreated(kName);
-}
+ApplyStatPoints::ApplyStatPoints(Bot &bot, std::vector<StatPointType> statPointTypes) : StateMachine(bot), statPointTypes_(statPointTypes) {}
 
-ApplyStatPoints::~ApplyStatPoints() {
-  // stateMachineDestroyed();
-}
+ApplyStatPoints::~ApplyStatPoints() {}
 
 Status ApplyStatPoints::onUpdate(const event::Event *event) {
   if (!initialized_) {

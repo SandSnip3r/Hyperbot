@@ -6,13 +6,9 @@
 
 namespace state::machine {
 
-PickItemWithCos::PickItemWithCos(Bot &bot, sro::scalar_types::EntityGlobalId cosGlobalId, sro::scalar_types::EntityGlobalId targetGlobalId) : StateMachine(bot), cosGlobalId_(cosGlobalId), targetGlobalId_(targetGlobalId) {
-  stateMachineCreated(kName);
-}
+PickItemWithCos::PickItemWithCos(Bot &bot, sro::scalar_types::EntityGlobalId cosGlobalId, sro::scalar_types::EntityGlobalId targetGlobalId) : StateMachine(bot), cosGlobalId_(cosGlobalId), targetGlobalId_(targetGlobalId) {}
 
-PickItemWithCos::~PickItemWithCos() {
-  stateMachineDestroyed();
-}
+PickItemWithCos::~PickItemWithCos() {}
 
 Status PickItemWithCos::onUpdate(const event::Event *event) {
   if (event) {

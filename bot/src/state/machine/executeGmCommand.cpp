@@ -8,12 +8,10 @@
 namespace state::machine {
 
 ExecuteGmCommand::ExecuteGmCommand(Bot &bot, packet::enums::OperatorCommand gmCommand, PacketContainer gmCommandPacket) : StateMachine(bot), gmCommand_(gmCommand), gmCommandPacket_(gmCommandPacket) {
-  // stateMachineCreated(kName);
   CHAR_VLOG(1) << "ExecuteGmCommand created";
 }
 
 ExecuteGmCommand::~ExecuteGmCommand() {
-  // stateMachineDestroyed();
   if (eventId_) {
     bot_.eventBroker().cancelDelayedEvent(*eventId_);
   }
