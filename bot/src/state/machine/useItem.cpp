@@ -10,10 +10,10 @@
 
 namespace state::machine {
 
-UseItem::UseItem(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex) : StateMachine(bot), inventoryIndex_(inventoryIndex) {
+UseItem::UseItem(StateMachine *parent, sro::scalar_types::StorageIndexType inventoryIndex) : StateMachine(parent), inventoryIndex_(inventoryIndex) {
 }
 
-UseItem::UseItem(Bot &bot, sro::scalar_types::ReferenceObjectId itemRefId) : StateMachine(bot), itemRefId_(itemRefId) {
+UseItem::UseItem(StateMachine *parent, sro::scalar_types::ReferenceObjectId itemRefId) : StateMachine(parent), itemRefId_(itemRefId) {
 }
 
 UseItem::~UseItem() {
@@ -139,7 +139,7 @@ Status UseItem::onUpdate(const event::Event *event) {
 
   // Use item
   const auto itemUsePacket = packet::building::ClientAgentInventoryItemUseRequest::packet(*inventoryIndex_, itemTypeId_);
-  bot_.packetBroker().injectPacket(itemUsePacket, PacketContainer::Direction::kBotToServer);
+  injectPacket(itemUsePacket, PacketContainer::Direction::kBotToServer);
 
   // Create a delayed event that will trigger if our item never gets used.
   // TODO: Rather than having event::ItemUseTimeout, we can just use the generic kTimeout event.

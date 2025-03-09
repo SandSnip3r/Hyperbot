@@ -17,6 +17,7 @@ enum class StatPointType {
 class ApplyStatPoints : public StateMachine {
 public:
   ApplyStatPoints(Bot &bot, std::vector<StatPointType> statPointTypes);
+  ApplyStatPoints(StateMachine *parent, std::vector<StatPointType> statPointTypes);
   ~ApplyStatPoints() override;
   Status onUpdate(const event::Event *event) override;
 private:

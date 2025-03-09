@@ -11,7 +11,7 @@ namespace state::machine {
 
 class TalkingToShopNpc : public StateMachine {
 public:
-  TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell = {});
+  TalkingToShopNpc(StateMachine *parent, Npc npc, const std::map<uint32_t, int> &shoppingList, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell = {});
   ~TalkingToShopNpc() override;
   Status onUpdate(const event::Event *event) override;
 private:

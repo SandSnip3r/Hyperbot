@@ -12,7 +12,7 @@ namespace state::machine {
 
 class EnablePvpMode : public StateMachine {
 public:
-  EnablePvpMode(Bot &bot);
+  EnablePvpMode(StateMachine *parent);
   ~EnablePvpMode() override;
   Status onUpdate(const event::Event *event) override;
 private:

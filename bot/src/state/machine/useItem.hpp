@@ -15,8 +15,8 @@ namespace state::machine {
 
 class UseItem : public StateMachine {
 public:
-  UseItem(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex);
-  UseItem(Bot &bot, sro::scalar_types::ReferenceObjectId itemRefId);
+  UseItem(StateMachine *parent, sro::scalar_types::StorageIndexType inventoryIndex);
+  UseItem(StateMachine *parent, sro::scalar_types::ReferenceObjectId itemRefId);
   ~UseItem() override;
   Status onUpdate(const event::Event *event) override;
 private:

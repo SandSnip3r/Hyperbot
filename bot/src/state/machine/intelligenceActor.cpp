@@ -10,7 +10,7 @@
 
 namespace state::machine {
 
-IntelligenceActor::IntelligenceActor(Bot &bot, rl::ai::BaseIntelligence *intelligence, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) : StateMachine(bot), intelligence_(intelligence), pvpId_(pvpId), opponentGlobalId_(opponentGlobalId) {
+IntelligenceActor::IntelligenceActor(StateMachine *parent, rl::ai::BaseIntelligence *intelligence, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) : StateMachine(parent), intelligence_(intelligence), pvpId_(pvpId), opponentGlobalId_(opponentGlobalId) {
   LOG(INFO) << "Instantiated " << intelligence->name() << " intelligence actor!";
 }
 
@@ -31,7 +31,7 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   }
 
   // Since actions are state machines, immediately set the selected action as our current active child state machine.
-  setChildStateMachine(intelligence_->selectAction(bot_, event, pvpId_, opponentGlobalId_));
+  setChildStateMachine(intelligence_->selectAction(bot_, this, event, pvpId_, opponentGlobalId_));
 
   // Run one update on the child state machine to let it start.
   const Status status = childState_->onUpdate(event);

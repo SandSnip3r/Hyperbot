@@ -115,11 +115,12 @@ void Training::getSkillsFromConfig() {
   LOG(INFO) << "  NontrainingBuffSkills: " << absl::StrJoin(trainingConfig.nontraining_buff_skill_ids(), ", ");
 }
 
-Training::Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeometry) : StateMachine(bot), trainingAreaGeometry_(std::move(trainingAreaGeometry)) {
+Training::Training(StateMachine *parent, std::unique_ptr<entity::Geometry> &&trainingAreaGeometry) : StateMachine(parent), trainingAreaGeometry_(std::move(trainingAreaGeometry)) {
   if (bot_.config() == nullptr) {
     throw std::runtime_error("Cannot construct Training state machine if Bot does not have a config");
   }
   getSkillsFromConfig();
+
 
   bot_.selfState()->setTrainingAreaGeometry(trainingAreaGeometry_->clone());
   bot_.selfState()->registerGeometryBoundary(bot_.selfState()->trainingAreaGeometry->clone());
@@ -466,7 +467,7 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
     }
     if (targetEntity->globalId != bot_.selfState()->globalId && (!bot_.selfState()->selectedEntity || *bot_.selfState()->selectedEntity != targetEntity->globalId)) {
       const auto selectPacket = packet::building::ClientAgentActionSelectRequest::packet(targetEntity->globalId);
-      bot_.packetBroker().injectPacket(selectPacket, PacketContainer::Direction::kBotToServer);
+      injectPacket(selectPacket, PacketContainer::Direction::kBotToServer);
     }
     possiblyOverwriteChildStateMachine(castSkillBuilder.create());
   }

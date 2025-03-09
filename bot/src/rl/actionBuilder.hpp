@@ -11,14 +11,15 @@ namespace event {
 struct Event;
 } // namespace event
 
-class Bot;
-
+namespace state::machine {
+class StateMachine;
+} // namespace state::machine
 
 namespace rl {
 
 class ActionBuilder {
 public:
-  static std::unique_ptr<Action> buildAction(Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId, int actionIndex);
+  static std::unique_ptr<Action> buildAction(state::machine::StateMachine *parentStateMachine, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId, int actionIndex);
   static constexpr int actionSpaceSize() { return 38; }
 };
 

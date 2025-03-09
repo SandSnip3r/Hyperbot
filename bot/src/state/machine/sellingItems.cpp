@@ -9,7 +9,7 @@
 
 namespace state::machine {
 
-SellingItems::SellingItems(Bot &bot, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell) : StateMachine(bot), slotsToSell_(slotsToSell) {
+SellingItems::SellingItems(StateMachine *parent, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell) : StateMachine(parent), slotsToSell_(slotsToSell) {
   // We must be talking to an NPC at this point
   // Prevent the client from closing the talk dialog
   pushBlockedOpcode(packet::Opcode::kClientAgentActionDeselectRequest);
@@ -60,7 +60,7 @@ Status SellingItems::onUpdate(const event::Event *event) {
   }
   VLOG(1) << absl::StreamFormat("Sell item at slot %d (x%d)", currentSlot, quantity);
   const auto sellPacket = packet::building::ClientAgentInventoryOperationRequest::sellPacket(currentSlot, quantity, bot_.selfState()->talkingGidAndOption->first);
-  bot_.packetBroker().injectPacket(sellPacket, PacketContainer::Direction::kBotToServer);
+  injectPacket(sellPacket, PacketContainer::Direction::kBotToServer);
   waitingOnASell_ = true;
   return Status::kNotDone;
 }

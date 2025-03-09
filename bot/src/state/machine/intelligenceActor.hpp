@@ -14,7 +14,7 @@ namespace state::machine {
 
 class IntelligenceActor : public StateMachine {
 public:
-  IntelligenceActor(Bot &bot, rl::ai::BaseIntelligence *intelligence, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId);
+  IntelligenceActor(StateMachine *parent, rl::ai::BaseIntelligence *intelligence, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId);
   ~IntelligenceActor() override;
   Status onUpdate(const event::Event *event) override;
 private:

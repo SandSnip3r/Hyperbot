@@ -4,11 +4,9 @@
 
 namespace state::machine {
 
-SequentialStateMachines::SequentialStateMachines(Bot &bot) : StateMachine(bot) {
-}
-
-SequentialStateMachines::~SequentialStateMachines() {
-}
+SequentialStateMachines::SequentialStateMachines(Bot &bot) : StateMachine(bot) {}
+SequentialStateMachines::SequentialStateMachines(StateMachine *parent) : StateMachine(parent) {}
+SequentialStateMachines::~SequentialStateMachines() {}
 
 Status SequentialStateMachines::onUpdate(const event::Event *event) {
   std::unique_lock lock(mutex_);
@@ -32,9 +30,10 @@ Status SequentialStateMachines::onUpdate(const event::Event *event) {
   return Status::kNotDone;
 }
 
-void SequentialStateMachines::push(std::unique_ptr<StateMachine> &&stateMachine) {
-  std::unique_lock lock(mutex_);
-  stateMachines_.push_back(std::move(stateMachine));
-}
+// TODO: When pushing a state machine, set ourself as its parent.
+// void SequentialStateMachines::push(std::unique_ptr<StateMachine> &&stateMachine) {
+//   std::unique_lock lock(mutex_);
+//   stateMachines_.push_back(std::move(stateMachine));
+// }
 
 } // namespace state::machine

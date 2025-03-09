@@ -6,7 +6,7 @@
 
 namespace state::machine {
 
-PickItemWithCos::PickItemWithCos(Bot &bot, sro::scalar_types::EntityGlobalId cosGlobalId, sro::scalar_types::EntityGlobalId targetGlobalId) : StateMachine(bot), cosGlobalId_(cosGlobalId), targetGlobalId_(targetGlobalId) {}
+PickItemWithCos::PickItemWithCos(StateMachine *parent, sro::scalar_types::EntityGlobalId cosGlobalId, sro::scalar_types::EntityGlobalId targetGlobalId) : StateMachine(parent), cosGlobalId_(cosGlobalId), targetGlobalId_(targetGlobalId) {}
 
 PickItemWithCos::~PickItemWithCos() {}
 
@@ -26,7 +26,7 @@ Status PickItemWithCos::onUpdate(const event::Event *event) {
   }
 
   const auto packet = packet::building::ClientAgentCosCommandRequest::pickup(cosGlobalId_, targetGlobalId_);
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+  injectPacket(packet, PacketContainer::Direction::kBotToServer);
   waitingForItemToBePicked_ = true;
   return Status::kNotDone;
 }

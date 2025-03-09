@@ -4,7 +4,7 @@
 
 namespace rl::ai {
 
-std::unique_ptr<Action> RandomIntelligence::selectAction(Bot &bot, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) {
+std::unique_ptr<Action> RandomIntelligence::selectAction(Bot &bot, state::machine::StateMachine *parentStateMachine, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) {
   Observation observation = buildObservation(bot, event, opponentGlobalId);
 
   int actionIndex;
@@ -18,7 +18,7 @@ std::unique_ptr<Action> RandomIntelligence::selectAction(Bot &bot, const event::
     actionIndex = actionDist(randomEngine_);
   }
   reportEventObservationAndAction(pvpId, bot.selfState()->globalId, event, observation, actionIndex);
-  return ActionBuilder::buildAction(bot, event, opponentGlobalId, actionIndex);
+  return ActionBuilder::buildAction(parentStateMachine, event, opponentGlobalId, actionIndex);
 }
 
 } // namespace rl::ai

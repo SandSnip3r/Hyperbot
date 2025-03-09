@@ -7,7 +7,7 @@
 
 namespace state::machine {
 
-ResurrectInPlace::ResurrectInPlace(Bot &bot, bool receivedResurrectionOptionAlready) : StateMachine(bot), receivedResurrectionOptionAlready_(receivedResurrectionOptionAlready) {
+ResurrectInPlace::ResurrectInPlace(StateMachine *parent, bool receivedResurrectionOptionAlready) : StateMachine(parent), receivedResurrectionOptionAlready_(receivedResurrectionOptionAlready) {
   LOG(INFO) << "ctor " << receivedResurrectionOptionAlready_;
 }
 
@@ -71,7 +71,7 @@ Status ResurrectInPlace::onUpdate(const event::Event *event) {
 void ResurrectInPlace::sendResurrectRequest() {
   // Got a resurrection option; whatever the option is, we'll do it.
   const auto packet = packet::building::ClientAgentCharacterResurrect::resurrect(packet::enums::ResurrectionOptionFlag::kAtPresentPoint);
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+  injectPacket(packet, PacketContainer::Direction::kBotToServer);
   requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(888));
 }
 

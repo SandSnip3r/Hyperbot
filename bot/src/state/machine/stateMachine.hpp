@@ -3,6 +3,7 @@
 
 #include "broker/eventBroker.hpp"
 #include "packet/opcode.hpp"
+#include "shared/silkroad_security.h"
 
 #include <future>
 #include <memory>
@@ -31,6 +32,7 @@ enum class Status { kDone, kNotDone };
 class StateMachine {
 public:
   StateMachine(Bot &bot);
+  StateMachine(StateMachine *parent);
   virtual ~StateMachine();
 
   // When this is called, `Bot` will have already processed the event.
@@ -40,6 +42,7 @@ public:
 protected:
   Bot &bot_;
   void pushBlockedOpcode(packet::Opcode opcode);
+  virtual void injectPacket(const PacketContainer &packet, PacketContainer::Direction direction);
 
   std::string characterNameForLog() const;
 
@@ -48,11 +51,12 @@ protected:
   template<typename StateMachineType, typename... Args>
   void setChildStateMachine(Args&&... args) {
     childState_.reset();
-    childState_ = std::unique_ptr<StateMachineType>(new StateMachineType(bot_, std::forward<Args>(args)...));
+    childState_ = std::unique_ptr<StateMachineType>(new StateMachineType(this, std::forward<Args>(args)...));
   }
   void setChildStateMachine(std::unique_ptr<StateMachine> &&newChildStateMachine);
   std::unique_ptr<StateMachine> childState_;
 private:
+  StateMachine *parent_{nullptr};
   std::vector<packet::Opcode> blockedOpcodes_;
   std::optional<std::promise<void>> destructionPromise_;
 };

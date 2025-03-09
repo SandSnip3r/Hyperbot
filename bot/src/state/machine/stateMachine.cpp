@@ -1,9 +1,12 @@
+#include "broker/packetBroker.hpp"
 #include "stateMachine.hpp"
 
 #include "bot.hpp"
 namespace state::machine {
 
 StateMachine::StateMachine(Bot &bot) : bot_(bot) {}
+
+StateMachine::StateMachine(StateMachine *parent) : bot_(parent->bot_), parent_(parent) {}
 
 StateMachine::~StateMachine() {
   // Undo all blocked opcodes
@@ -27,6 +30,16 @@ void StateMachine::pushBlockedOpcode(packet::Opcode opcode) {
     VLOG(1) << "Pushing blocked opcode " << packet::toString(opcode);
     bot_.proxy().blockOpcode(opcode);
     blockedOpcodes_.push_back(opcode);
+  }
+}
+
+void StateMachine::injectPacket(const PacketContainer &packet, PacketContainer::Direction direction) {
+  if (parent_ != nullptr) {
+    VLOG(1) << "Delegating packet injection to parent state machine";
+    parent_->injectPacket(packet, direction);
+  } else {
+    // No parent, inject the packet ourselves.
+    bot_.packetBroker().injectPacket(packet, direction);
   }
 }
 

@@ -18,6 +18,10 @@ Login::Login(Bot &bot, const CharacterLoginInfo &characterLoginInfo) : StateMach
   VLOG(1) << absl::StreamFormat("Constructed Login state machine for character %s", characterName_);
 }
 
+Login::Login(StateMachine *parent, const CharacterLoginInfo &characterLoginInfo) : StateMachine(parent), username_(characterLoginInfo.username), password_(characterLoginInfo.password), characterName_(characterLoginInfo.characterName) {
+  VLOG(1) << absl::StreamFormat("Constructed Login state machine for character %s", characterName_);
+}
+
 Login::~Login() {}
 
 Status Login::onUpdate(const event::Event *event) {
@@ -41,7 +45,7 @@ Status Login::onUpdate(const event::Event *event) {
   if (!waitingOnShardList_ && !bot_.worldState().shardListResponse_.has_value()) {
     // Don't yet have a shard list, request it.
     VLOG(1) << "Requesting shard list";
-    bot_.packetBroker().injectPacket(packet::building::ClientGatewayShardListRequest::packet(), PacketContainer::Direction::kBotToServer);
+    injectPacket(packet::building::ClientGatewayShardListRequest::packet(), PacketContainer::Direction::kBotToServer);
     waitingOnShardList_ = true;
     return Status::kNotDone;
   }
@@ -74,7 +78,7 @@ Status Login::onUpdate(const event::Event *event) {
         }
         VLOG(1) << absl::StreamFormat("  Trying to login with username \"%s\" and password \"%s\", to shard ID %d", username_, password_, shardListReceivedEvent->shards.at(0).shardId);
         const auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(bot_.gameData().divisionInfo().locale, username_, password_, shardListReceivedEvent->shards.at(0).shardId);
-        bot_.packetBroker().injectPacket(loginAuthPacket, PacketContainer::Direction::kBotToServer);
+        injectPacket(loginAuthPacket, PacketContainer::Direction::kBotToServer);
         waitingOnShardList_ = false;
         loginRequestSent_ = true;
       } else {
@@ -99,7 +103,7 @@ Status Login::onUpdate(const event::Event *event) {
         throw std::runtime_error("Connected to agentserver but don't have token");
       }
       const auto clientAuthPacket = packet::building::ClientAgentAuthRequest::packet(*agentServerToken_, username_, password_, bot_.gameData().divisionInfo().locale, kMacAddress);
-      bot_.packetBroker().injectPacket(clientAuthPacket, PacketContainer::Direction::kBotToServer);
+      injectPacket(clientAuthPacket, PacketContainer::Direction::kBotToServer);
     } else if (const auto *characterListReceivedEvent = dynamic_cast<const event::CharacterListReceived*>(sessionSpecificEvent); characterListReceivedEvent != nullptr) {
       VLOG(1) << absl::StreamFormat("[%s] Received character list for our session: [ %s ]", characterName_, absl::StrJoin(characterListReceivedEvent->characters, ", ", [](std::string *out, const auto character){
         out->append(character.name);
@@ -117,11 +121,11 @@ Status Login::onUpdate(const event::Event *event) {
       // Found our character, select it
       VLOG(1) << "  Selecting \"" << characterName_ << "\"";
       const auto charSelectionPacket = packet::building::ClientAgentCharacterSelectionJoinRequest::packet(characterName_);
-      bot_.packetBroker().injectPacket(charSelectionPacket, PacketContainer::Direction::kBotToServer);
+      injectPacket(charSelectionPacket, PacketContainer::Direction::kBotToServer);
     } else if (const auto *ibuvChallengeReceivedEvent = dynamic_cast<const event::IbuvChallengeReceived*>(sessionSpecificEvent); ibuvChallengeReceivedEvent != nullptr) {
       VLOG(1) << absl::StreamFormat("[%s] Got captcha. Sending answer", characterName_);
       const auto captchaAnswerPacket = packet::building::ClientGatewayLoginIbuvAnswer::packet(kCaptchaAnswer);
-      bot_.packetBroker().injectPacket(captchaAnswerPacket, PacketContainer::Direction::kBotToServer);
+      injectPacket(captchaAnswerPacket, PacketContainer::Direction::kBotToServer);
     } else if (const auto *serverAuthSuccessEvent = dynamic_cast<const event::ServerAuthSuccess*>(sessionSpecificEvent); serverAuthSuccessEvent != nullptr) {
       VLOG(1) << absl::StreamFormat("[%s] Successfully logged in.", characterName_);
     } else if (const auto *characterSelectionJoinSuccessEvent = dynamic_cast<const event::CharacterSelectionJoinSuccess*>(sessionSpecificEvent); characterSelectionJoinSuccessEvent != nullptr) {

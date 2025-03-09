@@ -13,6 +13,10 @@ namespace event {
 struct Event;
 } // namespace event
 
+namespace state::machine {
+class StateMachine;
+} // namespace state::machine
+
 class Bot;
 
 namespace rl {
@@ -24,7 +28,7 @@ namespace ai {
 class BaseIntelligence {
 public:
   BaseIntelligence(TrainingManager &trainingManager) : trainingManager_(trainingManager) {}
-  virtual std::unique_ptr<Action> selectAction(Bot &bot, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) = 0;
+  virtual std::unique_ptr<Action> selectAction(Bot &bot, state::machine::StateMachine *parentStateMachine, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) = 0;
   virtual std::string_view name() const = 0;
 
 protected:

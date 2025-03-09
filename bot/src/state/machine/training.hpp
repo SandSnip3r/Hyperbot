@@ -21,7 +21,7 @@ namespace state::machine {
 
 class Training : public StateMachine {
 public:
-  Training(Bot &bot, std::unique_ptr<entity::Geometry> &&trainingAreaGeometry);
+  Training(StateMachine *parent, std::unique_ptr<entity::Geometry> &&trainingAreaGeometry);
   ~Training() override;
   Status onUpdate(const event::Event *event) override;
 private:

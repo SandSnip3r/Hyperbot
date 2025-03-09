@@ -10,6 +10,7 @@
 namespace state::machine {
 
 ApplyStatPoints::ApplyStatPoints(Bot &bot, std::vector<StatPointType> statPointTypes) : StateMachine(bot), statPointTypes_(statPointTypes) {}
+ApplyStatPoints::ApplyStatPoints(StateMachine *parent, std::vector<StatPointType> statPointTypes) : StateMachine(parent), statPointTypes_(statPointTypes) {}
 
 ApplyStatPoints::~ApplyStatPoints() {}
 
@@ -85,7 +86,7 @@ Status ApplyStatPoints::onUpdate(const event::Event *event) {
     VLOG(2) << "Applying a Str stat point. Have " << bot_.selfState()->getAvailableStatPoints() << " stat point(s)";
     packet = packet::building::ClientAgentCharacterIncreaseStrRequest::packet();
   }
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+  injectPacket(packet, PacketContainer::Direction::kBotToServer);
   timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(200));
   return Status::kNotDone;
 }

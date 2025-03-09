@@ -12,7 +12,7 @@ namespace state::machine {
 
 class SpawnAndUseRepairHammerIfNecessary : public StateMachine {
 public:
-  SpawnAndUseRepairHammerIfNecessary(Bot &bot);
+  SpawnAndUseRepairHammerIfNecessary(StateMachine *parent);
   ~SpawnAndUseRepairHammerIfNecessary() override;
   Status onUpdate(const event::Event *event) override;
 private:

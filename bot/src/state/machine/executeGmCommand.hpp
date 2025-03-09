@@ -11,7 +11,7 @@ namespace state::machine {
 
 class ExecuteGmCommand : public StateMachine {
 public:
-  ExecuteGmCommand(Bot &bot, packet::enums::OperatorCommand gmCommand, PacketContainer gmCommandPacket);
+  ExecuteGmCommand(StateMachine *parent, packet::enums::OperatorCommand gmCommand, PacketContainer gmCommandPacket);
   ~ExecuteGmCommand() override;
   Status onUpdate(const event::Event *event) override;
 private:

@@ -11,7 +11,7 @@ namespace state::machine {
 
 class SellingItems : public StateMachine {
 public:
-  SellingItems(Bot &bot, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell);
+  SellingItems(StateMachine *parent, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell);
   ~SellingItems() override;
   Status onUpdate(const event::Event *event) override;
 private:

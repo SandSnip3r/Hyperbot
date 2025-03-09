@@ -7,7 +7,7 @@
 
 namespace rl::ai {
 
-std::unique_ptr<Action> DeepLearningIntelligence::selectAction(Bot &bot, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) {
+std::unique_ptr<Action> DeepLearningIntelligence::selectAction(Bot &bot, state::machine::StateMachine *parentStateMachine, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) {
   ZoneScopedN("DeepLearningIntelligence::selectAction");
   Observation observation = buildObservation(bot, event, opponentGlobalId);
   // Release the world state mutex while we call into JAX
@@ -15,7 +15,7 @@ std::unique_ptr<Action> DeepLearningIntelligence::selectAction(Bot &bot, const e
   int actionIndex = trainingManager_.getJaxInterface().selectAction(observation);
   bot.worldState().mutex.lock();
   reportEventObservationAndAction(pvpId, bot.selfState()->globalId, event, observation, actionIndex);
-  return ActionBuilder::buildAction(bot, event, opponentGlobalId, actionIndex);
+  return ActionBuilder::buildAction(parentStateMachine, event, opponentGlobalId, actionIndex);
 }
 
 } // namespace rl::ai

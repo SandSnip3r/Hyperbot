@@ -7,7 +7,7 @@
 
 namespace state::machine {
 
-ExecuteGmCommand::ExecuteGmCommand(Bot &bot, packet::enums::OperatorCommand gmCommand, PacketContainer gmCommandPacket) : StateMachine(bot), gmCommand_(gmCommand), gmCommandPacket_(gmCommandPacket) {
+ExecuteGmCommand::ExecuteGmCommand(StateMachine *parent, packet::enums::OperatorCommand gmCommand, PacketContainer gmCommandPacket) : StateMachine(parent), gmCommand_(gmCommand), gmCommandPacket_(gmCommandPacket) {
   CHAR_VLOG(1) << "ExecuteGmCommand created";
 }
 
@@ -21,7 +21,7 @@ Status ExecuteGmCommand::onUpdate(const event::Event *event) {
   constexpr int kMillisecondsTimeout{1000};
   if (!waitingForResponse_) {
     CHAR_VLOG(1) << "Injecting GM command packet";
-    bot_.packetBroker().injectPacket(gmCommandPacket_, PacketContainer::Direction::kBotToServer);
+    injectPacket(gmCommandPacket_, PacketContainer::Direction::kBotToServer);
     waitingForResponse_ = true;
     eventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(kMillisecondsTimeout));
     return Status::kNotDone;

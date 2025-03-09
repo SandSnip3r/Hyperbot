@@ -17,7 +17,7 @@ namespace state::machine {
 class GmCommandSpawnAndPickItems : public StateMachine {
 public:
   // TODO: Create a move constructor for the items.
-  GmCommandSpawnAndPickItems(Bot &bot, const std::vector<common::ItemRequirement> &items);
+  GmCommandSpawnAndPickItems(StateMachine *parent, const std::vector<common::ItemRequirement> &items);
   ~GmCommandSpawnAndPickItems() override;
   Status onUpdate(const event::Event *event) override;
 private:

@@ -9,7 +9,7 @@ namespace state::machine {
 
 class MoveItemInInventory : public StateMachine {
 public:
-  MoveItemInInventory(Bot &bot, uint8_t srcSlot, uint8_t destSlot);
+  MoveItemInInventory(StateMachine *parent, uint8_t srcSlot, uint8_t destSlot);
   ~MoveItemInInventory() override;
   Status onUpdate(const event::Event *event) override;
 private:
