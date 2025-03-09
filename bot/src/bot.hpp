@@ -41,6 +41,8 @@ public:
   Proxy& proxy() const;
   broker::PacketBroker& packetBroker() const;
   broker::EventBroker& eventBroker();
+  const broker::EventBroker& eventBroker() const;
+  state::WorldState& worldState();
   const state::WorldState& worldState() const;
   state::EntityTracker& entityTracker();
   const state::EntityTracker& entityTracker() const;

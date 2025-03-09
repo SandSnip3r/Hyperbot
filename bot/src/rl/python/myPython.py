@@ -20,5 +20,6 @@ def func(number):
 
 @nnx.jit
 def selectAction(model, observation, key):
+  # jax.debug.print('Picking action for obs {}', observation)
   values = model(observation)
   return jnp.argmax(values)

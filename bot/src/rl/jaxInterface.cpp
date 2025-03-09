@@ -2,6 +2,8 @@
 
 #include <pybind11/numpy.h>
 
+#include <tracy/Tracy.hpp>
+
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 
@@ -53,7 +55,7 @@ void JaxInterface::initialize() {
   nnxRngs_ = nnxModule_->attr("Rngs")(getNextRngKey());
   // Now, we want to create a randomly initialized model. Specifically, we want randomly initialized weights. To do this, we'll instantiate our NNX model, then split the abstract graph and the concrete weights.
   MyModelType = jaxModule_->attr("MyModel");
-  const int kInputSize = 2;
+  const int kInputSize = 4 + 32*2 + 3*2;
   const int kOutputSize = 38;
   myModel = MyModelType(kInputSize, kOutputSize, *nnxRngs_);
   graphAndWeights = nnxModule_->attr("split")(myModel);
@@ -63,24 +65,26 @@ void JaxInterface::initialize() {
 
 void JaxInterface::train() {
   LOG(INFO) << "All aboard the JAX train!";
-  {
-    py::gil_scoped_acquire acquire;
-    jaxModule_->attr("func")(12345);
-  }
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  py::gil_scoped_acquire acquire;
+  jaxModule_->attr("func")(12345);
 }
 
 int JaxInterface::selectAction(const Observation &observation) {
-  LOG(INFO) << "Getting action for observation " << observation.toString();
+  ZoneScopedN("JaxInterface::selectAction");
+  VLOG(1) << "Getting action for observation " << observation.toString();
   py::gil_scoped_acquire acquire;
   // Convert C++ observation into numpy observation
   py::object numpyObservation = convertToNumpy(observation);
   // Pick the right weights for the model
   py::object model = nnxModule_->attr("merge")(*modelGraph_, *modelWeights_);
   // Get the action from the model
-  const py::object actionPyObject = jaxModule_->attr("selectAction")(model, numpyObservation, getNextRngKey());
+  py::object actionPyObject;
+  {
+    ZoneScopedN("JaxInterface::selectAction_PYTHON");
+    actionPyObject = jaxModule_->attr("selectAction")(model, numpyObservation, getNextRngKey());
+  }
   int actionIndex = actionPyObject.cast<int>();
-  LOG(INFO) << "Chose action " << actionIndex;
+  VLOG(1) << "Chose action " << actionIndex;
   return actionIndex;
 }
 
@@ -94,10 +98,24 @@ py::object JaxInterface::getNextRngKey() {
 }
 
 py::object JaxInterface::convertToNumpy(const Observation &observation) {
-  py::array_t<float> array(2);
+  ZoneScopedN("JaxInterface::convertToNumpy");
+  py::array_t<float> array(4 + observation.skillCooldowns_.size()*2 + observation.itemCooldowns_.size()*2);
   auto mutableArray = array.mutable_unchecked<1>();
-  mutableArray(0) = observation.ourHp_ / 2660.0f;
-  mutableArray(1) = observation.opponentHp_ / 2660.0f;
+  mutableArray(0) = observation.ourCurrentHp_ / static_cast<float>(observation.ourMaxHp_);
+  mutableArray(1) = observation.ourCurrentMp_ / static_cast<float>(observation.ourMaxMp_);
+  mutableArray(2) = observation.opponentCurrentHp_ / static_cast<float>(observation.opponentMaxHp_);
+  mutableArray(3) = observation.opponentCurrentMp_ / static_cast<float>(observation.opponentMaxMp_);
+  int index = 4;
+  for (int cooldown : observation.skillCooldowns_) {
+    mutableArray(index) = cooldown == 0 ? 1.0 : 0.0;
+    mutableArray(index+1) = static_cast<float>(cooldown) / 1000.0;
+    index += 2;
+  }
+  for (int cooldown : observation.itemCooldowns_) {
+    mutableArray(index) = cooldown == 0 ? 1.0 : 0.0;
+    mutableArray(index+1) = static_cast<float>(cooldown) / 1000.0;
+    index += 2;
+  }
   return array;
 }
 

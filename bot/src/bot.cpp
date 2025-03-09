@@ -80,6 +80,14 @@ broker::EventBroker& Bot::eventBroker() {
   return eventBroker_;
 }
 
+const broker::EventBroker& Bot::eventBroker() const {
+  return eventBroker_;
+}
+
+state::WorldState& Bot::worldState() {
+  return worldState_;
+}
+
 const state::WorldState& Bot::worldState() const {
   return worldState_;
 }

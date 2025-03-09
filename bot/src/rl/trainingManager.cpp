@@ -47,7 +47,11 @@ void TrainingManager::train() {
   // Train at full speed in a tight loop.
   while (1) {
     // Get a S,A,R,S' tuple from the replay buffer.
-    jaxInterface_.train();
+    if (false) {
+      jaxInterface_.train();
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+
     // jaxInterface_.train(previousObservation, action, reward, currentObservation);
   }
 }
@@ -66,7 +70,7 @@ void TrainingManager::onUpdate(const event::Event *event) {
 }
 
 void TrainingManager::reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, int actionIndex) {
-  LOG(INFO) << "[PVP #" << pvpId << "] Given event " << event::toString(event->eventCode) << " and observation " << observation.toString() << " for observer " << observerGlobalId << " and action " << actionIndex;
+  // LOG(INFO) << "[PVP #" << pvpId << "] Given event " << event::toString(event->eventCode) << " and observation " << observation.toString() << " for observer " << observerGlobalId << " and action " << actionIndex;
 }
 
 // void TrainingManager::reportObservationAndAction(sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, int actionIndex) {
@@ -204,9 +208,9 @@ void TrainingManager::buildItemRequirementList() {
 double TrainingManager::calculateReward(const Observation &lastObservation, const Observation &observation) const {
   double reward = 0.0;
   // We get some positive reward proportional to how much our health increased, negative if it decreased.
-  reward += (static_cast<int64_t>(observation.ourHp_) - lastObservation.ourHp_) / 2660.0;
+  reward += (static_cast<int64_t>(observation.ourCurrentHp_) - lastObservation.ourCurrentHp_) / observation.ourMaxHp_;
   // We get some positive reward proportional to how much our opponent's health decreased, negative if it increased.
-  reward += (static_cast<int64_t>(lastObservation.opponentHp_) - observation.opponentHp_) / 2660.0;
+  reward += (static_cast<int64_t>(lastObservation.opponentCurrentHp_) - observation.opponentCurrentHp_) / observation.opponentMaxHp_;
   return reward;
 }
 
