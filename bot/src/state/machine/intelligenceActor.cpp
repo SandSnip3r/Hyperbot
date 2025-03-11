@@ -31,7 +31,8 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   }
 
   // Since actions are state machines, immediately set the selected action as our current active child state machine.
-  setChildStateMachine(intelligence_->selectAction(bot_, this, event, pvpId_, opponentGlobalId_));
+  const bool canSendPacket = !lastPacketTime_.has_value() || (std::chrono::steady_clock::now() - lastPacketTime_.value() > kPacketSendCooldown);
+  setChildStateMachine(intelligence_->selectAction(bot_, this, event, pvpId_, opponentGlobalId_, canSendPacket));
 
   // Run one update on the child state machine to let it start.
   const Status status = childState_->onUpdate(event);
@@ -42,6 +43,11 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
 
   // We are never done.
   return Status::kNotDone;
+}
+
+void IntelligenceActor::injectPacket(const PacketContainer &packet, PacketContainer::Direction direction) {
+  lastPacketTime_ = std::chrono::steady_clock::now();
+  StateMachine::injectPacket(packet, direction);
 }
 
 } // namespace state::machine

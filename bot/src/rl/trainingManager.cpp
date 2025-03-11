@@ -47,10 +47,30 @@ void TrainingManager::train() {
   // Train at full speed in a tight loop.
   while (1) {
     // Get a S,A,R,S' tuple from the replay buffer.
-    if (false) {
-      jaxInterface_.train();
+    if (!newReplayBuffer_.empty()) {
+      auto eng = common::createRandomEngine();
+      std::uniform_int_distribution<int> dist(0, newReplayBuffer_.size()-1);
+      auto it = newReplayBuffer_.begin();
+      std::advance(it, dist(eng));
+      const common::PvpDescriptor::PvpId pvpId = it->first;
+      const auto &pvpMap = it->second;
+      if (!pvpMap.empty()) {
+        std::uniform_int_distribution<int> dist2(0, pvpMap.size()-1);
+        auto it2 = pvpMap.begin();
+        std::advance(it2, dist2(eng));
+        const sro::scalar_types::EntityGlobalId observerGlobalId = it2->first;
+        const auto &eventObservationActionList = it2->second;
+        if (eventObservationActionList.size() >= 2) {
+          std::uniform_int_distribution<int> dist3(1, eventObservationActionList.size()-1);
+          const int selectedActionIndex = dist3(eng);
+          const auto &[eventCode1, observation1, actionIndex1] = eventObservationActionList[selectedActionIndex-1];
+          const auto &[eventCode2, observation2, actionIndex2] = eventObservationActionList[selectedActionIndex];
+          LOG(INFO) << "Selected actions " << selectedActionIndex-1 << " & " << selectedActionIndex << " from PVP #" << pvpId << " for observer " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name;
+          jaxInterface_.train(observation1, actionIndex1, calculateReward(observation1, observation2), observation2);
+        }
+      }
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // jaxInterface_.train(previousObservation, action, reward, currentObservation);
   }
@@ -70,6 +90,27 @@ void TrainingManager::onUpdate(const event::Event *event) {
 }
 
 void TrainingManager::reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, int actionIndex) {
+  // std::unordered_map<common::PvpDescriptor::PvpId, std::unordered_map<sro::scalar_types::EntityGlobalId, std::vector<std::tuple<event::EventCode, Observation, int>>>> newReplayBuffer_;
+  // static std::unordered_map<common::PvpDescriptor::PvpId, std::unordered_map<sro::scalar_types::EntityGlobalId, std::vector<std::tuple<event::EventCode, Observation, int>>>> myMap;
+  newReplayBuffer_[pvpId][observerGlobalId].push_back({event->eventCode, observation, actionIndex});
+
+  static int replayCount=0;
+  replayCount++;
+  // if (replayCount % 100 == 0) {
+  //   LOG(INFO) << "Replay count: " << replayCount;
+  //   // Collect some stats about pvps in the replay buffer.
+  //   for (const auto &[pvpId, observerMap] : newReplayBuffer_) {
+  //     for (const auto &[observerGlobalId, eventObservationActionList] : observerMap) {
+  //       LOG(INFO) << "[PVP #" << pvpId << "] " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name << " has " << eventObservationActionList.size() << " events";
+  //       // Calculate episode return.
+  //       double episodeReturn = 0.0;
+  //       for (int i=1; i<eventObservationActionList.size(); ++i) {
+  //         episodeReturn += calculateReward(std::get<1>(eventObservationActionList[i-1]), std::get<1>(eventObservationActionList[i]));
+  //       }
+  //       LOG(INFO) << "  Episode return: " << episodeReturn;
+  //     }
+  //   }
+  // }
   // LOG(INFO) << "[PVP #" << pvpId << "] Given event " << event::toString(event->eventCode) << " and observation " << observation.toString() << " for observer " << observerGlobalId << " and action " << actionIndex;
 }
 
@@ -208,9 +249,9 @@ void TrainingManager::buildItemRequirementList() {
 double TrainingManager::calculateReward(const Observation &lastObservation, const Observation &observation) const {
   double reward = 0.0;
   // We get some positive reward proportional to how much our health increased, negative if it decreased.
-  reward += (static_cast<int64_t>(observation.ourCurrentHp_) - lastObservation.ourCurrentHp_) / observation.ourMaxHp_;
+  reward += (static_cast<int64_t>(observation.ourCurrentHp_) - lastObservation.ourCurrentHp_) / static_cast<double>(observation.ourMaxHp_);
   // We get some positive reward proportional to how much our opponent's health decreased, negative if it increased.
-  reward += (static_cast<int64_t>(lastObservation.opponentCurrentHp_) - observation.opponentCurrentHp_) / observation.opponentMaxHp_;
+  reward += (static_cast<int64_t>(lastObservation.opponentCurrentHp_) - observation.opponentCurrentHp_) / static_cast<double>(observation.opponentMaxHp_);
   return reward;
 }
 

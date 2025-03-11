@@ -19,7 +19,21 @@ def func(number):
   print(f'Hyperbot\'s first call into Python!!! Passed argument: {number}')
 
 @nnx.jit
-def selectAction(model, observation, key):
-  # jax.debug.print('Picking action for obs {}', observation)
+def selectAction(model, observation, actionMask, key):
+  # jax.debug.print('Picking action for obs {} with action mask {}', observation, actionMask)
   values = model(observation)
+  values += actionMask
   return jnp.argmax(values)
+
+def train(model, optimizerState, olderObservation, selectedAction, reward, newerObservation):
+  # Move model(oldObservation)[selectedAction] towards max_action(model(newObservation)) + reward
+  def lossFunction(model, observation, actionIndex, target):
+    values = model(observation)
+    return jnp.mean(jnp.square(values[actionIndex] - target))
+
+  originalValue = model(olderObservation)[selectedAction]
+  targetValue = reward + jnp.max(model(newerObservation))
+  gradients = nnx.grad(lossFunction)(model, olderObservation, selectedAction, targetValue)
+  optimizerState.update(gradients)
+  newValue = model(olderObservation)[selectedAction]
+  jax.debug.print('Old value: {}, New value: {}, Target value: {}', originalValue, newValue, targetValue)

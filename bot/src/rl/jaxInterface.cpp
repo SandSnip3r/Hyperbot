@@ -7,6 +7,7 @@
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 
+#include <algorithm>
 #include <thread>
 
 namespace py = pybind11;
@@ -31,11 +32,11 @@ JaxInterface::~JaxInterface() {
   if (nnxRngs_.has_value()) {
     nnxRngs_.reset();
   }
-  if (modelGraph_.has_value()) {
-    modelGraph_.reset();
+  if (model_.has_value()) {
+    model_.reset();
   }
-  if (modelWeights_.has_value()) {
-    modelWeights_.reset();
+  if (optimizerState_.has_value()) {
+    optimizerState_.reset();
   }
 }
 
@@ -43,7 +44,6 @@ void JaxInterface::initialize() {
   VLOG(1) << "Constructing JaxInterface";
   py::gil_scoped_acquire acquire;
   py::object MyModelType;
-  py::object myModel;
   py::tuple graphAndWeights;
 
   jaxModule_ = py::module::import("rl.python.myPython");
@@ -56,32 +56,37 @@ void JaxInterface::initialize() {
   // Now, we want to create a randomly initialized model. Specifically, we want randomly initialized weights. To do this, we'll instantiate our NNX model, then split the abstract graph and the concrete weights.
   MyModelType = jaxModule_->attr("MyModel");
   const int kInputSize = 4 + 32*2 + 3*2;
-  const int kOutputSize = 38;
-  myModel = MyModelType(kInputSize, kOutputSize, *nnxRngs_);
-  graphAndWeights = nnxModule_->attr("split")(myModel);
-  modelGraph_ = graphAndWeights[0];
-  modelWeights_ = graphAndWeights[1];
+  const int kOutputSize = kActionSpaceSize;
+  model_ = MyModelType(kInputSize, kOutputSize, *nnxRngs_);
+
+  py::module optaxModule = py::module::import("optax");
+  py::object adam = optaxModule.attr("adam")(kLearningRate);
+  optimizerState_ = nnxModule_->attr("Optimizer")(*model_, adam);
 }
 
-void JaxInterface::train() {
+void JaxInterface::train(const Observation &olderObservation, int actionIndex, float reward, const Observation &newerObservation) {
+  ZoneScopedN("JaxInterface::train");
   LOG(INFO) << "All aboard the JAX train!";
   py::gil_scoped_acquire acquire;
-  jaxModule_->attr("func")(12345);
+  {
+    ZoneScopedN("JaxInterface::train_PYTHON");
+    jaxModule_->attr("train")(*model_, *optimizerState_, convertToNumpy(olderObservation), actionIndex, reward, convertToNumpy(newerObservation));
+  }
 }
 
-int JaxInterface::selectAction(const Observation &observation) {
+int JaxInterface::selectAction(const Observation &observation, bool canSendPacket) {
   ZoneScopedN("JaxInterface::selectAction");
-  VLOG(1) << "Getting action for observation " << observation.toString();
+  VLOG(1) << absl::StreamFormat("Getting action for observation %s, canSendPacket=%v", observation.toString(), canSendPacket);
   py::gil_scoped_acquire acquire;
   // Convert C++ observation into numpy observation
   py::object numpyObservation = convertToNumpy(observation);
-  // Pick the right weights for the model
-  py::object model = nnxModule_->attr("merge")(*modelGraph_, *modelWeights_);
+  // Create an action mask based on whether or not we can send a packet
+  py::object actionMask = createActionMask(canSendPacket);
   // Get the action from the model
   py::object actionPyObject;
   {
     ZoneScopedN("JaxInterface::selectAction_PYTHON");
-    actionPyObject = jaxModule_->attr("selectAction")(model, numpyObservation, getNextRngKey());
+    actionPyObject = jaxModule_->attr("selectAction")(*model_, numpyObservation, actionMask, getNextRngKey());
   }
   int actionIndex = actionPyObject.cast<int>();
   VLOG(1) << "Chose action " << actionIndex;
@@ -116,6 +121,15 @@ py::object JaxInterface::convertToNumpy(const Observation &observation) {
     mutableArray(index+1) = static_cast<float>(cooldown) / 1000.0;
     index += 2;
   }
+  return array;
+}
+
+pybind11::object JaxInterface::createActionMask(bool canSendPacket) {
+  py::array_t<float> array(kActionSpaceSize);
+  auto mutableArray = array.mutable_unchecked<1>();
+  mutableArray(0) = 0.0;
+  const float packetMaskValue = canSendPacket ? 0.0 : -std::numeric_limits<float>::infinity();
+  std::fill_n(mutableArray.mutable_data(1), kActionSpaceSize-1, packetMaskValue);
   return array;
 }
 

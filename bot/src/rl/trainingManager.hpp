@@ -74,6 +74,7 @@ private:
 
   std::vector<ReplayBufferEntry> replayBuffer_;
   std::map<sro::scalar_types::EntityGlobalId, LastObservationAndAction> lastObservationMap_;
+  std::unordered_map<common::PvpDescriptor::PvpId, std::unordered_map<sro::scalar_types::EntityGlobalId, std::vector<std::tuple<event::EventCode, Observation, int>>>> newReplayBuffer_;
   double calculateReward(const Observation &lastObservation, const Observation &observation) const;
 };
 

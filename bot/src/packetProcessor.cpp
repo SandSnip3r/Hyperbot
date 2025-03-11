@@ -194,6 +194,10 @@ void PacketProcessor::subscribeToPackets() {
 void PacketProcessor::handlePacket(const PacketContainer &packet) {
   ZoneScopedN("PacketProcessor::handlePacket");
   {
+    std::string_view packetOpcodeString = packet::toString(static_cast<packet::Opcode>(packet.opcode));
+    ZoneName(packetOpcodeString.data(), packetOpcodeString.size());
+  }
+  {
     // Do a quick check to see if any packets are coming while Self is despawned.
     static const absl::flat_hash_set<packet::Opcode> expectedOpcodes = {
       packet::Opcode::kFrameworkMessageIdentify,

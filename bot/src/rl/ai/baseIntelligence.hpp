@@ -28,7 +28,7 @@ namespace ai {
 class BaseIntelligence {
 public:
   BaseIntelligence(TrainingManager &trainingManager) : trainingManager_(trainingManager) {}
-  virtual std::unique_ptr<Action> selectAction(Bot &bot, state::machine::StateMachine *parentStateMachine, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) = 0;
+  virtual std::unique_ptr<Action> selectAction(Bot &bot, state::machine::StateMachine *parentStateMachine, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId, bool canSendPacket) = 0;
   virtual std::string_view name() const = 0;
 
 protected:

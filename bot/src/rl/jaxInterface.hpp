@@ -14,20 +14,23 @@ public:
   JaxInterface() = default;
   ~JaxInterface();
   void initialize();
-  void train();
-  int selectAction(const Observation &observation);
+  void train(const Observation &olderObservation, int actionIndex, float reward, const Observation &newerObservation);
+  int selectAction(const Observation &observation, bool canSendPacket);
 private:
+  static constexpr int kActionSpaceSize{36}; // TODO: If changed, also change rl::ActionBuilder
+  static constexpr float kLearningRate{1e-5};
   static constexpr int kSeed{0};
   std::optional<pybind11::module> jaxModule_;
   std::optional<pybind11::module> randomModule_;
   std::optional<pybind11::module> nnxModule_;
   std::optional<pybind11::object> rngKey_;
   std::optional<pybind11::object> nnxRngs_;
-  std::optional<pybind11::object> modelGraph_;
-  std::optional<pybind11::object> modelWeights_;
+  std::optional<pybind11::object> model_;
+  std::optional<pybind11::object> optimizerState_;
 
   pybind11::object getNextRngKey();
   pybind11::object convertToNumpy(const Observation &observation);
+  pybind11::object createActionMask(bool canSendPacket);
 };
 
 // We need 3 main interfaces:

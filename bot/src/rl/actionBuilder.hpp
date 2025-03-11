@@ -20,7 +20,7 @@ namespace rl {
 class ActionBuilder {
 public:
   static std::unique_ptr<Action> buildAction(state::machine::StateMachine *parentStateMachine, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId, int actionIndex);
-  static constexpr int actionSpaceSize() { return 38; }
+  static constexpr int actionSpaceSize() { return 36; } // TODO: If changed, also change rl::JaxInterface
 };
 
 } // namespace rl

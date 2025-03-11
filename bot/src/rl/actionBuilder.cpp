@@ -42,43 +42,43 @@ std::unique_ptr<Action> ActionBuilder::buildAction(state::machine::StateMachine 
       return std::make_unique<TargetlessSkill>(parentStateMachine, 1421);
     case 18:
       return std::make_unique<TargetlessSkill>(parentStateMachine, 1441);
+    // case 19:
+    //   return std::make_unique<TargetlessSkill>(parentStateMachine, 8312); // Fire Combustion - Firefly
+    // case 20:
+    //   return std::make_unique<TargetlessSkill>(parentStateMachine, 21209); // Vision Fire Combustion
     case 19:
-      return std::make_unique<TargetlessSkill>(parentStateMachine, 8312);
-    case 20:
-      return std::make_unique<TargetlessSkill>(parentStateMachine, 21209);
-    case 21:
       return std::make_unique<TargetlessSkill>(parentStateMachine, 30577);
-    case 22:
+    case 20:
       return std::make_unique<TargetedSkill>(parentStateMachine, 37, opponentGlobalId);
-    case 23:
+    case 21:
       return std::make_unique<TargetedSkill>(parentStateMachine, 114, opponentGlobalId);
-    case 24:
+    case 22:
       return std::make_unique<TargetedSkill>(parentStateMachine, 298, opponentGlobalId);
-    case 25:
+    case 23:
       return std::make_unique<TargetedSkill>(parentStateMachine, 300, opponentGlobalId);
-    case 26:
+    case 24:
       return std::make_unique<TargetedSkill>(parentStateMachine, 322, opponentGlobalId);
-    case 27:
+    case 25:
       return std::make_unique<TargetedSkill>(parentStateMachine, 339, opponentGlobalId);
-    case 28:
+    case 26:
       return std::make_unique<TargetedSkill>(parentStateMachine, 371, opponentGlobalId);
-    case 29:
+    case 27:
       return std::make_unique<TargetedSkill>(parentStateMachine, 588, opponentGlobalId);
-    case 30:
+    case 28:
       return std::make_unique<TargetedSkill>(parentStateMachine, 610, opponentGlobalId);
-    case 31:
+    case 29:
       return std::make_unique<TargetedSkill>(parentStateMachine, 644, opponentGlobalId);
-    case 32:
+    case 30:
       return std::make_unique<TargetedSkill>(parentStateMachine, 1315, opponentGlobalId);
-    case 33:
+    case 31:
       return std::make_unique<TargetedSkill>(parentStateMachine, 1343, opponentGlobalId);
-    case 34:
+    case 32:
       return std::make_unique<TargetedSkill>(parentStateMachine, 1449, opponentGlobalId);
-    case 35:
+    case 33:
       return std::make_unique<UseItem>(parentStateMachine, 5);
-    case 36:
+    case 34:
       return std::make_unique<UseItem>(parentStateMachine, 12);
-    case 37:
+    case 35:
       return std::make_unique<UseItem>(parentStateMachine, 56);
     default:
       throw std::runtime_error("Invalid action choice");
