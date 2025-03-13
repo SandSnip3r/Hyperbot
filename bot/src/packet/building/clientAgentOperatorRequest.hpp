@@ -18,6 +18,7 @@ private:
 public:
   static PacketContainer toggleInvisible();
   static PacketContainer makeItem(sro::scalar_types::ReferenceObjectId refItemId, uint8_t optLevelOrAmount);
+  static PacketContainer warpPoint(const sro::Position &position, uint16_t worldId);
 };
 
 } // namespace packet::building

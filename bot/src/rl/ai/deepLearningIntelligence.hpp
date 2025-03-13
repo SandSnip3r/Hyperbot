@@ -9,7 +9,7 @@ namespace rl::ai {
 class DeepLearningIntelligence : public BaseIntelligence {
 public:
   using BaseIntelligence::BaseIntelligence;
-  std::unique_ptr<Action> selectAction(Bot &bot, state::machine::StateMachine *parentStateMachine, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId, bool canSendPacket) override;
+  int selectAction(Bot &bot, const Observation &observation, bool canSendPacket) override;
   std::string_view name() const override { return "DeepLearning"; }
 private:
 };

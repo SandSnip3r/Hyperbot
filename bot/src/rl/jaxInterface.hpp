@@ -14,8 +14,9 @@ public:
   JaxInterface() = default;
   ~JaxInterface();
   void initialize();
-  void train(const Observation &olderObservation, int actionIndex, float reward, const Observation &newerObservation);
+  void train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation);
   int selectAction(const Observation &observation, bool canSendPacket);
+  void updateTargetModel();
 private:
   static constexpr int kActionSpaceSize{36}; // TODO: If changed, also change rl::ActionBuilder
   static constexpr float kLearningRate{1e-5};
@@ -26,6 +27,7 @@ private:
   std::optional<pybind11::object> rngKey_;
   std::optional<pybind11::object> nnxRngs_;
   std::optional<pybind11::object> model_;
+  std::optional<pybind11::object> targetModel_;
   std::optional<pybind11::object> optimizerState_;
 
   pybind11::object getNextRngKey();

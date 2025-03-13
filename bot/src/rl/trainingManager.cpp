@@ -45,32 +45,45 @@ void TrainingManager::train() {
   // }
   // We now have enough samples to start training.
   // Train at full speed in a tight loop.
+  std::mt19937 randomEngine = common::createRandomEngine();
   while (1) {
     // Get a S,A,R,S' tuple from the replay buffer.
-    if (!newReplayBuffer_.empty()) {
-      auto eng = common::createRandomEngine();
-      std::uniform_int_distribution<int> dist(0, newReplayBuffer_.size()-1);
-      auto it = newReplayBuffer_.begin();
-      std::advance(it, dist(eng));
-      const common::PvpDescriptor::PvpId pvpId = it->first;
-      const auto &pvpMap = it->second;
-      if (!pvpMap.empty()) {
-        std::uniform_int_distribution<int> dist2(0, pvpMap.size()-1);
-        auto it2 = pvpMap.begin();
-        std::advance(it2, dist2(eng));
-        const sro::scalar_types::EntityGlobalId observerGlobalId = it2->first;
-        const auto &eventObservationActionList = it2->second;
-        if (eventObservationActionList.size() >= 2) {
-          std::uniform_int_distribution<int> dist3(1, eventObservationActionList.size()-1);
-          const int selectedActionIndex = dist3(eng);
-          const auto &[eventCode1, observation1, actionIndex1] = eventObservationActionList[selectedActionIndex-1];
-          const auto &[eventCode2, observation2, actionIndex2] = eventObservationActionList[selectedActionIndex];
-          LOG(INFO) << "Selected actions " << selectedActionIndex-1 << " & " << selectedActionIndex << " from PVP #" << pvpId << " for observer " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name;
-          jaxInterface_.train(observation1, actionIndex1, calculateReward(observation1, observation2), observation2);
+    try {
+      std::unique_lock lock(replayBufferMutex_);
+      if (!newReplayBuffer_.empty()) {
+        std::uniform_int_distribution<int> dist(0, newReplayBuffer_.size()-1);
+        auto it = newReplayBuffer_.begin();
+        std::advance(it, dist(randomEngine));
+        const common::PvpDescriptor::PvpId pvpId = it->first;
+        const auto &pvpMap = it->second;
+        if (!pvpMap.empty()) {
+          std::uniform_int_distribution<int> dist2(0, pvpMap.size()-1);
+          auto it2 = pvpMap.begin();
+          std::advance(it2, dist2(randomEngine));
+          const sro::scalar_types::EntityGlobalId observerGlobalId = it2->first;
+          const auto &eventObservationActionList = it2->second;
+          if (eventObservationActionList.size() >= 2) {
+            std::uniform_int_distribution<int> dist3(1, eventObservationActionList.size()-1);
+            const int selectedActionIndex = dist3(randomEngine);
+            const auto &[eventCode1, observation1, actionIndex1] = eventObservationActionList[selectedActionIndex-1];
+            const auto &[eventCode2, observation2, actionIndex2] = eventObservationActionList[selectedActionIndex];
+            if (!actionIndex1) {
+              throw std::runtime_error("An entry in the replay buffer before the last item has a missing action index");
+            }
+            // LOG(INFO) << "Selected actions " << selectedActionIndex-1 << " & " << selectedActionIndex << " from PVP #" << pvpId << " for observer " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name << (!actionIndex2.has_value() ? std::string(200, '@') : std::string());
+            jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
+            ++trainStepCount_;
+            if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
+              LOG(INFO) << "Updating target network!";
+              jaxInterface_.updateTargetModel();
+            }
+          }
         }
       }
+    } catch (std::exception &ex) {
+      LOG(ERROR) << "Caught exception while training: " << ex.what();
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     // jaxInterface_.train(previousObservation, action, reward, currentObservation);
   }
@@ -89,49 +102,31 @@ void TrainingManager::onUpdate(const event::Event *event) {
   }
 }
 
-void TrainingManager::reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, int actionIndex) {
-  // std::unordered_map<common::PvpDescriptor::PvpId, std::unordered_map<sro::scalar_types::EntityGlobalId, std::vector<std::tuple<event::EventCode, Observation, int>>>> newReplayBuffer_;
-  // static std::unordered_map<common::PvpDescriptor::PvpId, std::unordered_map<sro::scalar_types::EntityGlobalId, std::vector<std::tuple<event::EventCode, Observation, int>>>> myMap;
-  newReplayBuffer_[pvpId][observerGlobalId].push_back({event->eventCode, observation, actionIndex});
+void TrainingManager::reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, std::optional<int> actionIndex) {
+  // LOG(INFO) << "[PVP #" << pvpId << "] Given event " << event::toString(event->eventCode) << " and observation " << observation.toString() << " for observer " << observerGlobalId << " and action " << actionIndex.value_or(-1);
+  {
+    std::unique_lock lock(replayBufferMutex_);
+    newReplayBuffer_[pvpId][observerGlobalId].push_back({event->eventCode, observation, actionIndex});
 
-  static int replayCount=0;
-  replayCount++;
-  // if (replayCount % 100 == 0) {
-  //   LOG(INFO) << "Replay count: " << replayCount;
-  //   // Collect some stats about pvps in the replay buffer.
-  //   for (const auto &[pvpId, observerMap] : newReplayBuffer_) {
-  //     for (const auto &[observerGlobalId, eventObservationActionList] : observerMap) {
-  //       LOG(INFO) << "[PVP #" << pvpId << "] " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name << " has " << eventObservationActionList.size() << " events";
-  //       // Calculate episode return.
-  //       double episodeReturn = 0.0;
-  //       for (int i=1; i<eventObservationActionList.size(); ++i) {
-  //         episodeReturn += calculateReward(std::get<1>(eventObservationActionList[i-1]), std::get<1>(eventObservationActionList[i]));
-  //       }
-  //       LOG(INFO) << "  Episode return: " << episodeReturn;
-  //     }
-  //   }
-  // }
-  // LOG(INFO) << "[PVP #" << pvpId << "] Given event " << event::toString(event->eventCode) << " and observation " << observation.toString() << " for observer " << observerGlobalId << " and action " << actionIndex;
+    // static int replayCount=0;
+    // replayCount++;
+    // if (replayCount % 100 == 0) {
+    //   LOG(INFO) << "Replay count: " << replayCount;
+    //   // Collect some stats about pvps in the replay buffer.
+    //   for (const auto &[pvpId, observerMap] : newReplayBuffer_) {
+    //     for (const auto &[observerGlobalId, eventObservationActionList] : observerMap) {
+    //       LOG(INFO) << "[PVP #" << pvpId << "] " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name << " has " << eventObservationActionList.size() << " events";
+    //       // Calculate episode return.
+    //       double episodeReturn = 0.0;
+    //       for (int i=1; i<eventObservationActionList.size(); ++i) {
+    //         episodeReturn += calculateReward(std::get<1>(eventObservationActionList[i-1]), std::get<1>(eventObservationActionList[i]));
+    //       }
+    //       LOG(INFO) << "  Episode return: " << episodeReturn;
+    //     }
+    //   }
+    // }
+  }
 }
-
-// void TrainingManager::reportObservationAndAction(sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, int actionIndex) {
-//   auto it = lastObservationMap_.find(observerGlobalId);
-//   if (it != lastObservationMap_.end()) {
-//     // We have a previous observation.
-//     const LastObservationAndAction &lastObservationAndAction = it->second;
-//     const double reward = calculateReward(lastObservationAndAction.observation, observation);
-//     // We want to store S,A,R,S' in a replay buffer.
-//     replayBuffer_.push_back({lastObservationAndAction.observation, lastObservationAndAction.actionIndex, reward, observation});
-//     // LOG(INFO) << "Received observation " << observation.toString() << " and action " << actionIndex;
-//     // LOG(INFO) << "Previous observation " << lastObservationAndAction.observation.toString() << ". Reward: " << reward << ", replay buffer size: " << replayBuffer_.size();
-//     if (replayBuffer_.size() % 1000 == 0) {
-//       LOG(INFO) << "Replay buffer size: " << replayBuffer_.size();
-//     }
-//   } else {
-//     LOG(INFO) << "Received first observation";
-//   }
-//   lastObservationMap_[observerGlobalId] = LastObservationAndAction{observation, actionIndex};
-// }
 
 void TrainingManager::setUpIntelligencePool() {
 
@@ -238,9 +233,9 @@ void TrainingManager::buildItemRequirementList() {
     return type_id::categories::kUniversalPill.contains(type_id::getTypeId(item)) && item.itemClass == 2;
   });
 
-  constexpr int kSmallHpPotionRequiredCount = 400;
-  constexpr int kSmallMpPotionRequiredCount = 400;
-  constexpr int kMediumUniversalPillRequiredCount = 200;
+  constexpr int kSmallHpPotionRequiredCount = 1600;
+  constexpr int kSmallMpPotionRequiredCount = 1600;
+  constexpr int kMediumUniversalPillRequiredCount = 800;
   itemRequirements_.push_back({smallHpPotionRefId, kSmallHpPotionRequiredCount});
   itemRequirements_.push_back({smallMpPotionRefId, kSmallMpPotionRequiredCount});
   itemRequirements_.push_back({mediumUniversalPillRefId, kMediumUniversalPillRequiredCount});

@@ -4,8 +4,7 @@
 
 namespace rl::ai {
 
-std::unique_ptr<Action> RandomIntelligence::selectAction(Bot &bot, state::machine::StateMachine *parentStateMachine, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId, bool canSendPacket) {
-  Observation observation = buildObservation(bot, event, opponentGlobalId);
+int RandomIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket) {
   int actionIndex;
   if (canSendPacket) {
     // Choose a truly random action.
@@ -14,8 +13,7 @@ std::unique_ptr<Action> RandomIntelligence::selectAction(Bot &bot, state::machin
   } else {
     actionIndex = 0;
   }
-  reportEventObservationAndAction(pvpId, bot.selfState()->globalId, event, observation, actionIndex);
-  return ActionBuilder::buildAction(parentStateMachine, event, opponentGlobalId, actionIndex);
+  return actionIndex;
 }
 
 } // namespace rl::ai

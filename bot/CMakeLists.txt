@@ -364,6 +364,8 @@ add_executable(${PROJECT_NAME}
   src/state/machine/executeGmCommand.hpp
   src/state/machine/gmCommandSpawnAndPickItems.cpp
   src/state/machine/gmCommandSpawnAndPickItems.hpp
+  src/state/machine/gmWarpToPosition.cpp
+  src/state/machine/gmWarpToPosition.hpp
   src/state/machine/intelligenceActor.cpp
   src/state/machine/intelligenceActor.hpp
   src/state/machine/login.cpp

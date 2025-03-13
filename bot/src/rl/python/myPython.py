@@ -16,7 +16,7 @@ class MyModel(nnx.Module):
     return x
 
 def func(number):
-  print(f'Hyperbot\'s first call into Python!!! Passed argument: {number}')
+  print(f'Hyperbot\'s first call into Python!!! Passed argument: {number}', flush=True)
 
 @nnx.jit
 def selectAction(model, observation, actionMask, key):
@@ -25,15 +25,22 @@ def selectAction(model, observation, actionMask, key):
   values += actionMask
   return jnp.argmax(values)
 
-def train(model, optimizerState, olderObservation, selectedAction, reward, newerObservation):
-  # Move model(oldObservation)[selectedAction] towards max_action(model(newObservation)) + reward
+@nnx.jit
+def train(model, optimizerState, targetModel, olderObservation, selectedAction, isTerminal, reward, newerObservation):
+  # Move model(oldObservation)[selectedAction] towards gamma * max_action(targetModel(newObservation)) + reward
   def lossFunction(model, observation, actionIndex, target):
     values = model(observation)
     return jnp.mean(jnp.square(values[actionIndex] - target))
 
-  originalValue = model(olderObservation)[selectedAction]
-  targetValue = reward + jnp.max(model(newerObservation))
+  currentValue = model(olderObservation)[selectedAction]
+  targetValue = jax.lax.cond(isTerminal, lambda _: reward, lambda _: reward + jnp.max(targetModel(newerObservation)), None)
+
   gradients = nnx.grad(lossFunction)(model, olderObservation, selectedAction, targetValue)
   optimizerState.update(gradients)
   newValue = model(olderObservation)[selectedAction]
-  jax.debug.print('Old value: {}, New value: {}, Target value: {}', originalValue, newValue, targetValue)
+  # jax.debug.print('Old value: {}, New value: {}, Target value: {} Terminal? {}', currentValue, newValue, targetValue, isTerminal)
+
+def getCopyOfModel(model, targetNetwork):
+  graph, params = nnx.split(model)
+  targetGraph, targetParams = nnx.split(targetNetwork)
+  return nnx.merge(targetGraph, params)

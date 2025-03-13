@@ -1,4 +1,5 @@
 #include "clientAgentOperatorRequest.hpp"
+#include "packet/building/commonBuilding.hpp"
 #include "packet/enums/packetEnums.hpp"
 
 namespace packet::building {
@@ -14,6 +15,14 @@ PacketContainer ClientAgentOperatorRequest::makeItem(sro::scalar_types::Referenc
   stream.Write(enums::OperatorCommand::kMakeItem);
   stream.Write(refItemId);
   stream.Write(optLevelOrAmount);
+  return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
+}
+
+PacketContainer ClientAgentOperatorRequest::warpPoint(const sro::Position &position, uint16_t worldId) {
+  StreamUtility stream;
+  stream.Write(enums::OperatorCommand::kWarpPoint);
+  writePosition(stream, position);
+  stream.Write(worldId);
   return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
 }
 

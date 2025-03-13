@@ -35,6 +35,9 @@ JaxInterface::~JaxInterface() {
   if (model_.has_value()) {
     model_.reset();
   }
+  if (targetModel_.has_value()) {
+    targetModel_.reset();
+  }
   if (optimizerState_.has_value()) {
     optimizerState_.reset();
   }
@@ -58,19 +61,22 @@ void JaxInterface::initialize() {
   const int kInputSize = 4 + 32*2 + 3*2;
   const int kOutputSize = kActionSpaceSize;
   model_ = MyModelType(kInputSize, kOutputSize, *nnxRngs_);
+  targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
 
   py::module optaxModule = py::module::import("optax");
   py::object adam = optaxModule.attr("adam")(kLearningRate);
   optimizerState_ = nnxModule_->attr("Optimizer")(*model_, adam);
 }
 
-void JaxInterface::train(const Observation &olderObservation, int actionIndex, float reward, const Observation &newerObservation) {
+void JaxInterface::train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation) {
   ZoneScopedN("JaxInterface::train");
-  LOG(INFO) << "All aboard the JAX train!";
   py::gil_scoped_acquire acquire;
-  {
+  try {
     ZoneScopedN("JaxInterface::train_PYTHON");
-    jaxModule_->attr("train")(*model_, *optimizerState_, convertToNumpy(olderObservation), actionIndex, reward, convertToNumpy(newerObservation));
+    jaxModule_->attr("train")(*model_, *optimizerState_, *targetModel_, convertToNumpy(olderObservation), actionIndex, isTerminal, reward, convertToNumpy(newerObservation));
+  } catch (std::exception &ex) {
+    LOG(ERROR) << "Caught exception in JaxInterface::train: " << ex.what();
+    throw;
   }
 }
 
@@ -78,19 +84,35 @@ int JaxInterface::selectAction(const Observation &observation, bool canSendPacke
   ZoneScopedN("JaxInterface::selectAction");
   VLOG(1) << absl::StreamFormat("Getting action for observation %s, canSendPacket=%v", observation.toString(), canSendPacket);
   py::gil_scoped_acquire acquire;
-  // Convert C++ observation into numpy observation
-  py::object numpyObservation = convertToNumpy(observation);
-  // Create an action mask based on whether or not we can send a packet
-  py::object actionMask = createActionMask(canSendPacket);
-  // Get the action from the model
-  py::object actionPyObject;
-  {
-    ZoneScopedN("JaxInterface::selectAction_PYTHON");
-    actionPyObject = jaxModule_->attr("selectAction")(*model_, numpyObservation, actionMask, getNextRngKey());
+  try {
+    // Convert C++ observation into numpy observation
+    py::object numpyObservation = convertToNumpy(observation);
+    // Create an action mask based on whether or not we can send a packet
+    py::object actionMask = createActionMask(canSendPacket);
+    // Get the action from the model
+    py::object actionPyObject;
+    {
+      ZoneScopedN("JaxInterface::selectAction_PYTHON");
+      actionPyObject = jaxModule_->attr("selectAction")(*model_, numpyObservation, actionMask, getNextRngKey());
+    }
+    int actionIndex = actionPyObject.cast<int>();
+    VLOG(1) << "Chose action " << actionIndex;
+    return actionIndex;
+  } catch (std::exception &ex) {
+    LOG(ERROR) << "Caught exception in JaxInterface::selectAction: " << ex.what();
+    throw;
   }
-  int actionIndex = actionPyObject.cast<int>();
-  VLOG(1) << "Chose action " << actionIndex;
-  return actionIndex;
+}
+
+void JaxInterface::updateTargetModel() {
+  ZoneScopedN("JaxInterface::updateTargetModel");
+  py::gil_scoped_acquire acquire;
+  try {
+    targetModel_ = jaxModule_->attr("getCopyOfModel")(*model_, *targetModel_);
+  } catch (std::exception &ex) {
+    LOG(ERROR) << "Caught exception in JaxInterface::updateTargetModel: " << ex.what();
+    throw;
+  }
 }
 
 py::object JaxInterface::getNextRngKey() {

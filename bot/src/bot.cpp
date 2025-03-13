@@ -380,6 +380,7 @@ void Bot::handleEntityDespawned(const event::EntityDespawned &event) {
   }
   if (event.globalId == selfEntity_->globalId) {
     // Self despawned, stop tracking.
+    LOG(INFO) << "We despawned!";
     selfEntity_.reset();
   }
 }
