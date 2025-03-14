@@ -12,7 +12,7 @@ public:
   int selectAction(Bot &bot, const Observation &observation, bool canSendPacket) override;
   std::string_view name() const override { return "Random"; }
 
-private:
+protected:
   std::mt19937 randomEngine_{common::createRandomEngine()};
 };
 

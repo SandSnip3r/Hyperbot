@@ -820,6 +820,9 @@ std::optional<std::chrono::milliseconds> PacketProcessor::getItemCooldownMs(cons
     cooldownMilliseconds.emplace(selfEntity_->getUniversalPillDelay());
   } else if (type_id::categories::kPurificationPill.contains(typeData)) {
     cooldownMilliseconds.emplace(selfEntity_->getPurificationPillDelay());
+  } else if (type_id::categories::kRepair.contains(typeData)) {
+    // Item mall repair hammer is hard-coded in the server binary with a cooldown of 1000ms.
+    cooldownMilliseconds.emplace(1000);
   }
   return cooldownMilliseconds;
 }

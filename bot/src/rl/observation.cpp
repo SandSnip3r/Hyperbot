@@ -9,6 +9,19 @@
 
 namespace rl {
 
+namespace {
+
+int countItemsInInventory(const Bot &bot, sro::scalar_types::ReferenceObjectId itemId) {
+  int count=0;
+  for (const auto &item : bot.selfState()->inventory) {
+    if (item.refItemId == itemId) {
+      count += item.getQuantity();
+    }
+  }
+  return count;
+}
+} // namespace
+
 Observation::Observation(const Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId) {
   if (!bot.selfState()) {
     throw std::runtime_error("Cannot get an observation without a self state");
@@ -23,6 +36,8 @@ Observation::Observation(const Bot &bot, const event::Event *event, sro::scalar_
   opponentMaxHp_ = opponent->maxHp().value();
   opponentCurrentMp_ = opponent->currentMp();
   opponentMaxMp_ = opponent->maxMp().value();
+
+  hpPotionCount_ = countItemsInInventory(bot, 5);
 
   static constexpr std::array kSkills{28, 131, 554, 1253, 1256, 1271, 1272, 1281, 1335, 1377, 1380, 1398, 1399, 1410, 1421, 1441, 8312, 21209, 30577, 37, 114, 298, 300, 322, 339, 371, 588, 610, 644, 1315, 1343, 1449};
   for (sro::scalar_types::ReferenceSkillId skillId : kSkills) {

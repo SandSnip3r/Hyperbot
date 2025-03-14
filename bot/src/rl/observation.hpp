@@ -29,6 +29,7 @@ public:
   uint32_t opponentMaxHp_;
   uint32_t opponentCurrentMp_;
   uint32_t opponentMaxMp_;
+  int hpPotionCount_;
   std::vector<int> skillCooldowns_;
   std::vector<int> itemCooldowns_;
 };

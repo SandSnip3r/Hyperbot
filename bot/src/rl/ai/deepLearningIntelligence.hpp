@@ -1,17 +1,22 @@
 #ifndef RL_AI_DEEP_LEARNING_INTELLIGENCE_HPP_
 #define RL_AI_DEEP_LEARNING_INTELLIGENCE_HPP_
 
-#include "rl/ai/baseIntelligence.hpp"
+#include "rl/ai/randomIntelligence.hpp"
 #include "rl/jaxInterface.hpp"
 
 namespace rl::ai {
 
-class DeepLearningIntelligence : public BaseIntelligence {
+class DeepLearningIntelligence : public RandomIntelligence {
 public:
-  using BaseIntelligence::BaseIntelligence;
+  using RandomIntelligence::RandomIntelligence;
   int selectAction(Bot &bot, const Observation &observation, bool canSendPacket) override;
   std::string_view name() const override { return "DeepLearning"; }
 private:
+  static constexpr float kInitialEpsilon = 1.0f;
+  static constexpr float kFinalEpsilon = 0.01f;
+  static constexpr int kEpsilonDecaySteps = 1'000'000;
+  int stepCount_{0};
+  float getEpsilon();
 };
 
 } // namespace rl::ai

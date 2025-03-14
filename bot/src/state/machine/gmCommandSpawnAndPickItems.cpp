@@ -64,28 +64,34 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
     }
     if (event->eventCode == event::EventCode::kEntitySpawned) {
       const event::EntitySpawned& castedEvent = dynamic_cast<const event::EntitySpawned&>(*event);
-      auto itemEntity = bot_.entityTracker().getEntity<entity::Item>(castedEvent.globalId);
-      // Make sure spawned entity is an item.
-      if (itemEntity) {
-        // Make sure spawned item is the same as what we're trying to spawn.
-        if (items_.empty()) {
-          throw std::runtime_error("Should not be possible to have no items yet");
-        }
-        if (itemEntity->refObjId == items_.front().refId) {
-          const double distance = sro::position_math::calculateDistance2d(bot_.selfState()->position(), itemEntity->position());
-          // Make sure the spawned item is close enough to us, otherwise, it might be spawned by someone else for someone else.
-          if (distance >= closestSpawnDistance-errorTolerance && distance <= farthestSpawnDistance+errorTolerance) {
-            CHAR_VLOG(1) << "Item (#" << itemEntity->globalId << ") we asked for spawned. Creating state machine to pick item " << bot_.gameData().getItemName(itemEntity->refObjId);
-            if (requestTimeoutEventId_) {
-              bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
-              requestTimeoutEventId_.reset();
+      try {
+        auto itemEntity = bot_.entityTracker().getEntity<entity::Item>(castedEvent.globalId);
+        // Make sure spawned entity is an item.
+        if (itemEntity) {
+          // Make sure spawned item is the same as what we're trying to spawn.
+          if (items_.empty()) {
+            throw std::runtime_error("Should not be possible to have no items yet");
+          }
+          if (itemEntity->refObjId == items_.front().refId) {
+            const double distance = sro::position_math::calculateDistance2d(bot_.selfState()->position(), itemEntity->position());
+            // Make sure the spawned item is close enough to us, otherwise, it might be spawned by someone else for someone else.
+            if (distance >= closestSpawnDistance-errorTolerance && distance <= farthestSpawnDistance+errorTolerance) {
+              CHAR_VLOG(1) << "Item (#" << itemEntity->globalId << ") we asked for spawned. Creating state machine to pick item " << bot_.gameData().getItemName(itemEntity->refObjId);
+              if (requestTimeoutEventId_) {
+                bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
+                requestTimeoutEventId_.reset();
+              }
+              setChildStateMachine<PickItem>(itemEntity->globalId);
+              return onUpdate(event);
             }
-            setChildStateMachine<PickItem>(itemEntity->globalId);
-            return onUpdate(event);
           }
         }
+        // Is not the item we care about. Not done yet
+      } catch (std::exception &ex) {
+        // There is a chance that this thing has already despawned by the time we're processing this event.
+        // That is okay. In this specific case, it is probably because our PVP opponent picked up their item.
+        LOG(WARNING) << "Entity spawned, but it is not tracked: " << ex.what();
       }
-      // Is not the item we care about. Not done yet
       return Status::kNotDone;
     } else if (event->eventCode == event::EventCode::kOperatorRequestError) {
       const auto &castedEvent = dynamic_cast<const event::OperatorRequestError&>(*event);

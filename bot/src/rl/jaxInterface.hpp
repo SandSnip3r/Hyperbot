@@ -31,7 +31,7 @@ private:
   std::optional<pybind11::object> optimizerState_;
 
   pybind11::object getNextRngKey();
-  pybind11::object convertToNumpy(const Observation &observation);
+  pybind11::object observationToNumpy(const Observation &observation);
   pybind11::object createActionMask(bool canSendPacket);
 };
 

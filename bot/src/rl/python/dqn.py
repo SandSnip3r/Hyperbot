@@ -2,7 +2,7 @@ from flax import nnx
 import jax
 import jax.numpy as jnp
 
-class MyModel(nnx.Module):
+class DqnModel(nnx.Module):
   def __init__(self, inSize: int, outSize: int, rngs: nnx.Rngs):
     intermediateSize = 64
     key = rngs.params()
@@ -33,7 +33,8 @@ def train(model, optimizerState, targetModel, olderObservation, selectedAction, 
     return jnp.mean(jnp.square(values[actionIndex] - target))
 
   currentValue = model(olderObservation)[selectedAction]
-  targetValue = jax.lax.cond(isTerminal, lambda _: reward, lambda _: reward + jnp.max(targetModel(newerObservation)), None)
+  gamma = 0.9925
+  targetValue = jax.lax.cond(isTerminal, lambda _: reward, lambda _: reward + gamma * jnp.max(targetModel(newerObservation)), None)
 
   gradients = nnx.grad(lossFunction)(model, olderObservation, selectedAction, targetValue)
   optimizerState.update(gradients)

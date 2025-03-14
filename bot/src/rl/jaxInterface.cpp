@@ -46,10 +46,10 @@ JaxInterface::~JaxInterface() {
 void JaxInterface::initialize() {
   VLOG(1) << "Constructing JaxInterface";
   py::gil_scoped_acquire acquire;
-  py::object MyModelType;
+  py::object DqnModelType;
   py::tuple graphAndWeights;
 
-  jaxModule_ = py::module::import("rl.python.myPython");
+  jaxModule_ = py::module::import("rl.python.dqn");
   randomModule_ = py::module::import("jax.random");
   // Grab a random key based on our seed. Any randomness from this point on will split & replace this key held in member data.
   rngKey_ = randomModule_->attr("key")(kSeed);
@@ -57,10 +57,10 @@ void JaxInterface::initialize() {
   nnxModule_ = py::module::import("flax.nnx");
   nnxRngs_ = nnxModule_->attr("Rngs")(getNextRngKey());
   // Now, we want to create a randomly initialized model. Specifically, we want randomly initialized weights. To do this, we'll instantiate our NNX model, then split the abstract graph and the concrete weights.
-  MyModelType = jaxModule_->attr("MyModel");
-  const int kInputSize = 4 + 32*2 + 3*2;
+  DqnModelType = jaxModule_->attr("DqnModel");
+  const int kInputSize = 4 + 1 + 32*2 + 3*2; // IF-CHANGE: If we change this, also change JaxInterface::observationToNumpy
   const int kOutputSize = kActionSpaceSize;
-  model_ = MyModelType(kInputSize, kOutputSize, *nnxRngs_);
+  model_ = DqnModelType(kInputSize, kOutputSize, *nnxRngs_);
   targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
 
   py::module optaxModule = py::module::import("optax");
@@ -73,7 +73,7 @@ void JaxInterface::train(const Observation &olderObservation, int actionIndex, b
   py::gil_scoped_acquire acquire;
   try {
     ZoneScopedN("JaxInterface::train_PYTHON");
-    jaxModule_->attr("train")(*model_, *optimizerState_, *targetModel_, convertToNumpy(olderObservation), actionIndex, isTerminal, reward, convertToNumpy(newerObservation));
+    jaxModule_->attr("train")(*model_, *optimizerState_, *targetModel_, observationToNumpy(olderObservation), actionIndex, isTerminal, reward, observationToNumpy(newerObservation));
   } catch (std::exception &ex) {
     LOG(ERROR) << "Caught exception in JaxInterface::train: " << ex.what();
     throw;
@@ -86,7 +86,7 @@ int JaxInterface::selectAction(const Observation &observation, bool canSendPacke
   py::gil_scoped_acquire acquire;
   try {
     // Convert C++ observation into numpy observation
-    py::object numpyObservation = convertToNumpy(observation);
+    py::object numpyObservation = observationToNumpy(observation);
     // Create an action mask based on whether or not we can send a packet
     py::object actionMask = createActionMask(canSendPacket);
     // Get the action from the model
@@ -124,15 +124,17 @@ py::object JaxInterface::getNextRngKey() {
   return keys[1];
 }
 
-py::object JaxInterface::convertToNumpy(const Observation &observation) {
-  ZoneScopedN("JaxInterface::convertToNumpy");
-  py::array_t<float> array(4 + observation.skillCooldowns_.size()*2 + observation.itemCooldowns_.size()*2);
+py::object JaxInterface::observationToNumpy(const Observation &observation) {
+  ZoneScopedN("JaxInterface::observationToNumpy");
+  // IF-CHANGE: If we change this, also change JaxInterface::initialize of DqnModel
+  py::array_t<float> array(4 + 1 + observation.skillCooldowns_.size()*2 + observation.itemCooldowns_.size()*2);
   auto mutableArray = array.mutable_unchecked<1>();
-  mutableArray(0) = observation.ourCurrentHp_ / static_cast<float>(observation.ourMaxHp_);
-  mutableArray(1) = observation.ourCurrentMp_ / static_cast<float>(observation.ourMaxMp_);
-  mutableArray(2) = observation.opponentCurrentHp_ / static_cast<float>(observation.opponentMaxHp_);
-  mutableArray(3) = observation.opponentCurrentMp_ / static_cast<float>(observation.opponentMaxMp_);
-  int index = 4;
+  int index{0};
+  mutableArray(index++) = observation.ourCurrentHp_ / static_cast<float>(observation.ourMaxHp_);
+  mutableArray(index++) = observation.ourCurrentMp_ / static_cast<float>(observation.ourMaxMp_);
+  mutableArray(index++) = observation.opponentCurrentHp_ / static_cast<float>(observation.opponentMaxHp_);
+  mutableArray(index++) = observation.opponentCurrentMp_ / static_cast<float>(observation.opponentMaxMp_);
+  mutableArray(index++) = observation.hpPotionCount_ / static_cast<float>(1600); // IF-CHANGE: If we change this, also change TrainingManager::buildItemRequirementList
   for (int cooldown : observation.skillCooldowns_) {
     mutableArray(index) = cooldown == 0 ? 1.0 : 0.0;
     mutableArray(index+1) = static_cast<float>(cooldown) / 1000.0;

@@ -205,7 +205,7 @@ void TrainingManager::createAndPublishPvpDescriptor() {
 
   // These two sessions should now no longer be considered for a new Pvp.
   sessionsReadyForAssignment_.erase(sessionsReadyForAssignment_.begin(), sessionsReadyForAssignment_.begin() + 2);
-  LOG(INFO) << "Published BeginPvp event for " << char1Id << " and " << char2Id << ". Now have " << sessionsReadyForAssignment_.size() << " sessions ready for assignment";
+  LOG(INFO) << "Published BeginPvp event for " << char1.getBot().selfState()->name << " & " << char2.getBot().selfState()->name << ". Now have " << sessionsReadyForAssignment_.size() << " sessions ready for assignment";
 }
 
 Session& TrainingManager::getSession(SessionId sessionId) {
@@ -233,7 +233,7 @@ void TrainingManager::buildItemRequirementList() {
     return type_id::categories::kUniversalPill.contains(type_id::getTypeId(item)) && item.itemClass == 2;
   });
 
-  constexpr int kSmallHpPotionRequiredCount = 1600;
+  constexpr int kSmallHpPotionRequiredCount = 1600; // IF-CHANGE: If we change this, also change the max potion count in JaxInterface::observationToNumpy
   constexpr int kSmallMpPotionRequiredCount = 1600;
   constexpr int kMediumUniversalPillRequiredCount = 800;
   itemRequirements_.push_back({smallHpPotionRefId, kSmallHpPotionRequiredCount});
@@ -247,6 +247,12 @@ double TrainingManager::calculateReward(const Observation &lastObservation, cons
   reward += (static_cast<int64_t>(observation.ourCurrentHp_) - lastObservation.ourCurrentHp_) / static_cast<double>(observation.ourMaxHp_);
   // We get some positive reward proportional to how much our opponent's health decreased, negative if it increased.
   reward += (static_cast<int64_t>(lastObservation.opponentCurrentHp_) - observation.opponentCurrentHp_) / static_cast<double>(observation.opponentMaxHp_);
+  // Give an extra bump for a win or loss.
+  if (observation.ourCurrentHp_ == 0) {
+    reward -= 10.0;
+  } else if (observation.opponentCurrentHp_ == 0) {
+    reward += 10.0;
+  }
   return reward;
 }
 

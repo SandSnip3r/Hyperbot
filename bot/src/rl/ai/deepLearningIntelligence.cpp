@@ -4,10 +4,26 @@
 
 #include <tracy/Tracy.hpp>
 
+#include <absl/log/log.h>
+#include <absl/log/vlog_is_on.h>
+
 namespace rl::ai {
 
 int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket) {
   ZoneScopedN("DeepLearningIntelligence::selectAction");
+  const float epsilon = getEpsilon();
+  if (VLOG_IS_ON(1) && stepCount_ <= kEpsilonDecaySteps) {
+    std::bernoulli_distribution printDist(0.001);
+    if (printDist(randomEngine_)) {
+      VLOG(1) << "Step: " << stepCount_ << ", epsilon: " << epsilon;
+    }
+  }
+  ++stepCount_;
+  std::bernoulli_distribution randomActionDistribution(epsilon);
+  if (randomActionDistribution(randomEngine_)) {
+    // Do a random action.
+    return RandomIntelligence::selectAction(bot, observation, canSendPacket);
+  }
   int actionIndex;
   if (canSendPacket) {
     // Release the world state mutex while we call into JAX
@@ -21,5 +37,11 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
   }
   return actionIndex;
 }
+
+float DeepLearningIntelligence::getEpsilon() {
+  // For now, epsilon will decay linearly with the number of steps.
+  return std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(stepCount_) / kEpsilonDecaySteps);
+}
+
 
 } // namespace rl::ai
