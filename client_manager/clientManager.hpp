@@ -35,7 +35,7 @@ private:
   int locale_;
 	std::string arguments_;
 
-  std::map<ClientId, DWORD> clientIdToProcessIdMap_;
+  std::map<ClientId, PROCESS_INFORMATION> clientIdToProcessInformationMap_;
   ClientId nextClientId_{0};
 
   void checkDllPath();
@@ -46,7 +46,10 @@ private:
   void replyWithError(const std::string &errorMessage);
 
   // Takes the actual process ID and returns a unique "ClientId" which can be shared.
-  int32_t saveProcessId(DWORD processId);
+  int32_t saveProcessInformation(PROCESS_INFORMATION processInformation);
+
+  // Checks if any clients have died and returns their ClientIds.
+  std::vector<ClientId> reapDeadClients();
 
   void killAllClients();
 };

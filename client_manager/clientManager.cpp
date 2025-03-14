@@ -30,7 +30,7 @@ void ClientManager::run() {
     std::vector<zmq::pollitem_t> pollItems = { { socket_, 0, ZMQ_POLLIN, 0 } };
     int eventCount = zmq::poll(pollItems, kMissedHeartbeatTimeout_);
     if (eventCount == 0) {
-      if (!clientIdToProcessIdMap_.empty()) {
+      if (!clientIdToProcessInformationMap_.empty()) {
         LOG(INFO) << "Bot seems to have disconnected. Killing all clients.";
         killAllClients();
       }
@@ -70,7 +70,17 @@ void ClientManager::run() {
       case proto::client_manager_request::Request::BodyCase::kHeartbeat: {
         VLOG(5) << "Received Heartbeat";
         proto::client_manager_request::Response response;
-        response.mutable_heartbeat_ack();
+        std::vector<ClientId> deadClientIds = reapDeadClients();
+        if (deadClientIds.empty()) {
+          // If no clients have died, we send a simple heartbeat_ack.
+          response.mutable_heartbeat_ack();
+        } else {
+          // If clients have died, we'll respond to the heartbeat with a list of dead clients.
+          proto::client_manager_request::ClientsDied *clientsDied = response.mutable_clients_died();
+          for (ClientId deadClientId : deadClientIds) {
+            clientsDied->add_client_ids(deadClientId);
+          }
+        }
         std::optional<zmq::send_result_t> result = socket_.send(zmq::message_t(response.SerializeAsString()), zmq::send_flags::none);
         if (!result) {
           throw std::runtime_error("Failed to send response for Heartbeat");
@@ -122,14 +132,14 @@ int32_t ClientManager::launchClient(int32_t portToConnectTo) {
   WSADATA wsaData = { 0 };
   WSAStartup(MAKEWORD(2, 2), &wsaData);
   STARTUPINFOA si = { 0 };
-  PROCESS_INFORMATION pi = { 0 };
+  PROCESS_INFORMATION processInformation = { 0 };
 
   // Launch the client in a suspended state so we can patch it
-  bool result = sro::edx_labs::CreateSuspendedProcess(clientPath_.string(), arguments_, si, pi);
+  bool result = sro::edx_labs::CreateSuspendedProcess(clientPath_.string(), arguments_, si, processInformation);
   if (result == false) {
     throw std::runtime_error("Could not start \""+clientPath_.string()+"\"");
   }
-  VLOG(1) << "Client " << clientPath_ << " (PID:" << pi.dwProcessId << ") launched with arguments \"" << arguments_ << '"';
+  VLOG(1) << "Client " << clientPath_ << " (PID:" << processInformation.dwProcessId << ") launched with arguments \"" << arguments_ << '"';
   VLOG(1) << "The client should connect to port " << portToConnectTo;
   {
     // Write to a file (<Client PID>.txt) the port that the client should connect to
@@ -138,7 +148,7 @@ int32_t ClientManager::launchClient(int32_t portToConnectTo) {
     if (appDataDirectoryPath.empty()) {
       throw std::runtime_error("Unable to find %APPDATA%\n");
     }
-    const std::filesystem::path portInfoFilename = appDataDirectoryPath / (std::to_string(pi.dwProcessId)+".txt");
+    const std::filesystem::path portInfoFilename = appDataDirectoryPath / (std::to_string(processInformation.dwProcessId)+".txt");
     std::ofstream portInfoFile(portInfoFilename);
     if (portInfoFile) {
       portInfoFile << portToConnectTo << '\n';
@@ -148,18 +158,18 @@ int32_t ClientManager::launchClient(int32_t portToConnectTo) {
   }
 
   // Inject the DLL so we can have some fun
-  result = (FALSE != sro::edx_labs::InjectDLL(pi.hProcess, dllPath_.string().c_str(), "OnInject", static_cast<DWORD>(sro::edx_labs::GetEntryPoint(clientPath_.string().c_str())), false));
+  result = (FALSE != sro::edx_labs::InjectDLL(processInformation.hProcess, dllPath_.string().c_str(), "OnInject", static_cast<DWORD>(sro::edx_labs::GetEntryPoint(clientPath_.string().c_str())), false));
   if (result == false) {
-    TerminateThread(pi.hThread, 0);
+    TerminateThread(processInformation.hThread, 0);
     throw std::runtime_error("Could not inject into the Silkroad client process");
   }
 
   // Finally resume the client.
-  ResumeThread(pi.hThread);
-  ResumeThread(pi.hProcess);
+  ResumeThread(processInformation.hThread);
+  ResumeThread(processInformation.hProcess);
   WSACleanup();
 
-  ClientId clientId = saveProcessId(pi.dwProcessId);
+  ClientId clientId = saveProcessInformation(processInformation);
   return clientId;
 }
 
@@ -174,17 +184,31 @@ void ClientManager::replyWithError(const std::string &errorMessage) {
   }
 }
 
-int32_t ClientManager::saveProcessId(DWORD processId) {
+int32_t ClientManager::saveProcessInformation(PROCESS_INFORMATION processInformation) {
   ClientId clientId = nextClientId_;
-  clientIdToProcessIdMap_[clientId] = processId;
-  VLOG(3) << "Saving process ID " << processId << " as client ID " << clientId;
+  clientIdToProcessInformationMap_[clientId] = processInformation;
+  VLOG(3) << "Saving process ID " << processInformation.hProcess << " as client ID " << clientId;
   ++nextClientId_;
   return clientId;
 }
 
+std::vector<ClientManager::ClientId> ClientManager::reapDeadClients() {
+  std::vector<ClientId> deadClientIds;
+  for (const auto [id, processInformation] : clientIdToProcessInformationMap_) {
+    if (WaitForSingleObject(processInformation.hProcess, 0) == WAIT_OBJECT_0) {
+      LOG(INFO) << "Client " << id << " (pid:" << processInformation.dwProcessId << ") has exited";
+      deadClientIds.emplace_back(id);
+    }
+  }
+  for (ClientId deadClientId : deadClientIds) {
+    clientIdToProcessInformationMap_.erase(deadClientId);
+  }
+  return deadClientIds;
+}
+
 void ClientManager::killAllClients() {
-  for (const auto [id, pid] : clientIdToProcessIdMap_) {
-    HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+  for (const auto [id, processInformation] : clientIdToProcessInformationMap_) {
+    HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, processInformation.dwProcessId);
     if (handle == NULL) {
       // Unable to "open" process?
     } else {
@@ -198,5 +222,5 @@ void ClientManager::killAllClients() {
       CloseHandle(handle);
     }
   }
-  clientIdToProcessIdMap_.clear();
+  clientIdToProcessInformationMap_.clear();
 }

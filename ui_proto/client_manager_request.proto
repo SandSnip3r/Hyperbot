@@ -20,10 +20,6 @@ message Request {
   }
 }
 
-message Error {
-  string message = 1;
-}
-
 message ClientStarted {
   int32 client_id = 1;
 }
@@ -32,11 +28,20 @@ message ClientKilled {
   int32 client_id = 1;
 }
 
+message Error {
+  string message = 1;
+}
+
+message ClientsDied {
+  repeated int32 client_ids = 1;
+}
+
 message Response {
   oneof body {
     ClientStarted client_started = 1;
     ClientKilled client_killed = 2;
     Error error = 3;
     google.protobuf.Empty heartbeat_ack = 4;
+    ClientsDied clients_died = 5;
   }
 }
