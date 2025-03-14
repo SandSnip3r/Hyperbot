@@ -10,7 +10,7 @@ namespace state::machine {
 
 class TalkingToStorageNpc : public StateMachine {
 public:
-  TalkingToStorageNpc(Bot &bot);
+  TalkingToStorageNpc(StateMachine *parent);
   ~TalkingToStorageNpc() override;
   Status onUpdate(const event::Event *event) override;
 private:

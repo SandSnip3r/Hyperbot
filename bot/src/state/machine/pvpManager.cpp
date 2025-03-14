@@ -8,6 +8,7 @@
 #include "state/machine/enablePvpMode.hpp"
 #include "state/machine/ensureFullVitalsAndNoStatuses.hpp"
 #include "state/machine/gmCommandSpawnAndPickItems.hpp"
+#include "state/machine/gmWarpToPosition.hpp"
 #include "state/machine/intelligenceActor.hpp"
 #include "state/machine/login.hpp"
 #include "state/machine/resurrectInPlace.hpp"
@@ -38,7 +39,7 @@ Player ourPlayer(const common::PvpDescriptor &pvpDescriptor, const sro::scalar_t
 } // namespace
 
 PvpManager::PvpManager(Bot &bot, const CharacterLoginInfo &characterLoginInfo) : StateMachine(bot), characterLoginInfo_(characterLoginInfo) {
-  LOG(INFO) << "Constructed";
+  LOG(INFO) << "PvpManager Constructed";
 }
 
 PvpManager::~PvpManager() {
@@ -78,7 +79,12 @@ Status PvpManager::onUpdate(const event::Event *event) {
   // - Check to see if our opponent is ready for pvp.
   // - Check to see if we received a resurrect option.
   if (event != nullptr) {
-    if (const auto *lifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event); lifeStateChanged != nullptr) {
+    if (const auto *entityDespawned = dynamic_cast<const event::EntityDespawned*>(event); entityDespawned != nullptr) {
+      if (pvpDescriptor_ && entityDespawned->globalId == pvpDescriptor_->player1GlobalId || entityDespawned->globalId == pvpDescriptor_->player2GlobalId) {
+        // TODO: Handle.
+        throw std::runtime_error("Someone in our pvp despawned!");
+      }
+    } else if (const auto *lifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event); lifeStateChanged != nullptr) {
       // Maybe someone died.
       // We don't care about this event if we're already resurrecting ourself.
       const bool childStateIsResurrect = childState_ != nullptr && dynamic_cast<ResurrectInPlace*>(childState_.get()) != nullptr;
@@ -102,12 +108,18 @@ Status PvpManager::onUpdate(const event::Event *event) {
             if (lifeStateChanged->globalId == pvpDescriptor_->player1GlobalId ||
                 lifeStateChanged->globalId == pvpDescriptor_->player2GlobalId) {
               CHAR_LOG(INFO) << "Either we or our opponent died! The pvp is over. " << lifeStateChanged->globalId << " died, we are " << bot_.selfState()->globalId;
+              // Call the child state once more, so that it may report the final state to the replay buffer.
+              Status childStatus = childState_->onUpdate(event);
               childState_.reset();
               pvpDescriptor_.reset();
               // If it was the opponent who died, we can immediately report that we're ready for our next assignment.
               if (lifeStateChanged->globalId == getOpponentGlobalId()) {
                 resetAndNotifyReadyForAssignment();
                 return Status::kNotDone;
+              }
+              if (childStatus != Status::kDone) {
+                // Sent a terminal state to the child state machine, it should have returned "Done".
+                throw std::runtime_error("Child state machine did not return Done after receiving a terminal state");
               }
             }
           }
@@ -119,14 +131,15 @@ Status PvpManager::onUpdate(const event::Event *event) {
         }
       }
     } else if (const auto *readyForPvpEvent = dynamic_cast<const event::ReadyForPvp*>(event); readyForPvpEvent != nullptr) {
+      CHAR_VLOG(1) << "ReadyForPvp";
       const sro::scalar_types::EntityGlobalId opponentsGlobalId = getOpponentGlobalId();
       if (readyForPvpEvent->globalId == opponentsGlobalId) {
-        CHAR_LOG(INFO) << "Received ReadyForPvp for our opponent";
+        CHAR_VLOG(1) << "Received ReadyForPvp for our opponent";
         opponentIsReady_ = true;
         if (weAreReady_) {
           return startPvp(event);
         } else {
-          CHAR_LOG(INFO) << "Opponent is ready for PVP, but we are not. Waiting for us to be ready.";
+          CHAR_VLOG(1) << "Opponent is ready for PVP, but we are not. Waiting for us to be ready.";
           return Status::kNotDone;
         }
       }
@@ -149,7 +162,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
       return Status::kNotDone;
     }
 
-    CHAR_LOG(INFO) << "Child state machine is done";
+    CHAR_VLOG(1) << "Child state machine is done";
     const bool childStateWasIntelligenceActor = dynamic_cast<IntelligenceActor*>(childState_.get()) != nullptr;
     if (childStateWasIntelligenceActor) {
       // The only time an intelligence actor should end is when the pvp is over, which is dictated by this state machine. Upon which, this state machine will reset the child state machine.
@@ -160,7 +173,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
     childState_.reset();
     if (childStateWasResurrect) {
       // We're done resurrecting.
-      CHAR_LOG(INFO) << "Finished resurrecting";
+      CHAR_VLOG(1) << "Finished resurrecting";
       if (pvpDescriptor_) {
         // Have our pvp assignment, prepare for pvp
         setPrepareForPvpStateMachine();
@@ -176,7 +189,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
         return Status::kNotDone;
       }
     } else if (childStateWasSequential) {
-      CHAR_LOG(INFO) << "Finished preparing for PVP";
+      CHAR_VLOG(1) << "Finished preparing for PVP";
       // Finished preparing for pvp.
       bot_.eventBroker().publishEvent<event::ReadyForPvp>(bot_.selfState()->globalId);
       weAreReady_ = true;
@@ -184,7 +197,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
         return startPvp(event);
       } else {
         // Opponent is not ready, need to wait.
-        CHAR_LOG(INFO) << "We're ready for PVP, but opponent is not. Waiting for opponent to be ready.";
+        CHAR_VLOG(1) << "We're ready for PVP, but opponent is not. Waiting for opponent to be ready.";
         return Status::kNotDone;
       }
     }
@@ -193,7 +206,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
 
   if (event != nullptr) {
     if (const auto *beginPvpEvent = dynamic_cast<const event::BeginPvp*>(event); beginPvpEvent != nullptr) {
-      CHAR_LOG(INFO) << "Received BeginPvp";
+      CHAR_VLOG(1) << "Received BeginPvp";
       const common::PvpDescriptor &pvpDescriptor = beginPvpEvent->pvpDescriptor;
       if (pvpDescriptor.player1GlobalId == bot_.selfState()->globalId ||
           pvpDescriptor.player2GlobalId == bot_.selfState()->globalId) {
@@ -203,7 +216,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
         }
         pvpDescriptor_ = pvpDescriptor;
         publishedThatWeAreReadyForAssignment_ = false;
-        CHAR_LOG(INFO) << "We've been told to fight!";
+        CHAR_VLOG(1) << "We've been told to fight!";
         setPrepareForPvpStateMachine();
         return onUpdate(event);
       }
@@ -215,7 +228,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
 }
 
 void PvpManager::setPrepareForPvpStateMachine() {
-  CHAR_LOG(INFO) << "Setting state machine to prepare for PVP";
+  CHAR_VLOG(1) << "Setting state machine to prepare for PVP";
   // Start with a sequence of actions that will prepare the character for PVP.
   //  1. Move to the location of the fight.
   //  2. Make sure hp/mp are full. (if we use an hp or mp potion, we should also wait for the potion to stop healing)
@@ -228,15 +241,18 @@ void PvpManager::setPrepareForPvpStateMachine() {
   setChildStateMachine<state::machine::SequentialStateMachines>();
   state::machine::SequentialStateMachines &sequentialStateMachines = dynamic_cast<state::machine::SequentialStateMachines&>(*childState_);
 
+  sro::Position ourPvpPosition;
+  if (ourPlayer(*pvpDescriptor_, bot_.selfState()->globalId) == Player::kPlayer1) {
+    ourPvpPosition = pvpDescriptor_->pvpPositionPlayer1;
+  } else {
+    ourPvpPosition = pvpDescriptor_->pvpPositionPlayer2;
+  }
+
+  sequentialStateMachines.emplace<state::machine::GmWarpToPosition>(ourPvpPosition);
   sequentialStateMachines.emplace<state::machine::DispelActiveBuffs>();
 
   // The two different players need to start from different positions.
-  std::vector<packet::building::NetworkReadyPosition> waypoints;
-  if (ourPlayer(*pvpDescriptor_, bot_.selfState()->globalId) == Player::kPlayer1) {
-    waypoints.emplace_back(pvpDescriptor_->pvpPositionPlayer1);
-  } else {
-    waypoints.emplace_back(pvpDescriptor_->pvpPositionPlayer2);
-  }
+  std::vector<packet::building::NetworkReadyPosition> waypoints = {ourPvpPosition};
   sequentialStateMachines.emplace<state::machine::Walking>(waypoints);
 
   sequentialStateMachines.emplace<state::machine::EnsureFullVitalsAndNoStatuses>();

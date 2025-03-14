@@ -4,21 +4,16 @@
 
 namespace rl::ai {
 
-std::unique_ptr<Action> RandomIntelligence::selectAction(Bot &bot, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) {
-  Observation observation = buildObservation(bot, event, opponentGlobalId);
-
+int RandomIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket) {
   int actionIndex;
-  // Start with a high probability to do nothing/sleep.
-  std::bernoulli_distribution sleepDist(0.85);
-  if (sleepDist(randomEngine_)) {
-    actionIndex = 0;
-  } else {
-    // Not sleeping, choose a true random action.
+  if (canSendPacket) {
+    // Choose a truly random action.
     std::uniform_int_distribution<int> actionDist(0, ActionBuilder::actionSpaceSize()-1);
     actionIndex = actionDist(randomEngine_);
+  } else {
+    actionIndex = 0;
   }
-  reportEventObservationAndAction(pvpId, bot.selfState()->globalId, event, observation, actionIndex);
-  return ActionBuilder::buildAction(bot, event, opponentGlobalId, actionIndex);
+  return actionIndex;
 }
 
 } // namespace rl::ai

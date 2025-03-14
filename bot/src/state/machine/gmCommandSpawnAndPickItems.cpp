@@ -14,7 +14,7 @@
 
 namespace state::machine {
 
-GmCommandSpawnAndPickItems::GmCommandSpawnAndPickItems(Bot &bot, const std::vector<common::ItemRequirement> &items) : StateMachine(bot), items_(items) {
+GmCommandSpawnAndPickItems::GmCommandSpawnAndPickItems(StateMachine *parent, const std::vector<common::ItemRequirement> &items) : StateMachine(parent), items_(items) {
   VLOG(1) << "Constructed state machine to spawn&pick: [" << absl::StrJoin(items, ", ", [this](std::string *out, const common::ItemRequirement &item) { absl::StrAppend(out, bot_.gameData().getItemName(item.refId), " x", item.count); }) << "]";
 }
 
@@ -141,7 +141,7 @@ Status GmCommandSpawnAndPickItems::spawnNextItem() {
   const uint16_t countToSpawn = std::min<uint16_t>(bot_.gameData().itemData().getItemById(refId).maxStack, std::min<uint16_t>(255, items_.front().count - currentCount));
   const PacketContainer packet = packet::building::ClientAgentOperatorRequest::makeItem(refId, countToSpawn);
   CHAR_VLOG(1) << "Sending packet for GM command to spawn " << countToSpawn << " x " << bot_.gameData().getItemName(refId);
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+  injectPacket(packet, PacketContainer::Direction::kBotToServer);
   requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(888));
   return Status::kNotDone;
 }

@@ -9,9 +9,7 @@
 
 namespace state::machine {
 
-UseReturnScroll::UseReturnScroll(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex) : StateMachine(bot), inventoryIndex_(inventoryIndex) {
-  stateMachineCreated(kName);
-
+UseReturnScroll::UseReturnScroll(StateMachine *parent, sro::scalar_types::StorageIndexType inventoryIndex) : StateMachine(parent), inventoryIndex_(inventoryIndex) {
   // Do some quick checks to make sure we have this item and can use it
   const auto &inventory = bot_.selfState()->inventory;
   if (!inventory.hasItem(inventoryIndex_)) {
@@ -28,9 +26,7 @@ UseReturnScroll::UseReturnScroll(Bot &bot, sro::scalar_types::StorageIndexType i
   setChildStateMachine<UseItem>(inventoryIndex_);
 }
 
-UseReturnScroll::~UseReturnScroll() {
-  stateMachineDestroyed();
-}
+UseReturnScroll::~UseReturnScroll() {}
 
 Status UseReturnScroll::onUpdate(const event::Event *event) {
   if (childState_) {

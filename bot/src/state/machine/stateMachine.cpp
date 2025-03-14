@@ -1,18 +1,18 @@
+#include "broker/packetBroker.hpp"
 #include "stateMachine.hpp"
 
 #include "bot.hpp"
 namespace state::machine {
 
-StateMachine::StateMachine(Bot &bot) : bot_(bot) {
-  // debugEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kStateMachineActiveTooLong, std::chrono::minutes(15));
-}
+StateMachine::StateMachine(Bot &bot) : bot_(bot) {}
+
+StateMachine::StateMachine(StateMachine *parent) : bot_(parent->bot_), parent_(parent) {}
 
 StateMachine::~StateMachine() {
   // Undo all blocked opcodes
   for (const auto opcode : blockedOpcodes_) {
     bot_.proxy().unblockOpcode(opcode);
   }
-  // bot_.eventBroker().cancelDelayedEvent(debugEventId_);
   if (destructionPromise_.has_value()) {
     destructionPromise_->set_value();
   }
@@ -33,12 +33,14 @@ void StateMachine::pushBlockedOpcode(packet::Opcode opcode) {
   }
 }
 
-void StateMachine::stateMachineCreated(const std::string &name) {
-  bot_.eventBroker().publishEvent<event::StateMachineCreated>(name);
-}
-
-void StateMachine::stateMachineDestroyed() {
-  bot_.eventBroker().publishEvent(event::EventCode::kStateMachineDestroyed);
+void StateMachine::injectPacket(const PacketContainer &packet, PacketContainer::Direction direction) {
+  if (parent_ != nullptr) {
+    VLOG(1) << "Delegating packet injection to parent state machine";
+    parent_->injectPacket(packet, direction);
+  } else {
+    // No parent, inject the packet ourselves.
+    bot_.packetBroker().injectPacket(packet, direction);
+  }
 }
 
 std::string StateMachine::characterNameForLog() const {
@@ -55,6 +57,9 @@ bool StateMachine::canMove() const {
 
 void StateMachine::setChildStateMachine(std::unique_ptr<StateMachine> &&newChildStateMachine) {
   childState_.reset();
+  if (newChildStateMachine == nullptr) {
+    throw std::runtime_error("Cannot set a nullptr child state machine");
+  }
   childState_ = std::move(newChildStateMachine);
 }
 

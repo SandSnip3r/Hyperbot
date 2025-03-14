@@ -32,7 +32,11 @@ public:
   void run();
 
   void onUpdate(const event::Event *event);
-  void reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, int actionIndex);
+
+  // If the actionIndex is not set, the observation was terminal.
+  void reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, std::optional<int> actionIndex);
+
+  JaxInterface& getJaxInterface() { return jaxInterface_; }
 
 private:
   static constexpr float kPvpStartingCenterOffset{40.0f};
@@ -45,6 +49,8 @@ private:
   common::PvpDescriptor::PvpId nextPvpId_{0};
   IntelligencePool intelligencePool_{*this};
   JaxInterface jaxInterface_;
+  int trainStepCount_{0};
+  static constexpr int kTargetNetworkUpdateInterval{10000};
 
   void setUpIntelligencePool();
 
@@ -73,6 +79,8 @@ private:
 
   std::vector<ReplayBufferEntry> replayBuffer_;
   std::map<sro::scalar_types::EntityGlobalId, LastObservationAndAction> lastObservationMap_;
+  std::map<common::PvpDescriptor::PvpId, std::map<sro::scalar_types::EntityGlobalId, std::vector<std::tuple<event::EventCode, Observation, std::optional<int>>>>> newReplayBuffer_;
+  std::mutex replayBufferMutex_;
   double calculateReward(const Observation &lastObservation, const Observation &observation) const;
 };
 

@@ -24,11 +24,11 @@ namespace ai {
 class BaseIntelligence {
 public:
   BaseIntelligence(TrainingManager &trainingManager) : trainingManager_(trainingManager) {}
-  virtual std::unique_ptr<Action> selectAction(Bot &bot, const event::Event *event, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) = 0;
+  virtual int selectAction(Bot &bot, const Observation &observation, bool canSendPacket) = 0;
+  virtual std::string_view name() const = 0;
+  TrainingManager& trainingManager() { return trainingManager_; }
+
 protected:
-  Observation buildObservation(const Bot &bot, const event::Event *event, sro::scalar_types::ReferenceObjectId opponentGlobalId) const;
-  void reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, int actionIndex);
-  private:
   TrainingManager &trainingManager_;
 };
 

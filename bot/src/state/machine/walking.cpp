@@ -9,9 +9,7 @@
 
 namespace state::machine {
 
-Walking::Walking(Bot &bot, const std::vector<packet::building::NetworkReadyPosition> &waypoints) : StateMachine(bot), waypoints_(waypoints) {
-  stateMachineCreated(kName);
-}
+Walking::Walking(StateMachine *parent, const std::vector<packet::building::NetworkReadyPosition> &waypoints) : StateMachine(parent), waypoints_(waypoints) {}
 
 Walking::~Walking() {
   if (movementRequestTimeoutEventId_) {
@@ -19,7 +17,6 @@ Walking::~Walking() {
     movementRequestTimeoutEventId_.reset();
   }
   bot_.eventBroker().publishEvent<event::WalkingPathUpdated>(std::vector<packet::building::NetworkReadyPosition>());
-  stateMachineDestroyed();
 }
 
 Status Walking::onUpdate(const event::Event *event) {
@@ -90,7 +87,7 @@ Status Walking::onUpdate(const event::Event *event) {
   const auto &currentWaypoint = waypoints_.at(currentWaypointIndex_);
   CHAR_VLOG(1) << "Requesting movement to " << currentWaypoint.asSroPosition() << ". We are currently at " << bot_.selfState()->position() << " which is " << sro::position_math::calculateDistance2d(currentWaypoint.asSroPosition(), bot_.selfState()->position()) << 'm';
   const auto movementPacket = packet::building::ClientAgentCharacterMoveRequest::moveToPosition(currentWaypoint);
-  bot_.packetBroker().injectPacket(movementPacket, PacketContainer::Direction::kBotToServer);
+  injectPacket(movementPacket, PacketContainer::Direction::kBotToServer);
   const int kMovementRequestTimeoutMs{333}; // TODO: Move somewhere else and make an educated guess about what this value should be
   movementRequestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kMovementRequestTimedOut, std::chrono::milliseconds(kMovementRequestTimeoutMs));
   tookAction_ = true;

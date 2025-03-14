@@ -9,7 +9,7 @@
 
 namespace state::machine {
 
-EnsureFullVitalsAndNoStatuses::EnsureFullVitalsAndNoStatuses(Bot &bot) : StateMachine(bot) {
+EnsureFullVitalsAndNoStatuses::EnsureFullVitalsAndNoStatuses(StateMachine *parent) : StateMachine(parent) {
   vigorPotionItemId_ = bot_.gameData().itemData().getItemId([](const sro::pk2::ref::Item &item) {
     return type_id::categories::kVigorPotion.contains(type_id::getTypeId(item)) && item.itemClass == 5;
   });
@@ -21,8 +21,7 @@ EnsureFullVitalsAndNoStatuses::EnsureFullVitalsAndNoStatuses(Bot &bot) : StateMa
   });
 }
 
-EnsureFullVitalsAndNoStatuses::~EnsureFullVitalsAndNoStatuses() {
-}
+EnsureFullVitalsAndNoStatuses::~EnsureFullVitalsAndNoStatuses() {}
 
 Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
   if (event != nullptr) {

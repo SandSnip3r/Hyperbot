@@ -10,7 +10,7 @@ namespace state::machine {
 // Drop an item.
 class DropItem : public StateMachine {
 public:
-  DropItem(Bot &bot, sro::scalar_types::StorageIndexType inventorySlot);
+  DropItem(StateMachine *parent, sro::scalar_types::StorageIndexType inventorySlot);
   ~DropItem() override;
   Status onUpdate(const event::Event *event) override;
 private:

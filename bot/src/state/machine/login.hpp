@@ -14,6 +14,7 @@ namespace state::machine {
 class Login : public StateMachine {
 public:
   Login(Bot &bot, const CharacterLoginInfo &characterLoginInfo);
+  Login(StateMachine *parent, const CharacterLoginInfo &characterLoginInfo);
   ~Login() override;
   Status onUpdate(const event::Event *event) override;
 private:

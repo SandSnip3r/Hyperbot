@@ -14,7 +14,7 @@ namespace state::machine {
 
 class EnsureFullVitalsAndNoStatuses : public StateMachine {
 public:
-  EnsureFullVitalsAndNoStatuses(Bot &bot);
+  EnsureFullVitalsAndNoStatuses(StateMachine *parent);
   ~EnsureFullVitalsAndNoStatuses() override;
   Status onUpdate(const event::Event *event) override;
 private:

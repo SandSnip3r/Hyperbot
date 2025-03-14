@@ -11,22 +11,19 @@
 
 namespace state::machine {
 
-TalkingToStorageNpc::TalkingToStorageNpc(Bot &bot) : StateMachine(bot) {
-  stateMachineCreated(kName);
+TalkingToStorageNpc::TalkingToStorageNpc(StateMachine *parent) : StateMachine(parent) {
   // We know we are near our npc, lets find the closest npc to us.
   // TODO: This won't always work. We don't need to get very close to an npc to talk to them, we could be closer to another npc.
   npcGid_ = bot_.getClosestNpcGlobalId();
 }
 
-TalkingToStorageNpc::~TalkingToStorageNpc() {
-  stateMachineDestroyed();
-}
+TalkingToStorageNpc::~TalkingToStorageNpc() {}
 
 Status TalkingToStorageNpc::onUpdate(const event::Event *event) {
   if (npcInteractionState_ == NpcInteractionState::kStart) {
     // Have not yet done anything. First thing is to select the Npc
     const auto selectNpc = packet::building::ClientAgentActionSelectRequest::packet(npcGid_);
-    bot_.packetBroker().injectPacket(selectNpc, PacketContainer::Direction::kBotToServer);
+    injectPacket(selectNpc, PacketContainer::Direction::kBotToServer);
     // Advance state
     npcInteractionState_ = NpcInteractionState::kSelectionRequestPending;
     return Status::kNotDone;
@@ -49,12 +46,12 @@ Status TalkingToStorageNpc::onUpdate(const event::Event *event) {
     if (bot_.selfState()->haveOpenedStorageSinceTeleport) {
       // We have already opened our storage, we just need to talk to the npc
       const auto openStorage = packet::building::ClientAgentActionTalkRequest::packet(*bot_.selfState()->selectedEntity, packet::enums::TalkOption::kStorage);
-      bot_.packetBroker().injectPacket(openStorage, PacketContainer::Direction::kBotToServer);
+      injectPacket(openStorage, PacketContainer::Direction::kBotToServer);
       npcInteractionState_ = NpcInteractionState::kShopOpenRequestPending;
     } else {
       // We have not yet opened our storage
       const auto openStorage = packet::building::ClientAgentInventoryStorageOpenRequest::packet(*bot_.selfState()->selectedEntity);
-      bot_.packetBroker().injectPacket(openStorage, PacketContainer::Direction::kBotToServer);
+      injectPacket(openStorage, PacketContainer::Direction::kBotToServer);
       // TODO: Once the server responds that this is successful, the client will automatically send the packet for the talk option
       //   To be client-independent, we should block this request from the client and do this ourself
       npcInteractionState_ = NpcInteractionState::kStorageOpenRequestPending;
@@ -82,7 +79,7 @@ Status TalkingToStorageNpc::onUpdate(const event::Event *event) {
 
     // Done storing items
     const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(bot_.selfState()->talkingGidAndOption->first);
-    bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+    injectPacket(packet, PacketContainer::Direction::kBotToServer);
     return Status::kNotDone;
   } else if (npcInteractionState_ == NpcInteractionState::kShopOpenRequestPending || npcInteractionState_ == NpcInteractionState::kStorageOpenRequestPending) {
     return Status::kNotDone;
@@ -91,7 +88,7 @@ Status TalkingToStorageNpc::onUpdate(const event::Event *event) {
   if (bot_.selfState()->selectedEntity) {
     // We have closed the shop, but still have the npc selected. Deselect them
     const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(*bot_.selfState()->selectedEntity);
-    bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+    injectPacket(packet, PacketContainer::Direction::kBotToServer);
     return Status::kNotDone;
   }
 
@@ -150,7 +147,7 @@ void TalkingToStorageNpc::storeItems(const event::Event *event) {
             if (spaceLeftInStack > 0) {
               // We can stack our item to this spot
               const auto moveItemInStoragePacket = packet::building::ClientAgentInventoryOperationRequest::withinStoragePacket(itemToTryStackingSlotNum, destSlotNum, std::min(itemExpendable->quantity, spaceLeftInStack), bot_.selfState()->talkingGidAndOption->first);
-              bot_.packetBroker().injectPacket(moveItemInStoragePacket, PacketContainer::Direction::kBotToServer);
+              injectPacket(moveItemInStoragePacket, PacketContainer::Direction::kBotToServer);
               // TODO: There is a potential that this function gets retriggered before the item movement completes. Maybe we ought to set an internal state to block that from messing us up
               pendingItemMovementRequest_ = true;
               return;
@@ -200,7 +197,7 @@ void TalkingToStorageNpc::storeItems(const event::Event *event) {
     if (slot) {
       // Have a free slot in storage
       const auto depositItemPacket = packet::building::ClientAgentInventoryOperationRequest::inventoryToStoragePacket(slotsWithItemsToStore.front(), *slot, bot_.selfState()->talkingGidAndOption->first);
-      bot_.packetBroker().injectPacket(depositItemPacket, PacketContainer::Direction::kBotToServer);
+      injectPacket(depositItemPacket, PacketContainer::Direction::kBotToServer);
       return;
     } else {
       LOG(INFO) << "Storage is full!";

@@ -8,11 +8,8 @@
 
 namespace state::machine {
 
-DisableGmInvisible::DisableGmInvisible(Bot &bot) : StateMachine(bot) {
-}
-
-DisableGmInvisible::~DisableGmInvisible() {
-}
+DisableGmInvisible::DisableGmInvisible(StateMachine *parent) : StateMachine(parent) {}
+DisableGmInvisible::~DisableGmInvisible() {}
 
 Status DisableGmInvisible::onUpdate(const event::Event *event) {
   // At first, if we're invisible, construct a child state machine to disable it.

@@ -18,7 +18,7 @@ bool isRepairHammer(const sro::pk2::ref::Item &item) {
 
 } // namespace
 
-SpawnAndUseRepairHammerIfNecessary::SpawnAndUseRepairHammerIfNecessary(Bot &bot) : StateMachine(bot) {
+SpawnAndUseRepairHammerIfNecessary::SpawnAndUseRepairHammerIfNecessary(StateMachine *parent) : StateMachine(parent) {
   repairHammerRefId_ = bot_.gameData().itemData().getItemId(std::bind(isRepairHammer, std::placeholders::_1));
   VLOG(1) << "Figured that repair hammer ref id is " << repairHammerRefId_;
 }

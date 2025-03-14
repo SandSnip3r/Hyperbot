@@ -7,8 +7,7 @@
 
 namespace state::machine {
 
-EnablePvpMode::EnablePvpMode(Bot &bot) : StateMachine(bot) {
-}
+EnablePvpMode::EnablePvpMode(StateMachine *parent) : StateMachine(parent) {}
 
 EnablePvpMode::~EnablePvpMode() {
   if (requestTimeoutEventId_) {
@@ -62,7 +61,7 @@ Status EnablePvpMode::onUpdate(const event::Event *event) {
 
 void EnablePvpMode::sendRequest() {
   const auto setPvpModePacket = packet::building::ClientAgentFreePvpUpdateRequest::setMode(packet::enums::FreePvpMode::kYellow);
-  bot_.packetBroker().injectPacket(setPvpModePacket, PacketContainer::Direction::kBotToServer);
+  injectPacket(setPvpModePacket, PacketContainer::Direction::kBotToServer);
   requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(666));
   CHAR_VLOG(1) << "Sending packet to enable pvp";
   state_ = State::kSentRequest;

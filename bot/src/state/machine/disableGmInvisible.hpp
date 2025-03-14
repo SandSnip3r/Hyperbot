@@ -10,7 +10,7 @@ namespace state::machine {
 
 class DisableGmInvisible : public StateMachine {
 public:
-  DisableGmInvisible(Bot &bot);
+  DisableGmInvisible(StateMachine *parent);
   ~DisableGmInvisible() override;
   Status onUpdate(const event::Event *event) override;
 private:

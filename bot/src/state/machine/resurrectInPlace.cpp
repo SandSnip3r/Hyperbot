@@ -7,8 +7,8 @@
 
 namespace state::machine {
 
-ResurrectInPlace::ResurrectInPlace(Bot &bot, bool receivedResurrectionOptionAlready) : StateMachine(bot), receivedResurrectionOptionAlready_(receivedResurrectionOptionAlready) {
-  LOG(INFO) << "ctor " << receivedResurrectionOptionAlready_;
+ResurrectInPlace::ResurrectInPlace(StateMachine *parent, bool receivedResurrectionOptionAlready) : StateMachine(parent), receivedResurrectionOptionAlready_(receivedResurrectionOptionAlready) {
+  VLOG(1) << "ctor " << receivedResurrectionOptionAlready_;
 }
 
 ResurrectInPlace::~ResurrectInPlace() {
@@ -23,9 +23,9 @@ Status ResurrectInPlace::onUpdate(const event::Event *event) {
     // We're just waiting on an event that our life state has changed.
     if (event != nullptr) {
       if (const auto *lifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event)) {
-        CHAR_LOG(INFO) << "Someone's life state changed";
+        CHAR_VLOG(1) << "Someone's life state changed";
         if (lifeStateChanged->globalId == bot_.selfState()->globalId) {
-          CHAR_LOG(INFO) << "  it was ours " << static_cast<int>(bot_.selfState()->lifeState);
+          CHAR_VLOG(1) << "  it was ours " << static_cast<int>(bot_.selfState()->lifeState);
           if (bot_.selfState()->lifeState == sro::entity::LifeState::kAlive) {
             if (requestTimeoutEventId_) {
               bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
@@ -38,7 +38,7 @@ Status ResurrectInPlace::onUpdate(const event::Event *event) {
                  requestTimeoutEventId_ &&
                  *requestTimeoutEventId_ == event->eventId) {
         // We timed out waiting for our life state to change.
-        CHAR_LOG(INFO) << "We timed out while waiting for resurrect";
+        CHAR_VLOG(1) << "We timed out while waiting for resurrect";
         sendResurrectRequest();
       }
     }
@@ -49,14 +49,14 @@ Status ResurrectInPlace::onUpdate(const event::Event *event) {
 
   if (receivedResurrectionOptionAlready_) {
     // We've already received a resurrection option; send resurrect.
-    CHAR_LOG(INFO) << "We've already received a resurrection option; send resurrect.";
+    CHAR_VLOG(1) << "We've already received a resurrection option; send resurrect.";
     sendResurrectRequest();
     return Status::kNotDone;
   }
 
   if (event != nullptr) {
     if (const auto *resurrectOption = dynamic_cast<const event::ResurrectOption*>(event)) {
-      CHAR_LOG(INFO) << "Just got a resurrect option. send resurrect";
+      CHAR_VLOG(1) << "Just got a resurrect option. send resurrect";
       if (resurrectOption->option != packet::enums::ResurrectionOptionFlag::kAtPresentPoint) {
         throw std::runtime_error("We can only handle resurrecting in place");
       }
@@ -71,7 +71,7 @@ Status ResurrectInPlace::onUpdate(const event::Event *event) {
 void ResurrectInPlace::sendResurrectRequest() {
   // Got a resurrection option; whatever the option is, we'll do it.
   const auto packet = packet::building::ClientAgentCharacterResurrect::resurrect(packet::enums::ResurrectionOptionFlag::kAtPresentPoint);
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+  injectPacket(packet, PacketContainer::Direction::kBotToServer);
   requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(888));
 }
 

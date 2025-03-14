@@ -9,7 +9,7 @@ namespace state::machine {
 
 class PickItemWithCos : public StateMachine {
 public:
-  PickItemWithCos(Bot &bot, sro::scalar_types::EntityGlobalId cosGlobalId, sro::scalar_types::EntityGlobalId targetGlobalId);
+  PickItemWithCos(StateMachine *parent, sro::scalar_types::EntityGlobalId cosGlobalId, sro::scalar_types::EntityGlobalId targetGlobalId);
   ~PickItemWithCos() override;
   Status onUpdate(const event::Event *event) override;
 private:

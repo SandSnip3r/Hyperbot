@@ -8,16 +8,13 @@
 
 namespace state::machine {
 
-DropItem::DropItem(Bot &bot, sro::scalar_types::StorageIndexType inventorySlot) : StateMachine(bot), inventorySlot_(inventorySlot) {
-  stateMachineCreated(kName);
+DropItem::DropItem(StateMachine *parent, sro::scalar_types::StorageIndexType inventorySlot) : StateMachine(parent), inventorySlot_(inventorySlot) {
   std::shared_ptr<entity::Self> selfEntity = bot_.selfState();
   const storage::Item *item = selfEntity->inventory.getItem(inventorySlot_);
   refId_ = item->refItemId;
 }
 
-DropItem::~DropItem() {
-  stateMachineDestroyed();
-}
+DropItem::~DropItem() {}
 
 Status DropItem::onUpdate(const event::Event *event) {
   // There are two relevant events:
@@ -55,7 +52,7 @@ Status DropItem::onUpdate(const event::Event *event) {
   }
 
   const auto packet = packet::building::ClientAgentInventoryOperationRequest::dropItem(inventorySlot_);
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+  injectPacket(packet, PacketContainer::Direction::kBotToServer);
   waitingForItemToBeDropped_ = true;
   LOG(INFO) << "Send drop packet";
   return Status::kNotDone;

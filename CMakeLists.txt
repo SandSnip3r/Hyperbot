@@ -9,6 +9,7 @@ option(USE_ASAN "Enable AddressSanitizer" OFF)
 option(TRACY_ENABLE "Enable Tracy Profiler" OFF)
 
 if(USE_ASAN)
+  # AddressSanitizer does not play well with CUDA! If you must use it, set JAX_PLATFORMS=cpu.
   add_compile_options(-fsanitize=address)
   add_link_options(-fsanitize=address)
 endif()

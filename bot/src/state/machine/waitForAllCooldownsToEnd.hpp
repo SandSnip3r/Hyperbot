@@ -10,7 +10,7 @@ namespace state::machine {
 
 class WaitForAllCooldownsToEnd : public StateMachine {
 public:
-  WaitForAllCooldownsToEnd(Bot &bot);
+  WaitForAllCooldownsToEnd(StateMachine *parent);
   ~WaitForAllCooldownsToEnd() override;
   Status onUpdate(const event::Event *event) override;
 private:

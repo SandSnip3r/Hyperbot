@@ -4,14 +4,25 @@
 #include "packet/building/clientAgentInventoryItemUseRequest.hpp"
 #include "packet/building/clientAgentActionCommandRequest.hpp"
 #include "rl/action.hpp"
+#include "rl/actionBuilder.hpp"
+#include "rl/observation.hpp"
+#include "rl/trainingManager.hpp"
 #include "type_id/categories.hpp"
 
 #include <absl/log/log.h>
 
 namespace state::machine {
 
-IntelligenceActor::IntelligenceActor(Bot &bot, rl::ai::BaseIntelligence *intelligence, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) : StateMachine(bot), intelligence_(intelligence), pvpId_(pvpId), opponentGlobalId_(opponentGlobalId) {
-  LOG(INFO) << "Instantiated intelligence actor!";
+namespace {
+
+rl::Observation buildObservation(const Bot &bot, const event::Event *event, sro::scalar_types::ReferenceObjectId opponentGlobalId) {
+  return {bot, event, opponentGlobalId};
+}
+
+} // namespace
+
+IntelligenceActor::IntelligenceActor(StateMachine *parent, rl::ai::BaseIntelligence *intelligence, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) : StateMachine(parent), intelligence_(intelligence), pvpId_(pvpId), opponentGlobalId_(opponentGlobalId) {
+  VLOG(1) << "Instantiated " << intelligence->name() << " intelligence actor!";
 }
 
 IntelligenceActor::~IntelligenceActor() {
@@ -30,8 +41,33 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
     childState_.reset();
   }
 
+  const rl::Observation observation = buildObservation(bot_, event, opponentGlobalId_);
+
+  // Check if this is a terminal state.
+  if (event != nullptr) {
+    if (const auto *lifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event); lifeStateChanged != nullptr) {
+      // Maybe someone died.
+      const std::shared_ptr<entity::PlayerCharacter> playerCharacter = bot_.entityTracker().getEntity<entity::PlayerCharacter>(lifeStateChanged->globalId);
+      if (playerCharacter->lifeState == sro::entity::LifeState::kDead) {
+        // Someone died.
+        if (lifeStateChanged->globalId == bot_.selfState()->globalId ||
+            lifeStateChanged->globalId == opponentGlobalId_) {
+          CHAR_VLOG(1) << "Either we or our opponent died! The pvp is over. " << lifeStateChanged->globalId << " died, we are " << bot_.selfState()->globalId;
+          // Someone died, the pvp is over.
+          // We will not query the intelligence for a chosen action, for obvious reasons.
+          // We will report the state, so that it can be saved in the replay buffer.
+          intelligence_->trainingManager().reportEventObservationAndAction(pvpId_, bot_.selfState()->globalId, event, observation, std::nullopt);
+          return Status::kDone;
+        }
+      }
+    }
+  }
+
   // Since actions are state machines, immediately set the selected action as our current active child state machine.
-  setChildStateMachine(intelligence_->selectAction(bot_, event, pvpId_, opponentGlobalId_));
+  const bool canSendPacket = !lastPacketTime_.has_value() || (std::chrono::steady_clock::now() - lastPacketTime_.value() > kPacketSendCooldown);
+  const int actionIndex = intelligence_->selectAction(bot_, observation, canSendPacket);
+  intelligence_->trainingManager().reportEventObservationAndAction(pvpId_, bot_.selfState()->globalId, event, observation, actionIndex);
+  setChildStateMachine(rl::ActionBuilder::buildAction(this, event, opponentGlobalId_, actionIndex));
 
   // Run one update on the child state machine to let it start.
   const Status status = childState_->onUpdate(event);
@@ -44,21 +80,9 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   return Status::kNotDone;
 }
 
-void IntelligenceActor::useItem(sro::pk2::ref::ItemId refId) {
-  // Find this item in our inventory.
-  for (int slot=0; slot<bot_.inventory().size(); ++slot) {
-    if (!bot_.inventory().hasItem(slot)) {
-      // No item here.
-      continue;
-    }
-    const storage::Item *item = bot_.inventory().getItem(slot);
-    if (item->refItemId == refId) {
-      // Use this item.
-      CHAR_VLOG(1) << "Sending packet to use item at slot " << slot;
-      bot_.packetBroker().injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(slot, item->typeId()), PacketContainer::Direction::kBotToServer);
-      break;
-    }
-  }
+void IntelligenceActor::injectPacket(const PacketContainer &packet, PacketContainer::Direction direction) {
+  lastPacketTime_ = std::chrono::steady_clock::now();
+  StateMachine::injectPacket(packet, direction);
 }
 
 } // namespace state::machine

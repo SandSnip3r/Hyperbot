@@ -7,11 +7,8 @@
 
 namespace state::machine {
 
-DispelActiveBuffs::DispelActiveBuffs(Bot &bot) : StateMachine(bot) {
-}
-
-DispelActiveBuffs::~DispelActiveBuffs() {
-}
+DispelActiveBuffs::DispelActiveBuffs(StateMachine *parent) : StateMachine(parent) {}
+DispelActiveBuffs::~DispelActiveBuffs() {}
 
 Status DispelActiveBuffs::onUpdate(const event::Event *event) {
   if (event != nullptr) {
@@ -56,7 +53,7 @@ Status DispelActiveBuffs::onUpdate(const event::Event *event) {
     }
   }
   if (buffSkillId_) {
-    bot_.packetBroker().injectPacket(packet::building::ClientAgentActionCommandRequest::dispel(*buffSkillId_), PacketContainer::Direction::kBotToServer);
+    injectPacket(packet::building::ClientAgentActionCommandRequest::dispel(*buffSkillId_), PacketContainer::Direction::kBotToServer);
     dispelTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(1000));
   } else {
     CHAR_VLOG(1) << bot_.selfState()->name << " has no active buffs that can be dispelled, but do have a debuff we must wait for";

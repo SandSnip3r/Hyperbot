@@ -16,7 +16,7 @@ public:
     uint16_t quantity;
     int32_t maxStackSize;
   };
-  BuyingItems(Bot &bot, const std::map<uint32_t, PurchaseRequest> &itemsToBuy);
+  BuyingItems(StateMachine *parent, const std::map<uint32_t, PurchaseRequest> &itemsToBuy);
   ~BuyingItems() override;
   Status onUpdate(const event::Event *event) override;
 private:

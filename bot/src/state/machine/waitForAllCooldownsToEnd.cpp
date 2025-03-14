@@ -6,11 +6,8 @@
 
 namespace state::machine {
 
-WaitForAllCooldownsToEnd::WaitForAllCooldownsToEnd(Bot &bot) : StateMachine(bot) {
-}
-
-WaitForAllCooldownsToEnd::~WaitForAllCooldownsToEnd() {
-}
+WaitForAllCooldownsToEnd::WaitForAllCooldownsToEnd(StateMachine *parent) : StateMachine(parent) {}
+WaitForAllCooldownsToEnd::~WaitForAllCooldownsToEnd() {}
 
 Status WaitForAllCooldownsToEnd::onUpdate(const event::Event *event) {
   // TODO(efficiency): Watch for item/skill cooldown ended events, rather than fetching this data on every event.

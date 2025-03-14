@@ -7,8 +7,7 @@
 
 namespace state::machine {
 
-BuyingItems::BuyingItems(Bot &bot, const std::map<uint32_t, PurchaseRequest> &itemsToBuy) : StateMachine(bot), itemsToBuy_(itemsToBuy) {
-  stateMachineCreated(kName);
+BuyingItems::BuyingItems(StateMachine *parent, const std::map<uint32_t, PurchaseRequest> &itemsToBuy) : StateMachine(parent), itemsToBuy_(itemsToBuy) {
   // We must be talking to an NPC at this point
   // Prevent the client from closing the talk dialog
   pushBlockedOpcode(packet::Opcode::kClientAgentActionDeselectRequest);
@@ -16,9 +15,7 @@ BuyingItems::BuyingItems(Bot &bot, const std::map<uint32_t, PurchaseRequest> &it
   pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
 }
 
-BuyingItems::~BuyingItems() {
-  stateMachineDestroyed();
-}
+BuyingItems::~BuyingItems() {}
 
 Status BuyingItems::onUpdate(const event::Event *event) {
   if (event) {
@@ -65,7 +62,7 @@ Status BuyingItems::onUpdate(const event::Event *event) {
             bot_.proxy().unblockOpcode(packet::Opcode::kServerAgentInventoryOperationResponse);
             // Since we blocked the packet which tells the client about this purchase, we need to spoof an item spawning in the character's inventory
             const auto itemBuySpoofPacket = packet::building::ServerAgentInventoryOperationResponse::addItemByServerPacket(*inventoryUpdatedEvent->destSlotNum, *itemAtInventorySlot);
-            bot_.packetBroker().injectPacket(itemBuySpoofPacket, PacketContainer::Direction::kBotToClient);
+            injectPacket(itemBuySpoofPacket, PacketContainer::Direction::kBotToClient);
           }
 
           if (bot_.selfState()->inventory.hasItem(*inventoryUpdatedEvent->destSlotNum)) {
@@ -109,7 +106,7 @@ Status BuyingItems::onUpdate(const event::Event *event) {
                     }
                     // Stack item
                     const auto moveItemInInventoryPacket = packet::building::ClientAgentInventoryOperationRequest::withinInventoryPacket(laterItemIndex, earlierItemIndex, std::min(laterItemAsExpendable->quantity, static_cast<uint16_t>(spaceLeftInStack)));
-                    bot_.packetBroker().injectPacket(moveItemInInventoryPacket, PacketContainer::Direction::kBotToServer);
+                    injectPacket(moveItemInInventoryPacket, PacketContainer::Direction::kBotToServer);
                     waitingOnItemMovementResponse_ = true;
                     stackedAnItem = true;
                     break;
@@ -147,7 +144,7 @@ Status BuyingItems::onUpdate(const event::Event *event) {
   // Block the server's response from reaching the client
   bot_.proxy().blockOpcode(packet::Opcode::kServerAgentInventoryOperationResponse);
   const auto buyItemPacket = packet::building::ClientAgentInventoryOperationRequest::buyPacket(nextPurchaseRequest.tabIndex, nextPurchaseRequest.itemIndex, countToBuy, bot_.selfState()->talkingGidAndOption->first);
-  bot_.packetBroker().injectPacket(buyItemPacket, PacketContainer::Direction::kBotToServer);
+  injectPacket(buyItemPacket, PacketContainer::Direction::kBotToServer);
   waitingOnBuyResponse_ = true;
   return Status::kNotDone;
 }

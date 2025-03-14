@@ -24,13 +24,13 @@ namespace rl {
 // TODO: For actions which send a packet, should we have a timeout if there is no response?
 class Action : public state::machine::StateMachine {
 public:
-  Action(Bot &bot) : StateMachine(bot) {}
+  Action(StateMachine *parent) : StateMachine(parent) {}
   virtual ~Action() = 0;
 };
 
 class Sleep : public Action {
 public:
-  Sleep(Bot &bot) : Action(bot) {}
+  Sleep(StateMachine *parent) : Action(parent) {}
   state::machine::Status onUpdate(const event::Event *event) override;
 private:
   static constexpr int kSleepDurationMs{200};
@@ -39,7 +39,7 @@ private:
 
 class CommonAttack : public Action {
 public:
-  CommonAttack(Bot &bot, sro::scalar_types::EntityGlobalId targetGlobalId) : Action(bot), targetGlobalId_(targetGlobalId) {}
+  CommonAttack(StateMachine *parent, sro::scalar_types::EntityGlobalId targetGlobalId) : Action(parent), targetGlobalId_(targetGlobalId) {}
   state::machine::Status onUpdate(const event::Event *event) override;
 private:
   const sro::scalar_types::EntityGlobalId targetGlobalId_;
@@ -48,7 +48,7 @@ private:
 
 class CancelAction : public Action {
 public:
-  CancelAction(Bot &bot) : Action(bot) {}
+  CancelAction(StateMachine *parent) : Action(parent) {}
   state::machine::Status onUpdate(const event::Event *event) override;
 private:
   bool sentPacket_{false};
@@ -56,7 +56,7 @@ private:
 
 class TargetlessSkill : public Action {
 public:
-  TargetlessSkill(Bot &bot, sro::scalar_types::ReferenceSkillId skillRefId) : Action(bot), skillRefId_(skillRefId) {}
+  TargetlessSkill(StateMachine *parent, sro::scalar_types::ReferenceSkillId skillRefId) : Action(parent), skillRefId_(skillRefId) {}
   state::machine::Status onUpdate(const event::Event *event) override;
 private:
   const sro::scalar_types::ReferenceSkillId skillRefId_;
@@ -65,7 +65,7 @@ private:
 
 class TargetedSkill : public Action {
 public:
-  TargetedSkill(Bot &bot, sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::EntityGlobalId targetGlobalId) : Action(bot), skillRefId_(skillRefId), targetGlobalId_(targetGlobalId) {}
+  TargetedSkill(StateMachine *parent, sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::EntityGlobalId targetGlobalId) : Action(parent), skillRefId_(skillRefId), targetGlobalId_(targetGlobalId) {}
   state::machine::Status onUpdate(const event::Event *event) override;
 private:
   const sro::scalar_types::ReferenceSkillId skillRefId_;
@@ -75,7 +75,7 @@ private:
 
 class UseItem : public Action {
 public:
-  UseItem(Bot &bot, sro::scalar_types::ReferenceObjectId itemRefId) : Action(bot), itemRefId_(itemRefId) {}
+  UseItem(StateMachine *parent, sro::scalar_types::ReferenceObjectId itemRefId) : Action(parent), itemRefId_(itemRefId) {}
   state::machine::Status onUpdate(const event::Event *event) override;
 private:
   const sro::scalar_types::ReferenceObjectId itemRefId_;

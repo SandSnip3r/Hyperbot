@@ -15,8 +15,7 @@
 
 namespace state::machine {
 
-TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, int> &shoppingList, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell) : StateMachine(bot), npc_(npc), shoppingList_(shoppingList), slotsToSell_(slotsToSell) {
-  stateMachineCreated(kName);
+TalkingToShopNpc::TalkingToShopNpc(StateMachine *parent, Npc npc, const std::map<uint32_t, int> &shoppingList, const std::vector<sro::scalar_types::StorageIndexType> &slotsToSell) : StateMachine(parent), npc_(npc), shoppingList_(shoppingList), slotsToSell_(slotsToSell) {
   // We know we are near our npc, lets find the closest npc to us.
   // TODO: This won't always work. We don't need to get very close to an npc to talk to them, we could be closer to another npc.
   npcGid_ = bot_.getClosestNpcGlobalId();
@@ -29,9 +28,7 @@ TalkingToShopNpc::TalkingToShopNpc(Bot &bot, Npc npc, const std::map<uint32_t, i
   pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
 }
 
-TalkingToShopNpc::~TalkingToShopNpc() {
-  stateMachineDestroyed();
-}
+TalkingToShopNpc::~TalkingToShopNpc() {}
 
 void TalkingToShopNpc::figureOutWhatToBuy() {
   int remainingGold = bot_.selfState()->getGold();
@@ -207,7 +204,7 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
 
     // Close the shop
     const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(bot_.selfState()->talkingGidAndOption->first);
-    bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+    injectPacket(packet, PacketContainer::Direction::kBotToServer);
     waitingOnStopTalkResponse_ = true;
     return Status::kNotDone;
   } else {
@@ -231,7 +228,7 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
 
         // Delect the npc
         const auto packet = packet::building::ClientAgentActionDeselectRequest::packet(*bot_.selfState()->selectedEntity);
-        bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+        injectPacket(packet, PacketContainer::Direction::kBotToServer);
         waitingOnDeselectionResponse_ = true;
         return Status::kNotDone;
       } else {
@@ -243,7 +240,7 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
 
         // Talk to npc
         const auto openStorage = packet::building::ClientAgentActionTalkRequest::packet(*bot_.selfState()->selectedEntity, packet::enums::TalkOption::kStore);
-        bot_.packetBroker().injectPacket(openStorage, PacketContainer::Direction::kBotToServer);
+        injectPacket(openStorage, PacketContainer::Direction::kBotToServer);
         waitingForTalkResponse_ = true;
       }
     } else {
@@ -261,7 +258,7 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
 
         // Repair
         const auto repairAllPacket = packet::building::ClientAgentInventoryRepairRequest::repairAllPacket(npcGid_);
-        bot_.packetBroker().injectPacket(repairAllPacket, PacketContainer::Direction::kBotToServer);
+        injectPacket(repairAllPacket, PacketContainer::Direction::kBotToServer);
         waitingForRepairResponse_ = true;
         return Status::kNotDone;
       } else if (waitingForRepairResponse_) {
@@ -277,7 +274,7 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
 
       // Select Npc
       const auto selectNpc = packet::building::ClientAgentActionSelectRequest::packet(npcGid_);
-      bot_.packetBroker().injectPacket(selectNpc, PacketContainer::Direction::kBotToServer);
+      injectPacket(selectNpc, PacketContainer::Direction::kBotToServer);
       waitingForSelectionResponse_ = true;
     }
   }

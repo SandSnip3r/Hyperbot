@@ -9,6 +9,14 @@
 namespace state::machine {
 
 AutoPotion::AutoPotion(Bot &bot) : StateMachine(bot), selfGlobalId_(bot_.selfState()->globalId) {
+  initialize();
+}
+
+AutoPotion::AutoPotion(StateMachine *parent) : StateMachine(parent), selfGlobalId_(bot_.selfState()->globalId) {
+  initialize();
+}
+
+void AutoPotion::initialize() {
   if (bot_.config() == nullptr) {
     throw std::runtime_error("Cannot construct AutoPotion state machine if Bot does not have a config");
   }

@@ -2,6 +2,7 @@
 #define RL_INTELLIGENCE_POOL_HPP_
 
 #include "rl/ai/baseIntelligence.hpp"
+#include "rl/ai/deepLearningIntelligence.hpp"
 #include "rl/ai/randomIntelligence.hpp"
 
 namespace rl {
@@ -14,9 +15,13 @@ public:
   ai::RandomIntelligence* getRandomIntelligence() {
     return &randomIntelligence_;
   }
+  ai::DeepLearningIntelligence* getDeepLearningIntelligence() {
+    return &deepLearningIntelligence_;
+  }
 private:
   TrainingManager &trainingManager_;
   ai::RandomIntelligence randomIntelligence_{trainingManager_};
+  ai::DeepLearningIntelligence deepLearningIntelligence_{trainingManager_};
 };
 
 } // namespace rl

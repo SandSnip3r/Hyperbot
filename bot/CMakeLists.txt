@@ -312,6 +312,8 @@ add_executable(${PROJECT_NAME}
   src/rl/actionBuilder.hpp
   src/rl/ai/baseIntelligence.cpp
   src/rl/ai/baseIntelligence.hpp
+  src/rl/ai/deepLearningIntelligence.cpp
+  src/rl/ai/deepLearningIntelligence.hpp
   src/rl/ai/randomIntelligence.cpp
   src/rl/ai/randomIntelligence.hpp
   src/rl/intelligencePool.cpp
@@ -362,6 +364,8 @@ add_executable(${PROJECT_NAME}
   src/state/machine/executeGmCommand.hpp
   src/state/machine/gmCommandSpawnAndPickItems.cpp
   src/state/machine/gmCommandSpawnAndPickItems.hpp
+  src/state/machine/gmWarpToPosition.cpp
+  src/state/machine/gmWarpToPosition.hpp
   src/state/machine/intelligenceActor.cpp
   src/state/machine/intelligenceActor.hpp
   src/state/machine/login.cpp
@@ -441,6 +445,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE SOURCE_DIR="${CMAKE_CURRENT_S
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_VISIBILITY_PRESET hidden
 )
+target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility-inlines-hidden)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   ${Boost_LIBRARIES}
@@ -475,6 +480,7 @@ target_link_libraries(
   new_test_name_todo_rename
   Pathfinder
   silkroad_lib
+  absl::str_format
   GTest::Main
 )
 

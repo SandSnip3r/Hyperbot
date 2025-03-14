@@ -15,7 +15,6 @@ Botting::Botting(Bot &bot) : StateMachine(bot) {
   if (bot_.config() == nullptr) {
     throw std::runtime_error("Cannot construct Botting state machine if Bot does not have a config");
   }
-  stateMachineCreated(kName);
   setTrainingSpotFromConfig();
   initializeChildState();
 }
@@ -43,9 +42,7 @@ void Botting::initializeChildState() {
   }
 }
 
-Botting::~Botting() {
-  stateMachineDestroyed();
-}
+Botting::~Botting() {}
 
 Status Botting::onUpdate(const event::Event *event) {
   if (!childState_) {

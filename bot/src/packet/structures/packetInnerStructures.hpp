@@ -7,6 +7,8 @@
 #include <silkroad_lib/position.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
+#include <absl/strings/str_format.h>
+
 #include <cmath>
 #include <cstdint>
 #include <ostream>
@@ -22,13 +24,10 @@ struct Shard {
   uint16_t capacity;
   uint8_t isOperating;
   uint8_t farmId;
-  bool operator==(const Shard &other) const {
-    return shardId == other.shardId &&
-           shardName == other.shardName &&
-           onlineCount == other.onlineCount &&
-           capacity == other.capacity &&
-           isOperating == other.isOperating &&
-           farmId == other.farmId;
+  std::string toString() const {
+    return absl::StrFormat("Shard %d: %s, %d/%d, %s, Farm %d",
+                           shardId, shardName, onlineCount, capacity,
+                           isOperating ? "Operating" : "Not Operating", farmId);
   }
 };
 

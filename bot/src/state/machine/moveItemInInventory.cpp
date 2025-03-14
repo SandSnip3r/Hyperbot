@@ -10,15 +10,12 @@
 
 namespace state::machine {
 
-MoveItemInInventory::MoveItemInInventory(Bot &bot, uint8_t srcSlot, uint8_t destSlot) : StateMachine(bot), srcSlot_(srcSlot), destSlot_(destSlot) {
-  stateMachineCreated(kName);
+MoveItemInInventory::MoveItemInInventory(StateMachine *parent, uint8_t srcSlot, uint8_t destSlot) : StateMachine(parent), srcSlot_(srcSlot), destSlot_(destSlot) {
   // Prevent the human from moving anything
   pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
 }
 
-MoveItemInInventory::~MoveItemInInventory() {
-  stateMachineDestroyed();
-}
+MoveItemInInventory::~MoveItemInInventory() {}
 
 Status MoveItemInInventory::onUpdate(const event::Event *event) {
   if (event != nullptr) {
@@ -50,7 +47,7 @@ Status MoveItemInInventory::onUpdate(const event::Event *event) {
   }
 
   const auto moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::withinInventoryPacket(srcSlot_, destSlot_, 1); // TODO: Figure out quantity, for now, we assume it's an equipment
-  bot_.packetBroker().injectPacket(moveItemPacket, PacketContainer::Direction::kBotToServer);
+  injectPacket(moveItemPacket, PacketContainer::Direction::kBotToServer);
   waitingForItemToMove_ = true;
   return Status::kNotDone;
 }

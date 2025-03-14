@@ -22,7 +22,7 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build_liunx_x64",
       "cacheVariables": {
-        "USE_ASAN": "ON"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     }
   ],
@@ -36,8 +36,7 @@
     {
       "name": "linux_x64",
       "displayName": "x64 build step",
-      "configurePreset": "linux_x64",
-      "configuration": "Debug"
+      "configurePreset": "linux_x64"
     }
   ]
 }

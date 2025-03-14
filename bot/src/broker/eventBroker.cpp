@@ -140,6 +140,10 @@ TimerManager::TimerId EventBroker::registerTimer(TimerEndTimePoint endTime, std:
 
 void EventBroker::notifySubscribers(std::unique_ptr<event::Event> event) {
   ZoneScopedN("EventBroker::notifySubscribers");
+  {
+    std::string_view eventCodeString = event::toString(event->eventCode);
+    ZoneName(eventCodeString.data(), eventCodeString.size());
+  }
   // For each subscription pass the event to the EventHandleFunction
   std::vector<EventSubscription*> subscribersToNotify;
   {

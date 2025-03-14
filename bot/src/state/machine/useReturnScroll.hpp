@@ -9,7 +9,7 @@ namespace state::machine {
 
 class UseReturnScroll : public StateMachine {
 public:
-  UseReturnScroll(Bot &bot, sro::scalar_types::StorageIndexType inventoryIndex);
+  UseReturnScroll(StateMachine *parent, sro::scalar_types::StorageIndexType inventoryIndex);
   ~UseReturnScroll() override;
   Status onUpdate(const event::Event *event) override;
 private:

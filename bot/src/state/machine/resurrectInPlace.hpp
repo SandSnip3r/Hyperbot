@@ -12,7 +12,7 @@ namespace state::machine {
 
 class ResurrectInPlace : public StateMachine {
 public:
-  ResurrectInPlace(Bot &bot, bool receivedResurrectionOptionAlready);
+  ResurrectInPlace(StateMachine *parent, bool receivedResurrectionOptionAlready);
   ~ResurrectInPlace() override;
   Status onUpdate(const event::Event *event) override;
 private:

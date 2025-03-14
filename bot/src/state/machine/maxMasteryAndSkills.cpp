@@ -16,15 +16,12 @@
 namespace state::machine {
 
 MaxMasteryAndSkills::MaxMasteryAndSkills(Bot &bot, sro::pk2::ref::MasteryId id) : StateMachine(bot), masteryId_(id) {
-  stateMachineCreated(kName);
   pushBlockedOpcode(packet::Opcode::kClientAgentSkillMasteryLearnRequest);
   pushBlockedOpcode(packet::Opcode::kClientAgentSkillLearnRequest);
   VLOG(1) << "MaxMasteryAndSkills created for mastery ID " << masteryId_;
 }
 
-MaxMasteryAndSkills::~MaxMasteryAndSkills() {
-  stateMachineDestroyed();
-}
+MaxMasteryAndSkills::~MaxMasteryAndSkills() {}
 
 Status MaxMasteryAndSkills::onUpdate(const event::Event *event) {
   std::shared_ptr<entity::Self> selfEntity = bot_.selfState();
@@ -68,7 +65,7 @@ Status MaxMasteryAndSkills::onUpdate(const event::Event *event) {
   if (currentMasteryLevel < currentLevel) {
     // Still need to level up mastery.
     VLOG(1) << absl::StreamFormat("Mastery is level %d, character level is %d. Sending packet to level up mastery", currentMasteryLevel, currentLevel);
-    bot_.packetBroker().injectPacket(packet::building::ClientAgentSkillMasteryLearnRequest::incrementLevel(masteryId_), PacketContainer::Direction::kBotToServer);
+    injectPacket(packet::building::ClientAgentSkillMasteryLearnRequest::incrementLevel(masteryId_), PacketContainer::Direction::kBotToServer);
     timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(200));
     return Status::kNotDone;
   }
@@ -95,7 +92,7 @@ Status MaxMasteryAndSkills::onUpdate(const event::Event *event) {
     nextSkillId = skillTree_.getNextSkillToLearn();
   }
   VLOG(1) << "Sending packet to learn skill " << nextSkillId;
-  bot_.packetBroker().injectPacket(packet::building::ClientAgentSkillLearnRequest::learnSkill(nextSkillId), PacketContainer::Direction::kBotToServer);
+  injectPacket(packet::building::ClientAgentSkillLearnRequest::learnSkill(nextSkillId), PacketContainer::Direction::kBotToServer);
   currentLearningSkill_ = nextSkillId;
   timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(400));
   return Status::kNotDone;

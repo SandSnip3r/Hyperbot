@@ -3,27 +3,21 @@
 #ifndef STREAM_UTILITY_H
 #define STREAM_UTILITY_H
 
-//-----------------------------------------------------------------------------
-#include <vector>
-#include <string>
-#include <iterator>
 #include <cstring>
+#include <iterator>
 #include <stdint.h>
+#include <string>
+#include <type_traits>
+#include <vector>
 
-//-----------------------------------------------------------------------------
-
-enum SeekDirection
-{
+enum SeekDirection {
 	Seek_Set,
 	Seek_Forward,
 	Seek_Backward,
 	Seek_End
 };
 
-//-----------------------------------------------------------------------------
-
-class StreamUtility
-{
+class StreamUtility {
 private:
 	std::vector< uint8_t > & m_stream;
 	std::vector< uint8_t > m_stream_internal;
@@ -107,20 +101,18 @@ public:
 		Write< type >( val.empty() ? 0 : &val[0], static_cast< int32_t >( val.size() ) );
 	}
 
-	template <typename type>
-	void Write( type val )
-	{
-		Write< type >( &val, 1 );
-	}
+  template <typename T>
+  void Write(T val) {
+   Write<T>( &val, 1 );
+  }
 
-	template <typename type>
-	void Write( const type * const input, int32_t count )
-	{
-		if( count )
-		{
-			std::copy( (uint8_t *)input, (count * sizeof(type)) + (uint8_t *)input, std::back_inserter( m_stream ) );
-		}
-	}
+  template <typename T>
+  void Write(const T * const input, int32_t count) {
+    static_assert(std::is_integral_v<T> || std::is_floating_point_v<T> || std::is_enum_v<T>, "T must be an integral type, floating point type, or an enum");
+    if (count) {
+      std::copy( (uint8_t *)input, (count * sizeof(T)) + (uint8_t *)input, std::back_inserter( m_stream ) );
+    }
+  }
 
 	template <typename type>
 	void Insert( int32_t index, const std::vector< type > & val )

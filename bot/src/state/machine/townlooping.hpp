@@ -15,7 +15,7 @@ namespace state::machine {
 
 class Townlooping : public StateMachine {
 public:
-  Townlooping(Bot &bot);
+  Townlooping(StateMachine *parent);
   ~Townlooping() override;
   Status onUpdate(const event::Event *event) override;
 private:

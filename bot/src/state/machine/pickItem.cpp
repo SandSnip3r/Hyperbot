@@ -6,7 +6,7 @@
 
 namespace state::machine {
 
-PickItem::PickItem(Bot &bot, sro::scalar_types::EntityGlobalId targetGlobalId) : StateMachine(bot), targetGlobalId_(targetGlobalId) {
+PickItem::PickItem(StateMachine *parent, sro::scalar_types::EntityGlobalId targetGlobalId) : StateMachine(parent), targetGlobalId_(targetGlobalId) {
 }
 
 PickItem::~PickItem() {
@@ -114,7 +114,7 @@ Status PickItem::onUpdate(const event::Event *event) {
 void PickItem::tryPickItem() {
   CHAR_VLOG(1) << "Sending packet to pickup " << bot_.gameData().getItemName(targetRefId_);
   const auto packet = packet::building::ClientAgentActionCommandRequest::pickup(targetGlobalId_);
-  bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+  injectPacket(packet, PacketContainer::Direction::kBotToServer);
   requestTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(1000));
   CHAR_VLOG(2) << "Published timeout event " << *requestTimeoutEventId_;
 }

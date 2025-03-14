@@ -13,8 +13,8 @@
 
 namespace state::machine {
 
-Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
-  stateMachineCreated(kName);
+Townlooping::Townlooping(StateMachine *parent) : StateMachine(parent) {
+  // TODO: Do all this inside the first call to onUpdate.
   buildBuffList();
   buildShoppingList();
   buildSellList();
@@ -45,9 +45,7 @@ Townlooping::Townlooping(Bot &bot) : StateMachine(bot) {
   }
 }
 
-Townlooping::~Townlooping() {
-  stateMachineDestroyed();
-}
+Townlooping::~Townlooping() {}
 
 Status Townlooping::onUpdate(const event::Event *event) {
   if (childState_) {
@@ -101,7 +99,7 @@ Status Townlooping::onUpdate(const event::Event *event) {
     } else if (const auto *resurrectOption = dynamic_cast<const event::ResurrectOption*>(event)) {
       // Got a resurrection option; whatever the option is, we'll do it.
       const auto packet = packet::building::ClientAgentCharacterResurrect::resurrect(resurrectOption->option);
-      bot_.packetBroker().injectPacket(packet, PacketContainer::Direction::kBotToServer);
+      injectPacket(packet, PacketContainer::Direction::kBotToServer);
       waitingForSpawn_ = true;
       return Status::kNotDone;
     }

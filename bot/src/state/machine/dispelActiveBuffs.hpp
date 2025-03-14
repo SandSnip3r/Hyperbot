@@ -14,7 +14,7 @@ namespace state::machine {
 
 class DispelActiveBuffs : public StateMachine {
 public:
-  DispelActiveBuffs(Bot &bot);
+  DispelActiveBuffs(StateMachine *parent);
   ~DispelActiveBuffs() override;
   Status onUpdate(const event::Event *event) override;
 private:
