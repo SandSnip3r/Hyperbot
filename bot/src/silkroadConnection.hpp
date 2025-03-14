@@ -6,6 +6,9 @@
 #include <boost/make_shared.hpp>
 #include <boost/asio.hpp>
 
+#include <string>
+#include <string_view>
+
 #ifndef SILKROAD_CONNECTION_HPP_
 #define SILKROAD_CONNECTION_HPP_
 
@@ -32,7 +35,7 @@ public:
 	boost::shared_ptr<SilkroadSecurity> security;
 
 	//Constructor
-	SilkroadConnection(boost::asio::io_service &ioService);
+	SilkroadConnection(boost::asio::io_service &ioService, std::string_view name);
 
 	//Destructor
 	~SilkroadConnection();
@@ -60,8 +63,11 @@ public:
 	// Insert packet into the incoming packet list of the security API
 	bool InjectAsReceived(const PacketContainer &container);
 
-	//Sends a formatted packet
-	bool Send(const std::vector<uint8_t> & packet);
+	// Sends a formatted packet
+	bool Send(const std::vector<uint8_t> &packet);
+
+private:
+  const std::string name_;
 };
 
 #endif

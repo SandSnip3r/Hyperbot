@@ -62,19 +62,25 @@ int main(int argc, char **argv) {
   VLOG(1) << "Python interpreter instantiated";
   std::signal(SIGINT, SIG_DFL);
 
-  // Append the current source directory to sys.path so that we can later load any local python files. SOURCE_DIR is set from CMake.
-  pybind11::module sys = pybind11::module::import("sys");
-  const std::string sourceDir = std::string(SOURCE_DIR);
-  sys.attr("path").cast<pybind11::list>().append(sourceDir);
-  VLOG(1) << "Added \"" << sourceDir << "\" to python path";
+  try {
+    // Append the current source directory to sys.path so that we can later load any local python files. SOURCE_DIR is set from CMake.
+    pybind11::module sys = pybind11::module::import("sys");
+    const std::string sourceDir = std::string(SOURCE_DIR);
+    sys.attr("path").cast<pybind11::list>().append(sourceDir);
+    VLOG(1) << "Added \"" << sourceDir << "\" to python path";
 
-  VLOG(1) << "Warming up JAX";
-  // Warm-up JAX
-  pybind11::module jax = pybind11::module::import("jax");
-  // Force initialization by listing available devices.
-  pybind11::object devices = jax.attr("devices")();
-  // Optionally, log the devices.
-  VLOG(1) << "JAX devices: " << std::string(pybind11::str(devices));
+    VLOG(1) << "Warming up JAX";
+    // Warm-up JAX
+    pybind11::module jax = pybind11::module::import("jax");
+    // Force initialization by listing available devices.
+    pybind11::object devices = jax.attr("devices")();
+    // Optionally, log the devices.
+    VLOG(1) << "JAX devices: " << std::string(pybind11::str(devices));
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << absl::StreamFormat("Caught an exception while warming up JAX: \"%s\". Exiting.", ex.what());
+    LOG(WARNING) << "If \"ModuleNotFoundError: No module named 'jax'\", you may need to source the virtual environment.";
+    throw;
+  }
 
   pybind11::gil_scoped_release release;
   VLOG(1) << "Python GIL released";

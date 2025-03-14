@@ -124,6 +124,8 @@ add_executable(${PROJECT_NAME}
   src/packet/building/clientGatewayShardListRequest.hpp
   src/packet/building/commonBuilding.cpp
   src/packet/building/commonBuilding.hpp
+  src/packet/building/frameworkAliveNotify.cpp
+  src/packet/building/frameworkAliveNotify.hpp
   src/packet/building/serverAgentChatUpdate.cpp
   src/packet/building/serverAgentChatUpdate.hpp
   src/packet/building/serverAgentEntityDespawn.cpp

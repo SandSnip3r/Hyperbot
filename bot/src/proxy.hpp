@@ -12,6 +12,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/asio.hpp>
 
+#include <chrono>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -29,10 +30,12 @@ public:
   void blockOpcode(packet::Opcode opcode);
   void unblockOpcode(packet::Opcode opcode);
   [[nodiscard]] bool blockingOpcode(packet::Opcode opcode) const;
+  void setClientless(bool clientless);
 
 	//Stops all networking objects
 	void stop();
 private:
+  static constexpr int kMillisecondsBetweenKeepalives{5000};
   uint16_t ourListeningPort_;
   uint16_t gatewayPort_;
   const sro::pk2::DivisionInfo divisionInfo_;
@@ -47,16 +50,20 @@ private:
 	PacketLogger packetLogger{"C:\\Users\\Victor\\Documents\\Development\\packet-logs\\"};
   std::optional<PacketContainer> characterInfoPacketContainer_, groupSpawnPacketContainer_, storagePacketContainer_, guildStoragePacketContainer_;
   std::thread thr_;
+  std::atomic<bool> clientless_{false};
+  std::chrono::steady_clock::time_point lastPacketSentToServer_{std::chrono::steady_clock::now()};
+	boost::shared_ptr<boost::asio::deadline_timer> keepAlivePacketTimer_;
+  bool injectedKeepalive_{false};
 
 	//Accepts TCP connections
 	boost::asio::ip::tcp::acceptor acceptor;
 
-	//Packet processing timer
-	boost::shared_ptr<boost::asio::deadline_timer> timer;
+	// Packet processing timer
+	boost::shared_ptr<boost::asio::deadline_timer> packetProcessingTimer_;
 
 	//Silkroad connections
-	SilkroadConnection clientConnection{ioService_};
-	SilkroadConnection serverConnection{ioService_};
+	SilkroadConnection clientConnection{ioService_, "Client"};
+	SilkroadConnection serverConnection{ioService_, "Server"};
 
 	//Starts accepting new connections
 	void PostAccept(uint32_t count = 1);
@@ -64,7 +71,9 @@ private:
 	//Handles new connections
 	void HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, const boost::system::error_code & error);
 
-	void ProcessPackets(const boost::system::error_code & error);
+	void ProcessPackets(const boost::system::error_code &error);
+  void setKeepaliveTimer();
+	void checkClientlessKeepalive(const boost::system::error_code &error);
 
   void run();
 };

@@ -19,7 +19,7 @@ void Hyperbot::run() {
 
   ui::UserInterface userInterface{context, gameData_, eventBroker_};
   userInterface.initialize();
-  ClientManagerInterface clientManagerInterface(context);
+  ClientManagerInterface clientManagerInterface(context, eventBroker_);
 
   clientManagerInterface.runAsync();
   eventBroker_.runAsync();

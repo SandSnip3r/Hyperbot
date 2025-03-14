@@ -233,9 +233,9 @@ void TrainingManager::buildItemRequirementList() {
     return type_id::categories::kUniversalPill.contains(type_id::getTypeId(item)) && item.itemClass == 2;
   });
 
-  constexpr int kSmallHpPotionRequiredCount = 1600; // IF-CHANGE: If we change this, also change the max potion count in JaxInterface::observationToNumpy
-  constexpr int kSmallMpPotionRequiredCount = 1600;
-  constexpr int kMediumUniversalPillRequiredCount = 800;
+  constexpr int kSmallHpPotionRequiredCount = 50; // IF-CHANGE: If we change this, also change the max potion count in JaxInterface::observationToNumpy
+  constexpr int kSmallMpPotionRequiredCount = 50;
+  constexpr int kMediumUniversalPillRequiredCount = 50;
   itemRequirements_.push_back({smallHpPotionRefId, kSmallHpPotionRequiredCount});
   itemRequirements_.push_back({smallMpPotionRefId, kSmallMpPotionRequiredCount});
   itemRequirements_.push_back({mediumUniversalPillRefId, kMediumUniversalPillRequiredCount});

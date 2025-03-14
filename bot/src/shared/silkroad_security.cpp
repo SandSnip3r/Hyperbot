@@ -637,13 +637,11 @@ uint8_t SilkroadSecurity::HasPacketToSend() const
 
 //-----------------------------------------------------------------------------
 
-std::vector< uint8_t > SilkroadSecurity::GetPacketToSend()
-{
+std::vector<uint8_t> SilkroadSecurity::GetPacketToSend() {
   PacketContainer packet_container;
   {
     std::unique_lock<std::mutex> outgoing_packet_lock(m_data->m_outgoing_packet_mutex);
-    if( m_data->m_outgoing_packets.empty() )
-    {
+    if (m_data->m_outgoing_packets.empty()) {
       throw( std::runtime_error( "[SilkroadSecurity::GetPacketToSend] No packets are avaliable to send.") );
     }
 
@@ -654,8 +652,7 @@ std::vector< uint8_t > SilkroadSecurity::GetPacketToSend()
     }
   }
 
-  if( packet_container.massive )
-  {
+  if (packet_container.massive) {
     uint8_t workspace[ 4089 ];
     uint16_t parts = 0;
 
@@ -663,8 +660,7 @@ std::vector< uint8_t > SilkroadSecurity::GetPacketToSend()
     StreamUtility final_data;
 
     int32_t total_size = packet_container.data.GetStreamSize();
-    while( total_size )
-    {
+    while (total_size) {
       StreamUtility part_data;
 
       int32_t cur_size = total_size > 4089 ? 4089 : total_size; // Max buffer size is 4kb for the client
@@ -693,13 +689,9 @@ std::vector< uint8_t > SilkroadSecurity::GetPacketToSend()
 
     // Return the collated data
     return final.GetStreamVector();
-  }
-  else
-  {
-    if( !m_data->m_client_security )
-    {
-      if( m_data->m_enc_opcodes.find( packet_container.opcode ) != m_data->m_enc_opcodes.end() )
-      {
+  } else {
+    if (!m_data->m_client_security) {
+      if (m_data->m_enc_opcodes.find( packet_container.opcode ) != m_data->m_enc_opcodes.end()) {
         packet_container.encrypted = true;
       }
     }

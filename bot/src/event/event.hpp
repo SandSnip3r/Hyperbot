@@ -1,6 +1,7 @@
 #ifndef EVENT_EVENT_HPP_
 #define EVENT_EVENT_HPP_
 
+#include "clientManagerInterface.hpp"
 #include "common/pvpDescriptor.hpp"
 #include "common/sessionId.hpp"
 #include "packet/building/commonBuilding.hpp"
@@ -119,6 +120,7 @@
   F(BeginPvp) \
   F(ReadyForPvp) \
   F(DispelSuccess) \
+  F(ClientDied) \
   F(Dummy)
 
 namespace event {
@@ -612,6 +614,12 @@ struct ReadyForPvp : public Event {
   explicit ReadyForPvp(EventId id, sro::scalar_types::EntityGlobalId globalId);
   sro::scalar_types::EntityGlobalId globalId;
   virtual ~ReadyForPvp() = default;
+};
+
+struct ClientDied : public Event {
+  explicit ClientDied(EventId id, ClientManagerInterface::ClientId clientId);
+  ClientManagerInterface::ClientId clientId;
+  virtual ~ClientDied() = default;
 };
 
 } // namespace event

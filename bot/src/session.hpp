@@ -53,6 +53,8 @@ private:
   ClientManagerInterface &clientManagerInterface_;
   std::optional<ClientManagerInterface::ClientId> clientId_;
 
+  void handleClientDiedEvent(const event::Event *event);
+
   static std::atomic<SessionId> nextSessionId;
   static SessionId createUniqueSessionId();
 };

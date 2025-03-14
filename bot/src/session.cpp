@@ -8,6 +8,7 @@ Session::Session(const pk2::GameData &gameData,
     eventBroker_(eventBroker),
     bot_(sessionId_, gameData_, proxy_, packetBroker_, eventBroker_, worldState),
     clientManagerInterface_(clientManagerInterface) {
+  eventBroker_.subscribeToEvent(event::EventCode::kClientDied, std::bind(&Session::handleClientDiedEvent, this, std::placeholders::_1));
 }
 
 void Session::setCharacter(const CharacterLoginInfo &characterLoginInfo) {
@@ -40,6 +41,17 @@ Bot& Session::getBot() {
 std::future<void> Session::asyncOpenClient() {
   clientId_ = clientManagerInterface_.startClient(proxy_.getOurListeningPort());
   return bot_.asyncOpenClient();
+}
+
+void Session::handleClientDiedEvent(const event::Event *event) {
+  const auto &clientDiedEvent = dynamic_cast<const event::ClientDied&>(*event);
+  if (clientId_ && clientDiedEvent.clientId == *clientId_) {
+    VLOG(1) << absl::StreamFormat("Our client died! Session %d, client %d", sessionId_, *clientId_);
+    proxy_.setClientless(true);
+    clientId_.reset();
+    // TODO: We should unsubscribe from this event, because it'll never trigger again.
+    //   However, there is a bug in EventBroker. We cannot unsubscribe from an event that is currently being handled.
+  }
 }
 
 std::atomic<SessionId> Session::nextSessionId{0};

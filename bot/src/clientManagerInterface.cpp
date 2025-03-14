@@ -1,3 +1,4 @@
+#include "broker/eventBroker.hpp"
 #include "clientManagerInterface.hpp"
 
 #include <ui_proto/client_manager_request.pb.h>
@@ -7,12 +8,9 @@
 
 #include <stdexcept>
 
-ClientManagerInterface::ClientManagerInterface(zmq::context_t &context) : context_(context) {
+ClientManagerInterface::ClientManagerInterface(zmq::context_t &context, broker::EventBroker &eventBroker) : context_(context), eventBroker_(eventBroker) {
   socket_ = zmq::socket_t(context_, zmq::socket_type::req);
   socket_.bind("tcp://*:2235");
-
-  // // When this process is killed, send requests to kill any open clients.
-  // signal(SIGINT, &ClientManagerInterface::signalHandler);
 }
 
 ClientManagerInterface::~ClientManagerInterface() {
@@ -80,7 +78,6 @@ ClientManagerInterface::ClientId ClientManagerInterface::privateStartClient(int3
   switch (response.body_case()) {
     case proto::client_manager_request::Response::BodyCase::kClientStarted: {
       const int32_t clientId = response.client_started().client_id();
-      // saveClientId(clientId);
       return clientId;
     }
     case proto::client_manager_request::Response::BodyCase::kError: {
@@ -132,6 +129,15 @@ void ClientManagerInterface::sendHeartbeat() {
   switch (response.body_case()) {
     case proto::client_manager_request::Response::BodyCase::kHeartbeatAck: {
       VLOG(20) << "Heartbeat acknowledged";
+      break;
+    }
+    case proto::client_manager_request::Response::BodyCase::kClientsDied: {
+      // If a client process dies, we'll find out about it in the response to our heartbeat.
+      VLOG(1) << response.clients_died().client_ids_size() << " client(s) have died";
+      for (int i=0; i<response.clients_died().client_ids_size(); ++i) {
+        VLOG(1) << "Publishing event that client " << response.clients_died().client_ids(i) << " has died";
+        eventBroker_.publishEvent<event::ClientDied>(response.clients_died().client_ids(i));
+      }
       break;
     }
     default: {
@@ -194,22 +200,3 @@ void ClientManagerInterface::run() {
     lastMessageSent_ = std::chrono::high_resolution_clock::now();
   }
 }
-
-// void ClientManagerInterface::handleReply(zmq::message_t reply) {
-// }
-
-// void ClientManagerInterface::saveClientId(ClientId clientId) {
-//   // std::unique_lock<std::mutex> lock(runningClientListMutex_);
-//   LOG(INFO) << "Saving client " << clientId << " to be killed later";
-//   runningClients_.push_back(clientId);
-// }
-
-// std::vector<ClientManagerInterface::ClientId> ClientManagerInterface::runningClients_;
-
-// void ClientManagerInterface::signalHandler(int signal) {
-//   // std::unique_lock<std::mutex> lock(runningClientListMutex_);
-//   for (ClientId clientId : runningClients_) {
-//     LOG(INFO) << "Killing client " << clientId;
-//   }
-//   exit(0);
-// }

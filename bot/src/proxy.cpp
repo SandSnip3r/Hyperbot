@@ -1,4 +1,5 @@
 #include "proxy.hpp"
+#include "packet/building/frameworkAliveNotify.hpp"
 
 #include <absl/log/log.h>
 
@@ -7,7 +8,7 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
       divisionInfo_(gameData.divisionInfo()),
       packetBroker_(broker),
       acceptor(ioService_, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
-      timer(boost::make_shared<boost::asio::deadline_timer>(ioService_)) {
+      packetProcessingTimer_(boost::make_shared<boost::asio::deadline_timer>(ioService_)) {
   // Get the port that the OS gave us to listen on
   if (port == 0) {
     // Using an OS-assigned port
@@ -32,8 +33,8 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
   PostAccept();
 
   // Post the packet processing timer
-  timer->expires_from_now(boost::posix_time::milliseconds(kPacketProcessDelayMs));
-  timer->async_wait(boost::bind(&Proxy::ProcessPackets, this, boost::asio::placeholders::error));
+  packetProcessingTimer_->expires_from_now(boost::posix_time::milliseconds(kPacketProcessDelayMs));
+  packetProcessingTimer_->async_wait(boost::bind(&Proxy::ProcessPackets, this, boost::asio::placeholders::error));
 }
 
 Proxy::~Proxy() {
@@ -102,10 +103,25 @@ uint16_t Proxy::getOurListeningPort() const {
 void Proxy::stop() {
   boost::system::error_code ec;
   acceptor.close(ec);
+  if (ec) {
+    LOG(ERROR) << "Error closing acceptor: " << ec.message();
+  }
   acceptor.cancel(ec);
+  if (ec) {
+    LOG(ERROR) << "Error cancelling acceptor: " << ec.message();
+  }
 
-  if (timer) {
-    timer->cancel(ec);
+  if (packetProcessingTimer_) {
+    packetProcessingTimer_->cancel(ec);
+    if (ec) {
+      LOG(ERROR) << "Error cancelling packet processing timer: " << ec.message();
+    }
+  }
+  if (keepAlivePacketTimer_) {
+    keepAlivePacketTimer_->cancel(ec);
+    if (ec) {
+      LOG(ERROR) << "Error cancelling keepalive timer: " << ec.message();
+    }
   }
 
   clientConnection.Close();
@@ -124,6 +140,17 @@ void Proxy::unblockOpcode(packet::Opcode opcode) {
 
 bool Proxy::blockingOpcode(packet::Opcode opcode) const {
   return (blockedOpcodes_.find(static_cast<std::underlying_type_t<packet::Opcode>>(opcode)) != blockedOpcodes_.end());
+}
+
+void Proxy::setClientless(bool clientless) {
+  // For now, we only support switching from clientful to clientless.
+  if (!clientless_ && clientless) {
+    VLOG(1) << "Proxy is switching to clientless";
+    clientless_ = clientless;
+    // Construct a timer to send a keepalive based on when we last sent a packet to the server.
+    keepAlivePacketTimer_ = boost::make_shared<boost::asio::deadline_timer>(ioService_);
+    setKeepaliveTimer();
+  }
 }
 
 // Starts accepting new connections
@@ -182,7 +209,7 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
   PostAccept();
 }
 
-void Proxy::ProcessPackets(const boost::system::error_code & error) {
+void Proxy::ProcessPackets(const boost::system::error_code &error) {
   if (!error) {
     if (clientConnection.security) {
       while (clientConnection.security->HasPacketToRecv()) {
@@ -379,17 +406,47 @@ void Proxy::ProcessPackets(const boost::system::error_code & error) {
       // Send packets that are currently in the security api
       while (serverConnection.security->HasPacketToSend()) {
         if (!serverConnection.Send(serverConnection.security->GetPacketToSend())) {
-          LOG(INFO) << "Server connection Send error";
           break;
+        }
+        // If we ever need to run clientless, we need to know when the last packet was sent.
+        lastPacketSentToServer_ = std::chrono::steady_clock::now();
+        if (injectedKeepalive_) {
+          // This is either the keepalive or some packet which we are sending earlier than the keepalive we injected.
+          setKeepaliveTimer();
         }
       }
     }
 
 Post:
     // Repost the timer
-    timer->expires_from_now(boost::posix_time::milliseconds(kPacketProcessDelayMs));
-    timer->async_wait(boost::bind(&Proxy::ProcessPackets, this, boost::asio::placeholders::error));
+    packetProcessingTimer_->expires_from_now(boost::posix_time::milliseconds(kPacketProcessDelayMs));
+    packetProcessingTimer_->async_wait(boost::bind(&Proxy::ProcessPackets, this, boost::asio::placeholders::error));
   } else {
-    LOG(INFO) << "Error: \"" << error.message() << '"';
+    LOG(ERROR) << "Error during async_wait for ProcessPackets:\"" << error.message() << '"';
+  }
+}
+
+void Proxy::setKeepaliveTimer() {
+  injectedKeepalive_ = false;
+  // Set the timer to trigger when we need to send a keepalive packet.
+  std::chrono::duration timeSinceLastPacketToServer = std::chrono::steady_clock::now() - lastPacketSentToServer_;
+  const int millisecondsUntilNextKeepalive = std::floor(kMillisecondsBetweenKeepalives - timeSinceLastPacketToServer.count()/1'000'000.0);
+  keepAlivePacketTimer_->expires_from_now(boost::posix_time::milliseconds(millisecondsUntilNextKeepalive));
+  keepAlivePacketTimer_->async_wait(boost::bind(&Proxy::checkClientlessKeepalive, this, boost::asio::placeholders::error));
+}
+
+void Proxy::checkClientlessKeepalive(const boost::system::error_code &error) {
+  // We've been woken up because we might need to send a keepalive packet.
+  // How long has it been since we've last sent a packet?
+  const std::chrono::duration timeSinceLastPacketToServer = std::chrono::steady_clock::now() - lastPacketSentToServer_;
+  int millisecondsUntilNextKeepalive = std::floor(kMillisecondsBetweenKeepalives - timeSinceLastPacketToServer.count()/1'000'000.0);
+  if (millisecondsUntilNextKeepalive <= 0) {
+    // It has been long enough and we now need to send a keepalive.
+    inject(packet::building::FrameworkAliveNotify::packet(), PacketContainer::Direction::kBotToServer);
+    // TODO: Technically, it is not accurate to set this timer here, as we have not yet sent the packet. But it's close enough.
+    injectedKeepalive_ = true;
+  } else {
+    // We must have sent a packet since we set this timer.
+    setKeepaliveTimer();
   }
 }

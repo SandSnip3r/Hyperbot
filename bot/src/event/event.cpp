@@ -208,4 +208,7 @@ BeginPvp::BeginPvp(EventId id, common::PvpDescriptor pvpDescriptor) :
 ReadyForPvp::ReadyForPvp(EventId id, sro::scalar_types::EntityGlobalId globalId) :
     Event(id, EventCode::kReadyForPvp), globalId(globalId) {}
 
+ClientDied::ClientDied(EventId id, ClientManagerInterface::ClientId clientId) :
+    Event(id, EventCode::kClientDied), clientId(clientId) {}
+
 } // namespace event

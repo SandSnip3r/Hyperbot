@@ -6,7 +6,7 @@
 #define PACKET_OPCODE_LIST(F) \
   F(Hack, 0xA003) \
   F(FrameworkMessageIdentify, 0x2001) \
-  F(LOGIN_CLIENT_KEEP_ALIVE, 0x2002) \
+  F(FrameworkAliveNotify, 0x2002) \
   F(FrameworkStateNotify, 0x2005) \
   F(FrameworkStateRequest, 0x6005) \
   F(ClientGatewayPatchRequest, 0x6100) \
@@ -27,7 +27,6 @@
   F(ServerGatewayLoginResponse, 0xA102) \
   F(CLIENT_INFO, 0x2001) \
   F(CLIENT_ACCEPT_HANDSHAKE, 0x9000) \
-  F(CLIENT_KEEP_ALIVE, 0x2002) \
   F(CLIENT_PATCH_REQUEST, 0x6100) \
   F(ClientAgentAuthRequest, 0x6103) \
   F(ClientAgentInventoryOperationRequest, 0x7034) \
