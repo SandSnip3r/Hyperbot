@@ -2,6 +2,8 @@
 
 #include <pybind11/embed.h>
 
+#include <tracy/Tracy.hpp>
+
 #include <absl/flags/flag.h>
 #include <absl/flags/parse.h>
 #include <absl/log/globals.h>
@@ -25,6 +27,42 @@ ABSL_FLAG(std::vector<std::string>, vmodule, {}, "Per-module verbose logging lev
 ABSL_FLAG(std::string, character, std::string(kDefaultCharacterFlagValue), "Character to login");
 
 using namespace std;
+
+#if TRACY_ENABLE
+
+// Override global new operator
+void* operator new(size_t size) {
+  void* ptr = malloc(size);
+  if (!ptr) {
+    throw std::bad_alloc();
+  }
+  TracyAlloc(ptr, size);
+  return ptr;
+}
+
+// Override global new[] operator
+void* operator new[](size_t size) {
+  void* ptr = malloc(size);
+  if (!ptr) {
+    throw std::bad_alloc();
+  }
+  TracyAlloc(ptr, size);
+  return ptr;
+}
+
+// Override global delete operator
+void operator delete(void* ptr) noexcept {
+  TracyFree(ptr);
+  free(ptr);
+}
+
+// Override global delete[] operator
+void operator delete[](void* ptr) noexcept {
+  TracyFree(ptr);
+  free(ptr);
+}
+
+#endif
 
 void initializeLogging();
 

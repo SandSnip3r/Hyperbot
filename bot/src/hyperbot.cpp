@@ -47,7 +47,9 @@ void Hyperbot::parseConfig() {
 
 void Hyperbot::initializeGameData() {
   try {
+    TracyMessageL("Before parsing Silkroad game data");
     gameData_.parseSilkroadFiles(serverConfig_.clientPath());
+    TracyMessageL("Done parsing Silkroad game data");
   } catch (const std::exception &ex) {
     throw std::runtime_error(absl::StrFormat("Failed to parse the Silkroad game data: \"%s\"", ex.what()));
   }
