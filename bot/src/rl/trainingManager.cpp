@@ -48,44 +48,46 @@ void TrainingManager::train() {
   std::mt19937 randomEngine = common::createRandomEngine();
   while (1) {
     // Get a S,A,R,S' tuple from the replay buffer.
-    try {
-      std::unique_lock lock(replayBufferMutex_);
-      if (!newReplayBuffer_.empty()) {
-        std::uniform_int_distribution<int> dist(0, newReplayBuffer_.size()-1);
-        auto it = newReplayBuffer_.begin();
-        std::advance(it, dist(randomEngine));
-        const common::PvpDescriptor::PvpId pvpId = it->first;
-        const auto &pvpMap = it->second;
-        if (!pvpMap.empty()) {
-          std::uniform_int_distribution<int> dist2(0, pvpMap.size()-1);
-          auto it2 = pvpMap.begin();
-          std::advance(it2, dist2(randomEngine));
-          const sro::scalar_types::EntityGlobalId observerGlobalId = it2->first;
-          const auto &eventObservationActionList = it2->second;
-          if (eventObservationActionList.size() >= 2) {
-            std::uniform_int_distribution<int> dist3(1, eventObservationActionList.size()-1);
-            const int selectedActionIndex = dist3(randomEngine);
-            const auto &[eventCode1, observation1, actionIndex1] = eventObservationActionList[selectedActionIndex-1];
-            const auto &[eventCode2, observation2, actionIndex2] = eventObservationActionList[selectedActionIndex];
-            if (!actionIndex1) {
-              throw std::runtime_error("An entry in the replay buffer before the last item has a missing action index");
-            }
-            // LOG(INFO) << "Selected actions " << selectedActionIndex-1 << " & " << selectedActionIndex << " from PVP #" << pvpId << " for observer " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name << (!actionIndex2.has_value() ? std::string(200, '@') : std::string());
-            jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
-            ++trainStepCount_;
-            if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
-              LOG(INFO) << "Updating target network!";
-              jaxInterface_.updateTargetModel();
+    constexpr bool kTrain{false};
+    if constexpr (kTrain) {
+      try {
+        // TODO: Create replay buffer class.
+        std::unique_lock lock(replayBufferMutex_);
+        if (!newReplayBuffer_.empty()) {
+          std::uniform_int_distribution<int> dist(0, newReplayBuffer_.size()-1);
+          auto it = newReplayBuffer_.begin();
+          std::advance(it, dist(randomEngine));
+          const common::PvpDescriptor::PvpId pvpId = it->first;
+          const auto &pvpMap = it->second;
+          if (!pvpMap.empty()) {
+            std::uniform_int_distribution<int> dist2(0, pvpMap.size()-1);
+            auto it2 = pvpMap.begin();
+            std::advance(it2, dist2(randomEngine));
+            const sro::scalar_types::EntityGlobalId observerGlobalId = it2->first;
+            const auto &eventObservationActionList = it2->second;
+            if (eventObservationActionList.size() >= 2) {
+              std::uniform_int_distribution<int> dist3(1, eventObservationActionList.size()-1);
+              const int selectedActionIndex = dist3(randomEngine);
+              const auto &[eventCode1, observation1, actionIndex1] = eventObservationActionList[selectedActionIndex-1];
+              const auto &[eventCode2, observation2, actionIndex2] = eventObservationActionList[selectedActionIndex];
+              if (!actionIndex1) {
+                throw std::runtime_error("An entry in the replay buffer before the last item has a missing action index");
+              }
+              // LOG(INFO) << "Selected actions " << selectedActionIndex-1 << " & " << selectedActionIndex << " from PVP #" << pvpId << " for observer " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name << (!actionIndex2.has_value() ? std::string(200, '@') : std::string());
+              jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
+              ++trainStepCount_;
+              if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
+                LOG(INFO) << "Updating target network!";
+                jaxInterface_.updateTargetModel();
+              }
             }
           }
         }
+      } catch (std::exception &ex) {
+        LOG(ERROR) << "Caught exception while training: " << ex.what();
       }
-    } catch (std::exception &ex) {
-      LOG(ERROR) << "Caught exception while training: " << ex.what();
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-    // jaxInterface_.train(previousObservation, action, reward, currentObservation);
   }
 }
 

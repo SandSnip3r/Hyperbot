@@ -34,3 +34,5 @@
 - In `JaxInterface::initialize()`, call all XLA JITted at least once, so that no time is spent JITing during combat
 - Handle any kind of teleportation (spawn & despawn) while pvping & preparing for pvp
 - Fix bug in EventBroker where an event cannot unsubscribe from itself
+- Move GameData & parsing to silkroad lib
+- Document Qt instructions

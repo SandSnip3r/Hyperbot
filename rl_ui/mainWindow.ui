@@ -14,17 +14,17 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QCheckBox" name="checkBox">
+   <widget class="QPushButton" name="startTrainingButton">
     <property name="geometry">
      <rect>
-      <x>270</x>
-      <y>170</y>
-      <width>211</width>
-      <height>22</height>
+      <x>230</x>
+      <y>200</y>
+      <width>80</width>
+      <height>24</height>
      </rect>
     </property>
     <property name="text">
-     <string>Enable Packet Logging To Console</string>
+     <string>Start Training</string>
     </property>
    </widget>
   </widget>

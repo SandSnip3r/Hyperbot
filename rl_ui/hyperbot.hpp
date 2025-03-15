@@ -18,6 +18,8 @@ public:
   void tryConnectAsync(std::string_view ipAddress, int32_t port);
   void cancelConnect();
 
+  void startTraining();
+
 signals:
   void connected();
   void connectionFailed();

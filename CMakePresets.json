@@ -24,6 +24,20 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
+    },
+    {
+      "name": "win64_qt_rl_ui",
+      "displayName": "Win64 Qt Configure (rl_ui only)",
+      "generator": "NMake Makefiles JOM",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build_win64_qt_rl_ui",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "C:/Users/Victor/Documents/Development/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "BUILD_UI": "ON",
+        "USE_ASAN": "OFF",
+        "CMAKE_PREFIX_PATH": "C:/Qt/6.8.2/msvc2022_64"
+      }
     }
   ],
   "buildPresets": [
@@ -37,6 +51,12 @@
       "name": "linux_x64",
       "displayName": "x64 build step",
       "configurePreset": "linux_x64"
+    },
+    {
+      "name": "win64_qt_rl_ui",
+      "displayName": "Win64 Qt Build (rl_ui only)",
+      "configurePreset": "win64_qt_rl_ui",
+      "configuration": "Debug"
     }
   ]
 }

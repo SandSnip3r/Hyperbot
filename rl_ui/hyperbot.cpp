@@ -1,6 +1,6 @@
 #include "hyperbot.hpp"
 
-#include <ui_proto/request.pb.h>
+#include <ui_proto/rl_ui_request.pb.h>
 
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
@@ -31,14 +31,29 @@ void Hyperbot::cancelConnect() {
   tryToConnect_ = false;
 }
 
+void Hyperbot::startTraining() {
+  LOG(INFO) << "Going to send start training message.";
+  proto::rl_ui_request::RequestMessage startTrainingRequest;
+  proto::rl_ui_request::DoAction *doAction = startTrainingRequest.mutable_doaction();
+  doAction->set_action(proto::rl_ui_request::DoAction::kStartTraining);
+
+  std::string protoMsgAsStr;
+  startTrainingRequest.SerializeToString(&protoMsgAsStr);
+  zmq::message_t zmqMsg(protoMsgAsStr);
+  std::optional<zmq::send_result_t> sendResult = socket_.send(zmqMsg, zmq::send_flags::none);
+
+  if (!sendResult.has_value()) {
+    LOG(WARNING) << "Failed to send message to Hyperbot.";
+  }
+}
+
 void Hyperbot::tryConnect() {
   // Do one send/recv to test the connection.
-  proto::request::RequestMessage pingRequest;
+  proto::rl_ui_request::RequestMessage pingRequest;
   pingRequest.mutable_ping();
   std::string protoMsgAsStr;
   pingRequest.SerializeToString(&protoMsgAsStr);
-  zmq::message_t zmqMsg;
-  zmqMsg.rebuild(protoMsgAsStr.data(), protoMsgAsStr.size());
+  zmq::message_t zmqMsg(protoMsgAsStr);
   std::optional<zmq::send_result_t> sendResult = socket_.send(zmqMsg, zmq::send_flags::none);
 
   if (!sendResult.has_value()) {

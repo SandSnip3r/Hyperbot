@@ -25,6 +25,8 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     hyperbotConnect.hpp hyperbotConnect.cpp hyperbotConnect.ui
     hyperbot.hpp hyperbot.cpp
     config.hpp config.cpp
+
+
   )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET rl_ui APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
