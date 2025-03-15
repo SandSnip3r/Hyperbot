@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package proto.rl_ui_request;
+
+message DoAction {
+  enum Action {
+    kStartTraining = 0;
+  }
+  Action action = 1;
+};
+
+message RequestMessage {
+  oneof body {
+    DoAction doAction = 1;
+    google.protobuf.Empty ping = 2;
+  }
+}

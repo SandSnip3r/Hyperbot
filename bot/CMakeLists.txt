@@ -424,6 +424,8 @@ add_executable(${PROJECT_NAME}
   src/type_id/categories.hpp
   src/type_id/typeCategory.cpp
   src/type_id/typeCategory.hpp
+  src/ui/rlUserInterface.cpp
+  src/ui/rlUserInterface.hpp
   src/ui/userInterface.cpp
   src/ui/userInterface.hpp
 )
