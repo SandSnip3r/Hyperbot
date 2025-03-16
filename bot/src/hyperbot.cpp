@@ -7,11 +7,14 @@
 #include "state/worldState.hpp"
 #include "ui/rlUserInterface.hpp"
 
+#include <common/TracySystem.hpp>
+
 #include <absl/log/log.h>
 
 #include <stdexcept>
 
 void Hyperbot::run() {
+  tracy::SetThreadName("Hyperbot");
   VLOG(1) << "Running Hyperbot";
   parseConfig();
 

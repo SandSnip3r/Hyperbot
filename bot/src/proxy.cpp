@@ -1,6 +1,9 @@
 #include "proxy.hpp"
 #include "packet/building/frameworkAliveNotify.hpp"
 
+#include <common/TracySystem.hpp>
+#include <tracy/Tracy.hpp>
+
 #include <absl/log/log.h>
 
 Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port) :
@@ -72,6 +75,7 @@ void Proxy::runAsync() {
 }
 
 void Proxy::run() {
+  tracy::SetThreadName("Proxy");
   // Start processing network events
   while(true) {
     try {
@@ -212,7 +216,9 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
 void Proxy::ProcessPackets(const boost::system::error_code &error) {
   if (!error) {
     if (clientConnection.security) {
+      // Receive all pending incoming packets sent from the client
       while (clientConnection.security->HasPacketToRecv()) {
+        ZoneScopedN("Proxy::ProcessPackets ClientHasPacketToRecv");
         // Client sent a packet
         bool forward = true;
 
@@ -242,7 +248,7 @@ void Proxy::ProcessPackets(const boost::system::error_code &error) {
         }
       }
 
-      // Send packets that are currently in the security api
+      // Send all pending outgoing packets to the client
       while (clientConnection.security->HasPacketToSend()) {
         if (!clientConnection.Send(clientConnection.security->GetPacketToSend())) {
           LOG(ERROR) << "Client connection Send error";
@@ -253,6 +259,7 @@ void Proxy::ProcessPackets(const boost::system::error_code &error) {
 
     if (serverConnection.security) {
       while (serverConnection.security->HasPacketToRecv()) {
+        ZoneScopedN("Proxy::ProcessPackets ServerHasPacketToRecv");
         // Server sent a packet
         bool forward = true;
 

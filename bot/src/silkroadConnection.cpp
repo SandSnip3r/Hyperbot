@@ -1,5 +1,7 @@
 #include "silkroadConnection.hpp"
 
+#include <tracy/Tracy.hpp>
+
 #include <absl/log/log.h>
 
 #define CHECK_ERROR(error)                               \
@@ -11,6 +13,7 @@ do {                                                     \
 
 //Handles incoming packets
 void SilkroadConnection::HandleRead(size_t bytes_transferred, const boost::system::error_code & error) {
+  TracyMessageL("SilkroadConnection::HandleRead");
   if (!error && boostSocket_ && security) {
     security->Recv(&data[0], bytes_transferred);
     PostRead();

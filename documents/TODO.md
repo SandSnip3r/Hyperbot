@@ -36,3 +36,6 @@
 - Fix bug in EventBroker where an event cannot unsubscribe from itself
 - Move GameData & parsing to silkroad lib
 - Document Qt instructions
+- PR/issue to Tracy to not clutter the "<common/>" include path
+- Add move ctor/ass for PacketContainer, this should remove an unecessary alloc when taking a packet from SilkroadSecurity::GetPacketToRecv()
+- Move Proxy::ProcessPackets to properly triggered async wakeups, not a looping timer

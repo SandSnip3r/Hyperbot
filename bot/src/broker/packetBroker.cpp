@@ -1,5 +1,7 @@
 #include "packetBroker.hpp"
 
+#include <tracy/Tracy.hpp>
+
 #include <stdexcept>
 
 namespace broker {
@@ -9,6 +11,7 @@ void PacketBroker::setInjectionFunction(PacketInjectionFunction &&injectionFunct
 }
 
 void PacketBroker::packetReceived(const PacketContainer &packet, PacketContainer::Direction packetDirection) {
+  ZoneScopedN("PacketBroker::packetReceived");
   // A new packet has arrived
   // First, determine which "event bus" to "put it on"
   PacketSubscriptionMap *subscriptionMap;

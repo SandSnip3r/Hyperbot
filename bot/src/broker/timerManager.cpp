@@ -1,5 +1,7 @@
 #include "timerManager.hpp"
 
+#include <common/TracySystem.hpp>
+
 #include <absl/log/log.h>
 
 #include <algorithm>
@@ -126,6 +128,7 @@ bool TimerManager::mostRecentTimerIsFinished() {
 }
 
 void TimerManager::run() {
+  tracy::SetThreadName("TimerManager");
   while (keepRunning_) {
     if (timerDataHeap_.empty()) {
       waitForData();
