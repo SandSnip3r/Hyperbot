@@ -77,20 +77,13 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   if constexpr (kStoreInReplayBuffer) {
     intelligence_->trainingManager().reportEventObservationAndAction(pvpId_, bot_.selfState()->globalId, event, observation, actionIndex);
   }
-  {
-    ZoneScopedN("setChildStateMachine -> ActionBuilder::buildAction");
-    TracyMessageL(("Action #"+std::to_string(actionIndex)).c_str());
-    setChildStateMachine(rl::ActionBuilder::buildAction(this, event, opponentGlobalId_, actionIndex));
-  }
+  setChildStateMachine(rl::ActionBuilder::buildAction(this, event, opponentGlobalId_, actionIndex));
 
-  {
-    ZoneScopedN("Running first tick of action");
-    // Run one update on the child state machine to let it start.
-    const Status status = childState_->onUpdate(event);
-    if (status == Status::kDone) {
-      // If the action immediately completes, deconstruct it.
-      childState_.reset();
-    }
+  // Run one update on the child state machine to let it start.
+  const Status status = childState_->onUpdate(event);
+  if (status == Status::kDone) {
+    // If the action immediately completes, deconstruct it.
+    childState_.reset();
   }
 
   // We are never done.
