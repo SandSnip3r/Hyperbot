@@ -18,6 +18,8 @@
 #include "state/machine/walking.hpp"
 #include "type_id/categories.hpp"
 
+#include <tracy/Tracy.hpp>
+
 #include <absl/log/log.h>
 
 namespace state::machine {
@@ -46,6 +48,7 @@ PvpManager::~PvpManager() {
 }
 
 Status PvpManager::onUpdate(const event::Event *event) {
+  ZoneScopedN("PvpManager::onUpdate");
   if (!initialized_) {
     initialized_ = true;
     if (bot_.loggedIn()) {

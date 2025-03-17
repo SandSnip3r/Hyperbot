@@ -1343,18 +1343,12 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     if (selfEntity_->skillEngine.pendingCommandQueue.empty()) {
       throw std::runtime_error("Command queued, but pending command list is empty");
     }
-    CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Command accepted: " << selfEntity_->skillEngine.pendingCommandQueue.front().toString();
-    selfEntity_->skillEngine.acceptedCommandQueue.emplace_back(selfEntity_->skillEngine.pendingCommandQueue.front());
-    selfEntity_->skillEngine.pendingCommandQueue.erase(selfEntity_->skillEngine.pendingCommandQueue.begin());
-    const auto &command = selfEntity_->skillEngine.acceptedCommandQueue.back();
-    if (command.command.commandType == packet::enums::CommandType::kExecute &&
-        command.command.actionType == packet::enums::ActionType::kCast) {
-      const auto &skillData = gameData_.skillData().getSkillById(command.command.refSkillId);
-      CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Queued command is to cast skill " << gameData_.getSkillName(command.command.refSkillId);
-    }
-    if (!selfEntity_->skillEngine.pendingCommandQueue.empty()) {
-      CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "There are " << selfEntity_->skillEngine.pendingCommandQueue.size() << " more commands in the pending queue";
-    }
+    // We don't know which command was accepted. At this point, we have to move all pending commands. Later, when a command is executed, we can narrow our accepted list down.
+    CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Moving " << selfEntity_->skillEngine.pendingCommandQueue.size() << " pending command(s) to accepted queue";
+    selfEntity_->skillEngine.acceptedCommandQueue.insert(selfEntity_->skillEngine.acceptedCommandQueue.end(),
+                                                         selfEntity_->skillEngine.pendingCommandQueue.begin(),
+                                                         selfEntity_->skillEngine.pendingCommandQueue.end());
+    selfEntity_->skillEngine.pendingCommandQueue.clear();
   } else if (packet.actionState() == packet::enums::ActionState::kError) {
     // 16388 happens when the skill is on cooldown
     if (selfEntity_->skillEngine.pendingCommandQueue.empty()) {
@@ -1546,9 +1540,9 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     const bool isFinalPieceOfChain = skillData.basicChainCode == 0;
     if (!selfEntity_->skillEngine.acceptedCommandQueue.empty()) {
       // Try to find the index of this skill in the accepted command queue.
-      // Iterate backwards, because if there are multiple occurrences, the last one is probably the one that this skill begin refers to.
       std::optional<size_t> indexOfOurSkill;
-      const auto &acceptedCommandQueue = selfEntity_->skillEngine.acceptedCommandQueue;
+      auto &acceptedCommandQueue = selfEntity_->skillEngine.acceptedCommandQueue;
+      // Walk in reverse order of the queue looking for a skill which matched out. The last item is the newest. Later, when we remove items after our command, it will at worst be an underestimate of the number of things to remove.
       for (int i=acceptedCommandQueue.size()-1; i>=0; --i) {
         const auto &acceptedCommand = acceptedCommandQueue.at(i);
         if (acceptedCommand.command.actionType == packet::enums::ActionType::kCast && acceptedCommand.command.refSkillId == rootSkillRefId) {
@@ -1567,8 +1561,8 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         // TODO: Shouldn't happen now
         CHAR_LOG(WARNING) << absl::StreamFormat("Couldn't find our skill in the accepted command queue. packet.refSkillId(): %d, rootSkillRefId: %d", packet.refSkillId(), rootSkillRefId);
         // This happens for common attacks
-        if (skillIsCommonAttack && !(selfEntity_->skillEngine.acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute &&
-                                     selfEntity_->skillEngine.acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kAttack)) {
+        if (skillIsCommonAttack && !(acceptedCommandQueue.front().command.commandType == packet::enums::CommandType::kExecute &&
+                                     acceptedCommandQueue.front().command.actionType == packet::enums::ActionType::kAttack)) {
           // First command is not a common attack
           // LOG(INFO) << "First command in the queue isn't a common attack!";
         }
@@ -1600,15 +1594,15 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
           } else {
             for (int i=0; i<*indexOfOurSkill; ++i) {
               // TODO: Should we publish an event that command has been skipped?
-              VLOG(1) << "Command #" << i << " (" << wrapActionCommand(selfEntity_->skillEngine.acceptedCommandQueue.at(i).command) << ") skipped";
+              VLOG(1) << "Command #" << i << " (" << wrapActionCommand(acceptedCommandQueue.at(i).command) << ") skipped";
             }
-            selfEntity_->skillEngine.acceptedCommandQueue.erase(selfEntity_->skillEngine.acceptedCommandQueue.begin(), selfEntity_->skillEngine.acceptedCommandQueue.begin() + *indexOfOurSkill);
+            acceptedCommandQueue.erase(acceptedCommandQueue.begin(), acceptedCommandQueue.begin() + *indexOfOurSkill);
             indexOfOurSkill = 0;
           }
         }
         // A skill always has a begin, but might not have an end.
         //  Marking this skill as executed here is sufficient
-        selfEntity_->skillEngine.acceptedCommandQueue.at(*indexOfOurSkill).wasExecuted = true;
+        acceptedCommandQueue.at(*indexOfOurSkill).wasExecuted = true;
         if (isRootSkill && !skillIsCommonAttack) {
           // Set a timer for when the skill cooldown ends. We only do this for the root piece of the skill. If this is a chain and later piece has a cooldown too, it is probably just the same cooldown that we already set a timer for when we cast the root.
           // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1620,7 +1614,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         }
         if (skillData.basicActivity == 1) {
           // No "End" will come for Basic_Activity == 1, delete the item from the accepted command queue
-          selfEntity_->skillEngine.acceptedCommandQueue.erase(selfEntity_->skillEngine.acceptedCommandQueue.begin() + *indexOfOurSkill);
+          acceptedCommandQueue.erase(acceptedCommandQueue.begin() + *indexOfOurSkill);
         }
         // printCommandQueues(); // COMMAND_QUEUE_DEBUG
       }

@@ -4,6 +4,8 @@
 #include "event/event.hpp"
 #include "timerManager.hpp"
 
+#include <tracy/Tracy.hpp>
+
 #include <absl/container/flat_hash_map.h>
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
@@ -70,13 +72,7 @@ public:
 
   template<typename EventType, typename... Args>
   EventId publishDelayedEvent(TimerEndTimePoint endTime, Args&&... args) {
-    // Abstract away TimerManager's IDs.
-    const EventId eventId = getNextUniqueEventId();
-    std::unique_ptr<event::Event> event = std::make_unique<EventType>(eventId, std::forward<Args>(args)...);
-    VLOG(2) << absl::StreamFormat("Created delayed event #%d, %s, which triggers in %dms", event->eventId, event::toString(event->eventCode), std::chrono::duration_cast<std::chrono::milliseconds>(endTime-ClockType::now()).count());
-    TimerManager::TimerId timerId = registerTimer(endTime, std::move(event));
-    addTimerIdMapping(eventId, timerId);
-    return eventId;
+    return publishDelayedEvent<EventType>(std::chrono::duration_cast<std::chrono::milliseconds>(endTime-ClockType::now()), std::forward<Args>(args)...);
   }
   EventId publishDelayedEvent(event::EventCode eventCode, std::chrono::milliseconds delay);
   EventId publishDelayedEvent(event::EventCode eventCode, TimerEndTimePoint endTime);

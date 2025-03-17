@@ -1,6 +1,7 @@
 #include "timerManager.hpp"
 
 #include <common/TracySystem.hpp>
+#include <tracy/Tracy.hpp>
 
 #include <absl/log/log.h>
 
@@ -19,8 +20,11 @@ bool TimerManager::cancelTimer(TimerId id) {
   bool shouldNotify=false;
   {
     std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
+    if (timerDataHeap_.empty()) {
+      return false;
+    }
     // Save our current "next to fire" timer time
-    TimePoint prevTime = (timerDataHeap_.empty() ? TimePoint::max() : timerDataHeap_.front().endTime);
+    const TimePoint prevTime = timerDataHeap_.front().endTime;
     // Remove the timer matching the id
     bool timerFound = false;
     for (auto it=timerDataHeap_.begin(), end=timerDataHeap_.end(); it!=end; ++it) {

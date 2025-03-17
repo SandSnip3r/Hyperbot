@@ -215,6 +215,7 @@ void Bot::handleEvent(const event::Event *event) {
 // ============================================================================================================================
 
 void Bot::onUpdate(const event::Event *event) {
+  ZoneScopedN("Bot::onUpdate");
   // sequentialStateMachines_.onUpdate(event);
   if (pvpManagerStateMachine_) {
     pvpManagerStateMachine_->onUpdate(event);
