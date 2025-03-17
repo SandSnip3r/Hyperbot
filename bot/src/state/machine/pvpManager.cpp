@@ -276,6 +276,7 @@ Status PvpManager::startPvp(const event::Event *event) {
   } else {
     ourIntelligence = pvpDescriptor_->player2Intelligence;
   }
+  CHAR_VLOG(1) << "Starting PVP with intelligence " << ourIntelligence->name();
   setChildStateMachine<state::machine::IntelligenceActor>(ourIntelligence, pvpDescriptor_->pvpId, getOpponentGlobalId());
   return childState_->onUpdate(event);
 }

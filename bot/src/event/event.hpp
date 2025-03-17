@@ -1,6 +1,7 @@
 #ifndef EVENT_EVENT_HPP_
 #define EVENT_EVENT_HPP_
 
+#include "broker/timerManager.hpp"
 #include "clientManagerInterface.hpp"
 #include "common/pvpDescriptor.hpp"
 #include "common/sessionId.hpp"
@@ -134,7 +135,7 @@ enum class EventCode {
 
 std::string_view toString(EventCode eventCode);
 
-struct Event {
+struct Event : public broker::Payload {
 public:
   using EventId = uint32_t;
   explicit Event(EventId id, EventCode code);

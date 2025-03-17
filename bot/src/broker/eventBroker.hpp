@@ -29,7 +29,7 @@ size_t getAddress(std::function<T(U...)> f) {
 namespace broker {
 
 // If the EventBroker thread calls back into subscribe or unsubscribe, this will crash, due to reacquisition of the subscriber map mutex.
-class EventBroker {
+class EventBroker : public CallbackTarget {
 public:
   using EventId = event::Event::EventId;
   using ClockType = TimerManager::ClockType;
@@ -84,6 +84,9 @@ public:
 
   // Will block until any events currently being sent to any subscribers are complete due to a lock on the subscriber map.
   void unsubscribeFromEvent(SubscriptionId id);
+
+  void instantTimerFinished(std::unique_ptr<Payload> &&payload) override;
+  void delayedTimerFinished(std::unique_ptr<Payload> &&payload) override;
 private:
   // This is used for providing unique subscription IDs. Protected by subscriptionMutex_.
   SubscriptionId subscriptionIdCounter_{0};
@@ -93,18 +96,16 @@ private:
   std::vector<std::unique_ptr<EventSubscription>> subscriptionMasterList_;
   std::mutex subscriptionMutex_;
   std::atomic<EventId> eventIdCounter_{0};
-  TimerManager timerManager_;
+  TimerManager timerManager_{*this};
   absl::flat_hash_map<EventId, TimerManager::TimerId> timerIdMap_;
   mutable std::mutex timerIdMapMutex_;
 
-  void publishEvent(std::unique_ptr<event::Event> event);
-  TimerManager::TimerId registerTimer(std::chrono::milliseconds delay, std::unique_ptr<event::Event> event);
-  TimerManager::TimerId registerTimer(TimerEndTimePoint endTime, std::unique_ptr<event::Event> event);
+  void publishEvent(std::unique_ptr<event::Event> &&event);
+  TimerManager::TimerId registerTimer(std::chrono::milliseconds delay, std::unique_ptr<event::Event> &&event);
+  TimerManager::TimerId registerTimer(TimerEndTimePoint endTime, std::unique_ptr<event::Event> &&event);
 
   void notifySubscribers(std::unique_ptr<event::Event> event);
-  void instantTimerFinished(event::Event *event);
-  void delayedTimerFinished(event::Event *event);
-  void timerFinished(event::Event *event);
+  void timerFinished(std::unique_ptr<event::Event> &&event);
   EventId getNextUniqueEventId();
   void addTimerIdMapping(EventId eventId, TimerManager::TimerId timerId);
   TimerManager::TimerId getTimerId(EventId eventId) const;

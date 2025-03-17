@@ -1,3 +1,4 @@
+#include "common/dynamicUniqueCast.hpp"
 #include "eventBroker.hpp"
 
 #include <tracy/Tracy.hpp>
@@ -124,18 +125,34 @@ void EventBroker::unsubscribeFromEvent(SubscriptionId id) {
   }
 }
 
-void EventBroker::publishEvent(std::unique_ptr<event::Event> event) {
-  // It might seem weird that we release the data from the unique_ptr here and then rewrap it later once it comes back from the TimerManager in EventBroker::timerFinished. However, this is because the std::function, which we pass to the TimerManager, requires the ability to be copy constructed, which unique_ptr disallows.
-  timerManager_.triggerInstantTimer(std::bind(&EventBroker::instantTimerFinished, this, event.release()));
+void EventBroker::instantTimerFinished(std::unique_ptr<Payload> &&payload) {
+  std::unique_ptr<event::Event> event = common::dynamicUniqueCast<event::Event>(std::move(payload));
+  if (!event) {
+    throw std::runtime_error("EventBroker::instantTimerFinished: Payload is not an event");
+  }
+  timerFinished(std::move(event));
 }
 
-TimerManager::TimerId EventBroker::registerTimer(std::chrono::milliseconds delay, std::unique_ptr<event::Event> event) {
+void EventBroker::delayedTimerFinished(std::unique_ptr<Payload> &&payload) {
+  std::unique_ptr<event::Event> event = common::dynamicUniqueCast<event::Event>(std::move(payload));
+  if (!event) {
+    throw std::runtime_error("EventBroker::instantTimerFinished: Payload is not an event");
+  }
+  removeTimerIdMapping(event->eventId);
+  timerFinished(std::move(event));
+}
+
+void EventBroker::publishEvent(std::unique_ptr<event::Event> &&event) {
+  timerManager_.triggerInstantTimer(std::move(event));
+}
+
+TimerManager::TimerId EventBroker::registerTimer(std::chrono::milliseconds delay, std::unique_ptr<event::Event> &&event) {
   // TODO: Rather than giving the event to a std::function, we should instead have an object that we give the event to which is also callable. If the object is destroyed, the event should be destroyed as well.
-  return timerManager_.registerTimer(delay, std::bind(&EventBroker::delayedTimerFinished, this, event.release()));
+  return timerManager_.registerTimer(delay, std::move(event));
 }
 
-TimerManager::TimerId EventBroker::registerTimer(TimerEndTimePoint endTime, std::unique_ptr<event::Event> event) {
-  return timerManager_.registerTimer(endTime, std::bind(&EventBroker::delayedTimerFinished, this, event.release()));
+TimerManager::TimerId EventBroker::registerTimer(TimerEndTimePoint endTime, std::unique_ptr<event::Event> &&event) {
+  return timerManager_.registerTimer(endTime, std::move(event));
 }
 
 void EventBroker::notifySubscribers(std::unique_ptr<event::Event> event) {
@@ -174,19 +191,10 @@ void EventBroker::notifySubscribers(std::unique_ptr<event::Event> event) {
   }
 }
 
-void EventBroker::instantTimerFinished(event::Event *event) {
-  timerFinished(event);
-}
-
-void EventBroker::delayedTimerFinished(event::Event *event) {
-  removeTimerIdMapping(event->eventId);
-  timerFinished(event);
-}
-
-void EventBroker::timerFinished(event::Event *event) {
+void EventBroker::timerFinished(std::unique_ptr<event::Event> &&event) {
   VLOG(2) << absl::StreamFormat("Event #%d %s triggered", event->eventId, event::toString(event->eventCode));
   // Take the raw pointer and move it into a unique_pointer
-  notifySubscribers(std::unique_ptr<event::Event>(event));
+  notifySubscribers(std::move(event));
 }
 
 event::Event::EventId EventBroker::getNextUniqueEventId() {

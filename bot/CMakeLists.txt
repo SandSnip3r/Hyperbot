@@ -29,6 +29,7 @@ add_executable(${PROJECT_NAME}
   src/characterLoginInfo.hpp
   src/clientManagerInterface.cpp
   src/clientManagerInterface.hpp
+  src/common/dynamicUniqueCast.hpp
   src/common/itemRequirement.hpp
   src/common/pvpDescriptor.cpp
   src/common/pvpDescriptor.hpp
