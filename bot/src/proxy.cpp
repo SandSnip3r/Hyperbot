@@ -97,6 +97,7 @@ void Proxy::run() {
       LOG(ERROR) << "Exception while running io_service \"" << ex.what() << '"';
     }
   }
+  LOG(INFO) << "Proxy::run exiting";
 }
 
 uint16_t Proxy::getOurListeningPort() const {
@@ -214,6 +215,7 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
 }
 
 void Proxy::ProcessPackets(const boost::system::error_code &error) {
+  ZoneScopedN("Proxy::ProcessPackets");
   if (!error) {
     if (clientConnection.security) {
       // Receive all pending incoming packets sent from the client

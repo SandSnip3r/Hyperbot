@@ -4,6 +4,14 @@
 #include "bot.hpp"
 namespace state::machine {
 
+std::string_view toString(Status status) {
+  if (status == Status::kDone) {
+    return "Done";
+  } else {
+    return "Not Done";
+  }
+}
+
 StateMachine::StateMachine(Bot &bot) : bot_(bot) {}
 
 StateMachine::StateMachine(StateMachine *parent) : bot_(parent->bot_), parent_(parent) {}

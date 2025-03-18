@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #define CHAR_LOG(severity) \
@@ -28,6 +29,7 @@ namespace state::machine {
 enum class Npc { kStorage, kPotion, kGrocery, kBlacksmith, kProtector, kStable };
 
 enum class Status { kDone, kNotDone };
+std::string_view toString(Status status);
 
 class StateMachine {
 public:

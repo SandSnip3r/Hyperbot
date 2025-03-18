@@ -24,7 +24,7 @@ rl::Observation buildObservation(const Bot &bot, const event::Event *event, sro:
 } // namespace
 
 IntelligenceActor::IntelligenceActor(StateMachine *parent, rl::ai::BaseIntelligence *intelligence, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) : StateMachine(parent), intelligence_(intelligence), pvpId_(pvpId), opponentGlobalId_(opponentGlobalId) {
-  VLOG(1) << "Instantiated " << intelligence->name() << " intelligence actor!";
+  VLOG(1) << "Constructed " << intelligence->name() << " intelligence actor!";
 }
 
 IntelligenceActor::~IntelligenceActor() {
