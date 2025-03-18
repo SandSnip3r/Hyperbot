@@ -134,7 +134,7 @@ py::object JaxInterface::observationToNumpy(const Observation &observation) {
   mutableArray(index++) = observation.ourCurrentMp_ / static_cast<float>(observation.ourMaxMp_);
   mutableArray(index++) = observation.opponentCurrentHp_ / static_cast<float>(observation.opponentMaxHp_);
   mutableArray(index++) = observation.opponentCurrentMp_ / static_cast<float>(observation.opponentMaxMp_);
-  mutableArray(index++) = observation.hpPotionCount_ / static_cast<float>(50); // IF-CHANGE: If we change this, also change TrainingManager::buildItemRequirementList
+  mutableArray(index++) = observation.hpPotionCount_ / static_cast<float>(5); // IF-CHANGE: If we change this, also change TrainingManager::buildItemRequirementList
   for (int cooldown : observation.skillCooldowns_) {
     mutableArray(index) = cooldown == 0 ? 1.0 : 0.0;
     mutableArray(index+1) = static_cast<float>(cooldown) / 1000.0; // Convert milliseconds to seconds

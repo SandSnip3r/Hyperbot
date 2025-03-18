@@ -278,7 +278,10 @@ Status PvpManager::startPvp(const event::Event *event) {
   }
   CHAR_VLOG(1) << "Starting PVP with intelligence " << ourIntelligence->name();
   setChildStateMachine<state::machine::IntelligenceActor>(ourIntelligence, pvpDescriptor_->pvpId, getOpponentGlobalId());
-  return childState_->onUpdate(event);
+  CHAR_VLOG(2) << "  child state machine set";
+  Status result = childState_->onUpdate(event);
+  CHAR_VLOG(2) << "  child state machine run, result: " << toString(result);
+  return result;
 }
 
 sro::scalar_types::EntityGlobalId PvpManager::getOpponentGlobalId() {

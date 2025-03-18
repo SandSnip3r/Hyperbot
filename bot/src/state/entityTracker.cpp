@@ -1,14 +1,15 @@
 #include "entityTracker.hpp"
 #include "event/event.hpp"
 #include "helpers.hpp"
+#include "state/worldState.hpp"
 
 #include <absl/strings/str_format.h>
 
 namespace state {
 
-bool EntityTracker::entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker) {
+bool EntityTracker::entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker, WorldState &worldState) {
   {
-    std::unique_lock<std::mutex> entityMapLockGuard(entityMapMutex_);
+    std::unique_lock entityMapLockGuard(entityMapMutex_);
     int &entityReferenceCount = entityReferenceCountMap_[entity->globalId];
     ++entityReferenceCount;
     if (entityReferenceCount > 1) {
@@ -19,7 +20,7 @@ bool EntityTracker::entitySpawned(std::shared_ptr<entity::Entity> entity, broker
       return false;
     }
     VLOG(1) << "Tracking new " << entity::toString(entity->entityType()) << " " << entity->toString();
-    entity->initializeEventBroker(eventBroker);
+    entity->initializeEventBroker(eventBroker, worldState);
     entityMap_.emplace(entity->globalId, entity);
   }
   eventBroker.publishEvent<event::EntitySpawned>(entity->globalId);
@@ -28,7 +29,7 @@ bool EntityTracker::entitySpawned(std::shared_ptr<entity::Entity> entity, broker
 
 bool EntityTracker::entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker) {
   {
-    std::unique_lock<std::mutex> entityMapLockGuard(entityMapMutex_);
+    std::unique_lock entityMapLockGuard(entityMapMutex_);
     int &entityReferenceCount = entityReferenceCountMap_[globalId];
     --entityReferenceCount;
     if (entityReferenceCount != 0) {
@@ -50,12 +51,12 @@ bool EntityTracker::entityDespawned(sro::scalar_types::EntityGlobalId globalId, 
 }
 
 bool EntityTracker::trackingEntity(sro::scalar_types::EntityGlobalId globalId) const {
-  std::unique_lock<std::mutex> entityMapLockGuard(entityMapMutex_);
+  std::unique_lock entityMapLockGuard(entityMapMutex_);
   return (entityMap_.find(globalId) != entityMap_.end());
 }
 
 // std::shared_ptr<entity::Entity> EntityTracker::getEntity(sro::scalar_types::EntityGlobalId globalId) const {
-//   std::unique_lock<std::mutex> entityMapLockGuard(entityMapMutex_);
+//   std::unique_lock entityMapLockGuard(entityMapMutex_);
 //   auto it = entityMap_.find(globalId);
 //   if (it == entityMap_.end()) {
 //     throw std::runtime_error(absl::StrFormat("EntityTracker::getEntity; Entity ID %d does not exist", globalId));
@@ -68,7 +69,7 @@ bool EntityTracker::trackingEntity(sro::scalar_types::EntityGlobalId globalId) c
 // }
 
 size_t EntityTracker::size() const {
-  std::unique_lock<std::mutex> entityMapLockGuard(entityMapMutex_);
+  std::unique_lock entityMapLockGuard(entityMapMutex_);
   return entityMap_.size();
 }
 

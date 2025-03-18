@@ -10,6 +10,10 @@
 #include <string>
 #include <string_view>
 
+namespace state {
+class WorldState;
+} // namespace state
+
 namespace pk2 {
 class GameData;
 } // namespace pk2
@@ -34,7 +38,9 @@ public:
   sro::scalar_types::EntityGlobalId globalId;
   void initializePosition(const sro::Position &position);
   void initializeAngle(sro::Angle angle);
-  virtual void initializeEventBroker(broker::EventBroker &eventBroker);
+
+  // TODO: For now, this function takes a reference to the WorldState, that is because we use WorldState::mutex to protect all data inside the WorldState. Entities are inside the WorldState. Entities can subscribe to events. When an entity receives an event, it needs to lock the WorldState::mutex.
+  virtual void initializeEventBroker(broker::EventBroker &eventBroker, state::WorldState &worldState);
   virtual sro::Position position() const;
   sro::Angle angle() const;
   virtual ~Entity() = default;
@@ -45,6 +51,7 @@ protected:
   sro::Position position_;
   sro::Angle angle_;
   broker::EventBroker *eventBroker_{nullptr};
+  state::WorldState *worldState_{nullptr};
   virtual std::string toStringImpl(const pk2::GameData *gameData) const;
 };
 

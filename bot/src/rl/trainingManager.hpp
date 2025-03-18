@@ -39,6 +39,7 @@ public:
   JaxInterface& getJaxInterface() { return jaxInterface_; }
 
 private:
+  static constexpr bool kTrain{true};
   static constexpr float kPvpStartingCenterOffset{40.0f};
   const pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;

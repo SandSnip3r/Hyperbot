@@ -1,5 +1,6 @@
 #include "helpers.hpp"
 #include "mobileEntity.hpp"
+#include "state/worldState.hpp"
 
 #include <silkroad_lib/position_math.hpp>
 #include <silkroad_lib/constants.hpp>
@@ -35,8 +36,8 @@ void MobileEntity::initializeAsMoving(sro::Angle destinationAngle) {
   this->angle_ = destinationAngle;
 }
 
-void MobileEntity::initializeEventBroker(broker::EventBroker &eventBroker) {
-  Entity::initializeEventBroker(eventBroker);
+void MobileEntity::initializeEventBroker(broker::EventBroker &eventBroker, state::WorldState &worldState) {
+  Entity::initializeEventBroker(eventBroker, worldState);
   if (moving()) {
     checkIfWillCrossGeometryBoundary();
   }
@@ -53,6 +54,7 @@ void MobileEntity::handleEvent(const event::Event *event) {
   if (event == nullptr) {
     throw std::runtime_error("MobileEntity::handleEvent given null event");
   }
+  std::unique_lock lock(worldState_->mutex);
   try {
     if (const auto *movementTimerEndedEvent = dynamic_cast<const event::EntityMovementTimerEnded*>(event); movementTimerEndedEvent != nullptr) {
       if (movementTimerEndedEvent->globalId == globalId) {

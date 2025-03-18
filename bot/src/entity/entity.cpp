@@ -17,8 +17,9 @@ void Entity::initializeAngle(sro::Angle angle) {
   angle_ = angle;
 }
 
-void Entity::initializeEventBroker(broker::EventBroker &eventBroker) {
+void Entity::initializeEventBroker(broker::EventBroker &eventBroker, state::WorldState &worldState) {
   eventBroker_ = &eventBroker;
+  worldState_ = &worldState;
 }
 
 sro::Position Entity::position() const {

@@ -1,6 +1,6 @@
 #include "helpers.hpp"
 #include "self.hpp"
-
+#include "state/worldState.hpp"
 #include "type_id/categories.hpp"
 
 // From Pathfinder
@@ -52,6 +52,7 @@ void Self::handleEvent(const event::Event *event) {
   if (event == nullptr) {
     throw std::runtime_error("Self::handleEvent given null event");
   }
+  std::unique_lock lock(worldState_->mutex);
   try {
     if (const auto *enteredNewRegionEvent = dynamic_cast<const event::EnteredNewRegion*>(event); enteredNewRegionEvent != nullptr) {
       if (enteredNewRegionEvent->globalId == globalId) {
@@ -111,8 +112,8 @@ void Self::initializeGold(uint64_t goldAmount) {
   gold_ = goldAmount;
 }
 
-void Self::initializeEventBroker(broker::EventBroker &eventBroker) {
-  PlayerCharacter::initializeEventBroker(eventBroker);
+void Self::initializeEventBroker(broker::EventBroker &eventBroker, state::WorldState &worldState) {
+  PlayerCharacter::initializeEventBroker(eventBroker, worldState);
 
   // Subscribe to events.
   if (!eventSubscriptionIds_.empty()) {

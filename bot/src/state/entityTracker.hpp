@@ -5,6 +5,8 @@
 #include "entity/entity.hpp"
 #include "packet/parsing/parsedPacket.hpp"
 
+#include <tracy/Tracy.hpp>
+
 #include <absl/container/flat_hash_map.h>
 
 #include <memory>
@@ -13,12 +15,15 @@
 #include <vector>
 
 namespace state {
-  
+
+class WorldState;
+
 class EntityTracker {
 public:
   // When an entity spawns, call this to hold on to the entity. Since multiple characters can see the spawning of a single entity, if the entity is already tracked, a "reference count" is incremented.
   // Returns `true` if this tracks a new entity, `false` if this entity is already being tracked.
-  bool entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker);
+  // TODO: For now, this function takes a reference to the WorldState, that is because we use WorldState::mutex to protect all data inside the WorldState. Entities are inside the EntityTracker, which is inside the WorldState. Entities can subscribe to events. When an entity receives an event, it needs to lock the WorldState::mutex.
+  bool entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker, WorldState &worldState);
   // When an entity despawns, call this to release the entity. Since multiple characters can see the despawning of a single entity, a "reference count" is decremented. If that count hits 0, the entity is deleted.
   // Returns `true` if this deletes the entity, `false` if this entity is still being tracked.
   bool entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker);
@@ -27,7 +32,7 @@ public:
 
   template<typename EntityType = entity::Entity>
   std::shared_ptr<EntityType> getEntity(sro::scalar_types::EntityGlobalId globalId) const {
-    std::unique_lock<std::mutex> entityMapLockGuard(entityMapMutex_);
+    std::unique_lock entityMapLockGuard(entityMapMutex_);
     auto it = entityMap_.find(globalId);
     if (it == entityMap_.end()) {
       throw std::runtime_error(absl::StrFormat("EntityTracker::getEntity; Entity ID %d does not exist", globalId));
@@ -46,7 +51,7 @@ public:
   const absl::flat_hash_map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>>& getEntityMap() const; // TODO: Remove
 private:
   // Guards `entityMap_` and `entityReferenceCountMap_`.
-  mutable std::mutex entityMapMutex_;
+  mutable TracyLockableN(std::mutex, entityMapMutex_, "EntityTracker::entityMapMutex");
 
   absl::flat_hash_map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>> entityMap_;
   absl::flat_hash_map<sro::scalar_types::EntityGlobalId, int> entityReferenceCountMap_;

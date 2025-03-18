@@ -1343,12 +1343,18 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     if (selfEntity_->skillEngine.pendingCommandQueue.empty()) {
       throw std::runtime_error("Command queued, but pending command list is empty");
     }
-    // We don't know which command was accepted. At this point, we have to move all pending commands. Later, when a command is executed, we can narrow our accepted list down.
-    CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Moving " << selfEntity_->skillEngine.pendingCommandQueue.size() << " pending command(s) to accepted queue";
-    selfEntity_->skillEngine.acceptedCommandQueue.insert(selfEntity_->skillEngine.acceptedCommandQueue.end(),
-                                                         selfEntity_->skillEngine.pendingCommandQueue.begin(),
-                                                         selfEntity_->skillEngine.pendingCommandQueue.end());
-    selfEntity_->skillEngine.pendingCommandQueue.clear();
+    CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Command accepted: " << selfEntity_->skillEngine.pendingCommandQueue.front().toString();
+    selfEntity_->skillEngine.acceptedCommandQueue.emplace_back(selfEntity_->skillEngine.pendingCommandQueue.front());
+    selfEntity_->skillEngine.pendingCommandQueue.erase(selfEntity_->skillEngine.pendingCommandQueue.begin());
+    const auto &command = selfEntity_->skillEngine.acceptedCommandQueue.back();
+    if (command.command.commandType == packet::enums::CommandType::kExecute &&
+        command.command.actionType == packet::enums::ActionType::kCast) {
+      const auto &skillData = gameData_.skillData().getSkillById(command.command.refSkillId);
+      CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Queued command is to cast skill " << gameData_.getSkillName(command.command.refSkillId);
+    }
+    if (!selfEntity_->skillEngine.pendingCommandQueue.empty()) {
+      CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "There are " << selfEntity_->skillEngine.pendingCommandQueue.size() << " more commands in the pending queue";
+    }
   } else if (packet.actionState() == packet::enums::ActionState::kError) {
     // 16388 happens when the skill is on cooldown
     if (selfEntity_->skillEngine.pendingCommandQueue.empty()) {

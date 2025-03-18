@@ -60,7 +60,7 @@ public:
   void initializeBodyState(packet::enums::BodyState bodyState);
   void initializeGold(uint64_t goldAmount);
 
-  void initializeEventBroker(broker::EventBroker &eventBroker) override;
+  void initializeEventBroker(broker::EventBroker &eventBroker, state::WorldState &worldState) override;
 
   // Setters
   void setCurrentLevel(uint8_t currentLevel);

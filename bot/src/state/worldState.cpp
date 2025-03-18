@@ -21,7 +21,7 @@ const state::EntityTracker& WorldState::entityTracker() const {
 }
 
 bool WorldState::entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker) {
-  bool spawned = entityTracker_.entitySpawned(entity, eventBroker);
+  bool spawned = entityTracker_.entitySpawned(entity, eventBroker, *this);
   if (!spawned) {
     return false;
   }

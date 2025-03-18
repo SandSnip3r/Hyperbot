@@ -49,7 +49,7 @@ public:
   std::optional<broker::EventBroker::EventId> movingEventId;
   void initializeAsMoving(const sro::Position &destinationPosition);
   void initializeAsMoving(sro::Angle destinationAngle);
-  void initializeEventBroker(broker::EventBroker &eventBroker) override;
+  void initializeEventBroker(broker::EventBroker &eventBroker, state::WorldState &worldState) override;
   void registerGeometryBoundary(std::unique_ptr<Geometry> geometry);
   void resetGeometryBoundary();
   void cancelEvents();

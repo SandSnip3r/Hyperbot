@@ -48,7 +48,6 @@ void TrainingManager::train() {
   std::mt19937 randomEngine = common::createRandomEngine();
   while (1) {
     // Get a S,A,R,S' tuple from the replay buffer.
-    constexpr bool kTrain{false};
     if constexpr (kTrain) {
       try {
         // TODO: Create replay buffer class.
@@ -68,12 +67,16 @@ void TrainingManager::train() {
             if (eventObservationActionList.size() >= 2) {
               std::uniform_int_distribution<int> dist3(1, eventObservationActionList.size()-1);
               const int selectedActionIndex = dist3(randomEngine);
-              const auto &[eventCode1, observation1, actionIndex1] = eventObservationActionList[selectedActionIndex-1];
-              const auto &[eventCode2, observation2, actionIndex2] = eventObservationActionList[selectedActionIndex];
+              const auto [eventCode1, observation1, actionIndex1] = eventObservationActionList[selectedActionIndex-1];
+              const auto [eventCode2, observation2, actionIndex2] = eventObservationActionList[selectedActionIndex];
               if (!actionIndex1) {
                 throw std::runtime_error("An entry in the replay buffer before the last item has a missing action index");
               }
               // LOG(INFO) << "Selected actions " << selectedActionIndex-1 << " & " << selectedActionIndex << " from PVP #" << pvpId << " for observer " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name << (!actionIndex2.has_value() ? std::string(200, '@') : std::string());
+
+              // Since we copy the rl::Observations from the replay buffer, we can unlock the mutex while we run JAX code.
+              lock.unlock();
+
               jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
               ++trainStepCount_;
               if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
@@ -235,9 +238,9 @@ void TrainingManager::buildItemRequirementList() {
     return type_id::categories::kUniversalPill.contains(type_id::getTypeId(item)) && item.itemClass == 2;
   });
 
-  constexpr int kSmallHpPotionRequiredCount = 50; // IF-CHANGE: If we change this, also change the max potion count in JaxInterface::observationToNumpy
-  constexpr int kSmallMpPotionRequiredCount = 50;
-  constexpr int kMediumUniversalPillRequiredCount = 50;
+  constexpr int kSmallHpPotionRequiredCount = 5; // IF-CHANGE: If we change this, also change the max potion count in JaxInterface::observationToNumpy
+  constexpr int kSmallMpPotionRequiredCount = 5;
+  constexpr int kMediumUniversalPillRequiredCount = 5;
   itemRequirements_.push_back({smallHpPotionRefId, kSmallHpPotionRequiredCount});
   itemRequirements_.push_back({smallMpPotionRefId, kSmallMpPotionRequiredCount});
   itemRequirements_.push_back({mediumUniversalPillRefId, kMediumUniversalPillRequiredCount});
