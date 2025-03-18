@@ -28,72 +28,90 @@ void ClientManager::run() {
     zmq::message_t request;
     VLOG(4) << "Waiting for request";
     std::vector<zmq::pollitem_t> pollItems = { { socket_, 0, ZMQ_POLLIN, 0 } };
+    // Wait up to a certain amount of time for a message.
     int eventCount = zmq::poll(pollItems, kMissedHeartbeatTimeout_);
     if (eventCount == 0) {
+      // No message was received within the specified timeout. It seems like the bot process is no longer running.
       if (!clientIdToProcessInformationMap_.empty()) {
-        LOG(INFO) << "Bot seems to have disconnected. Killing all clients.";
+        LOG(INFO) << "Bot seems to have disconnected. Killing " << clientIdToProcessInformationMap_.size() << " open clients.";
         killAllClients();
       }
       continue;
     }
+    // Successfully received a message
     std::optional<zmq::recv_result_t> result = socket_.recv(request, zmq::recv_flags::none);
     if (!result) {
       throw std::runtime_error("Failed to receive from socket");
     }
 
-    proto::client_manager_request::Request requestProto;
-    bool successfullyParsed = requestProto.ParseFromArray(request.data(), request.size());
-    if (!successfullyParsed) {
-      const std::string error = absl::StrFormat("Failed to parse request \"%s\"", request.to_string());
+    handleRequest(request);
+  }
+}
+
+void ClientManager::handleRequest(const zmq::message_t &request) {
+  proto::client_manager_request::Request requestProto;
+  bool successfullyParsed = requestProto.ParseFromArray(request.data(), request.size());
+  if (!successfullyParsed) {
+    const std::string error = absl::StrFormat("Failed to parse request \"%s\"", request.to_string());
+    LOG(WARNING) << error;
+    replyWithError(error);
+    return;
+  }
+
+  // Successfully parsed request.
+  switch (requestProto.body_case()) {
+    case proto::client_manager_request::Request::BodyCase::kStartClient: {
+      VLOG(4) << "Received StartClient \"" << requestProto.DebugString() << '"';
+      const proto::client_manager_request::StartClient &packet = requestProto.start_client();
+      LOG(INFO) << "Port to connect to: " << packet.port_to_connect_to();
+      const int32_t clientId = launchClient(packet.port_to_connect_to());
+      proto::client_manager_request::ClientStarted clientStarted;
+      clientStarted.set_client_id(clientId);
+      proto::client_manager_request::Response response;
+      response.mutable_client_started()->CopyFrom(clientStarted);
+      std::optional<zmq::send_result_t> result = socket_.send(zmq::message_t(response.SerializeAsString()), zmq::send_flags::none);
+      if (!result) {
+        throw std::runtime_error("Failed to send response for StartClient");
+      }
+      break;
+    }
+    case proto::client_manager_request::Request::BodyCase::kHeartbeat: {
+      VLOG(5) << "Received Heartbeat";
+      proto::client_manager_request::Response response;
+      const std::vector<ClientId> deadClientIds = reapDeadClients();
+      if (deadClientIds.empty()) {
+        // If no clients have died, we send a simple heartbeat_ack.
+        response.mutable_heartbeat_ack();
+      } else {
+        // If clients have died, we'll respond to the heartbeat with a list of dead clients.
+        proto::client_manager_request::ClientsDied *clientsDied = response.mutable_clients_died();
+        for (ClientId deadClientId : deadClientIds) {
+          clientsDied->add_client_ids(deadClientId);
+        }
+      }
+      std::optional<zmq::send_result_t> result = socket_.send(zmq::message_t(response.SerializeAsString()), zmq::send_flags::none);
+      if (!result) {
+        throw std::runtime_error("Failed to send response for Heartbeat");
+      }
+      break;
+    }
+    default: {
+      const std::string error = absl::StrFormat("Unknown message body case %d", static_cast<int>(requestProto.body_case()));
       LOG(WARNING) << error;
       replyWithError(error);
-      continue;
+      break;
     }
+  }
+}
 
-    // Successfully parsed request.
-    switch (requestProto.body_case()) {
-      case proto::client_manager_request::Request::BodyCase::kStartClient: {
-        VLOG(4) << "Received StartClient \"" << requestProto.DebugString() << '"';
-        const proto::client_manager_request::StartClient &packet = requestProto.start_client();
-        LOG(INFO) << "Port to connect to: " << packet.port_to_connect_to();
-        const int32_t clientId = launchClient(packet.port_to_connect_to());
-        proto::client_manager_request::ClientStarted clientStarted;
-        clientStarted.set_client_id(clientId);
-        proto::client_manager_request::Response response;
-        response.mutable_client_started()->CopyFrom(clientStarted);
-        std::optional<zmq::send_result_t> result = socket_.send(zmq::message_t(response.SerializeAsString()), zmq::send_flags::none);
-        if (!result) {
-          throw std::runtime_error("Failed to send response for StartClient");
-        }
-        break;
-      }
-      case proto::client_manager_request::Request::BodyCase::kHeartbeat: {
-        VLOG(5) << "Received Heartbeat";
-        proto::client_manager_request::Response response;
-        std::vector<ClientId> deadClientIds = reapDeadClients();
-        if (deadClientIds.empty()) {
-          // If no clients have died, we send a simple heartbeat_ack.
-          response.mutable_heartbeat_ack();
-        } else {
-          // If clients have died, we'll respond to the heartbeat with a list of dead clients.
-          proto::client_manager_request::ClientsDied *clientsDied = response.mutable_clients_died();
-          for (ClientId deadClientId : deadClientIds) {
-            clientsDied->add_client_ids(deadClientId);
-          }
-        }
-        std::optional<zmq::send_result_t> result = socket_.send(zmq::message_t(response.SerializeAsString()), zmq::send_flags::none);
-        if (!result) {
-          throw std::runtime_error("Failed to send response for Heartbeat");
-        }
-        break;
-      }
-      default: {
-        const std::string error = absl::StrFormat("Unknown message body case %d", static_cast<int>(requestProto.body_case()));
-        LOG(WARNING) << error;
-        replyWithError(error);
-        break;
-      }
-    }
+void ClientManager::replyWithError(const std::string &errorMessage) {
+  proto::client_manager_request::Error error;
+  error.set_message(errorMessage);
+  proto::client_manager_request::Response response;
+  response.mutable_error()->CopyFrom(error);
+  std::optional<zmq::send_result_t> result = socket_.send(zmq::message_t(response.SerializeAsString()), zmq::send_flags::none);
+  if (!result) {
+    throw std::runtime_error("Failed to send error message");
   }
 }
 
@@ -173,17 +191,6 @@ int32_t ClientManager::launchClient(int32_t portToConnectTo) {
   return clientId;
 }
 
-void ClientManager::replyWithError(const std::string &errorMessage) {
-  proto::client_manager_request::Error error;
-  error.set_message(errorMessage);
-  proto::client_manager_request::Response response;
-  response.mutable_error()->CopyFrom(error);
-  std::optional<zmq::send_result_t> result = socket_.send(zmq::message_t(response.SerializeAsString()), zmq::send_flags::none);
-  if (!result) {
-    throw std::runtime_error("Failed to send error message");
-  }
-}
-
 int32_t ClientManager::saveProcessInformation(PROCESS_INFORMATION processInformation) {
   ClientId clientId = nextClientId_;
   clientIdToProcessInformationMap_[clientId] = processInformation;
@@ -195,7 +202,8 @@ int32_t ClientManager::saveProcessInformation(PROCESS_INFORMATION processInforma
 std::vector<ClientManager::ClientId> ClientManager::reapDeadClients() {
   std::vector<ClientId> deadClientIds;
   for (const auto [id, processInformation] : clientIdToProcessInformationMap_) {
-    if (WaitForSingleObject(processInformation.hProcess, 0) == WAIT_OBJECT_0) {
+    // Poll the process with no wait to quickly see if it has exited.
+    if (WaitForSingleObject(processInformation.hProcess, /*dwMilliseconds=*/0) == WAIT_OBJECT_0) {
       LOG(INFO) << "Client " << id << " (pid:" << processInformation.dwProcessId << ") has exited";
       deadClientIds.emplace_back(id);
     }

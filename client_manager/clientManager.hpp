@@ -38,12 +38,14 @@ private:
   std::map<ClientId, PROCESS_INFORMATION> clientIdToProcessInformationMap_;
   ClientId nextClientId_{0};
 
+  void handleRequest(const zmq::message_t &request);
+  void replyWithError(const std::string &errorMessage);
+
   void checkDllPath();
   void checkClientPath();
   void parseGameFiles();
   void buildArguments();
   int32_t launchClient(int32_t portToConnectTo);
-  void replyWithError(const std::string &errorMessage);
 
   // Takes the actual process ID and returns a unique "ClientId" which can be shared.
   int32_t saveProcessInformation(PROCESS_INFORMATION processInformation);
