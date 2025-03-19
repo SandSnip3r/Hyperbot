@@ -215,7 +215,6 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
 }
 
 void Proxy::ProcessPackets(const boost::system::error_code &error) {
-  ZoneScopedN("Proxy::ProcessPackets");
   if (!error) {
     if (clientConnection.security) {
       // Receive all pending incoming packets sent from the client

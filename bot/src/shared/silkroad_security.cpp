@@ -1,8 +1,13 @@
 #include "silkroad_security.h"
+#include "packet/opcode.hpp"
 
 #include <silkroad_lib/blowfish.hpp>
 
+#include <tracy/Tracy.hpp>
+
 #include <boost/random.hpp>
+
+#include <absl/strings/str_format.h>
 
 #include <exception>
 #include <list>
@@ -807,6 +812,12 @@ void SilkroadSecurity::Recv( const uint8_t * stream, int32_t count )
       // Save the current packet's header
       uint16_t packet_size = m_data->m_pending_stream.Read< uint16_t >();
       uint16_t packet_opcode = m_data->m_pending_stream.Read< uint16_t >();
+#if TRACY_ENABLE
+      {
+        const std::string messageWithOpcode = absl::StrFormat("SilkroadSecurity::Recv::%s", packet::toString(static_cast<packet::Opcode>(packet_opcode)));
+        TracyMessage(messageWithOpcode.c_str(), messageWithOpcode.size());
+      }
+#endif
       uint8_t packet_security_count = m_data->m_pending_stream.Read< uint8_t >();
       uint8_t packet_security_crc = m_data->m_pending_stream.Read< uint8_t >();
 

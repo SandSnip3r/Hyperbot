@@ -30,9 +30,15 @@ void TrainingManager::run() {
   auto eventHandleFunction = std::bind(&TrainingManager::onUpdate, this, std::placeholders::_1);
   // Subscribe to events.
   eventBroker_.subscribeToEvent(event::EventCode::kPvpManagerReadyForAssignment, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStarRlTraining, eventHandleFunction);
 
   jaxInterface_.initialize();
 
+  LOG(INFO) << "Waiting to be told to train";
+  while (!training_) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  LOG(INFO) << "Made it past!";
   createSessions();
 
   train();
@@ -104,6 +110,10 @@ void TrainingManager::onUpdate(const event::Event *event) {
     if (sessionsReadyForAssignment_.size() >= 2) {
       createAndPublishPvpDescriptor();
     }
+  } else if (event->eventCode == event::EventCode::kStarRlTraining) {
+    LOG(INFO) << "Received kStarRlTraining event";
+    // Start training.
+    training_ = true;
   }
 }
 

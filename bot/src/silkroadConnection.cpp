@@ -1,8 +1,10 @@
+#include "packet/opcode.hpp"
 #include "silkroadConnection.hpp"
 
 #include <tracy/Tracy.hpp>
 
 #include <absl/log/log.h>
+#include <absl/strings/str_format.h>
 
 #define CHECK_ERROR(error)                               \
 do {                                                     \
@@ -13,7 +15,6 @@ do {                                                     \
 
 //Handles incoming packets
 void SilkroadConnection::HandleRead(size_t bytes_transferred, const boost::system::error_code & error) {
-  TracyMessageL("SilkroadConnection::HandleRead");
   if (!error && boostSocket_ && security) {
     security->Recv(&data[0], bytes_transferred);
     PostRead();
@@ -146,6 +147,12 @@ bool SilkroadConnection::InjectToSend(const PacketContainer &container) {
 // Insert packet into the incoming packet list of the security API
 bool SilkroadConnection::InjectAsReceived(const PacketContainer &container) {
   if (security) {
+#if TRACY_ENABLE
+    {
+      const std::string messageWithOpcode = absl::StrFormat("SilkroadConnection::InjectAsReceived::%s", packet::toString(static_cast<packet::Opcode>(container.opcode)));
+      TracyMessage(messageWithOpcode.c_str(), messageWithOpcode.size());
+    }
+#endif
     security->Recv(container);
     return true;
   }

@@ -14,6 +14,18 @@ namespace py = pybind11;
 
 namespace rl {
 
+namespace {
+
+bool checkHasAttr(py::object &obj, const std::string &attr_name) {
+  // Get the hasattr function from Python's built-in module
+  py::object hasattr_func = py::module_::import("builtins").attr("hasattr");
+
+  // Call hasattr function
+  return hasattr_func(obj, attr_name).cast<bool>();
+}
+
+} // namespace
+
 JaxInterface::~JaxInterface() {
   VLOG(1) << "Destructing JaxInterface";
   py::gil_scoped_acquire acquire;
@@ -68,8 +80,38 @@ void JaxInterface::initialize() {
   optimizerState_ = nnxModule_->attr("Optimizer")(*model_, adam);
 }
 
+int JaxInterface::selectAction(const Observation &observation, bool canSendPacket) {
+  ZoneScopedN("JaxInterface::selectAction");
+  VLOG(1) << absl::StreamFormat("Getting action for observation %s, canSendPacket=%v", observation.toString(), canSendPacket);
+  int actionIndex;
+  {
+    std::unique_lock lock(modelMutex_);
+    py::gil_scoped_acquire acquire;
+    try {
+      // Convert C++ observation into numpy observation
+      py::object numpyObservation = observationToNumpy(observation);
+      // Create an action mask based on whether or not we can send a packet
+      py::object actionMask = createActionMask(canSendPacket);
+      // Get the action from the model
+      py::object actionPyObject;
+      {
+        ZoneScopedN("JaxInterface::selectAction_PYTHON");
+        actionPyObject = jaxModule_->attr("selectAction")(*model_, numpyObservation, actionMask, getNextRngKey());
+      }
+      actionIndex = actionPyObject.cast<int>();
+    } catch (std::exception &ex) {
+      LOG(ERROR) << "Caught exception in JaxInterface::selectAction: " << ex.what();
+      throw;
+    }
+  }
+  VLOG(1) << "Chose action " << actionIndex;
+  return actionIndex;
+}
+
 void JaxInterface::train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation) {
   ZoneScopedN("JaxInterface::train");
+  std::unique_lock modelLock(modelMutex_);
+  std::unique_lock targetModelLock(targetModelMutex_);
   py::gil_scoped_acquire acquire;
   try {
     ZoneScopedN("JaxInterface::train_PYTHON");
@@ -80,32 +122,10 @@ void JaxInterface::train(const Observation &olderObservation, int actionIndex, b
   }
 }
 
-int JaxInterface::selectAction(const Observation &observation, bool canSendPacket) {
-  ZoneScopedN("JaxInterface::selectAction");
-  VLOG(1) << absl::StreamFormat("Getting action for observation %s, canSendPacket=%v", observation.toString(), canSendPacket);
-  py::gil_scoped_acquire acquire;
-  try {
-    // Convert C++ observation into numpy observation
-    py::object numpyObservation = observationToNumpy(observation);
-    // Create an action mask based on whether or not we can send a packet
-    py::object actionMask = createActionMask(canSendPacket);
-    // Get the action from the model
-    py::object actionPyObject;
-    {
-      ZoneScopedN("JaxInterface::selectAction_PYTHON");
-      actionPyObject = jaxModule_->attr("selectAction")(*model_, numpyObservation, actionMask, getNextRngKey());
-    }
-    int actionIndex = actionPyObject.cast<int>();
-    VLOG(1) << "Chose action " << actionIndex;
-    return actionIndex;
-  } catch (std::exception &ex) {
-    LOG(ERROR) << "Caught exception in JaxInterface::selectAction: " << ex.what();
-    throw;
-  }
-}
-
 void JaxInterface::updateTargetModel() {
   ZoneScopedN("JaxInterface::updateTargetModel");
+  std::unique_lock modelLock(modelMutex_);
+  std::unique_lock targetModelLock(targetModelMutex_);
   py::gil_scoped_acquire acquire;
   try {
     targetModel_ = jaxModule_->attr("getCopyOfModel")(*model_, *targetModel_);
