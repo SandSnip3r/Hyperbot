@@ -30,29 +30,33 @@ void TrainingManager::run() {
   auto eventHandleFunction = std::bind(&TrainingManager::onUpdate, this, std::placeholders::_1);
   // Subscribe to events.
   eventBroker_.subscribeToEvent(event::EventCode::kPvpManagerReadyForAssignment, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStarRlTraining, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStartRlTraining, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kStopRlTraining, eventHandleFunction);
 
   jaxInterface_.initialize();
 
-  LOG(INFO) << "Waiting to be told to train";
-  while (!training_) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  // 1. Wait here until we're told to start training.
+  // 2. Enter training loop once we're told to do so.
+  // 3. Break loop if we're told to stop.
+  // 4. Go to #1
+  bool once = false;
+  while (true) {
+    LOG(INFO) << "Waiting to be told to train";
+    std::unique_lock lock(runTrainingMutex_);
+    runTrainingCondition_.wait(lock, [this] -> bool { return runTraining_; });
+    LOG(INFO) << "Starting training";
+    if (once) {
+      throw std::runtime_error("We do not yet support restarting training");
+    }
+    createSessions();
+    train();
+    once = true;
   }
-  LOG(INFO) << "Made it past!";
-  createSessions();
-
-  train();
 }
 
 void TrainingManager::train() {
-  // Wait until we have enough samples to start training.
-  // while (1) {
-  //   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  // }
-  // We now have enough samples to start training.
-  // Train at full speed in a tight loop.
   std::mt19937 randomEngine = common::createRandomEngine();
-  while (1) {
+  while (runTraining_) {
     // Get a S,A,R,S' tuple from the replay buffer.
     if constexpr (kTrain) {
       try {
@@ -98,6 +102,7 @@ void TrainingManager::train() {
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+  LOG(INFO) << "Done with training loop. Exiting train()";
 }
 
 void TrainingManager::onUpdate(const event::Event *event) {
@@ -110,10 +115,16 @@ void TrainingManager::onUpdate(const event::Event *event) {
     if (sessionsReadyForAssignment_.size() >= 2) {
       createAndPublishPvpDescriptor();
     }
-  } else if (event->eventCode == event::EventCode::kStarRlTraining) {
-    LOG(INFO) << "Received kStarRlTraining event";
+  } else if (event->eventCode == event::EventCode::kStartRlTraining) {
+    LOG(INFO) << "Received kStartRlTraining event";
     // Start training.
-    training_ = true;
+    std::unique_lock lock(runTrainingMutex_);
+    runTraining_ = true;
+    runTrainingCondition_.notify_one();
+  } else if (event->eventCode == event::EventCode::kStopRlTraining) {
+    LOG(INFO) << "Received kStopRlTraining event";
+    // Stop training.
+    runTraining_ = false;
   }
 }
 

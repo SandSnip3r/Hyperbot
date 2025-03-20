@@ -16,7 +16,9 @@
 
 #include <silkroad_lib/position.hpp>
 
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace rl {
@@ -41,7 +43,11 @@ public:
 private:
   static constexpr bool kTrain{true};
   static constexpr float kPvpStartingCenterOffset{40.0f};
-  std::atomic<bool> training_{false};
+
+  std::atomic<bool> runTraining_{false};
+  std::mutex runTrainingMutex_;
+  std::condition_variable runTrainingCondition_;
+
   const pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
   state::WorldState &worldState_;

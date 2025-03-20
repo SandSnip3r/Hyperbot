@@ -87,7 +87,9 @@ zmq::message_t RlUserInterface::handleRequest(const zmq::message_t &request) {
     case rl_ui_request::RequestMessage::BodyCase::kDoAction: {
       const rl_ui_request::DoAction &doActionMsg = requestMsg.do_action();
       if (doActionMsg.action() == rl_ui_request::DoAction::kStartTraining) {
-        eventBroker_.publishEvent(event::EventCode::kStarRlTraining);
+        eventBroker_.publishEvent(event::EventCode::kStartRlTraining);
+      } else if (doActionMsg.action() == rl_ui_request::DoAction::kStopTraining) {
+        eventBroker_.publishEvent(event::EventCode::kStopRlTraining);
       }
       responseMsg.mutable_do_action_ack();
       break;

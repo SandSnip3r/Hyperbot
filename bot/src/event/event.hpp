@@ -122,7 +122,8 @@
   F(ReadyForPvp) \
   F(DispelSuccess) \
   F(ClientDied) \
-  F(StarRlTraining) \
+  F(StartRlTraining) \
+  F(StopRlTraining) \
   F(Dummy)
 
 namespace event {
