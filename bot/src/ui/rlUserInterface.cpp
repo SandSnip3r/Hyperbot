@@ -66,36 +66,52 @@ void RlUserInterface::run() {
       continue;
     }
 
-    handleRequest(request);
+    zmq::message_t response = handleRequest(request);
 
-    // Immediately respond with an acknowledgement
-    const std::string response{"ack"};
-    socket.send(zmq::message_t(response), zmq::send_flags::none);
+    // Immediately respond with the response
+    socket.send(response, zmq::send_flags::none);
   }
 }
 
-void RlUserInterface::handleRequest(const zmq::message_t &request) {
+zmq::message_t RlUserInterface::handleRequest(const zmq::message_t &request) {
   using namespace proto;
+  rl_ui_request::ResponseMessage responseMsg;
   // Parse the request
   rl_ui_request::RequestMessage requestMsg;
-  requestMsg.ParseFromArray(request.data(), request.size());
+  bool success = requestMsg.ParseFromArray(request.data(), request.size());
+  if (!success) {
+    throw std::runtime_error(absl::StrFormat("RlUserInterface received invalid data \"%s\"", request.str()));
+  }
   LOG(INFO) << "Received request " << requestMsg.DebugString();
   switch (requestMsg.body_case()) {
     case rl_ui_request::RequestMessage::BodyCase::kDoAction: {
-      const rl_ui_request::DoAction &doActionMsg = requestMsg.doaction();
+      const rl_ui_request::DoAction &doActionMsg = requestMsg.do_action();
       if (doActionMsg.action() == rl_ui_request::DoAction::kStartTraining) {
         eventBroker_.publishEvent(event::EventCode::kStarRlTraining);
       }
+      responseMsg.mutable_do_action_ack();
       break;
     }
     case rl_ui_request::RequestMessage::BodyCase::kPing: {
       LOG(INFO) << "Received ping";
+      responseMsg.mutable_ping_ack();
+      break;
+    }
+    case rl_ui_request::RequestMessage::BodyCase::kRequestCheckpointList: {
+      LOG(INFO) << "Received request for checkpoint list";
+      rl_ui_request::CheckpointList *checkpointList = responseMsg.mutable_checkpoint_list();
+      rl_ui_request::Checkpoint *checkpoint = checkpointList->add_checkpoints();
+      checkpoint->set_name("My_first_checkpoint");
       break;
     }
     default:
-    LOG(WARNING) << "Unknown request type";
-    break;
+      throw std::runtime_error(absl::StrFormat("RlUserInterface received invalid message \"%s\"", requestMsg.DebugString()));
   }
+
+  // Serialize to zmq message
+  std::string protoMsgAsStr;
+  responseMsg.SerializeToString(&protoMsgAsStr);
+  return zmq::message_t(protoMsgAsStr);
 }
 
 } // namespace ui

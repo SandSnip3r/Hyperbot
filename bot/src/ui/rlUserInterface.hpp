@@ -26,7 +26,7 @@ private:
   std::thread thr_;
 
   void run();
-  void handleRequest(const zmq::message_t &request);
+  zmq::message_t handleRequest(const zmq::message_t &request);
 };
 
 } // namespace ui

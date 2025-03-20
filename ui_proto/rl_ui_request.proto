@@ -4,6 +4,10 @@ import "google/protobuf/empty.proto";
 
 package proto.rl_ui_request;
 
+// ===================================================================
+// ============================= Request =============================
+// ===================================================================
+
 message DoAction {
   enum Action {
     kStartTraining = 0;
@@ -18,3 +22,27 @@ message RequestMessage {
     google.protobuf.Empty request_checkpoint_list = 3;
   }
 }
+
+// ===================================================================
+// ============================= Response ============================
+// ===================================================================
+
+message Checkpoint {
+  string name = 1;
+}
+
+message CheckpointList {
+  repeated Checkpoint checkpoints = 1;
+}
+
+message ResponseMessage {
+  oneof body {
+    google.protobuf.Empty do_action_ack = 1;
+    google.protobuf.Empty ping_ack = 2;
+    CheckpointList checkpoint_list = 3;
+  }
+}
+
+// ===================================================================
+// ===================================================================
+// ===================================================================

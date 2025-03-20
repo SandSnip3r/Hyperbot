@@ -41,7 +41,7 @@ public:
 private:
   static constexpr bool kTrain{true};
   static constexpr float kPvpStartingCenterOffset{40.0f};
-  std::atomic<bool> training_{true};
+  std::atomic<bool> training_{false};
   const pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
   state::WorldState &worldState_;
