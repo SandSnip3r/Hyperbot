@@ -4,10 +4,10 @@
 #include "hyperbot.hpp"
 
 #include <QMainWindow>
+#include <QStringList>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
 #include <QTimer>
-
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -24,7 +24,7 @@ public:
 
 public slots:
   void timerTriggered();
-  void checkpointListReceived(const QString &list);
+  void checkpointListReceived(QStringList list);
 
 private:
   Ui::MainWindow *ui;

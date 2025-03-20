@@ -38,36 +38,46 @@ void Hyperbot::startTraining() {
   std::string protoMsgAsStr;
   startTrainingRequest.SerializeToString(&protoMsgAsStr);
   zmq::message_t zmqMsg(protoMsgAsStr);
-  std::optional<zmq::send_result_t> sendResult = socket_.send(zmqMsg, zmq::send_flags::none);
-
-  if (!sendResult.has_value()) {
+  zmq::send_result_t sendResult = socket_.send(zmqMsg, zmq::send_flags::none);
+  if (!sendResult) {
     LOG(WARNING) << "Failed to send message to Hyperbot.";
   }
 }
 
 void Hyperbot::requestCheckpointList() {
-  proto::rl_ui_request::RequestMessage request;
+  using namespace proto;
+  rl_ui_request::RequestMessage request;
   request.mutable_request_checkpoint_list();
   const bool sendSuccess = sendMessage(request);
   if (!sendSuccess) {
     return;
   }
-  LOG(INFO) << "Successfully sent request for checkpoint list";
+  VLOG(1) << "Successfully sent request for checkpoint list";
 
   zmq::message_t reply;
-  std::optional<zmq::recv_result_t> receiveResult = socket_.recv(reply, zmq::recv_flags::none);
+  zmq::recv_result_t receiveResult = socket_.recv(reply, zmq::recv_flags::none);
   if (!receiveResult) {
     LOG(WARNING) << "Failed to receive reply";
     return;
   }
-  LOG(INFO) << "Received reply " << reply.to_string();
-  checkpointListReceived(tr("hey"));
 
-  // proto::client_manager_request::Response response;
-  // bool successfullyParsed = response.ParseFromArray(reply.data(), reply.size());
-  // if (!successfullyParsed) {
-  //   throw std::runtime_error("ClientManagerInterface: Failed to parse response while trying to start sro_client");
-  // }
+  rl_ui_request::ResponseMessage responseMsg;
+  bool receiveSuccess = responseMsg.ParseFromArray(reply.data(), reply.size());
+  if (!receiveSuccess) {
+    LOG(WARNING) << "Failed to parse reply";
+    return;
+  }
+  VLOG(1) << "Successfully parsed response: " << responseMsg.DebugString();
+  if (responseMsg.body_case() != rl_ui_request::ResponseMessage::BodyCase::kCheckpointList) {
+    LOG(WARNING) << "Received unexpected response";
+    return;
+  }
+  rl_ui_request::CheckpointList checkpointList = responseMsg.checkpoint_list();
+  QStringList checkpointListStr;
+  for (const rl_ui_request::Checkpoint &checkpoint : checkpointList.checkpoints()) {
+    checkpointListStr.append(QString::fromStdString(checkpoint.name()));
+  }
+  checkpointListReceived(checkpointListStr);
 }
 
 void Hyperbot::tryConnect() {

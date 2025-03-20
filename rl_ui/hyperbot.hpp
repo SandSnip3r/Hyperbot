@@ -6,7 +6,7 @@
 #include <zmq.hpp>
 
 #include <QObject>
-#include <QString>
+#include <QStringList>
 
 #include <atomic>
 #include <cstdint>
@@ -28,7 +28,7 @@ signals:
   void connected();
   void connectionFailed();
   void connectionCancelled();
-  void checkpointListReceived(const QString &str);
+  void checkpointListReceived(QStringList str);
 
 private:
   zmq::context_t context_;

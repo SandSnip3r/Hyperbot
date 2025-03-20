@@ -3,6 +3,7 @@
 
 #include <absl/log/log.h>
 
+#include <QStringListModel>
 #include <QtCharts/QChart>
 #include <QtCharts/QLineSeries>
 
@@ -63,6 +64,8 @@ void MainWindow::timerTriggered() {
   LOG(INFO) << "Trigger";
 }
 
-void MainWindow::checkpointListReceived(const QString &list) {
-  LOG(INFO) << "Received checkpoint list: " << list.toStdString();
+void MainWindow::checkpointListReceived(QStringList list) {
+  VLOG(1) << "Received checkpoint list: " << list.join(", ").toStdString();
+  QStringListModel *checkpointModel = new QStringListModel(list);
+  ui->checkpointsListView->setModel(checkpointModel);
 }
