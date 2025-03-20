@@ -7,8 +7,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Charts Qml)
 find_package(cppzmq CONFIG REQUIRED)
 
 set(PROJECT_SOURCES
@@ -18,33 +17,13 @@ set(PROJECT_SOURCES
   mainWindow.ui
 )
 
-if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-  qt_add_executable(rl_ui
-    MANUAL_FINALIZATION
-    ${PROJECT_SOURCES}
-    hyperbotConnect.hpp hyperbotConnect.cpp hyperbotConnect.ui
-    hyperbot.hpp hyperbot.cpp
-    config.hpp config.cpp
-
-
-  )
-# Define target properties for Android with Qt 6 as:
-#    set_property(TARGET rl_ui APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
-#                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
-# For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
-else()
-  if(ANDROID)
-    add_library(rl_ui SHARED
-      ${PROJECT_SOURCES}
-    )
-# Define properties for Android with Qt 5 after find_package() calls as:
-#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-  else()
-    add_executable(rl_ui
-      ${PROJECT_SOURCES}
-    )
-  endif()
-endif()
+qt_add_executable(rl_ui
+  MANUAL_FINALIZATION
+  ${PROJECT_SOURCES}
+  hyperbotConnect.hpp hyperbotConnect.cpp hyperbotConnect.ui
+  hyperbot.hpp hyperbot.cpp
+  config.hpp config.cpp
+)
 
 target_link_libraries(rl_ui PRIVATE
   absl::flags
@@ -53,17 +32,13 @@ target_link_libraries(rl_ui PRIVATE
   absl::log_initialize
   absl::strings
   cppzmq
-  Qt${QT_VERSION_MAJOR}::Widgets
+  Qt6::Widgets
+  Qt6::Charts
+  Qt6::Qml
   silkroad_lib
   ui_proto
 )
 
-# Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
-# If you are developing for iOS or macOS you should consider setting an
-# explicit, fixed bundle identifier manually though.
-if(${QT_VERSION} VERSION_LESS 6.1.0)
-  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.rl_ui)
-endif()
 set_target_properties(rl_ui PROPERTIES
     ${BUNDLE_ID_OPTION}
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
@@ -79,6 +54,4 @@ install(TARGETS rl_ui
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(rl_ui)
-endif()
+qt_finalize_executable(rl_ui)

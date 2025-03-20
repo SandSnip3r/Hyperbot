@@ -4,6 +4,10 @@
 #include "hyperbot.hpp"
 
 #include <QMainWindow>
+#include <QtCharts/QLineSeries>
+#include <QtCharts/QValueAxis>
+#include <QTimer>
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -18,8 +22,18 @@ public:
   MainWindow(Hyperbot &hyperbot, QWidget *parent = nullptr);
   ~MainWindow();
 
+public slots:
+  void timerTriggered();
+  void checkpointListReceived(const QString &list);
+
 private:
   Ui::MainWindow *ui;
   Hyperbot &hyperbot_;
+  QLineSeries *series_;
+  QValueAxis *xAxis_;
+  QTimer *timer_;
+
+  void connectSignals();
+  void testChart();
 };
 #endif // MAINWINDOW_HPP_

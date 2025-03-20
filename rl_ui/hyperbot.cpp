@@ -1,7 +1,5 @@
 #include "hyperbot.hpp"
 
-#include <ui_proto/rl_ui_request.pb.h>
-
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 
@@ -34,7 +32,7 @@ void Hyperbot::cancelConnect() {
 void Hyperbot::startTraining() {
   LOG(INFO) << "Going to send start training message.";
   proto::rl_ui_request::RequestMessage startTrainingRequest;
-  proto::rl_ui_request::DoAction *doAction = startTrainingRequest.mutable_doaction();
+  proto::rl_ui_request::DoAction *doAction = startTrainingRequest.mutable_do_action();
   doAction->set_action(proto::rl_ui_request::DoAction::kStartTraining);
 
   std::string protoMsgAsStr;
@@ -47,17 +45,37 @@ void Hyperbot::startTraining() {
   }
 }
 
+void Hyperbot::requestCheckpointList() {
+  proto::rl_ui_request::RequestMessage request;
+  request.mutable_request_checkpoint_list();
+  const bool sendSuccess = sendMessage(request);
+  if (!sendSuccess) {
+    return;
+  }
+  LOG(INFO) << "Successfully sent request for checkpoint list";
+
+  zmq::message_t reply;
+  std::optional<zmq::recv_result_t> receiveResult = socket_.recv(reply, zmq::recv_flags::none);
+  if (!receiveResult) {
+    LOG(WARNING) << "Failed to receive reply";
+    return;
+  }
+  LOG(INFO) << "Received reply " << reply.to_string();
+  checkpointListReceived(tr("hey"));
+
+  // proto::client_manager_request::Response response;
+  // bool successfullyParsed = response.ParseFromArray(reply.data(), reply.size());
+  // if (!successfullyParsed) {
+  //   throw std::runtime_error("ClientManagerInterface: Failed to parse response while trying to start sro_client");
+  // }
+}
+
 void Hyperbot::tryConnect() {
   // Do one send/recv to test the connection.
   proto::rl_ui_request::RequestMessage pingRequest;
   pingRequest.mutable_ping();
-  std::string protoMsgAsStr;
-  pingRequest.SerializeToString(&protoMsgAsStr);
-  zmq::message_t zmqMsg(protoMsgAsStr);
-  std::optional<zmq::send_result_t> sendResult = socket_.send(zmqMsg, zmq::send_flags::none);
-
-  if (!sendResult.has_value()) {
-    LOG(WARNING) << "Failed to send message to Hyperbot.";
+  const bool sendSuccess = sendMessage(pingRequest);
+  if (!sendSuccess) {
     connectionFailed();
     return;
   }
@@ -102,4 +120,17 @@ void Hyperbot::tryConnect() {
   }
   VLOG(1) << "Received response " << reply.to_string();
   connected();
+}
+
+bool Hyperbot::sendMessage(const proto::rl_ui_request::RequestMessage &message) {
+  std::string protoMsgAsStr;
+  message.SerializeToString(&protoMsgAsStr);
+  zmq::message_t zmqMsg(protoMsgAsStr);
+  std::optional<zmq::send_result_t> sendResult = socket_.send(zmqMsg, zmq::send_flags::none);
+
+  if (!sendResult.has_value()) {
+    LOG(WARNING) << "Failed to send message to Hyperbot.";
+    return false;
+  }
+  return true;
 }

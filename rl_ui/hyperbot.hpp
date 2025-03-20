@@ -1,9 +1,12 @@
 #ifndef HYPERBOT_HPP_
 #define HYPERBOT_HPP_
 
+#include <ui_proto/rl_ui_request.pb.h>
+
 #include <zmq.hpp>
 
 #include <QObject>
+#include <QString>
 
 #include <atomic>
 #include <cstdint>
@@ -19,11 +22,13 @@ public:
   void cancelConnect();
 
   void startTraining();
+  void requestCheckpointList();
 
 signals:
   void connected();
   void connectionFailed();
   void connectionCancelled();
+  void checkpointListReceived(const QString &str);
 
 private:
   zmq::context_t context_;
@@ -32,6 +37,7 @@ private:
   std::atomic<bool> tryToConnect_;
 
   void tryConnect();
+  bool sendMessage(const proto::rl_ui_request::RequestMessage &message);
 };
 
 #endif // HYPERBOT_HPP_
