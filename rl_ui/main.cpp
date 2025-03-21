@@ -1,7 +1,6 @@
 #include "config.hpp"
 #include "hyperbot.hpp"
-#include "hyperbotConnect.hpp"
-// #include "mainwindow.h"
+#include "mainWindow.hpp"
 
 #include <silkroad_lib/file_util.hpp>
 
@@ -42,9 +41,8 @@ int main(int argc, char *argv[]) {
   QApplication a(argc, argv);
   a.setStyle(QStyleFactory::create("Fusion"));
   // Note: QApplication must be constructed before any QWidget.
-  HyperbotConnect *hc = new HyperbotConnect(std::move(config), bot);
-  hc->show();
-  // HyperbotConnect will be deleted by Qt when the window is closed.
+  MainWindow *mainWindow = new MainWindow(std::move(config), bot);
+  mainWindow->show();
   return a.exec();
 }
 

@@ -1,3 +1,4 @@
+#include "hyperbotConnect.hpp"
 #include "mainWindow.hpp"
 #include "./ui_mainwindow.h"
 
@@ -16,13 +17,24 @@
 //  - Epsilon
 //  - Win rate
 
-MainWindow::MainWindow(Hyperbot &hyperbot, QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow), hyperbot_(hyperbot) {
+MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot, QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow), config_(std::move(config)), hyperbot_(hyperbot) {
   ui->setupUi(this);
   setWindowTitle(tr("Hyperbot"));
   connectSignals();
-  // TODO: For now, we assume we're connected to Hyperbot, this might not be the case.
-  hyperbot_.requestCheckpointList();
-  // testChart();
+}
+
+void MainWindow::showEvent(QShowEvent *event) {
+  // Always call base implementation.
+  QMainWindow::showEvent(event);
+
+  if (!connectionWindowShown_) {
+    connectionWindowShown_ = true;
+    connectionWindow_ = new HyperbotConnect(config_, hyperbot_, this);
+    connect(connectionWindow_, &QObject::destroyed, this, &MainWindow::connectedToHyperbot);
+    this->setEnabled(false);
+    connectionWindow_->setEnabled(true);
+    connectionWindow_->show();
+  }
 }
 
 MainWindow::~MainWindow() {
@@ -54,6 +66,12 @@ void MainWindow::testChart() {
   timer_->setInterval(100);
   connect(timer_, &QTimer::timeout, this, &MainWindow::timerTriggered);
   timer_->start();
+}
+
+void MainWindow::connectedToHyperbot() {
+  connectionWindow_ = nullptr;
+  this->setEnabled(true);
+  hyperbot_.requestCheckpointList();
 }
 
 void MainWindow::timerTriggered() {

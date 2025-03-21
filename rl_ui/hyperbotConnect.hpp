@@ -1,5 +1,5 @@
-#ifndef HYPERBOTCONNECT_HPP_
-#define HYPERBOTCONNECT_HPP_
+#ifndef HYPERBOT_CONNECT_HPP_
+#define HYPERBOT_CONNECT_HPP_
 
 #include "config.hpp"
 #include "hyperbot.hpp"
@@ -31,7 +31,7 @@ class HyperbotConnect : public QMainWindow {
   Q_OBJECT
 
 public:
-  explicit HyperbotConnect(Config &&config, Hyperbot &hyperbot, QWidget *parent = nullptr);
+  explicit HyperbotConnect(Config &config, Hyperbot &hyperbot, QWidget *parent = nullptr);
   ~HyperbotConnect();
 
 signals:
@@ -43,11 +43,11 @@ private slots:
   void handleConnected();
 private:
   Ui::HyperbotConnect *ui;
-  Config config_;
+  Config &config_;
   Hyperbot &hyperbot_;
   internal::MyLogSink *myLogSink_{nullptr};
 
   void registerLogSink();
 };
 
-#endif // HYPERBOTCONNECT_HPP_
+#endif // HYPERBOT_CONNECT_HPP_

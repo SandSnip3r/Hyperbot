@@ -3,6 +3,8 @@
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 
+using namespace proto;
+
 Hyperbot::~Hyperbot() {
   if (connectionThread_.joinable()) {
     connectionThread_.join();
@@ -30,11 +32,11 @@ void Hyperbot::cancelConnect() {
 }
 
 void Hyperbot::startTraining() {
-  doAction(proto::rl_ui_request::DoAction::kStartTraining);
+  doAction(rl_ui_request::DoAction::kStartTraining);
 }
 
 void Hyperbot::stopTraining() {
-  doAction(proto::rl_ui_request::DoAction::kStopTraining);
+  doAction(rl_ui_request::DoAction::kStopTraining);
 }
 
 void Hyperbot::requestCheckpointList() {
@@ -75,7 +77,7 @@ void Hyperbot::requestCheckpointList() {
 
 void Hyperbot::tryConnect() {
   // Do one send/recv to test the connection.
-  proto::rl_ui_request::RequestMessage pingRequest;
+  rl_ui_request::RequestMessage pingRequest;
   pingRequest.mutable_ping();
   const bool sendSuccess = sendMessage(pingRequest);
   if (!sendSuccess) {
@@ -125,10 +127,10 @@ void Hyperbot::tryConnect() {
   connected();
 }
 
-void Hyperbot::doAction(proto::rl_ui_request::DoAction::Action action) {
-  LOG(INFO) << "Going to send DoAction-" << proto::rl_ui_request::DoAction::Action_Name(action) << " message.";
-  proto::rl_ui_request::RequestMessage startTrainingRequest;
-  proto::rl_ui_request::DoAction *doAction = startTrainingRequest.mutable_do_action();
+void Hyperbot::doAction(rl_ui_request::DoAction::Action action) {
+  LOG(INFO) << "Going to send DoAction-" << rl_ui_request::DoAction::Action_Name(action) << " message.";
+  rl_ui_request::RequestMessage startTrainingRequest;
+  rl_ui_request::DoAction *doAction = startTrainingRequest.mutable_do_action();
   doAction->set_action(action);
 
   std::string protoMsgAsStr;
@@ -138,9 +140,27 @@ void Hyperbot::doAction(proto::rl_ui_request::DoAction::Action action) {
   if (!sendResult) {
     LOG(WARNING) << "Failed to send message to Hyperbot.";
   }
+  zmq::message_t reply;
+  zmq::recv_result_t receiveResult = socket_.recv(reply, zmq::recv_flags::none);
+  if (!receiveResult) {
+    LOG(WARNING) << "Failed to receive reply";
+    return;
+  }
+
+  rl_ui_request::ResponseMessage responseMsg;
+  bool receiveSuccess = responseMsg.ParseFromArray(reply.data(), reply.size());
+  if (!receiveSuccess) {
+    LOG(WARNING) << "Failed to parse reply";
+    return;
+  }
+  VLOG(1) << "Successfully parsed reply: " << responseMsg.DebugString();
+  if (responseMsg.body_case() != rl_ui_request::ResponseMessage::BodyCase::kDoActionAck) {
+    LOG(WARNING) << "Received unexpected reply";
+    return;
+  }
 }
 
-bool Hyperbot::sendMessage(const proto::rl_ui_request::RequestMessage &message) {
+bool Hyperbot::sendMessage(const rl_ui_request::RequestMessage &message) {
   std::string protoMsgAsStr;
   message.SerializeToString(&protoMsgAsStr);
   zmq::message_t zmqMsg(protoMsgAsStr);

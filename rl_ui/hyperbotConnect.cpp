@@ -51,16 +51,20 @@ void MyLogSink::Send(const absl::LogEntry& entry) {
 
 } // namespace internal
 
-HyperbotConnect::HyperbotConnect(Config &&config, Hyperbot &hyperbot, QWidget *parent) : QMainWindow(parent), ui(new Ui::HyperbotConnect), config_(config), hyperbot_(hyperbot) {
+HyperbotConnect::HyperbotConnect(Config &config, Hyperbot &hyperbot, QWidget *parent) : QMainWindow(parent), ui(new Ui::HyperbotConnect), config_(config), hyperbot_(hyperbot) {
   setAttribute(Qt::WA_DeleteOnClose);
   ui->setupUi(this);
+  this->setWindowFlags(Qt::Window |
+                       Qt::WindowMinimizeButtonHint |
+                       Qt::WindowMaximizeButtonHint |
+                       Qt::CustomizeWindowHint);
   registerLogSink();
 
   ui->cancelButton->setEnabled(false);
 
   // We must have a valid config at this point, initialize the UI with the data from it.
-  ui->addressLineEdit->setText(QString::fromStdString(config.proto().ip_address()));
-  ui->portLineEdit->setText(QString::number(config.proto().port()));
+  ui->addressLineEdit->setText(QString::fromStdString(config_.proto().ip_address()));
+  ui->portLineEdit->setText(QString::number(config_.proto().port()));
 
   // Connect the UI controls.
   connect(ui->connectButton, &QPushButton::clicked, this, &HyperbotConnect::connectClicked);
@@ -122,7 +126,5 @@ void HyperbotConnect::handleConnectionCancelled() {
 
 void HyperbotConnect::handleConnected() {
   LOG(INFO) << "Connected to Hyperbot.";
-  MainWindow *mw = new MainWindow(hyperbot_);
-  mw->show();
   close();
 }

@@ -1,6 +1,7 @@
-#ifndef MAINWINDOW_HPP_
-#define MAINWINDOW_HPP_
+#ifndef MAIN_WINDOW_HPP_
+#define MAIN_WINDOW_HPP_
 
+#include "config.hpp"
 #include "hyperbot.hpp"
 
 #include <QMainWindow>
@@ -19,16 +20,24 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 
 public:
-  MainWindow(Hyperbot &hyperbot, QWidget *parent = nullptr);
+  explicit MainWindow(Config &&config, Hyperbot &hyperbot, QWidget *parent = nullptr);
   ~MainWindow();
 
+protected:
+  // This is called when this window is shown.
+  void showEvent(QShowEvent *event) override;
+
 public slots:
+  void connectedToHyperbot();
   void timerTriggered();
   void checkpointListReceived(QStringList list);
 
 private:
   Ui::MainWindow *ui;
+  Config config_;
   Hyperbot &hyperbot_;
+  bool connectionWindowShown_{false};
+  QMainWindow *connectionWindow_{nullptr};
   QLineSeries *series_;
   QValueAxis *xAxis_;
   QTimer *timer_;
@@ -36,4 +45,4 @@ private:
   void connectSignals();
   void testChart();
 };
-#endif // MAINWINDOW_HPP_
+#endif // MAIN_WINDOW_HPP_
