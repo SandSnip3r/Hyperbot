@@ -25,7 +25,7 @@ message RequestMessage {
 }
 
 // ===================================================================
-// ============================= Response ============================
+// ============================== Reply ==============================
 // ===================================================================
 
 message Checkpoint {
@@ -36,7 +36,7 @@ message CheckpointList {
   repeated Checkpoint checkpoints = 1;
 }
 
-message ResponseMessage {
+message ReplyMessage {
   oneof body {
     google.protobuf.Empty do_action_ack = 1;
     google.protobuf.Empty ping_ack = 2;

@@ -56,18 +56,18 @@ void Hyperbot::requestCheckpointList() {
     return;
   }
 
-  rl_ui_request::ResponseMessage responseMsg;
-  bool receiveSuccess = responseMsg.ParseFromArray(reply.data(), reply.size());
+  rl_ui_request::ReplyMessage replyMsg;
+  bool receiveSuccess = replyMsg.ParseFromArray(reply.data(), reply.size());
   if (!receiveSuccess) {
     LOG(WARNING) << "Failed to parse reply";
     return;
   }
-  VLOG(1) << "Successfully parsed response: " << responseMsg.DebugString();
-  if (responseMsg.body_case() != rl_ui_request::ResponseMessage::BodyCase::kCheckpointList) {
-    LOG(WARNING) << "Received unexpected response";
+  VLOG(1) << "Successfully parsed reply: " << replyMsg.DebugString();
+  if (replyMsg.body_case() != rl_ui_request::ReplyMessage::BodyCase::kCheckpointList) {
+    LOG(WARNING) << "Received unexpected reply";
     return;
   }
-  rl_ui_request::CheckpointList checkpointList = responseMsg.checkpoint_list();
+  rl_ui_request::CheckpointList checkpointList = replyMsg.checkpoint_list();
   QStringList checkpointListStr;
   for (const rl_ui_request::Checkpoint &checkpoint : checkpointList.checkpoints()) {
     checkpointListStr.append(QString::fromStdString(checkpoint.name()));
@@ -123,7 +123,7 @@ void Hyperbot::tryConnect() {
     connectionFailed();
     return;
   }
-  VLOG(1) << "Received response " << reply.to_string();
+  VLOG(1) << "Received reply " << reply.to_string();
   connected();
 }
 
@@ -147,14 +147,14 @@ void Hyperbot::doAction(rl_ui_request::DoAction::Action action) {
     return;
   }
 
-  rl_ui_request::ResponseMessage responseMsg;
-  bool receiveSuccess = responseMsg.ParseFromArray(reply.data(), reply.size());
+  rl_ui_request::ReplyMessage replyMsg;
+  bool receiveSuccess = replyMsg.ParseFromArray(reply.data(), reply.size());
   if (!receiveSuccess) {
     LOG(WARNING) << "Failed to parse reply";
     return;
   }
-  VLOG(1) << "Successfully parsed reply: " << responseMsg.DebugString();
-  if (responseMsg.body_case() != rl_ui_request::ResponseMessage::BodyCase::kDoActionAck) {
+  VLOG(1) << "Successfully parsed reply: " << replyMsg.DebugString();
+  if (replyMsg.body_case() != rl_ui_request::ReplyMessage::BodyCase::kDoActionAck) {
     LOG(WARNING) << "Received unexpected reply";
     return;
   }
