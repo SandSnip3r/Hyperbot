@@ -31,6 +31,7 @@ MainWindow::~MainWindow() {
 
 void MainWindow::connectSignals() {
   connect(ui->startTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::startTraining);
+  connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
   connect(&hyperbot_, &Hyperbot::checkpointListReceived, this, &MainWindow::checkpointListReceived);
 }
 

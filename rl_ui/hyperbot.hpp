@@ -22,6 +22,7 @@ public:
   void cancelConnect();
 
   void startTraining();
+  void stopTraining();
   void requestCheckpointList();
 
 signals:
@@ -37,6 +38,7 @@ private:
   std::atomic<bool> tryToConnect_;
 
   void tryConnect();
+  void doAction(proto::rl_ui_request::DoAction::Action action);
   bool sendMessage(const proto::rl_ui_request::RequestMessage &message);
 };
 

@@ -30,18 +30,11 @@ void Hyperbot::cancelConnect() {
 }
 
 void Hyperbot::startTraining() {
-  LOG(INFO) << "Going to send start training message.";
-  proto::rl_ui_request::RequestMessage startTrainingRequest;
-  proto::rl_ui_request::DoAction *doAction = startTrainingRequest.mutable_do_action();
-  doAction->set_action(proto::rl_ui_request::DoAction::kStartTraining);
+  doAction(proto::rl_ui_request::DoAction::kStartTraining);
+}
 
-  std::string protoMsgAsStr;
-  startTrainingRequest.SerializeToString(&protoMsgAsStr);
-  zmq::message_t zmqMsg(protoMsgAsStr);
-  zmq::send_result_t sendResult = socket_.send(zmqMsg, zmq::send_flags::none);
-  if (!sendResult) {
-    LOG(WARNING) << "Failed to send message to Hyperbot.";
-  }
+void Hyperbot::stopTraining() {
+  doAction(proto::rl_ui_request::DoAction::kStopTraining);
 }
 
 void Hyperbot::requestCheckpointList() {
@@ -130,6 +123,21 @@ void Hyperbot::tryConnect() {
   }
   VLOG(1) << "Received response " << reply.to_string();
   connected();
+}
+
+void Hyperbot::doAction(proto::rl_ui_request::DoAction::Action action) {
+  LOG(INFO) << "Going to send DoAction-" << proto::rl_ui_request::DoAction::Action_Name(action) << " message.";
+  proto::rl_ui_request::RequestMessage startTrainingRequest;
+  proto::rl_ui_request::DoAction *doAction = startTrainingRequest.mutable_do_action();
+  doAction->set_action(action);
+
+  std::string protoMsgAsStr;
+  startTrainingRequest.SerializeToString(&protoMsgAsStr);
+  zmq::message_t zmqMsg(protoMsgAsStr);
+  zmq::send_result_t sendResult = socket_.send(zmqMsg, zmq::send_flags::none);
+  if (!sendResult) {
+    LOG(WARNING) << "Failed to send message to Hyperbot.";
+  }
 }
 
 bool Hyperbot::sendMessage(const proto::rl_ui_request::RequestMessage &message) {
