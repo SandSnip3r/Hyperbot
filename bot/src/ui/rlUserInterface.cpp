@@ -66,16 +66,16 @@ void RlUserInterface::run() {
       continue;
     }
 
-    zmq::message_t response = handleRequest(request);
+    zmq::message_t reply = handleRequest(request);
 
-    // Immediately respond with the response
-    socket.send(response, zmq::send_flags::none);
+    // Immediately respond with the reply
+    socket.send(reply, zmq::send_flags::none);
   }
 }
 
 zmq::message_t RlUserInterface::handleRequest(const zmq::message_t &request) {
   using namespace proto;
-  rl_ui_request::ResponseMessage responseMsg;
+  rl_ui_request::ReplyMessage replyMsg;
   // Parse the request
   rl_ui_request::RequestMessage requestMsg;
   bool success = requestMsg.ParseFromArray(request.data(), request.size());
@@ -91,17 +91,17 @@ zmq::message_t RlUserInterface::handleRequest(const zmq::message_t &request) {
       } else if (doActionMsg.action() == rl_ui_request::DoAction::kStopTraining) {
         eventBroker_.publishEvent(event::EventCode::kStopRlTraining);
       }
-      responseMsg.mutable_do_action_ack();
+      replyMsg.mutable_do_action_ack();
       break;
     }
     case rl_ui_request::RequestMessage::BodyCase::kPing: {
       LOG(INFO) << "Received ping";
-      responseMsg.mutable_ping_ack();
+      replyMsg.mutable_ping_ack();
       break;
     }
     case rl_ui_request::RequestMessage::BodyCase::kRequestCheckpointList: {
       LOG(INFO) << "Received request for checkpoint list";
-      rl_ui_request::CheckpointList *checkpointList = responseMsg.mutable_checkpoint_list();
+      rl_ui_request::CheckpointList *checkpointList = replyMsg.mutable_checkpoint_list();
       rl_ui_request::Checkpoint *checkpoint = checkpointList->add_checkpoints();
       checkpoint->set_name("My_first_checkpoint");
       break;
@@ -112,7 +112,7 @@ zmq::message_t RlUserInterface::handleRequest(const zmq::message_t &request) {
 
   // Serialize to zmq message
   std::string protoMsgAsStr;
-  responseMsg.SerializeToString(&protoMsgAsStr);
+  replyMsg.SerializeToString(&protoMsgAsStr);
   return zmq::message_t(protoMsgAsStr);
 }
 
