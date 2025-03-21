@@ -30,9 +30,8 @@ void RlUserInterface::runAsync() {
   }
   // Set up publisher
   try {
-    constexpr std::string_view kPublisherAddress{"tcp://*:5556"};
     VLOG(1) << "RlUserInterface:publisher binding to " << kPublisherAddress;
-    publisher_.bind(std::string(kPublisherAddress));
+    publisher_.bind(kPublisherAddress);
 
     // Run the request receiver in another thread
     keepRunning_ = true;
@@ -47,14 +46,13 @@ void RlUserInterface::runAsync() {
 void RlUserInterface::run() {
   // Run request receiver
   zmq::socket_t socket(context_, zmq::socket_type::rep);
-  constexpr std::string_view kSocketAddress{"tcp://*:5555"};
-  VLOG(1) << "RlUserInterface:socket binding to " << kSocketAddress;
-  socket.bind(std::string(kSocketAddress));
+  VLOG(1) << "RlUserInterface:socket binding to " << kReqReplyAddress << "; this is the address which the UI should connect to.";
+  socket.bind(kReqReplyAddress);
   while (keepRunning_) {
-    // Wait for a request
+    // Wait for a request with a timeout so that we have an opportunity to check if we should stop running.
     zmq::message_t request;
     zmq::pollitem_t items[] = {{socket, 0, ZMQ_POLLIN, 0}};
-    std::chrono::duration timeout = std::chrono::milliseconds{100};
+    const std::chrono::duration timeout = std::chrono::milliseconds{100};
     zmq::poll(&items[0], 1, timeout);
     if ((items[0].revents & ZMQ_POLLIN) == 0) {
       // Did not receive anything yet.
@@ -66,14 +64,11 @@ void RlUserInterface::run() {
       continue;
     }
 
-    zmq::message_t reply = handleRequest(request);
-
-    // Immediately respond with the reply
-    socket.send(reply, zmq::send_flags::none);
+    handleRequest(request, socket);
   }
 }
 
-zmq::message_t RlUserInterface::handleRequest(const zmq::message_t &request) {
+void RlUserInterface::handleRequest(const zmq::message_t &request, zmq::socket_t &socket) {
   using namespace proto;
   rl_ui_request::ReplyMessage replyMsg;
   // Parse the request
@@ -84,14 +79,9 @@ zmq::message_t RlUserInterface::handleRequest(const zmq::message_t &request) {
   }
   LOG(INFO) << "Received request " << requestMsg.DebugString();
   switch (requestMsg.body_case()) {
-    case rl_ui_request::RequestMessage::BodyCase::kDoAction: {
-      const rl_ui_request::DoAction &doActionMsg = requestMsg.do_action();
-      if (doActionMsg.action() == rl_ui_request::DoAction::kStartTraining) {
-        eventBroker_.publishEvent(event::EventCode::kStartRlTraining);
-      } else if (doActionMsg.action() == rl_ui_request::DoAction::kStopTraining) {
-        eventBroker_.publishEvent(event::EventCode::kStopRlTraining);
-      }
-      replyMsg.mutable_do_action_ack();
+    case rl_ui_request::RequestMessage::BodyCase::kRequestBroadcastPort: {
+      LOG(INFO) << "Received request for broadcast port";
+      replyMsg.set_broadcast_port(kPublisherPort);
       break;
     }
     case rl_ui_request::RequestMessage::BodyCase::kPing: {
@@ -106,6 +96,16 @@ zmq::message_t RlUserInterface::handleRequest(const zmq::message_t &request) {
       checkpoint->set_name("My_first_checkpoint");
       break;
     }
+    case rl_ui_request::RequestMessage::BodyCase::kDoAction: {
+      const rl_ui_request::DoAction &doActionMsg = requestMsg.do_action();
+      if (doActionMsg.action() == rl_ui_request::DoAction::kStartTraining) {
+        eventBroker_.publishEvent(event::EventCode::kStartRlTraining);
+      } else if (doActionMsg.action() == rl_ui_request::DoAction::kStopTraining) {
+        eventBroker_.publishEvent(event::EventCode::kStopRlTraining);
+      }
+      replyMsg.mutable_do_action_ack();
+      break;
+    }
     default:
       throw std::runtime_error(absl::StrFormat("RlUserInterface received invalid message \"%s\"", requestMsg.DebugString()));
   }
@@ -113,7 +113,8 @@ zmq::message_t RlUserInterface::handleRequest(const zmq::message_t &request) {
   // Serialize to zmq message
   std::string protoMsgAsStr;
   replyMsg.SerializeToString(&protoMsgAsStr);
-  return zmq::message_t(protoMsgAsStr);
+  // Immediately respond with the reply
+  socket.send(zmq::message_t(protoMsgAsStr), zmq::send_flags::none);
 }
 
 } // namespace ui

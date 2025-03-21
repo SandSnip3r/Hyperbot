@@ -18,9 +18,10 @@ message DoAction {
 
 message RequestMessage {
   oneof body {
-    DoAction do_action = 1;
+    google.protobuf.Empty request_broadcast_port = 1;
     google.protobuf.Empty ping = 2;
     google.protobuf.Empty request_checkpoint_list = 3;
+    DoAction do_action = 4;
   }
 }
 
@@ -38,9 +39,10 @@ message CheckpointList {
 
 message ReplyMessage {
   oneof body {
-    google.protobuf.Empty do_action_ack = 1;
+    int32 broadcast_port = 1;
     google.protobuf.Empty ping_ack = 2;
     CheckpointList checkpoint_list = 3;
+    google.protobuf.Empty do_action_ack = 4;
   }
 }
 

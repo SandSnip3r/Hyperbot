@@ -3,7 +3,10 @@
 
 #include <zmq.hpp>
 
+#include <absl/strings/str_format.h>
+
 #include <atomic>
+#include <string>
 #include <thread>
 
 namespace broker {
@@ -19,6 +22,9 @@ public:
   void initialize();
   void runAsync();
 private:
+  const std::string kReqReplyAddress{"tcp://*:5555"};
+  static constexpr int kPublisherPort{5556};
+  const std::string kPublisherAddress{absl::StrFormat("tcp://*:%d", kPublisherPort)};
   zmq::context_t &context_;
   broker::EventBroker &eventBroker_;
   std::atomic<bool> keepRunning_;
@@ -26,7 +32,7 @@ private:
   std::thread thr_;
 
   void run();
-  zmq::message_t handleRequest(const zmq::message_t &request);
+  void handleRequest(const zmq::message_t &request, zmq::socket_t &socket);
 };
 
 } // namespace ui
