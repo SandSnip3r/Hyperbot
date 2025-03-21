@@ -2,9 +2,9 @@
 #include "event/event.hpp"
 #include "ui/rlUserInterface.hpp"
 
-#include <ui_proto/rl_ui_request.pb.h>
-
 #include <absl/log/log.h>
+
+using namespace proto;
 
 namespace ui {
 
@@ -14,10 +14,16 @@ RlUserInterface::RlUserInterface(zmq::context_t &context, broker::EventBroker &e
 
 RlUserInterface::~RlUserInterface() {
   VLOG(1) << "Destructing UserInterface";
-  if (thr_.joinable()) {
+  if (requestHandlingThread_.joinable() || broadcastHeartbeatThread_.joinable()) {
     keepRunning_ = false;
-    thr_.join();
+    if (requestHandlingThread_.joinable()) {
+      requestHandlingThread_.join();
+    }
+    if (broadcastHeartbeatThread_.joinable()) {
+      broadcastHeartbeatThread_.join();
+    }
   }
+
 }
 
 void RlUserInterface::initialize() {
@@ -25,7 +31,7 @@ void RlUserInterface::initialize() {
 }
 
 void RlUserInterface::runAsync() {
-  if (thr_.joinable()) {
+  if (requestHandlingThread_.joinable() || broadcastHeartbeatThread_.joinable()) {
     throw std::runtime_error("UserInterface::runAsync called while already running");
   }
   // Set up publisher
@@ -35,7 +41,8 @@ void RlUserInterface::runAsync() {
 
     // Run the request receiver in another thread
     keepRunning_ = true;
-    thr_ = std::thread(&RlUserInterface::run, this);
+    requestHandlingThread_ = std::thread(&RlUserInterface::requestLoop, this);
+    broadcastHeartbeatThread_ = std::thread(&RlUserInterface::heartbeatLoop, this);
   } catch (const std::exception &ex) {
     LOG(ERROR) << "Exception while binding to UI: \"" << ex.what() << "\"";
   } catch (...) {
@@ -43,7 +50,25 @@ void RlUserInterface::runAsync() {
   }
 }
 
-void RlUserInterface::run() {
+// ================================================================================
+// ===================================== Send =====================================
+// ================================================================================
+
+void RlUserInterface::sendCheckpointList(const std::vector<std::string> &checkpointList) {
+  rl_ui_messages::BroadcastMessage msg;
+  rl_ui_messages::CheckpointList *checkpointListMsg = msg.mutable_checkpoint_list();
+  for (const std::string &checkpointName : checkpointList) {
+    rl_ui_messages::Checkpoint *checkpointMsg = checkpointListMsg->add_checkpoints();
+    checkpointMsg->set_name(checkpointName);
+  }
+  broadcastMessage(msg);
+}
+
+// ================================================================================
+// ================================================================================
+// ================================================================================
+
+void RlUserInterface::requestLoop() {
   // Run request receiver
   zmq::socket_t socket(context_, zmq::socket_type::rep);
   VLOG(1) << "RlUserInterface:socket binding to " << kReqReplyAddress << "; this is the address which the UI should connect to.";
@@ -68,42 +93,45 @@ void RlUserInterface::run() {
   }
 }
 
+void RlUserInterface::heartbeatLoop() {
+  rl_ui_messages::BroadcastMessage msg;
+  msg.mutable_heartbeat();
+  while (keepRunning_) {
+    broadcastMessage(msg);
+    std::this_thread::sleep_for(kHeartbeatInterval);
+  }
+}
+
 void RlUserInterface::handleRequest(const zmq::message_t &request, zmq::socket_t &socket) {
-  using namespace proto;
-  rl_ui_request::ReplyMessage replyMsg;
+  rl_ui_messages::ReplyMessage replyMsg;
   // Parse the request
-  rl_ui_request::RequestMessage requestMsg;
+  rl_ui_messages::RequestMessage requestMsg;
   bool success = requestMsg.ParseFromArray(request.data(), request.size());
   if (!success) {
     throw std::runtime_error(absl::StrFormat("RlUserInterface received invalid data \"%s\"", request.str()));
   }
   LOG(INFO) << "Received request " << requestMsg.DebugString();
   switch (requestMsg.body_case()) {
-    case rl_ui_request::RequestMessage::BodyCase::kRequestBroadcastPort: {
+    case rl_ui_messages::RequestMessage::BodyCase::kRequestBroadcastPort: {
       LOG(INFO) << "Received request for broadcast port";
       replyMsg.set_broadcast_port(kPublisherPort);
       break;
     }
-    case rl_ui_request::RequestMessage::BodyCase::kPing: {
+    case rl_ui_messages::RequestMessage::BodyCase::kPing: {
       LOG(INFO) << "Received ping";
       replyMsg.mutable_ping_ack();
       break;
     }
-    case rl_ui_request::RequestMessage::BodyCase::kRequestCheckpointList: {
-      LOG(INFO) << "Received request for checkpoint list";
-      rl_ui_request::CheckpointList *checkpointList = replyMsg.mutable_checkpoint_list();
-      rl_ui_request::Checkpoint *checkpoint = checkpointList->add_checkpoints();
-      checkpoint->set_name("My_first_checkpoint");
-      break;
-    }
-    case rl_ui_request::RequestMessage::BodyCase::kDoAction: {
-      const rl_ui_request::DoAction &doActionMsg = requestMsg.do_action();
-      if (doActionMsg.action() == rl_ui_request::DoAction::kStartTraining) {
-        eventBroker_.publishEvent(event::EventCode::kStartRlTraining);
-      } else if (doActionMsg.action() == rl_ui_request::DoAction::kStopTraining) {
-        eventBroker_.publishEvent(event::EventCode::kStopRlTraining);
+    case rl_ui_messages::RequestMessage::BodyCase::kAsyncRequest: {
+      const rl_ui_messages::AsyncRequest &asyncRequestMsg = requestMsg.async_request();
+      if (asyncRequestMsg.request_type() == rl_ui_messages::AsyncRequest::kStartTraining) {
+        eventBroker_.publishEvent(event::EventCode::kRlUiStartTraining);
+      } else if (asyncRequestMsg.request_type() == rl_ui_messages::AsyncRequest::kStopTraining) {
+        eventBroker_.publishEvent(event::EventCode::kRlUiStopTraining);
+      } else if (asyncRequestMsg.request_type() == rl_ui_messages::AsyncRequest::kRequestCheckpointList) {
+        eventBroker_.publishEvent(event::EventCode::kRlUiRequestCheckpointList);
       }
-      replyMsg.mutable_do_action_ack();
+      replyMsg.mutable_async_request_ack();
       break;
     }
     default:
@@ -115,6 +143,11 @@ void RlUserInterface::handleRequest(const zmq::message_t &request, zmq::socket_t
   replyMsg.SerializeToString(&protoMsgAsStr);
   // Immediately respond with the reply
   socket.send(zmq::message_t(protoMsgAsStr), zmq::send_flags::none);
+}
+
+void RlUserInterface::broadcastMessage(const rl_ui_messages::BroadcastMessage &message) {
+  std::unique_lock lock(publisherMutex_);
+  publisher_.send(zmq::message_t(message.SerializeAsString()), zmq::send_flags::none);
 }
 
 } // namespace ui

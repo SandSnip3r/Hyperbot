@@ -21,12 +21,17 @@
 #include <mutex>
 #include <vector>
 
+namespace ui {
+class RlUserInterface;
+} // namespace ui
+
 namespace rl {
 
 class TrainingManager {
 public:
   TrainingManager(const pk2::GameData &gameData,
                     broker::EventBroker &eventBroker,
+                    ui::RlUserInterface &rlUserInterface,
                     state::WorldState &worldState,
                     ClientManagerInterface &clientManagerInterface);
 
@@ -50,6 +55,7 @@ private:
 
   const pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
+  ui::RlUserInterface &rlUserInterface_;
   state::WorldState &worldState_;
   ClientManagerInterface &clientManagerInterface_;
   std::vector<std::unique_ptr<Session>> sessions_;

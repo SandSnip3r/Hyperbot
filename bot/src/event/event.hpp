@@ -122,8 +122,9 @@
   F(ReadyForPvp) \
   F(DispelSuccess) \
   F(ClientDied) \
-  F(StartRlTraining) \
-  F(StopRlTraining) \
+  F(RlUiStartTraining) \
+  F(RlUiStopTraining) \
+  F(RlUiRequestCheckpointList) \
   F(Dummy)
 
 namespace event {

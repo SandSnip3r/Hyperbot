@@ -5,6 +5,7 @@
 #include "rl/trainingManager.hpp"
 #include "session.hpp"
 #include "type_id/categories.hpp"
+#include "ui/rlUserInterface.hpp"
 
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 
@@ -15,10 +16,12 @@ namespace rl {
 
 TrainingManager::TrainingManager(const pk2::GameData &gameData,
                   broker::EventBroker &eventBroker,
+                  ui::RlUserInterface &rlUserInterface,
                   state::WorldState &worldState,
                   ClientManagerInterface &clientManagerInterface) :
                       gameData_(gameData),
                       eventBroker_(eventBroker),
+                      rlUserInterface_(rlUserInterface),
                       worldState_(worldState),
                       clientManagerInterface_(clientManagerInterface)  {
   buildItemRequirementList();
@@ -30,8 +33,9 @@ void TrainingManager::run() {
   auto eventHandleFunction = std::bind(&TrainingManager::onUpdate, this, std::placeholders::_1);
   // Subscribe to events.
   eventBroker_.subscribeToEvent(event::EventCode::kPvpManagerReadyForAssignment, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStartRlTraining, eventHandleFunction);
-  eventBroker_.subscribeToEvent(event::EventCode::kStopRlTraining, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kRlUiStartTraining, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kRlUiStopTraining, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kRlUiRequestCheckpointList, eventHandleFunction);
 
   jaxInterface_.initialize();
 
@@ -43,7 +47,7 @@ void TrainingManager::run() {
   while (true) {
     LOG(INFO) << "Waiting to be told to train";
     std::unique_lock lock(runTrainingMutex_);
-    runTrainingCondition_.wait(lock, [this] -> bool { return runTraining_; });
+    runTrainingCondition_.wait(lock, [this]() -> bool { return runTraining_; });
     LOG(INFO) << "Starting training";
     if (once) {
       throw std::runtime_error("We do not yet support restarting training");
@@ -115,16 +119,16 @@ void TrainingManager::onUpdate(const event::Event *event) {
     if (sessionsReadyForAssignment_.size() >= 2) {
       createAndPublishPvpDescriptor();
     }
-  } else if (event->eventCode == event::EventCode::kStartRlTraining) {
-    LOG(INFO) << "Received kStartRlTraining event";
+  } else if (event->eventCode == event::EventCode::kRlUiStartTraining) {
     // Start training.
     std::unique_lock lock(runTrainingMutex_);
     runTraining_ = true;
     runTrainingCondition_.notify_one();
-  } else if (event->eventCode == event::EventCode::kStopRlTraining) {
-    LOG(INFO) << "Received kStopRlTraining event";
+  } else if (event->eventCode == event::EventCode::kRlUiStopTraining) {
     // Stop training.
     runTraining_ = false;
+  } else if (event->eventCode == event::EventCode::kRlUiRequestCheckpointList) {
+    rlUserInterface_.sendCheckpointList({"example_checkpoint_name_1", "example_checkpoint_name_2", "tmp_ckpt"});
   }
 }
 

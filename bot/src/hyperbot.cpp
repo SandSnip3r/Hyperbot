@@ -26,14 +26,17 @@ void Hyperbot::run() {
 
   clientManagerInterface.runAsync();
   eventBroker_.runAsync();
-  rlUserInterface.runAsync();
 
   initializeGameData();
 
   // Create a single WorldState to be shared across all sessions.
   state::WorldState worldState{gameData_, eventBroker_};
 
-  rl::TrainingManager trainingManager{gameData_, eventBroker_, worldState, clientManagerInterface};
+  rl::TrainingManager trainingManager{gameData_, eventBroker_, rlUserInterface, worldState, clientManagerInterface};
+
+  // Run the user interface after everything is constructed so that everyone is ready to receive requests from it.
+  rlUserInterface.runAsync();
+
   trainingManager.run();
 }
 

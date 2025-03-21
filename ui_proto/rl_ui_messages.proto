@@ -51,7 +51,8 @@ message CheckpointList {
 
 message BroadcastMessage {
   oneof body {
-    CheckpointList checkpoint_list = 1;
+    google.protobuf.Empty heartbeat = 1;
+    CheckpointList checkpoint_list = 2;
   }
 }
 
