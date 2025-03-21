@@ -1,7 +1,7 @@
 #ifndef HYPERBOT_HPP_
 #define HYPERBOT_HPP_
 
-#include <ui_proto/rl_ui_request.pb.h>
+#include <ui_proto/rl_ui_messages.pb.h>
 
 #include <zmq.hpp>
 
@@ -10,7 +10,7 @@
 
 #include <atomic>
 #include <cstdint>
-#include <string_view>
+#include <string>
 #include <thread>
 
 class Hyperbot : public QObject {
@@ -34,12 +34,16 @@ signals:
 private:
   zmq::context_t context_;
   zmq::socket_t socket_;
+  std::string ipAddress_;
   std::thread connectionThread_;
   std::atomic<bool> tryToConnect_;
+  zmq::socket_t subscriber_;
+  std::thread subscriberThread_;
 
   void tryConnect();
-  void doAction(proto::rl_ui_request::DoAction::Action action);
-  bool sendMessage(const proto::rl_ui_request::RequestMessage &message);
+  void doAction(proto::rl_ui_messages::DoAction::Action action);
+  bool sendMessage(const proto::rl_ui_messages::RequestMessage &message);
+  void subscriberThreadFunc();
 };
 
 #endif // HYPERBOT_HPP_

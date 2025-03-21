@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 
-package proto.rl_ui_request;
+package proto.rl_ui_messages;
 
 // ===================================================================
 // ============================= Request =============================
@@ -43,6 +43,16 @@ message ReplyMessage {
     google.protobuf.Empty ping_ack = 2;
     CheckpointList checkpoint_list = 3;
     google.protobuf.Empty do_action_ack = 4;
+  }
+}
+
+// ===================================================================
+// ============================ Broadcast ============================
+// ===================================================================
+
+message BroadcastMessage {
+  oneof body {
+    google.protobuf.Empty unused = 1;
   }
 }
 
