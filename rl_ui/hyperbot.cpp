@@ -33,47 +33,15 @@ void Hyperbot::cancelConnect() {
 }
 
 void Hyperbot::startTraining() {
-  doAction(rl_ui_messages::DoAction::kStartTraining);
+  sendAsyncRequest(rl_ui_messages::AsyncRequest::kStartTraining);
 }
 
 void Hyperbot::stopTraining() {
-  doAction(rl_ui_messages::DoAction::kStopTraining);
+  sendAsyncRequest(rl_ui_messages::AsyncRequest::kStopTraining);
 }
 
 void Hyperbot::requestCheckpointList() {
-  using namespace proto;
-  rl_ui_messages::RequestMessage request;
-  request.mutable_request_checkpoint_list();
-  const bool sendSuccess = sendMessage(request);
-  if (!sendSuccess) {
-    return;
-  }
-  VLOG(1) << "Successfully sent request for checkpoint list";
-
-  zmq::message_t reply;
-  zmq::recv_result_t receiveResult = socket_.recv(reply, zmq::recv_flags::none);
-  if (!receiveResult) {
-    LOG(WARNING) << "Failed to receive reply";
-    return;
-  }
-
-  rl_ui_messages::ReplyMessage replyMsg;
-  bool receiveSuccess = replyMsg.ParseFromArray(reply.data(), reply.size());
-  if (!receiveSuccess) {
-    LOG(WARNING) << "Failed to parse reply";
-    return;
-  }
-  VLOG(1) << "Successfully parsed reply: " << replyMsg.DebugString();
-  if (replyMsg.body_case() != rl_ui_messages::ReplyMessage::BodyCase::kCheckpointList) {
-    LOG(WARNING) << "Received unexpected reply";
-    return;
-  }
-  rl_ui_messages::CheckpointList checkpointList = replyMsg.checkpoint_list();
-  QStringList checkpointListStr;
-  for (const rl_ui_messages::Checkpoint &checkpoint : checkpointList.checkpoints()) {
-    checkpointListStr.append(QString::fromStdString(checkpoint.name()));
-  }
-  checkpointListReceived(checkpointListStr);
+  sendAsyncRequest(rl_ui_messages::AsyncRequest::kRequestCheckpointList);
 }
 
 void Hyperbot::tryConnect() {
@@ -194,18 +162,19 @@ void Hyperbot::tryConnect() {
   connected();
 }
 
-void Hyperbot::doAction(rl_ui_messages::DoAction::Action action) {
-  LOG(INFO) << "Going to send DoAction-" << rl_ui_messages::DoAction::Action_Name(action) << " message.";
-  rl_ui_messages::RequestMessage startTrainingRequest;
-  rl_ui_messages::DoAction *doAction = startTrainingRequest.mutable_do_action();
-  doAction->set_action(action);
+void Hyperbot::sendAsyncRequest(proto::rl_ui_messages::AsyncRequest::RequestType requestType) {
+  LOG(INFO) << "Going to send async request type \"" << rl_ui_messages::AsyncRequest::RequestType_Name(requestType) << "\"";
+  rl_ui_messages::RequestMessage asyncRequestMessage;
+  rl_ui_messages::AsyncRequest *asyncRequest = asyncRequestMessage.mutable_async_request();
+  asyncRequest->set_request_type(requestType);
 
   std::string protoMsgAsStr;
-  startTrainingRequest.SerializeToString(&protoMsgAsStr);
+  asyncRequestMessage.SerializeToString(&protoMsgAsStr);
   zmq::message_t zmqMsg(protoMsgAsStr);
   zmq::send_result_t sendResult = socket_.send(zmqMsg, zmq::send_flags::none);
   if (!sendResult) {
     LOG(WARNING) << "Failed to send message to Hyperbot.";
+    return;
   }
   zmq::message_t reply;
   zmq::recv_result_t receiveResult = socket_.recv(reply, zmq::recv_flags::none);
@@ -221,7 +190,7 @@ void Hyperbot::doAction(rl_ui_messages::DoAction::Action action) {
     return;
   }
   VLOG(1) << "Successfully parsed reply: " << replyMsg.DebugString();
-  if (replyMsg.body_case() != rl_ui_messages::ReplyMessage::BodyCase::kDoActionAck) {
+  if (replyMsg.body_case() != rl_ui_messages::ReplyMessage::BodyCase::kAsyncRequestAck) {
     LOG(WARNING) << "Received unexpected reply";
     return;
   }
@@ -248,5 +217,20 @@ void Hyperbot::subscriberThreadFunc() {
     rl_ui_messages::BroadcastMessage broadcastMessage;
     broadcastMessage.ParseFromArray(message.data(), message.size());
     LOG(INFO) << "Received broadcast message \"" << broadcastMessage.DebugString() << "\"";
+    handleBroadcastMessage(broadcastMessage);
+  }
+}
+
+void Hyperbot::handleBroadcastMessage(const proto::rl_ui_messages::BroadcastMessage &broadcastMessage) {
+  switch (broadcastMessage.body_case()) {
+    case rl_ui_messages::BroadcastMessage::BodyCase::kCheckpointList: {
+      rl_ui_messages::CheckpointList checkpointList = broadcastMessage.checkpoint_list();
+      QStringList checkpointListStr;
+      for (const rl_ui_messages::Checkpoint &checkpoint : checkpointList.checkpoints()) {
+        checkpointListStr.append(QString::fromStdString(checkpoint.name()));
+      }
+      checkpointListReceived(checkpointListStr);
+      break;
+    }
   }
 }

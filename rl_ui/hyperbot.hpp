@@ -41,9 +41,10 @@ private:
   std::thread subscriberThread_;
 
   void tryConnect();
-  void doAction(proto::rl_ui_messages::DoAction::Action action);
+  void sendAsyncRequest(proto::rl_ui_messages::AsyncRequest::RequestType requestType);
   bool sendMessage(const proto::rl_ui_messages::RequestMessage &message);
   void subscriberThreadFunc();
+  void handleBroadcastMessage(const proto::rl_ui_messages::BroadcastMessage &broadcastMessage);
 };
 
 #endif // HYPERBOT_HPP_

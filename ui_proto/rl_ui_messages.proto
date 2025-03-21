@@ -8,25 +8,37 @@ package proto.rl_ui_messages;
 // ============================= Request =============================
 // ===================================================================
 
-message DoAction {
-  enum Action {
+message AsyncRequest {
+  enum RequestType {
     kStartTraining = 0;
     kStopTraining = 1;
+    kRequestCheckpointList = 2;
   }
-  Action action = 1;
+  RequestType request_type = 1;
 };
 
 message RequestMessage {
   oneof body {
     google.protobuf.Empty request_broadcast_port = 1;
     google.protobuf.Empty ping = 2;
-    google.protobuf.Empty request_checkpoint_list = 3;
-    DoAction do_action = 4;
+    AsyncRequest async_request = 3;
   }
 }
 
 // ===================================================================
 // ============================== Reply ==============================
+// ===================================================================
+
+message ReplyMessage {
+  oneof body {
+    int32 broadcast_port = 1;
+    google.protobuf.Empty ping_ack = 2;
+    google.protobuf.Empty async_request_ack = 3;
+  }
+}
+
+// ===================================================================
+// ============================ Broadcast ============================
 // ===================================================================
 
 message Checkpoint {
@@ -37,22 +49,9 @@ message CheckpointList {
   repeated Checkpoint checkpoints = 1;
 }
 
-message ReplyMessage {
-  oneof body {
-    int32 broadcast_port = 1;
-    google.protobuf.Empty ping_ack = 2;
-    CheckpointList checkpoint_list = 3;
-    google.protobuf.Empty do_action_ack = 4;
-  }
-}
-
-// ===================================================================
-// ============================ Broadcast ============================
-// ===================================================================
-
 message BroadcastMessage {
   oneof body {
-    google.protobuf.Empty unused = 1;
+    CheckpointList checkpoint_list = 1;
   }
 }
 
