@@ -55,15 +55,28 @@ void Hyperbot::cancelConnect() {
 }
 
 void Hyperbot::startTraining() {
-  sendAsyncRequest(rl_ui_messages::AsyncRequest::kStartTraining);
+  rl_ui_messages::AsyncRequest asyncRequest;
+  asyncRequest.mutable_start_training();
+  sendAsyncRequest(asyncRequest);
 }
 
 void Hyperbot::stopTraining() {
-  sendAsyncRequest(rl_ui_messages::AsyncRequest::kStopTraining);
+  rl_ui_messages::AsyncRequest asyncRequest;
+  asyncRequest.mutable_stop_training();
+  sendAsyncRequest(asyncRequest);
 }
 
 void Hyperbot::requestCheckpointList() {
-  sendAsyncRequest(rl_ui_messages::AsyncRequest::kRequestCheckpointList);
+  rl_ui_messages::AsyncRequest asyncRequest;
+  asyncRequest.mutable_request_checkpoint_list();
+  sendAsyncRequest(asyncRequest);
+}
+
+void Hyperbot::saveCheckpoint(const QString &checkpointName) {
+  rl_ui_messages::AsyncRequest asyncRequest;
+  rl_ui_messages::SaveCheckpoint *saveCheckpoint = asyncRequest.mutable_save_checkpoint();
+  saveCheckpoint->set_name(checkpointName.toStdString());
+  sendAsyncRequest(asyncRequest);
 }
 
 void Hyperbot::onConnectionFailed() {
@@ -124,15 +137,13 @@ void Hyperbot::setupSubscriber(int broadcastPort) {
   subscriberThread_->start();
 }
 
-void Hyperbot::sendAsyncRequest(proto::rl_ui_messages::AsyncRequest::RequestType requestType) {
+void Hyperbot::sendAsyncRequest(const rl_ui_messages::AsyncRequest &asyncRequest) {
   if (!connected_) {
     LOG(WARNING) << "Not connected to Hyperbot.";
     return;
   }
   rl_ui_messages::RequestMessage asyncRequestMessage;
-  rl_ui_messages::AsyncRequest *asyncRequest = asyncRequestMessage.mutable_async_request();
-  asyncRequest->set_request_type(requestType);
-
+  *asyncRequestMessage.mutable_async_request() = asyncRequest;
   std::string protoMsgAsStr;
   asyncRequestMessage.SerializeToString(&protoMsgAsStr);
   zmq::message_t zmqMsg(protoMsgAsStr);

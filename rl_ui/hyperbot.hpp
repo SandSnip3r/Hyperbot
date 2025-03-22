@@ -29,6 +29,7 @@ public:
   void startTraining();
   void stopTraining();
   void requestCheckpointList();
+  void saveCheckpoint(const QString &checkpointName);
 
 public slots:
   void onConnectionFailed();
@@ -58,7 +59,7 @@ private:
 
   // void tryConnect();
   void setupSubscriber(int broadcastPort);
-  void sendAsyncRequest(proto::rl_ui_messages::AsyncRequest::RequestType requestType);
+  void sendAsyncRequest(const proto::rl_ui_messages::AsyncRequest &asyncRequest);
   bool sendMessage(const proto::rl_ui_messages::RequestMessage &message);
   void subscriberThreadFunc();
 };

@@ -8,13 +8,17 @@ package proto.rl_ui_messages;
 // ============================= Request =============================
 // ===================================================================
 
+message SaveCheckpoint {
+  string name = 1;
+}
+
 message AsyncRequest {
-  enum RequestType {
-    kStartTraining = 0;
-    kStopTraining = 1;
-    kRequestCheckpointList = 2;
+  oneof body {
+    google.protobuf.Empty start_training = 1;
+    google.protobuf.Empty stop_training = 2;
+    google.protobuf.Empty request_checkpoint_list = 3;
+    SaveCheckpoint save_checkpoint = 4;
   }
-  RequestType request_type = 1;
 };
 
 message RequestMessage {

@@ -20,6 +20,8 @@ public:
   void setHyperbot(Hyperbot &hyperbot);
 public slots:
   void onCheckpointListReceived(QStringList checkpointList);
+  void onSaveCheckpointClicked();
+
 private:
   Ui::CheckpointWidget *ui;
   Hyperbot *hyperbot_{nullptr};
