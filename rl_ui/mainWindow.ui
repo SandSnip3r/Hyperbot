@@ -37,52 +37,6 @@
      </rect>
     </property>
    </widget>
-   <widget class="QGroupBox" name="groupBox">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>30</y>
-      <width>471</width>
-      <height>301</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string>Model Checkpoints</string>
-    </property>
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="1" column="0" rowspan="2">
-      <widget class="QListView" name="checkpointsListView"/>
-     </item>
-     <item row="1" column="1">
-      <widget class="QPushButton" name="loadCheckpointButton">
-       <property name="text">
-        <string>Load Checkpoint</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0" colspan="2">
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <item>
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Checkpoint Name:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="checkpointNameLineEdit"/>
-       </item>
-       <item>
-        <widget class="QPushButton" name="saveCheckpointButton">
-         <property name="text">
-          <string>Save Checkpoint</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-    </layout>
-   </widget>
    <widget class="QPushButton" name="stopTrainingButton">
     <property name="geometry">
      <rect>
@@ -94,6 +48,16 @@
     </property>
     <property name="text">
      <string>Stop Training</string>
+    </property>
+   </widget>
+   <widget class="CheckpointWidget" name="checkpointWidget" native="true">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>20</y>
+      <width>451</width>
+      <height>321</height>
+     </rect>
     </property>
    </widget>
   </widget>
@@ -114,6 +78,12 @@
    <class>QChartView</class>
    <extends>QWidget</extends>
    <header>QtCharts/QChartView</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CheckpointWidget</class>
+   <extends>QWidget</extends>
+   <header>checkpointWidget.hpp</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

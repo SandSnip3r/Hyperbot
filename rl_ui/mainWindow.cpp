@@ -1,10 +1,10 @@
+#include "checkpointWidget.hpp"
 #include "hyperbotConnect.hpp"
 #include "mainWindow.hpp"
 #include "./ui_mainwindow.h"
 
 #include <absl/log/log.h>
 
-#include <QStringListModel>
 #include <QtCharts/QChart>
 #include <QtCharts/QLineSeries>
 
@@ -19,6 +19,7 @@
 
 MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot, QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow), config_(std::move(config)), hyperbot_(hyperbot) {
   ui->setupUi(this);
+  ui->checkpointWidget->setHyperbot(hyperbot_);
   setWindowTitle(tr("Hyperbot"));
   connectSignals();
 }
@@ -36,7 +37,6 @@ MainWindow::~MainWindow() {
 void MainWindow::connectSignals() {
   connect(ui->startTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::startTraining);
   connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
-  connect(&hyperbot_, &Hyperbot::checkpointListReceived, this, &MainWindow::onCheckpointListReceived);
   connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
 }
 
@@ -91,10 +91,4 @@ void MainWindow::onTimerTriggered() {
   int y = dist(gen);
   series_->append(xVal++, y);
   LOG(INFO) << "Trigger";
-}
-
-void MainWindow::onCheckpointListReceived(QStringList list) {
-  VLOG(1) << "Received checkpoint list: " << list.join(", ").toStdString();
-  QStringListModel *checkpointModel = new QStringListModel(list);
-  ui->checkpointsListView->setModel(checkpointModel);
 }

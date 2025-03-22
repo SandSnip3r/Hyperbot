@@ -31,7 +31,6 @@ public slots:
   void onConnectedToHyperbot();
   void onDisconnectedFromHyperbot();
   void onTimerTriggered();
-  void onCheckpointListReceived(QStringList list);
 
 private:
   Ui::MainWindow *ui;

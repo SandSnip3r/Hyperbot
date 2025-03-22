@@ -25,6 +25,7 @@ qt_add_executable(rl_ui
   config.hpp config.cpp
   hyperbotConnectWorker.hpp hyperbotConnectWorker.cpp
   hyperbotSubscriberWorker.hpp hyperbotSubscriberWorker.cpp
+  checkpointWidget.hpp checkpointWidget.cpp checkpointwidget.ui
 )
 
 target_link_libraries(rl_ui PRIVATE
