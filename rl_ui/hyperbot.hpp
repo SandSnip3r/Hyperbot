@@ -1,12 +1,17 @@
 #ifndef HYPERBOT_HPP_
 #define HYPERBOT_HPP_
 
+#include "hyperbotConnectWorker.hpp"
+#include "hyperbotSubscriberWorker.hpp"
+
 #include <ui_proto/rl_ui_messages.pb.h>
 
 #include <zmq.hpp>
 
 #include <QObject>
 #include <QStringList>
+#include <QTimer>
+#include <QThread>
 
 #include <atomic>
 #include <cstdint>
@@ -25,26 +30,37 @@ public:
   void stopTraining();
   void requestCheckpointList();
 
+public slots:
+  void onConnectionFailed();
+  void onConnectionCancelled();
+  void onConnected(int broadcastPort);
+  void handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage broadcastMessage);
+  void onSubscriberDisconnected();
+
 signals:
-  void connected();
   void connectionFailed();
   void connectionCancelled();
+  void connected();
+  void disconnected();
   void checkpointListReceived(QStringList str);
 
 private:
+  static constexpr int kHeartbeatIntervalMs = 500;
   zmq::context_t context_;
-  zmq::socket_t socket_;
   std::string ipAddress_;
-  std::thread connectionThread_;
-  std::atomic<bool> tryToConnect_;
-  zmq::socket_t subscriber_;
-  std::thread subscriberThread_;
+  std::atomic<bool> connected_;
+  zmq::socket_t socket_;
+  QThread *connectThread_{nullptr};
+  QThread *subscriberThread_{nullptr};
+  HyperbotConnectWorker *connectWorker_{nullptr};
+  HyperbotSubscriberWorker *subscriberWorker_{nullptr};
 
-  void tryConnect();
+
+  // void tryConnect();
+  void setupSubscriber(int broadcastPort);
   void sendAsyncRequest(proto::rl_ui_messages::AsyncRequest::RequestType requestType);
   bool sendMessage(const proto::rl_ui_messages::RequestMessage &message);
   void subscriberThreadFunc();
-  void handleBroadcastMessage(const proto::rl_ui_messages::BroadcastMessage &broadcastMessage);
 };
 
 #endif // HYPERBOT_HPP_

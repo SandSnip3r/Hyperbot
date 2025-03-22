@@ -26,15 +26,7 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot, QWidget *parent) : Q
 void MainWindow::showEvent(QShowEvent *event) {
   // Always call base implementation.
   QMainWindow::showEvent(event);
-
-  if (!connectionWindowShown_) {
-    connectionWindowShown_ = true;
-    connectionWindow_ = new HyperbotConnect(config_, hyperbot_, this);
-    connect(connectionWindow_, &QObject::destroyed, this, &MainWindow::connectedToHyperbot);
-    this->setEnabled(false);
-    connectionWindow_->setEnabled(true);
-    connectionWindow_->show();
-  }
+  showConnectionWindow(tr("Connect to Hyperbot"));
 }
 
 MainWindow::~MainWindow() {
@@ -44,7 +36,20 @@ MainWindow::~MainWindow() {
 void MainWindow::connectSignals() {
   connect(ui->startTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::startTraining);
   connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
-  connect(&hyperbot_, &Hyperbot::checkpointListReceived, this, &MainWindow::checkpointListReceived);
+  connect(&hyperbot_, &Hyperbot::checkpointListReceived, this, &MainWindow::onCheckpointListReceived);
+  connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
+}
+
+void MainWindow::showConnectionWindow(const QString &windowTitle) {
+  if (!connectionWindowShown_) {
+    connectionWindowShown_ = true;
+    connectionWindow_ = new HyperbotConnect(config_, hyperbot_, this);
+    connectionWindow_->setWindowTitle(windowTitle);
+    connect(connectionWindow_, &QObject::destroyed, this, &MainWindow::onConnectedToHyperbot);
+    this->setEnabled(false);
+    connectionWindow_->setEnabled(true);
+    connectionWindow_->show();
+  }
 }
 
 void MainWindow::testChart() {
@@ -64,17 +69,22 @@ void MainWindow::testChart() {
 
   timer_ = new QTimer(this);
   timer_->setInterval(100);
-  connect(timer_, &QTimer::timeout, this, &MainWindow::timerTriggered);
+  connect(timer_, &QTimer::timeout, this, &MainWindow::onTimerTriggered);
   timer_->start();
 }
 
-void MainWindow::connectedToHyperbot() {
+void MainWindow::onConnectedToHyperbot() {
+  connectionWindowShown_ = false;
   connectionWindow_ = nullptr;
   this->setEnabled(true);
   hyperbot_.requestCheckpointList();
 }
 
-void MainWindow::timerTriggered() {
+void MainWindow::onDisconnectedFromHyperbot() {
+  showConnectionWindow(tr("Disconnected from Hyperbot"));
+}
+
+void MainWindow::onTimerTriggered() {
   static std::mt19937 gen(std::random_device{}());
   static std::uniform_real_distribution<double> dist(0, 100);
   static int xVal{11};
@@ -83,7 +93,7 @@ void MainWindow::timerTriggered() {
   LOG(INFO) << "Trigger";
 }
 
-void MainWindow::checkpointListReceived(QStringList list) {
+void MainWindow::onCheckpointListReceived(QStringList list) {
   VLOG(1) << "Received checkpoint list: " << list.join(", ").toStdString();
   QStringListModel *checkpointModel = new QStringListModel(list);
   ui->checkpointsListView->setModel(checkpointModel);

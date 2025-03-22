@@ -23,6 +23,8 @@ qt_add_executable(rl_ui
   hyperbotConnect.hpp hyperbotConnect.cpp hyperbotConnect.ui
   hyperbot.hpp hyperbot.cpp
   config.hpp config.cpp
+  hyperbotConnectWorker.hpp hyperbotConnectWorker.cpp
+  hyperbotSubscriberWorker.hpp hyperbotSubscriberWorker.cpp
 )
 
 target_link_libraries(rl_ui PRIVATE

@@ -6,30 +6,52 @@
 using namespace proto;
 
 Hyperbot::~Hyperbot() {
-  if (connectionThread_.joinable()) {
-    connectionThread_.join();
+  if (connectThread_ && connectThread_->isRunning()) {
+    connectThread_->quit();
+    connectThread_->wait();
+  }
+  if (subscriberThread_ && subscriberThread_->isRunning()) {
+    subscriberThread_->requestInterruption();
+    subscriberThread_->quit();
+    subscriberThread_->wait();
   }
 }
 
 void Hyperbot::tryConnectAsync(std::string_view ipAddress, int32_t port) {
+  connected_ = false;
   ipAddress_ = ipAddress;
   LOG(INFO) << absl::StrFormat("Connecting to Hyperbot at %s:%d.", ipAddress_, port);
-
   socket_ = zmq::socket_t(context_, zmq::socket_type::req);
   socket_.connect(absl::StrFormat("tcp://%s:%d", ipAddress_, port));
 
-  if (connectionThread_.joinable()) {
-    VLOG(1) << "Joining existing connection thread";
-    connectionThread_.join();
-  }
-  tryToConnect_ = true;
-  connectionThread_ = std::thread([this]() {
-    tryConnect();
+  // Set up the connection worker in its own thread.
+  connectThread_ = new QThread;
+  connectWorker_ = new HyperbotConnectWorker(ipAddress_, port, socket_);
+  connectWorker_->moveToThread(connectThread_);
+
+  connect(connectThread_, &QThread::started, connectWorker_, &HyperbotConnectWorker::process);
+  connect(connectWorker_, &HyperbotConnectWorker::connectionFailed, this, &Hyperbot::onConnectionFailed);
+  connect(connectWorker_, &HyperbotConnectWorker::connectionCancelled, this, &Hyperbot::onConnectionCancelled);
+  connect(connectWorker_, &HyperbotConnectWorker::connected, this, &Hyperbot::onConnected);
+
+  // Ensure thread cleanup.
+  connect(connectWorker_, &HyperbotConnectWorker::connected, connectThread_, &QThread::quit);
+  connect(connectWorker_, &HyperbotConnectWorker::connectionFailed, connectThread_, &QThread::quit);
+  connect(connectWorker_, &HyperbotConnectWorker::connectionCancelled, connectThread_, &QThread::quit);
+  connect(connectThread_, &QThread::finished, [this]() {
+    delete connectWorker_;
+    connectWorker_ = nullptr;
+    connectThread_->deleteLater();
+    connectThread_ = nullptr;
   });
+
+  connectThread_->start();
 }
 
 void Hyperbot::cancelConnect() {
-  tryToConnect_ = false;
+  if (connectWorker_) {
+    connectWorker_->stopTrying();
+  }
 }
 
 void Hyperbot::startTraining() {
@@ -44,126 +66,69 @@ void Hyperbot::requestCheckpointList() {
   sendAsyncRequest(rl_ui_messages::AsyncRequest::kRequestCheckpointList);
 }
 
-void Hyperbot::tryConnect() {
-  const std::chrono::milliseconds kReplyTimeout(2000);
+void Hyperbot::onConnectionFailed() {
+  emit connectionFailed();
+}
 
-  // Do one send/recv to test the connection.
-  rl_ui_messages::RequestMessage pingRequest;
-  pingRequest.mutable_ping();
-  bool sendSuccess = sendMessage(pingRequest);
-  if (!sendSuccess) {
-    connectionFailed();
-    return;
-  }
+void Hyperbot::onConnectionCancelled() {
+ emit connectionCancelled();
+}
 
-  LOG(INFO) << "Awaiting connection.";
-  constexpr int kAttemptCount = 5;
-  for (int i=0; i<kAttemptCount; ++i) {
-    VLOG(1) << "Attempt " << i;
-    if (!tryToConnect_) {
-      connectionCancelled();
-      return;
-    }
-    if (i > 0) {
-      LOG(INFO) << "No reply from Hyperbot. Retrying... (attempt "  << i+1 << '/' << kAttemptCount << ").";
-    }
-    // Poll for a reply.
-    std::vector<zmq::pollitem_t> items = { { socket_, 0, ZMQ_POLLIN, 0 } };
-    const int pollResult = zmq::poll(items, kReplyTimeout);
-    if (pollResult == 1) {
-      // Successfully received a reply.
+void Hyperbot::onConnected(int broadcastPort) {
+  connected_ = true;
+  setupSubscriber(broadcastPort);
+  emit connected();
+}
+
+void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage broadcastMessage) {
+  switch (broadcastMessage.body_case()) {
+    case rl_ui_messages::BroadcastMessage::BodyCase::kHeartbeat: {
+      LOG(WARNING) << "Should not receive heartbeat message here.";
       break;
     }
-    if (i < kAttemptCount - 1) {
-      // Retry.
-      continue;
+    case rl_ui_messages::BroadcastMessage::BodyCase::kCheckpointList: {
+      rl_ui_messages::CheckpointList checkpointList = broadcastMessage.checkpoint_list();
+      QStringList checkpointListStr;
+      for (const rl_ui_messages::Checkpoint &checkpoint : checkpointList.checkpoints()) {
+        checkpointListStr.append(QString::fromStdString(checkpoint.name()));
+      }
+      checkpointListReceived(checkpointListStr);
+      break;
     }
-
-    LOG(WARNING) << "No reply from Hyperbot. Giving up.";
-    connectionFailed();
-    return;
   }
+}
 
-  // Receive the reply.
-  zmq::message_t reply;
-  zmq::recv_result_t receiveResult = socket_.recv(reply, zmq::recv_flags::none);
-  if (!receiveResult) {
-    LOG(WARNING) << "Failed to receive ping reply from Hyperbot.";
-    connectionFailed();
-    return;
-  }
-  VLOG(2) << "Received ping reply data \"" << reply.to_string() << "\"";
+void Hyperbot::onSubscriberDisconnected() {
+  emit disconnected();
+}
 
-  // Ensure the reply is the message we expected.
-  rl_ui_messages::ReplyMessage pingReplyMsg;
-  bool parseSuccess = pingReplyMsg.ParseFromArray(reply.data(), reply.size());
-  if (!parseSuccess) {
-    LOG(WARNING) << "Failed to parse ping reply";
-    connectionFailed();
-    return;
-  }
-  VLOG(2) << "Received ping reply \"" << pingReplyMsg.DebugString() << "\"";
+void Hyperbot::setupSubscriber(int broadcastPort) {
+  // Set up the subscriber worker in its own thread.
+  subscriberThread_ = new QThread;
+  subscriberWorker_ = new HyperbotSubscriberWorker(context_, ipAddress_, broadcastPort);
+  subscriberWorker_->moveToThread(subscriberThread_);
 
-  if (pingReplyMsg.body_case() != rl_ui_messages::ReplyMessage::BodyCase::kPingAck) {
-    LOG(WARNING) << "Received unexpected reply";
-    connectionFailed();
-    return;
-  }
+  connect(subscriberThread_, &QThread::started, subscriberWorker_, &HyperbotSubscriberWorker::startWork);
+  connect(subscriberWorker_, &HyperbotSubscriberWorker::disconnected, this, &Hyperbot::onSubscriberDisconnected);
+  connect(subscriberWorker_, &HyperbotSubscriberWorker::broadcastMessageReceived, this, &Hyperbot::handleBroadcastMessage);
 
-  // Now that we know we are connected to Hyperbot, request the port of its broadcast socket, so that we can connect to that too.
-  rl_ui_messages::RequestMessage broadcastPortRequest;
-  broadcastPortRequest.mutable_request_broadcast_port();
-  sendSuccess = sendMessage(broadcastPortRequest);
-  if (!sendSuccess) {
-    connectionFailed();
-    return;
-  }
-
-  // Again, poll for a reply, in case Hyperbot went down after we successfully connected.
-  std::vector<zmq::pollitem_t> items = { { socket_, 0, ZMQ_POLLIN, 0 } };
-  const int pollResult = zmq::poll(items, kReplyTimeout);
-  if (pollResult != 1) {
-    LOG(WARNING) << "No reply from Hyperbot when getting broadcast port.";
-    connectionFailed();
-    return;
-  }
-
-  // Receive the reply.
-  receiveResult = socket_.recv(reply, zmq::recv_flags::none);
-  if (!receiveResult) {
-    LOG(WARNING) << "Failed to receive broadcast port reply from Hyperbot.";
-    connectionFailed();
-    return;
-  }
-
-  VLOG(1) << "Received broadcast port reply data \"" << reply.to_string() << "\"";
-  rl_ui_messages::ReplyMessage broadcastPortReplyMsg;
-  parseSuccess = broadcastPortReplyMsg.ParseFromArray(reply.data(), reply.size());
-  if (!parseSuccess) {
-    LOG(WARNING) << "Failed to parse reply";
-    return;
-  }
-  VLOG(2) << "Received broadcast reply \"" << broadcastPortReplyMsg.DebugString() << "\"";
-
-  if (broadcastPortReplyMsg.body_case() != rl_ui_messages::ReplyMessage::BodyCase::kBroadcastPort) {
-    LOG(WARNING) << "Received unexpected reply";
-    connectionFailed();
-    return;
-  }
-
-  int32_t broadcastPort = broadcastPortReplyMsg.broadcast_port();
-  LOG(INFO) << "Received broadcast port: " << broadcastPort;
-  subscriber_ = zmq::socket_t(context_, zmq::socket_type::sub);
-  subscriber_.set(zmq::sockopt::subscribe, "");
-  subscriber_.connect(absl::StrFormat("tcp://%s:%d", ipAddress_, broadcastPort));
-  subscriberThread_ = std::thread([this]() {
-    subscriberThreadFunc();
+  // Clean up when the subscriber worker signals a disconnect.
+  connect(subscriberWorker_, &HyperbotSubscriberWorker::disconnected, subscriberThread_, &QThread::quit);
+  connect(subscriberThread_, &QThread::finished, [this]() {
+    delete subscriberWorker_;
+    subscriberWorker_ = nullptr;
+    subscriberThread_->deleteLater();
+    subscriberThread_ = nullptr;
   });
-  connected();
+
+  subscriberThread_->start();
 }
 
 void Hyperbot::sendAsyncRequest(proto::rl_ui_messages::AsyncRequest::RequestType requestType) {
-  LOG(INFO) << "Going to send async request type \"" << rl_ui_messages::AsyncRequest::RequestType_Name(requestType) << "\"";
+  if (!connected_) {
+    LOG(WARNING) << "Not connected to Hyperbot.";
+    return;
+  }
   rl_ui_messages::RequestMessage asyncRequestMessage;
   rl_ui_messages::AsyncRequest *asyncRequest = asyncRequestMessage.mutable_async_request();
   asyncRequest->set_request_type(requestType);
@@ -207,30 +172,4 @@ bool Hyperbot::sendMessage(const rl_ui_messages::RequestMessage &message) {
     return false;
   }
   return true;
-}
-
-
-void Hyperbot::subscriberThreadFunc() {
-  while (true) {
-    zmq::message_t message;
-    subscriber_.recv(message);
-    rl_ui_messages::BroadcastMessage broadcastMessage;
-    broadcastMessage.ParseFromArray(message.data(), message.size());
-    LOG(INFO) << "Received broadcast message \"" << broadcastMessage.DebugString() << "\"";
-    handleBroadcastMessage(broadcastMessage);
-  }
-}
-
-void Hyperbot::handleBroadcastMessage(const proto::rl_ui_messages::BroadcastMessage &broadcastMessage) {
-  switch (broadcastMessage.body_case()) {
-    case rl_ui_messages::BroadcastMessage::BodyCase::kCheckpointList: {
-      rl_ui_messages::CheckpointList checkpointList = broadcastMessage.checkpoint_list();
-      QStringList checkpointListStr;
-      for (const rl_ui_messages::Checkpoint &checkpoint : checkpointList.checkpoints()) {
-        checkpointListStr.append(QString::fromStdString(checkpoint.name()));
-      }
-      checkpointListReceived(checkpointListStr);
-      break;
-    }
-  }
 }

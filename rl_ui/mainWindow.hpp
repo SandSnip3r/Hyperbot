@@ -28,9 +28,10 @@ protected:
   void showEvent(QShowEvent *event) override;
 
 public slots:
-  void connectedToHyperbot();
-  void timerTriggered();
-  void checkpointListReceived(QStringList list);
+  void onConnectedToHyperbot();
+  void onDisconnectedFromHyperbot();
+  void onTimerTriggered();
+  void onCheckpointListReceived(QStringList list);
 
 private:
   Ui::MainWindow *ui;
@@ -43,6 +44,7 @@ private:
   QTimer *timer_;
 
   void connectSignals();
+  void showConnectionWindow(const QString &windowTitle);
   void testChart();
 };
 #endif // MAIN_WINDOW_HPP_
