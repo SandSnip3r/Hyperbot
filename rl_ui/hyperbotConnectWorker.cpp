@@ -17,7 +17,7 @@ void HyperbotConnectWorker::process() {
     zmq::message_t zmqMsg(protoMsgAsStr);
     return socket_.send(zmqMsg, zmq::send_flags::none);
   };
-  const std::chrono::milliseconds kReplyTimeout(500);
+  const std::chrono::milliseconds kReplyTimeout(200);
 
   // Send a ping request to test the connection.
   rl_ui_messages::RequestMessage pingRequest;
@@ -28,28 +28,18 @@ void HyperbotConnectWorker::process() {
     return;
   }
 
-  LOG(INFO) << "Awaiting connection.";
-  constexpr int kAttemptCount = 20;
+  LOG(INFO) << "Awaiting connection...";
   int attempt = 0;
-  for (; attempt < kAttemptCount; ++attempt) {
+  for (;; ++attempt) {
     if (!tryToConnect_) {
       emit connectionCancelled();
       return;
     }
-    if (attempt > 0) {
-      LOG(INFO) << "No reply from Hyperbot. Retrying... (attempt "  << attempt+1 << '/' << kAttemptCount << ").";
-    }
-    VLOG(1) << "Attempt #" << attempt;
     std::vector<zmq::pollitem_t> items = { { socket_, 0, ZMQ_POLLIN, 0 } };
     int pollResult = zmq::poll(items, kReplyTimeout);
     if (pollResult == 1) {
       break;
     }
-  }
-  if (attempt == kAttemptCount) {
-    LOG(WARNING) << "No reply from Hyperbot. Giving up.";
-    emit connectionFailed();
-    return;
   }
 
   zmq::message_t reply;

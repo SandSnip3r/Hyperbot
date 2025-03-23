@@ -81,7 +81,7 @@ void MainWindow::onConnectedToHyperbot() {
 }
 
 void MainWindow::onDisconnectedFromHyperbot() {
-  showConnectionWindow(tr("Disconnected from Hyperbot"));
+  showConnectionWindow(tr("Reconnect to Hyperbot"));
 }
 
 void MainWindow::onTimerTriggered() {

@@ -65,15 +65,22 @@ HyperbotConnect::HyperbotConnect(Config &config, Hyperbot &hyperbot, QWidget *pa
   // We must have a valid config at this point, initialize the UI with the data from it.
   ui->addressLineEdit->setText(QString::fromStdString(config_.proto().ip_address()));
   ui->portLineEdit->setText(QString::number(config_.proto().port()));
+  const bool shouldAutomaticallyConnect = config_.proto().automatically_connect();
+  ui->automaticallyConnectCheckBox->setChecked(shouldAutomaticallyConnect);
 
   // Connect the UI controls.
-  connect(ui->connectButton, &QPushButton::clicked, this, &HyperbotConnect::connectClicked);
-  connect(ui->cancelButton, &QPushButton::clicked, this, &HyperbotConnect::cancelClicked);
+  connect(ui->connectButton, &QPushButton::clicked, this, &HyperbotConnect::onConnectClicked);
+  connect(ui->cancelButton, &QPushButton::clicked, this, &HyperbotConnect::onCancelClicked);
+  connect(ui->automaticallyConnectCheckBox, &QCheckBox::clicked, this, &HyperbotConnect::onAutoConnectCheckBoxClicked);
 
   // Connect Hyperbot's connection signals.
   connect(&hyperbot_, &Hyperbot::connected, this, &HyperbotConnect::handleConnected);
   connect(&hyperbot_, &Hyperbot::connectionFailed, this, &HyperbotConnect::handleConnectionFailed);
   connect(&hyperbot_, &Hyperbot::connectionCancelled, this, &HyperbotConnect::handleConnectionCancelled);
+
+  if (shouldAutomaticallyConnect) {
+    tryConnect();
+  }
 }
 
 HyperbotConnect::~HyperbotConnect() {
@@ -84,32 +91,20 @@ HyperbotConnect::~HyperbotConnect() {
   delete ui;
 }
 
-void HyperbotConnect::registerLogSink() {
-  if (myLogSink_ != nullptr) {
-    throw std::runtime_error("Log sink already registered");
-  }
-  myLogSink_ = new internal::MyLogSink(ui->logTextEdit);
-  absl::AddLogSink(myLogSink_);
-}
-
-void HyperbotConnect::connectClicked() {
+void HyperbotConnect::onConnectClicked() {
   VLOG(1) << "Connect button clicked";
-  std::string address = ui->addressLineEdit->text().toStdString();
-  int32_t port = ui->portLineEdit->text().toInt();
-  config_.proto().set_ip_address(address);
-  config_.proto().set_port(port);
-  config_.save();
-
-  // Try to connect to the bot.
-  ui->cancelButton->setEnabled(true);
-  ui->connectButton->setEnabled(false);
-  hyperbot_.tryConnectAsync(address, port);
+  tryConnect();
 }
 
-void HyperbotConnect::cancelClicked() {
+void HyperbotConnect::onCancelClicked() {
   VLOG(1) << "Cancel button clicked";
   ui->cancelButton->setEnabled(false);
   hyperbot_.cancelConnect();
+}
+
+void HyperbotConnect::onAutoConnectCheckBoxClicked(bool checked) {
+  config_.proto().set_automatically_connect(checked);
+  config_.save();
 }
 
 void HyperbotConnect::handleConnectionFailed() {
@@ -127,4 +122,25 @@ void HyperbotConnect::handleConnectionCancelled() {
 void HyperbotConnect::handleConnected() {
   LOG(INFO) << "Connected to Hyperbot.";
   close();
+}
+
+void HyperbotConnect::registerLogSink() {
+  if (myLogSink_ != nullptr) {
+    throw std::runtime_error("Log sink already registered");
+  }
+  myLogSink_ = new internal::MyLogSink(ui->logTextEdit);
+  absl::AddLogSink(myLogSink_);
+}
+
+void HyperbotConnect::tryConnect() {
+  std::string address = ui->addressLineEdit->text().toStdString();
+  int32_t port = ui->portLineEdit->text().toInt();
+  config_.proto().set_ip_address(address);
+  config_.proto().set_port(port);
+  config_.save();
+
+  // Try to connect to the bot.
+  ui->cancelButton->setEnabled(true);
+  ui->connectButton->setEnabled(false);
+  hyperbot_.tryConnectAsync(address, port);
 }

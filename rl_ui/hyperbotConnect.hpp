@@ -36,8 +36,9 @@ public:
 
 signals:
 private slots:
-  void connectClicked();
-  void cancelClicked();
+  void onConnectClicked();
+  void onCancelClicked();
+  void onAutoConnectCheckBoxClicked(bool checked);
   void handleConnectionFailed();
   void handleConnectionCancelled();
   void handleConnected();
@@ -48,6 +49,7 @@ private:
   internal::MyLogSink *myLogSink_{nullptr};
 
   void registerLogSink();
+  void tryConnect();
 };
 
 #endif // HYPERBOT_CONNECT_HPP_
