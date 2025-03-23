@@ -124,12 +124,17 @@ void RlUserInterface::handleRequest(const zmq::message_t &request, zmq::socket_t
     }
     case rl_ui_messages::RequestMessage::BodyCase::kAsyncRequest: {
       const rl_ui_messages::AsyncRequest &asyncRequestMsg = requestMsg.async_request();
-      if (asyncRequestMsg.request_type() == rl_ui_messages::AsyncRequest::kStartTraining) {
+      if (asyncRequestMsg.body_case() == rl_ui_messages::AsyncRequest::BodyCase::kStartTraining) {
         eventBroker_.publishEvent(event::EventCode::kRlUiStartTraining);
-      } else if (asyncRequestMsg.request_type() == rl_ui_messages::AsyncRequest::kStopTraining) {
+      } else if (asyncRequestMsg.body_case() == rl_ui_messages::AsyncRequest::BodyCase::kStopTraining) {
         eventBroker_.publishEvent(event::EventCode::kRlUiStopTraining);
-      } else if (asyncRequestMsg.request_type() == rl_ui_messages::AsyncRequest::kRequestCheckpointList) {
+      } else if (asyncRequestMsg.body_case() == rl_ui_messages::AsyncRequest::BodyCase::kRequestCheckpointList) {
         eventBroker_.publishEvent(event::EventCode::kRlUiRequestCheckpointList);
+      } else if (asyncRequestMsg.body_case() == rl_ui_messages::AsyncRequest::BodyCase::kSaveCheckpoint) {
+        const rl_ui_messages::SaveCheckpoint &saveCheckpointMsg = asyncRequestMsg.save_checkpoint();
+        eventBroker_.publishEvent<event::RlUiSaveCheckpoint>(saveCheckpointMsg.name());
+      } else {
+        throw std::runtime_error(absl::StrFormat("RlUserInterface received invalid async request \"%s\"", asyncRequestMsg.DebugString()));
       }
       replyMsg.mutable_async_request_ack();
       break;

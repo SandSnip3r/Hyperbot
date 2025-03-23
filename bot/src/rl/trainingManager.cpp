@@ -36,6 +36,7 @@ void TrainingManager::run() {
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiStartTraining, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiStopTraining, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiRequestCheckpointList, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kRlUiSaveCheckpoint, eventHandleFunction);
 
   jaxInterface_.initialize();
 
@@ -110,6 +111,7 @@ void TrainingManager::train() {
 }
 
 void TrainingManager::onUpdate(const event::Event *event) {
+  static std::vector<std::string> checkpointNames;
   std::unique_lock worldStateLock(worldState_.mutex);
 
   LOG(INFO) << "Received event " << event::toString(event->eventCode);
@@ -128,7 +130,15 @@ void TrainingManager::onUpdate(const event::Event *event) {
     // Stop training.
     runTraining_ = false;
   } else if (event->eventCode == event::EventCode::kRlUiRequestCheckpointList) {
-    rlUserInterface_.sendCheckpointList({"example_checkpoint_name_1", "example_checkpoint_name_2", "tmp_ckpt"});
+    rlUserInterface_.sendCheckpointList(checkpointNames);
+  } else if (event->eventCode == event::EventCode::kRlUiSaveCheckpoint) {
+    const auto *saveCheckpointEvent = dynamic_cast<const event::RlUiSaveCheckpoint*>(event);
+    if (saveCheckpointEvent == nullptr) {
+      throw std::runtime_error("Received kRlUiSaveCheckpoint event but failed to cast to event::RlUiSaveCheckpoint");
+    }
+    LOG(INFO) << "Received save checkpoint request for " << saveCheckpointEvent->checkpointName;
+    checkpointNames.push_back(saveCheckpointEvent->checkpointName);
+    rlUserInterface_.sendCheckpointList(checkpointNames);
   }
 }
 

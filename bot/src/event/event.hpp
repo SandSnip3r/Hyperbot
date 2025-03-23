@@ -125,6 +125,7 @@
   F(RlUiStartTraining) \
   F(RlUiStopTraining) \
   F(RlUiRequestCheckpointList) \
+  F(RlUiSaveCheckpoint) \
   F(Dummy)
 
 namespace event {
@@ -624,6 +625,12 @@ struct ClientDied : public Event {
   explicit ClientDied(EventId id, ClientManagerInterface::ClientId clientId);
   ClientManagerInterface::ClientId clientId;
   virtual ~ClientDied() = default;
+};
+
+struct RlUiSaveCheckpoint : public Event {
+  explicit RlUiSaveCheckpoint(EventId id, const std::string &checkpointName);
+  const std::string checkpointName;
+  virtual ~RlUiSaveCheckpoint() = default;
 };
 
 } // namespace event

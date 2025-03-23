@@ -211,4 +211,7 @@ ReadyForPvp::ReadyForPvp(EventId id, sro::scalar_types::EntityGlobalId globalId)
 ClientDied::ClientDied(EventId id, ClientManagerInterface::ClientId clientId) :
     Event(id, EventCode::kClientDied), clientId(clientId) {}
 
+RlUiSaveCheckpoint::RlUiSaveCheckpoint(EventId id, const std::string &checkpointName) :
+    Event(id, EventCode::kRlUiSaveCheckpoint), checkpointName(checkpointName) {}
+
 } // namespace event
