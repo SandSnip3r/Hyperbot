@@ -64,6 +64,12 @@ void RlUserInterface::sendCheckpointList(const std::vector<std::string> &checkpo
   broadcastMessage(msg);
 }
 
+void RlUserInterface::sendCheckpointAlreadyExists(const std::string &checkpointName) {
+  rl_ui_messages::BroadcastMessage msg;
+  *msg.mutable_checkpoint_already_exists() = checkpointName;
+  broadcastMessage(msg);
+}
+
 // ================================================================================
 // ================================================================================
 // ================================================================================

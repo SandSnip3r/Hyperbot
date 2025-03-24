@@ -57,6 +57,7 @@ message BroadcastMessage {
   oneof body {
     google.protobuf.Empty heartbeat = 1;
     CheckpointList checkpoint_list = 2;
+    string checkpoint_already_exists = 3;
   }
 }
 

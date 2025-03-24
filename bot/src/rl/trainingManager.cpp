@@ -60,6 +60,7 @@ void TrainingManager::run() {
 }
 
 void TrainingManager::train() {
+  static bool first = true;
   std::mt19937 randomEngine = common::createRandomEngine();
   while (runTraining_) {
     // Get a S,A,R,S' tuple from the replay buffer.
@@ -91,12 +92,17 @@ void TrainingManager::train() {
 
               // Since we copy the rl::Observations from the replay buffer, we can unlock the mutex while we run JAX code.
               lock.unlock();
-
-              jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
-              ++trainStepCount_;
-              if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
-                LOG(INFO) << "Updating target network!";
-                jaxInterface_.updateTargetModel();
+              if (first) {
+                LOG(INFO) << "Doing training step";
+                jaxInterface_.printModels();
+                jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
+                jaxInterface_.printModels();
+                ++trainStepCount_;
+                if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
+                  LOG(INFO) << "Updating target network!";
+                  jaxInterface_.updateTargetModel();
+                }
+                first = false;
               }
             }
           }
@@ -111,7 +117,6 @@ void TrainingManager::train() {
 }
 
 void TrainingManager::onUpdate(const event::Event *event) {
-  static std::vector<std::string> checkpointNames;
   std::unique_lock worldStateLock(worldState_.mutex);
 
   LOG(INFO) << "Received event " << event::toString(event->eventCode);
@@ -130,6 +135,7 @@ void TrainingManager::onUpdate(const event::Event *event) {
     // Stop training.
     runTraining_ = false;
   } else if (event->eventCode == event::EventCode::kRlUiRequestCheckpointList) {
+    const std::vector<std::string> checkpointNames = checkpointManager_.getCheckpointNames();
     rlUserInterface_.sendCheckpointList(checkpointNames);
   } else if (event->eventCode == event::EventCode::kRlUiSaveCheckpoint) {
     const auto *saveCheckpointEvent = dynamic_cast<const event::RlUiSaveCheckpoint*>(event);
@@ -137,8 +143,14 @@ void TrainingManager::onUpdate(const event::Event *event) {
       throw std::runtime_error("Received kRlUiSaveCheckpoint event but failed to cast to event::RlUiSaveCheckpoint");
     }
     LOG(INFO) << "Received save checkpoint request for " << saveCheckpointEvent->checkpointName;
-    checkpointNames.push_back(saveCheckpointEvent->checkpointName);
-    rlUserInterface_.sendCheckpointList(checkpointNames);
+    const bool checkpointAlreadyExists = checkpointManager_.checkpointExists(saveCheckpointEvent->checkpointName);
+    if (checkpointAlreadyExists) {
+      rlUserInterface_.sendCheckpointAlreadyExists(saveCheckpointEvent->checkpointName);
+    } else {
+      checkpointManager_.saveCheckpoint(saveCheckpointEvent->checkpointName);
+      const std::vector<std::string> checkpointNames = checkpointManager_.getCheckpointNames();
+      rlUserInterface_.sendCheckpointList(checkpointNames);
+    };
   }
 }
 

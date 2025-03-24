@@ -29,8 +29,8 @@ bool checkHasAttr(py::object &obj, const std::string &attr_name) {
 JaxInterface::~JaxInterface() {
   VLOG(1) << "Destructing JaxInterface";
   py::gil_scoped_acquire acquire;
-  if (jaxModule_.has_value()) {
-    jaxModule_.reset();
+  if (dqnModule_.has_value()) {
+    dqnModule_.reset();
   }
   if (randomModule_.has_value()) {
     randomModule_.reset();
@@ -61,7 +61,7 @@ void JaxInterface::initialize() {
   py::object DqnModelType;
   py::tuple graphAndWeights;
 
-  jaxModule_ = py::module::import("rl.python.dqn");
+  dqnModule_ = py::module::import("rl.python.dqn");
   randomModule_ = py::module::import("jax.random");
   // Grab a random key based on our seed. Any randomness from this point on will split & replace this key held in member data.
   rngKey_ = randomModule_->attr("key")(kSeed);
@@ -69,7 +69,7 @@ void JaxInterface::initialize() {
   nnxModule_ = py::module::import("flax.nnx");
   nnxRngs_ = nnxModule_->attr("Rngs")(getNextRngKey());
   // Now, we want to create a randomly initialized model. Specifically, we want randomly initialized weights. To do this, we'll instantiate our NNX model, then split the abstract graph and the concrete weights.
-  DqnModelType = jaxModule_->attr("DqnModel");
+  DqnModelType = dqnModule_->attr("DqnModel");
   const int kInputSize = 4 + 1 + 32*2 + 3*2; // IF-CHANGE: If we change this, also change JaxInterface::observationToNumpy
   const int kOutputSize = kActionSpaceSize;
   model_ = DqnModelType(kInputSize, kOutputSize, *nnxRngs_);
@@ -78,6 +78,13 @@ void JaxInterface::initialize() {
   py::module optaxModule = py::module::import("optax");
   py::object adam = optaxModule.attr("adam")(kLearningRate);
   optimizerState_ = nnxModule_->attr("Optimizer")(*model_, adam);
+
+  try {
+    dqnModule_->attr("printWeights")(*model_);
+    dqnModule_->attr("printWeights")(*targetModel_);
+  } catch (std::exception &ex) {
+    LOG(ERROR) << "Caught exception in JaxInterface::initialize: " << ex.what();
+  }
 }
 
 int JaxInterface::selectAction(const Observation &observation, bool canSendPacket) {
@@ -96,7 +103,7 @@ int JaxInterface::selectAction(const Observation &observation, bool canSendPacke
       py::object actionPyObject;
       {
         ZoneScopedN("JaxInterface::selectAction_PYTHON");
-        actionPyObject = jaxModule_->attr("selectAction")(*model_, numpyObservation, actionMask, getNextRngKey());
+        actionPyObject = dqnModule_->attr("selectAction")(*model_, numpyObservation, actionMask, getNextRngKey());
       }
       actionIndex = actionPyObject.cast<int>();
     } catch (std::exception &ex) {
@@ -115,7 +122,7 @@ void JaxInterface::train(const Observation &olderObservation, int actionIndex, b
   py::gil_scoped_acquire acquire;
   try {
     ZoneScopedN("JaxInterface::train_PYTHON");
-    jaxModule_->attr("train")(*model_, *optimizerState_, *targetModel_, observationToNumpy(olderObservation), actionIndex, isTerminal, reward, observationToNumpy(newerObservation));
+    dqnModule_->attr("train")(*model_, *optimizerState_, *targetModel_, observationToNumpy(olderObservation), actionIndex, isTerminal, reward, observationToNumpy(newerObservation));
   } catch (std::exception &ex) {
     LOG(ERROR) << "Caught exception in JaxInterface::train: " << ex.what();
     throw;
@@ -128,10 +135,27 @@ void JaxInterface::updateTargetModel() {
   std::unique_lock targetModelLock(targetModelMutex_);
   py::gil_scoped_acquire acquire;
   try {
-    targetModel_ = jaxModule_->attr("getCopyOfModel")(*model_, *targetModel_);
+    targetModel_ = dqnModule_->attr("getCopyOfModel")(*model_, *targetModel_);
   } catch (std::exception &ex) {
     LOG(ERROR) << "Caught exception in JaxInterface::updateTargetModel: " << ex.what();
     throw;
+  }
+}
+
+void JaxInterface::printModels() {
+  try {
+    {
+      std::unique_lock modelLock(modelMutex_);
+      py::gil_scoped_acquire acquire;
+      dqnModule_->attr("printWeights")(*model_);
+    }
+    {
+      std::unique_lock targetModelLock(targetModelMutex_);
+      py::gil_scoped_acquire acquire;
+      dqnModule_->attr("printWeights")(*targetModel_);
+    }
+  } catch (std::exception &ex) {
+    LOG(ERROR) << "Caught exception in JaxInterface::printModels: " << ex.what();
   }
 }
 

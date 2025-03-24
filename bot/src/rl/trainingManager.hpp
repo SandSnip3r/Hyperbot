@@ -8,6 +8,7 @@
 #include "common/pvpDescriptor.hpp"
 #include "common/sessionId.hpp"
 #include "pk2/gameData.hpp"
+#include "rl/checkpointManager.hpp"
 #include "rl/intelligencePool.hpp"
 #include "rl/jaxInterface.hpp"
 #include "rl/observation.hpp"
@@ -63,6 +64,7 @@ private:
   common::PvpDescriptor::PvpId nextPvpId_{0};
   IntelligencePool intelligencePool_{*this};
   JaxInterface jaxInterface_;
+  CheckpointManager checkpointManager_;
   int trainStepCount_{0};
   static constexpr int kTargetNetworkUpdateInterval{10000};
 

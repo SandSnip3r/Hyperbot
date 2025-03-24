@@ -20,11 +20,12 @@ public:
   int selectAction(const Observation &observation, bool canSendPacket);
   void train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation);
   void updateTargetModel();
+  void printModels();
 private:
   static constexpr int kActionSpaceSize{36}; // TODO: If changed, also change rl::ActionBuilder
   static constexpr float kLearningRate{1e-5};
   static constexpr int kSeed{0};
-  std::optional<pybind11::module> jaxModule_;
+  std::optional<pybind11::module> dqnModule_;
   std::optional<pybind11::module> randomModule_;
   std::optional<pybind11::module> nnxModule_;
   std::optional<pybind11::object> rngKey_;

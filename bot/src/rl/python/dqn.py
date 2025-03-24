@@ -15,8 +15,9 @@ class DqnModel(nnx.Module):
     x = self.linear2(x)
     return x
 
-def func(number):
-  print(f'Hyperbot\'s first call into Python!!! Passed argument: {number}', flush=True)
+def printWeights(model):
+  _, params = nnx.split(model)
+  print(params)
 
 @nnx.jit
 def selectAction(model, observation, actionMask, key):
