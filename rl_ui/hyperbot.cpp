@@ -108,6 +108,14 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
       checkpointListReceived(checkpointListStr);
       break;
     }
+    case rl_ui_messages::BroadcastMessage::BodyCase::kCheckpointAlreadyExists: {
+      emit checkpointAlreadyExists(QString::fromStdString(broadcastMessage.checkpoint_already_exists()));
+      break;
+    }
+    default: {
+      LOG(WARNING) << "Received unexpected broadcast message.";
+      break;
+    }
   }
 }
 
