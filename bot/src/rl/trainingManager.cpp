@@ -321,10 +321,6 @@ void TrainingManager::saveCheckpoint(const std::string &checkpointName) {
   //  - Replay buffer, maybe?
   // We'll let the
   checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, intelligencePool_.getDeepLearningIntelligence()->getStepCount());
-  LOG(INFO) << "Saved checkpoint \"" << checkpointName << "\"";
-
-  const std::vector<std::string> checkpointNames = checkpointManager_.getCheckpointNames();
-  rlUserInterface_.sendCheckpointList(checkpointNames);
 }
 
 } // namespace rl

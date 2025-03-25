@@ -64,7 +64,7 @@ private:
   common::PvpDescriptor::PvpId nextPvpId_{0};
   IntelligencePool intelligencePool_{*this};
   JaxInterface jaxInterface_;
-  CheckpointManager checkpointManager_{eventBroker_, rlUserInterface_};
+  CheckpointManager checkpointManager_{rlUserInterface_};
   int trainStepCount_{0};
   static constexpr int kTargetNetworkUpdateInterval{10000};
 

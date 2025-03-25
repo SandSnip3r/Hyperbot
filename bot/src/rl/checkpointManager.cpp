@@ -11,7 +11,7 @@ using namespace proto;
 
 namespace rl {
 
-CheckpointManager::CheckpointManager(broker::EventBroker &eventBroker, ui::RlUserInterface &rlUserInterface) : eventBroker_(eventBroker), rlUserInterface_(rlUserInterface) {
+CheckpointManager::CheckpointManager(ui::RlUserInterface &rlUserInterface) : rlUserInterface_(rlUserInterface) {
   std::unique_lock lock(registryMutex_);
   LOG(INFO) << "Constructing CheckpointManager";
   const std::filesystem::path appDataPath = sro::file_util::getAppDataPath();
@@ -70,10 +70,14 @@ void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::Ja
       LOG(ERROR) << "Failed to serialize new checkpoint registry to file";
     }
   }
-  checkpointingThread_ = std::thread([this, modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath, &jaxInterface]() {
+  if (checkpointingThread_.joinable()) {
+    throw std::runtime_error("Another checkpointing thread is already running");
+  }
+  checkpointingThread_ = std::thread([this, checkpointName, modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath, &jaxInterface]() {
     rlUserInterface_.sendSavingCheckpoint();
     jaxInterface.saveCheckpoint(modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath);
     rlUserInterface_.sendCheckpointList(getCheckpointNames());
+    LOG(INFO) << "Saved checkpoint \"" << checkpointName << "\"";
   });
 }
 
