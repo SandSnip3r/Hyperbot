@@ -4,6 +4,7 @@
 #include "hyperbot.hpp"
 
 #include <QStringList>
+#include <QStringListModel>
 #include <QWidget>
 
 namespace Ui {
@@ -24,6 +25,7 @@ public slots:
 
 private:
   Ui::CheckpointWidget *ui;
+  QStringListModel *checkpointModel_{nullptr};
   Hyperbot *hyperbot_{nullptr};
 };
 

@@ -30,6 +30,7 @@ public:
   void stopTraining();
   void requestCheckpointList();
   void saveCheckpoint(const QString &checkpointName);
+  void loadCheckpoint(const QString &checkpointName);
 
 public slots:
   void onConnectionFailed();

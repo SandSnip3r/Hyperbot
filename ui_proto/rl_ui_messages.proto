@@ -12,12 +12,17 @@ message SaveCheckpoint {
   string name = 1;
 }
 
+message LoadCheckpoint {
+  string name = 1;
+}
+
 message AsyncRequest {
   oneof body {
     google.protobuf.Empty start_training = 1;
     google.protobuf.Empty stop_training = 2;
     google.protobuf.Empty request_checkpoint_list = 3;
     SaveCheckpoint save_checkpoint = 4;
+    LoadCheckpoint load_checkpoint = 5;
   }
 };
 

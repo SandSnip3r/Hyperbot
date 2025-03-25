@@ -79,6 +79,13 @@ void Hyperbot::saveCheckpoint(const QString &checkpointName) {
   sendAsyncRequest(asyncRequest);
 }
 
+void Hyperbot::loadCheckpoint(const QString &checkpointName) {
+  rl_ui_messages::AsyncRequest asyncRequest;
+  rl_ui_messages::LoadCheckpoint *loadCheckpoint = asyncRequest.mutable_load_checkpoint();
+  loadCheckpoint->set_name(checkpointName.toStdString());
+  sendAsyncRequest(asyncRequest);
+}
+
 void Hyperbot::onConnectionFailed() {
   emit connectionFailed();
 }
@@ -165,6 +172,7 @@ void Hyperbot::sendAsyncRequest(const rl_ui_messages::AsyncRequest &asyncRequest
     LOG(WARNING) << "Failed to send message to Hyperbot.";
     return;
   }
+  // TODO: Poll for reply. If polling fails, Hyperbot might've died immediately after our send. We should reset the socket and exit.
   zmq::message_t reply;
   zmq::recv_result_t receiveResult = socket_.recv(reply, zmq::recv_flags::none);
   if (!receiveResult) {
