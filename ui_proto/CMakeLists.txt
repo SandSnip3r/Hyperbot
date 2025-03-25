@@ -17,6 +17,7 @@ set(PROTO_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/old_config.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/position.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/request.proto"
+  "${CMAKE_CURRENT_SOURCE_DIR}/rl_checkpointing.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/rl_ui_config.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/rl_ui_messages.proto"
   "${CMAKE_CURRENT_SOURCE_DIR}/server_config.proto"

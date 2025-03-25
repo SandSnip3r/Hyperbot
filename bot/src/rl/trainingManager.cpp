@@ -68,9 +68,9 @@ void TrainingManager::train() {
       try {
         // TODO: Create replay buffer class.
         std::unique_lock lock(replayBufferMutex_);
-        if (!newReplayBuffer_.empty()) {
-          std::uniform_int_distribution<int> dist(0, newReplayBuffer_.size()-1);
-          auto it = newReplayBuffer_.begin();
+        if (!replayBuffer_.empty()) {
+          std::uniform_int_distribution<int> dist(0, replayBuffer_.size()-1);
+          auto it = replayBuffer_.begin();
           std::advance(it, dist(randomEngine));
           const common::PvpDescriptor::PvpId pvpId = it->first;
           const auto &pvpMap = it->second;
@@ -143,14 +143,7 @@ void TrainingManager::onUpdate(const event::Event *event) {
       throw std::runtime_error("Received kRlUiSaveCheckpoint event but failed to cast to event::RlUiSaveCheckpoint");
     }
     LOG(INFO) << "Received save checkpoint request for " << saveCheckpointEvent->checkpointName;
-    const bool checkpointAlreadyExists = checkpointManager_.checkpointExists(saveCheckpointEvent->checkpointName);
-    if (checkpointAlreadyExists) {
-      rlUserInterface_.sendCheckpointAlreadyExists(saveCheckpointEvent->checkpointName);
-    } else {
-      checkpointManager_.saveCheckpoint(saveCheckpointEvent->checkpointName);
-      const std::vector<std::string> checkpointNames = checkpointManager_.getCheckpointNames();
-      rlUserInterface_.sendCheckpointList(checkpointNames);
-    };
+    saveCheckpoint(saveCheckpointEvent->checkpointName);
   }
 }
 
@@ -158,14 +151,14 @@ void TrainingManager::reportEventObservationAndAction(common::PvpDescriptor::Pvp
   // LOG(INFO) << "[PVP #" << pvpId << "] Given event " << event::toString(event->eventCode) << " and observation " << observation.toString() << " for observer " << observerGlobalId << " and action " << actionIndex.value_or(-1);
   {
     std::unique_lock lock(replayBufferMutex_);
-    newReplayBuffer_[pvpId][observerGlobalId].push_back({event->eventCode, observation, actionIndex});
+    replayBuffer_[pvpId][observerGlobalId].push_back({event->eventCode, observation, actionIndex});
 
     // static int replayCount=0;
     // replayCount++;
     // if (replayCount % 100 == 0) {
     //   LOG(INFO) << "Replay count: " << replayCount;
     //   // Collect some stats about pvps in the replay buffer.
-    //   for (const auto &[pvpId, observerMap] : newReplayBuffer_) {
+    //   for (const auto &[pvpId, observerMap] : replayBuffer_) {
     //     for (const auto &[observerGlobalId, eventObservationActionList] : observerMap) {
     //       LOG(INFO) << "[PVP #" << pvpId << "] " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name << " has " << eventObservationActionList.size() << " events";
     //       // Calculate episode return.
@@ -306,6 +299,32 @@ double TrainingManager::calculateReward(const Observation &lastObservation, cons
     reward += 10.0;
   }
   return reward;
+}
+
+
+void TrainingManager::saveCheckpoint(const std::string &checkpointName) {
+  LOG(INFO) << "Being asked to save checkpoint \"" << checkpointName << "\"";
+  const bool checkpointAlreadyExists = checkpointManager_.checkpointExists(checkpointName);
+  if (checkpointAlreadyExists) {
+    LOG(INFO) << "  Checkpoint already exists";
+    rlUserInterface_.sendCheckpointAlreadyExists(checkpointName);
+    return;
+  }
+  LOG(INFO) << "  Checkpoint does not yet exist";
+
+  // Checkpoint does not exist. Save it.
+  // What needs to be saved in the checkpoint?
+  //  - Current model weights
+  //  - Target model weights
+  //  - Optimizer state
+  //  - DeepLearningIntelligence::stepCount_
+  //  - Replay buffer, maybe?
+  // We'll let the
+  checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, intelligencePool_.getDeepLearningIntelligence()->getStepCount());
+  LOG(INFO) << "Saved checkpoint \"" << checkpointName << "\"";
+
+  const std::vector<std::string> checkpointNames = checkpointManager_.getCheckpointNames();
+  rlUserInterface_.sendCheckpointList(checkpointNames);
 }
 
 } // namespace rl

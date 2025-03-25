@@ -70,6 +70,12 @@ void RlUserInterface::sendCheckpointAlreadyExists(const std::string &checkpointN
   broadcastMessage(msg);
 }
 
+void RlUserInterface::sendSavingCheckpoint() {
+  rl_ui_messages::BroadcastMessage msg;
+  msg.mutable_saving_checkpoint();
+  broadcastMessage(msg);
+}
+
 // ================================================================================
 // ================================================================================
 // ================================================================================

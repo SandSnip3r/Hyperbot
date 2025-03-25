@@ -1,6 +1,8 @@
 from flax import nnx
 import jax
 import jax.numpy as jnp
+import orbax
+import orbax.checkpoint
 
 class DqnModel(nnx.Module):
   def __init__(self, inSize: int, outSize: int, rngs: nnx.Rngs):
@@ -46,3 +48,16 @@ def getCopyOfModel(model, targetNetwork):
   graph, params = nnx.split(model)
   targetGraph, targetParams = nnx.split(targetNetwork)
   return nnx.merge(targetGraph, params)
+
+def checkpointModel(model, path):
+  print(f'Checkpointing model to {path}')
+  graph, params = nnx.split(model)
+  with orbax.checkpoint.StandardCheckpointer() as checkpointer:
+    checkpointer.save(path, params)
+    checkpointer.wait_until_finished()
+
+def checkpointOptimizer(optimizer, path):
+  print(f'Checkpointing optimizer to {path}')
+  with orbax.checkpoint.StandardCheckpointer() as checkpointer:
+    checkpointer.save(path, nnx.state(optimizer.opt_state))
+    checkpointer.wait_until_finished()

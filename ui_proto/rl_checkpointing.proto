@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package proto.rl_checkpointing;
+
+// ===================================================================
+// ============================= Request =============================
+// ===================================================================
+
+// message SaveCheckpoint {
+//   string name = 1;
+// }
+
+// message AsyncRequest {
+//   oneof body {
+//     google.protobuf.Empty start_training = 1;
+//     google.protobuf.Empty stop_training = 2;
+//     google.protobuf.Empty request_checkpoint_list = 3;
+//     SaveCheckpoint save_checkpoint = 4;
+//   }
+// };
+
+// message RequestMessage {
+//   oneof body {
+//     google.protobuf.Empty request_broadcast_port = 1;
+//     google.protobuf.Empty ping = 2;
+//     AsyncRequest async_request = 3;
+//   }
+// }
+
+// // ===================================================================
+// // ============================== Reply ==============================
+// // ===================================================================
+
+// message ReplyMessage {
+//   oneof body {
+//     int32 broadcast_port = 1;
+//     google.protobuf.Empty ping_ack = 2;
+//     google.protobuf.Empty async_request_ack = 3;
+//   }
+// }
+
+// // ===================================================================
+// // ============================ Broadcast ============================
+// // ===================================================================
+
+// message Checkpoint {
+//   string name = 1;
+// }
+
+// message CheckpointList {
+//   repeated Checkpoint checkpoints = 1;
+// }
+
+// message BroadcastMessage {
+//   oneof body {
+//     google.protobuf.Empty heartbeat = 1;
+//     CheckpointList checkpoint_list = 2;
+//     string checkpoint_already_exists = 3;
+//   }
+// }
+
+// ===================================================================
+// ===================================================================
+// ===================================================================
+
+message Checkpoint {
+  string checkpoint_name = 1;
+  string model_checkpoint_path = 2;
+  string target_model_checkpoint_path = 3;
+  string optimizer_checkpoint_path = 4;
+  int32 step_count = 5;
+}
+
+message CheckpointRegistry {
+  repeated Checkpoint checkpoints = 1;
+}

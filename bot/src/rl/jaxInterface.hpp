@@ -21,6 +21,9 @@ public:
   void train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation);
   void updateTargetModel();
   void printModels();
+
+  // Note: Parent directory does not need to exist.
+  void saveCheckpoint(const std::string &modelCheckpointPath, const std::string &targetModelCheckpointPath, const std::string &optimizerStateCheckpointPath);
 private:
   static constexpr int kActionSpaceSize{36}; // TODO: If changed, also change rl::ActionBuilder
   static constexpr float kLearningRate{1e-5};

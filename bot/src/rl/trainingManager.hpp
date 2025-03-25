@@ -64,7 +64,7 @@ private:
   common::PvpDescriptor::PvpId nextPvpId_{0};
   IntelligencePool intelligencePool_{*this};
   JaxInterface jaxInterface_;
-  CheckpointManager checkpointManager_;
+  CheckpointManager checkpointManager_{eventBroker_, rlUserInterface_};
   int trainStepCount_{0};
   static constexpr int kTargetNetworkUpdateInterval{10000};
 
@@ -81,23 +81,10 @@ private:
   void buildItemRequirementList();
   std::vector<common::ItemRequirement> itemRequirements_;
 
-  struct ReplayBufferEntry {
-    Observation observation;
-    int actionIndex;
-    double reward;
-    Observation nextObservation;
-  };
-
-  struct LastObservationAndAction {
-    Observation observation;
-    int actionIndex;
-  };
-
-  std::vector<ReplayBufferEntry> replayBuffer_;
-  std::map<sro::scalar_types::EntityGlobalId, LastObservationAndAction> lastObservationMap_;
-  std::map<common::PvpDescriptor::PvpId, std::map<sro::scalar_types::EntityGlobalId, std::vector<std::tuple<event::EventCode, Observation, std::optional<int>>>>> newReplayBuffer_;
+  std::map<common::PvpDescriptor::PvpId, std::map<sro::scalar_types::EntityGlobalId, std::vector<std::tuple<event::EventCode, Observation, std::optional<int>>>>> replayBuffer_;
   std::mutex replayBufferMutex_;
   double calculateReward(const Observation &lastObservation, const Observation &observation) const;
+  void saveCheckpoint(const std::string &checkpointName);
 };
 
 } // namespace rl

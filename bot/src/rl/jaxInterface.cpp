@@ -57,6 +57,8 @@ JaxInterface::~JaxInterface() {
 
 void JaxInterface::initialize() {
   VLOG(1) << "Constructing JaxInterface";
+  std::unique_lock modelLock(modelMutex_);
+  std::unique_lock targetModelLock(targetModelMutex_);
   py::gil_scoped_acquire acquire;
   py::object DqnModelType;
   py::tuple graphAndWeights;
@@ -156,6 +158,21 @@ void JaxInterface::printModels() {
     }
   } catch (std::exception &ex) {
     LOG(ERROR) << "Caught exception in JaxInterface::printModels: " << ex.what();
+  }
+}
+
+void JaxInterface::saveCheckpoint(const std::string &modelCheckpointPath, const std::string &targetModelCheckpointPath, const std::string &optimizerStateCheckpointPath) {
+  LOG(INFO) << "Saving checkpoint at paths \"" << modelCheckpointPath << "\", \"" << targetModelCheckpointPath << "\", and \"" << optimizerStateCheckpointPath << "\"";
+  std::unique_lock modelLock(modelMutex_);
+  std::unique_lock targetModelLock(targetModelMutex_);
+  py::gil_scoped_acquire acquire;
+  try {
+    dqnModule_->attr("checkpointModel")(*model_, modelCheckpointPath);
+    dqnModule_->attr("checkpointModel")(*targetModel_, targetModelCheckpointPath);
+    dqnModule_->attr("checkpointOptimizer")(*optimizerState_, optimizerStateCheckpointPath);
+  } catch (std::exception &ex) {
+    LOG(ERROR) << "Caught exception in JaxInterface::saveCheckpoint: " << ex.what();
+    throw;
   }
 }
 
