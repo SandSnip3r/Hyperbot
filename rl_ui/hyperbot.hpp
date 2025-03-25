@@ -45,6 +45,7 @@ signals:
   void disconnected();
   void checkpointListReceived(QStringList str);
   void checkpointAlreadyExists(QString checkpointName);
+  void savingCheckpoint();
 
 private:
   static constexpr int kHeartbeatIntervalMs = 500;

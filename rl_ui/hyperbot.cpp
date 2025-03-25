@@ -94,6 +94,7 @@ void Hyperbot::onConnected(int broadcastPort) {
 }
 
 void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage broadcastMessage) {
+  LOG(INFO) << broadcastMessage.DebugString();
   switch (broadcastMessage.body_case()) {
     case rl_ui_messages::BroadcastMessage::BodyCase::kHeartbeat: {
       LOG(WARNING) << "Should not receive heartbeat message here.";
@@ -110,6 +111,10 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
     }
     case rl_ui_messages::BroadcastMessage::BodyCase::kCheckpointAlreadyExists: {
       emit checkpointAlreadyExists(QString::fromStdString(broadcastMessage.checkpoint_already_exists()));
+      break;
+    }
+    case rl_ui_messages::BroadcastMessage::BodyCase::kSavingCheckpoint: {
+      emit savingCheckpoint();
       break;
     }
     default: {

@@ -20,6 +20,9 @@ void CheckpointWidget::setHyperbot(Hyperbot &hyperbot) {
   connect(hyperbot_, &Hyperbot::checkpointAlreadyExists, [this](QString checkpointName) {
     QMessageBox::information(this, "Checkpoint already exists", "Checkpoint \"" + checkpointName + "\" already exists.");
   });
+  connect(hyperbot_, &Hyperbot::savingCheckpoint, [this](){
+    ui->saveCheckpointButton->setEnabled(false);
+  });
   connect(ui->saveCheckpointButton, &QPushButton::clicked, this, &CheckpointWidget::onSaveCheckpointClicked);
 }
 
@@ -27,6 +30,7 @@ void CheckpointWidget::onCheckpointListReceived(QStringList list) {
   VLOG(1) << "Received checkpoint list: " << list.join(", ").toStdString();
   QStringListModel *checkpointModel = new QStringListModel(list);
   ui->checkpointsListView->setModel(checkpointModel);
+  ui->saveCheckpointButton->setEnabled(true);
 }
 
 void CheckpointWidget::onSaveCheckpointClicked() {
