@@ -214,4 +214,7 @@ ClientDied::ClientDied(EventId id, ClientManagerInterface::ClientId clientId) :
 RlUiSaveCheckpoint::RlUiSaveCheckpoint(EventId id, const std::string &checkpointName) :
     Event(id, EventCode::kRlUiSaveCheckpoint), checkpointName(checkpointName) {}
 
+RlUiLoadCheckpoint::RlUiLoadCheckpoint(EventId id, const std::string &checkpointName) :
+    Event(id, EventCode::kRlUiLoadCheckpoint), checkpointName(checkpointName) {}
+
 } // namespace event

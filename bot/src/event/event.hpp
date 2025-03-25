@@ -126,6 +126,7 @@
   F(RlUiStopTraining) \
   F(RlUiRequestCheckpointList) \
   F(RlUiSaveCheckpoint) \
+  F(RlUiLoadCheckpoint) \
   F(Dummy)
 
 namespace event {
@@ -631,6 +632,12 @@ struct RlUiSaveCheckpoint : public Event {
   explicit RlUiSaveCheckpoint(EventId id, const std::string &checkpointName);
   const std::string checkpointName;
   virtual ~RlUiSaveCheckpoint() = default;
+};
+
+struct RlUiLoadCheckpoint : public Event {
+  explicit RlUiLoadCheckpoint(EventId id, const std::string &checkpointName);
+  const std::string checkpointName;
+  virtual ~RlUiLoadCheckpoint() = default;
 };
 
 } // namespace event

@@ -59,5 +59,20 @@ def checkpointModel(model, path):
 def checkpointOptimizer(optimizer, path):
   print(f'Checkpointing optimizer to {path}')
   with orbax.checkpoint.StandardCheckpointer() as checkpointer:
-    checkpointer.save(path, nnx.state(optimizer.opt_state))
+    checkpointer.save(path, nnx.state(optimizer))
     checkpointer.wait_until_finished()
+
+def loadModelCheckpoint(currentModel, path):
+  print(f'Loading model checkpoint from {path}')
+  graph, abstractParams = nnx.split(currentModel)
+  with orbax.checkpoint.StandardCheckpointer() as checkpointer:
+    loadedParams = checkpointer.restore(path, abstractParams)
+    return nnx.merge(graph, loadedParams)
+
+def loadOptimizerCheckpoint(optimizer, path):
+  print(f'Loading optimizer checkpoint from {path}')
+  with orbax.checkpoint.StandardCheckpointer() as checkpointer:
+    abstractOptStateTree = jax.tree_util.tree_map(orbax.checkpoint.utils.to_shape_dtype_struct, nnx.state(optimizer))
+    optimizerState = checkpointer.restore(path, abstractOptStateTree)
+    nnx.update(optimizer, optimizerState)
+    return optimizer

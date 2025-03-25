@@ -12,6 +12,7 @@ public:
   int selectAction(Bot &bot, const Observation &observation, bool canSendPacket) override;
   std::string_view name() const override { return "DeepLearning"; }
   int getStepCount() const { return stepCount_; }
+  void setStepCount(int stepCount) { stepCount_ = stepCount; }
 private:
   static constexpr float kInitialEpsilon = 1.0f;
   static constexpr float kFinalEpsilon = 0.01f;

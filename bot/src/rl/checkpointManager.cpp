@@ -1,4 +1,5 @@
 #include "checkpointManager.hpp"
+#include "rl/ai/deepLearningIntelligence.hpp"
 #include "ui/rlUserInterface.hpp"
 
 #include <silkroad_lib/file_util.hpp>
@@ -26,14 +27,7 @@ CheckpointManager::CheckpointManager(ui::RlUserInterface &rlUserInterface) : rlU
   } else {
     // File does not exist. Create an empty one.
     LOG(INFO) << "Checkpoint registry file does not exist. Creating empty one.";
-    std::ofstream newCheckpointRegistryFile(appDataPath / kCheckpointRegistryFilename);
-    if (!newCheckpointRegistryFile.is_open()) {
-      LOG(ERROR) << "Failed to create new checkpoint registry file";
-    } else {
-      if (!checkpointRegistry_.SerializeToOstream(&newCheckpointRegistryFile)) {
-        LOG(ERROR) << "Failed to serialize new checkpoint registry to file";
-      }
-    }
+    saveCurrentRegistry();
   }
 }
 
@@ -60,15 +54,7 @@ void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::Ja
     newCheckpointProto->set_target_model_checkpoint_path(targetModelCheckpointPath);
     newCheckpointProto->set_optimizer_checkpoint_path(optimizerCheckpointPath);
     newCheckpointProto->set_step_count(stepCount);
-
-    std::ofstream newCheckpointRegistryFile(sro::file_util::getAppDataPath() / kCheckpointRegistryFilename);
-    if (!newCheckpointRegistryFile.is_open()) {
-      LOG(ERROR) << "Failed to create new checkpoint registry file";
-      return;
-    }
-    if (!checkpointRegistry_.SerializeToOstream(&newCheckpointRegistryFile)) {
-      LOG(ERROR) << "Failed to serialize new checkpoint registry to file";
-    }
+    saveCurrentRegistry();
   }
   if (checkpointingThread_.joinable()) {
     throw std::runtime_error("Another checkpointing thread is already running");
@@ -99,5 +85,35 @@ std::vector<std::string> CheckpointManager::getCheckpointNames() const {
   }
   return checkpointNames;
 }
+
+void CheckpointManager::loadCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, rl::ai::DeepLearningIntelligence *deepLearningIntelligence) {
+  std::unique_lock lock(registryMutex_);
+  for (const rl_checkpointing::Checkpoint &checkpoint : checkpointRegistry_.checkpoints()) {
+    if (checkpoint.checkpoint_name() == checkpointName) {
+      const std::string modelCheckpointPath = checkpoint.model_checkpoint_path();
+      const std::string targetModelCheckpointPath = checkpoint.target_model_checkpoint_path();
+      const std::string optimizerCheckpointPath = checkpoint.optimizer_checkpoint_path();
+      const int stepCount = checkpoint.step_count();
+      LOG(INFO) << "Loading checkpoint \"" << checkpointName << "\" from paths \"" << modelCheckpointPath << "\", \"" << targetModelCheckpointPath << "\", and \"" << optimizerCheckpointPath << "\"";
+      jaxInterface.loadCheckpoint(modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath);
+      if (deepLearningIntelligence != nullptr) {
+        deepLearningIntelligence->setStepCount(stepCount);
+      }
+      return;
+    }
+  }
+  throw std::runtime_error("Checkpoint not found");
+}
+
+void CheckpointManager::saveCurrentRegistry() {
+  std::ofstream checkpointRegistryFile(sro::file_util::getAppDataPath() / kCheckpointRegistryFilename);
+  if (!checkpointRegistryFile.is_open()) {
+    throw std::runtime_error("Failed to open/create checkpoint registry file");
+  }
+  if (!checkpointRegistry_.SerializeToOstream(&checkpointRegistryFile)) {
+    throw std::runtime_error("Failed to serialize checkpoint registry to file");
+  }
+}
+
 
 } // namespace rl

@@ -10,6 +10,10 @@
 #include <thread>
 #include <vector>
 
+namespace rl::ai {
+class DeepLearningIntelligence;
+} // namespace rl::ai
+
 namespace ui {
 class RlUserInterface;
 } // namespace ui
@@ -23,12 +27,16 @@ public:
   void saveCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, int stepCount);
   bool checkpointExists(const std::string &checkpointName) const;
   std::vector<std::string> getCheckpointNames() const;
+  void loadCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, rl::ai::DeepLearningIntelligence *deepLearningIntelligence);
 private:
   static constexpr std::string_view kCheckpointRegistryFilename{"checkpoint_registry"};
   ui::RlUserInterface &rlUserInterface_;
   mutable std::mutex registryMutex_;
   proto::rl_checkpointing::CheckpointRegistry checkpointRegistry_;
   std::thread checkpointingThread_;
+
+  // Note: Expects lock to be held.
+  void saveCurrentRegistry();
 };
 
 } // namespace rl

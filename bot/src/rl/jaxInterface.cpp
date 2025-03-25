@@ -38,6 +38,9 @@ JaxInterface::~JaxInterface() {
   if (nnxModule_.has_value()) {
     nnxModule_.reset();
   }
+  if (optaxModule_.has_value()) {
+    optaxModule_.reset();
+  }
   if (rngKey_.has_value()) {
     rngKey_.reset();
   }
@@ -77,16 +80,9 @@ void JaxInterface::initialize() {
   model_ = DqnModelType(kInputSize, kOutputSize, *nnxRngs_);
   targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
 
-  py::module optaxModule = py::module::import("optax");
-  py::object adam = optaxModule.attr("adam")(kLearningRate);
+  optaxModule_ = py::module::import("optax");
+  py::object adam = optaxModule_->attr("adam")(kLearningRate);
   optimizerState_ = nnxModule_->attr("Optimizer")(*model_, adam);
-
-  try {
-    dqnModule_->attr("printWeights")(*model_);
-    dqnModule_->attr("printWeights")(*targetModel_);
-  } catch (std::exception &ex) {
-    LOG(ERROR) << "Caught exception in JaxInterface::initialize: " << ex.what();
-  }
 }
 
 int JaxInterface::selectAction(const Observation &observation, bool canSendPacket) {
@@ -172,6 +168,25 @@ void JaxInterface::saveCheckpoint(const std::string &modelCheckpointPath, const 
     dqnModule_->attr("checkpointOptimizer")(*optimizerState_, optimizerStateCheckpointPath);
   } catch (std::exception &ex) {
     LOG(ERROR) << "Caught exception in JaxInterface::saveCheckpoint: " << ex.what();
+    throw;
+  }
+}
+
+void JaxInterface::loadCheckpoint(const std::string &modelCheckpointPath, const std::string &targetModelCheckpointPath, const std::string &optimizerStateCheckpointPath) {
+  LOG(INFO) << "Loading checkpoint at paths \"" << modelCheckpointPath << "\", \"" << targetModelCheckpointPath << "\", and \"" << optimizerStateCheckpointPath << "\"";
+  std::unique_lock modelLock(modelMutex_);
+  std::unique_lock targetModelLock(targetModelMutex_);
+  py::gil_scoped_acquire acquire;
+  try {
+    model_ = dqnModule_->attr("loadModelCheckpoint")(*model_, modelCheckpointPath);
+    targetModel_ = dqnModule_->attr("loadModelCheckpoint")(*targetModel_, targetModelCheckpointPath);
+    // Construct new optimizer for the loaded model.
+    py::object adam = optaxModule_->attr("adam")(kLearningRate);
+    optimizerState_ = nnxModule_->attr("Optimizer")(*model_, adam);
+    // Load the optimizer state into the newly created optimizer.
+    optimizerState_ = dqnModule_->attr("loadOptimizerCheckpoint")(*optimizerState_, optimizerStateCheckpointPath);
+  } catch (std::exception &ex) {
+    LOG(ERROR) << "Caught exception in JaxInterface::loadCheckpoint: " << ex.what();
     throw;
   }
 }

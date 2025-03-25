@@ -145,6 +145,9 @@ void RlUserInterface::handleRequest(const zmq::message_t &request, zmq::socket_t
       } else if (asyncRequestMsg.body_case() == rl_ui_messages::AsyncRequest::BodyCase::kSaveCheckpoint) {
         const rl_ui_messages::SaveCheckpoint &saveCheckpointMsg = asyncRequestMsg.save_checkpoint();
         eventBroker_.publishEvent<event::RlUiSaveCheckpoint>(saveCheckpointMsg.name());
+      } else if (asyncRequestMsg.body_case() == rl_ui_messages::AsyncRequest::BodyCase::kLoadCheckpoint) {
+        const rl_ui_messages::LoadCheckpoint &loadCheckpointMsg = asyncRequestMsg.load_checkpoint();
+        eventBroker_.publishEvent<event::RlUiLoadCheckpoint>(loadCheckpointMsg.name());
       } else {
         throw std::runtime_error(absl::StrFormat("RlUserInterface received invalid async request \"%s\"", asyncRequestMsg.DebugString()));
       }

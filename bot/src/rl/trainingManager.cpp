@@ -37,6 +37,7 @@ void TrainingManager::run() {
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiStopTraining, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiRequestCheckpointList, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiSaveCheckpoint, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kRlUiLoadCheckpoint, eventHandleFunction);
 
   jaxInterface_.initialize();
 
@@ -60,7 +61,6 @@ void TrainingManager::run() {
 }
 
 void TrainingManager::train() {
-  static bool first = true;
   std::mt19937 randomEngine = common::createRandomEngine();
   while (runTraining_) {
     // Get a S,A,R,S' tuple from the replay buffer.
@@ -92,17 +92,11 @@ void TrainingManager::train() {
 
               // Since we copy the rl::Observations from the replay buffer, we can unlock the mutex while we run JAX code.
               lock.unlock();
-              if (first) {
-                LOG(INFO) << "Doing training step";
-                jaxInterface_.printModels();
-                jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
-                jaxInterface_.printModels();
-                ++trainStepCount_;
-                if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
-                  LOG(INFO) << "Updating target network!";
-                  jaxInterface_.updateTargetModel();
-                }
-                first = false;
+              jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
+              ++trainStepCount_;
+              if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
+                LOG(INFO) << "Updating target network!";
+                jaxInterface_.updateTargetModel();
               }
             }
           }
@@ -144,6 +138,14 @@ void TrainingManager::onUpdate(const event::Event *event) {
     }
     LOG(INFO) << "Received save checkpoint request for " << saveCheckpointEvent->checkpointName;
     saveCheckpoint(saveCheckpointEvent->checkpointName);
+  } else if (event->eventCode == event::EventCode::kRlUiLoadCheckpoint) {
+    const auto *loadCheckpointEvent = dynamic_cast<const event::RlUiLoadCheckpoint*>(event);
+    if (loadCheckpointEvent == nullptr) {
+      throw std::runtime_error("Received kRlUiLoadCheckpoint event but failed to cast to event::RlUiLoadCheckpoint");
+    }
+    LOG(INFO) << "Received load checkpoint request for " << loadCheckpointEvent->checkpointName;
+    checkpointManager_.loadCheckpoint(loadCheckpointEvent->checkpointName, jaxInterface_, intelligencePool_.getDeepLearningIntelligence());
+    LOG(INFO) << "Done loading";
   }
 }
 
