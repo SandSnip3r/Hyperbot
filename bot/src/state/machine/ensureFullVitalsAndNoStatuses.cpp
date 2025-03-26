@@ -57,7 +57,13 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
   CHAR_VLOG(1) << "No child state machine. Checking vitals";
   std::vector<common::ItemRequirement> fullVitalsItemRequirements;
   const bool hpNotFull = bot_.selfState()->currentHp() < bot_.selfState()->maxHp();
+  if (hpNotFull) {
+    CHAR_VLOG(1) << "hpNotFull";
+  }
   const bool mpNotFull = bot_.selfState()->currentMp() < bot_.selfState()->maxMp();
+  if (mpNotFull) {
+    CHAR_VLOG(1) << "mpNotFull";
+  }
   const bool spawnAndUseVigor = !waitForPotionEventId_.has_value() && (hpNotFull || mpNotFull);
   if (spawnAndUseVigor) {
     // Spawn and use a vigor potion
