@@ -41,9 +41,14 @@ private:
   QLineSeries *series_;
   QValueAxis *xAxis_;
   QTimer *timer_;
+  float minX_{0};
+  float maxX_{0};
+  float minY_{0};
+  float maxY_{0};
 
   void connectSignals();
   void showConnectionWindow(const QString &windowTitle);
   void testChart();
+  void addDataPoint(float x, float y);
 };
 #endif // MAIN_WINDOW_HPP_

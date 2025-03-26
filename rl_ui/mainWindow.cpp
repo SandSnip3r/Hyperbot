@@ -22,6 +22,7 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot, QWidget *parent) : Q
   ui->checkpointWidget->setHyperbot(hyperbot_);
   setWindowTitle(tr("Hyperbot"));
   connectSignals();
+  testChart();
 }
 
 void MainWindow::showEvent(QShowEvent *event) {
@@ -54,19 +55,21 @@ void MainWindow::showConnectionWindow(const QString &windowTitle) {
 
 void MainWindow::testChart() {
   series_ = new QLineSeries;
-  series_->append(0,6);
-  series_->append(2,4);
-  series_->append(3,8);
-  series_->append(7,4);
-  series_->append(10,5);
   QChart *chart = new QChart;
+  ui->graphWidget->setRenderHint(QPainter::Antialiasing);
   chart->legend()->hide();
   chart->addSeries(series_);
   chart->createDefaultAxes();
   chart->setTitle("My title");
+  chart->setBackgroundRoundness(0);
+  chart->setBackgroundVisible(false);
   ui->graphWidget->setChart(chart);
-  // chart->axes()
 
+  addDataPoint(0,6);
+  addDataPoint(2,4);
+  addDataPoint(3,8);
+  addDataPoint(7,4);
+  addDataPoint(10,5);
   timer_ = new QTimer(this);
   timer_->setInterval(100);
   connect(timer_, &QTimer::timeout, this, &MainWindow::onTimerTriggered);
@@ -89,6 +92,47 @@ void MainWindow::onTimerTriggered() {
   static std::uniform_real_distribution<double> dist(0, 100);
   static int xVal{11};
   int y = dist(gen);
-  series_->append(xVal++, y);
-  LOG(INFO) << "Trigger";
+  addDataPoint(xVal, y);
+  xVal++;
+  if (xVal > 100) {
+    timer_->stop();
+  }
+}
+
+void MainWindow::addDataPoint(float x, float y) {
+  series_->append(x, y);
+  QChart *chart = ui->graphWidget->chart();
+  if (chart) {
+    bool scaleChanged = false;
+    if (x < minX_) {
+      minX_ = x;
+      scaleChanged = true;
+    }
+    if (x > maxX_) {
+      maxX_ = x;
+      scaleChanged = true;
+    }
+    if (scaleChanged) {
+      QAbstractAxis *axisX = chart->axes(Qt::Horizontal).first();
+      if (axisX) {
+        axisX->setRange(minX_, maxX_);
+      }
+    }
+    scaleChanged = false;
+    if (y < minY_) {
+      minY_ = y;
+      scaleChanged = true;
+    }
+    if (y > maxY_) {
+      maxY_ = y;
+      scaleChanged = true;
+    }
+    if (scaleChanged) {
+      QAbstractAxis *axisY = chart->axes(Qt::Vertical).first();
+      if (axisY) {
+        axisY->setRange(minY_, maxY_);
+      }
+    }
+  }
+
 }
