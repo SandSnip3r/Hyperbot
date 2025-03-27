@@ -92,7 +92,8 @@ void TrainingManager::train() {
 
               // Since we copy the rl::Observations from the replay buffer, we can unlock the mutex while we run JAX code.
               lock.unlock();
-              jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
+              const double loss = jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
+              rlUserInterface_.plot("Train Loss", trainStepCount_, loss);
               ++trainStepCount_;
               if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
                 LOG(INFO) << "Updating target network!";

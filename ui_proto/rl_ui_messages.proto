@@ -58,12 +58,19 @@ message CheckpointList {
   repeated Checkpoint checkpoints = 1;
 }
 
+message PlotData {
+  string name = 1;
+  float x = 2;
+  float y = 3;
+}
+
 message BroadcastMessage {
   oneof body {
     google.protobuf.Empty heartbeat = 1;
     CheckpointList checkpoint_list = 2;
     string checkpoint_already_exists = 3;
     google.protobuf.Empty saving_checkpoint = 4;
+    PlotData plot_data = 5;
   }
 }
 

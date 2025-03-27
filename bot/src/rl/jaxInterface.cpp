@@ -113,14 +113,15 @@ int JaxInterface::selectAction(const Observation &observation, bool canSendPacke
   return actionIndex;
 }
 
-void JaxInterface::train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation) {
+double JaxInterface::train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation) {
   ZoneScopedN("JaxInterface::train");
   std::unique_lock modelLock(modelMutex_);
   std::unique_lock targetModelLock(targetModelMutex_);
   py::gil_scoped_acquire acquire;
   try {
     ZoneScopedN("JaxInterface::train_PYTHON");
-    dqnModule_->attr("train")(*model_, *optimizerState_, *targetModel_, observationToNumpy(olderObservation), actionIndex, isTerminal, reward, observationToNumpy(newerObservation));
+    py::object loss = dqnModule_->attr("train")(*model_, *optimizerState_, *targetModel_, observationToNumpy(olderObservation), actionIndex, isTerminal, reward, observationToNumpy(newerObservation));
+    return py::cast<double>(loss);
   } catch (std::exception &ex) {
     LOG(ERROR) << "Caught exception in JaxInterface::train: " << ex.what();
     throw;

@@ -28,6 +28,8 @@ public:
   void sendCheckpointList(const std::vector<std::string> &checkpointList);
   void sendCheckpointAlreadyExists(const std::string &checkpointName);
   void sendSavingCheckpoint();
+
+  void plot(std::string_view plotName, double x, double y);
 private:
   static constexpr std::chrono::milliseconds kHeartbeatInterval{250};
   const std::string kReqReplyAddress{"tcp://*:5555"};

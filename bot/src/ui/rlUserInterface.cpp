@@ -76,6 +76,15 @@ void RlUserInterface::sendSavingCheckpoint() {
   broadcastMessage(msg);
 }
 
+void RlUserInterface::plot(std::string_view plotName, double x, double y) {
+  rl_ui_messages::BroadcastMessage msg;
+  rl_ui_messages::PlotData *plotDataMsg = msg.mutable_plot_data();
+  plotDataMsg->set_name(std::string(plotName));
+  plotDataMsg->set_x(x);
+  plotDataMsg->set_y(y);
+  broadcastMessage(msg);
+}
+
 // ================================================================================
 // ================================================================================
 // ================================================================================

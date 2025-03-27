@@ -18,7 +18,9 @@ public:
   ~JaxInterface();
   void initialize();
   int selectAction(const Observation &observation, bool canSendPacket);
-  void train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation);
+
+  // Returns loss.
+  double train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation);
   void updateTargetModel();
   void printModels();
 

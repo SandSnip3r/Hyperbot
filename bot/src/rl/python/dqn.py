@@ -29,20 +29,19 @@ def selectAction(model, observation, actionMask, key):
   return jnp.argmax(values)
 
 @nnx.jit
-def train(model, optimizerState, targetModel, olderObservation, selectedAction, isTerminal, reward, newerObservation):
-  # Move model(oldObservation)[selectedAction] towards gamma * max_action(targetModel(newObservation)) + reward
+def train(model, optimizerState, targetModel, observation, selectedAction, isTerminal, reward, nextObservation):
+  # Move model(observation)[selectedAction] towards gamma * max_action(targetModel(nextObservation)) + reward
   def lossFunction(model, observation, actionIndex, target):
     values = model(observation)
     return jnp.mean(jnp.square(values[actionIndex] - target))
 
-  currentValue = model(olderObservation)[selectedAction]
-  gamma = 0.9925
-  targetValue = jax.lax.cond(isTerminal, lambda _: reward, lambda _: reward + gamma * jnp.max(targetModel(newerObservation)), None)
+  gamma = 1.0
+  targetValue = jax.lax.cond(isTerminal, lambda _: reward, lambda _: reward + gamma * jnp.max(targetModel(nextObservation)), None)
 
-  gradients = nnx.grad(lossFunction)(model, olderObservation, selectedAction, targetValue)
+  # gradients = nnx.grad(lossFunction)(model, observation, selectedAction, targetValue)
+  loss, gradients = nnx.value_and_grad(lossFunction)(model, observation, selectedAction, targetValue)
   optimizerState.update(gradients)
-  newValue = model(olderObservation)[selectedAction]
-  # jax.debug.print('Old value: {}, New value: {}, Target value: {} Terminal? {}', currentValue, newValue, targetValue, isTerminal)
+  return loss
 
 def getCopyOfModel(model, targetNetwork):
   graph, params = nnx.split(model)
