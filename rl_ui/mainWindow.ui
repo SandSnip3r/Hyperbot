@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1298</width>
-    <height>1136</height>
+    <width>1584</width>
+    <height>1128</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,13 +27,13 @@
      <string>Start Training</string>
     </property>
    </widget>
-   <widget class="QChartView" name="graphWidget" native="true">
+   <widget class="InteractiveChartView" name="graphWidget" native="true">
     <property name="geometry">
      <rect>
-      <x>850</x>
-      <y>110</y>
-      <width>391</width>
-      <height>311</height>
+      <x>520</x>
+      <y>20</y>
+      <width>681</width>
+      <height>531</height>
      </rect>
     </property>
    </widget>
@@ -66,7 +66,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1298</width>
+     <width>1584</width>
      <height>21</height>
     </rect>
    </property>
@@ -75,15 +75,15 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>QChartView</class>
-   <extends>QWidget</extends>
-   <header>QtCharts/QChartView</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>CheckpointWidget</class>
    <extends>QWidget</extends>
    <header>checkpointWidget.hpp</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>InteractiveChartView</class>
+   <extends>QWidget</extends>
+   <header>interactiveChartView.hpp</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

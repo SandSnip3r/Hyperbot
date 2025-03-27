@@ -24,6 +24,7 @@ qt_add_executable(rl_ui
   hyperbot.hpp hyperbot.cpp
   config.hpp config.cpp
   hyperbotConnectWorker.hpp hyperbotConnectWorker.cpp
+  interactiveChartView.hpp interactiveChartView.cpp
   hyperbotSubscriberWorker.hpp hyperbotSubscriberWorker.cpp
   checkpointWidget.hpp checkpointWidget.cpp checkpointwidget.ui
 )

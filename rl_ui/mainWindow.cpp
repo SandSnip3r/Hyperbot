@@ -54,22 +54,14 @@ void MainWindow::showConnectionWindow(const QString &windowTitle) {
 }
 
 void MainWindow::testChart() {
-  series_ = new QLineSeries;
-  QChart *chart = new QChart;
-  ui->graphWidget->setRenderHint(QPainter::Antialiasing);
-  chart->legend()->hide();
-  chart->addSeries(series_);
-  chart->createDefaultAxes();
-  chart->setTitle("My title");
-  chart->setBackgroundRoundness(0);
-  chart->setBackgroundVisible(false);
-  ui->graphWidget->setChart(chart);
+  ui->graphWidget->chart()->setBackgroundRoundness(0);
+  ui->graphWidget->chart()->setBackgroundVisible(false);
 
-  addDataPoint(0,6);
-  addDataPoint(2,4);
-  addDataPoint(3,8);
-  addDataPoint(7,4);
-  addDataPoint(10,5);
+  ui->graphWidget->addDataPoint({0,6});
+  ui->graphWidget->addDataPoint({2,4});
+  ui->graphWidget->addDataPoint({3,8});
+  ui->graphWidget->addDataPoint({7,4});
+  ui->graphWidget->addDataPoint({10,5});
   timer_ = new QTimer(this);
   timer_->setInterval(100);
   connect(timer_, &QTimer::timeout, this, &MainWindow::onTimerTriggered);
@@ -90,13 +82,10 @@ void MainWindow::onDisconnectedFromHyperbot() {
 void MainWindow::onTimerTriggered() {
   static std::mt19937 gen(std::random_device{}());
   static std::uniform_real_distribution<double> dist(0, 100);
-  static int xVal{11};
-  int y = dist(gen);
-  addDataPoint(xVal, y);
-  xVal++;
-  if (xVal > 100) {
-    timer_->stop();
-  }
+  static qreal xVal{11};
+  qreal y = dist(gen);
+  ui->graphWidget->addDataPoint({xVal, y});
+  xVal += 1;
 }
 
 void MainWindow::addDataPoint(float x, float y) {
