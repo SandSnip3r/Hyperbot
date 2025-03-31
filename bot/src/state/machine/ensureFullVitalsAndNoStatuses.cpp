@@ -58,11 +58,11 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
   std::vector<common::ItemRequirement> fullVitalsItemRequirements;
   const bool hpNotFull = bot_.selfState()->currentHp() < bot_.selfState()->maxHp();
   if (hpNotFull) {
-    CHAR_VLOG(1) << "hpNotFull";
+    CHAR_VLOG(1) << "hp: " << bot_.selfState()->currentHp() << "/" << *bot_.selfState()->maxHp();
   }
   const bool mpNotFull = bot_.selfState()->currentMp() < bot_.selfState()->maxMp();
   if (mpNotFull) {
-    CHAR_VLOG(1) << "mpNotFull";
+    CHAR_VLOG(1) << "mp: " << bot_.selfState()->currentMp() << "/" << *bot_.selfState()->maxMp();
   }
   const bool spawnAndUseVigor = !waitForPotionEventId_.has_value() && (hpNotFull || mpNotFull);
   if (spawnAndUseVigor) {
