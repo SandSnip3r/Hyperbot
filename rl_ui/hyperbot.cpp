@@ -101,19 +101,18 @@ void Hyperbot::onConnected(int broadcastPort) {
 }
 
 void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage broadcastMessage) {
-  LOG(INFO) << broadcastMessage.DebugString();
   switch (broadcastMessage.body_case()) {
     case rl_ui_messages::BroadcastMessage::BodyCase::kHeartbeat: {
       LOG(WARNING) << "Should not receive heartbeat message here.";
       break;
     }
     case rl_ui_messages::BroadcastMessage::BodyCase::kCheckpointList: {
-      rl_ui_messages::CheckpointList checkpointList = broadcastMessage.checkpoint_list();
+      const rl_ui_messages::CheckpointList &checkpointList = broadcastMessage.checkpoint_list();
       QStringList checkpointListStr;
       for (const rl_ui_messages::Checkpoint &checkpoint : checkpointList.checkpoints()) {
         checkpointListStr.append(QString::fromStdString(checkpoint.name()));
       }
-      checkpointListReceived(checkpointListStr);
+      emit checkpointListReceived(checkpointListStr);
       break;
     }
     case rl_ui_messages::BroadcastMessage::BodyCase::kCheckpointAlreadyExists: {
@@ -122,6 +121,11 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
     }
     case rl_ui_messages::BroadcastMessage::BodyCase::kSavingCheckpoint: {
       emit savingCheckpoint();
+      break;
+    }
+    case rl_ui_messages::BroadcastMessage::BodyCase::kPlotData: {
+      const rl_ui_messages::PlotData &plotDataMsg = broadcastMessage.plot_data();
+      emit plotData(plotDataMsg.x(), plotDataMsg.y());
       break;
     }
     default: {

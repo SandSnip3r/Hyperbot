@@ -44,9 +44,12 @@ signals:
   void connectionCancelled();
   void connected();
   void disconnected();
+
+  // Broadcast messages.
   void checkpointListReceived(QStringList str);
   void checkpointAlreadyExists(QString checkpointName);
   void savingCheckpoint();
+  void plotData(qreal x, qreal y);
 
 private:
   static constexpr int kHeartbeatIntervalMs = 500;

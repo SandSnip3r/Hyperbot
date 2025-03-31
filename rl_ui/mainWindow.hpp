@@ -49,6 +49,6 @@ private:
   void connectSignals();
   void showConnectionWindow(const QString &windowTitle);
   void testChart();
-  void addDataPoint(float x, float y);
+  void addDataPoint(qreal x, qreal y);
 };
 #endif // MAIN_WINDOW_HPP_

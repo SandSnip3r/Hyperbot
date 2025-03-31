@@ -43,6 +43,10 @@ target_link_libraries(rl_ui PRIVATE
   ui_proto
 )
 
+if(TRACY_ENABLE)
+  target_link_libraries(rl_ui PRIVATE Tracy::TracyClient)
+endif()
+
 set_target_properties(rl_ui PROPERTIES
     ${BUNDLE_ID_OPTION}
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}

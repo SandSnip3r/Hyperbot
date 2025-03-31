@@ -3,6 +3,8 @@
 #include "mainWindow.hpp"
 #include "./ui_mainwindow.h"
 
+#include <tracy/Tracy.hpp>
+
 #include <absl/log/log.h>
 
 #include <QtCharts/QChart>
@@ -22,7 +24,7 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot, QWidget *parent) : Q
   ui->checkpointWidget->setHyperbot(hyperbot_);
   setWindowTitle(tr("Hyperbot"));
   connectSignals();
-  testChart();
+  // testChart();
 }
 
 void MainWindow::showEvent(QShowEvent *event) {
@@ -39,6 +41,9 @@ void MainWindow::connectSignals() {
   connect(ui->startTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::startTraining);
   connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
   connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
+
+  // TODO: Organize this better
+  connect(&hyperbot_, &Hyperbot::plotData, this, &MainWindow::addDataPoint);
 }
 
 void MainWindow::showConnectionWindow(const QString &windowTitle) {
@@ -88,40 +93,11 @@ void MainWindow::onTimerTriggered() {
   xVal += 1;
 }
 
-void MainWindow::addDataPoint(float x, float y) {
-  series_->append(x, y);
-  QChart *chart = ui->graphWidget->chart();
-  if (chart) {
-    bool scaleChanged = false;
-    if (x < minX_) {
-      minX_ = x;
-      scaleChanged = true;
-    }
-    if (x > maxX_) {
-      maxX_ = x;
-      scaleChanged = true;
-    }
-    if (scaleChanged) {
-      QAbstractAxis *axisX = chart->axes(Qt::Horizontal).first();
-      if (axisX) {
-        axisX->setRange(minX_, maxX_);
-      }
-    }
-    scaleChanged = false;
-    if (y < minY_) {
-      minY_ = y;
-      scaleChanged = true;
-    }
-    if (y > maxY_) {
-      maxY_ = y;
-      scaleChanged = true;
-    }
-    if (scaleChanged) {
-      QAbstractAxis *axisY = chart->axes(Qt::Vertical).first();
-      if (axisY) {
-        axisY->setRange(minY_, maxY_);
-      }
-    }
+void MainWindow::addDataPoint(qreal x, qreal y) {
+  static int count=0;
+  ++count;
+  if (count % 1000 == 0) {
+    LOG(INFO) << "Adding data point #" << count;
   }
-
+  ui->graphWidget->addDataPoint({x,y});
 }
