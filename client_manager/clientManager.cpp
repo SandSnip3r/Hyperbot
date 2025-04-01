@@ -7,6 +7,8 @@
 #include <silkroad_lib/pk2/pk2.hpp>
 #include <silkroad_lib/pk2/pk2ReaderModern.hpp>
 
+#include <boost/dll/runtime_symbol_info.hpp>
+
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 
@@ -116,7 +118,9 @@ void ClientManager::replyWithError(const std::string &errorMessage) {
 }
 
 void ClientManager::checkDllPath() {
-  dllPath_ = std::filesystem::current_path() / "loader_dll.dll";
+  boost::dll::fs::path exePath = boost::dll::program_location();
+  boost::dll::fs::path exeDir = exePath.parent_path();
+  dllPath_ = std::filesystem::path(exeDir.string()) / "loader_dll.dll";
   if (!std::filesystem::exists(dllPath_)) {
     throw std::runtime_error(absl::StrFormat("loader_dll.dll does not exist at \"%s\"", dllPath_.string()));
   }

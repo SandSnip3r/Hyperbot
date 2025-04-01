@@ -28,3 +28,4 @@ bld/
 /win32_build/
 /build*/
 tools/paramIdNumToName/main
+vcpkg_installed/

@@ -14,6 +14,7 @@ if(USE_ASAN)
   add_link_options(-fsanitize=address)
 endif()
 
+find_package(absl CONFIG REQUIRED)
 find_package(GTest REQUIRED)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")

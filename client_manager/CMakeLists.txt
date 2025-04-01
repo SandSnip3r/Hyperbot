@@ -5,6 +5,7 @@ if (NOT ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4
   message(FATAL_ERROR "${PROJECT_NAME} can only be built for x86 Windows")
 endif()
 
+find_package(Boost COMPONENTS filesystem REQUIRED)
 find_package(cppzmq CONFIG REQUIRED)
 
 set(SOURCES
@@ -27,6 +28,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   absl::flags_parse
   absl::log
   absl::log_initialize
+  Boost::filesystem
   silkroad_lib
   ui_proto
 )

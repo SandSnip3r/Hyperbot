@@ -8,11 +8,11 @@
     {
       "name": "win32",
       "displayName": "Win32 configure step with vcpkg toolchain",
-      "generator": "Visual Studio 16 2019",
+      "generator": "Visual Studio 17 2022",
       "architecture": "Win32",
       "binaryDir": "${sourceDir}/build_win32",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "C:/Users/Victor/Documents/Development/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_TOOLCHAIN_FILE": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "USE_ASAN": "OFF"
       }
     },
@@ -33,7 +33,7 @@
       "binaryDir": "${sourceDir}/build_win64_qt_rl_ui",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_TOOLCHAIN_FILE": "C:/Users/Victor/Documents/Development/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_TOOLCHAIN_FILE": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "BUILD_UI": "ON",
         "USE_ASAN": "OFF",
         "CMAKE_PREFIX_PATH": "C:/Qt/6.8.2/msvc2022_64"

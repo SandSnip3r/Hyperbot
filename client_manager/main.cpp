@@ -15,7 +15,7 @@ ABSL_FLAG(int, v, -1, "Verbose logging level");
 ABSL_FLAG(std::vector<std::string>, vmodule, {}, "Per-module verbose logging level");
 ABSL_FLAG(std::string, ip_address, "127.0.0.1", "IP address of Hyperbot");
 ABSL_FLAG(int32_t, port, 2235, "Port of Hyperbot");
-ABSL_FLAG(std::string, client_path, "C:\\Users\\Victor\\Documents\\Development\\Daxter Silkroad server files\\Silkroad Client", "Path to sro_client.exe");
+ABSL_FLAG(std::string, client_path, "C:\\dev\\Daxter Silkroad server files\\Silkroad Client", "Path to sro_client.exe");
 
 void initializeLogging();
 
@@ -29,8 +29,12 @@ int main(int argc, char *argv[]) {
   VLOG(2) << "Parsed IP address: \"" << ipAddress << "\" and port: " << port;
   VLOG(2) << "Parsed client path: \"" << client_path << "\"";
 
-  ClientManager clientManager{ipAddress, port, client_path};
-  clientManager.run();
+  try {
+    ClientManager clientManager{ipAddress, port, client_path};
+    clientManager.run();
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << absl::StreamFormat("Error running ClientManager: \"%s\"", ex.what());
+  }
   return 0;
 }
 
@@ -53,7 +57,7 @@ void initializeLogging() {
         const auto errorCode = std::make_error_code(parseResult.ec);
         throw std::runtime_error(absl::StrFormat("Could not parse integer from vmodule flag: \"%s\". Error is \"%s\"", module, errorCode.message()));
       }
-      absl::SetVLogLevel(module_name, level);
+      absl::SetVLogLevel(absl::string_view(module_name.data(), module_name.size()), level);
     }
   }
 
