@@ -2,6 +2,7 @@
 #define PK2_REF_SCRAP_OF_PACKAGE_ITEM_HPP_
 
 #include <array>
+#include <cstdint>
 #include <string>
 
 namespace sro::pk2::ref {

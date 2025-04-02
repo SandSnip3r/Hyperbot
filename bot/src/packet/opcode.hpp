@@ -1,7 +1,8 @@
-#include <string_view>
-
 #ifndef PACKET_OPCODE_HPP_
 #define PACKET_OPCODE_HPP_
+
+#include <cstdint>
+#include <string_view>
 
 #define PACKET_OPCODE_LIST(F) \
   F(Hack, 0xA003) \

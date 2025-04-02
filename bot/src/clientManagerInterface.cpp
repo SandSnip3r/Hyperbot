@@ -15,9 +15,9 @@ ClientManagerInterface::ClientManagerInterface(zmq::context_t &context, broker::
 
 ClientManagerInterface::~ClientManagerInterface() {
   {
+    shouldStop_ = true;
     std::unique_lock lock(mutex_);
     VLOG(1) << "Destructing";
-    shouldStop_ = true;
   }
   conditionVariable_.notify_all();
   if (runThread_.joinable()) {
@@ -107,7 +107,7 @@ void ClientManagerInterface::sendHeartbeat() {
   proto::client_manager_request::Request request;
   request.mutable_heartbeat();
   VLOG(20) << "Sending:\n" << request.DebugString();
-  std::optional<zmq::send_result_t> sendResult = socket_.send(zmq::message_t(request.SerializeAsString()), zmq::send_flags::none);
+  std::optional<zmq::send_result_t> sendResult = socket_.send(zmq::message_t(request.SerializeAsString()), zmq::send_flags::dontwait);
   if (!sendResult) {
     throw std::runtime_error("ClientManagerInterface: Failed to send heartbeat");
   }
@@ -148,55 +148,60 @@ void ClientManagerInterface::sendHeartbeat() {
 
 void ClientManagerInterface::run() {
   running_ = true;
-  VLOG(1) << "Running";
-  while (true) {
-    // Wait on our condition variable
-    std::unique_lock lock(mutex_);
-    conditionVariable_.wait_for(lock, kMaxHeartbeatSilence, [this]() -> bool {
-      // Should we stop waiting?
-      const std::chrono::time_point<std::chrono::high_resolution_clock> now = std::chrono::high_resolution_clock::now();
+  try {
+    VLOG(1) << "Running";
+    while (true) {
+      // Wait on our condition variable
+      std::unique_lock lock(mutex_);
+      conditionVariable_.wait_for(lock, kMaxHeartbeatSilence, [this]() -> bool {
+        // Should we stop waiting?
+        const std::chrono::time_point<std::chrono::high_resolution_clock> now = std::chrono::high_resolution_clock::now();
+        if (shouldStop_) {
+          // We've been told to stop running.
+          return true;
+        }
+        if (!clientsPendingOpen_.empty()) {
+          // There is a request to open a client.
+          return true;
+        }
+        if (now - lastMessageSent_ > kMaxHeartbeatSilence) {
+          // It has been too long since we last sent a message.
+          return true;
+        }
+        // Keep waiting.
+        return false;
+      });
+      // We've been woken up! Why?
+      VLOG(20) << "We're awake!";
+
+      // Highest priority is to quit if we've been told to.
       if (shouldStop_) {
-        // We've been told to stop running.
-        return true;
+        VLOG(1) << "Quitting";
+        return;
       }
+
+      // Next priority is to open a client if we've been asked to do so.
       if (!clientsPendingOpen_.empty()) {
-        // There is a request to open a client.
-        return true;
+        ClientOpenRequest request = std::move(clientsPendingOpen_.front());
+        clientsPendingOpen_.pop_front();
+        VLOG(1) << "Sending message to open a client listening on port " << request.port;
+        const ClientId id = privateStartClient(request.port);
+        VLOG(1) << "Client opened with ID " << id << ". Fulfilling promise";
+        request.completedPromise.set_value(id);
+
+        // We've sent a message. Update our last message sent time.
+        lastMessageSent_ = std::chrono::high_resolution_clock::now();
+        continue;
       }
-      if (now - lastMessageSent_ > kMaxHeartbeatSilence) {
-        // It has been too long since we last sent a message.
-        return true;
-      }
-      // Keep waiting.
-      return false;
-    });
-    // We've been woken up! Why?
-    VLOG(20) << "We're awake!";
 
-    // Highest priority is to quit if we've been told to.
-    if (shouldStop_) {
-      VLOG(1) << "Quitting";
-      return;
-    }
-
-    // Next priority is to open a client if we've been asked to do so.
-    if (!clientsPendingOpen_.empty()) {
-      ClientOpenRequest request = std::move(clientsPendingOpen_.front());
-      clientsPendingOpen_.pop_front();
-      VLOG(1) << "Sending message to open a client listening on port " << request.port;
-      const ClientId id = privateStartClient(request.port);
-      VLOG(1) << "Client opened with ID " << id << ". Fulfilling promise";
-      request.completedPromise.set_value(id);
-
-      // We've sent a message. Update our last message sent time.
+      // We should not stop and there are no client open requests. We've been woken up because it has been too long since we've sent a message. Send a heartbeat.
+      const auto diffMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - lastMessageSent_);
+      VLOG(20) << diffMs.count() << "ms () since last message sent. Sending heartbeat";
+      sendHeartbeat();
       lastMessageSent_ = std::chrono::high_resolution_clock::now();
-      continue;
     }
-
-    // We should not stop and there are no client open requests. We've been woken up because it has been too long since we've sent a message. Send a heartbeat.
-    const auto diffMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - lastMessageSent_);
-    VLOG(20) << diffMs.count() << "ms () since last message sent. Sending heartbeat";
-    sendHeartbeat();
-    lastMessageSent_ = std::chrono::high_resolution_clock::now();
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Error while running ClientManagerInterface: \"" << ex.what() << "\"";
+    running_ = false;
   }
 }

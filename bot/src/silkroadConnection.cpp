@@ -3,8 +3,12 @@
 
 #include <tracy/Tracy.hpp>
 
+#include <boost/bind/bind.hpp>
+
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
+
+#include <thread>
 
 #define CHECK_ERROR(error)                               \
 do {                                                     \
@@ -100,7 +104,7 @@ boost::system::error_code SilkroadConnection::Connect(const std::string & IP, ui
     if (!ec) break;
 
     //Error occurred so wait
-    boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }
 
   if (!ec) {

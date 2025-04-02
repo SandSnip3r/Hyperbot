@@ -1,6 +1,7 @@
 #ifndef PK2_REF_TEXT_HPP_
 #define PK2_REF_TEXT_HPP_
 
+#include <cstdint>
 #include <string>
 #include <ostream>
 

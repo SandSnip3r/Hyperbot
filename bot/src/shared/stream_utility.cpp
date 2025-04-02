@@ -244,8 +244,12 @@ std::string StreamUtility::Read_UnicodeToAscii( int32_t count )
 	if( m_read_error )
 	{
 		return "";
-	}
+	} //tmp
+// Disable the nonnull warning temporarily. It is a common pattern to call wcstombs with NULL to first check the expected size of the conversion.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnonnull"
 	int32_t converted = static_cast< int32_t >( wcstombs( NULL, str.c_str(), count ) );
+#pragma GCC diagnostic pop
 	if( converted == 0 || ( converted - 1 ) != count )
 	{
 		m_read_error = true;
@@ -307,8 +311,12 @@ void StreamUtility::Write_UnicodeToAscii( const wchar_t * wcs_text, int32_t coun
 	{
 		return;
 	}
+// Disable the nonnull warning temporarily. It is a common pattern to call wcstombs with NULL to first check the expected size of the conversion.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnonnull"
 	int32_t converted = static_cast< int32_t >( wcstombs( NULL, wcs_text, count ) );
-	if( converted == 0 || ( converted - 1 ) != count )
+#pragma GCC diagnostic pop
+  if( converted == 0 || ( converted - 1 ) != count )
 	{
 		m_write_error = true;
 		return;

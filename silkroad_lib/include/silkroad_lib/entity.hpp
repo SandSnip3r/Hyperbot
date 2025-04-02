@@ -1,6 +1,7 @@
 #ifndef SRO_ENTITY_H_
 #define SRO_ENTITY_H_
 
+#include <cstdint>
 #include <ostream>
 
 namespace sro::entity {

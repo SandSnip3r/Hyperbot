@@ -4,7 +4,11 @@
 #include <common/TracySystem.hpp>
 #include <tracy/Tracy.hpp>
 
+#include <boost/bind/bind.hpp>
+
 #include <absl/log/log.h>
+
+#include <thread>
 
 Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port) :
       gatewayPort_(gameData.gatewayPort()),
@@ -92,7 +96,7 @@ void Proxy::run() {
       }
 
       // Prevent high CPU usage
-      boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     } catch (const std::exception &ex) {
       LOG(ERROR) << "Exception while running io_service \"" << ex.what() << '"';
     }

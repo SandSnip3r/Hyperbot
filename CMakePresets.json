@@ -22,6 +22,7 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build_liunx_x64",
       "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "/home/victor/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },

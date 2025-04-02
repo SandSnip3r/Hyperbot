@@ -5,15 +5,14 @@
 
 #include <tracy/Tracy.hpp>
 
-#include <boost/random.hpp>
-
 #include <absl/strings/str_format.h>
 
 #include <exception>
 #include <list>
 #include <mutex>
-#include <vector>
+#include <random>
 #include <set>
+#include <vector>
 
 //-----------------------------------------------------------------------------
 
@@ -137,12 +136,14 @@ static bool init_security_table = GenerateSecurityTable();
 
 //-----------------------------------------------------------------------------
 
-uint64_t rng()
-{
-  static boost::mt19937 randgen;
-  static boost::uniform_int< uint64_t > range( 0, 0xFFFFFFFFFFFFFFFF );
-  boost::variate_generator< boost::mt19937 &, boost::uniform_int< uint64_t > > die( randgen, range );
-  return die();
+uint64_t rng() {
+  // Static so the same engine and distribution are reused across calls.
+  static std::mt19937_64 randgen{std::random_device{}()};
+  static std::uniform_int_distribution<uint64_t> dist(
+    0, std::numeric_limits<uint64_t>::max()
+  );
+
+  return dist(randgen);
 }
 
 //-----------------------------------------------------------------------------

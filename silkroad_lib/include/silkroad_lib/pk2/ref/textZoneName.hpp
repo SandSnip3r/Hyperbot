@@ -1,6 +1,7 @@
 #ifndef PK2_REF_TEXT_ZONE_NAME_HPP_
 #define PK2_REF_TEXT_ZONE_NAME_HPP_
 
+#include <cstdint>
 #include <string>
 #include <ostream>
 

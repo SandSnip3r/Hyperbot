@@ -16,7 +16,7 @@ Hyperbot is comprised of 3 separate components:
 
 Since ClientManager must be run on Windows, we must also build it in Windows. Below I will outline the steps to build ClientManager on Windows using Ubuntu24 in WSL 1 (primarily for the bash command line).
 
-1. Install Visual Studio Community 2022. We will use CMake and VCPkg from this install.
+1. Install Visual Studio Community 2022. We will use CMake and vcpkg from this install.
 
 _Note: Visual Studio version probably does not matter much. It might be possible to use a newer one if it exists._
 
@@ -37,4 +37,24 @@ vcpkg.exe install --triplet=x86-windows
 
 ### Hyperbot
 
-As mentioned above, Hyperbot needs to run on Linux. We will build it in Ubuntu24 in WSL 2 (not WSL 1, like before). We will also use VCPkg for dependency management. It can easily be installed in Linux by following [these instructions](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash#1---set-up-vcpkg).
+As mentioned above, Hyperbot needs to run on Linux. We will build it in Ubuntu24 in WSL 2 (not WSL 1, like before). We will also use vcpkg for dependency management. It can easily be installed in Linux by following [these instructions](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash#1---set-up-vcpkg).
+
+Make sure your system has the necessary tools for building C++ software:
+```
+sudo apt-get update
+sudo apt-get install pkg-config autoconf cmake ninja-build clang python3-dev python-is-python3 python3.12-venv
+```
+_Note: Notice that python3.12-venv references a specific version number. You should make sure this matches the version of python you have installed._
+
+Similar to step 3 from ClientManager, use vcpkg to install dependencies (this time using the default triplet, which should be x64-linux):
+```
+cd Hyperbot
+vcpkg install
+```
+
+Install Python packages:
+```
+cd Hyperbot
+python -m venv venv
+pip install -r bot/src/rl/python/requirements.txt
+```

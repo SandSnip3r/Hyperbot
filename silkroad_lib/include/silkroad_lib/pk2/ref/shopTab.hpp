@@ -1,6 +1,7 @@
 #ifndef PK2_REF_SHOP_TAB_HPP_
 #define PK2_REF_SHOP_TAB_HPP_
 
+#include <cstdint>
 #include <string>
 
 namespace sro::pk2::ref {
