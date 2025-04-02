@@ -34,3 +34,7 @@ _Note: Your Visual Studio install path might be different._
 cd Hyperbot
 vcpkg.exe install --triplet=x86-windows
 ```
+
+### Hyperbot
+
+As mentioned above, Hyperbot needs to run on Linux. We will build it in Ubuntu24 in WSL 2 (not WSL 1, like before). We will also use VCPkg for dependency management. It can easily be installed in Linux by following [these instructions](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash#1---set-up-vcpkg).
