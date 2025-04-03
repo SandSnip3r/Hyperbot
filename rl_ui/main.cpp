@@ -65,7 +65,7 @@ void initializeLogging() {
         const auto errorCode = std::make_error_code(parseResult.ec);
         throw std::runtime_error(absl::StrFormat("Could not parse integer from vmodule flag: \"%s\". Error is \"%s\"", module, errorCode.message()));
       }
-      absl::SetVLogLevel(module_name, level);
+      absl::SetVLogLevel(absl::string_view(module_name.data(), module_name.size()), level);
     }
   }
 

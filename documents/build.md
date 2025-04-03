@@ -66,5 +66,12 @@ As mentioned above, Hyperbot needs to run on Linux. We will build it in Ubuntu24
 - Install Qt 6.9.0
 - Open Qt Creator
 - Click Open Project
-- Navigate to Hyperbot and choose CMakeLists.txt
-- Choose only one kit/configuration: Win64 Qt Configure (rl_ui only). Deselect all others
+- Navigate to Hyperbot and choose the root-level CMakeLists.txt
+- In Qt's "Configure Project" view, choose only one kit/configuration: "Win64 Qt Configure (rl_ui only) (CMake preset) - temporary". Deselect all others
+- Click the "Manage..." button on the right of the kit, to the left of "Details"
+- Below, click the dropdown for "Qt version:" and select "Qt 6.9.0 MSVC2022 64bit"
+- Click Ok
+- Click Configure Project
+- Once the configuration completes, you should still be in Qt Creator's "Projects" view, specifically in the "Build Settings" view. Under the "CMake" section, click "Details" on the right side of the "Build Steps" section. In the "Targets:" section check "rl_ui" and then uncheck "all"
+- While still in the "Projects" view, on the left, under your kit, select "Run" (instead of "Build")
+- Look for "Run configuration:" in the "Run" section and change this to "rl_ui"

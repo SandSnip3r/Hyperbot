@@ -3,7 +3,9 @@
 #include "mainWindow.hpp"
 #include "./ui_mainwindow.h"
 
+#if TRACY_ENABLE
 #include <tracy/Tracy.hpp>
+#endif
 
 #include <absl/log/log.h>
 
