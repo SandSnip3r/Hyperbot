@@ -12,8 +12,8 @@
 namespace config {
 
 void ServerConfig::initialize(const std::filesystem::path &pathToConfig) {
-  VLOG(2) << "Initializing ServerConfig";
   std::filesystem::path configFileFilePath = pathToConfig / kConfigFileFilename;
+  VLOG(2) << "Looking for ServerConfig at " << configFileFilePath;
 
   std::ios_base::openmode fileOpenMode = std::ios::in;
   if constexpr (kProtobufSavedAsBinary_) {

@@ -96,8 +96,9 @@ int main(int argc, char **argv) {
 
   VLOG(1) << "Abseil logging initialized";
 
-  pybind11::scoped_interpreter guard(false);
+  pybind11::scoped_interpreter guard;
   VLOG(1) << "Python interpreter instantiated";
+  std::signal(SIGINT, SIG_DFL);
 
   try {
     // Append the current source directory to sys.path so that we can later load any local python files. SOURCE_DIR is set from CMake.

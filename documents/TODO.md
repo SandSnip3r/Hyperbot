@@ -42,3 +42,4 @@
 - Remove Entity's reference to WorldState once we have a more fine-grained concurrency protection
 - Maybe use a more functional approach using JAX for training so that we dont need to lock mutexes for the models in JaxInterface
 - In the UI, when sending requests, poll for reply rather than block on it. If polling fails, Hyperbot might've died immediately after our send. We should reset the socket and exit.
+- ClientManagerInterface will be blocked on sending a heartbeat if the client manager is not running. If something else in the bot crashes, ClientManagerInterface cannot shut down. We should probably poll on recv and reconstruct the socket if it fails.
