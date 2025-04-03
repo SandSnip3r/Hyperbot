@@ -58,3 +58,13 @@ cd Hyperbot
 python -m venv venv
 pip install -r bot/src/rl/python/requirements.txt
 ```
+As mentioned above, Hyperbot needs to run on Linux. We will build it in Ubuntu24 in WSL 2 (not WSL 1, like before). We will also use VCPkg for dependency management. It can easily be installed in Linux by following [these instructions](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash#1---set-up-vcpkg).
+
+### RL User Interface
+
+- Install Qt Creator 16.0
+- Install Qt 6.9.0
+- Open Qt Creator
+- Click Open Project
+- Navigate to Hyperbot and choose CMakeLists.txt
+- Choose only one kit/configuration: Win64 Qt Configure (rl_ui only). Deselect all others

@@ -13,11 +13,15 @@
 #include <absl/strings/str_format.h>
 
 #include <fstream>
+#include <filesystem>
 
 ClientManager::ClientManager(std::string_view hyperbotIpAddress, int32_t hyperbotPort, std::string_view clientDirectoryPath) : hyperbotIpAddress_(hyperbotIpAddress), hyperbotPort_(hyperbotPort), clientDirectoryPath_(clientDirectoryPath) {
 }
 
 void ClientManager::run() {
+  // Start by ensuring the appdata directory exists.
+  const std::filesystem::path appDataDirectoryPath = sro::file_util::getAppDataPath();
+  std::filesystem::create_directories(appDataDirectoryPath);
   checkDllPath();
   checkClientPath();
   parseGameFiles();
@@ -166,11 +170,12 @@ int32_t ClientManager::launchClient(int32_t portToConnectTo) {
   {
     // Write to a file (<Client PID>.txt) the port that the client should connect to
     // TODO: Replace %APPDATA% with %TEMP% to prevent stray file buildup
-    const auto appDataDirectoryPath = sro::file_util::getAppDataPath();
+    const std::filesystem::path appDataDirectoryPath = sro::file_util::getAppDataPath();
     if (appDataDirectoryPath.empty()) {
       throw std::runtime_error("Unable to find %APPDATA%\n");
     }
     const std::filesystem::path portInfoFilename = appDataDirectoryPath / (std::to_string(processInformation.dwProcessId)+".txt");
+    VLOG(2) << "Writing file to " << portInfoFilename;
     std::ofstream portInfoFile(portInfoFilename);
     if (portInfoFile) {
       portInfoFile << portToConnectTo << '\n';
