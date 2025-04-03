@@ -6,6 +6,8 @@
     "abseil",
     "boost-asio",
     "boost-bind",
+    "boost-dll",
+    "boost-filesystem",
     "cppzmq",
     "gtest",
     "protobuf"

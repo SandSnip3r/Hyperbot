@@ -5,7 +5,7 @@ if (NOT ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4
   message(FATAL_ERROR "${PROJECT_NAME} can only be built for x86 Windows")
 endif()
 
-find_package(Boost COMPONENTS filesystem REQUIRED)
+find_package(Boost CONFIG 1.86.0 COMPONENTS dll filesystem REQUIRED)
 find_package(cppzmq CONFIG REQUIRED)
 
 set(SOURCES
