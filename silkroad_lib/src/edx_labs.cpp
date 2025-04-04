@@ -1,9 +1,12 @@
 #include "edx_labs.hpp"
 
-#include <sstream>
-#include <fstream>
-#include <fcntl.h>
+#include <absl/log/log.h>
+
 #include <algorithm>
+#include <fcntl.h>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 
 #if defined(_WIN32)
 #include <shlwapi.h>
@@ -18,8 +21,7 @@ namespace sro::edx_labs {
 #if defined(_WIN32)
 
 // Injects a DLL into a process at the specified address
-BOOL InjectDLL(HANDLE hProcess, const char * dllNameToLoad, const char * funcNameToLoad, DWORD injectAddress, bool bDebugAttach)
-{
+BOOL InjectDLL(HANDLE hProcess, const char *dllNameToLoad, const char *funcNameToLoad, DWORD injectAddress, bool bDebugAttach) {
   // # of bytes to replace
   DWORD byteCountToReplace = 6;
 
@@ -45,45 +47,45 @@ BOOL InjectDLL(HANDLE hProcess, const char * dllNameToLoad, const char * funcNam
   }
 
   //------------------------------------------//
-  // Function variables.						//
+  // Function variables.                      //
   //------------------------------------------//
 
   // Main DLL we will need to load
-  HMODULE kernel32	= NULL;
+  HMODULE kernel32 = NULL;
 
   // Main functions we will need to import
-  FARPROC loadlibrary		= NULL;
-  FARPROC getprocaddress	= NULL;
-  FARPROC exitprocess		= NULL;
+  FARPROC loadlibrary = NULL;
+  FARPROC getprocaddress = NULL;
+  FARPROC exitprocess = NULL;
 
   // The workspace we will build the codecave on locally
-  LPBYTE workspace		= NULL;
-  DWORD workspaceIndex	= 0;
+  LPBYTE workspace = NULL;
+  DWORD workspaceIndex = 0;
 
   // The memory in the process we write to
-  LPVOID codecaveAddress	= NULL;
+  LPVOID codecaveAddress = NULL;
   DWORD dwCodecaveAddress = 0;
 
   // Strings we have to write into the process
-  CHAR injectDllName[MAX_PATH + 1]	= {0};
-  CHAR injectFuncName[MAX_PATH + 1]	= {0};
-  CHAR injectError0[MAX_PATH + 1]		= {0};
-  CHAR injectError1[MAX_PATH + 1]		= {0};
-  CHAR injectError2[MAX_PATH + 1]		= {0};
-  CHAR user32Name[MAX_PATH + 1]		= {0};
-  CHAR msgboxName[MAX_PATH + 1]		= {0};
+  CHAR injectDllName[MAX_PATH + 1] = {0};
+  CHAR injectFuncName[MAX_PATH + 1] = {0};
+  CHAR injectError0[MAX_PATH + 1] = {0};
+  CHAR injectError1[MAX_PATH + 1] = {0};
+  CHAR injectError2[MAX_PATH + 1] = {0};
+  CHAR user32Name[MAX_PATH + 1] = {0};
+  CHAR msgboxName[MAX_PATH + 1] = {0};
 
   // Placeholder addresses to use the strings
-  DWORD user32NameAddr	= 0;
-  DWORD user32Addr		= 0;
-  DWORD msgboxNameAddr	= 0;
-  DWORD msgboxAddr		= 0;
-  DWORD dllAddr			= 0;
-  DWORD dllNameAddr		= 0;
-  DWORD funcNameAddr		= 0;
-  DWORD error0Addr		= 0;
-  DWORD error1Addr		= 0;
-  DWORD error2Addr		= 0;
+  DWORD user32NameAddr = 0;
+  DWORD user32Addr = 0;
+  DWORD msgboxNameAddr = 0;
+  DWORD msgboxAddr = 0;
+  DWORD dllAddr = 0;
+  DWORD dllNameAddr = 0;
+  DWORD funcNameAddr = 0;
+  DWORD error0Addr = 0;
+  DWORD error1Addr = 0;
+  DWORD error2Addr = 0;
 
   DWORD offsetOrigBytes = 0;
   DWORD userVar = 0;
@@ -95,16 +97,16 @@ BOOL InjectDLL(HANDLE hProcess, const char * dllNameToLoad, const char * funcNam
   DWORD codecaveExecAddr = 0;
 
   //------------------------------------------//
-  // Variable initialization.					//
+  // Variable initialization.                 //
   //------------------------------------------//
 
   // Get the address of the main DLL
-  kernel32	= LoadLibraryA("kernel32.dll");
+  kernel32 = LoadLibraryA("kernel32.dll");
 
   // Get our functions
-  loadlibrary		= GetProcAddress(kernel32,	"LoadLibraryA");
-  getprocaddress	= GetProcAddress(kernel32,	"GetProcAddress");
-  exitprocess		= GetProcAddress(kernel32,	"ExitProcess");
+  loadlibrary = GetProcAddress(kernel32,	"LoadLibraryA");
+  getprocaddress = GetProcAddress(kernel32,	"GetProcAddress");
+  exitprocess = GetProcAddress(kernel32,	"ExitProcess");
 
   // This section will cause compiler warnings on VS8,
   // you can upgrade the functions or ignore them
@@ -128,7 +130,7 @@ BOOL InjectDLL(HANDLE hProcess, const char * dllNameToLoad, const char * funcNam
   dwCodecaveAddress = PtrToUlong(codecaveAddress);
 
   //------------------------------------------//
-  // Data and string writing.					//
+  // Data and string writing.                 //
   //------------------------------------------//
 
   // Write out the address for the user32 dll address
@@ -473,8 +475,7 @@ BOOL InjectDLL(HANDLE hProcess, const char * dllNameToLoad, const char * funcNam
 
   // Try to write the final codecave patch to the process first.
   // By doing this, worst case event is we add code to the process that is not used
-  if(!WriteProcessBytes(hProcess, PtrToUlong(codecaveAddress), workspace, workspaceIndex))
-  {
+  if (!WriteProcessBytes(hProcess, PtrToUlong(codecaveAddress), workspace, workspaceIndex)) {
     HeapFree(GetProcessHeap(), 0, workspace);
     return FALSE;
   }
@@ -494,8 +495,7 @@ BOOL InjectDLL(HANDLE hProcess, const char * dllNameToLoad, const char * funcNam
     memcpy(patch2 + 1, &toCC, sizeof(toCC));
 
     // Make the patch that will JMP to the codecave
-    if(!WriteProcessBytes(hProcess, injectAddress, patch2, 5))
-    {
+    if (!WriteProcessBytes(hProcess, injectAddress, patch2, 5)) {
       return FALSE;
     }
   }

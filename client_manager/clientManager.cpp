@@ -122,14 +122,47 @@ void ClientManager::replyWithError(const std::string &errorMessage) {
 }
 
 void ClientManager::checkDllPath() {
-  boost::dll::fs::path exePath = boost::dll::program_location();
-  boost::dll::fs::path exeDir = exePath.parent_path();
-  dllPath_ = std::filesystem::path(exeDir.string()) / "loader_dll.dll";
+  // Get the full path to the executable
+  boost::dll::fs::path boostExePath = boost::dll::program_location();
+
+  // Get the directory containing the executable
+  boost::dll::fs::path boostExeDir = boostExePath.parent_path();
+  // Convert to std::filesystem::path for consistency
+  std::filesystem::path exeDir(boostExeDir.string()); // Use string conversion for potentially better compatibility
+
+  // Get the current working directory
+  std::filesystem::path currentDir = std::filesystem::current_path();
+
+  // --- Check if CWD is different from executable directory ---
+  // TODO: Figure out why injecting the DLL fails.
+  try {
+    // Use std::filesystem::equivalent for robust comparison (handles symlinks, etc.)
+    // Both paths must exist for equivalent() to work without throwing.
+    if (!std::filesystem::equivalent(exeDir, currentDir)) {
+      LOG(ERROR) << "Current working directory (\"" << currentDir.string()
+                 << "\") is different from the executable directory (\""
+                 << exeDir.string() << "\"). Injecting DLL will probably fail.";
+    }
+  } catch (const std::filesystem::filesystem_error& fs_err) {
+    // equivalent() can throw if paths don't exist or other issues occur
+    LOG(ERROR) << "Could not compare executable directory and current working directory: " << fs_err.what()
+               << " (Path1: \"" << exeDir.string() << "\", Path2: \"" << currentDir.string() << "\")";
+  }
+  // --- End of CWD check ---
+
+  // Construct the expected path for the DLL relative to the executable's directory
+  dllPath_ = exeDir / "loader_dll.dll"; // Uses std::filesystem::path's operator/
+
+  // Check if the DLL exists at the calculated path
   if (!std::filesystem::exists(dllPath_)) {
+    // Throw an error if the DLL is not found where expected
     throw std::runtime_error(absl::StrFormat("loader_dll.dll does not exist at \"%s\"", dllPath_.string()));
   }
-  VLOG(1) << "Found loader_dll.dll at " << dllPath_;
+
+  // Log the location where the DLL was found
+  VLOG(1) << "Found loader_dll.dll at " << dllPath_.string(); // Use .string() for consistent logging format
 }
+
 void ClientManager::checkClientPath() {
   clientPath_ = std::filesystem::path(clientDirectoryPath_) / "sro_client.exe";
   if (!std::filesystem::exists(clientPath_)) {
