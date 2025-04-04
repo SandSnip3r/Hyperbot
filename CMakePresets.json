@@ -45,8 +45,7 @@
     {
       "name": "win32",
       "displayName": "Win32 build step",
-      "configurePreset": "win32",
-      "configuration": "Debug"
+      "configurePreset": "win32"
     },
     {
       "name": "linux_x64",
