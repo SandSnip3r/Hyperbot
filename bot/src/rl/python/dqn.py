@@ -6,7 +6,7 @@ import orbax.checkpoint
 
 class DqnModel(nnx.Module):
   def __init__(self, inSize: int, outSize: int, rngs: nnx.Rngs):
-    intermediateSize = 64
+    intermediateSize = 512
     key = rngs.params()
     self.linear1 = nnx.Linear(inSize, intermediateSize, rngs=rngs)
     self.linear2 = nnx.Linear(intermediateSize, outSize, rngs=rngs)

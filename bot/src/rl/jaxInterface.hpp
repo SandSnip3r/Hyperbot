@@ -27,6 +27,8 @@ public:
   // Note: Parent directory does not need to exist.
   void saveCheckpoint(const std::string &modelCheckpointPath, const std::string &targetModelCheckpointPath, const std::string &optimizerStateCheckpointPath);
   void loadCheckpoint(const std::string &modelCheckpointPath, const std::string &targetModelCheckpointPath, const std::string &optimizerStateCheckpointPath);
+
+  void addScalar(std::string_view name, double xValue, double yValue);
 private:
   static constexpr int kActionSpaceSize{36}; // TODO: If changed, also change rl::ActionBuilder
   static constexpr float kLearningRate{1e-5};
@@ -35,6 +37,7 @@ private:
   std::optional<pybind11::module> randomModule_;
   std::optional<pybind11::module> nnxModule_;
   std::optional<pybind11::module> optaxModule_;
+  std::optional<pybind11::object> summaryWriter_;
   std::optional<pybind11::object> rngKey_;
   std::optional<pybind11::object> nnxRngs_;
   std::optional<pybind11::object> model_;

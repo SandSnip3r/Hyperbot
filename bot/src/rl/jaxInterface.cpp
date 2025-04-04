@@ -28,6 +28,7 @@ bool checkHasAttr(py::object &obj, const std::string &attr_name) {
 
 JaxInterface::~JaxInterface() {
   VLOG(1) << "Destructing JaxInterface";
+  // Manually destroy all python objects by first acquiring the GIL.
   py::gil_scoped_acquire acquire;
   if (dqnModule_.has_value()) {
     dqnModule_.reset();
@@ -40,6 +41,9 @@ JaxInterface::~JaxInterface() {
   }
   if (optaxModule_.has_value()) {
     optaxModule_.reset();
+  }
+  if (summaryWriter_.has_value()) {
+    summaryWriter_.reset();
   }
   if (rngKey_.has_value()) {
     rngKey_.reset();
@@ -59,6 +63,8 @@ JaxInterface::~JaxInterface() {
 }
 
 void JaxInterface::initialize() {
+  using namespace pybind11::literals;
+
   VLOG(1) << "Constructing JaxInterface";
   std::unique_lock modelLock(modelMutex_);
   std::unique_lock targetModelLock(targetModelMutex_);
@@ -66,9 +72,15 @@ void JaxInterface::initialize() {
   py::object DqnModelType;
   py::tuple graphAndWeights;
 
+  // Initialize Tensorboard for logging statistics.
+  py::module tensorboardX = py::module::import("tensorboardX");
+  summaryWriter_ = tensorboardX.attr("SummaryWriter")("flush_secs"_a=1);
+
+  // Load our python module which has our RL code.
   dqnModule_ = py::module::import("rl.python.dqn");
-  randomModule_ = py::module::import("jax.random");
+
   // Grab a random key based on our seed. Any randomness from this point on will split & replace this key held in member data.
+  randomModule_ = py::module::import("jax.random");
   rngKey_ = randomModule_->attr("key")(kSeed);
   // NNX's Rngs is created using a JAX key, so we'll use the above key to create our NNX Rngs.
   nnxModule_ = py::module::import("flax.nnx");
@@ -190,6 +202,11 @@ void JaxInterface::loadCheckpoint(const std::string &modelCheckpointPath, const 
     LOG(ERROR) << "Caught exception in JaxInterface::loadCheckpoint: " << ex.what();
     throw;
   }
+}
+
+void JaxInterface::addScalar(std::string_view name, double xValue, double yValue) {
+  py::gil_scoped_acquire acquire;
+  summaryWriter_->attr("add_scalar")(name, yValue, xValue);
 }
 
 py::object JaxInterface::getNextRngKey() {

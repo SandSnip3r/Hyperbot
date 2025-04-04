@@ -260,14 +260,6 @@ void Proxy::ProcessPackets(const boost::system::error_code &error) {
           break;
         }
       }
-    } else {
-      // TODO: Remove, this is for debugging a disconnection.
-      static int count=0;
-      LOG(WARNING) << "Client connection security is null";
-      ++count;
-      if (count > 2000) {
-        std::abort();
-      }
     }
 
     if (serverConnection.security) {
@@ -434,14 +426,6 @@ void Proxy::ProcessPackets(const boost::system::error_code &error) {
           // This is either the keepalive or some packet which we are sending earlier than the keepalive we injected.
           setKeepaliveTimer();
         }
-      }
-    } else {
-      // TODO: Remove, this is for debugging a disconnection.
-      static int count=0;
-      LOG(WARNING) << "Server connection security is null";
-      ++count;
-      if (count > 2000) {
-        std::abort();
       }
     }
 

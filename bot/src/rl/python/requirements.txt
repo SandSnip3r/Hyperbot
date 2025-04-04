@@ -1,2 +1,4 @@
 jax[cuda]
 flax
+tensorboardX
+tensorboard

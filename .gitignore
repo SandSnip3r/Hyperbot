@@ -30,3 +30,4 @@ bld/
 tools/paramIdNumToName/main
 vcpkg_installed/
 venv/
+runs/
