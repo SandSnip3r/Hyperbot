@@ -37,7 +37,7 @@ private:
   std::thread checkpointingThread_;
 
   // Note: Expects lock to be held.
-  void saveCurrentRegistry();
+  void saveCurrentRegistryNoLock();
 };
 
 } // namespace rl

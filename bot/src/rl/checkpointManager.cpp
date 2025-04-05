@@ -30,7 +30,7 @@ CheckpointManager::CheckpointManager(ui::RlUserInterface &rlUserInterface) : rlU
   } else {
     // File does not exist. Create an empty one.
     LOG(INFO) << "Checkpoint registry file does not exist. Creating empty one.";
-    saveCurrentRegistry();
+    saveCurrentRegistryNoLock();
   }
 }
 
@@ -57,13 +57,15 @@ void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::Ja
     newCheckpointProto->set_target_model_checkpoint_path(targetModelCheckpointPath);
     newCheckpointProto->set_optimizer_checkpoint_path(optimizerCheckpointPath);
     newCheckpointProto->set_step_count(stepCount);
-    saveCurrentRegistry();
+    saveCurrentRegistryNoLock();
   }
   if (checkpointingThread_.joinable()) {
-    throw std::runtime_error("Another checkpointing thread is already running");
+    VLOG(1) << "Checkpointing thread is already running. Waiting for it to finish.";
+    checkpointingThread_.join();
   }
   checkpointingThread_ = std::thread([this, checkpointName, modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath, &jaxInterface]() {
-    tracy::SetThreadName("CheckpointerManager::CheckpointingThread");
+    // TODO: This class should entirely be run on another thread. Any request should get queued to that thread.
+    tracy::SetThreadName("CheckpointManager");
     rlUserInterface_.sendSavingCheckpoint();
     jaxInterface.saveCheckpoint(modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath);
     rlUserInterface_.sendCheckpointList(getCheckpointNames());
@@ -110,44 +112,46 @@ void CheckpointManager::loadCheckpoint(const std::string &checkpointName, rl::Ja
 }
 
 void CheckpointManager::deleteCheckpoints(const std::vector<std::string> &checkpointNames) {
-  std::unique_lock lock(registryMutex_);
-  for (const std::string &checkpointName : checkpointNames) {
-    auto it = std::find_if(checkpointRegistry_.mutable_checkpoints()->begin(), checkpointRegistry_.mutable_checkpoints()->end(),
-                           [&checkpointName](const rl_checkpointing::Checkpoint &checkpoint) { return checkpoint.checkpoint_name() == checkpointName; });
-    if (it == checkpointRegistry_.mutable_checkpoints()->end()) {
-      LOG(WARNING) << "Checkpoint \"" << checkpointName << "\" not found";
-      continue;
+  {
+    std::unique_lock lock(registryMutex_);
+    for (const std::string &checkpointName : checkpointNames) {
+      auto it = std::find_if(checkpointRegistry_.mutable_checkpoints()->begin(), checkpointRegistry_.mutable_checkpoints()->end(),
+                            [&checkpointName](const rl_checkpointing::Checkpoint &checkpoint) { return checkpoint.checkpoint_name() == checkpointName; });
+      if (it == checkpointRegistry_.mutable_checkpoints()->end()) {
+        LOG(WARNING) << "Checkpoint \"" << checkpointName << "\" not found";
+        continue;
+      }
+      // Delete the actual checkpoint files from disk.
+      VLOG(1) << "Deleting checkpoint \"" << checkpointName << "\" from registry, which is comprised of:";
+      VLOG(1) << "  - Model checkpoint path: " << it->model_checkpoint_path();
+      VLOG(1) << "  - Target model checkpoint path: " << it->target_model_checkpoint_path();
+      VLOG(1) << "  - Optimizer checkpoint path: " << it->optimizer_checkpoint_path();
+      std::uintmax_t filesRemoved;
+      filesRemoved = std::filesystem::remove_all(it->model_checkpoint_path());
+      if (filesRemoved == 0) {
+        LOG(WARNING) << "Failed to delete model checkpoint files";
+      }
+      filesRemoved = std::filesystem::remove_all(it->target_model_checkpoint_path());
+      if (filesRemoved == 0) {
+        LOG(WARNING) << "Failed to delete target model checkpoint files";
+      }
+      filesRemoved = std::filesystem::remove_all(it->optimizer_checkpoint_path());
+      if (filesRemoved == 0) {
+        LOG(WARNING) << "Failed to delete optimizer checkpoint files";
+      }
+      // Remove the checkpoint from the registry.
+      checkpointRegistry_.mutable_checkpoints()->erase(it);
+      LOG(INFO) << "Deleted checkpoint \"" << checkpointName << "\"";
     }
-    // Delete the actual checkpoint files from disk.
-    VLOG(1) << "Deleting checkpoint \"" << checkpointName << "\" from registry, which is comprised of:";
-    VLOG(1) << "  - Model checkpoint path: " << it->model_checkpoint_path();
-    VLOG(1) << "  - Target model checkpoint path: " << it->target_model_checkpoint_path();
-    VLOG(1) << "  - Optimizer checkpoint path: " << it->optimizer_checkpoint_path();
-    std::uintmax_t filesRemoved;
-    filesRemoved = std::filesystem::remove_all(it->model_checkpoint_path());
-    if (filesRemoved == 0) {
-      LOG(WARNING) << "Failed to delete model checkpoint files";
-    }
-    filesRemoved = std::filesystem::remove_all(it->target_model_checkpoint_path());
-    if (filesRemoved == 0) {
-      LOG(WARNING) << "Failed to delete target model checkpoint files";
-    }
-    filesRemoved = std::filesystem::remove_all(it->optimizer_checkpoint_path());
-    if (filesRemoved == 0) {
-      LOG(WARNING) << "Failed to delete optimizer checkpoint files";
-    }
-    // Remove the checkpoint from the registry.
-    checkpointRegistry_.mutable_checkpoints()->erase(it);
-    LOG(INFO) << "Deleted checkpoint \"" << checkpointName << "\"";
+    LOG(INFO) << "Saving checkpoint registry after deleting checkpoints";
+    saveCurrentRegistryNoLock();
   }
-  LOG(INFO) << "Saving checkpoint registry after deleting checkpoints";
-  saveCurrentRegistry();
   LOG(INFO) << "Sending new checkpoint list to UI";
   rlUserInterface_.sendCheckpointList(getCheckpointNames());
   LOG(INFO) << "Sent new checkpoint list to UI";
 }
 
-void CheckpointManager::saveCurrentRegistry() {
+void CheckpointManager::saveCurrentRegistryNoLock() {
   std::ofstream checkpointRegistryFile(sro::file_util::getAppDataPath() / kCheckpointRegistryFilename);
   if (!checkpointRegistryFile.is_open()) {
     throw std::runtime_error("Failed to open/create checkpoint registry file");
