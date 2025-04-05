@@ -38,6 +38,7 @@ void TrainingManager::run() {
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiRequestCheckpointList, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiSaveCheckpoint, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiLoadCheckpoint, eventHandleFunction);
+  eventBroker_.subscribeToEvent(event::EventCode::kRlUiDeleteCheckpoints, eventHandleFunction);
 
   jaxInterface_.initialize();
 
@@ -93,7 +94,7 @@ void TrainingManager::train() {
               // Since we copy the rl::Observations from the replay buffer, we can unlock the mutex while we run JAX code.
               lock.unlock();
               const double loss = jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
-              jaxInterface_.addScalar("Train Loss", trainStepCount_, loss);
+              jaxInterface_.addScalar("Train Loss", loss, trainStepCount_);
               ++trainStepCount_;
               if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
                 LOG(INFO) << "Updating target network!";
@@ -147,33 +148,31 @@ void TrainingManager::onUpdate(const event::Event *event) {
     LOG(INFO) << "Received load checkpoint request for " << loadCheckpointEvent->checkpointName;
     checkpointManager_.loadCheckpoint(loadCheckpointEvent->checkpointName, jaxInterface_, intelligencePool_.getDeepLearningIntelligence());
     LOG(INFO) << "Done loading";
+  } else if (event->eventCode == event::EventCode::kRlUiDeleteCheckpoints) {
+    const auto *deleteCheckpointsEvent = dynamic_cast<const event::RlUiDeleteCheckpoints*>(event);
+    if (deleteCheckpointsEvent == nullptr) {
+      throw std::runtime_error("Received kRlUiDeleteCheckpoints event but failed to cast to event::RlUiDeleteCheckpoints");
+    }
+    LOG(INFO) << "Received delete checkpoints request for " << deleteCheckpointsEvent->checkpointNames.size() << " checkpoints";
+    checkpointManager_.deleteCheckpoints(deleteCheckpointsEvent->checkpointNames);
+  } else {
+    throw std::runtime_error("Received unknown event");
   }
 }
 
 void TrainingManager::reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, std::optional<int> actionIndex) {
   // LOG(INFO) << "[PVP #" << pvpId << "] Given event " << event::toString(event->eventCode) << " and observation " << observation.toString() << " for observer " << observerGlobalId << " and action " << actionIndex.value_or(-1);
+  int totalReplayBufferSize=0;
   {
     std::unique_lock lock(replayBufferMutex_);
     replayBuffer_[pvpId][observerGlobalId].push_back({event->eventCode, observation, actionIndex});
-
-    // static int replayCount=0;
-    // replayCount++;
-    // if (replayCount % 100 == 0) {
-    //   LOG(INFO) << "Replay count: " << replayCount;
-    //   // Collect some stats about pvps in the replay buffer.
-    //   for (const auto &[pvpId, observerMap] : replayBuffer_) {
-    //     for (const auto &[observerGlobalId, eventObservationActionList] : observerMap) {
-    //       LOG(INFO) << "[PVP #" << pvpId << "] " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name << " has " << eventObservationActionList.size() << " events";
-    //       // Calculate episode return.
-    //       double episodeReturn = 0.0;
-    //       for (int i=1; i<eventObservationActionList.size(); ++i) {
-    //         episodeReturn += calculateReward(std::get<1>(eventObservationActionList[i-1]), std::get<1>(eventObservationActionList[i]));
-    //       }
-    //       LOG(INFO) << "  Episode return: " << episodeReturn;
-    //     }
-    //   }
-    // }
+    for (const auto &i : replayBuffer_) {
+      for (const auto &j : i.second) {
+        totalReplayBufferSize += j.second.size();
+      }
+    }
   }
+  jaxInterface_.addScalar("Replay Buffer Size", totalReplayBufferSize, trainStepCount_);
 }
 
 void TrainingManager::setUpIntelligencePool() {

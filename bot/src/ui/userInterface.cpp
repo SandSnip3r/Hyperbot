@@ -11,6 +11,9 @@
 
 #include <ui_proto/request.pb.h>
 
+// Tracy
+#include <common/TracySystem.hpp>
+
 #include <absl/log/log.h>
 
 namespace {
@@ -311,6 +314,7 @@ void UserInterface::handleEvent(const event::Event *event) {/*
  */}
 
 void UserInterface::run() {
+  tracy::SetThreadName("UserInterface");
   // Run request receiver
   zmq::socket_t socket(context_, zmq::socket_type::rep);
   socket.bind("tcp://*:5555");

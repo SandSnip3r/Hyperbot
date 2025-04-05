@@ -45,6 +45,7 @@ public:
   void reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, std::optional<int> actionIndex);
 
   JaxInterface& getJaxInterface() { return jaxInterface_; }
+  int getTrainStepCount() const { return trainStepCount_.load(); }
 
 private:
   static constexpr bool kTrain{true};
@@ -65,7 +66,7 @@ private:
   IntelligencePool intelligencePool_{*this};
   JaxInterface jaxInterface_;
   CheckpointManager checkpointManager_{rlUserInterface_};
-  int trainStepCount_{0};
+  std::atomic<int> trainStepCount_{0};
   static constexpr int kTargetNetworkUpdateInterval{10000};
 
   void setUpIntelligencePool();

@@ -217,4 +217,7 @@ RlUiSaveCheckpoint::RlUiSaveCheckpoint(EventId id, const std::string &checkpoint
 RlUiLoadCheckpoint::RlUiLoadCheckpoint(EventId id, const std::string &checkpointName) :
     Event(id, EventCode::kRlUiLoadCheckpoint), checkpointName(checkpointName) {}
 
+RlUiDeleteCheckpoints::RlUiDeleteCheckpoints(EventId id, const std::vector<std::string> &checkpointNames) :
+    Event(id, EventCode::kRlUiDeleteCheckpoints), checkpointNames(checkpointNames) {}
+
 } // namespace event

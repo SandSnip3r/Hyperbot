@@ -2,6 +2,9 @@
 #include "event/event.hpp"
 #include "ui/rlUserInterface.hpp"
 
+// Tracy
+#include <common/TracySystem.hpp>
+
 #include <absl/log/log.h>
 
 using namespace proto;
@@ -55,6 +58,7 @@ void RlUserInterface::runAsync() {
 // ================================================================================
 
 void RlUserInterface::sendCheckpointList(const std::vector<std::string> &checkpointList) {
+  LOG(INFO) << "Sending checkpoint list with " << checkpointList.size() << " checkpoints";
   rl_ui_messages::BroadcastMessage msg;
   rl_ui_messages::CheckpointList *checkpointListMsg = msg.mutable_checkpoint_list();
   for (const std::string &checkpointName : checkpointList) {
@@ -90,6 +94,7 @@ void RlUserInterface::plot(std::string_view plotName, double x, double y) {
 // ================================================================================
 
 void RlUserInterface::requestLoop() {
+  tracy::SetThreadName("RlUserInterface::RequestLoop");
   // Run request receiver
   zmq::socket_t socket(context_, zmq::socket_type::rep);
   VLOG(1) << "RlUserInterface:socket binding to " << kReqReplyAddress << "; this is the address which the UI should connect to.";
@@ -115,6 +120,7 @@ void RlUserInterface::requestLoop() {
 }
 
 void RlUserInterface::heartbeatLoop() {
+  tracy::SetThreadName("RlUserInterface::HeartbeatLoop");
   rl_ui_messages::BroadcastMessage msg;
   msg.mutable_heartbeat();
   while (keepRunning_) {
@@ -157,6 +163,13 @@ void RlUserInterface::handleRequest(const zmq::message_t &request, zmq::socket_t
       } else if (asyncRequestMsg.body_case() == rl_ui_messages::AsyncRequest::BodyCase::kLoadCheckpoint) {
         const rl_ui_messages::LoadCheckpoint &loadCheckpointMsg = asyncRequestMsg.load_checkpoint();
         eventBroker_.publishEvent<event::RlUiLoadCheckpoint>(loadCheckpointMsg.name());
+      } else if (asyncRequestMsg.body_case() == rl_ui_messages::AsyncRequest::BodyCase::kDeleteCheckpoints) {
+        const rl_ui_messages::DeleteCheckpoints &deleteCheckpointsMsg = asyncRequestMsg.delete_checkpoints();
+        std::vector<std::string> checkpointNames;
+        for (const std::string &checkpointName : deleteCheckpointsMsg.names()) {
+          checkpointNames.push_back(checkpointName);
+        }
+        eventBroker_.publishEvent<event::RlUiDeleteCheckpoints>(checkpointNames);
       } else {
         throw std::runtime_error(absl::StrFormat("RlUserInterface received invalid async request \"%s\"", asyncRequestMsg.DebugString()));
       }

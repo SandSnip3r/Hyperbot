@@ -12,6 +12,7 @@ namespace rl::ai {
 int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket) {
   ZoneScopedN("DeepLearningIntelligence::selectAction");
   const float epsilon = getEpsilon();
+  trainingManager_.getJaxInterface().addScalar("Epsilon", epsilon, trainingManager_.getTrainStepCount());
   if (VLOG_IS_ON(1) && stepCount_ <= kEpsilonDecaySteps) {
     std::bernoulli_distribution printDist(0.001);
     if (printDist(randomEngine_)) {
@@ -40,7 +41,7 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
 
 float DeepLearningIntelligence::getEpsilon() {
   // For now, epsilon will decay linearly with the number of steps.
-  return std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(stepCount_) / kEpsilonDecaySteps);
+  return std::min(kInitialEpsilon, std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(stepCount_) / kEpsilonDecaySteps));
 }
 
 

@@ -7,6 +7,9 @@
 #include <silkroad_lib/pk2/parsing/regionInfoParser.hpp>
 #include <silkroad_lib/pk2/pk2.hpp>
 
+// Tracy
+#include <common/TracySystem.hpp>
+
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
@@ -232,6 +235,7 @@ std::string getFileDataAsString(sro::pk2::Pk2ReaderModern &pk2Reader, const std:
 } // namespace (anonymous)
 
 void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  tracy::SetThreadName("GameData::ParseCharacterData");
   const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   const std::string kMasterCharacterdataName = "characterdata.txt";
   const std::string kMasterCharacterdataPath = kTextdataDirectory + kMasterCharacterdataName;
@@ -266,6 +270,7 @@ void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  tracy::SetThreadName("GameData::ParseItemData");
   const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   const std::string kMasterItemdataName = "itemdata.txt";
   const std::string kMasterItemdataPath = kTextdataDirectory + kMasterItemdataName;
@@ -288,6 +293,7 @@ void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  tracy::SetThreadName("GameData::ParseSkillData");
   const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   // Prefer the encrypted file, as the client uses this and not the unencrypted version (skilldata.txt)
   const std::string kMasterSkilldataName = "skilldataenc.txt";

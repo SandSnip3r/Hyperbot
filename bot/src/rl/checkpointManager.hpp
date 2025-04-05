@@ -28,6 +28,7 @@ public:
   bool checkpointExists(const std::string &checkpointName) const;
   std::vector<std::string> getCheckpointNames() const;
   void loadCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, rl::ai::DeepLearningIntelligence *deepLearningIntelligence);
+  void deleteCheckpoints(const std::vector<std::string> &checkpointNames);
 private:
   static constexpr std::string_view kCheckpointRegistryFilename{"checkpoint_registry"};
   ui::RlUserInterface &rlUserInterface_;

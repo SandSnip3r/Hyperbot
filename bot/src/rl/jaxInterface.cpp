@@ -204,7 +204,7 @@ void JaxInterface::loadCheckpoint(const std::string &modelCheckpointPath, const 
   }
 }
 
-void JaxInterface::addScalar(std::string_view name, double xValue, double yValue) {
+void JaxInterface::addScalar(std::string_view name, double yValue, double xValue) {
   py::gil_scoped_acquire acquire;
   summaryWriter_->attr("add_scalar")(name, yValue, xValue);
 }

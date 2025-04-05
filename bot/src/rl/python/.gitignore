@@ -1,2 +1,3 @@
 __pycache__/
-test_notebooks/
+test_notebooks/*
+!test_notebooks/*.ipynb

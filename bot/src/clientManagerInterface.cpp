@@ -3,6 +3,9 @@
 
 #include <ui_proto/client_manager_request.pb.h>
 
+// Tracy
+#include <common/TracySystem.hpp>
+
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
 
@@ -147,6 +150,7 @@ void ClientManagerInterface::sendHeartbeat() {
 }
 
 void ClientManagerInterface::run() {
+  tracy::SetThreadName("ClientManagerInterface");
   running_ = true;
   VLOG(1) << "Running";
   while (true) {

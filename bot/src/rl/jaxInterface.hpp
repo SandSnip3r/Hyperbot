@@ -28,7 +28,7 @@ public:
   void saveCheckpoint(const std::string &modelCheckpointPath, const std::string &targetModelCheckpointPath, const std::string &optimizerStateCheckpointPath);
   void loadCheckpoint(const std::string &modelCheckpointPath, const std::string &targetModelCheckpointPath, const std::string &optimizerStateCheckpointPath);
 
-  void addScalar(std::string_view name, double xValue, double yValue);
+  void addScalar(std::string_view name, double yValue, double xValue);
 private:
   static constexpr int kActionSpaceSize{36}; // TODO: If changed, also change rl::ActionBuilder
   static constexpr float kLearningRate{1e-5};
