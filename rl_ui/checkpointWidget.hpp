@@ -22,6 +22,7 @@ public:
 public slots:
   void onCheckpointListReceived(QStringList checkpointList);
   void onSaveCheckpointClicked();
+  void onDeleteCheckpointClicked();
 
 private:
   Ui::CheckpointWidget *ui;

@@ -86,6 +86,15 @@ void Hyperbot::loadCheckpoint(const QString &checkpointName) {
   sendAsyncRequest(asyncRequest);
 }
 
+void Hyperbot::deleteCheckpoints(const QList<QString> &checkpointNames) {
+  rl_ui_messages::AsyncRequest asyncRequest;
+  rl_ui_messages::DeleteCheckpoints *deleteCheckpoints = asyncRequest.mutable_delete_checkpoints();
+  for (const QString &checkpointName : checkpointNames) {
+    deleteCheckpoints->add_name(checkpointName.toStdString());
+  }
+  sendAsyncRequest(asyncRequest);
+}
+
 void Hyperbot::onConnectionFailed() {
   emit connectionFailed();
 }

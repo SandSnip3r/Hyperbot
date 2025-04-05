@@ -5,6 +5,8 @@
 #include <QStringListModel>
 
 #include <absl/log/log.h>
+#include <absl/strings/str_format.h>
+#include <absl/strings/str_join.h>
 
 CheckpointWidget::CheckpointWidget(QWidget *parent) : QWidget(parent), ui(new Ui::CheckpointWidget) {
   ui->setupUi(this);
@@ -22,9 +24,11 @@ CheckpointWidget::CheckpointWidget(QWidget *parent) : QWidget(parent), ui(new Ui
     // Check the total number of selected indexes in the list view.
     int selectedCount = selectionModel->selectedIndexes().size();
     ui->loadCheckpointButton->setEnabled(selectedCount == 1);
+    ui->deleteCheckpointButton->setEnabled(selectedCount > 0);
   });
 
   connect(ui->saveCheckpointButton, &QPushButton::clicked, this, &CheckpointWidget::onSaveCheckpointClicked);
+  connect(ui->deleteCheckpointButton, &QPushButton::clicked, this, &CheckpointWidget::onDeleteCheckpointClicked);
 }
 
 CheckpointWidget::~CheckpointWidget() {
@@ -63,4 +67,29 @@ void CheckpointWidget::onCheckpointListReceived(QStringList list) {
 void CheckpointWidget::onSaveCheckpointClicked() {
   QString checkpointName = ui->checkpointNameLineEdit->text();
   hyperbot_->saveCheckpoint(checkpointName);
+}
+
+void CheckpointWidget::onDeleteCheckpointClicked() {
+  QModelIndexList selectedIndices = ui->checkpointsListView->selectionModel()->selectedIndexes();
+  std::string confirmationString = absl::StrFormat("Are you sure you want to delete checkpoint(s):\n%s", absl::StrJoin(selectedIndices, "\n", [](std::string *out, QModelIndex index) {
+    absl::StrAppend(out, index.data(Qt::DisplayRole).toString().toStdString());
+  }));
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(
+              this,
+              "Confirm Delete",
+              QString::fromStdString(confirmationString),
+              QMessageBox::Yes | QMessageBox::No
+          );
+
+  if (reply != QMessageBox::Yes) {
+    return;
+  }
+
+  // User clicked "Yes".
+  QStringList checkpointNamesToDelete;
+  for (const QModelIndex &index : selectedIndices) {
+    checkpointNamesToDelete.append(index.data(Qt::DisplayRole).toString());
+  }
+  hyperbot_->deleteCheckpoints(checkpointNamesToDelete);
 }

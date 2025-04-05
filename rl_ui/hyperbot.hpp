@@ -31,6 +31,7 @@ public:
   void requestCheckpointList();
   void saveCheckpoint(const QString &checkpointName);
   void loadCheckpoint(const QString &checkpointName);
+  void deleteCheckpoints(const QList<QString> &checkpointNames);
 
 public slots:
   void onConnectionFailed();

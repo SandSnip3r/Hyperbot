@@ -16,6 +16,10 @@ message LoadCheckpoint {
   string name = 1;
 }
 
+message DeleteCheckpoints {
+  repeated string name = 1;
+}
+
 message AsyncRequest {
   oneof body {
     google.protobuf.Empty start_training = 1;
@@ -23,6 +27,7 @@ message AsyncRequest {
     google.protobuf.Empty request_checkpoint_list = 3;
     SaveCheckpoint save_checkpoint = 4;
     LoadCheckpoint load_checkpoint = 5;
+    DeleteCheckpoints delete_checkpoints = 6;
   }
 };
 
