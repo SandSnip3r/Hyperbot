@@ -17,7 +17,7 @@ message LoadCheckpoint {
 }
 
 message DeleteCheckpoints {
-  repeated string name = 1;
+  repeated string names = 1;
 }
 
 message AsyncRequest {
