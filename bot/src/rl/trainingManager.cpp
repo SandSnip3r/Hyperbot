@@ -23,7 +23,7 @@ TrainingManager::TrainingManager(const pk2::GameData &gameData,
                       eventBroker_(eventBroker),
                       rlUserInterface_(rlUserInterface),
                       worldState_(worldState),
-                      clientManagerInterface_(clientManagerInterface)  {
+                      clientManagerInterface_(clientManagerInterface) {
   buildItemRequirementList();
 }
 
@@ -67,47 +67,39 @@ void TrainingManager::train() {
     // Get a S,A,R,S' tuple from the replay buffer.
     if constexpr (kTrain) {
       try {
-        // TODO: Create replay buffer class.
-        std::unique_lock lock(replayBufferMutex_);
-        if (!replayBuffer_.empty()) {
-          std::uniform_int_distribution<int> dist(0, replayBuffer_.size()-1);
-          auto it = replayBuffer_.begin();
-          std::advance(it, dist(randomEngine));
-          const common::PvpDescriptor::PvpId pvpId = it->first;
-          const auto &pvpMap = it->second;
-          if (!pvpMap.empty()) {
-            std::uniform_int_distribution<int> dist2(0, pvpMap.size()-1);
-            auto it2 = pvpMap.begin();
-            std::advance(it2, dist2(randomEngine));
-            const sro::scalar_types::EntityGlobalId observerGlobalId = it2->first;
-            const auto &eventObservationActionList = it2->second;
-            if (eventObservationActionList.size() >= 2) {
-              std::uniform_int_distribution<int> dist3(1, eventObservationActionList.size()-1);
-              const int selectedActionIndex = dist3(randomEngine);
-              const auto [eventCode1, observation1, actionIndex1] = eventObservationActionList[selectedActionIndex-1];
-              const auto [eventCode2, observation2, actionIndex2] = eventObservationActionList[selectedActionIndex];
-              if (!actionIndex1) {
-                throw std::runtime_error("An entry in the replay buffer before the last item has a missing action index");
-              }
-              // LOG(INFO) << "Selected actions " << selectedActionIndex-1 << " & " << selectedActionIndex << " from PVP #" << pvpId << " for observer " << worldState_.getEntity<entity::PlayerCharacter>(observerGlobalId)->name << (!actionIndex2.has_value() ? std::string(200, '@') : std::string());
+        if (replayBuffer_.size() < replayBuffer_.samplingBatchSize()) {
+          // We don't have enough transitions to sample from yet.
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+          continue;
+        }
 
-              // Since we copy the rl::Observations from the replay buffer, we can unlock the mutex while we run JAX code.
-              lock.unlock();
-              const double loss = jaxInterface_.train(observation1, *actionIndex1, !actionIndex2.has_value(), calculateReward(observation1, observation2), observation2);
-              jaxInterface_.addScalar("Train Loss", loss, trainStepCount_);
-              ++trainStepCount_;
-              if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
-                LOG(INFO) << "Updating target network!";
-                jaxInterface_.updateTargetModel();
-              }
-            }
-          }
+        // Sample a batch of transitions from the replay buffer.
+        std::vector<ReplayBuffer::SampleResult> sampleResult = replayBuffer_.sample();
+
+        // TODO: For now, we only sample one transition at a time. We should be able to sample more than one.
+        if (sampleResult.size() != 1) {
+          throw std::runtime_error("Sampled more than one transition");
+        }
+
+        const ReplayBuffer::SampleResult sample = sampleResult.at(0);
+        Observation observation0 = sample.transition.first.observation;
+        const std::optional<int> actionIndex0 = sample.transition.first.actionIndex;
+        const Observation observation1 = sample.transition.second.observation;
+        const std::optional<int> actionIndex1 = sample.transition.second.actionIndex;
+
+        const double tdError = jaxInterface_.train(observation0, *actionIndex0, !actionIndex1.has_value(), calculateReward(observation0, observation1), observation1, sample.weight);
+        LOG(INFO) << "Trained. Saw TD error: " << tdError;
+        jaxInterface_.addScalar("TD Error", tdError, trainStepCount_);
+        ++trainStepCount_;
+        if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
+          LOG(INFO) << "Updating target network!";
+          jaxInterface_.updateTargetModel();
         }
       } catch (std::exception &ex) {
         LOG(ERROR) << "Caught exception while training: " << ex.what();
       }
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
   LOG(INFO) << "Done with training loop. Exiting train()";
 }
@@ -160,19 +152,8 @@ void TrainingManager::onUpdate(const event::Event *event) {
   }
 }
 
-void TrainingManager::reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, std::optional<int> actionIndex) {
-  // LOG(INFO) << "[PVP #" << pvpId << "] Given event " << event::toString(event->eventCode) << " and observation " << observation.toString() << " for observer " << observerGlobalId << " and action " << actionIndex.value_or(-1);
-  int totalReplayBufferSize=0;
-  {
-    std::unique_lock lock(replayBufferMutex_);
-    replayBuffer_[pvpId][observerGlobalId].push_back({event->eventCode, observation, actionIndex});
-    for (const auto &i : replayBuffer_) {
-      for (const auto &j : i.second) {
-        totalReplayBufferSize += j.second.size();
-      }
-    }
-  }
-  jaxInterface_.addScalar("Replay Buffer Size", totalReplayBufferSize, trainStepCount_);
+void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex) {
+  replayBuffer_.addObservationAndAction(pvpId, observerGlobalId, observation, actionIndex);
 }
 
 void TrainingManager::setUpIntelligencePool() {

@@ -327,6 +327,8 @@ add_executable(${PROJECT_NAME}
   src/rl/jaxInterface.hpp
   src/rl/observation.cpp
   src/rl/observation.hpp
+  src/rl/replayBuffer.cpp
+  src/rl/replayBuffer.hpp
   src/rl/trainingManager.cpp
   src/rl/trainingManager.hpp
   src/session.cpp

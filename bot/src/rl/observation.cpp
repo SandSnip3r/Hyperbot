@@ -23,6 +23,7 @@ int countItemsInInventory(const Bot &bot, sro::scalar_types::ReferenceObjectId i
 } // namespace
 
 Observation::Observation(const Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId) {
+  eventCode_ = event->eventCode;
   if (!bot.selfState()) {
     throw std::runtime_error("Cannot get an observation without a self state");
   }

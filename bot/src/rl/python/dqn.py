@@ -1,6 +1,7 @@
 from flax import nnx
 import jax
 import jax.numpy as jnp
+import optax
 import orbax
 import orbax.checkpoint
 
@@ -28,20 +29,39 @@ def selectAction(model, observation, actionMask, key):
   values += actionMask
   return jnp.argmax(values)
 
-@nnx.jit
-def train(model, optimizerState, targetModel, observation, selectedAction, isTerminal, reward, nextObservation):
-  # Move model(observation)[selectedAction] towards gamma * max_action(targetModel(nextObservation)) + reward
-  def lossFunction(model, observation, actionIndex, target):
-    values = model(observation)
-    return jnp.mean(jnp.square(values[actionIndex] - target))
+# Function to compute weighted loss and TD error for a SINGLE transition
+def compute_weighted_loss_and_td_error(model, targetModel, transition, weight):
+  observation, selectedAction, isTerminal, reward, nextObservation = transition
 
   gamma = 1.0
-  targetValue = jax.lax.cond(isTerminal, lambda _: reward, lambda _: reward + gamma * jnp.max(targetModel(nextObservation)), None)
+  # Target calculation (same as before)
+  targetValue = jax.lax.cond(
+      isTerminal,
+      lambda _: reward,
+      lambda _: reward + gamma * jnp.max(jax.lax.stop_gradient(targetModel(nextObservation))),
+      None
+  )
 
-  # gradients = nnx.grad(lossFunction)(model, observation, selectedAction, targetValue)
-  loss, gradients = nnx.value_and_grad(lossFunction)(model, observation, selectedAction, targetValue)
+  # Prediction from main model
+  values = model(observation)
+  pred = values[selectedAction]
+
+  # Calculate Huber loss (unweighted)
+  unweightedLoss = optax.losses.huber_loss(pred, targetValue)
+
+  # Calculate TD Error (unweighted)
+  tdError = targetValue - pred
+
+  # Apply Importance Sampling weight to the loss
+  weightedLoss = weight * unweightedLoss
+
+  return weightedLoss, tdError
+
+@nnx.jit
+def train(model, optimizerState, targetModel, observation, selectedAction, isTerminal, reward, nextObservation, weight):
+  (loss, tdError), gradients = nnx.value_and_grad(compute_weighted_loss_and_td_error, has_aux=True)(model, targetModel, (observation, selectedAction, isTerminal, reward, nextObservation), weight)
   optimizerState.update(gradients)
-  return loss
+  return tdError
 
 def getCopyOfModel(model, targetNetwork):
   graph, params = nnx.split(model)

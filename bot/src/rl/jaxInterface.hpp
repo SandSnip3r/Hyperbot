@@ -19,8 +19,8 @@ public:
   void initialize();
   int selectAction(const Observation &observation, bool canSendPacket);
 
-  // Returns loss.
-  double train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation);
+  // Returns TD error.
+  float train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation, float weight);
   void updateTargetModel();
   void printModels();
 

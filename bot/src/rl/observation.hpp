@@ -1,15 +1,13 @@
 #ifndef RL_OBSERVATION_HPP_
 #define RL_OBSERVATION_HPP_
 
+#include "event/event.hpp"
+
 #include <silkroad_lib/scalar_types.hpp>
 
 #include <cstdint>
 #include <string>
 #include <vector>
-
-namespace event {
-struct Event;
-} // namespace event
 
 class Bot;
 
@@ -21,6 +19,7 @@ public:
   Observation(const Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId);
   std::string toString() const;
 // private:
+  event::EventCode eventCode_;
   uint32_t ourCurrentHp_;
   uint32_t ourMaxHp_;
   uint32_t ourCurrentMp_;

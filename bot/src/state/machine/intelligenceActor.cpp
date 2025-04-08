@@ -63,7 +63,7 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
           // We will not query the intelligence for a chosen action, for obvious reasons.
           // We will report the state, so that it can be saved in the replay buffer.
           if constexpr (kStoreInReplayBuffer) {
-            intelligence_->trainingManager().reportEventObservationAndAction(pvpId_, bot_.selfState()->globalId, event, observation, std::nullopt);
+            intelligence_->trainingManager().reportObservationAndAction(pvpId_, bot_.selfState()->globalId, observation, std::nullopt);
           }
           return Status::kDone;
         }
@@ -75,7 +75,7 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   const bool canSendPacket = !lastPacketTime_.has_value() || (std::chrono::steady_clock::now() - lastPacketTime_.value() > kPacketSendCooldown);
   const int actionIndex = intelligence_->selectAction(bot_, observation, canSendPacket);
   if constexpr (kStoreInReplayBuffer) {
-    intelligence_->trainingManager().reportEventObservationAndAction(pvpId_, bot_.selfState()->globalId, event, observation, actionIndex);
+    intelligence_->trainingManager().reportObservationAndAction(pvpId_, bot_.selfState()->globalId, observation, actionIndex);
   }
   setChildStateMachine(rl::ActionBuilder::buildAction(this, event, opponentGlobalId_, actionIndex));
 

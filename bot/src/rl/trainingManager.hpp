@@ -11,6 +11,7 @@
 #include "rl/checkpointManager.hpp"
 #include "rl/intelligencePool.hpp"
 #include "rl/jaxInterface.hpp"
+#include "rl/replayBuffer.hpp"
 #include "rl/observation.hpp"
 #include "session.hpp"
 #include "state/worldState.hpp"
@@ -42,7 +43,7 @@ public:
   void onUpdate(const event::Event *event);
 
   // If the actionIndex is not set, the observation was terminal.
-  void reportEventObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const event::Event *event, const Observation &observation, std::optional<int> actionIndex);
+  void reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex);
 
   JaxInterface& getJaxInterface() { return jaxInterface_; }
   int getTrainStepCount() const { return trainStepCount_.load(); }
@@ -82,8 +83,7 @@ private:
   void buildItemRequirementList();
   std::vector<common::ItemRequirement> itemRequirements_;
 
-  std::map<common::PvpDescriptor::PvpId, std::map<sro::scalar_types::EntityGlobalId, std::vector<std::tuple<event::EventCode, Observation, std::optional<int>>>>> replayBuffer_;
-  std::mutex replayBufferMutex_;
+  ReplayBuffer replayBuffer_{/*capacity=*/10'000'000, /*samplingBatchSize=*/1};
   double calculateReward(const Observation &lastObservation, const Observation &observation) const;
   void saveCheckpoint(const std::string &checkpointName);
 };
