@@ -83,6 +83,8 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
               }
               setChildStateMachine<PickItem>(itemEntity->globalId);
               return onUpdate(event);
+            } else {
+              CHAR_VLOG(1) << "Spawned item " << itemEntity->globalId << " is too far (" << distance << ") away to pick.";
             }
           }
         }

@@ -48,6 +48,13 @@ ReplayBuffer::ReplayBuffer(size_t capacity, size_t samplingBatchSize,
 
 void ReplayBuffer::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex) {
   std::unique_lock lock{replayBufferMutex_};
+
+  // TODO: Remove
+  if (currentBufferSize_ == capacity_) {
+    // Do not add if buffer is full, for now.
+    return;
+  }
+
   // 1. Add transition to internal storage, get its index within that storage
   StorageIndexType storageIndex = storage_.addObservationAndAction(pvpId, observerGlobalId, observation, actionIndex);
   if (storageIndex.actionIndex == 0) {
@@ -71,15 +78,15 @@ void ReplayBuffer::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, s
   leafToStorageMap_[leafIndex] = storageIndex;
   storageToLeafMap_[storageIndex] = leafIndex;
 
-  // 5. Update the sum-tree with MAX priority for the new transition
-  update_tree(leafIndex, maxPriority_);
+  // 5. Update the sum-tree using the max priority for the new transition. This is suggested by the paper so that new transitions are always sampled at least once.
+  updateTree(leafIndex, maxPriority_);
 
   // 6. Advance leaf index (circular) and update buffer size
   currentLeafIndex_ = (currentLeafIndex_ + 1) % capacity_;
   if (currentBufferSize_ < capacity_) {
     currentBufferSize_++;
   }
-  if (currentBufferSize_%100 == 0) {
+  if (currentBufferSize_%1000 == 0) {
     LOG(INFO) << "Added transition #" << currentBufferSize_ << " to replay buffer.";
   }
 }
@@ -93,7 +100,7 @@ std::vector<ReplayBuffer::SampleResult> ReplayBuffer::sample() {
   std::vector<SampleResult> results;
   results.reserve(samplingBatchSize_);
 
-  float total_priority = get_total_priority();
+  float total_priority = getTotalPriority();
   if (total_priority <= 0.0f) {
     throw std::runtime_error("Total priority is zero or negative, cannot sample.");
   }
@@ -152,7 +159,7 @@ void ReplayBuffer::updatePriorities(const std::vector<StorageIndexType>& storage
       LeafIndexType leafIndex = it->second; // Found the leaf index in the tree
       float priority_alpha = calculate_priority(td_errors[i]);
       maxPriority_ = std::max(maxPriority_, priority_alpha); // Ensure max_priority stays current
-      update_tree(leafIndex, priority_alpha);
+      updateTree(leafIndex, priority_alpha);
     } else {
       // Handle cases where the storage index is not found in the map
       // (e.g., it was overwritten and added again before update)
@@ -203,9 +210,9 @@ void ReplayBuffer::propagate(size_t tree_index) {
   }
 }
 
-void ReplayBuffer::update_tree(LeafIndexType leaf_index, float priority_alpha) {
+void ReplayBuffer::updateTree(LeafIndexType leaf_index, float priority_alpha) {
   if (leaf_index >= capacity_) {
-    throw std::out_of_range("Leaf index out of range in update_tree.");
+    throw std::out_of_range("Leaf index out of range in updateTree.");
   }
   // Index in the sumTree_ vector corresponding to the leaf
   size_t tree_index = leaf_index + capacity_ - 1;
@@ -247,7 +254,7 @@ std::pair<ReplayBuffer::LeafIndexType, float> ReplayBuffer::retrieve_leaf(float 
   return {leaf_index, priority_alpha};
 }
 
-float ReplayBuffer::get_total_priority() const {
+float ReplayBuffer::getTotalPriority() const {
   return sumTree_[0];
 }
 

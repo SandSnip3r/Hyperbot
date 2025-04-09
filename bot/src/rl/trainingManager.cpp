@@ -69,7 +69,7 @@ void TrainingManager::train() {
       try {
         if (replayBuffer_.size() < replayBuffer_.samplingBatchSize()) {
           // We don't have enough transitions to sample from yet.
-          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
           continue;
         }
 
@@ -88,18 +88,16 @@ void TrainingManager::train() {
         const std::optional<int> actionIndex1 = sample.transition.second.actionIndex;
 
         const double tdError = jaxInterface_.train(observation0, *actionIndex0, !actionIndex1.has_value(), calculateReward(observation0, observation1), observation1, sample.weight);
-        LOG(INFO) << "Trained. Saw TD error: " << tdError;
         jaxInterface_.addScalar("TD Error", tdError, trainStepCount_);
         ++trainStepCount_;
         if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
-          LOG(INFO) << "Updating target network!";
+          LOG(INFO) << "Train step #" << trainStepCount_ << ". Updating target network";
           jaxInterface_.updateTargetModel();
         }
       } catch (std::exception &ex) {
         LOG(ERROR) << "Caught exception while training: " << ex.what();
       }
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
   LOG(INFO) << "Done with training loop. Exiting train()";
 }

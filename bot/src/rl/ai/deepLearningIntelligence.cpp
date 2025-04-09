@@ -12,13 +12,7 @@ namespace rl::ai {
 int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket) {
   ZoneScopedN("DeepLearningIntelligence::selectAction");
   const float epsilon = getEpsilon();
-  trainingManager_.getJaxInterface().addScalar("Epsilon", epsilon, trainingManager_.getTrainStepCount());
-  if (VLOG_IS_ON(1) && stepCount_ <= kEpsilonDecaySteps) {
-    std::bernoulli_distribution printDist(0.001);
-    if (printDist(randomEngine_)) {
-      VLOG(1) << "Step: " << stepCount_ << ", epsilon: " << epsilon;
-    }
-  }
+  trainingManager_.getJaxInterface().addScalar("Epsilon", epsilon, stepCount_);
   ++stepCount_;
   std::bernoulli_distribution randomActionDistribution(epsilon);
   if (randomActionDistribution(randomEngine_)) {

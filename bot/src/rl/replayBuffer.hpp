@@ -139,13 +139,13 @@ private:
   void propagate(size_t tree_index);
 
   // Updates the priority at a specific *leaf* index in the sum-tree.
-  void update_tree(LeafIndexType leaf_index, float priority_alpha);
+  void updateTree(LeafIndexType leaf_index, float priority_alpha);
 
   // Retrieves the leaf index (0 to capacity-1) and priority corresponding to a sampled value.
   std::pair<LeafIndexType, float> retrieve_leaf(float value_to_find) const;
 
   // Gets the total priority sum (value at the root node).
-  float get_total_priority() const;
+  float getTotalPriority() const;
 };
 
 } // namespace rl

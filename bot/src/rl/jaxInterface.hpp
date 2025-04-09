@@ -7,6 +7,8 @@
 
 #include <pybind11/pybind11.h>
 
+#include <atomic>
+#include <condition_variable>
 #include <optional>
 #include <mutex>
 
@@ -43,8 +45,12 @@ private:
   std::optional<pybind11::object> model_;
   std::optional<pybind11::object> targetModel_;
   std::optional<pybind11::object> optimizerState_;
+
+  // We use a special synchronization routine to give action selection a higher priority than everything else, since it requires low latency.
+  // Context: https://github.com/SandSnip3r/ContentionBenchmark
   TracyLockableN(std::mutex, modelMutex_, "JaxInterface::modelMutex");
-  TracyLockableN(std::mutex, targetModelMutex_, "JaxInterface::targetModelMutex");
+  std::condition_variable modelConditionVariable_;
+  std::atomic<bool> waitingToSelectAction_{false};
 
   pybind11::object getNextRngKey();
   pybind11::object observationToNumpy(const Observation &observation);

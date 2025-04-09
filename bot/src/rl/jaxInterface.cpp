@@ -66,105 +66,122 @@ void JaxInterface::initialize() {
   using namespace pybind11::literals;
 
   VLOG(1) << "Constructing JaxInterface";
-  std::unique_lock modelLock(modelMutex_);
-  std::unique_lock targetModelLock(targetModelMutex_);
-  py::gil_scoped_acquire acquire;
-  py::object DqnModelType;
-  py::tuple graphAndWeights;
+  {
+    std::unique_lock modelLock(modelMutex_);
+    modelConditionVariable_.wait(modelLock, [this]() -> bool {
+      return !waitingToSelectAction_.load();
+    });
+    py::gil_scoped_acquire acquire;
+    py::object DqnModelType;
+    py::tuple graphAndWeights;
 
-  // Initialize Tensorboard for logging statistics.
-  py::module tensorboardX = py::module::import("tensorboardX");
-  summaryWriter_ = tensorboardX.attr("SummaryWriter")("flush_secs"_a=1);
+    // Initialize Tensorboard for logging statistics.
+    py::module tensorboardX = py::module::import("tensorboardX");
+    summaryWriter_ = tensorboardX.attr("SummaryWriter")("flush_secs"_a=1);
 
-  // Load our python module which has our RL code.
-  dqnModule_ = py::module::import("rl.python.dqn");
+    // Load our python module which has our RL code.
+    dqnModule_ = py::module::import("rl.python.dqn");
 
-  // Grab a random key based on our seed. Any randomness from this point on will split & replace this key held in member data.
-  randomModule_ = py::module::import("jax.random");
-  rngKey_ = randomModule_->attr("key")(kSeed);
-  // NNX's Rngs is created using a JAX key, so we'll use the above key to create our NNX Rngs.
-  nnxModule_ = py::module::import("flax.nnx");
-  nnxRngs_ = nnxModule_->attr("Rngs")(getNextRngKey());
-  // Now, we want to create a randomly initialized model. Specifically, we want randomly initialized weights. To do this, we'll instantiate our NNX model, then split the abstract graph and the concrete weights.
-  DqnModelType = dqnModule_->attr("DqnModel");
-  const int kInputSize = 4 + 1 + 32*2 + 3*2; // IF-CHANGE: If we change this, also change JaxInterface::observationToNumpy
-  const int kOutputSize = kActionSpaceSize;
-  model_ = DqnModelType(kInputSize, kOutputSize, *nnxRngs_);
-  targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
+    // Grab a random key based on our seed. Any randomness from this point on will split & replace this key held in member data.
+    randomModule_ = py::module::import("jax.random");
+    rngKey_ = randomModule_->attr("key")(kSeed);
+    // NNX's Rngs is created using a JAX key, so we'll use the above key to create our NNX Rngs.
+    nnxModule_ = py::module::import("flax.nnx");
+    nnxRngs_ = nnxModule_->attr("Rngs")(getNextRngKey());
+    // Now, we want to create a randomly initialized model. Specifically, we want randomly initialized weights. To do this, we'll instantiate our NNX model, then split the abstract graph and the concrete weights.
+    DqnModelType = dqnModule_->attr("DqnModel");
+    const int kInputSize = 4 + 1 + 32*2 + 3*2; // IF-CHANGE: If we change this, also change JaxInterface::observationToNumpy
+    const int kOutputSize = kActionSpaceSize;
+    model_ = DqnModelType(kInputSize, kOutputSize, *nnxRngs_);
+    targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
 
-  optaxModule_ = py::module::import("optax");
-  py::object adam = optaxModule_->attr("adam")(kLearningRate);
-  optimizerState_ = nnxModule_->attr("Optimizer")(*model_, adam);
+    optaxModule_ = py::module::import("optax");
+    py::object adam = optaxModule_->attr("adam")(kLearningRate);
+    optimizerState_ = nnxModule_->attr("Optimizer")(*model_, adam);
+  }
+  modelConditionVariable_.notify_all();
 }
 
 int JaxInterface::selectAction(const Observation &observation, bool canSendPacket) {
   ZoneScopedN("JaxInterface::selectAction");
   VLOG(1) << absl::StreamFormat("Getting action for observation %s, canSendPacket=%v", observation.toString(), canSendPacket);
   int actionIndex;
-  {
+  try {
+    waitingToSelectAction_ = true;
     std::unique_lock lock(modelMutex_);
+    waitingToSelectAction_ = false;
     py::gil_scoped_acquire acquire;
-    try {
-      // Convert C++ observation into numpy observation
-      py::object numpyObservation = observationToNumpy(observation);
-      // Create an action mask based on whether or not we can send a packet
-      py::object actionMask = createActionMask(canSendPacket);
-      // Get the action from the model
-      py::object actionPyObject;
-      {
-        ZoneScopedN("JaxInterface::selectAction_PYTHON");
-        actionPyObject = dqnModule_->attr("selectAction")(*model_, numpyObservation, actionMask, getNextRngKey());
-      }
-      actionIndex = actionPyObject.cast<int>();
-    } catch (std::exception &ex) {
-      LOG(ERROR) << "Caught exception in JaxInterface::selectAction: " << ex.what();
-      throw;
+    // Convert C++ observation into numpy observation
+    py::object numpyObservation = observationToNumpy(observation);
+    // Create an action mask based on whether or not we can send a packet
+    py::object actionMask = createActionMask(canSendPacket);
+    // Get the action from the model
+    py::object actionPyObject;
+    {
+      ZoneScopedN("JaxInterface::selectAction_PYTHON");
+      actionPyObject = dqnModule_->attr("selectAction")(*model_, numpyObservation, actionMask, getNextRngKey());
     }
+    actionIndex = actionPyObject.cast<int>();
+  } catch (std::exception &ex) {
+    LOG(ERROR) << "Caught exception in JaxInterface::selectAction: " << ex.what();
+    modelConditionVariable_.notify_all();
+    throw;
   }
+  modelConditionVariable_.notify_all();
   VLOG(1) << "Chose action " << actionIndex;
   return actionIndex;
 }
 
 float JaxInterface::train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation, float weight) {
   ZoneScopedN("JaxInterface::train");
-  std::unique_lock modelLock(modelMutex_);
-  std::unique_lock targetModelLock(targetModelMutex_);
-  py::gil_scoped_acquire acquire;
-  try {
-    ZoneScopedN("JaxInterface::train_PYTHON");
-    py::object tdError = dqnModule_->attr("train")(*model_, *optimizerState_, *targetModel_, observationToNumpy(olderObservation), actionIndex, isTerminal, reward, observationToNumpy(newerObservation), weight);
-    return py::cast<float>(tdError);
-  } catch (std::exception &ex) {
-    LOG(ERROR) << "Caught exception in JaxInterface::train: " << ex.what();
-    throw;
+  {
+    std::unique_lock modelLock(modelMutex_);
+    modelConditionVariable_.wait(modelLock, [this]() -> bool {
+      return !waitingToSelectAction_.load();
+    });
+    py::gil_scoped_acquire acquire;
+    try {
+      ZoneScopedN("JaxInterface::train_PYTHON");
+      py::object tdError = dqnModule_->attr("train")(*model_, *optimizerState_, *targetModel_, observationToNumpy(olderObservation), actionIndex, isTerminal, reward, observationToNumpy(newerObservation), weight);
+      return py::cast<float>(tdError);
+    } catch (std::exception &ex) {
+      LOG(ERROR) << "Caught exception in JaxInterface::train: " << ex.what();
+      throw;
+    }
   }
+  modelConditionVariable_.notify_all();
 }
 
 void JaxInterface::updateTargetModel() {
   ZoneScopedN("JaxInterface::updateTargetModel");
-  std::unique_lock modelLock(modelMutex_);
-  std::unique_lock targetModelLock(targetModelMutex_);
-  py::gil_scoped_acquire acquire;
-  try {
-    targetModel_ = dqnModule_->attr("getCopyOfModel")(*model_, *targetModel_);
-  } catch (std::exception &ex) {
-    LOG(ERROR) << "Caught exception in JaxInterface::updateTargetModel: " << ex.what();
-    throw;
+  {
+    std::unique_lock modelLock(modelMutex_);
+    modelConditionVariable_.wait(modelLock, [this]() -> bool {
+      return !waitingToSelectAction_.load();
+    });
+    py::gil_scoped_acquire acquire;
+    try {
+      targetModel_ = dqnModule_->attr("getCopyOfModel")(*model_, *targetModel_);
+    } catch (std::exception &ex) {
+      LOG(ERROR) << "Caught exception in JaxInterface::updateTargetModel: " << ex.what();
+      throw;
+    }
   }
+  modelConditionVariable_.notify_all();
 }
 
 void JaxInterface::printModels() {
   try {
     {
       std::unique_lock modelLock(modelMutex_);
+      modelConditionVariable_.wait(modelLock, [this]() -> bool {
+        return !waitingToSelectAction_.load();
+      });
       py::gil_scoped_acquire acquire;
       dqnModule_->attr("printWeights")(*model_);
-    }
-    {
-      std::unique_lock targetModelLock(targetModelMutex_);
-      py::gil_scoped_acquire acquire;
       dqnModule_->attr("printWeights")(*targetModel_);
     }
+    modelConditionVariable_.notify_all();
   } catch (std::exception &ex) {
     LOG(ERROR) << "Caught exception in JaxInterface::printModels: " << ex.what();
   }
@@ -172,25 +189,31 @@ void JaxInterface::printModels() {
 
 void JaxInterface::saveCheckpoint(const std::string &modelCheckpointPath, const std::string &targetModelCheckpointPath, const std::string &optimizerStateCheckpointPath) {
   LOG(INFO) << "Saving checkpoint at paths \"" << modelCheckpointPath << "\", \"" << targetModelCheckpointPath << "\", and \"" << optimizerStateCheckpointPath << "\"";
-  std::unique_lock modelLock(modelMutex_);
-  std::unique_lock targetModelLock(targetModelMutex_);
-  py::gil_scoped_acquire acquire;
   try {
+    std::unique_lock modelLock(modelMutex_);
+    modelConditionVariable_.wait(modelLock, [this]() -> bool {
+      return !waitingToSelectAction_.load();
+    });
+    py::gil_scoped_acquire acquire;
     dqnModule_->attr("checkpointModel")(*model_, modelCheckpointPath);
     dqnModule_->attr("checkpointModel")(*targetModel_, targetModelCheckpointPath);
     dqnModule_->attr("checkpointOptimizer")(*optimizerState_, optimizerStateCheckpointPath);
   } catch (std::exception &ex) {
     LOG(ERROR) << "Caught exception in JaxInterface::saveCheckpoint: " << ex.what();
+    modelConditionVariable_.notify_all();
     throw;
   }
+  modelConditionVariable_.notify_all();
 }
 
 void JaxInterface::loadCheckpoint(const std::string &modelCheckpointPath, const std::string &targetModelCheckpointPath, const std::string &optimizerStateCheckpointPath) {
   LOG(INFO) << "Loading checkpoint at paths \"" << modelCheckpointPath << "\", \"" << targetModelCheckpointPath << "\", and \"" << optimizerStateCheckpointPath << "\"";
-  std::unique_lock modelLock(modelMutex_);
-  std::unique_lock targetModelLock(targetModelMutex_);
-  py::gil_scoped_acquire acquire;
   try {
+    std::unique_lock modelLock(modelMutex_);
+    modelConditionVariable_.wait(modelLock, [this]() -> bool {
+      return !waitingToSelectAction_.load();
+    });
+    py::gil_scoped_acquire acquire;
     model_ = dqnModule_->attr("loadModelCheckpoint")(*model_, modelCheckpointPath);
     targetModel_ = dqnModule_->attr("loadModelCheckpoint")(*targetModel_, targetModelCheckpointPath);
     // Construct new optimizer for the loaded model.
@@ -200,8 +223,10 @@ void JaxInterface::loadCheckpoint(const std::string &modelCheckpointPath, const 
     optimizerState_ = dqnModule_->attr("loadOptimizerCheckpoint")(*optimizerState_, optimizerStateCheckpointPath);
   } catch (std::exception &ex) {
     LOG(ERROR) << "Caught exception in JaxInterface::loadCheckpoint: " << ex.what();
+    modelConditionVariable_.notify_all();
     throw;
   }
+  modelConditionVariable_.notify_all();
 }
 
 void JaxInterface::addScalar(std::string_view name, double yValue, double xValue) {
