@@ -1,6 +1,8 @@
 #include "rl/replayBuffer.hpp"
 
 #include <absl/log/log.h>
+#include <absl/strings/str_format.h>
+#include <absl/strings/str_join.h>
 
 namespace rl {
 
@@ -29,8 +31,7 @@ ObservationAndActionStorage::ObservationAndActionType ObservationAndActionStorag
   return observations.at(index.actionIndex);
 }
 
-ReplayBuffer::ReplayBuffer(size_t capacity, size_t samplingBatchSize,
-                           float alpha, float beta, float epsilon)
+ReplayBuffer::ReplayBuffer(size_t capacity, size_t samplingBatchSize, float alpha, float beta, float epsilon)
       : capacity_(capacity),
         samplingBatchSize_(samplingBatchSize),
         alpha_(alpha),
@@ -63,7 +64,7 @@ void ReplayBuffer::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, s
   }
 
   // 2. Determine the leaf index in our sum-tree where this priority will go
-  LeafIndexType leafIndex = currentLeafIndex_;
+  const LeafIndexType leafIndex = currentLeafIndex_;
 
   // 3. Handle potential overwrite in mapping
   if (currentBufferSize_ == capacity_) {
@@ -87,7 +88,7 @@ void ReplayBuffer::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, s
     currentBufferSize_++;
   }
   if (currentBufferSize_%1000 == 0) {
-    LOG(INFO) << "Added transition #" << currentBufferSize_ << " to replay buffer.";
+    VLOG(1) << "Added transition #" << currentBufferSize_ << " to replay buffer.";
   }
 }
 
@@ -100,71 +101,70 @@ std::vector<ReplayBuffer::SampleResult> ReplayBuffer::sample() {
   std::vector<SampleResult> results;
   results.reserve(samplingBatchSize_);
 
-  float total_priority = getTotalPriority();
-  if (total_priority <= 0.0f) {
+  const float totalPriority = getTotalPriority();
+  if (totalPriority <= 0.0f) {
     throw std::runtime_error("Total priority is zero or negative, cannot sample.");
   }
 
-  float segment_size = total_priority / static_cast<float>(samplingBatchSize_);
-  float max_weight = 0.0f;
+  const float segmentSize = totalPriority / static_cast<float>(samplingBatchSize_);
+  float maxWeight = 0.0f;
 
   for (size_t i = 0; i < samplingBatchSize_; ++i) {
-    std::uniform_real_distribution<float> dist(i * segment_size, (i + 1) * segment_size);
-    float value_to_find = dist(rng_);
+    std::uniform_real_distribution<float> dist(i * segmentSize, (i + 1) * segmentSize);
+    const float valueToFind = dist(rng_);
 
     // Retrieve leaf index (within sum-tree) and its stored priority (p^alpha)
-    auto [leafIndex, priority_alpha] = retrieve_leaf(value_to_find);
+    auto [leafIndex, priorityAlpha] = retrieveLeaf(valueToFind);
 
     // Get the corresponding storage index using the map
     const StorageIndexType observation1StorageIndex = leafToStorageMap_[leafIndex];
 
     // Calculate sampling probability P(i) = p_i^alpha / total_p_alpha
-    float sampling_probability = priority_alpha / total_priority;
-    if (sampling_probability <= 0.0f) {
-      sampling_probability = std::numeric_limits<float>::epsilon(); // Avoid issues
+    float samplingProbability = priorityAlpha / totalPriority;
+    if (samplingProbability <= 0.0f) {
+      samplingProbability = std::numeric_limits<float>::epsilon(); // Avoid issues
     }
 
     // Calculate Importance Sampling (IS) weight: w_i = (N * P(i))^-beta
     // Note: Using currentBufferSize_ as N
-    float weight = std::pow(static_cast<float>(currentBufferSize_) * sampling_probability, -beta_);
-    max_weight = std::max(max_weight, weight); // Track max weight for normalization
+    const float weight = std::pow(static_cast<float>(currentBufferSize_) * samplingProbability, -beta_);
+    maxWeight = std::max(maxWeight, weight); // Track max weight for normalization
 
     // Create a new SampleResult object with one-lower index
     const StorageIndexType observation0StorageIndex = observation1StorageIndex.previous();
 
-    results.push_back({TransitionType{storage_.getObservationAndAction(observation0StorageIndex), storage_.getObservationAndAction(observation1StorageIndex)}, weight});
+    results.push_back({observation1StorageIndex, TransitionType{storage_.getObservationAndAction(observation0StorageIndex), storage_.getObservationAndAction(observation1StorageIndex)}, weight});
   }
 
   // Normalize weights: w_i = w_i / max_w
-  if (max_weight > 0) {
+  if (maxWeight > 0) {
     for (SampleResult &sample : results) {
-      sample.weight /= max_weight;
+      sample.weight /= maxWeight;
     }
   }
 
   return results;
 }
 
-void ReplayBuffer::updatePriorities(const std::vector<StorageIndexType>& storageIndices, const std::vector<float>& td_errors) {
+void ReplayBuffer::updatePriorities(const std::vector<StorageIndexType>& storageIndices, const std::vector<float>& tdErrors) {
   std::unique_lock lock{replayBufferMutex_};
-  if (storageIndices.size() != td_errors.size()) {
+  if (storageIndices.size() != tdErrors.size()) {
     throw std::runtime_error("Indices and TD errors size mismatch in updatePriorities.");
   }
 
-  for (size_t i = 0; i < storageIndices.size(); ++i) {
+  for (size_t i=0; i<storageIndices.size(); ++i) {
     StorageIndexType storageIndex = storageIndices[i];
     auto it = storageToLeafMap_.find(storageIndex);
 
     if (it != storageToLeafMap_.end()) {
       LeafIndexType leafIndex = it->second; // Found the leaf index in the tree
-      float priority_alpha = calculate_priority(td_errors[i]);
-      maxPriority_ = std::max(maxPriority_, priority_alpha); // Ensure max_priority stays current
-      updateTree(leafIndex, priority_alpha);
+      const float priorityAlpha = calculatePriority(tdErrors[i]);
+      maxPriority_ = std::max(maxPriority_, priorityAlpha); // Ensure max_priority stays current
+      updateTree(leafIndex, priorityAlpha);
     } else {
-      // Handle cases where the storage index is not found in the map
+      // Handle cases where the storage index is not found in the map.
       // (e.g., it was overwritten and added again before update)
-      // Depending on requirements, could log a warning or ignore.
-      // std::cerr << "Warning: Storage index " << storageIndex << " not found for priority update." << std::endl;
+      throw std::runtime_error("Storage index not found in storageToLeafMap.");
     }
   }
 }
@@ -179,28 +179,23 @@ size_t ReplayBuffer::samplingBatchSize() const {
   return samplingBatchSize_;
 }
 
-float ReplayBuffer::calculate_priority(float tdError) const {
+float ReplayBuffer::calculatePriority(float tdError) const {
   return std::pow(std::abs(tdError) + epsilon_, alpha_);
 }
 
-void ReplayBuffer::propagate(size_t tree_index) {
+void ReplayBuffer::propagate(size_t treeIndex) {
   // Start from parent of the updated node
-  size_t current = (tree_index - 1) / 2;
+  size_t current = (treeIndex - 1) / 2;
   while (true) {
-    size_t left_child = 2 * current + 1;
-    size_t right_child = left_child + 1;
+    const size_t leftChild = 2 * current + 1;
+    const size_t rightChild = leftChild + 1;
 
-    float new_sum = sumTree_[left_child];
+    float newSum = sumTree_[leftChild];
       // Check if right child is within tree bounds before accessing
-    if (right_child < sumTree_.size()) {
-      new_sum += sumTree_[right_child];
+    if (rightChild < sumTree_.size()) {
+      newSum += sumTree_[rightChild];
     }
-
-    if (std::abs(sumTree_[current] - new_sum) < 1e-6 ) { // Tolerance check
-      break; // Sum hasn't changed significantly
-    }
-
-    sumTree_[current] = new_sum;
+    sumTree_[current] = newSum;
 
     if (current == 0) {
       // Reached the root
@@ -210,48 +205,49 @@ void ReplayBuffer::propagate(size_t tree_index) {
   }
 }
 
-void ReplayBuffer::updateTree(LeafIndexType leaf_index, float priority_alpha) {
-  if (leaf_index >= capacity_) {
+void ReplayBuffer::updateTree(LeafIndexType leafIndex, float priorityAlpha) {
+  if (leafIndex >= capacity_) {
     throw std::out_of_range("Leaf index out of range in updateTree.");
   }
   // Index in the sumTree_ vector corresponding to the leaf
-  size_t tree_index = leaf_index + capacity_ - 1;
-  sumTree_[tree_index] = priority_alpha;
-  propagate(tree_index);
+  const size_t treeIndex = leafIndex + capacity_ - 1;
+  sumTree_[treeIndex] = priorityAlpha;
+  propagate(treeIndex);
 }
 
-std::pair<ReplayBuffer::LeafIndexType, float> ReplayBuffer::retrieve_leaf(float value_to_find) const {
-  size_t current_node_idx = 0; // Start at the root (tree index)
+std::pair<ReplayBuffer::LeafIndexType, float> ReplayBuffer::retrieveLeaf(float valueToFind) const {
+  // Start at the root (tree index)
+  size_t currentNodeIndex = 0;
 
   while (true) {
-    size_t left_child_idx = 2 * current_node_idx + 1;
-    size_t right_child_idx = left_child_idx + 1;
+    const size_t leftChildIndex = 2 * currentNodeIndex + 1;
+    const size_t rightChildIndex = leftChildIndex + 1;
 
-    if (left_child_idx >= sumTree_.size()) {
+    if (leftChildIndex >= sumTree_.size()) {
       // Reached a leaf
       break;
     }
 
-    float left_child_value = sumTree_[left_child_idx];
+    const float leftChildValue = sumTree_[leftChildIndex];
 
-    if (value_to_find <= left_child_value) {
-      current_node_idx = left_child_idx; // Go left
+    if (valueToFind <= leftChildValue) {
+      currentNodeIndex = leftChildIndex; // Go left
     } else {
-      value_to_find -= left_child_value; // Subtract left value
-      if (right_child_idx < sumTree_.size()) {
-        current_node_idx = right_child_idx; // Go right
+      valueToFind -= leftChildValue; // Subtract left value
+      if (rightChildIndex < sumTree_.size()) {
+        currentNodeIndex = rightChildIndex; // Go right
       } else {
         // Should only happen if value > total priority or tree is corrupt
-        current_node_idx = left_child_idx; // Fallback to last valid node
-        break;
+        throw std::runtime_error("Right child index out of bounds.");
       }
     }
   }
-  // Convert tree index back to leaf index (0 to capacity-1)
-  LeafIndexType leaf_index = current_node_idx - (capacity_ - 1);
-  float priority_alpha = sumTree_[current_node_idx];
 
-  return {leaf_index, priority_alpha};
+  // Convert tree index back to leaf index (0 to capacity-1)
+  const LeafIndexType leafIndex = currentNodeIndex - (capacity_ - 1);
+  const float priorityAlpha = sumTree_[currentNodeIndex];
+
+  return {leafIndex, priorityAlpha};
 }
 
 float ReplayBuffer::getTotalPriority() const {

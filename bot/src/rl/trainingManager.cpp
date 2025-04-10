@@ -87,7 +87,18 @@ void TrainingManager::train() {
         const Observation observation1 = sample.transition.second.observation;
         const std::optional<int> actionIndex1 = sample.transition.second.actionIndex;
 
-        const double tdError = jaxInterface_.train(observation0, *actionIndex0, !actionIndex1.has_value(), calculateReward(observation0, observation1), observation1, sample.weight);
+        const float reward = calculateReward(observation0, observation1);
+        const float tdError = jaxInterface_.train(observation0, *actionIndex0, !actionIndex1.has_value(), reward, observation1, sample.weight);
+
+        // Update the priorities of the sampled transitions in the replay buffer.
+        std::vector<ReplayBuffer::StorageIndexType> storageIndices;
+        std::vector<float> tdErrors;
+        storageIndices.reserve(sampleResult.size());
+        tdErrors.reserve(sampleResult.size());
+        storageIndices.push_back(sampleResult.at(0).storageIndex);
+        tdErrors.push_back(tdError);
+        replayBuffer_.updatePriorities(storageIndices, tdErrors);
+
         jaxInterface_.addScalar("TD Error", tdError, trainStepCount_);
         ++trainStepCount_;
         if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
@@ -267,21 +278,20 @@ void TrainingManager::buildItemRequirementList() {
   itemRequirements_.push_back({mediumUniversalPillRefId, kMediumUniversalPillRequiredCount});
 }
 
-double TrainingManager::calculateReward(const Observation &lastObservation, const Observation &observation) const {
-  double reward = 0.0;
+float TrainingManager::calculateReward(const Observation &lastObservation, const Observation &observation) const {
+  float reward = 0.0f;
   // We get some positive reward proportional to how much our health increased, negative if it decreased.
   reward += (static_cast<int64_t>(observation.ourCurrentHp_) - lastObservation.ourCurrentHp_) / static_cast<double>(observation.ourMaxHp_);
   // We get some positive reward proportional to how much our opponent's health decreased, negative if it increased.
   reward += (static_cast<int64_t>(lastObservation.opponentCurrentHp_) - observation.opponentCurrentHp_) / static_cast<double>(observation.opponentMaxHp_);
   // Give an extra bump for a win or loss.
   if (observation.ourCurrentHp_ == 0) {
-    reward -= 10.0;
+    reward -= 10.0f;
   } else if (observation.opponentCurrentHp_ == 0) {
-    reward += 10.0;
+    reward += 10.0f;
   }
   return reward;
 }
-
 
 void TrainingManager::saveCheckpoint(const std::string &checkpointName) {
   LOG(INFO) << "Being asked to save checkpoint \"" << checkpointName << "\"";

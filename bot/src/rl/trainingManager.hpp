@@ -83,8 +83,9 @@ private:
   void buildItemRequirementList();
   std::vector<common::ItemRequirement> itemRequirements_;
 
-  ReplayBuffer replayBuffer_{/*capacity=*/10'000'000, /*samplingBatchSize=*/1};
-  double calculateReward(const Observation &lastObservation, const Observation &observation) const;
+  ReplayBuffer replayBuffer_{/*capacity=*/10'000'000, /*samplingBatchSize=*/1,
+                             /*alpha=*/0.6f, /*beta=*/0.4f, /*epsilon=*/1e-5f};
+  float calculateReward(const Observation &lastObservation, const Observation &observation) const;
   void saveCheckpoint(const std::string &checkpointName);
 };
 

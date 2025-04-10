@@ -694,7 +694,7 @@ void PacketProcessor::serverAgentEntityDamageEffectReceived(const packet::parsin
   std::shared_ptr<entity::Entity> entity = worldState_.getEntity(packet.globalId());
   if (auto *entityAsCharacter = dynamic_cast<entity::Character*>(entity.get())) {
     if (entityAsCharacter->currentHpIsKnown()) {
-      entityAsCharacter->setCurrentHp(std::max<uint32_t>(0, entityAsCharacter->currentHp() - packet.effectDamage()));
+      entityAsCharacter->setCurrentHp(std::max<int64_t>(0, int64_t(entityAsCharacter->currentHp()) - packet.effectDamage()));
     }
   }
   // This packet only comes for effects which we deal.
@@ -1828,7 +1828,7 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
             if (hitResult.damage >= character->currentHp()) {
               character->setCurrentHp(0);
             } else {
-              character->setCurrentHp(character->currentHp() - hitResult.damage);
+              character->setCurrentHp(std::max<int64_t>(0, int64_t(character->currentHp()) - hitResult.damage));
             }
           }
         }

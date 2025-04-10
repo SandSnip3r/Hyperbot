@@ -71,8 +71,6 @@ private:
 class ReplayBuffer {
 private:
   // --- Internal Types ---
-  // StorageIndexType is the index type defined by the storage class.
-  using StorageIndexType = typename ObservationAndActionStorage::Index;
   // LeafIndexType is the index type for leaves within our sum-tree (0 to capacity-1).
   using LeafIndexType = size_t;
 
@@ -84,14 +82,17 @@ public:
   // alpha: How much prioritization to use (0=uniform, 1=full priority)
   // beta: Initial importance sampling exponent (annealed externally, or stays constant)
   // epsilon: Small value added to priorities to ensure non-zero probability
-  ReplayBuffer(size_t capacity, size_t samplingBatchSize,
-               float alpha = 0.6f, float beta = 0.4f, float epsilon = 1e-5f);
+  ReplayBuffer(size_t capacity, size_t samplingBatchSize, float alpha, float beta, float epsilon);
 
   // Adds a transition to the internal storage and updates PER structures.
   void addObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex);
 
+  // StorageIndexType is the index type defined by the storage class.
+  using StorageIndexType = typename ObservationAndActionStorage::Index;
+
   // Result structure for sampling
   struct SampleResult {
+    StorageIndexType storageIndex; // Used for updating priorities
     TransitionType transition;
     float weight;
   };
@@ -101,7 +102,7 @@ public:
 
   // Updates the priorities of specific transitions after they've been processed.
   // Uses the indices provided by the storage class.
-  void updatePriorities(const std::vector<StorageIndexType>& storageIndices, const std::vector<float>& td_errors);
+  void updatePriorities(const std::vector<StorageIndexType>& storageIndices, const std::vector<float>& tdErrors);
 
   size_t size() const;
   size_t samplingBatchSize() const;
@@ -116,7 +117,7 @@ private:
   const float epsilon_;
 
   // --- Internal Storage ---
-  ObservationAndActionStorage storage_; // The user-provided storage class instance
+  ObservationAndActionStorage storage_;
 
   // --- PER Data Structures ---
   std::vector<float> sumTree_; // Stores priorities p^alpha (size 2*capacity - 1)
@@ -133,16 +134,16 @@ private:
   // --- Helper Methods ---
 
   // Calculates priority p^alpha = (|tdError| + epsilon)^alpha
-  float calculate_priority(float tdError) const;
+  float calculatePriority(float tdError) const;
 
   // Propagates priority change up the sum-tree from a given *tree* index.
   void propagate(size_t tree_index);
 
   // Updates the priority at a specific *leaf* index in the sum-tree.
-  void updateTree(LeafIndexType leaf_index, float priority_alpha);
+  void updateTree(LeafIndexType leafIndex, float priorityAlpha);
 
   // Retrieves the leaf index (0 to capacity-1) and priority corresponding to a sampled value.
-  std::pair<LeafIndexType, float> retrieve_leaf(float value_to_find) const;
+  std::pair<LeafIndexType, float> retrieveLeaf(float valueToFind) const;
 
   // Gets the total priority sum (value at the root node).
   float getTotalPriority() const;

@@ -33,7 +33,7 @@ public:
   void addScalar(std::string_view name, double yValue, double xValue);
 private:
   static constexpr int kActionSpaceSize{36}; // TODO: If changed, also change rl::ActionBuilder
-  static constexpr float kLearningRate{1e-5};
+  static constexpr float kLearningRate{1e-6};
   static constexpr int kSeed{0};
   std::optional<pybind11::module> dqnModule_;
   std::optional<pybind11::module> randomModule_;
