@@ -47,20 +47,20 @@ ReplayBuffer::ReplayBuffer(size_t capacity, size_t samplingBatchSize, float alph
   storageToLeafMap_.reserve(capacity);
 }
 
-void ReplayBuffer::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex) {
+ReplayBuffer::StorageIndexType ReplayBuffer::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex) {
   std::unique_lock lock{replayBufferMutex_};
 
   // TODO: Remove
   if (currentBufferSize_ == capacity_) {
     // Do not add if buffer is full, for now.
-    return;
+    return {};
   }
 
   // 1. Add transition to internal storage, get its index within that storage
   StorageIndexType storageIndex = storage_.addObservationAndAction(pvpId, observerGlobalId, observation, actionIndex);
   if (storageIndex.actionIndex == 0) {
     // This is the first observation of this pvp for this player. We do not yet have a full transition. Nothing to do.
-    return;
+    return storageIndex;
   }
 
   // 2. Determine the leaf index in our sum-tree where this priority will go
@@ -90,6 +90,13 @@ void ReplayBuffer::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, s
   if (currentBufferSize_%1000 == 0) {
     VLOG(1) << "Added transition #" << currentBufferSize_ << " to replay buffer.";
   }
+
+  return storageIndex;
+}
+
+ObservationAndActionStorage::ObservationAndActionType ReplayBuffer::getObservationAndAction(StorageIndexType index) const {
+  std::unique_lock lock{replayBufferMutex_};
+  return storage_.getObservationAndAction(index);
 }
 
 std::vector<ReplayBuffer::SampleResult> ReplayBuffer::sample() {

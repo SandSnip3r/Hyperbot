@@ -88,7 +88,7 @@ void TrainingManager::train() {
         const std::optional<int> actionIndex1 = sample.transition.second.actionIndex;
 
         const float reward = calculateReward(observation0, observation1);
-        const float tdError = jaxInterface_.train(observation0, *actionIndex0, !actionIndex1.has_value(), reward, observation1, sample.weight);
+        const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(observation0, *actionIndex0, !actionIndex1.has_value(), reward, observation1, sample.weight);
 
         // Update the priorities of the sampled transitions in the replay buffer.
         std::vector<ReplayBuffer::StorageIndexType> storageIndices;
@@ -96,10 +96,13 @@ void TrainingManager::train() {
         storageIndices.reserve(sampleResult.size());
         tdErrors.reserve(sampleResult.size());
         storageIndices.push_back(sampleResult.at(0).storageIndex);
-        tdErrors.push_back(tdError);
+        tdErrors.push_back(trainOutput.tdError);
         replayBuffer_.updatePriorities(storageIndices, tdErrors);
 
-        jaxInterface_.addScalar("TD Error", tdError, trainStepCount_);
+        jaxInterface_.addScalar("TD Error", trainOutput.tdError, trainStepCount_);
+        jaxInterface_.addScalar("Min Q Value", trainOutput.minQValue, trainStepCount_);
+        jaxInterface_.addScalar("Mean Q Value", trainOutput.meanQValue, trainStepCount_);
+        jaxInterface_.addScalar("Max Q Value", trainOutput.maxQValue, trainStepCount_);
         ++trainStepCount_;
         if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
           LOG(INFO) << "Train step #" << trainStepCount_ << ". Updating target network";
@@ -162,7 +165,19 @@ void TrainingManager::onUpdate(const event::Event *event) {
 }
 
 void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex) {
-  replayBuffer_.addObservationAndAction(pvpId, observerGlobalId, observation, actionIndex);
+  ObservationAndActionStorage::Index index = replayBuffer_.addObservationAndAction(pvpId, observerGlobalId, observation, actionIndex);
+  ObservationAndActionStorage::ObservationAndActionType currentAction = replayBuffer_.getObservationAndAction(index);
+  float cumulativeReward = 0.0f;
+  // Go backwards and sum this agent's rewards so far.
+  while (index.actionIndex > 0) {
+    const ObservationAndActionStorage::Index previousIndex = index.previous();
+    const ObservationAndActionStorage::ObservationAndActionType previousAction = replayBuffer_.getObservationAndAction(previousIndex);
+    cumulativeReward += calculateReward(previousAction.observation, currentAction.observation);
+    index = previousIndex;
+    currentAction = previousAction;
+  }
+  // TODO: It would be nice to get the name of the agent for the name of the scalar, so we can compare across runs.
+  jaxInterface_.addScalar(absl::StrFormat("%d_Reward", observerGlobalId), cumulativeReward, trainStepCount_);
 }
 
 void TrainingManager::setUpIntelligencePool() {

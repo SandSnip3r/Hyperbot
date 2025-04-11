@@ -33,6 +33,8 @@ def selectAction(model, observation, actionMask, key):
 def computeWeightedLossAndTdError(model, targetModel, transition, weight):
   observation, selectedAction, isTerminal, reward, nextObservation = transition
 
+  gamma = 0.99
+
   # --- DDQN Target Calculation ---
   # Define the calculation for the non-terminal case using DDQN logic
   def ddqnTargetCalculation(_):
@@ -50,7 +52,6 @@ def computeWeightedLossAndTdError(model, targetModel, transition, weight):
     #    Stop gradients from flowing back through the target network calculation.
     return reward + gamma * jax.lax.stop_gradient(targetQValueForBestAction)
 
-  gamma = 1.0
   targetValue = jax.lax.cond(
       isTerminal,
       lambda _: reward,
@@ -71,13 +72,13 @@ def computeWeightedLossAndTdError(model, targetModel, transition, weight):
   # Apply Importance Sampling weight to the loss
   weightedLoss = weight * unweightedLoss
 
-  return weightedLoss, tdError
+  return weightedLoss, (tdError, jnp.min(values), jnp.mean(values), jnp.max(values))
 
 @nnx.jit
 def train(model, optimizerState, targetModel, observation, selectedAction, isTerminal, reward, nextObservation, weight):
-  (loss, tdError), gradients = nnx.value_and_grad(computeWeightedLossAndTdError, has_aux=True)(model, targetModel, (observation, selectedAction, isTerminal, reward, nextObservation), weight)
+  (loss, auxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdError, has_aux=True)(model, targetModel, (observation, selectedAction, isTerminal, reward, nextObservation), weight)
   optimizerState.update(gradients)
-  return tdError
+  return auxOutput
 
 def getCopyOfModel(model, targetNetwork):
   graph, params = nnx.split(model)

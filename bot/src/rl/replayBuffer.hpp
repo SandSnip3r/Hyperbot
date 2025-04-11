@@ -29,9 +29,9 @@ namespace rl {
 class ObservationAndActionStorage {
 public:
   struct Index {
-    common::PvpDescriptor::PvpId pvpId;
-    sro::scalar_types::EntityGlobalId observerGlobalId;
-    size_t actionIndex;
+    common::PvpDescriptor::PvpId pvpId{};
+    sro::scalar_types::EntityGlobalId observerGlobalId{};
+    size_t actionIndex{};
 
     Index previous() const {
       Index result{*this};
@@ -84,11 +84,13 @@ public:
   // epsilon: Small value added to priorities to ensure non-zero probability
   ReplayBuffer(size_t capacity, size_t samplingBatchSize, float alpha, float beta, float epsilon);
 
-  // Adds a transition to the internal storage and updates PER structures.
-  void addObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex);
-
   // StorageIndexType is the index type defined by the storage class.
   using StorageIndexType = typename ObservationAndActionStorage::Index;
+
+  // Adds a transition to the internal storage and updates PER structures.
+  StorageIndexType addObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex);
+
+  ObservationAndActionStorage::ObservationAndActionType getObservationAndAction(StorageIndexType index) const;
 
   // Result structure for sampling
   struct SampleResult {

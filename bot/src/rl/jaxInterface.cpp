@@ -132,7 +132,7 @@ int JaxInterface::selectAction(const Observation &observation, bool canSendPacke
   return actionIndex;
 }
 
-float JaxInterface::train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation, float weight) {
+JaxInterface::TrainAuxOutput JaxInterface::train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation, float weight) {
   ZoneScopedN("JaxInterface::train");
   {
     std::unique_lock modelLock(modelMutex_);
@@ -142,8 +142,14 @@ float JaxInterface::train(const Observation &olderObservation, int actionIndex, 
     py::gil_scoped_acquire acquire;
     try {
       ZoneScopedN("JaxInterface::train_PYTHON");
-      py::object tdError = dqnModule_->attr("train")(*model_, *optimizerState_, *targetModel_, observationToNumpy(olderObservation), actionIndex, isTerminal, reward, observationToNumpy(newerObservation), weight);
-      return py::cast<float>(tdError);
+      py::object auxOutput = dqnModule_->attr("train")(*model_, *optimizerState_, *targetModel_, observationToNumpy(olderObservation), actionIndex, isTerminal, reward, observationToNumpy(newerObservation), weight);
+      py::tuple auxOutputTuple = auxOutput.cast<py::tuple>();
+      TrainAuxOutput result;
+      result.tdError = auxOutputTuple[0].cast<float>();
+      result.minQValue = auxOutputTuple[1].cast<float>();
+      result.meanQValue = auxOutputTuple[2].cast<float>();
+      result.maxQValue = auxOutputTuple[3].cast<float>();
+      return result;
     } catch (std::exception &ex) {
       LOG(ERROR) << "Caught exception in JaxInterface::train: " << ex.what();
       throw;

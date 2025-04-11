@@ -60,12 +60,14 @@ Status Walking::onUpdate(const event::Event *event) {
   // Did we just arrive at this waypoint?
   bool updatedCurrentWaypoint{false};
   while (currentWaypointIndex_ < waypoints_.size() && sro::position_math::calculateDistance2d(bot_.selfState()->position(), waypoints_.at(currentWaypointIndex_).asSroPosition()) < sqrt(0.5)) {
+    CHAR_VLOG(1) << "Already close enough to " << waypoints_.at(currentWaypointIndex_).asSroPosition().toString();
     // Already at this waypoint, increment index
     ++currentWaypointIndex_;
     updatedCurrentWaypoint = true;
   }
   if (done()) {
     // Finished walking
+    CHAR_VLOG(1) << absl::StreamFormat("Finished walking to final %s, am at %s", bot_.selfState()->position().toString(), waypoints_.back().asSroPosition().toString());
     return Status::kDone;
   }
   if (updatedCurrentWaypoint) {

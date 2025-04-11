@@ -21,8 +21,13 @@ public:
   void initialize();
   int selectAction(const Observation &observation, bool canSendPacket);
 
-  // Returns TD error.
-  float train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation, float weight);
+  struct TrainAuxOutput {
+    float tdError;
+    float minQValue;
+    float meanQValue;
+    float maxQValue;
+  };
+  TrainAuxOutput train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation, float weight);
   void updateTargetModel();
   void printModels();
 
@@ -33,7 +38,7 @@ public:
   void addScalar(std::string_view name, double yValue, double xValue);
 private:
   static constexpr int kActionSpaceSize{36}; // TODO: If changed, also change rl::ActionBuilder
-  static constexpr float kLearningRate{1e-6};
+  static constexpr float kLearningRate{1e-5};
   static constexpr int kSeed{0};
   std::optional<pybind11::module> dqnModule_;
   std::optional<pybind11::module> randomModule_;
