@@ -85,7 +85,7 @@ private:
 
   ReplayBuffer replayBuffer_{/*capacity=*/10'000'000, /*samplingBatchSize=*/1,
                              /*alpha=*/0.001f, /*beta=*/0.4f, /*epsilon=*/1e-5f};
-  float calculateReward(const Observation &lastObservation, const Observation &observation) const;
+  float calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const;
   void saveCheckpoint(const std::string &checkpointName);
 };
 

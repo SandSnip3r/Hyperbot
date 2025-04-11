@@ -58,7 +58,7 @@ ReplayBuffer::StorageIndexType ReplayBuffer::addObservationAndAction(common::Pvp
 
   // 1. Add transition to internal storage, get its index within that storage
   StorageIndexType storageIndex = storage_.addObservationAndAction(pvpId, observerGlobalId, observation, actionIndex);
-  if (storageIndex.actionIndex == 0) {
+  if (!storageIndex.havePrevious()) {
     // This is the first observation of this pvp for this player. We do not yet have a full transition. Nothing to do.
     return storageIndex;
   }

@@ -33,6 +33,10 @@ public:
     sro::scalar_types::EntityGlobalId observerGlobalId{};
     size_t actionIndex{};
 
+    bool havePrevious() const {
+      return actionIndex > 0;
+    }
+
     Index previous() const {
       Index result{*this};
       if (actionIndex == 0) {

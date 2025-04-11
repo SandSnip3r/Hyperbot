@@ -87,8 +87,9 @@ void TrainingManager::train() {
         const Observation observation1 = sample.transition.second.observation;
         const std::optional<int> actionIndex1 = sample.transition.second.actionIndex;
 
-        const float reward = calculateReward(observation0, observation1);
-        const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(observation0, *actionIndex0, !actionIndex1.has_value(), reward, observation1, sample.weight);
+        const bool isTerminal = !actionIndex1.has_value();
+        const float reward = calculateReward(observation0, observation1, isTerminal);
+        const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(observation0, *actionIndex0, isTerminal, reward, observation1, sample.weight);
 
         // Update the priorities of the sampled transitions in the replay buffer.
         std::vector<ReplayBuffer::StorageIndexType> storageIndices;
@@ -169,15 +170,16 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
   ObservationAndActionStorage::ObservationAndActionType currentAction = replayBuffer_.getObservationAndAction(index);
   float cumulativeReward = 0.0f;
   // Go backwards and sum this agent's rewards so far.
-  while (index.actionIndex > 0) {
+  while (index.havePrevious()) {
     const ObservationAndActionStorage::Index previousIndex = index.previous();
     const ObservationAndActionStorage::ObservationAndActionType previousAction = replayBuffer_.getObservationAndAction(previousIndex);
-    cumulativeReward += calculateReward(previousAction.observation, currentAction.observation);
+    const bool isTerminal = !currentAction.actionIndex.has_value();
+    cumulativeReward += calculateReward(previousAction.observation, currentAction.observation, isTerminal);
     index = previousIndex;
     currentAction = previousAction;
   }
   // TODO: It would be nice to get the name of the agent for the name of the scalar, so we can compare across runs.
-  jaxInterface_.addScalar(absl::StrFormat("%d_Reward", observerGlobalId), cumulativeReward, trainStepCount_);
+  jaxInterface_.addScalar(absl::StrFormat("%d Cumulative Return", observerGlobalId), cumulativeReward, trainStepCount_);
 }
 
 void TrainingManager::setUpIntelligencePool() {
@@ -293,17 +295,19 @@ void TrainingManager::buildItemRequirementList() {
   itemRequirements_.push_back({mediumUniversalPillRefId, kMediumUniversalPillRequiredCount});
 }
 
-float TrainingManager::calculateReward(const Observation &lastObservation, const Observation &observation) const {
+float TrainingManager::calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const {
   float reward = 0.0f;
   // We get some positive reward proportional to how much our health increased, negative if it decreased.
   reward += (static_cast<int64_t>(observation.ourCurrentHp_) - lastObservation.ourCurrentHp_) / static_cast<double>(observation.ourMaxHp_);
   // We get some positive reward proportional to how much our opponent's health decreased, negative if it increased.
   reward += (static_cast<int64_t>(lastObservation.opponentCurrentHp_) - observation.opponentCurrentHp_) / static_cast<double>(observation.opponentMaxHp_);
-  // Give an extra bump for a win or loss.
-  if (observation.ourCurrentHp_ == 0) {
-    reward -= 10.0f;
-  } else if (observation.opponentCurrentHp_ == 0) {
-    reward += 10.0f;
+  if (isTerminal) {
+    // Give an extra bump for a win or loss.
+    if (observation.ourCurrentHp_ == 0) {
+      reward -= 2.0f;
+    } else if (observation.opponentCurrentHp_ == 0) {
+      reward += 2.0f;
+    }
   }
   return reward;
 }
