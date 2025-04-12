@@ -30,7 +30,7 @@ def selectAction(model, observation, actionMask, key):
   return jnp.argmax(values)
 
 # Function to compute weighted loss and TD error for a SINGLE transition
-def computeWeightedLossAndTdError(model, targetModel, transition, weight):
+def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight):
   observation, selectedAction, isTerminal, reward, nextObservation = transition
 
   gamma = 0.99
@@ -74,11 +74,36 @@ def computeWeightedLossAndTdError(model, targetModel, transition, weight):
 
   return weightedLoss, (tdError, jnp.min(values), jnp.mean(values), jnp.max(values))
 
+def computeWeightedLossAndTdErrorBatch(model, targetModel, transitions, weights):
+  batched = jax.vmap(computeWeightedLossAndTdErrorSingle, in_axes=( None, None, (0, 0, 0, 0, 0), 0 ), out_axes=(0, 0))
+  weightedLosses, (tdErrors, minValues, meanValues, maxValues) = batched(model, targetModel, transitions, weights)
+  return jnp.mean(weightedLosses), (jnp.mean(tdErrors), jnp.mean(minValues), jnp.mean(meanValues), jnp.mean(maxValues))
+
 @nnx.jit
-def train(model, optimizerState, targetModel, observation, selectedAction, isTerminal, reward, nextObservation, weight):
-  (loss, auxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdError, has_aux=True)(model, targetModel, (observation, selectedAction, isTerminal, reward, nextObservation), weight)
+def jittedTrain(model, optimizerState, targetModel, observations, selectedActions, isTerminals, rewards, nextObservations, weights):
+  npSelectedActions = jnp.array(selectedActions)
+  npIsTerminals = jnp.array(isTerminals)
+  npRewards = jnp.array(rewards)
+  npWeights = jnp.array(weights)
+
+  (meanLoss, meanAuxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdErrorBatch, has_aux=True)(model, targetModel, (observations, npSelectedActions, npIsTerminals, npRewards, nextObservations), npWeights)
   optimizerState.update(gradients)
-  return auxOutput
+  return meanAuxOutput
+
+def convertThenTrain(model, optimizerState, targetModel, observations, selectedActions, isTerminals, rewards, nextObservations, weights):
+  # print(f'observations: {type(observations)}: {observations}')
+  # print(f'selectedActions: {type(selectedActions)}: {selectedActions}')
+  # print(f'isTerminals: {type(isTerminals)}: {isTerminals}')
+  # print(f'rewards: {type(rewards)}: {rewards}')
+  # print(f'nextObservations: {type(nextObservations)}: {nextObservations}')
+  # print(f'weights: {type(weights)}: {weights}')
+
+  npSelectedActions = jnp.array(selectedActions)
+  npIsTerminals = jnp.array(isTerminals)
+  npRewards = jnp.array(rewards)
+  npWeights = jnp.array(weights)
+
+  return jittedTrain(model, optimizerState, targetModel, observations, npSelectedActions, npIsTerminals, npRewards, nextObservations, npWeights)
 
 def getCopyOfModel(model, targetNetwork):
   graph, params = nnx.split(model)

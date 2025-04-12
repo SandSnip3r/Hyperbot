@@ -76,20 +76,38 @@ void TrainingManager::train() {
         // Sample a batch of transitions from the replay buffer.
         std::vector<ReplayBuffer::SampleResult> sampleResult = replayBuffer_.sample();
 
-        // TODO: For now, we only sample one transition at a time. We should be able to sample more than one.
-        if (sampleResult.size() != 1) {
-          throw std::runtime_error("Sampled more than one transition");
+        std::vector<Observation> olderObservations;
+        std::vector<int> actionIndexs;
+        std::vector<bool> isTerminals;
+        std::vector<float> rewards;
+        std::vector<Observation> newerObservations;
+        std::vector<float> weights;
+        olderObservations.reserve(sampleResult.size());
+        actionIndexs.reserve(sampleResult.size());
+        isTerminals.reserve(sampleResult.size());
+        rewards.reserve(sampleResult.size());
+        newerObservations.reserve(sampleResult.size());
+        weights.reserve(sampleResult.size());
+
+        for (int i=0; i<sampleResult.size(); ++i) {
+          const ReplayBuffer::SampleResult sample = sampleResult.at(i);
+          Observation observation0 = sample.transition.first.observation;
+          const std::optional<int> actionIndex0 = sample.transition.first.actionIndex;
+          const Observation observation1 = sample.transition.second.observation;
+          const std::optional<int> actionIndex1 = sample.transition.second.actionIndex;
+
+          const bool isTerminal = !actionIndex1.has_value();
+          const float reward = calculateReward(observation0, observation1, isTerminal);
+
+          olderObservations.push_back(observation0);
+          actionIndexs.push_back(actionIndex0.value());
+          isTerminals.push_back(isTerminal);
+          rewards.push_back(reward);
+          newerObservations.push_back(observation1);
+          weights.push_back(sample.weight);
         }
 
-        const ReplayBuffer::SampleResult sample = sampleResult.at(0);
-        Observation observation0 = sample.transition.first.observation;
-        const std::optional<int> actionIndex0 = sample.transition.first.actionIndex;
-        const Observation observation1 = sample.transition.second.observation;
-        const std::optional<int> actionIndex1 = sample.transition.second.actionIndex;
-
-        const bool isTerminal = !actionIndex1.has_value();
-        const float reward = calculateReward(observation0, observation1, isTerminal);
-        const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(observation0, *actionIndex0, isTerminal, reward, observation1, sample.weight);
+        const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(olderObservations, actionIndexs, isTerminals, rewards, newerObservations, weights);
 
         // Update the priorities of the sampled transitions in the replay buffer.
         std::vector<ReplayBuffer::StorageIndexType> storageIndices;

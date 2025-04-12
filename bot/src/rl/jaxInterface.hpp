@@ -27,7 +27,12 @@ public:
     float meanQValue;
     float maxQValue;
   };
-  TrainAuxOutput train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation, float weight);
+  TrainAuxOutput train(const std::vector<Observation> &olderObservation,
+                       const std::vector<int> &actionIndex,
+                       const std::vector<bool> &isTerminal,
+                       const std::vector<float> &reward,
+                       const std::vector<Observation> &newerObservation,
+                       const std::vector<float> &weight);
   void updateTargetModel();
   void printModels();
 
@@ -53,12 +58,17 @@ private:
 
   // We use a special synchronization routine to give action selection a higher priority than everything else, since it requires low latency.
   // Context: https://github.com/SandSnip3r/ContentionBenchmark
-  TracyLockableN(std::mutex, modelMutex_, "JaxInterface::modelMutex");
+  std::mutex modelMutex_;
+  // Tracy lockable does not seem to work with a condition variable.
+  // TracyLockableN(std::mutex, modelMutex_, "JaxInterface::modelMutex");
   std::condition_variable modelConditionVariable_;
   std::atomic<bool> waitingToSelectAction_{false};
 
   pybind11::object getNextRngKey();
   pybind11::object observationToNumpy(const Observation &observation);
+  pybind11::object observationsToNumpy(const std::vector<Observation> &observations);
+  size_t getObservationNumpySize(const Observation &observation) const;
+  void writeObservationToNumpyArray(const Observation &observation, float *array);
   pybind11::object createActionMask(bool canSendPacket);
 };
 

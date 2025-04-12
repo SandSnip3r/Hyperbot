@@ -1,6 +1,7 @@
 #include "rl/jaxInterface.hpp"
 
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
 
 #include <tracy/Tracy.hpp>
 
@@ -90,7 +91,7 @@ void JaxInterface::initialize() {
     nnxRngs_ = nnxModule_->attr("Rngs")(getNextRngKey());
     // Now, we want to create a randomly initialized model. Specifically, we want randomly initialized weights. To do this, we'll instantiate our NNX model, then split the abstract graph and the concrete weights.
     DqnModelType = dqnModule_->attr("DqnModel");
-    const int kInputSize = 4 + 1 + 32*2 + 3*2; // IF-CHANGE: If we change this, also change JaxInterface::observationToNumpy
+    const int kInputSize = 4 + 1 + 32*2 + 3*2; // IF-CHANGE: If we change this, also change JaxInterface::getObservationNumpySize
     const int kOutputSize = kActionSpaceSize;
     model_ = DqnModelType(kInputSize, kOutputSize, *nnxRngs_);
     targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
@@ -132,8 +133,25 @@ int JaxInterface::selectAction(const Observation &observation, bool canSendPacke
   return actionIndex;
 }
 
-JaxInterface::TrainAuxOutput JaxInterface::train(const Observation &olderObservation, int actionIndex, bool isTerminal, float reward, const Observation &newerObservation, float weight) {
+JaxInterface::TrainAuxOutput JaxInterface::train(const std::vector<Observation> &olderObservation,
+                                                 const std::vector<int> &actionIndex,
+                                                 const std::vector<bool> &isTerminal,
+                                                 const std::vector<float> &reward,
+                                                 const std::vector<Observation> &newerObservation,
+                                                 const std::vector<float> &weight) {
   ZoneScopedN("JaxInterface::train");
+  {
+    size_t size = olderObservation.size();
+    if (size == 0 ||
+        actionIndex.size() != size ||
+        isTerminal.size() != size ||
+        reward.size() != size ||
+        newerObservation.size() != size ||
+        weight.size() != size) {
+      throw std::runtime_error(absl::StrFormat("JaxInterface::train: size mismatch: %zu %zu %zu %zu %zu %zu", olderObservation.size(), actionIndex.size(), isTerminal.size(), reward.size(), newerObservation.size(), weight.size()));
+    }
+  }
+  TrainAuxOutput result;
   {
     std::unique_lock modelLock(modelMutex_);
     modelConditionVariable_.wait(modelLock, [this]() -> bool {
@@ -142,20 +160,19 @@ JaxInterface::TrainAuxOutput JaxInterface::train(const Observation &olderObserva
     py::gil_scoped_acquire acquire;
     try {
       ZoneScopedN("JaxInterface::train_PYTHON");
-      py::object auxOutput = dqnModule_->attr("train")(*model_, *optimizerState_, *targetModel_, observationToNumpy(olderObservation), actionIndex, isTerminal, reward, observationToNumpy(newerObservation), weight);
+      py::object auxOutput = dqnModule_->attr("convertThenTrain")(*model_, *optimizerState_, *targetModel_, observationsToNumpy(olderObservation), actionIndex, isTerminal, reward, observationsToNumpy(newerObservation), weight);
       py::tuple auxOutputTuple = auxOutput.cast<py::tuple>();
-      TrainAuxOutput result;
       result.tdError = auxOutputTuple[0].cast<float>();
       result.minQValue = auxOutputTuple[1].cast<float>();
       result.meanQValue = auxOutputTuple[2].cast<float>();
       result.maxQValue = auxOutputTuple[3].cast<float>();
-      return result;
     } catch (std::exception &ex) {
       LOG(ERROR) << "Caught exception in JaxInterface::train: " << ex.what();
       throw;
     }
   }
   modelConditionVariable_.notify_all();
+  return result;
 }
 
 void JaxInterface::updateTargetModel() {
@@ -251,26 +268,47 @@ py::object JaxInterface::getNextRngKey() {
 
 py::object JaxInterface::observationToNumpy(const Observation &observation) {
   ZoneScopedN("JaxInterface::observationToNumpy");
-  // IF-CHANGE: If we change this, also change JaxInterface::initialize of DqnModel
-  py::array_t<float> array(4 + 1 + observation.skillCooldowns_.size()*2 + observation.itemCooldowns_.size()*2);
+  py::array_t<float> array(getObservationNumpySize(observation));
   auto mutableArray = array.mutable_unchecked<1>();
+  float *mutableData = mutableArray.mutable_data(0);
+  writeObservationToNumpyArray(observation, mutableData);
+  return array;
+}
+
+py::object JaxInterface::observationsToNumpy(const std::vector<Observation> &observations) {
+  ZoneScopedN("JaxInterface::observationsToNumpy");
+  py::array_t<float> array({observations.size(), getObservationNumpySize(observations.at(0))});
+  auto mutableArray = array.mutable_unchecked<2>();
+  for (size_t i=0; i<observations.size(); ++i) {
+    const Observation &observation = observations.at(i);
+    float *mutableData = mutableArray.mutable_data(i, 0);
+    writeObservationToNumpyArray(observation, mutableData);
+  }
+  return array;
+}
+
+size_t JaxInterface::getObservationNumpySize(const Observation &observation) const {
+  // IF-CHANGE: If we change this, also change JaxInterface::initialize of DqnModel
+  return 4 + 1 + observation.skillCooldowns_.size()*2 + observation.itemCooldowns_.size()*2;
+}
+
+void JaxInterface::writeObservationToNumpyArray(const Observation &observation, float *array) {
   int index{0};
-  mutableArray(index++) = observation.ourCurrentHp_ / static_cast<float>(observation.ourMaxHp_);
-  mutableArray(index++) = observation.ourCurrentMp_ / static_cast<float>(observation.ourMaxMp_);
-  mutableArray(index++) = observation.opponentCurrentHp_ / static_cast<float>(observation.opponentMaxHp_);
-  mutableArray(index++) = observation.opponentCurrentMp_ / static_cast<float>(observation.opponentMaxMp_);
-  mutableArray(index++) = observation.hpPotionCount_ / static_cast<float>(5); // IF-CHANGE: If we change this, also change TrainingManager::buildItemRequirementList
+  array[index++] = observation.ourCurrentHp_ / static_cast<float>(observation.ourMaxHp_);
+  array[index++] = observation.ourCurrentMp_ / static_cast<float>(observation.ourMaxMp_);
+  array[index++] = observation.opponentCurrentHp_ / static_cast<float>(observation.opponentMaxHp_);
+  array[index++] = observation.opponentCurrentMp_ / static_cast<float>(observation.opponentMaxMp_);
+  array[index++] = observation.hpPotionCount_ / static_cast<float>(5); // IF-CHANGE: If we change this, also change TrainingManager::buildItemRequirementList
   for (int cooldown : observation.skillCooldowns_) {
-    mutableArray(index) = cooldown == 0 ? 1.0 : 0.0;
-    mutableArray(index+1) = static_cast<float>(cooldown) / 1000.0; // Convert milliseconds to seconds
+    array[index] = cooldown == 0 ? 1.0 : 0.0;
+    array[index+1] = static_cast<float>(cooldown) / 1000.0; // Convert milliseconds to seconds
     index += 2;
   }
   for (int cooldown : observation.itemCooldowns_) {
-    mutableArray(index) = cooldown == 0 ? 1.0 : 0.0;
-    mutableArray(index+1) = static_cast<float>(cooldown) / 1000.0; // Convert milliseconds to seconds
+    array[index] = cooldown == 0 ? 1.0 : 0.0;
+    array[index+1] = static_cast<float>(cooldown) / 1000.0; // Convert milliseconds to seconds
     index += 2;
   }
-  return array;
 }
 
 pybind11::object JaxInterface::createActionMask(bool canSendPacket) {

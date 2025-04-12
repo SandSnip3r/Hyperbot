@@ -51,6 +51,7 @@ public:
 private:
   static constexpr bool kTrain{true};
   static constexpr float kPvpStartingCenterOffset{40.0f};
+  static constexpr int kBatchSize{128};
 
   std::atomic<bool> runTraining_{false};
   std::mutex runTrainingMutex_;
@@ -83,8 +84,8 @@ private:
   void buildItemRequirementList();
   std::vector<common::ItemRequirement> itemRequirements_;
 
-  ReplayBuffer replayBuffer_{/*capacity=*/10'000'000, /*samplingBatchSize=*/1,
-                             /*alpha=*/0.001f, /*beta=*/0.4f, /*epsilon=*/1e-5f};
+  ReplayBuffer replayBuffer_{/*capacity=*/10'000'000, kBatchSize,
+                             /*alpha=*/0.6f, /*beta=*/0.4f, /*epsilon=*/1e-5f};
   float calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const;
   void saveCheckpoint(const std::string &checkpointName);
 };
