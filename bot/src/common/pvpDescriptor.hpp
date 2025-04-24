@@ -6,6 +6,7 @@
 #include <silkroad_lib/position.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
+#include <string>
 #include <vector>
 
 namespace rl::ai {
@@ -17,11 +18,18 @@ namespace common {
 struct PvpDescriptor {
   using PvpId = uint64_t;
   PvpId pvpId;
-  sro::scalar_types::EntityGlobalId player1GlobalId;
-  sro::scalar_types::EntityGlobalId player2GlobalId;
+
+  // We use player names rather than global ids because if the character teleports, the global id changes.
+  std::string player1Name;
+  std::string player2Name;
+
+  // These are the positions where each character must stand at the start of the Pvp.
   sro::Position pvpPositionPlayer1;
   sro::Position pvpPositionPlayer2;
+
+  // These are the items which each character has in their inventory at the start of the Pvp.
   std::vector<common::ItemRequirement> itemRequirements;
+
   rl::ai::BaseIntelligence *player1Intelligence{nullptr};
   rl::ai::BaseIntelligence *player2Intelligence{nullptr};
 };

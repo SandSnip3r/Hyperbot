@@ -10,9 +10,10 @@ class RandomIntelligence : public BaseIntelligence {
 public:
   using BaseIntelligence::BaseIntelligence;
   int selectAction(Bot &bot, const Observation &observation, bool canSendPacket) override;
-  std::string_view name() const override { return "Random"; }
+  const std::string& name() const override { return name_; }
 
 protected:
+  const std::string name_{"Random"};
   std::mt19937 randomEngine_{common::createRandomEngine()};
 };
 

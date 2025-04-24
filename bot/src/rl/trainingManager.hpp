@@ -21,6 +21,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <vector>
 
 namespace ui {
@@ -43,17 +44,16 @@ public:
   void onUpdate(const event::Event *event);
 
   // If the actionIndex is not set, the observation was terminal.
-  void reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex);
+  void reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex);
 
   JaxInterface& getJaxInterface() { return jaxInterface_; }
   int getTrainStepCount() const { return trainStepCount_.load(); }
 
 private:
-  static constexpr bool kTrain{true};
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
 
-  std::atomic<bool> runTraining_{false};
+  std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;
   std::condition_variable runTrainingCondition_;
 
@@ -69,7 +69,7 @@ private:
   JaxInterface jaxInterface_;
   CheckpointManager checkpointManager_{rlUserInterface_};
   std::atomic<int> trainStepCount_{0};
-  static constexpr int kTargetNetworkUpdateInterval{10000};
+  static constexpr int kTargetNetworkUpdateInterval{50'000};
 
   void setUpIntelligencePool();
 
@@ -85,7 +85,7 @@ private:
   std::vector<common::ItemRequirement> itemRequirements_;
 
   ReplayBuffer replayBuffer_{/*capacity=*/10'000'000, kBatchSize,
-                             /*alpha=*/0.6f, /*beta=*/0.4f, /*epsilon=*/1e-5f};
+                             /*alpha=*/0.6f, /*beta=*/0.8f, /*epsilon=*/1e-5f};
   float calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const;
   void saveCheckpoint(const std::string &checkpointName);
 };

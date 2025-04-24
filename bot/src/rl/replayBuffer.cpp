@@ -8,21 +8,21 @@ namespace rl {
 
 ObservationAndActionStorage::ObservationAndActionStorage(size_t capacity) : capacity_(capacity) {}
 
-ObservationAndActionStorage::Index ObservationAndActionStorage::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex) {
-  std::deque<ObservationAndActionType> &observations = buffer_[pvpId][observerGlobalId];
+ObservationAndActionStorage::Index ObservationAndActionStorage::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
+  std::deque<ObservationAndActionType> &observations = buffer_[pvpId][intelligenceName];
   observations.push_back({observation, actionIndex});
   size_t index = observations.size() - 1;
-  return {pvpId, observerGlobalId, index};
+  return {pvpId, intelligenceName, index};
 }
 
 ObservationAndActionStorage::ObservationAndActionType ObservationAndActionStorage::getObservationAndAction(Index index) const {
   auto it = buffer_.find(index.pvpId);
   if (it == buffer_.end()) {
-    throw std::out_of_range("Index not found in buffer.");
+    throw std::out_of_range("Index(pvpId) not found in buffer.");
   }
-  auto it2 = it->second.find(index.observerGlobalId);
+  auto it2 = it->second.find(index.intelligenceName);
   if (it2 == it->second.end()) {
-    throw std::out_of_range("Index not found in buffer.");
+    throw std::out_of_range("Index(intelligenceName) not found in buffer.");
   }
   const auto& observations = it2->second;
   if (index.actionIndex >= observations.size()) {
@@ -47,7 +47,7 @@ ReplayBuffer::ReplayBuffer(size_t capacity, size_t samplingBatchSize, float alph
   storageToLeafMap_.reserve(capacity);
 }
 
-ReplayBuffer::StorageIndexType ReplayBuffer::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex) {
+ReplayBuffer::StorageIndexType ReplayBuffer::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
   std::unique_lock lock{replayBufferMutex_};
 
   // TODO: Remove
@@ -57,14 +57,14 @@ ReplayBuffer::StorageIndexType ReplayBuffer::addObservationAndAction(common::Pvp
   }
 
   // 1. Add transition to internal storage, get its index within that storage
-  StorageIndexType storageIndex = storage_.addObservationAndAction(pvpId, observerGlobalId, observation, actionIndex);
-  if (!storageIndex.havePrevious()) {
+  const StorageIndexType storageIndex = storage_.addObservationAndAction(pvpId, intelligenceName, observation, actionIndex);
+  if (!storageIndex.hasPrevious()) {
     // This is the first observation of this pvp for this player. We do not yet have a full transition. Nothing to do.
     return storageIndex;
   }
 
   // 2. Determine the leaf index in our sum-tree where this priority will go
-  const LeafIndexType leafIndex = currentLeafIndex_;
+  const LeafIndexType leafIndex = nextLeafIndex_;
 
   // 3. Handle potential overwrite in mapping
   if (currentBufferSize_ == capacity_) {
@@ -83,7 +83,7 @@ ReplayBuffer::StorageIndexType ReplayBuffer::addObservationAndAction(common::Pvp
   updateTree(leafIndex, maxPriority_);
 
   // 6. Advance leaf index (circular) and update buffer size
-  currentLeafIndex_ = (currentLeafIndex_ + 1) % capacity_;
+  nextLeafIndex_ = (nextLeafIndex_ + 1) % capacity_;
   if (currentBufferSize_ < capacity_) {
     currentBufferSize_++;
   }
@@ -121,7 +121,7 @@ std::vector<ReplayBuffer::SampleResult> ReplayBuffer::sample() {
     const float valueToFind = dist(rng_);
 
     // Retrieve leaf index (within sum-tree) and its stored priority (p^alpha)
-    auto [leafIndex, priorityAlpha] = retrieveLeaf(valueToFind);
+    const auto [leafIndex, priorityAlpha] = retrieveLeaf(valueToFind);
 
     // Get the corresponding storage index using the map
     const StorageIndexType observation1StorageIndex = leafToStorageMap_[leafIndex];
@@ -138,6 +138,14 @@ std::vector<ReplayBuffer::SampleResult> ReplayBuffer::sample() {
     maxWeight = std::max(maxWeight, weight); // Track max weight for normalization
 
     // Create a new SampleResult object with one-lower index
+    if (!observation1StorageIndex.hasPrevious()) {
+      LOG(INFO) << "Whoa, weird. Does not have previous. Leaf index: " << leafIndex << ", index: " << observation1StorageIndex.toString() << ". Next leaf index: " << nextLeafIndex_;
+      for (int i=0; i<nextLeafIndex_; ++i) {
+        if (!leafToStorageMap_.at(i).hasPrevious()) {
+          LOG(INFO) << "  Leaf index " << i << " does not have previous: " << leafToStorageMap_.at(i).toString();
+        }
+      }
+    }
     const StorageIndexType observation0StorageIndex = observation1StorageIndex.previous();
 
     results.push_back({observation1StorageIndex, TransitionType{storage_.getObservationAndAction(observation0StorageIndex), storage_.getObservationAndAction(observation1StorageIndex)}, weight});

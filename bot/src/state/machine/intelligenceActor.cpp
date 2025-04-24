@@ -62,9 +62,7 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
           // Someone died, the pvp is over.
           // We will not query the intelligence for a chosen action, for obvious reasons.
           // We will report the state, so that it can be saved in the replay buffer.
-          if constexpr (kStoreInReplayBuffer) {
-            intelligence_->trainingManager().reportObservationAndAction(pvpId_, bot_.selfState()->globalId, observation, std::nullopt);
-          }
+          intelligence_->trainingManager().reportObservationAndAction(pvpId_, intelligence_->name(), observation, std::nullopt);
           return Status::kDone;
         }
       }
@@ -74,9 +72,7 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   // Since actions are state machines, immediately set the selected action as our current active child state machine.
   const bool canSendPacket = !lastPacketTime_.has_value() || (std::chrono::steady_clock::now() - lastPacketTime_.value() > kPacketSendCooldown);
   const int actionIndex = intelligence_->selectAction(bot_, observation, canSendPacket);
-  if constexpr (kStoreInReplayBuffer) {
-    intelligence_->trainingManager().reportObservationAndAction(pvpId_, bot_.selfState()->globalId, observation, actionIndex);
-  }
+  intelligence_->trainingManager().reportObservationAndAction(pvpId_, intelligence_->name(), observation, actionIndex);
   setChildStateMachine(rl::ActionBuilder::buildAction(this, event, opponentGlobalId_, actionIndex));
 
   // Run one update on the child state machine to let it start.

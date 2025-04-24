@@ -22,7 +22,6 @@ public:
 protected:
   void injectPacket(const PacketContainer &packet, PacketContainer::Direction direction) override;
 private:
-  static constexpr bool kStoreInReplayBuffer{true};
   static inline std::chrono::milliseconds kPacketSendCooldown{50};
   static inline std::string kName{"IntelligenceActor"};
   rl::ai::BaseIntelligence *intelligence_;

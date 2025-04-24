@@ -45,3 +45,4 @@
 - ClientManagerInterface will be blocked on sending a heartbeat if the client manager is not running. If something else in the bot crashes, ClientManagerInterface cannot shut down. We should probably poll on recv and reconstruct the socket if it fails.
 - Plot cumulative episode return
 - Show currently loaded checkpoint in UI, if any
+- Display state machine trees in UI

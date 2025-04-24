@@ -40,6 +40,7 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
     }
     // Child state machine is done.
     const bool childStateWasPick = dynamic_cast<PickItem*>(childState_.get()) != nullptr;
+    const bool childStateWasWalking = dynamic_cast<Walking*>(childState_.get()) != nullptr;
     childState_.reset();
     if (childStateWasPick) {
       CHAR_VLOG(1) << "Finished picking item";
@@ -49,6 +50,9 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
         setChildStateMachine<Walking>(std::vector<packet::building::NetworkReadyPosition>{originalPosition_});
         return onUpdate(event);
       }
+    } else if (childStateWasWalking && tryingNudgePosition_) {
+      CHAR_VLOG(1) << "Finished nudging position";
+      tryingNudgePosition_ = false;
     }
   }
 
@@ -111,6 +115,20 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
                *requestTimeoutEventId_ == event->eventId) {
       CHAR_VLOG(1) << "Timeout waiting for item to spawn. Retrying";
       requestTimeoutEventId_.reset();
+
+      // It can happen that our position is bugged and when spawning items, we think that they are too far away.
+      // If we fail too many times, we'll try to correct for this by moving a bit.
+      ++timeoutCount_;
+      if (timeoutCount_ >= kMaxTimeoutCount) {
+        CHAR_VLOG(1) << "Timed out too many times, nudging position";
+        std::vector<packet::building::NetworkReadyPosition> steps;
+        steps.push_back(sro::position_math::createNewPositionWith2dOffset(originalPosition_, 30.0, 30.0));
+        steps.push_back(originalPosition_);
+        setChildStateMachine<Walking>(steps);
+        timeoutCount_ = 0;
+        tryingNudgePosition_ = true;
+        return onUpdate(event);
+      }
       return spawnNextItem();
     }
   }

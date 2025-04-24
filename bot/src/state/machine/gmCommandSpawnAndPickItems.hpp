@@ -22,10 +22,13 @@ public:
   Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"GmCommandSpawnAndPickItems"};
+  static constexpr int kMaxTimeoutCount{5};
   bool initialized_{false};
   std::vector<common::ItemRequirement> items_;
   sro::Position originalPosition_;
   std::optional<broker::EventBroker::EventId> requestTimeoutEventId_;
+  int timeoutCount_{0};
+  bool tryingNudgePosition_{false};
 
   Status spawnNextItem();
 };

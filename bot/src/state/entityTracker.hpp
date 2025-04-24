@@ -3,6 +3,7 @@
 
 #include "broker/eventBroker.hpp"
 #include "entity/entity.hpp"
+#include "entity/playerCharacter.hpp"
 #include "packet/parsing/parsedPacket.hpp"
 
 #include <tracy/Tracy.hpp>
@@ -12,6 +13,7 @@
 #include <memory>
 #include <mutex>
 #include <type_traits>
+#include <string_view>
 #include <vector>
 
 namespace state {
@@ -29,6 +31,9 @@ public:
   bool entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker);
 
   bool trackingEntity(sro::scalar_types::EntityGlobalId globalId) const;
+
+  // Returns a PlayerCharacter if the player character with the given name is found, otherwise returns nullptr.
+  std::shared_ptr<entity::PlayerCharacter> getPlayerByName(std::string_view name) const;
 
   template<typename EntityType = entity::Entity>
   std::shared_ptr<EntityType> getEntity(sro::scalar_types::EntityGlobalId globalId) const {

@@ -10,13 +10,14 @@ class DeepLearningIntelligence : public RandomIntelligence {
 public:
   using RandomIntelligence::RandomIntelligence;
   int selectAction(Bot &bot, const Observation &observation, bool canSendPacket) override;
-  std::string_view name() const override { return "DeepLearning"; }
+  const std::string& name() const override { return name_; }
   int getStepCount() const { return stepCount_; }
   void setStepCount(int stepCount) { stepCount_ = stepCount; }
 private:
   static constexpr float kInitialEpsilon = 1.0f;
   static constexpr float kFinalEpsilon = 0.01f;
   static constexpr int kEpsilonDecaySteps = 1'000'000;
+  const std::string name_{"DeepLearning"};
   int stepCount_{0};
   float getEpsilon();
 };

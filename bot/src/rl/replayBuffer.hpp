@@ -8,11 +8,13 @@
 #include <silkroad_lib/scalar_types.hpp>
 
 #include <absl/hash/hash.h>
+#include <absl/strings/str_format.h>
 
 #include <deque>
 #include <map>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -29,33 +31,39 @@ namespace rl {
 class ObservationAndActionStorage {
 public:
   struct Index {
-    common::PvpDescriptor::PvpId pvpId{};
-    sro::scalar_types::EntityGlobalId observerGlobalId{};
-    size_t actionIndex{};
+    Index() = default;
+    Index(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, size_t actionIndex) : pvpId(pvpId), intelligenceName(intelligenceName), actionIndex(actionIndex) {}
+    common::PvpDescriptor::PvpId pvpId;
+    std::string intelligenceName{"default"}; // TODO: Remove when bug in replay buffer is fixed.
+    size_t actionIndex;
 
-    bool havePrevious() const {
+    bool hasPrevious() const {
       return actionIndex > 0;
     }
 
     Index previous() const {
-      Index result{*this};
       if (actionIndex == 0) {
         throw std::runtime_error("Cannot construct a previous index");
       }
+      Index result{*this};
       --result.actionIndex;
       return result;
     }
 
     bool operator==(const Index& other) const {
       return pvpId == other.pvpId &&
-             observerGlobalId == other.observerGlobalId &&
+             intelligenceName == other.intelligenceName &&
              actionIndex == other.actionIndex;
     }
 
     // Abseil hashing support
     template <typename H>
     friend H AbslHashValue(H h, const Index& idx) {
-      return H::combine(std::move(h), idx.pvpId, idx.observerGlobalId, idx.actionIndex);
+      return H::combine(std::move(h), idx.pvpId, idx.intelligenceName, idx.actionIndex);
+    }
+
+    std::string toString() const {
+      return absl::StrFormat("Index(pvpId=%d, intelligenceName=%s, actionIndex=%d)", pvpId, intelligenceName, actionIndex);
     }
   };
   struct ObservationAndActionType {
@@ -64,12 +72,12 @@ public:
   };
 
   ObservationAndActionStorage(size_t capacity);
-  Index addObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex);
+  Index addObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex);
   ObservationAndActionType getObservationAndAction(Index index) const;
 
 private:
   const size_t capacity_;
-  std::map<common::PvpDescriptor::PvpId, std::map<sro::scalar_types::EntityGlobalId, std::deque<ObservationAndActionType>>> buffer_;
+  std::map<common::PvpDescriptor::PvpId, std::map<std::string, std::deque<ObservationAndActionType>>> buffer_;
 };
 
 class ReplayBuffer {
@@ -92,7 +100,7 @@ public:
   using StorageIndexType = typename ObservationAndActionStorage::Index;
 
   // Adds a transition to the internal storage and updates PER structures.
-  StorageIndexType addObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex);
+  StorageIndexType addObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex);
 
   ObservationAndActionStorage::ObservationAndActionType getObservationAndAction(StorageIndexType index) const;
 
@@ -132,7 +140,7 @@ private:
   std::unordered_map<StorageIndexType, LeafIndexType, absl::Hash<StorageIndexType>> storageToLeafMap_; // storageIndex -> leafIndex
 
   // --- State ---
-  LeafIndexType currentLeafIndex_{0};              // Next *leaf* index to write priority to (circular)
+  LeafIndexType nextLeafIndex_{0};                 // Next *leaf* index to write priority to (circular)
   size_t currentBufferSize_{0};                    // Number of valid entries in the buffer/tree
   float maxPriority_{1.0f};                        // Max priority seen so far (p^alpha)
   std::mt19937 rng_{common::createRandomEngine()}; // Random number generator

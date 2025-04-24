@@ -55,6 +55,18 @@ bool EntityTracker::trackingEntity(sro::scalar_types::EntityGlobalId globalId) c
   return (entityMap_.find(globalId) != entityMap_.end());
 }
 
+std::shared_ptr<entity::PlayerCharacter> EntityTracker::getPlayerByName(std::string_view name) const {
+  std::unique_lock entityMapLockGuard(entityMapMutex_);
+  for (const auto &[globalId, entity] : entityMap_) {
+    std::shared_ptr<entity::PlayerCharacter> playerCharacter = std::dynamic_pointer_cast<entity::PlayerCharacter>(entity);
+    if (playerCharacter && playerCharacter->name == name) {
+      return playerCharacter;
+    }
+  }
+  return nullptr;
+}
+
+
 // std::shared_ptr<entity::Entity> EntityTracker::getEntity(sro::scalar_types::EntityGlobalId globalId) const {
 //   std::unique_lock entityMapLockGuard(entityMapMutex_);
 //   auto it = entityMap_.find(globalId);

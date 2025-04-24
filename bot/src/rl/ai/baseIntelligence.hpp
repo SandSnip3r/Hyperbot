@@ -8,6 +8,7 @@
 #include <silkroad_lib/scalar_types.hpp>
 
 #include <memory>
+#include <string>
 
 namespace event {
 struct Event;
@@ -25,7 +26,7 @@ class BaseIntelligence {
 public:
   BaseIntelligence(TrainingManager &trainingManager) : trainingManager_(trainingManager) {}
   virtual int selectAction(Bot &bot, const Observation &observation, bool canSendPacket) = 0;
-  virtual std::string_view name() const = 0;
+  virtual const std::string& name() const = 0;
   TrainingManager& trainingManager() { return trainingManager_; }
 
 protected:

@@ -64,72 +64,70 @@ void TrainingManager::run() {
 void TrainingManager::train() {
   std::mt19937 randomEngine = common::createRandomEngine();
   while (runTraining_) {
-    // Get a S,A,R,S' tuple from the replay buffer.
-    if constexpr (kTrain) {
-      try {
-        if (replayBuffer_.size() < replayBuffer_.samplingBatchSize()) {
-          // We don't have enough transitions to sample from yet.
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
-          continue;
-        }
-
-        // Sample a batch of transitions from the replay buffer.
-        std::vector<ReplayBuffer::SampleResult> sampleResult = replayBuffer_.sample();
-
-        std::vector<Observation> olderObservations;
-        std::vector<int> actionIndexs;
-        std::vector<bool> isTerminals;
-        std::vector<float> rewards;
-        std::vector<Observation> newerObservations;
-        std::vector<float> weights;
-        olderObservations.reserve(sampleResult.size());
-        actionIndexs.reserve(sampleResult.size());
-        isTerminals.reserve(sampleResult.size());
-        rewards.reserve(sampleResult.size());
-        newerObservations.reserve(sampleResult.size());
-        weights.reserve(sampleResult.size());
-
-        for (int i=0; i<sampleResult.size(); ++i) {
-          const ReplayBuffer::SampleResult sample = sampleResult.at(i);
-          Observation observation0 = sample.transition.first.observation;
-          const std::optional<int> actionIndex0 = sample.transition.first.actionIndex;
-          const Observation observation1 = sample.transition.second.observation;
-          const std::optional<int> actionIndex1 = sample.transition.second.actionIndex;
-
-          const bool isTerminal = !actionIndex1.has_value();
-          const float reward = calculateReward(observation0, observation1, isTerminal);
-
-          olderObservations.push_back(observation0);
-          actionIndexs.push_back(actionIndex0.value());
-          isTerminals.push_back(isTerminal);
-          rewards.push_back(reward);
-          newerObservations.push_back(observation1);
-          weights.push_back(sample.weight);
-        }
-
-        const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(olderObservations, actionIndexs, isTerminals, rewards, newerObservations, weights);
-
-        // Update the priorities of the sampled transitions in the replay buffer.
-        std::vector<ReplayBuffer::StorageIndexType> storageIndices;
-        std::vector<float> tdErrors;
-        storageIndices.reserve(sampleResult.size());
-        tdErrors.reserve(sampleResult.size());
-        storageIndices.push_back(sampleResult.at(0).storageIndex);
-        tdErrors.push_back(trainOutput.tdError);
-        replayBuffer_.updatePriorities(storageIndices, tdErrors);
-
-        jaxInterface_.addScalar("TD Error", trainOutput.tdError, trainStepCount_);
-        jaxInterface_.addScalar("Min Q Value", trainOutput.minQValue, trainStepCount_);
-        jaxInterface_.addScalar("Mean Q Value", trainOutput.meanQValue, trainStepCount_);
-        jaxInterface_.addScalar("Max Q Value", trainOutput.maxQValue, trainStepCount_);
-        ++trainStepCount_;
-        if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
-          LOG(INFO) << "Train step #" << trainStepCount_ << ". Updating target network";
-          jaxInterface_.updateTargetModel();
-        }
-      } catch (std::exception &ex) {
-        LOG(ERROR) << "Caught exception while training: " << ex.what();
+    try {
+      if (replayBuffer_.size() < replayBuffer_.samplingBatchSize()) {
+        // We don't have enough transitions to sample from yet.
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        continue;
       }
+
+      // Sample a batch of transitions from the replay buffer.
+      std::vector<ReplayBuffer::SampleResult> sampleResult = replayBuffer_.sample();
+
+      std::vector<Observation> olderObservations;
+      std::vector<int> actionIndexs;
+      std::vector<bool> isTerminals;
+      std::vector<float> rewards;
+      std::vector<Observation> newerObservations;
+      std::vector<float> weights;
+      olderObservations.reserve(sampleResult.size());
+      actionIndexs.reserve(sampleResult.size());
+      isTerminals.reserve(sampleResult.size());
+      rewards.reserve(sampleResult.size());
+      newerObservations.reserve(sampleResult.size());
+      weights.reserve(sampleResult.size());
+
+      for (int i=0; i<sampleResult.size(); ++i) {
+        const ReplayBuffer::SampleResult &sample = sampleResult.at(i);
+        Observation observation0 = sample.transition.first.observation;
+        const std::optional<int> actionIndex0 = sample.transition.first.actionIndex;
+        const Observation observation1 = sample.transition.second.observation;
+        const std::optional<int> actionIndex1 = sample.transition.second.actionIndex;
+        float weight = sample.weight;
+
+        const bool isTerminal = !actionIndex1.has_value();
+        const float reward = calculateReward(observation0, observation1, isTerminal);
+
+        olderObservations.push_back(observation0);
+        actionIndexs.push_back(actionIndex0.value());
+        isTerminals.push_back(isTerminal);
+        rewards.push_back(reward);
+        newerObservations.push_back(observation1);
+        weights.push_back(weight);
+      }
+
+      const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(olderObservations, actionIndexs, isTerminals, rewards, newerObservations, weights);
+
+      // Update the priorities of the sampled transitions in the replay buffer.
+      std::vector<ReplayBuffer::StorageIndexType> storageIndices;
+      std::vector<float> tdErrors;
+      storageIndices.reserve(sampleResult.size());
+      tdErrors.reserve(sampleResult.size());
+      storageIndices.push_back(sampleResult.at(0).storageIndex);
+      tdErrors.push_back(trainOutput.tdError);
+      replayBuffer_.updatePriorities(storageIndices, tdErrors);
+
+      jaxInterface_.addScalar("TD Error", trainOutput.tdError, trainStepCount_);
+      jaxInterface_.addScalar("Min Q Value", trainOutput.minQValue, trainStepCount_);
+      jaxInterface_.addScalar("Mean Q Value", trainOutput.meanQValue, trainStepCount_);
+      jaxInterface_.addScalar("Max Q Value", trainOutput.maxQValue, trainStepCount_);
+      ++trainStepCount_;
+      if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
+        LOG(INFO) << "Train step #" << trainStepCount_ << ". Updating target network";
+        jaxInterface_.updateTargetModel();
+      }
+    } catch (std::exception &ex) {
+      LOG(ERROR) << "Caught exception while training: " << ex.what();
     }
   }
   LOG(INFO) << "Done with training loop. Exiting train()";
@@ -183,21 +181,23 @@ void TrainingManager::onUpdate(const event::Event *event) {
   }
 }
 
-void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId observerGlobalId, const Observation &observation, std::optional<int> actionIndex) {
-  ObservationAndActionStorage::Index index = replayBuffer_.addObservationAndAction(pvpId, observerGlobalId, observation, actionIndex);
+void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
+  ObservationAndActionStorage::Index index = replayBuffer_.addObservationAndAction(pvpId, intelligenceName, observation, actionIndex);
   ObservationAndActionStorage::ObservationAndActionType currentAction = replayBuffer_.getObservationAndAction(index);
-  float cumulativeReward = 0.0f;
-  // Go backwards and sum this agent's rewards so far.
-  while (index.havePrevious()) {
-    const ObservationAndActionStorage::Index previousIndex = index.previous();
-    const ObservationAndActionStorage::ObservationAndActionType previousAction = replayBuffer_.getObservationAndAction(previousIndex);
-    const bool isTerminal = !currentAction.actionIndex.has_value();
-    cumulativeReward += calculateReward(previousAction.observation, currentAction.observation, isTerminal);
-    index = previousIndex;
-    currentAction = previousAction;
+  if (!actionIndex) {
+    // This is the end of the episode, calculate & report the episode return.
+    float cumulativeReward = 0.0f;
+    // Go backwards and sum this agent's rewards so far.
+    while (index.hasPrevious()) {
+      const ObservationAndActionStorage::Index previousIndex = index.previous();
+      const ObservationAndActionStorage::ObservationAndActionType previousAction = replayBuffer_.getObservationAndAction(previousIndex);
+      const bool isTerminal = !currentAction.actionIndex.has_value();
+      cumulativeReward += calculateReward(previousAction.observation, currentAction.observation, isTerminal);
+      index = previousIndex;
+      currentAction = previousAction;
+    }
+    jaxInterface_.addScalar(absl::StrFormat("Episode Return %s", intelligenceName), cumulativeReward, trainStepCount_);
   }
-  // TODO: It would be nice to get the name of the agent for the name of the scalar, so we can compare across runs.
-  jaxInterface_.addScalar(absl::StrFormat("%d Cumulative Return", observerGlobalId), cumulativeReward, trainStepCount_);
 }
 
 void TrainingManager::setUpIntelligencePool() {
@@ -241,8 +241,14 @@ void TrainingManager::createSessions() {
 common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Session &char2) {
   common::PvpDescriptor pvpDescriptor;
   pvpDescriptor.pvpId = nextPvpId_++;
-  pvpDescriptor.player1GlobalId = char1.getBot().selfState()->globalId;
-  pvpDescriptor.player2GlobalId = char2.getBot().selfState()->globalId;
+  if (!char1.getBot().selfState()) {
+    throw std::runtime_error("char1 does not have a self state");
+  }
+  if (!char2.getBot().selfState()) {
+    throw std::runtime_error("char2 does not have a self state");
+  }
+  pvpDescriptor.player1Name = char1.getBot().selfState()->name;
+  pvpDescriptor.player2Name = char2.getBot().selfState()->name;
 
   // Massive Pvp Area
   const sro::Position pvpCenterPosition(/*regionId=*/sro::position_math::worldRegionIdFromSectors(1,1),
