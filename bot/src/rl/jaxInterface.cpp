@@ -97,8 +97,8 @@ void JaxInterface::initialize() {
     targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
 
     optaxModule_ = py::module::import("optax");
-    py::object adam = optaxModule_->attr("adam")(kLearningRate);
-    optimizerState_ = nnxModule_->attr("Optimizer")(*model_, adam);
+    py::object optimizer = getOptimizer();
+    optimizerState_ = nnxModule_->attr("Optimizer")(*model_, optimizer);
   }
   modelConditionVariable_.notify_all();
 }
@@ -240,8 +240,8 @@ void JaxInterface::loadCheckpoint(const std::string &modelCheckpointPath, const 
     model_ = dqnModule_->attr("loadModelCheckpoint")(*model_, modelCheckpointPath);
     targetModel_ = dqnModule_->attr("loadModelCheckpoint")(*targetModel_, targetModelCheckpointPath);
     // Construct new optimizer for the loaded model.
-    py::object adam = optaxModule_->attr("adam")(kLearningRate);
-    optimizerState_ = nnxModule_->attr("Optimizer")(*model_, adam);
+    py::object optimizer = getOptimizer();
+    optimizerState_ = nnxModule_->attr("Optimizer")(*model_, optimizer);
     // Load the optimizer state into the newly created optimizer.
     optimizerState_ = dqnModule_->attr("loadOptimizerCheckpoint")(*optimizerState_, optimizerStateCheckpointPath);
   } catch (std::exception &ex) {
@@ -255,6 +255,10 @@ void JaxInterface::loadCheckpoint(const std::string &modelCheckpointPath, const 
 void JaxInterface::addScalar(std::string_view name, double yValue, double xValue) {
   py::gil_scoped_acquire acquire;
   summaryWriter_->attr("add_scalar")(name, yValue, xValue);
+}
+
+py::object JaxInterface::getOptimizer() {
+  return dqnModule_->attr("getOptaxAdamWOptimizer")(kLearningRate);
 }
 
 py::object JaxInterface::getNextRngKey() {

@@ -137,3 +137,15 @@ def loadOptimizerCheckpoint(optimizer, path):
     optimizerState = checkpointer.restore(path, abstractOptStateTree)
     nnx.update(optimizer, optimizerState)
     return optimizer
+
+def getOptaxAdamWOptimizer(learningRate):
+  # Do not apply weight decay to the biases
+  def isKernel(x):
+    return jax.tree.map(lambda y: y.ndim > 1, x)
+
+  adamW = optax.adamw(
+      learning_rate=learningRate,
+      weight_decay=1e-2,
+      mask=isKernel
+  )
+  return adamW

@@ -64,6 +64,7 @@ private:
   std::condition_variable modelConditionVariable_;
   std::atomic<bool> waitingToSelectAction_{false};
 
+  pybind11::object getOptimizer();
   pybind11::object getNextRngKey();
   pybind11::object observationToNumpy(const Observation &observation);
   pybind11::object observationsToNumpy(const std::vector<Observation> &observations);
