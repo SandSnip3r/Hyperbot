@@ -11,12 +11,15 @@
 #include "rl/checkpointManager.hpp"
 #include "rl/intelligencePool.hpp"
 #include "rl/jaxInterface.hpp"
+#include "rl/observationAndActionStorage.hpp"
 #include "rl/replayBuffer.hpp"
 #include "rl/observation.hpp"
 #include "session.hpp"
 #include "state/worldState.hpp"
 
 #include <silkroad_lib/position.hpp>
+
+#include <absl/container/flat_hash_map.h>
 
 #include <condition_variable>
 #include <memory>
@@ -52,6 +55,7 @@ public:
 private:
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
+  static constexpr int kReplayBufferCapacity{1'000'000};
 
   std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;
@@ -84,8 +88,12 @@ private:
   void buildItemRequirementList();
   std::vector<common::ItemRequirement> itemRequirements_;
 
-  ReplayBuffer replayBuffer_{/*capacity=*/10'000'000, kBatchSize,
-                             /*alpha=*/0.6f, /*beta=*/0.8f, /*epsilon=*/1e-5f};
+  ObservationAndActionStorage observationAndActionStorage_{kReplayBufferCapacity};
+  using ReplayBufferType = ReplayBuffer<ObservationAndActionStorage::Id>;
+  ReplayBufferType replayBuffer_{kReplayBufferCapacity, /*alpha=*/0.6f, /*beta=*/0.8f, /*epsilon=*/1e-5f};
+  absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> observationIdToTransitionIdMap_;
+  absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> transitionIdToObservationIdMap_;
+  std::mutex observationTransitionIdMapMutex_;
   float calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const;
   void saveCheckpoint(const std::string &checkpointName);
 };

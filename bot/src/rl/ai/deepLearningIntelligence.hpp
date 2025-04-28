@@ -16,7 +16,7 @@ public:
 private:
   static constexpr float kInitialEpsilon = 1.0f;
   static constexpr float kFinalEpsilon = 0.01f;
-  static constexpr int kEpsilonDecaySteps = 1'000'000;
+  static constexpr int kEpsilonDecaySteps = 250'000;
   const std::string name_{"DeepLearning"};
   int stepCount_{0};
   float getEpsilon();

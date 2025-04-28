@@ -327,7 +327,8 @@ add_executable(${PROJECT_NAME}
   src/rl/jaxInterface.hpp
   src/rl/observation.cpp
   src/rl/observation.hpp
-  src/rl/replayBuffer.cpp
+  src/rl/observationAndActionStorage.cpp
+  src/rl/observationAndActionStorage.hpp
   src/rl/replayBuffer.hpp
   src/rl/trainingManager.cpp
   src/rl/trainingManager.hpp
@@ -481,24 +482,43 @@ endif()
 enable_testing()
 
 add_executable(
-  new_test_name_todo_rename
+  navmesh_triangulation_test
   test/singleRegionNavmeshTriangulationTest.cpp
 )
 
 target_link_libraries(
-  new_test_name_todo_rename
+  navmesh_triangulation_test
   Pathfinder
   silkroad_lib
   absl::str_format
   GTest::Main
 )
 
-target_include_directories(new_test_name_todo_rename PRIVATE
+target_include_directories(navmesh_triangulation_test PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/src"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/src"
+)
+
+add_executable(
+  replay_buffer_test
+  test/replayBufferTest.cpp
+  src/rl/replayBuffer.hpp
+)
+
+target_link_libraries(
+  replay_buffer_test
+  absl::log
+  GTest::Main
+)
+
+target_include_directories(replay_buffer_test PRIVATE
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/src"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/src"
 )
 
 include(GoogleTest)
-gtest_discover_tests(new_test_name_todo_rename
-# WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+
+gtest_discover_tests(navmesh_triangulation_test
+)
+gtest_discover_tests(replay_buffer_test
 )

@@ -65,14 +65,14 @@ void TrainingManager::train() {
   std::mt19937 randomEngine = common::createRandomEngine();
   while (runTraining_) {
     try {
-      if (replayBuffer_.size() < replayBuffer_.samplingBatchSize()) {
+      if (replayBuffer_.size() < kBatchSize) {
         // We don't have enough transitions to sample from yet.
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
       }
 
       // Sample a batch of transitions from the replay buffer.
-      std::vector<ReplayBuffer::SampleResult> sampleResult = replayBuffer_.sample();
+      std::vector<ReplayBufferType::SampleResult> sampleResult = replayBuffer_.sample(kBatchSize, randomEngine);
 
       std::vector<Observation> olderObservations;
       std::vector<int> actionIndexs;
@@ -88,11 +88,22 @@ void TrainingManager::train() {
       weights.reserve(sampleResult.size());
 
       for (int i=0; i<sampleResult.size(); ++i) {
-        const ReplayBuffer::SampleResult &sample = sampleResult.at(i);
-        Observation observation0 = sample.transition.first.observation;
-        const std::optional<int> actionIndex0 = sample.transition.first.actionIndex;
-        const Observation observation1 = sample.transition.second.observation;
-        const std::optional<int> actionIndex1 = sample.transition.second.actionIndex;
+        const ReplayBufferType::SampleResult &sample = sampleResult.at(i);
+        ObservationAndActionStorage::Id observationId;
+        {
+          std::unique_lock lock(observationTransitionIdMapMutex_);
+          observationId = transitionIdToObservationIdMap_.at(sample.transitionId);
+        }
+        const ObservationAndActionStorage::ObservationAndActionType observationAndAction = observationAndActionStorage_.getObservationAndAction(observationId);
+        if (!observationAndActionStorage_.hasPrevious(observationId)) {
+          throw std::runtime_error("ObservationAndActionStorage: No previous observation for this observation ID");
+        }
+        ObservationAndActionStorage::Id previousObservationId = observationAndActionStorage_.getPrevious(observationId);
+        const ObservationAndActionStorage::ObservationAndActionType previousObservationAndAction = observationAndActionStorage_.getObservationAndAction(previousObservationId);
+        const Observation &observation0 = previousObservationAndAction.observation;
+        const std::optional<int> actionIndex0 = previousObservationAndAction.actionIndex;
+        const Observation &observation1 = observationAndAction.observation;
+        const std::optional<int> actionIndex1 = observationAndAction.actionIndex;
         float weight = sample.weight;
 
         const bool isTerminal = !actionIndex1.has_value();
@@ -109,13 +120,13 @@ void TrainingManager::train() {
       const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(olderObservations, actionIndexs, isTerminals, rewards, newerObservations, weights);
 
       // Update the priorities of the sampled transitions in the replay buffer.
-      std::vector<ReplayBuffer::StorageIndexType> storageIndices;
+      std::vector<ReplayBufferType::TransitionId> ids;
       std::vector<float> tdErrors;
-      storageIndices.reserve(sampleResult.size());
+      ids.reserve(sampleResult.size());
       tdErrors.reserve(sampleResult.size());
-      storageIndices.push_back(sampleResult.at(0).storageIndex);
+      ids.push_back(sampleResult.at(0).transitionId);
       tdErrors.push_back(trainOutput.tdError);
-      replayBuffer_.updatePriorities(storageIndices, tdErrors);
+      replayBuffer_.updatePriorities(ids, tdErrors);
 
       jaxInterface_.addScalar("TD Error", trainOutput.tdError, trainStepCount_);
       jaxInterface_.addScalar("Min Q Value", trainOutput.minQValue, trainStepCount_);
@@ -182,19 +193,52 @@ void TrainingManager::onUpdate(const event::Event *event) {
 }
 
 void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
-  ObservationAndActionStorage::Index index = replayBuffer_.addObservationAndAction(pvpId, intelligenceName, observation, actionIndex);
-  ObservationAndActionStorage::ObservationAndActionType currentAction = replayBuffer_.getObservationAndAction(index);
+  using Id = ObservationAndActionStorage::Id;
+  using ObservationAndActionType = ObservationAndActionStorage::ObservationAndActionType;
+
+  // Store this item in the observation and action storage.
+  std::pair<Id, std::vector<Id>> observationIdAndDeletedObservationIds = observationAndActionStorage_.addObservationAndAction(pvpId, intelligenceName, observation, actionIndex);
+
+  const std::vector<Id> &deletedObservationIds = observationIdAndDeletedObservationIds.second;
+  if (deletedObservationIds.size() > 0) {
+    // Some observations were deleted due to the buffer being full. Remove the corresponding transitions from the replay buffer.
+    for (Id deletedObservationId : deletedObservationIds) {
+      std::unique_lock lock(observationTransitionIdMapMutex_);
+      auto it = observationIdToTransitionIdMap_.find(deletedObservationId);
+      if (it == observationIdToTransitionIdMap_.end()) {
+        // No transition ID for this observation ID. This can happen if the observation was the first in a new PVP.
+        // It will always be the case that one deleted observation will not have a corresponding transition ID. That is because we only have transition IDs for pairs of observations.
+        continue;
+      }
+      replayBuffer_.deleteTransition(it->second);
+      auto it2 = transitionIdToObservationIdMap_.find(it->second);
+      observationIdToTransitionIdMap_.erase(it);
+      transitionIdToObservationIdMap_.erase(it2);
+    }
+  }
+
+  Id observationId = observationIdAndDeletedObservationIds.first;
+  if (observationAndActionStorage_.hasPrevious(observationId)) {
+    // There was an observation before this one. We can store a full transition in the replay buffer (a transition traditionally is a (S,A,R,S') tuple).
+    ReplayBufferType::TransitionId transitionId = replayBuffer_.addTransition(observationId);
+    std::unique_lock lock(observationTransitionIdMapMutex_);
+    observationIdToTransitionIdMap_[observationId] = transitionId;
+    transitionIdToObservationIdMap_[transitionId] = observationId;
+  }
+
   if (!actionIndex) {
     // This is the end of the episode, calculate & report the episode return.
     float cumulativeReward = 0.0f;
-    // Go backwards and sum this agent's rewards so far.
-    while (index.hasPrevious()) {
-      const ObservationAndActionStorage::Index previousIndex = index.previous();
-      const ObservationAndActionStorage::ObservationAndActionType previousAction = replayBuffer_.getObservationAndAction(previousIndex);
-      const bool isTerminal = !currentAction.actionIndex.has_value();
-      cumulativeReward += calculateReward(previousAction.observation, currentAction.observation, isTerminal);
-      index = previousIndex;
-      currentAction = previousAction;
+    ObservationAndActionType currentObservationAndAction = observationAndActionStorage_.getObservationAndAction(observationId);
+    // Go backwards and sum this agent's rewards.
+    while (observationAndActionStorage_.hasPrevious(observationId)) {
+      Id previousObservationId = observationAndActionStorage_.getPrevious(observationId);
+      ObservationAndActionType previousObservationAndAction = observationAndActionStorage_.getObservationAndAction(previousObservationId);
+      const bool isTerminal = !currentObservationAndAction.actionIndex.has_value();
+      const float reward = calculateReward(previousObservationAndAction.observation, currentObservationAndAction.observation, isTerminal);
+      cumulativeReward += reward;
+      observationId = previousObservationId;
+      currentObservationAndAction = previousObservationAndAction;
     }
     jaxInterface_.addScalar(absl::StrFormat("Episode Return %s", intelligenceName), cumulativeReward, trainStepCount_);
   }

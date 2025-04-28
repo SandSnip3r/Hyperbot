@@ -46,3 +46,5 @@
 - Plot cumulative episode return
 - Show currently loaded checkpoint in UI, if any
 - Display state machine trees in UI
+- Prevent any user input while pvping
+- Implement periodic checkpointing in case of crashes
