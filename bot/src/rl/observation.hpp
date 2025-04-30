@@ -1,7 +1,7 @@
 #ifndef RL_OBSERVATION_HPP_
 #define RL_OBSERVATION_HPP_
 
-#include "event/event.hpp"
+#include "event/eventCode.hpp"
 
 #include <silkroad_lib/scalar_types.hpp>
 
@@ -10,6 +10,10 @@
 #include <vector>
 
 class Bot;
+
+namespace event {
+class Event;
+} // namespace event
 
 namespace rl {
 

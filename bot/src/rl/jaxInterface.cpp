@@ -162,10 +162,10 @@ JaxInterface::TrainAuxOutput JaxInterface::train(const std::vector<Observation> 
       ZoneScopedN("JaxInterface::train_PYTHON");
       py::object auxOutput = dqnModule_->attr("convertThenTrain")(*model_, *optimizerState_, *targetModel_, observationsToNumpy(olderObservation), actionIndex, isTerminal, reward, observationsToNumpy(newerObservation), weight);
       py::tuple auxOutputTuple = auxOutput.cast<py::tuple>();
-      result.tdError = auxOutputTuple[0].cast<float>();
-      result.minQValue = auxOutputTuple[1].cast<float>();
-      result.meanQValue = auxOutputTuple[2].cast<float>();
-      result.maxQValue = auxOutputTuple[3].cast<float>();
+      result.tdErrors = auxOutputTuple[0].cast<std::vector<float>>();
+      result.meanMinQValue = auxOutputTuple[1].cast<float>();
+      result.meanMeanQValue = auxOutputTuple[2].cast<float>();
+      result.meanMaxQValue = auxOutputTuple[3].cast<float>();
     } catch (std::exception &ex) {
       LOG(ERROR) << "Caught exception in JaxInterface::train: " << ex.what();
       throw;

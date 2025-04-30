@@ -37,7 +37,7 @@ public:
 
   // Result structure for sampling
   struct SampleResult {
-    TransitionId transitionId;
+    TransitionId transitionId{0xBFBFBFBF};
     float weight;
   };
 
@@ -96,6 +96,8 @@ private:
 
   // Gets the total priority sum (value at the root node).
   float getTotalPriority() const;
+
+  size_t internalSize() const { return currentBufferSize_; }
 };
 
 #include "replayBuffer.inl"

@@ -62,6 +62,8 @@ add_executable(${PROJECT_NAME}
   src/entity/self.hpp
   src/event/event.cpp
   src/event/event.hpp
+  src/event/eventCode.cpp
+  src/event/eventCode.hpp
   src/helpers.cpp
   src/helpers.hpp
   src/hyperbot.cpp

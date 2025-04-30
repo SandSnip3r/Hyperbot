@@ -3,4 +3,8 @@
 
 namespace rl::ai {
 
+BaseIntelligence::BaseIntelligence(TrainingManager &trainingManager) : trainingManager_(trainingManager) {
+
+}
+
 } // namespace rl::ai

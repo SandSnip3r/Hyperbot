@@ -22,10 +22,11 @@ public:
   int selectAction(const Observation &observation, bool canSendPacket);
 
   struct TrainAuxOutput {
-    float tdError;
-    float minQValue;
-    float meanQValue;
-    float maxQValue;
+    std::vector<float> tdErrors;
+    // The following values are means over the batch.
+    float meanMinQValue;
+    float meanMeanQValue;
+    float meanMaxQValue;
   };
   TrainAuxOutput train(const std::vector<Observation> &olderObservation,
                        const std::vector<int> &actionIndex,

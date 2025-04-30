@@ -6,7 +6,7 @@ namespace rl {
 
 ObservationAndActionStorage::ObservationAndActionStorage(size_t capacity) : capacity_(capacity) {}
 
-std::pair<ObservationAndActionStorage::Id, std::vector<ObservationAndActionStorage::Id>> ObservationAndActionStorage::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
+std::pair<ObservationAndActionStorage::Id, std::vector<ObservationAndActionStorage::Id>> ObservationAndActionStorage::addObservationAndAction(std::chrono::high_resolution_clock::time_point timestamp, common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
   std::unique_lock lock{mutex_};
   std::vector<Id> deletedIds;
   if (size() == capacity_) {
@@ -43,7 +43,7 @@ std::pair<ObservationAndActionStorage::Id, std::vector<ObservationAndActionStora
   }
 
   std::deque<ObservationAndActionType> &observations = buffer_[pvpId][intelligenceName];
-  observations.push_back({observation, actionIndex});
+  observations.push_back({timestamp, observation, actionIndex});
   size_t index = observations.size() - 1;
   if (index == 0) {
     // LOG(INFO) << "First of a new pvp added, pushing to deque: " << pvpId << ", intelligence name: " << intelligenceName;
@@ -65,7 +65,7 @@ ObservationAndActionStorage::ObservationAndActionType ObservationAndActionStorag
   std::unique_lock lock{mutex_};
   auto it = idToIndexMap_.find(id);
   if (it == idToIndexMap_.end()) {
-    throw std::out_of_range("ID not found in buffer.");
+    throw std::out_of_range("getObservationAndAction: ID not found in buffer.");
   }
   const BufferIndices &index = it->second;
   auto it1 = buffer_.find(index.pvpId);
@@ -87,7 +87,7 @@ bool ObservationAndActionStorage::hasPrevious(Id id) const {
   std::unique_lock lock{mutex_};
   auto it = idToIndexMap_.find(id);
   if (it == idToIndexMap_.end()) {
-    throw std::out_of_range("ID not found in buffer.");
+    throw std::out_of_range("hasPrevious: ID not found in buffer.");
   }
   const BufferIndices &index = it->second;
   return index.actionIndex > 0;
@@ -97,7 +97,7 @@ ObservationAndActionStorage::Id ObservationAndActionStorage::getPrevious(Id id) 
   std::unique_lock lock{mutex_};
   auto it = idToIndexMap_.find(id);
   if (it == idToIndexMap_.end()) {
-    throw std::out_of_range("ID not found in buffer.");
+    throw std::out_of_range("getPrevious: ID not found in buffer.");
   }
   const BufferIndices &index = it->second;
   if (index.actionIndex == 0) {

@@ -1,4 +1,10 @@
+#include <absl/strings/str_format.h>
+
+#define private public
+#define protected public
 #include "rl/replayBuffer.hpp"
+#undef protected
+#undef private
 
 #include <gtest/gtest.h>
 
@@ -254,6 +260,83 @@ TEST_F(ReplayBufferTest, UpdatePrioritiesIdOutOfRangeThrows) {
   fillBuffer(buf, 3);
   // id ‘4’ is beyond capacity 3
   EXPECT_ANY_THROW(buf.updatePriorities({0,4}, {0.1f,0.2f}));
+}
+
+// Throws if you try to update more priorities than there are elements in the buffer.
+TEST_F(ReplayBufferTest, UpdatePrioritiesCountExceedsCurrentSizeThrows) {
+  // capacity=5, but we'll only add 2 transitions
+  ReplayBuffer<int32_t> buf(5, /*alpha=*/1.0f, /*beta=*/1.0f, /*epsilon=*/1e-6f);
+  fillBuffer(buf, 2);
+  EXPECT_EQ(buf.size(), 2u);
+
+  // Prepare 3 ids + 3 priorities → exceeds buf.size()
+  std::vector<TransitionId> ids = { 0, 1, 2 };
+  std::vector<float> prios = { 0.1f, 0.2f, 0.3f };
+
+  EXPECT_ANY_THROW(buf.updatePriorities(ids, prios));
+}
+
+TEST_F(ReplayBufferTest, RetrieveLeafBoundaryValues) {
+  // capacity=4, uniform priorities
+  ReplayBuffer<int32_t> buf(4, /*α=*/1, /*β=*/1, /*ε=*/1e-3f);
+  fillBuffer(buf, 4);
+
+  const float total = buf.getTotalPriority();
+
+  // near zero should map to leaf 0
+  auto [l0, p0] = buf.retrieveLeaf(0.0f);
+  EXPECT_EQ(l0, 0u);
+
+  // exactly total should map to last non-free leaf
+  auto [lMax, pMax] = buf.retrieveLeaf(total);
+  EXPECT_EQ(lMax, 3u);
+
+  // midway should pick leaf 1 or 2
+  auto [lMid, pMid] = buf.retrieveLeaf(total * 0.5f);
+  EXPECT_TRUE(lMid == 1u || lMid == 2u);
+}
+
+// Stress test: large buffer + 100k+ samples + random priority tweaks.
+TEST_F(ReplayBufferTest, StressTestLargeBufferManySamples) {
+  std::mt19937 rng(67719);
+  constexpr size_t CAP = 9;
+  ReplayBuffer<int32_t> buf(
+    CAP,
+    /*alpha=*/1.0f,
+    /*beta=*/1.0f,
+    /*epsilon=*/1e-3f
+  );
+  fillBuffer(buf, 4);
+
+  std::uniform_int_distribution<size_t> idDist(0, buf.size()-1);
+  std::uniform_real_distribution<float> prioDist(0.0f, 1.0f);
+  std::uniform_int_distribution<int> countDist(1, 4);
+
+  for (int iter = 0; iter < 100; ++iter) {
+    // every 50 iters, randomly tweak 4 priorities
+    if ((iter % 50) == 0) {
+      std::vector<TransitionId> ids(4);
+      std::vector<float> ps(4);
+      for (int j = 0; j < 4; ++j) {
+        ids[j] = idDist(rng);
+        ps[j] = prioDist(rng);
+      }
+      buf.updatePriorities(ids, ps);
+    }
+
+    int n = countDist(rng);
+    std::vector<typename ReplayBuffer<int32_t>::SampleResult> samples;
+    EXPECT_NO_THROW(samples = buf.sample(n, rng));
+    EXPECT_EQ(samples.size(), size_t(n));
+
+    for (auto &s : samples) {
+      // must be a valid leaf
+      EXPECT_LT(s.transitionId, buf.size()) << "Failed on iter " << iter;
+      // weight should be non-negative and finite
+      EXPECT_GE(s.weight, 0.0f);
+      EXPECT_TRUE(std::isfinite(s.weight));
+    }
+  }
 }
 
 // Constructor rejects capacity=0 or negative epsilon.

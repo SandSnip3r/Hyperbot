@@ -22,6 +22,7 @@ typename ReplayBuffer<TransitionType>::TransitionId ReplayBuffer<TransitionType>
   std::unique_lock lock{replayBufferMutex_};
 
   if (currentBufferSize_ == capacity_) {
+    // Note that it is the user's responsibility to ensure that there is enough room before adding a transition.
     throw std::runtime_error("Replay buffer is full. Cannot add new transition.");
   }
 
@@ -115,6 +116,9 @@ void ReplayBuffer<TransitionType>::updatePriorities(const std::vector<ReplayBuff
   if (ids.size() != priorities.size()) {
     throw std::runtime_error("Size of ids does not match size of priorities in ReplayBuffer::updatePriorities.");
   }
+  if (ids.size() > internalSize()) {
+    throw std::runtime_error("Given too many priorities to update in ReplayBuffer::updatePriorities.");
+  }
 
   for (size_t i=0; i<ids.size(); ++i) {
     LeafIndexType leafIndex = transitionIdToLeafIndex(ids[i]);
@@ -127,7 +131,7 @@ void ReplayBuffer<TransitionType>::updatePriorities(const std::vector<ReplayBuff
 template<typename TransitionType>
 size_t ReplayBuffer<TransitionType>::size() const {
   std::unique_lock lock{replayBufferMutex_};
-  return currentBufferSize_;
+  return internalSize();
 }
 
 // ========================= Private Methods =========================
@@ -208,6 +212,13 @@ std::pair<typename ReplayBuffer<TransitionType>::LeafIndexType, float> ReplayBuf
   // Start at the root (tree index)
   size_t currentNodeIndex = 0;
 
+  // TODO: Remove once done debugging -->
+  std::vector<size_t> indices;
+  std::vector<float> values;
+  indices.push_back(currentNodeIndex);
+  values.push_back(valueToFind);
+  // <--
+
   while (true) {
     const size_t leftChildIndex = 2 * currentNodeIndex + 1;
     const size_t rightChildIndex = leftChildIndex + 1;
@@ -222,18 +233,32 @@ std::pair<typename ReplayBuffer<TransitionType>::LeafIndexType, float> ReplayBuf
     if (valueToFind <= leftChildValue) {
       currentNodeIndex = leftChildIndex; // Go left
     } else {
-      valueToFind -= leftChildValue; // Subtract left value
       if (rightChildIndex < sumTree_.size()) {
+        // Subtract left value and ensure it stays within range.
+        valueToFind = std::min(valueToFind-leftChildValue, sumTree_[rightChildIndex]);
+        // valueToFind = std::max(0.0f, std::min(valueToFind-leftChildValue, sumTree_[rightChildIndex]));
         currentNodeIndex = rightChildIndex; // Go right
       } else {
         // Should only happen if value > total priority or tree is corrupt
         throw std::runtime_error("Right child index out of bounds.");
       }
     }
+    // TODO: Remove once done debugging -->
+    indices.push_back(currentNodeIndex);
+    values.push_back(valueToFind);
+    // <--
   }
 
   // Convert tree index back to leaf index (0 to capacity-1)
   const LeafIndexType leafIndex = currentNodeIndex - (capacity_ - 1);
+  if (leafIndex > internalSize()) {
+    LOG(ERROR) << "Leaf index out of range: " << leafIndex << " > " << internalSize();
+    LOG(ERROR) << "Indices & values:";
+    for (size_t i = 0; i < indices.size(); ++i) {
+      LOG(ERROR) << "  Index: " << indices[i] << ", Value: " << absl::StreamFormat("%17g", values[i]);
+    }
+    throw std::out_of_range(absl::StrFormat("Leaf index %d out of range (size: %d) in retrieveLeaf(%f).", leafIndex, internalSize(), valueToFind));
+  }
   const float priorityAlpha = sumTree_[currentNodeIndex];
 
   return {leafIndex, priorityAlpha};

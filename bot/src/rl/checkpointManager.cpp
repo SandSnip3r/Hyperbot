@@ -40,16 +40,21 @@ CheckpointManager::~CheckpointManager() {
   }
 }
 
-void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, int stepCount) {
-  if (checkpointExists(checkpointName)) {
+void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, int stepCount, bool overwrite) {
+  const bool checkpointAlreadyExists = checkpointExists(checkpointName);
+  if (!overwrite && checkpointAlreadyExists) {
     throw std::runtime_error("Trying to create a checkpoint which already exists");
   }
   const std::string fullCheckpointPath = "/tmp/hyperbot_checkpoints/" + checkpointName;
-  LOG(INFO) << "Saving checkpoint \"" << checkpointName << "\" to path \"" << fullCheckpointPath << "\"";
+  if (checkpointAlreadyExists) {
+    LOG(INFO) << "Overwriting checkpoint \"" << checkpointName << "\" at path \"" << fullCheckpointPath << "\"";
+  } else {
+    LOG(INFO) << "Saving checkpoint \"" << checkpointName << "\" to path \"" << fullCheckpointPath << "\"";
+  }
   const std::string modelCheckpointPath = fullCheckpointPath + "_model";
   const std::string targetModelCheckpointPath = fullCheckpointPath + "_target_model";
   const std::string optimizerCheckpointPath = fullCheckpointPath + "_optimizer_state";
-  {
+  if (!checkpointAlreadyExists) {
     std::unique_lock lock(registryMutex_);
     rl_checkpointing::Checkpoint *newCheckpointProto = checkpointRegistry_.add_checkpoints();
     newCheckpointProto->set_checkpoint_name(checkpointName);
@@ -57,6 +62,16 @@ void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::Ja
     newCheckpointProto->set_target_model_checkpoint_path(targetModelCheckpointPath);
     newCheckpointProto->set_optimizer_checkpoint_path(optimizerCheckpointPath);
     newCheckpointProto->set_step_count(stepCount);
+    saveCurrentRegistryNoLock();
+  } else {
+    // Need to update the step count.
+    std::unique_lock lock(registryMutex_);
+    for (rl_checkpointing::Checkpoint &checkpoint : *checkpointRegistry_.mutable_checkpoints()) {
+      if (checkpoint.checkpoint_name() == checkpointName) {
+        checkpoint.set_step_count(stepCount);
+        break;
+      }
+    }
     saveCurrentRegistryNoLock();
   }
   if (checkpointingThread_.joinable()) {

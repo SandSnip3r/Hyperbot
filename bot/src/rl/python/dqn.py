@@ -77,7 +77,7 @@ def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight):
 def computeWeightedLossAndTdErrorBatch(model, targetModel, transitions, weights):
   batched = jax.vmap(computeWeightedLossAndTdErrorSingle, in_axes=( None, None, (0, 0, 0, 0, 0), 0 ), out_axes=(0, 0))
   weightedLosses, (tdErrors, minValues, meanValues, maxValues) = batched(model, targetModel, transitions, weights)
-  return jnp.mean(weightedLosses), (jnp.mean(tdErrors), jnp.mean(minValues), jnp.mean(meanValues), jnp.mean(maxValues))
+  return jnp.mean(weightedLosses), (tdErrors, jnp.mean(minValues), jnp.mean(meanValues), jnp.mean(maxValues))
 
 @nnx.jit
 def jittedTrain(model, optimizerState, targetModel, observations, selectedActions, isTerminals, rewards, nextObservations, weights):

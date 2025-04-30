@@ -1,4 +1,5 @@
 #include "bot.hpp"
+#include "event/event.hpp"
 #include "rl/observation.hpp"
 
 #include <absl/algorithm/container.h>

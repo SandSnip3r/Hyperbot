@@ -92,13 +92,24 @@ void TrainingManager::train() {
         ObservationAndActionStorage::Id observationId;
         {
           std::unique_lock lock(observationTransitionIdMapMutex_);
-          observationId = transitionIdToObservationIdMap_.at(sample.transitionId);
+          try {
+            observationId = transitionIdToObservationIdMap_.at(sample.transitionId);
+          } catch (...) {
+            LOG(ERROR) << "Failed to find observation ID for transition ID " << sample.transitionId;
+            throw;
+          }
+        }
+        ObservationAndActionStorage::Id previousObservationId;
+        try {
+          if (!observationAndActionStorage_.hasPrevious(observationId)) {
+            throw std::runtime_error("ObservationAndActionStorage: No previous observation for this observation ID");
+          }
+          previousObservationId = observationAndActionStorage_.getPrevious(observationId);
+        } catch (...) {
+          LOG(ERROR) << "Failed to find previous observation ID for observation ID " << observationId;
+          throw;
         }
         const ObservationAndActionStorage::ObservationAndActionType observationAndAction = observationAndActionStorage_.getObservationAndAction(observationId);
-        if (!observationAndActionStorage_.hasPrevious(observationId)) {
-          throw std::runtime_error("ObservationAndActionStorage: No previous observation for this observation ID");
-        }
-        ObservationAndActionStorage::Id previousObservationId = observationAndActionStorage_.getPrevious(observationId);
         const ObservationAndActionStorage::ObservationAndActionType previousObservationAndAction = observationAndActionStorage_.getObservationAndAction(previousObservationId);
         const Observation &observation0 = previousObservationAndAction.observation;
         const std::optional<int> actionIndex0 = previousObservationAndAction.actionIndex;
@@ -121,21 +132,32 @@ void TrainingManager::train() {
 
       // Update the priorities of the sampled transitions in the replay buffer.
       std::vector<ReplayBufferType::TransitionId> ids;
-      std::vector<float> tdErrors;
+      std::vector<float> newPriorities;
       ids.reserve(sampleResult.size());
-      tdErrors.reserve(sampleResult.size());
-      ids.push_back(sampleResult.at(0).transitionId);
-      tdErrors.push_back(trainOutput.tdError);
-      replayBuffer_.updatePriorities(ids, tdErrors);
+      newPriorities.reserve(sampleResult.size());
 
-      jaxInterface_.addScalar("TD Error", trainOutput.tdError, trainStepCount_);
-      jaxInterface_.addScalar("Min Q Value", trainOutput.minQValue, trainStepCount_);
-      jaxInterface_.addScalar("Mean Q Value", trainOutput.meanQValue, trainStepCount_);
-      jaxInterface_.addScalar("Max Q Value", trainOutput.maxQValue, trainStepCount_);
+      if (sampleResult.size() != trainOutput.tdErrors.size()) {
+        throw std::runtime_error(absl::StrFormat("Sample size %zu does not match TD error size %zu", sampleResult.size(), trainOutput.tdErrors.size()));
+      }
+      for (int i=0; i<sampleResult.size(); ++i) {
+        ids.push_back(sampleResult.at(i).transitionId);
+        newPriorities.push_back(std::abs(trainOutput.tdErrors.at(i)));
+      }
+      replayBuffer_.updatePriorities(ids, newPriorities);
+
+      const float meanTdError = std::accumulate(trainOutput.tdErrors.begin(), trainOutput.tdErrors.end(), 0.0f) / trainOutput.tdErrors.size();
+      jaxInterface_.addScalar("TD Error", meanTdError, trainStepCount_);
+      jaxInterface_.addScalar("Min Q Value", trainOutput.meanMinQValue, trainStepCount_);
+      jaxInterface_.addScalar("Mean Q Value", trainOutput.meanMeanQValue, trainStepCount_);
+      jaxInterface_.addScalar("Max Q Value", trainOutput.meanMaxQValue, trainStepCount_);
       ++trainStepCount_;
       if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
         LOG(INFO) << "Train step #" << trainStepCount_ << ". Updating target network";
         jaxInterface_.updateTargetModel();
+      }
+      if (trainStepCount_ % kTrainStepCheckpointInterval == 0) {
+        LOG(INFO) << "Train step #" << trainStepCount_ << ". Saving checkpoint";
+        saveCheckpoint("backup_checkpoint", /*overwrite=*/true);
       }
     } catch (std::exception &ex) {
       LOG(ERROR) << "Caught exception while training: " << ex.what();
@@ -171,7 +193,7 @@ void TrainingManager::onUpdate(const event::Event *event) {
       throw std::runtime_error("Received kRlUiSaveCheckpoint event but failed to cast to event::RlUiSaveCheckpoint");
     }
     LOG(INFO) << "Received save checkpoint request for " << saveCheckpointEvent->checkpointName;
-    saveCheckpoint(saveCheckpointEvent->checkpointName);
+    saveCheckpoint(saveCheckpointEvent->checkpointName, /*overwrite=*/false);
   } else if (event->eventCode == event::EventCode::kRlUiLoadCheckpoint) {
     const auto *loadCheckpointEvent = dynamic_cast<const event::RlUiLoadCheckpoint*>(event);
     if (loadCheckpointEvent == nullptr) {
@@ -193,11 +215,12 @@ void TrainingManager::onUpdate(const event::Event *event) {
 }
 
 void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
+  std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
   using Id = ObservationAndActionStorage::Id;
   using ObservationAndActionType = ObservationAndActionStorage::ObservationAndActionType;
 
   // Store this item in the observation and action storage.
-  std::pair<Id, std::vector<Id>> observationIdAndDeletedObservationIds = observationAndActionStorage_.addObservationAndAction(pvpId, intelligenceName, observation, actionIndex);
+  std::pair<Id, std::vector<Id>> observationIdAndDeletedObservationIds = observationAndActionStorage_.addObservationAndAction(currentTime, pvpId, intelligenceName, observation, actionIndex);
 
   const std::vector<Id> &deletedObservationIds = observationIdAndDeletedObservationIds.second;
   if (deletedObservationIds.size() > 0) {
@@ -210,17 +233,19 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
         // It will always be the case that one deleted observation will not have a corresponding transition ID. That is because we only have transition IDs for pairs of observations.
         continue;
       }
-      replayBuffer_.deleteTransition(it->second);
-      auto it2 = transitionIdToObservationIdMap_.find(it->second);
-      observationIdToTransitionIdMap_.erase(it);
-      transitionIdToObservationIdMap_.erase(it2);
+      const ReplayBufferType::TransitionId transitionId = it->second;
+      replayBuffer_.deleteTransition(transitionId);
+      auto it2 = transitionIdToObservationIdMap_.find(transitionId);
+      const ObservationAndActionStorage::Id observationId = it2->second;
+      observationIdToTransitionIdMap_.erase(observationId);
+      transitionIdToObservationIdMap_.erase(transitionId);
     }
   }
 
-  Id observationId = observationIdAndDeletedObservationIds.first;
+  const Id observationId = observationIdAndDeletedObservationIds.first;
   if (observationAndActionStorage_.hasPrevious(observationId)) {
     // There was an observation before this one. We can store a full transition in the replay buffer (a transition traditionally is a (S,A,R,S') tuple).
-    ReplayBufferType::TransitionId transitionId = replayBuffer_.addTransition(observationId);
+    const ReplayBufferType::TransitionId transitionId = replayBuffer_.addTransition(observationId);
     std::unique_lock lock(observationTransitionIdMapMutex_);
     observationIdToTransitionIdMap_[observationId] = transitionId;
     transitionIdToObservationIdMap_[transitionId] = observationId;
@@ -229,15 +254,16 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
   if (!actionIndex) {
     // This is the end of the episode, calculate & report the episode return.
     float cumulativeReward = 0.0f;
-    ObservationAndActionType currentObservationAndAction = observationAndActionStorage_.getObservationAndAction(observationId);
+    Id currentObservationId = observationId;
+    ObservationAndActionType currentObservationAndAction = observationAndActionStorage_.getObservationAndAction(currentObservationId);
     // Go backwards and sum this agent's rewards.
-    while (observationAndActionStorage_.hasPrevious(observationId)) {
-      Id previousObservationId = observationAndActionStorage_.getPrevious(observationId);
+    while (observationAndActionStorage_.hasPrevious(currentObservationId)) {
+      Id previousObservationId = observationAndActionStorage_.getPrevious(currentObservationId);
       ObservationAndActionType previousObservationAndAction = observationAndActionStorage_.getObservationAndAction(previousObservationId);
       const bool isTerminal = !currentObservationAndAction.actionIndex.has_value();
       const float reward = calculateReward(previousObservationAndAction.observation, currentObservationAndAction.observation, isTerminal);
       cumulativeReward += reward;
-      observationId = previousObservationId;
+      currentObservationId = previousObservationId;
       currentObservationAndAction = previousObservationAndAction;
     }
     jaxInterface_.addScalar(absl::StrFormat("Episode Return %s", intelligenceName), cumulativeReward, trainStepCount_);
@@ -305,8 +331,10 @@ common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Sessio
 
   pvpDescriptor.itemRequirements = itemRequirements_;
 
-  pvpDescriptor.player1Intelligence = intelligencePool_.getRandomIntelligence();
-  pvpDescriptor.player2Intelligence = intelligencePool_.getDeepLearningIntelligence();
+  pvpDescriptor.player1Intelligence = intelligencePool_.getDeepLearningIntelligence();
+  pvpDescriptor.player2Intelligence = intelligencePool_.getRandomIntelligence();
+  pvpDescriptor.player1Intelligence->resetForNewEpisode();
+  pvpDescriptor.player2Intelligence->resetForNewEpisode();
 
   return pvpDescriptor;
 }
@@ -323,7 +351,7 @@ void TrainingManager::createAndPublishPvpDescriptor() {
   common::PvpDescriptor pvpDescriptor = buildPvpDescriptor(char1, char2);
 
   // ----------------------Send the PvpDescriptor----------------------
-  eventBroker_.publishEvent<event::BeginPvp>(pvpDescriptor);
+  eventBroker_.publishEvent<event::BeginPvp>(std::move(pvpDescriptor));
 
   // These two sessions should now no longer be considered for a new Pvp.
   sessionsReadyForAssignment_.erase(sessionsReadyForAssignment_.begin(), sessionsReadyForAssignment_.begin() + 2);
@@ -380,25 +408,19 @@ float TrainingManager::calculateReward(const Observation &lastObservation, const
   return reward;
 }
 
-void TrainingManager::saveCheckpoint(const std::string &checkpointName) {
+void TrainingManager::saveCheckpoint(const std::string &checkpointName, bool overwrite) {
   LOG(INFO) << "Being asked to save checkpoint \"" << checkpointName << "\"";
-  const bool checkpointAlreadyExists = checkpointManager_.checkpointExists(checkpointName);
-  if (checkpointAlreadyExists) {
-    LOG(INFO) << "  Checkpoint already exists";
-    rlUserInterface_.sendCheckpointAlreadyExists(checkpointName);
-    return;
+  if (!overwrite) {
+    const bool checkpointAlreadyExists = checkpointManager_.checkpointExists(checkpointName);
+    if (checkpointAlreadyExists) {
+      LOG(INFO) << "  Checkpoint already exists";
+      rlUserInterface_.sendCheckpointAlreadyExists(checkpointName);
+      return;
+    }
+    LOG(INFO) << "  Checkpoint does not yet exist";
   }
-  LOG(INFO) << "  Checkpoint does not yet exist";
 
-  // Checkpoint does not exist. Save it.
-  // What needs to be saved in the checkpoint?
-  //  - Current model weights
-  //  - Target model weights
-  //  - Optimizer state
-  //  - DeepLearningIntelligence::stepCount_
-  //  - Replay buffer, maybe?
-  // We'll let the
-  checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, intelligencePool_.getDeepLearningIntelligence()->getStepCount());
+  checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, intelligencePool_.getDeepLearningIntelligence()->getStepCount(), overwrite);
 }
 
 } // namespace rl

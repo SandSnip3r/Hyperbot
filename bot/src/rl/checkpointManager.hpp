@@ -24,7 +24,7 @@ class CheckpointManager {
 public:
   CheckpointManager(ui::RlUserInterface &rlUserInterface);
   ~CheckpointManager();
-  void saveCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, int stepCount);
+  void saveCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, int stepCount, bool overwrite);
   bool checkpointExists(const std::string &checkpointName) const;
   std::vector<std::string> getCheckpointNames() const;
   void loadCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, rl::ai::DeepLearningIntelligence *deepLearningIntelligence);

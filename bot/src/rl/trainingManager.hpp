@@ -56,6 +56,8 @@ private:
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
   static constexpr int kReplayBufferCapacity{1'000'000};
+  static constexpr int kTargetNetworkUpdateInterval{50'000};
+  static constexpr int kTrainStepCheckpointInterval{100'000};
 
   std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;
@@ -73,7 +75,6 @@ private:
   JaxInterface jaxInterface_;
   CheckpointManager checkpointManager_{rlUserInterface_};
   std::atomic<int> trainStepCount_{0};
-  static constexpr int kTargetNetworkUpdateInterval{50'000};
 
   void setUpIntelligencePool();
 
@@ -95,7 +96,7 @@ private:
   absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> transitionIdToObservationIdMap_;
   std::mutex observationTransitionIdMapMutex_;
   float calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const;
-  void saveCheckpoint(const std::string &checkpointName);
+  void saveCheckpoint(const std::string &checkpointName, bool overwrite);
 };
 
 } // namespace rl
