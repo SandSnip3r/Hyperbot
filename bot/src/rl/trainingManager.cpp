@@ -40,7 +40,7 @@ void TrainingManager::run() {
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiLoadCheckpoint, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiDeleteCheckpoints, eventHandleFunction);
 
-  jaxInterface_.initialize();
+  jaxInterface_.initialize(kObservationStackSize);
 
   // 1. Wait here until we're told to start training.
   // 2. Enter training loop once we're told to do so.
@@ -74,17 +74,17 @@ void TrainingManager::train() {
       // Sample a batch of transitions from the replay buffer.
       std::vector<ReplayBufferType::SampleResult> sampleResult = replayBuffer_.sample(kBatchSize, randomEngine);
 
-      std::vector<Observation> olderObservations;
+      std::vector<std::vector<Observation>> olderObservationStacks;
       std::vector<int> actionIndexs;
       std::vector<bool> isTerminals;
       std::vector<float> rewards;
-      std::vector<Observation> newerObservations;
+      std::vector<std::vector<Observation>> newerObservationStacks;
       std::vector<float> weights;
-      olderObservations.reserve(sampleResult.size());
+      olderObservationStacks.reserve(sampleResult.size());
       actionIndexs.reserve(sampleResult.size());
       isTerminals.reserve(sampleResult.size());
       rewards.reserve(sampleResult.size());
-      newerObservations.reserve(sampleResult.size());
+      newerObservationStacks.reserve(sampleResult.size());
       weights.reserve(sampleResult.size());
 
       for (int i=0; i<sampleResult.size(); ++i) {
@@ -109,26 +109,51 @@ void TrainingManager::train() {
           LOG(ERROR) << "Failed to find previous observation ID for observation ID " << observationId;
           throw;
         }
-        const ObservationAndActionStorage::ObservationAndActionType observationAndAction = observationAndActionStorage_.getObservationAndAction(observationId);
         const ObservationAndActionStorage::ObservationAndActionType previousObservationAndAction = observationAndActionStorage_.getObservationAndAction(previousObservationId);
         const Observation &observation0 = previousObservationAndAction.observation;
         const std::optional<int> actionIndex0 = previousObservationAndAction.actionIndex;
+
+        const ObservationAndActionStorage::ObservationAndActionType observationAndAction = observationAndActionStorage_.getObservationAndAction(observationId);
         const Observation &observation1 = observationAndAction.observation;
         const std::optional<int> actionIndex1 = observationAndAction.actionIndex;
+
         float weight = sample.weight;
 
         const bool isTerminal = !actionIndex1.has_value();
         const float reward = calculateReward(observation0, observation1, isTerminal);
 
-        olderObservations.push_back(observation0);
+        std::vector<Observation> olderObservationStack = {observation0};
+        {
+          ObservationAndActionStorage::Id tmp = previousObservationId;
+          while (olderObservationStack.size() < kObservationStackSize && observationAndActionStorage_.hasPrevious(tmp)) {
+            tmp = observationAndActionStorage_.getPrevious(tmp);
+            const ObservationAndActionStorage::ObservationAndActionType observationAndAction = observationAndActionStorage_.getObservationAndAction(tmp);
+            olderObservationStack.push_back(observationAndAction.observation);
+          }
+          std::reverse(olderObservationStack.begin(), olderObservationStack.end());
+        }
+        olderObservationStacks.push_back(olderObservationStack);
+
         actionIndexs.push_back(actionIndex0.value());
         isTerminals.push_back(isTerminal);
         rewards.push_back(reward);
-        newerObservations.push_back(observation1);
+
+        std::vector<Observation> newerObservationStack = {observation1};
+        {
+          ObservationAndActionStorage::Id tmp = observationId;
+          while (newerObservationStack.size() < kObservationStackSize && observationAndActionStorage_.hasPrevious(tmp)) {
+            tmp = observationAndActionStorage_.getPrevious(tmp);
+            const ObservationAndActionStorage::ObservationAndActionType observationAndAction = observationAndActionStorage_.getObservationAndAction(tmp);
+            newerObservationStack.push_back(observationAndAction.observation);
+          }
+          std::reverse(newerObservationStack.begin(), newerObservationStack.end());
+        }
+        newerObservationStacks.push_back(newerObservationStack);
+
         weights.push_back(weight);
       }
 
-      const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(olderObservations, actionIndexs, isTerminals, rewards, newerObservations, weights);
+      const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(kObservationStackSize, olderObservationStacks, actionIndexs, isTerminals, rewards, newerObservationStacks, weights);
 
       // Update the priorities of the sampled transitions in the replay buffer.
       std::vector<ReplayBufferType::TransitionId> ids;
@@ -215,12 +240,11 @@ void TrainingManager::onUpdate(const event::Event *event) {
 }
 
 void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
-  std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
   using Id = ObservationAndActionStorage::Id;
   using ObservationAndActionType = ObservationAndActionStorage::ObservationAndActionType;
 
   // Store this item in the observation and action storage.
-  std::pair<Id, std::vector<Id>> observationIdAndDeletedObservationIds = observationAndActionStorage_.addObservationAndAction(currentTime, pvpId, intelligenceName, observation, actionIndex);
+  std::pair<Id, std::vector<Id>> observationIdAndDeletedObservationIds = observationAndActionStorage_.addObservationAndAction(pvpId, intelligenceName, observation, actionIndex);
 
   const std::vector<Id> &deletedObservationIds = observationIdAndDeletedObservationIds.second;
   if (deletedObservationIds.size() > 0) {

@@ -50,22 +50,27 @@ Status UseItem::onUpdate(const event::Event *event) {
       } else {
         // TODO: This can happen if an item use failure causes us to exit out of here, construct another UseItem, and enter this function with the same event
       }
-    } else if (const auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
+    } else if (const auto *itemMovedEvent = dynamic_cast<const event::ItemMoved*>(event)) {
       // Use InventoryUpdated events to track if the item we want to use moves to a different slot.
-      if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
-        if (inventoryUpdatedEvent->srcSlotNum && *inventoryUpdatedEvent->srcSlotNum == inventoryIndex_) {
+      if (itemMovedEvent->globalId == bot_.selfState()->globalId) {
+        if (itemMovedEvent->source && itemMovedEvent->source->storage == sro::storage::Storage::kInventory && itemMovedEvent->source->slotNum == inventoryIndex_) {
           // This is our item
-          if (inventoryUpdatedEvent->destSlotNum) {
-            // Item was moved to a new slot, track it
-            inventoryIndex_ = *inventoryUpdatedEvent->destSlotNum;
-            if (itemUseTimeoutEventId_) {
-              // We need to cancel the existing timeout event (because it has the wrong inventory slot) and send a new item use timeout event with the updated inventory slot.
-              const auto eventEndTime = bot_.eventBroker().delayedEventEndTime(*itemUseTimeoutEventId_);
-              if (!eventEndTime) {
-                throw std::runtime_error("This item use timeout event does not exist");
+          if (itemMovedEvent->destination) {
+            if (itemMovedEvent->destination->storage == sro::storage::Storage::kInventory) {
+              // Item was moved to a new slot, track it
+              inventoryIndex_ = itemMovedEvent->destination->slotNum;
+              if (itemUseTimeoutEventId_) {
+                // We need to cancel the existing timeout event (because it has the wrong inventory slot) and send a new item use timeout event with the updated inventory slot.
+                const auto eventEndTime = bot_.eventBroker().delayedEventEndTime(*itemUseTimeoutEventId_);
+                if (!eventEndTime) {
+                  throw std::runtime_error("This item use timeout event does not exist");
+                }
+                bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
+                itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(*eventEndTime, *inventoryIndex_, itemTypeId_);
               }
-              bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
-              itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(*eventEndTime, *inventoryIndex_, itemTypeId_);
+            } else {
+              // Maybe moved to COS or storage?
+              throw std::runtime_error("Item was moved to a non-inventory slot");
             }
           }
         }

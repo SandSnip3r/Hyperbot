@@ -6,7 +6,7 @@ namespace rl {
 
 ObservationAndActionStorage::ObservationAndActionStorage(size_t capacity) : capacity_(capacity) {}
 
-std::pair<ObservationAndActionStorage::Id, std::vector<ObservationAndActionStorage::Id>> ObservationAndActionStorage::addObservationAndAction(std::chrono::high_resolution_clock::time_point timestamp, common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
+std::pair<ObservationAndActionStorage::Id, std::vector<ObservationAndActionStorage::Id>> ObservationAndActionStorage::addObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
   std::unique_lock lock{mutex_};
   std::vector<Id> deletedIds;
   if (size() == capacity_) {
@@ -43,7 +43,7 @@ std::pair<ObservationAndActionStorage::Id, std::vector<ObservationAndActionStora
   }
 
   std::deque<ObservationAndActionType> &observations = buffer_[pvpId][intelligenceName];
-  observations.push_back({timestamp, observation, actionIndex});
+  observations.push_back({observation, actionIndex});
   size_t index = observations.size() - 1;
   if (index == 0) {
     // LOG(INFO) << "First of a new pvp added, pushing to deque: " << pvpId << ", intelligence name: " << intelligenceName;

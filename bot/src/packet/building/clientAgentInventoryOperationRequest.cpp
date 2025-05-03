@@ -29,6 +29,22 @@ PacketContainer ClientAgentInventoryOperationRequest::inventoryToStoragePacket(s
   return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
 }
 
+PacketContainer ClientAgentInventoryOperationRequest::inventoryToAvatarPacket(sro::scalar_types::StorageIndexType srcSlot, sro::scalar_types::StorageIndexType destSlot) {
+  StreamUtility stream;
+  stream.Write(packet::enums::ItemMovementType::kMoveItemInventoryToAvatar);
+  stream.Write(srcSlot);
+  stream.Write(destSlot);
+  return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
+}
+
+PacketContainer ClientAgentInventoryOperationRequest::avatarToInventoryPacket(sro::scalar_types::StorageIndexType srcSlot, sro::scalar_types::StorageIndexType destSlot) {
+  StreamUtility stream;
+  stream.Write(packet::enums::ItemMovementType::kMoveItemAvatarToInventory);
+  stream.Write(srcSlot);
+  stream.Write(destSlot);
+  return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
+}
+
 PacketContainer ClientAgentInventoryOperationRequest::withinInventoryPacket(sro::scalar_types::StorageIndexType srcSlot, sro::scalar_types::StorageIndexType destSlot, uint16_t quantity) {
   StreamUtility stream;
   stream.Write(packet::enums::ItemMovementType::kUpdateSlotsInventory);

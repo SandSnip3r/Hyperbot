@@ -339,6 +339,72 @@ TEST_F(ReplayBufferTest, StressTestLargeBufferManySamples) {
   }
 }
 
+// Massive stress test: huge buffer + 2M sample calls + random priority tweaks
+TEST_F(ReplayBufferTest, MassiveStressTestSample) {
+  constexpr int kSampleSize = 128;
+  constexpr size_t kCapacity = 100'000;
+  ReplayBuffer<int32_t> buf(
+    kCapacity,
+    /*alpha=*/0.6f,
+    /*beta=*/0.8f,
+    /*epsilon=*/1e-5f
+  );
+  auto sampleAndUpdate = [&]() {
+    if (buf.size() < kSampleSize) {
+      return;
+    }
+    std::uniform_real_distribution<float> prioDist(-2.0f * pow(0.999, buf.size()), 2.0f * pow(0.999, buf.size()));
+    for (int j=0; j<2; ++j) {
+      const auto sampleRes = buf.sample(kSampleSize, rng);
+      std::vector<TransitionId> ids;
+      std::vector<float> prios;
+      ids.reserve(sampleRes.size());
+      prios.reserve(sampleRes.size());
+      for (const auto &s : sampleRes) {
+        ids.push_back(s.transitionId);
+        prios.push_back(prioDist(rng));
+        break;
+      }
+      buf.updatePriorities(ids, prios);
+    }
+  };
+  // =======================================================================
+  for (int i=0; i<kCapacity-10'000; ++i) {
+    if ((i+1) % 10000 == 0) {
+      VLOG(1) << "Adding transition " << i;
+    }
+    buf.addTransition(static_cast<int32_t>(i));
+    sampleAndUpdate();
+  }
+  VLOG(1) << "Begin final fill phase";
+  while (buf.size() < buf.capacity()) {
+    buf.addTransition(static_cast<int32_t>(buf.size()));
+    sampleAndUpdate();
+  }
+  VLOG(1) << "Begin delete & replace phase";
+  size_t nextId = buf.size();
+  for (int i=0; i<10000; ++i) {
+    // Sample one
+    auto sampleRes = buf.sample(1, rng);
+    buf.deleteTransition(sampleRes[0].transitionId);
+    // Add a new one
+    buf.addTransition(static_cast<int32_t>(nextId));
+    ++nextId;
+    sampleAndUpdate();
+  }
+  VLOG(1) << "Deleting a handful, then sampling";
+  // Delete a few
+  for (int i=0; i<1000; ++i) {
+    auto sampleRes = buf.sample(1000, rng);
+    std::shuffle(sampleRes.begin(), sampleRes.end(), rng);
+    buf.deleteTransition(sampleRes[0].transitionId);
+  }
+  VLOG(1) << "Sampling";
+  for (int i=0; i<1000; ++i) {
+    sampleAndUpdate();
+  }
+}
+
 // Constructor rejects capacity=0 or negative epsilon.
 TEST(ReplayBufferInvalidParams, CapacityZeroOrNegativeEpsilon) {
   // capacity zero

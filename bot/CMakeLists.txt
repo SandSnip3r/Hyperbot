@@ -366,6 +366,8 @@ add_executable(${PROJECT_NAME}
   src/state/machine/dispelActiveBuffs.hpp
   src/state/machine/dropItem.cpp
   src/state/machine/dropItem.hpp
+  src/state/machine/equipItem.cpp
+  src/state/machine/equipItem.hpp
   src/state/machine/enablePvpMode.cpp
   src/state/machine/enablePvpMode.hpp
   src/state/machine/ensureFullVitalsAndNoStatuses.cpp
@@ -382,8 +384,10 @@ add_executable(${PROJECT_NAME}
   src/state/machine/login.hpp
   src/state/machine/maxMasteryAndSkills.cpp
   src/state/machine/maxMasteryAndSkills.hpp
-  src/state/machine/moveItemInInventory.cpp
-  src/state/machine/moveItemInInventory.hpp
+  src/state/machine/maybeRemoveAvatarEquipment.cpp
+  src/state/machine/maybeRemoveAvatarEquipment.hpp
+  src/state/machine/moveItem.cpp
+  src/state/machine/moveItem.hpp
   src/state/machine/pickItem.cpp
   src/state/machine/pickItem.hpp
   src/state/machine/pickItemWithCos.cpp

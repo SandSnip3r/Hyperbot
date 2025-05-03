@@ -28,10 +28,13 @@ Status SellingItems::onUpdate(const event::Event *event) {
   }
 
   if (event) {
-    if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
-      if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
-        if (inventoryUpdatedEvent->srcSlotNum && inventoryUpdatedEvent->srcSlotNum == slotsToSell_[nextToSellIndex_] && !inventoryUpdatedEvent->destSlotNum) {
-          // This seems to the item sell that we're expecting
+    if (auto *itemMovedEvent = dynamic_cast<const event::ItemMoved*>(event)) {
+      if (itemMovedEvent->globalId == bot_.selfState()->globalId) {
+        if (!itemMovedEvent->destination &&
+            itemMovedEvent->source &&
+            itemMovedEvent->source->storage == sro::storage::Storage::kInventory &&
+            itemMovedEvent->source->slotNum == slotsToSell_[nextToSellIndex_]) {
+          // This seems to be the item sell that we're expecting.
           if (!waitingOnASell_) {
             throw std::runtime_error("Weird, the item at our target slot disappeared");
           }

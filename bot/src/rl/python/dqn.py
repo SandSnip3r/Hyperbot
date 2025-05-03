@@ -86,16 +86,16 @@ def jittedTrain(model, optimizerState, targetModel, observations, selectedAction
   npRewards = jnp.array(rewards)
   npWeights = jnp.array(weights)
 
-  (meanLoss, meanAuxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdErrorBatch, has_aux=True)(model, targetModel, (observations, npSelectedActions, npIsTerminals, npRewards, nextObservations), npWeights)
+  (meanLoss, auxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdErrorBatch, has_aux=True)(model, targetModel, (observations, npSelectedActions, npIsTerminals, npRewards, nextObservations), npWeights)
   optimizerState.update(gradients)
-  return meanAuxOutput
+  return auxOutput
 
 def convertThenTrain(model, optimizerState, targetModel, observations, selectedActions, isTerminals, rewards, nextObservations, weights):
-  # print(f'observations: {type(observations)}: {observations}')
+  # print(f'observations: {type(observations)}.{observations.shape}: {observations}')
   # print(f'selectedActions: {type(selectedActions)}: {selectedActions}')
   # print(f'isTerminals: {type(isTerminals)}: {isTerminals}')
   # print(f'rewards: {type(rewards)}: {rewards}')
-  # print(f'nextObservations: {type(nextObservations)}: {nextObservations}')
+  # print(f'nextObservations: {type(nextObservations)}.{nextObservations.shape}: {nextObservations}')
   # print(f'weights: {type(weights)}: {weights}')
 
   npSelectedActions = jnp.array(selectedActions)
@@ -114,13 +114,13 @@ def checkpointModel(model, path):
   print(f'Checkpointing model to {path}')
   graph, params = nnx.split(model)
   with orbax.checkpoint.StandardCheckpointer() as checkpointer:
-    checkpointer.save(path, params)
+    checkpointer.save(path, params, force=True)
     checkpointer.wait_until_finished()
 
 def checkpointOptimizer(optimizer, path):
   print(f'Checkpointing optimizer to {path}')
   with orbax.checkpoint.StandardCheckpointer() as checkpointer:
-    checkpointer.save(path, nnx.state(optimizer))
+    checkpointer.save(path, nnx.state(optimizer), force=True)
     checkpointer.wait_until_finished()
 
 def loadModelCheckpoint(currentModel, path):

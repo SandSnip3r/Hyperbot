@@ -10,6 +10,7 @@
 #include "packet/structures/packetInnerStructures.hpp"
 
 #include <silkroad_lib/scalar_types.hpp>
+#include <silkroad_lib/storage.hpp>
 
 #include <cstdint>
 #include <optional>
@@ -112,46 +113,17 @@ public:
   virtual ~SkillCooldownEnded() = default;
 };
 
-struct InventoryUpdated : public Event {
+// Note that new items arriving are represented as a null source. Items leaving are represented as a null destination. This is the case for simple quantity increases/decreases too.
+struct ItemMoved : public Event {
 public:
-  InventoryUpdated(EventId id, sro::scalar_types::EntityGlobalId globalId, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
+  ItemMoved(EventId id,
+            sro::scalar_types::EntityGlobalId globalId,
+            std::optional<sro::storage::Position> source,
+            std::optional<sro::storage::Position> destination);
   const sro::scalar_types::EntityGlobalId globalId;
-  const std::optional<int8_t> srcSlotNum;
-  const std::optional<int8_t> destSlotNum;
-  virtual ~InventoryUpdated() = default;
-};
-
-struct AvatarInventoryUpdated : public Event {
-public:
-  AvatarInventoryUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
-  const std::optional<int8_t> srcSlotNum;
-  const std::optional<int8_t> destSlotNum;
-  virtual ~AvatarInventoryUpdated() = default;
-};
-
-struct CosInventoryUpdated : public Event {
-public:
-  CosInventoryUpdated(EventId id, sro::scalar_types::EntityGlobalId gId, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
-  sro::scalar_types::EntityGlobalId globalId;
-  const std::optional<int8_t> srcSlotNum;
-  const std::optional<int8_t> destSlotNum;
-  virtual ~CosInventoryUpdated() = default;
-};
-
-struct StorageUpdated : public Event {
-public:
-  StorageUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
-  const std::optional<int8_t> srcSlotNum;
-  const std::optional<int8_t> destSlotNum;
-  virtual ~StorageUpdated() = default;
-};
-
-struct GuildStorageUpdated : public Event {
-public:
-  GuildStorageUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot);
-  const std::optional<int8_t> srcSlotNum;
-  const std::optional<int8_t> destSlotNum;
-  virtual ~GuildStorageUpdated() = default;
+  const std::optional<sro::storage::Position> source;
+  const std::optional<sro::storage::Position> destination;
+  virtual ~ItemMoved() = default;
 };
 
 struct ItemUseSuccess : public Event {

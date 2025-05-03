@@ -4,14 +4,6 @@
 #include "bot.hpp"
 namespace state::machine {
 
-std::string_view toString(Status status) {
-  if (status == Status::kDone) {
-    return "Done";
-  } else {
-    return "Not Done";
-  }
-}
-
 StateMachine::StateMachine(Bot &bot) : bot_(bot) {}
 
 StateMachine::StateMachine(StateMachine *parent) : bot_(parent->bot_), parent_(parent) {}
@@ -99,3 +91,13 @@ std::ostream& operator<<(std::ostream &stream, Npc npc) {
 }
 
 } // namespace state::machine
+
+std::string_view toString(state::machine::Status status) {
+  if (status == state::machine::Status::kDone) {
+    return "Done";
+  } else if (status == state::machine::Status::kNotDone) {
+    return "Not Done";
+  } else {
+    throw std::runtime_error("Unknown status");
+  }
+}

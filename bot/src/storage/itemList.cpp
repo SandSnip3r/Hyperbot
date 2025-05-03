@@ -76,8 +76,8 @@ std::optional<sro::scalar_types::StorageIndexType> ItemList::findFirstItemWithRe
   return std::nullopt;
 }
 
-std::optional<uint8_t> ItemList::firstFreeSlot() const {
-  for (uint8_t slotNum=0; slotNum<items_.size(); ++slotNum) {
+std::optional<sro::scalar_types::StorageIndexType> ItemList::firstFreeSlot(sro::scalar_types::StorageIndexType startingSlot) const {
+  for (sro::scalar_types::StorageIndexType slotNum=startingSlot; slotNum<items_.size(); ++slotNum) {
     const auto itemPtr = items_[slotNum];
     if (itemPtr == nullptr) {
       return slotNum;

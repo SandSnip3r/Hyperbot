@@ -62,11 +62,11 @@ private:
   void handleEntityNotMovingAngleChanged(sro::scalar_types::EntityGlobalId globalId);
   void handleStorageInitialized();
   void handleGuildStorageInitialized();
-  void handleInventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent);
-  void handleAvatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent);
-  void handleCosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent);
-  void handleStorageUpdated(const event::StorageUpdated &storageUpdatedEvent);
-  void handleGuildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent);
+  // void handleInventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent);
+  // void handleAvatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent);
+  // void handleCosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent);
+  // void handleStorageUpdated(const event::StorageUpdated &storageUpdatedEvent);
+  // void handleGuildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent);
   void handleWalkingPathUpdated(const event::WalkingPathUpdated &walkingPathUpdatedEvent);
 
   void broadcastItemUpdateForSlot(proto::broadcast::ItemLocation itemLocation, const storage::Storage &itemStorage, const uint8_t slotIndex);

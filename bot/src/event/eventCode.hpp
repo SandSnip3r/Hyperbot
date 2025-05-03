@@ -15,11 +15,7 @@
   F(EntityStatesChanged) \
   F(InternalSkillCooldownEnded) \
   F(SkillCooldownEnded) \
-  F(InventoryUpdated) \
-  F(AvatarInventoryUpdated) \
-  F(CosInventoryUpdated) \
-  F(StorageUpdated) \
-  F(GuildStorageUpdated) \
+  F(ItemMoved) \
   F(SkillCastAboutToEnd) \
   F(ItemUseSuccess) \
   F(ItemUseFailed) \

@@ -58,16 +58,18 @@ Status Alchemy::onUpdate(const event::Event *event) {
         LOG(INFO) << "Whoa! Have no event!";
       }
       waitingForCreatedItem_.reset();
-    } else if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event); inventoryUpdatedEvent != nullptr) {
-      if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
-        if (!inventoryUpdatedEvent->srcSlotNum) {
-          // New item appeared in our inventory, is it the item we just picked?
-          // TODO: I think this should move into PickItem, maybe optionally checked.
-          const auto *item = bot_.selfState()->inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
-          if (waitingForCreatedItem_) {
-            if (item->refItemId == *waitingForCreatedItem_) {
-              // This is the item we created.
-              waitingForCreatedItem_.reset();
+    } else if (auto *itemMovedEvent = dynamic_cast<const event::ItemMoved*>(event); itemMovedEvent != nullptr) {
+      if (itemMovedEvent->globalId == bot_.selfState()->globalId) {
+        if (!itemMovedEvent->source && itemMovedEvent->destination) {
+          if (itemMovedEvent->destination->storage == sro::storage::Storage::kInventory) {
+            // New item appeared in our inventory, is it the item we just picked?
+            // TODO: I think this should move into PickItem, maybe optionally checked.
+            const auto *item = bot_.selfState()->inventory.getItem(itemMovedEvent->destination->slotNum);
+            if (waitingForCreatedItem_) {
+              if (item->refItemId == *waitingForCreatedItem_) {
+                // This is the item we created.
+                waitingForCreatedItem_.reset();
+              }
             }
           }
         }

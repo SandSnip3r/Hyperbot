@@ -1,5 +1,5 @@
 #include "castSkill.hpp"
-#include "moveItemInInventory.hpp"
+#include "moveItem.hpp"
 
 #include "bot.hpp"
 #include "event/event.hpp"
@@ -287,7 +287,7 @@ Status CastSkill::onUpdate(const event::Event *event) {
 
   if (weaponSlot_) {
     // Need to move weapon, create child state to do so
-    setChildStateMachine<MoveItemInInventory>(*weaponSlot_, kWeaponInventorySlot_);
+    setChildStateMachine<MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, *weaponSlot_), sro::storage::Position(sro::storage::Storage::kInventory, kWeaponInventorySlot_));
     // We assume that the child state will complete successfully, so we will reset the weaponSlot_ here
     weaponSlot_.reset();
     return onUpdate(event);
@@ -295,7 +295,7 @@ Status CastSkill::onUpdate(const event::Event *event) {
 
   if (shieldSlot_) {
     // Need to move shield, create child state to do so
-    setChildStateMachine<MoveItemInInventory>(*shieldSlot_, kShieldInventorySlot_);
+    setChildStateMachine<MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, *shieldSlot_), sro::storage::Position(sro::storage::Storage::kInventory, kShieldInventorySlot_));
     // We assume that the child state will complete successfully, so we will reset the shieldSlot_ here
     shieldSlot_.reset();
     return onUpdate(event);

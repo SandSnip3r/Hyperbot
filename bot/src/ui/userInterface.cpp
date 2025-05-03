@@ -510,56 +510,56 @@ void UserInterface::handleGuildStorageInitialized() {/*
   }
  */}
 
-void UserInterface::handleInventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent) {/*
-  if (inventoryUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.srcSlotNum);
-  }
-  if (inventoryUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.destSlotNum);
-  }
- */}
+// void UserInterface::handleInventoryUpdated(const event::InventoryUpdated &inventoryUpdatedEvent) {/*
+//   if (inventoryUpdatedEvent.srcSlotNum) {
+//     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.srcSlotNum);
+//   }
+//   if (inventoryUpdatedEvent.destSlotNum) {
+//     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCharacterInventory, worldState_->selfState().inventory, *inventoryUpdatedEvent.destSlotNum);
+//   }
+//  */}
 
-void UserInterface::handleAvatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent) {/*
-  if (avatarInventoryUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.srcSlotNum);
-  }
-  if (avatarInventoryUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.destSlotNum);
-  }
- */}
+// void UserInterface::handleAvatarInventoryUpdated(const event::AvatarInventoryUpdated &avatarInventoryUpdatedEvent) {/*
+//   if (avatarInventoryUpdatedEvent.srcSlotNum) {
+//     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.srcSlotNum);
+//   }
+//   if (avatarInventoryUpdatedEvent.destSlotNum) {
+//     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kAvatarInventory, worldState_->selfState().avatarInventory, *avatarInventoryUpdatedEvent.destSlotNum);
+//   }
+//  */}
 
-void UserInterface::handleCosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent) {/*
-  auto it = worldState_->selfState().cosInventoryMap.find(cosInventoryUpdatedEvent.globalId);
-  if (it == worldState_->selfState().cosInventoryMap.end()) {
-    // COS inventory updated, but not tracking this COS
-    return;
-  }
-  const auto &cosInventory = it->second;
-  if (cosInventoryUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.srcSlotNum);
-  }
-  if (cosInventoryUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.destSlotNum);
-  }
- */}
+// void UserInterface::handleCosInventoryUpdated(const event::CosInventoryUpdated &cosInventoryUpdatedEvent) {/*
+//   auto it = worldState_->selfState().cosInventoryMap.find(cosInventoryUpdatedEvent.globalId);
+//   if (it == worldState_->selfState().cosInventoryMap.end()) {
+//     // COS inventory updated, but not tracking this COS
+//     return;
+//   }
+//   const auto &cosInventory = it->second;
+//   if (cosInventoryUpdatedEvent.srcSlotNum) {
+//     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.srcSlotNum);
+//   }
+//   if (cosInventoryUpdatedEvent.destSlotNum) {
+//     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kCosInventory, cosInventory, *cosInventoryUpdatedEvent.destSlotNum);
+//   }
+//  */}
 
-void UserInterface::handleStorageUpdated(const event::StorageUpdated &storageUpdatedEvent) {/*
-  if (storageUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.srcSlotNum);
-  }
-  if (storageUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.destSlotNum);
-  }
- */}
+// void UserInterface::handleStorageUpdated(const event::StorageUpdated &storageUpdatedEvent) {/*
+//   if (storageUpdatedEvent.srcSlotNum) {
+//     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.srcSlotNum);
+//   }
+//   if (storageUpdatedEvent.destSlotNum) {
+//     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kStorage, worldState_->selfState().storage, *storageUpdatedEvent.destSlotNum);
+//   }
+//  */}
 
-void UserInterface::handleGuildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent) {/*
-  if (guildStorageUpdatedEvent.srcSlotNum) {
-    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.srcSlotNum);
-  }
-  if (guildStorageUpdatedEvent.destSlotNum) {
-    broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.destSlotNum);
-  }
- */}
+// void UserInterface::handleGuildStorageUpdated(const event::GuildStorageUpdated &guildStorageUpdatedEvent) {/*
+//   if (guildStorageUpdatedEvent.srcSlotNum) {
+//     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.srcSlotNum);
+//   }
+//   if (guildStorageUpdatedEvent.destSlotNum) {
+//     broadcastItemUpdateForSlot(proto::broadcast::ItemLocation::kGuildStorage, worldState_->selfState().guildStorage, *guildStorageUpdatedEvent.destSlotNum);
+//   }
+//  */}
 
 void UserInterface::handleWalkingPathUpdated(const event::WalkingPathUpdated &walkingPathUpdatedEvent) {
   std::vector<sro::Position> waypointSroPositions;

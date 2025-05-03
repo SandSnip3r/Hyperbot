@@ -19,11 +19,12 @@ BuyingItems::~BuyingItems() {}
 
 Status BuyingItems::onUpdate(const event::Event *event) {
   if (event) {
-    if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
-      if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
-        if (inventoryUpdatedEvent->destSlotNum) {
+    if (auto *itemMovedEvent = dynamic_cast<const event::ItemMoved*>(event)) {
+      if (itemMovedEvent->globalId == bot_.selfState()->globalId) {
+        if (itemMovedEvent->destination && itemMovedEvent->destination->storage == sro::storage::Storage::kInventory) {
           // TODO: We dont actually know if this was our purchase, for now, we assume it was
-          if (inventoryUpdatedEvent->srcSlotNum) {
+          const sro::scalar_types::StorageIndexType destSlotNum = itemMovedEvent->destination->slotNum;
+          if (itemMovedEvent->source && itemMovedEvent->source->storage == sro::storage::Storage::kInventory) {
             // This was a stacking
             waitingOnItemMovementResponse_ = false;
           } else {
@@ -32,7 +33,7 @@ Status BuyingItems::onUpdate(const event::Event *event) {
             //  ex. A pickup by a party member
 
             // Purchase was successful. Adjust shopping list to reflect the newly desired quantity
-            const auto *itemAtInventorySlot = bot_.selfState()->inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
+            const auto *itemAtInventorySlot = bot_.selfState()->inventory.getItem(destSlotNum);
             if (itemAtInventorySlot == nullptr) {
               throw std::runtime_error("Got an item from our inventory, but there's nothing here");
             }
@@ -61,13 +62,13 @@ Status BuyingItems::onUpdate(const event::Event *event) {
             // We successfully blocked the server's purchase response from reaching the client, unblock that packet type
             bot_.proxy().unblockOpcode(packet::Opcode::kServerAgentInventoryOperationResponse);
             // Since we blocked the packet which tells the client about this purchase, we need to spoof an item spawning in the character's inventory
-            const auto itemBuySpoofPacket = packet::building::ServerAgentInventoryOperationResponse::addItemByServerPacket(*inventoryUpdatedEvent->destSlotNum, *itemAtInventorySlot);
+            const auto itemBuySpoofPacket = packet::building::ServerAgentInventoryOperationResponse::addItemByServerPacket(destSlotNum, *itemAtInventorySlot);
             injectPacket(itemBuySpoofPacket, PacketContainer::Direction::kBotToClient);
           }
 
-          if (bot_.selfState()->inventory.hasItem(*inventoryUpdatedEvent->destSlotNum)) {
+          if (bot_.selfState()->inventory.hasItem(destSlotNum)) {
             // Now, lets see if we want to stack this item. It could have been just bought, or we just stacked some of it into another slot
-            const auto *itemAtInventorySlot = bot_.selfState()->inventory.getItem(*inventoryUpdatedEvent->destSlotNum);
+            const auto *itemAtInventorySlot = bot_.selfState()->inventory.getItem(destSlotNum);
             if (itemAtInventorySlot == nullptr) {
               throw std::runtime_error("Got an item from our inventory, but there's nothing here");
             }

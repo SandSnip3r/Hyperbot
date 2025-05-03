@@ -51,13 +51,15 @@ public:
 
   JaxInterface& getJaxInterface() { return jaxInterface_; }
   int getTrainStepCount() const { return trainStepCount_.load(); }
+  constexpr int getObservationStackSize() const { return kObservationStackSize; }
 
 private:
+  static constexpr int kObservationStackSize = 64;
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
   static constexpr int kReplayBufferCapacity{1'000'000};
-  static constexpr int kTargetNetworkUpdateInterval{50'000};
-  static constexpr int kTrainStepCheckpointInterval{100'000};
+  static constexpr int kTargetNetworkUpdateInterval{20'000};
+  static constexpr int kTrainStepCheckpointInterval{10'000};
 
   std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;

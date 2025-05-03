@@ -7,16 +7,20 @@
 #include "state/machine/dispelActiveBuffs.hpp"
 #include "state/machine/enablePvpMode.hpp"
 #include "state/machine/ensureFullVitalsAndNoStatuses.hpp"
+#include "state/machine/equipItem.hpp"
 #include "state/machine/gmCommandSpawnAndPickItems.hpp"
 #include "state/machine/gmWarpToPosition.hpp"
 #include "state/machine/intelligenceActor.hpp"
 #include "state/machine/login.hpp"
+#include "state/machine/maybeRemoveAvatarEquipment.hpp"
 #include "state/machine/resurrectInPlace.hpp"
 #include "state/machine/spawnAndUseRepairHammerIfNecessary.hpp"
 #include "state/machine/useItem.hpp"
 #include "state/machine/waitForAllCooldownsToEnd.hpp"
 #include "state/machine/walking.hpp"
 #include "type_id/categories.hpp"
+
+#include <silkroad_lib/game_constants.hpp>
 
 #include <tracy/Tracy.hpp>
 
@@ -253,6 +257,9 @@ Status PvpManager::onUpdate(const event::Event *event) {
 }
 
 void PvpManager::setPrepareForPvpStateMachine() {
+  sro::scalar_types::ReferenceObjectId deepLearningHatRefId = 23958; // Wizard's Hat (M)
+  sro::scalar_types::ReferenceObjectId randomHatRefId = 24302; // Joker Hat (M)
+
   CHAR_VLOG(1) << "Setting state machine to prepare for PVP";
   // Start with a sequence of actions that will prepare the character for PVP.
   //  1. Move to the location of the fight.
@@ -265,6 +272,18 @@ void PvpManager::setPrepareForPvpStateMachine() {
   //  8. Ensure we're visible.
   setChildStateMachine<state::machine::SequentialStateMachines>();
   state::machine::SequentialStateMachines &sequentialStateMachines = dynamic_cast<state::machine::SequentialStateMachines&>(*childState_);
+
+  // Take off any avatar hats we may be wearing.
+  sequentialStateMachines.emplace<state::machine::MaybeRemoveAvatarEquipment>(
+      /*slot=*/sro::game_constants::kAvatarHatSlot,
+      /*targetSlot=*/[](Bot &bot) {
+        for (int i=bot.inventory().size()-1; i>=0; --i) {
+          if (!bot.inventory().hasItem(i)) {
+            return i;
+          }
+        }
+        throw std::runtime_error("We don't have any free slots in our inventory");
+      });
 
   sro::Position ourPvpPosition;
   if (ourPlayer(*pvpDescriptor_, bot_.selfState()->name) == Player::kPlayer1) {
@@ -284,6 +303,16 @@ void PvpManager::setPrepareForPvpStateMachine() {
   sequentialStateMachines.emplace<state::machine::GmCommandSpawnAndPickItems>(pvpDescriptor_->itemRequirements);
   sequentialStateMachines.emplace<state::machine::SpawnAndUseRepairHammerIfNecessary>();
   sequentialStateMachines.emplace<state::machine::EnablePvpMode>();
+
+  // Equip an avatar hat depending on which intelligence we are.
+  std::string ourIntelligenceName;
+  if (ourPlayer(*pvpDescriptor_, bot_.selfState()->name) == Player::kPlayer1) {
+    ourIntelligenceName = pvpDescriptor_->player1Intelligence->name();
+  } else {
+    ourIntelligenceName = pvpDescriptor_->player2Intelligence->name();
+  }
+  sequentialStateMachines.emplace<state::machine::EquipItem>(ourIntelligenceName == "Random" ? randomHatRefId : deepLearningHatRefId);
+
   sequentialStateMachines.emplace<state::machine::DisableGmInvisible>();
   sequentialStateMachines.emplace<state::machine::WaitForAllCooldownsToEnd>();
 }

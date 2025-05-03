@@ -7,6 +7,7 @@ set(PROJECT_SOURCES
   src/position.cpp
   src/position_math.cpp
   src/shared_io.cpp
+  src/storage.cpp
   src/math/matrix4x4.cpp
   src/math/vector3.cpp
   src/navmesh/navmesh.cpp

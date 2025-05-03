@@ -11,7 +11,6 @@
 #include <absl/hash/hash.h>
 #include <absl/strings/str_format.h>
 
-#include <chrono>
 #include <deque>
 #include <map>
 #include <mutex>
@@ -28,7 +27,6 @@ class ObservationAndActionStorage {
 public:
   using Id = size_t;
   struct ObservationAndActionType {
-    std::chrono::high_resolution_clock::time_point timestamp;
     Observation observation;
     std::optional<int> actionIndex;
   };
@@ -37,7 +35,7 @@ public:
 
   // Adds an observation and action to the storage. Returns the ID of the observation (first of pair).
   // If the storage is full, it will delete the oldest PVP and return the IDs of all observations and actions in the deleted PVP (second of pair).
-  std::pair<Id, std::vector<Id>> addObservationAndAction(std::chrono::high_resolution_clock::time_point timestamp, common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex);
+  std::pair<Id, std::vector<Id>> addObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex);
   ObservationAndActionType getObservationAndAction(Id id) const;
   bool hasPrevious(Id id) const;
   Id getPrevious(Id id) const;

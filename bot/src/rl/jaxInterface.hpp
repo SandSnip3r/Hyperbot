@@ -11,6 +11,7 @@
 #include <condition_variable>
 #include <optional>
 #include <mutex>
+#include <vector>
 
 namespace rl {
 
@@ -18,8 +19,10 @@ class JaxInterface {
 public:
   JaxInterface() = default;
   ~JaxInterface();
-  void initialize();
-  int selectAction(const Observation &observation, bool canSendPacket);
+  void initialize(int observationStackSize);
+
+  // Excpects a stack of observations. Newest is at the back, oldest is at the front.
+  int selectAction(int observationStackSize, const std::vector<Observation> &observationStack, bool canSendPacket);
 
   struct TrainAuxOutput {
     std::vector<float> tdErrors;
@@ -28,11 +31,14 @@ public:
     float meanMeanQValue;
     float meanMaxQValue;
   };
-  TrainAuxOutput train(const std::vector<Observation> &olderObservation,
+
+  // Excpects stacks of observations. Newest is at the back, oldest is at the front.
+  TrainAuxOutput train(int observationStackSize,
+                       const std::vector<std::vector<Observation>> &olderObservationStacks,
                        const std::vector<int> &actionIndex,
                        const std::vector<bool> &isTerminal,
                        const std::vector<float> &reward,
-                       const std::vector<Observation> &newerObservation,
+                       const std::vector<std::vector<Observation>> &newerObservationStacks,
                        const std::vector<float> &weight);
   void updateTargetModel();
   void printModels();
@@ -68,8 +74,11 @@ private:
   pybind11::object getOptimizer();
   pybind11::object getNextRngKey();
   pybind11::object observationToNumpy(const Observation &observation);
+  pybind11::object observationStackToNumpy(int stackSize, const std::vector<Observation> &observationStack);
   pybind11::object observationsToNumpy(const std::vector<Observation> &observations);
+  pybind11::object observationStacksToNumpy(int stackSize, const std::vector<std::vector<Observation>> &observationStacks);
   size_t getObservationNumpySize(const Observation &observation) const;
+  void writeEmptyObservationToNumpyArray(int observationSize, float *array);
   void writeObservationToNumpyArray(const Observation &observation, float *array);
   pybind11::object createActionMask(bool canSendPacket);
 };

@@ -29,18 +29,19 @@ Status DropItem::onUpdate(const event::Event *event) {
         LOG(INFO) << "Item spawned";
         // This is our item.
       }
-    } else if (auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event); inventoryUpdatedEvent != nullptr) {
-      if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
+    } else if (auto *itemMovedEvent = dynamic_cast<const event::ItemMoved*>(event); itemMovedEvent != nullptr) {
+      if (itemMovedEvent->globalId == bot_.selfState()->globalId) {
         LOG(INFO) << "inventory update";
-        if (!inventoryUpdatedEvent->destSlotNum) {
+        if (!itemMovedEvent->destination && itemMovedEvent->source && itemMovedEvent->source->storage == sro::storage::Storage::kInventory) {
+          const sro::scalar_types::StorageIndexType srcSlotNum = itemMovedEvent->source->slotNum;
           LOG(INFO) << "  is a drop";
           // Is a item drop/delete update.
-          if (*inventoryUpdatedEvent->srcSlotNum == inventorySlot_) {
+          if (srcSlotNum == inventorySlot_) {
             LOG(INFO) << "    is our item";
             // Is our item.
             return Status::kDone;
           } else {
-            LOG(INFO) << "    dropped from " << (int)*inventoryUpdatedEvent->srcSlotNum << " but we expected " << (int)inventorySlot_;
+            LOG(INFO) << "    dropped from " << (int)srcSlotNum << " but we expected " << (int)inventorySlot_;
           }
         }
       }

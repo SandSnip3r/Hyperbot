@@ -24,7 +24,7 @@ public:
   std::vector<uint8_t> findItemsWithTypeId(type_id::TypeId typeId) const;
   std::vector<sro::scalar_types::StorageIndexType> findItemsWithRefId(sro::scalar_types::ReferenceObjectId refId) const;
   std::optional<sro::scalar_types::StorageIndexType> findFirstItemWithRefId(sro::scalar_types::ReferenceObjectId refId) const;
-  std::optional<uint8_t> firstFreeSlot() const;
+  std::optional<sro::scalar_types::StorageIndexType> firstFreeSlot(sro::scalar_types::StorageIndexType startingSlot) const;
 
   // Modifying
   void addItem(uint8_t slot, std::shared_ptr<Item> item);

@@ -212,13 +212,6 @@ std::pair<typename ReplayBuffer<TransitionType>::LeafIndexType, float> ReplayBuf
   // Start at the root (tree index)
   size_t currentNodeIndex = 0;
 
-  // TODO: Remove once done debugging -->
-  std::vector<size_t> indices;
-  std::vector<float> values;
-  indices.push_back(currentNodeIndex);
-  values.push_back(valueToFind);
-  // <--
-
   while (true) {
     const size_t leftChildIndex = 2 * currentNodeIndex + 1;
     const size_t rightChildIndex = leftChildIndex + 1;
@@ -243,22 +236,10 @@ std::pair<typename ReplayBuffer<TransitionType>::LeafIndexType, float> ReplayBuf
         throw std::runtime_error("Right child index out of bounds.");
       }
     }
-    // TODO: Remove once done debugging -->
-    indices.push_back(currentNodeIndex);
-    values.push_back(valueToFind);
-    // <--
   }
 
   // Convert tree index back to leaf index (0 to capacity-1)
   const LeafIndexType leafIndex = currentNodeIndex - (capacity_ - 1);
-  if (leafIndex > internalSize()) {
-    LOG(ERROR) << "Leaf index out of range: " << leafIndex << " > " << internalSize();
-    LOG(ERROR) << "Indices & values:";
-    for (size_t i = 0; i < indices.size(); ++i) {
-      LOG(ERROR) << "  Index: " << indices[i] << ", Value: " << absl::StreamFormat("%17g", values[i]);
-    }
-    throw std::out_of_range(absl::StrFormat("Leaf index %d out of range (size: %d) in retrieveLeaf(%f).", leafIndex, internalSize(), valueToFind));
-  }
   const float priorityAlpha = sumTree_[currentNodeIndex];
 
   return {leafIndex, priorityAlpha};

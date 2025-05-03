@@ -29,7 +29,6 @@ namespace state::machine {
 enum class Npc { kStorage, kPotion, kGrocery, kBlacksmith, kProtector, kStable };
 
 enum class Status { kDone, kNotDone };
-std::string_view toString(Status status);
 
 class StateMachine {
 public:
@@ -66,5 +65,7 @@ private:
 std::ostream& operator<<(std::ostream &stream, Npc npc);
 
 } // namespace state::machine
+
+std::string_view toString(state::machine::Status status);
 
 #endif // STATE_MACHINE_STATE_MACHINE_HPP_

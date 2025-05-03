@@ -43,20 +43,8 @@ InternalSkillCooldownEnded::InternalSkillCooldownEnded(EventId id, sro::scalar_t
 SkillCooldownEnded::SkillCooldownEnded(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillId) :
     Event(id, EventCode::kSkillCooldownEnded), globalId(globalId), skillRefId(skillId) {}
 
-InventoryUpdated::InventoryUpdated(EventId id, sro::scalar_types::EntityGlobalId globalId, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) :
-    Event(id, EventCode::kInventoryUpdated), globalId(globalId), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
-
-AvatarInventoryUpdated::AvatarInventoryUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) :
-    Event(id, EventCode::kAvatarInventoryUpdated), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
-
-CosInventoryUpdated::CosInventoryUpdated(EventId id, sro::scalar_types::EntityGlobalId gId, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) :
-    Event(id, EventCode::kCosInventoryUpdated), globalId(gId), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
-
-StorageUpdated::StorageUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) :
-    Event(id, EventCode::kStorageUpdated), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
-
-GuildStorageUpdated::GuildStorageUpdated(EventId id, const std::optional<int8_t> &srcSlot, const std::optional<int8_t> &destSlot) :
-    Event(id, EventCode::kGuildStorageUpdated), srcSlotNum(srcSlot), destSlotNum(destSlot) {}
+ItemMoved::ItemMoved(EventId id, sro::scalar_types::EntityGlobalId globalId, std::optional<sro::storage::Position> source, std::optional<sro::storage::Position> destination) :
+    Event(id, EventCode::kItemMoved), globalId(globalId), source(source), destination(destination) {}
 
 ItemUseSuccess::ItemUseSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::StorageIndexType slotNum, sro::scalar_types::ReferenceObjectId refId) :
     Event(id, EventCode::kItemUseSuccess), globalId(globalId), slotNum(slotNum), refId(refId) {}

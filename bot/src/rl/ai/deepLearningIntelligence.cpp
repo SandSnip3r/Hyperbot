@@ -15,9 +15,19 @@ void DeepLearningIntelligence::resetForNewEpisode() {
 
 int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket) {
   ZoneScopedN("DeepLearningIntelligence::selectAction");
+
+  // Update epsilon.
   const float epsilon = getEpsilon();
   trainingManager_.getJaxInterface().addScalar("Epsilon", epsilon, stepCount_);
   ++stepCount_;
+
+  if (lastObservations_.size() >= trainingManager_.getObservationStackSize()) {
+    // We have enough observations, we can remove the oldest one.
+    lastObservations_.pop_front();
+  }
+  // Add the new observation to the stack.
+  lastObservations_.push_back(observation);
+
   std::bernoulli_distribution randomActionDistribution(epsilon);
   int actionIndex;
   if (randomActionDistribution(randomEngine_)) {
@@ -27,7 +37,11 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
     if (canSendPacket) {
       // Release the world state mutex while we call into JAX
       bot.worldState().mutex.unlock();
-      actionIndex = trainingManager_.getJaxInterface().selectAction(observation, canSendPacket);
+      std::vector<Observation> observationStack;
+      for (const auto &obs : lastObservations_) {
+        observationStack.push_back(obs);
+      }
+      actionIndex = trainingManager_.getJaxInterface().selectAction(trainingManager_.getObservationStackSize(), observationStack, canSendPacket);
       bot.worldState().mutex.lock();
     } else {
       // We cannot send a packet, we'll entirely side-step JAX and immediately return the do-nothing action

@@ -42,23 +42,32 @@ Status PickItem::onUpdate(const event::Event *event) {
           //  Alternatively, maybe all parent state machines should be robust to pick failures.
         }
       }
-    } else if (const auto *inventoryUpdatedEvent = dynamic_cast<const event::InventoryUpdated*>(event)) {
+    } else if (const auto *itemMovedEvent = dynamic_cast<const event::ItemMoved*>(event)) {
       if (waitingForItemToArriveInInventory_) {
-        if (inventoryUpdatedEvent->globalId == bot_.selfState()->globalId) {
+        if (itemMovedEvent->globalId == bot_.selfState()->globalId) {
           // Event is for us
-          if (!inventoryUpdatedEvent->srcSlotNum.has_value() && inventoryUpdatedEvent->destSlotNum.has_value()) {
-            // Represents a pick
-            const storage::Item *item = bot_.inventory().getItem(inventoryUpdatedEvent->destSlotNum.value());
-            if (item != nullptr && item->refItemId == targetRefId_) {
-              // We picked up the item we wanted
-              // TODO: We don't know if this is because we picked this item up, or someone else in our party picked up an item of the same type and via item distribution, we received it.
-              CHAR_VLOG(1) << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") landed in our inventory";
-              if (requestTimeoutEventId_) {
-                CHAR_VLOG(2) << "Cancelling timeout event " << *requestTimeoutEventId_;
-                bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
-                requestTimeoutEventId_.reset();
+          if (!itemMovedEvent->source.has_value() && itemMovedEvent->destination.has_value()) {
+            // Represents a pick to inventory
+            if (itemMovedEvent->destination->storage == sro::storage::Storage::kInventory) {
+              // The item we wanted to pick up arrived in our inventory
+              const storage::Item *item = bot_.inventory().getItem(itemMovedEvent->destination->slotNum);
+              if (item != nullptr && item->refItemId == targetRefId_) {
+                // We picked up the item we wanted
+                // TODO: We don't know if this is because we picked this item up, or someone else in our party picked up an item of the same type and via item distribution, we received it.
+                CHAR_VLOG(1) << "The item we picked (" << bot_.gameData().getItemName(targetRefId_) << ") landed in our inventory";
+                if (requestTimeoutEventId_) {
+                  CHAR_VLOG(2) << "Cancelling timeout event " << *requestTimeoutEventId_;
+                  bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
+                  requestTimeoutEventId_.reset();
+                }
+                waitingForItemToArriveInInventory_ = false;
               }
-              waitingForItemToArriveInInventory_ = false;
+            } else {
+              if (itemMovedEvent->destination->storage == sro::storage::Storage::kCosInventory) {
+                LOG(WARNING) << "Item picked to COS inventory. This is not supported yet.";
+              } else {
+                LOG(WARNING) << "Item picked to unanticipated storage " << toString(itemMovedEvent->destination->storage);
+              }
             }
           }
         }

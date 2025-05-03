@@ -88,7 +88,11 @@ public:
   const_iterator cend()   const { return const_iterator(this, size()); }
 
   bool hasItem(uint8_t slot) const;
+
+  // Returns nullptr if there is no item in the slot.
   Item* getItem(uint8_t slot);
+
+  // Returns nullptr if there is no item in the slot.
   const Item* getItem(uint8_t slot) const;
   uint8_t size() const;
 
@@ -104,7 +108,7 @@ public:
   std::vector<uint8_t> findItemsWithTypeId(type_id::TypeId typeId) const;
   std::vector<sro::scalar_types::StorageIndexType> findItemsWithRefId(sro::scalar_types::ReferenceObjectId refId) const;
   std::optional<sro::scalar_types::StorageIndexType> findFirstItemWithRefId(sro::scalar_types::ReferenceObjectId refId) const;
-  std::optional<uint8_t> firstFreeSlot() const;
+  std::optional<uint8_t> firstFreeSlot(sro::scalar_types::StorageIndexType startingSlot) const;
 private:
   ItemList itemList_;
 };

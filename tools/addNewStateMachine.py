@@ -41,7 +41,7 @@ headerTemplate = '#ifndef STATE_MACHINE_{macroClassName}_HPP_\n'\
                  '\n'\
                  'class {pascalClassName} : public StateMachine {{\n'\
                  'public:\n'\
-                 '  {pascalClassName}(Bot &bot);\n'\
+                 '  {pascalClassName}(StateMachine *parent);\n'\
                  '  ~{pascalClassName}() override;\n'\
                  '  Status onUpdate(const event::Event *event) override;\n'\
                  'private:\n'\
@@ -60,7 +60,7 @@ sourceTemplate = '#include "{camelClassName}.hpp"\n'\
                  '\n'\
                  'namespace state::machine {{\n'\
                  '\n'\
-                 '{pascalClassName}::{pascalClassName}(Bot &bot) : StateMachine(bot) {{\n'\
+                 '{pascalClassName}::{pascalClassName}(StateMachine *parent) : StateMachine(parent) {{\n'\
                  '}}\n'\
                  '\n'\
                  '{pascalClassName}::~{pascalClassName}() {{\n'\

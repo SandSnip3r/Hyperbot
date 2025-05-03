@@ -126,8 +126,8 @@ std::optional<sro::scalar_types::StorageIndexType> Storage::findFirstItemWithRef
   return itemList_.findFirstItemWithRefId(refId);
 }
 
-std::optional<uint8_t> Storage::firstFreeSlot() const {
-  return itemList_.firstFreeSlot();
+std::optional<uint8_t> Storage::firstFreeSlot(sro::scalar_types::StorageIndexType startingSlot) const {
+  return itemList_.firstFreeSlot(startingSlot);
 }
 
 } // namespace storage

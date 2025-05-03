@@ -102,24 +102,21 @@ Status TalkingToStorageNpc::onUpdate(const event::Event *event) {
 void TalkingToStorageNpc::storeItems(const event::Event *event) {
   // Did something just arrive in storage?
   if (event != nullptr) {
-    if (dynamic_cast<const event::InventoryUpdated*>(event) != nullptr) {
-      // Ignoring inventory updated events since a corresponding storage event will come with more info for us
-      return;
-    }
-    const auto *storageUpdatedEvent = dynamic_cast<const event::StorageUpdated*>(event);
-    if (storageUpdatedEvent != nullptr) {
+    if (const auto *itemMovedEvent = dynamic_cast<const event::ItemMoved*>(event); itemMovedEvent != nullptr) {
       // At least one storage slot was updated
       pendingItemMovementRequest_ = false;
-      uint8_t itemToTryStackingSlotNum;
-      if (storageUpdatedEvent->destSlotNum.has_value()) {
+      sro::scalar_types::StorageIndexType itemToTryStackingSlotNum;
+      if (itemMovedEvent->destination && itemMovedEvent->destination->storage == sro::storage::Storage::kStorage) {
         // Something was moved in storage. Either a deposit or an item stacked in storage
-        if (storageUpdatedEvent->srcSlotNum.has_value()) {
+        if (itemMovedEvent->source->storage == sro::storage::Storage::kStorage) {
           // This was a move within storage, a stacking in this case
           // The src slot could still contain an item, we'll try to stack that
-          itemToTryStackingSlotNum = *storageUpdatedEvent->srcSlotNum;
-        } else {
+          itemToTryStackingSlotNum = itemMovedEvent->source->slotNum;
+        } else if (itemMovedEvent->source->storage == sro::storage::Storage::kInventory) {
           // This was a deposit, try to stack the newly added item
-          itemToTryStackingSlotNum = *storageUpdatedEvent->destSlotNum;
+          itemToTryStackingSlotNum = itemMovedEvent->destination->slotNum;
+        } else {
+          LOG(WARNING) << "Item moved event was not from storage or inventory";
         }
       }
 
@@ -193,7 +190,7 @@ void TalkingToStorageNpc::storeItems(const event::Event *event) {
   if (!slotsWithItemsToStore.empty()) {
     // Try to store first item
     // Figure out where to store it
-    const auto &slot = bot_.selfState()->storage.firstFreeSlot();
+    const auto &slot = bot_.selfState()->storage.firstFreeSlot(0);
     if (slot) {
       // Have a free slot in storage
       const auto depositItemPacket = packet::building::ClientAgentInventoryOperationRequest::inventoryToStoragePacket(slotsWithItemsToStore.front(), *slot, bot_.selfState()->talkingGidAndOption->first);
