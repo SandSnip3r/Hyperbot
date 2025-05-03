@@ -28,6 +28,7 @@ public:
   void sendCheckpointList(const std::vector<std::string> &checkpointList);
   void sendCheckpointAlreadyExists(const std::string &checkpointName);
   void sendSavingCheckpoint();
+  void sendCheckpointLoaded(const std::string &checkpointName);
 
   void plot(std::string_view plotName, double x, double y);
 private:

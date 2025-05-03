@@ -32,7 +32,6 @@
 - Handle any kind of teleportation (spawn & despawn) while pvping & preparing for pvp
 - Fix bug in EventBroker where an event cannot unsubscribe from itself
 - Move GameData & parsing to silkroad lib
-- Document Qt instructions
 - PR/issue to Tracy to not clutter the "<common/>" include path
 - Add move ctor/ass for PacketContainer, this should remove an unecessary alloc when taking a packet from SilkroadSecurity::GetPacketToRecv()
 - Move Proxy::ProcessPackets to properly triggered async wakeups, not a looping timer
@@ -44,7 +43,6 @@
 - In the UI, when sending requests, poll for reply rather than block on it. If polling fails, Hyperbot might've died immediately after our send. We should reset the socket and exit.
 - ClientManagerInterface will be blocked on sending a heartbeat if the client manager is not running. If something else in the bot crashes, ClientManagerInterface cannot shut down. We should probably poll on recv and reconstruct the socket if it fails.
 - Plot cumulative episode return
-- Show currently loaded checkpoint in UI, if any
 - Display state machine trees in UI
 - Prevent any user input while pvping
 - Implement periodic checkpointing in case of crashes

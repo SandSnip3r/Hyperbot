@@ -132,6 +132,10 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
       emit savingCheckpoint();
       break;
     }
+    case rl_ui_messages::BroadcastMessage::BodyCase::kCheckpointLoaded: {
+      emit checkpointLoaded(QString::fromStdString(broadcastMessage.checkpoint_loaded().name()));
+      break;
+    }
     case rl_ui_messages::BroadcastMessage::BodyCase::kPlotData: {
       const rl_ui_messages::PlotData &plotDataMsg = broadcastMessage.plot_data();
       emit plotData(plotDataMsg.x(), plotDataMsg.y());

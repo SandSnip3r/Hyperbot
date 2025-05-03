@@ -41,6 +41,24 @@
         </item>
        </layout>
       </item>
+      <item row="3" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="loadedCheckpointLabel">
+          <property name="text">
+           <string>Loaded Checkpoint:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="currentlyLoadedCheckpoint">
+          <property name="text">
+           <string>None</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
       <item row="1" column="1">
        <widget class="QPushButton" name="loadCheckpointButton">
         <property name="text">

@@ -50,6 +50,7 @@ signals:
   void checkpointListReceived(QStringList str);
   void checkpointAlreadyExists(QString checkpointName);
   void savingCheckpoint();
+  void checkpointLoaded(QString checkpointName);
   void plotData(qreal x, qreal y);
 
 private:

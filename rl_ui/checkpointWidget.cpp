@@ -44,6 +44,7 @@ void CheckpointWidget::setHyperbot(Hyperbot &hyperbot) {
   connect(hyperbot_, &Hyperbot::savingCheckpoint, this, [this](){
     ui->saveCheckpointButton->setEnabled(false);
   });
+  connect(hyperbot_, &Hyperbot::checkpointLoaded, this, &CheckpointWidget::onCheckpointLoaded);
 
   // Connect the button click to load the selected checkpoint
   connect(ui->loadCheckpointButton, &QPushButton::clicked, this, [this]() {
@@ -92,4 +93,8 @@ void CheckpointWidget::onDeleteCheckpointClicked() {
     checkpointNamesToDelete.append(index.data(Qt::DisplayRole).toString());
   }
   hyperbot_->deleteCheckpoints(checkpointNamesToDelete);
+}
+
+void CheckpointWidget::onCheckpointLoaded(QString checkpointName) {
+  ui->currentlyLoadedCheckpoint->setText(checkpointName);
 }

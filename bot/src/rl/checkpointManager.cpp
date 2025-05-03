@@ -120,6 +120,8 @@ void CheckpointManager::loadCheckpoint(const std::string &checkpointName, rl::Ja
       if (deepLearningIntelligence != nullptr) {
         deepLearningIntelligence->setStepCount(stepCount);
       }
+      // Notify the UI that a checkpoint has been loaded
+      rlUserInterface_.sendCheckpointLoaded(checkpointName);
       return;
     }
   }

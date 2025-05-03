@@ -58,19 +58,19 @@ void RlUserInterface::runAsync() {
 // ================================================================================
 
 void RlUserInterface::sendCheckpointList(const std::vector<std::string> &checkpointList) {
-  LOG(INFO) << "Sending checkpoint list with " << checkpointList.size() << " checkpoints";
+  VLOG(1) << "Sending checkpoint list to UI";
   rl_ui_messages::BroadcastMessage msg;
   rl_ui_messages::CheckpointList *checkpointListMsg = msg.mutable_checkpoint_list();
   for (const std::string &checkpointName : checkpointList) {
-    rl_ui_messages::Checkpoint *checkpointMsg = checkpointListMsg->add_checkpoints();
-    checkpointMsg->set_name(checkpointName);
+    rl_ui_messages::Checkpoint *checkpoint = checkpointListMsg->add_checkpoints();
+    checkpoint->set_name(checkpointName);
   }
   broadcastMessage(msg);
 }
 
 void RlUserInterface::sendCheckpointAlreadyExists(const std::string &checkpointName) {
   rl_ui_messages::BroadcastMessage msg;
-  *msg.mutable_checkpoint_already_exists() = checkpointName;
+  msg.set_checkpoint_already_exists(checkpointName);
   broadcastMessage(msg);
 }
 
@@ -80,12 +80,19 @@ void RlUserInterface::sendSavingCheckpoint() {
   broadcastMessage(msg);
 }
 
+void RlUserInterface::sendCheckpointLoaded(const std::string &checkpointName) {
+  rl_ui_messages::BroadcastMessage msg;
+  rl_ui_messages::CheckpointLoaded *checkpointLoaded = msg.mutable_checkpoint_loaded();
+  checkpointLoaded->set_name(checkpointName);
+  broadcastMessage(msg);
+}
+
 void RlUserInterface::plot(std::string_view plotName, double x, double y) {
   rl_ui_messages::BroadcastMessage msg;
-  rl_ui_messages::PlotData *plotDataMsg = msg.mutable_plot_data();
-  plotDataMsg->set_name(std::string(plotName));
-  plotDataMsg->set_x(x);
-  plotDataMsg->set_y(y);
+  rl_ui_messages::PlotData *plotData = msg.mutable_plot_data();
+  plotData->set_name(std::string(plotName));
+  plotData->set_x(x);
+  plotData->set_y(y);
   broadcastMessage(msg);
 }
 
