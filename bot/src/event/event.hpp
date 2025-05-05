@@ -126,6 +126,14 @@ public:
   virtual ~ItemMoved() = default;
 };
 
+struct ItemMoveFailed : public Event {
+public:
+  ItemMoveFailed(EventId id, sro::scalar_types::EntityGlobalId globalId, uint16_t errorCode);
+  const sro::scalar_types::EntityGlobalId globalId;
+  const uint16_t errorCode;
+  virtual ~ItemMoveFailed() = default;
+};
+
 struct ItemUseSuccess : public Event {
 public:
   ItemUseSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::StorageIndexType slotNum, sro::scalar_types::ReferenceObjectId refId);

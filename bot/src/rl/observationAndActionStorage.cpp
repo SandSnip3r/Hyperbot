@@ -61,7 +61,7 @@ std::pair<ObservationAndActionStorage::Id, std::vector<ObservationAndActionStora
   return {id, deletedIds};
 }
 
-ObservationAndActionStorage::ObservationAndActionType ObservationAndActionStorage::getObservationAndAction(Id id) const {
+const ObservationAndActionStorage::ObservationAndActionType& ObservationAndActionStorage::getObservationAndAction(Id id) const {
   std::unique_lock lock{mutex_};
   auto it = idToIndexMap_.find(id);
   if (it == idToIndexMap_.end()) {
@@ -93,7 +93,7 @@ bool ObservationAndActionStorage::hasPrevious(Id id) const {
   return index.actionIndex > 0;
 }
 
-ObservationAndActionStorage::Id ObservationAndActionStorage::getPrevious(Id id) const {
+ObservationAndActionStorage::Id ObservationAndActionStorage::getPreviousId(Id id) const {
   std::unique_lock lock{mutex_};
   auto it = idToIndexMap_.find(id);
   if (it == idToIndexMap_.end()) {

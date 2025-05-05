@@ -13,7 +13,11 @@ class ServerAgentInventoryOperationResponse : public ParsedPacket {
 public:
   ServerAgentInventoryOperationResponse(const PacketContainer &packet, const pk2::ItemData &itemData);
   const std::vector<structures::ItemMovement>& itemMovements() const;
+  bool success() const { return result_ == 1; }
+  uint16_t errorCode() const { return errorCode_; }
 private:
+  uint8_t result_;
+  uint16_t errorCode_;
   std::vector<structures::ItemMovement> itemMovements_;
 };
 

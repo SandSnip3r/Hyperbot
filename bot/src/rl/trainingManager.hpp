@@ -26,6 +26,7 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <chrono>
 
 namespace ui {
 class RlUserInterface;
@@ -58,7 +59,7 @@ private:
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
   static constexpr int kReplayBufferCapacity{1'000'000};
-  static constexpr int kTargetNetworkUpdateInterval{20'000};
+  static constexpr int kTargetNetworkUpdateInterval{1'000};
   static constexpr int kTrainStepCheckpointInterval{10'000};
 
   std::atomic<bool> runTraining_{true};
@@ -78,6 +79,14 @@ private:
   CheckpointManager checkpointManager_{rlUserInterface_};
   std::atomic<int> trainStepCount_{0};
 
+  // Sample collection rate tracking
+  int sampleCount_{0};
+  std::chrono::high_resolution_clock::time_point lastSampleTime_{std::chrono::high_resolution_clock::now()};
+
+  // Training rate tracking
+  int trainingCount_{0};
+  std::chrono::high_resolution_clock::time_point lastTrainingTime_{std::chrono::high_resolution_clock::now()};
+
   void setUpIntelligencePool();
 
   void createSessions();
@@ -96,9 +105,20 @@ private:
   ReplayBufferType replayBuffer_{kReplayBufferCapacity, /*alpha=*/0.6f, /*beta=*/0.8f, /*epsilon=*/1e-5f};
   absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> observationIdToTransitionIdMap_;
   absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> transitionIdToObservationIdMap_;
-  std::mutex observationTransitionIdMapMutex_;
+  mutable std::mutex observationTransitionIdMapMutex_;
   float calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const;
   void saveCheckpoint(const std::string &checkpointName, bool overwrite);
+
+  struct ModelInputs {
+    std::vector<std::vector<Observation>> olderObservationStacks;
+    std::vector<int> actionIndexs;
+    std::vector<bool> isTerminals;
+    std::vector<float> rewards;
+    std::vector<std::vector<Observation>> newerObservationStacks;
+    std::vector<float> weights;
+  };
+
+  ModelInputs buildModelInputsFromReplayBufferSamples(const std::vector<ReplayBufferType::SampleResult> &samples) const;
 };
 
 } // namespace rl

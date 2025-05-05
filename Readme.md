@@ -11,7 +11,7 @@ The main components of the game worth automating are:
 - Killing a target (enemy or player)
 - Item management
 - Equipment ehancements (alchemy)
-  
+
 ## Timeline
 
 #### Past

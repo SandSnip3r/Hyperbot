@@ -74,86 +74,26 @@ void TrainingManager::train() {
       // Sample a batch of transitions from the replay buffer.
       std::vector<ReplayBufferType::SampleResult> sampleResult = replayBuffer_.sample(kBatchSize, randomEngine);
 
-      std::vector<std::vector<Observation>> olderObservationStacks;
-      std::vector<int> actionIndexs;
-      std::vector<bool> isTerminals;
-      std::vector<float> rewards;
-      std::vector<std::vector<Observation>> newerObservationStacks;
-      std::vector<float> weights;
-      olderObservationStacks.reserve(sampleResult.size());
-      actionIndexs.reserve(sampleResult.size());
-      isTerminals.reserve(sampleResult.size());
-      rewards.reserve(sampleResult.size());
-      newerObservationStacks.reserve(sampleResult.size());
-      weights.reserve(sampleResult.size());
-
-      for (int i=0; i<sampleResult.size(); ++i) {
-        const ReplayBufferType::SampleResult &sample = sampleResult.at(i);
-        ObservationAndActionStorage::Id observationId;
-        {
-          std::unique_lock lock(observationTransitionIdMapMutex_);
-          try {
-            observationId = transitionIdToObservationIdMap_.at(sample.transitionId);
-          } catch (...) {
-            LOG(ERROR) << "Failed to find observation ID for transition ID " << sample.transitionId;
-            throw;
-          }
-        }
-        ObservationAndActionStorage::Id previousObservationId;
-        try {
-          if (!observationAndActionStorage_.hasPrevious(observationId)) {
-            throw std::runtime_error("ObservationAndActionStorage: No previous observation for this observation ID");
-          }
-          previousObservationId = observationAndActionStorage_.getPrevious(observationId);
-        } catch (...) {
-          LOG(ERROR) << "Failed to find previous observation ID for observation ID " << observationId;
-          throw;
-        }
-        const ObservationAndActionStorage::ObservationAndActionType previousObservationAndAction = observationAndActionStorage_.getObservationAndAction(previousObservationId);
-        const Observation &observation0 = previousObservationAndAction.observation;
-        const std::optional<int> actionIndex0 = previousObservationAndAction.actionIndex;
-
-        const ObservationAndActionStorage::ObservationAndActionType observationAndAction = observationAndActionStorage_.getObservationAndAction(observationId);
-        const Observation &observation1 = observationAndAction.observation;
-        const std::optional<int> actionIndex1 = observationAndAction.actionIndex;
-
-        float weight = sample.weight;
-
-        const bool isTerminal = !actionIndex1.has_value();
-        const float reward = calculateReward(observation0, observation1, isTerminal);
-
-        std::vector<Observation> olderObservationStack = {observation0};
-        {
-          ObservationAndActionStorage::Id tmp = previousObservationId;
-          while (olderObservationStack.size() < kObservationStackSize && observationAndActionStorage_.hasPrevious(tmp)) {
-            tmp = observationAndActionStorage_.getPrevious(tmp);
-            const ObservationAndActionStorage::ObservationAndActionType observationAndAction = observationAndActionStorage_.getObservationAndAction(tmp);
-            olderObservationStack.push_back(observationAndAction.observation);
-          }
-          std::reverse(olderObservationStack.begin(), olderObservationStack.end());
-        }
-        olderObservationStacks.push_back(olderObservationStack);
-
-        actionIndexs.push_back(actionIndex0.value());
-        isTerminals.push_back(isTerminal);
-        rewards.push_back(reward);
-
-        std::vector<Observation> newerObservationStack = {observation1};
-        {
-          ObservationAndActionStorage::Id tmp = observationId;
-          while (newerObservationStack.size() < kObservationStackSize && observationAndActionStorage_.hasPrevious(tmp)) {
-            tmp = observationAndActionStorage_.getPrevious(tmp);
-            const ObservationAndActionStorage::ObservationAndActionType observationAndAction = observationAndActionStorage_.getObservationAndAction(tmp);
-            newerObservationStack.push_back(observationAndAction.observation);
-          }
-          std::reverse(newerObservationStack.begin(), newerObservationStack.end());
-        }
-        newerObservationStacks.push_back(newerObservationStack);
-
-        weights.push_back(weight);
+      // Track training rate
+      const std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
+      const std::chrono::high_resolution_clock::duration timeDiff = currentTime - lastTrainingTime_;
+      if (timeDiff > std::chrono::seconds(1)) {
+        const float trainingRate = static_cast<float>(trainingCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(timeDiff).count()/1000.0);
+        jaxInterface_.addScalar("perf/Training Rate", trainingRate, trainStepCount_);
+        trainingCount_ = 0;
+        lastTrainingTime_ = currentTime;
       }
+      trainingCount_ += kBatchSize;
 
-      const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(kObservationStackSize, olderObservationStacks, actionIndexs, isTerminals, rewards, newerObservationStacks, weights);
+      const ModelInputs modelInputs = buildModelInputsFromReplayBufferSamples(sampleResult);
+
+      const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(kObservationStackSize,
+                                                                           modelInputs.olderObservationStacks,
+                                                                           modelInputs.actionIndexs,
+                                                                           modelInputs.isTerminals,
+                                                                           modelInputs.rewards,
+                                                                           modelInputs.newerObservationStacks,
+                                                                           modelInputs.weights);
 
       // Update the priorities of the sampled transitions in the replay buffer.
       std::vector<ReplayBufferType::TransitionId> ids;
@@ -172,9 +112,9 @@ void TrainingManager::train() {
 
       const float meanTdError = std::accumulate(trainOutput.tdErrors.begin(), trainOutput.tdErrors.end(), 0.0f) / trainOutput.tdErrors.size();
       jaxInterface_.addScalar("TD Error", meanTdError, trainStepCount_);
-      jaxInterface_.addScalar("Min Q Value", trainOutput.meanMinQValue, trainStepCount_);
-      jaxInterface_.addScalar("Mean Q Value", trainOutput.meanMeanQValue, trainStepCount_);
-      jaxInterface_.addScalar("Max Q Value", trainOutput.meanMaxQValue, trainStepCount_);
+      jaxInterface_.addScalar("Q_Value/Min", trainOutput.meanMinQValue, trainStepCount_);
+      jaxInterface_.addScalar("Q_Value/Mean", trainOutput.meanMeanQValue, trainStepCount_);
+      jaxInterface_.addScalar("Q_Value/Max", trainOutput.meanMaxQValue, trainStepCount_);
       ++trainStepCount_;
       if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
         LOG(INFO) << "Train step #" << trainStepCount_ << ". Updating target network";
@@ -273,6 +213,17 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
     std::unique_lock lock(observationTransitionIdMapMutex_);
     observationIdToTransitionIdMap_[observationId] = transitionId;
     transitionIdToObservationIdMap_[transitionId] = observationId;
+
+    // Track sample collection rate
+    sampleCount_++;
+    const std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
+    const std::chrono::high_resolution_clock::duration timeDiff = currentTime - lastSampleTime_;
+    if (timeDiff > std::chrono::seconds(1)) {
+      const float sampleRate = static_cast<float>(sampleCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(timeDiff).count()/1000.0);
+      jaxInterface_.addScalar("perf/Sample Collection Rate", sampleRate, trainStepCount_);
+      sampleCount_ = 0;
+      lastSampleTime_ = currentTime;
+    }
   }
 
   if (!actionIndex) {
@@ -282,7 +233,7 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
     ObservationAndActionType currentObservationAndAction = observationAndActionStorage_.getObservationAndAction(currentObservationId);
     // Go backwards and sum this agent's rewards.
     while (observationAndActionStorage_.hasPrevious(currentObservationId)) {
-      Id previousObservationId = observationAndActionStorage_.getPrevious(currentObservationId);
+      Id previousObservationId = observationAndActionStorage_.getPreviousId(currentObservationId);
       ObservationAndActionType previousObservationAndAction = observationAndActionStorage_.getObservationAndAction(previousObservationId);
       const bool isTerminal = !currentObservationAndAction.actionIndex.has_value();
       const float reward = calculateReward(previousObservationAndAction.observation, currentObservationAndAction.observation, isTerminal);
@@ -290,7 +241,7 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
       currentObservationId = previousObservationId;
       currentObservationAndAction = previousObservationAndAction;
     }
-    jaxInterface_.addScalar(absl::StrFormat("Episode Return %s", intelligenceName), cumulativeReward, trainStepCount_);
+    jaxInterface_.addScalar(absl::StrFormat("Episode_Return/%s", intelligenceName), cumulativeReward, trainStepCount_);
   }
 }
 
@@ -445,6 +396,83 @@ void TrainingManager::saveCheckpoint(const std::string &checkpointName, bool ove
   }
 
   checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, intelligencePool_.getDeepLearningIntelligence()->getStepCount(), overwrite);
+}
+
+TrainingManager::ModelInputs TrainingManager::buildModelInputsFromReplayBufferSamples(const std::vector<ReplayBufferType::SampleResult> &samples) const {
+  ZoneScopedN("TrainingManager::buildModelInputsFromReplayBufferSamples");
+  ModelInputs modelInputs;
+  const size_t sampleSize = samples.size();
+
+  // Pre-allocate all vectors to exact size.
+  modelInputs.olderObservationStacks.reserve(sampleSize);
+  modelInputs.actionIndexs.reserve(sampleSize);
+  modelInputs.isTerminals.reserve(sampleSize);
+  modelInputs.rewards.reserve(sampleSize);
+  modelInputs.newerObservationStacks.reserve(sampleSize);
+  modelInputs.weights.reserve(sampleSize);
+
+  // Batch look up all observation IDs at once to minimize mutex lock time.
+  std::vector<ObservationAndActionStorage::Id> observationIds(sampleSize);
+  {
+    std::unique_lock lock(observationTransitionIdMapMutex_);
+    for (int i=0; i<sampleSize; ++i) {
+      observationIds[i] = transitionIdToObservationIdMap_.at(samples[i].transitionId);
+    }
+  }
+
+  for (int i=0; i<samples.size(); ++i) {
+    const ReplayBufferType::SampleResult &sample = samples.at(i);
+    const ObservationAndActionStorage::Id observationId = observationIds.at(i);
+    const ObservationAndActionStorage::Id previousObservationId = observationAndActionStorage_.getPreviousId(observationId);
+    const ObservationAndActionStorage::ObservationAndActionType &previousObservationAndAction = observationAndActionStorage_.getObservationAndAction(previousObservationId);
+    const Observation &observation0 = previousObservationAndAction.observation;
+    const std::optional<int> &actionIndex0 = previousObservationAndAction.actionIndex;
+
+    const ObservationAndActionStorage::ObservationAndActionType &observationAndAction = observationAndActionStorage_.getObservationAndAction(observationId);
+    const Observation &observation1 = observationAndAction.observation;
+    const std::optional<int> &actionIndex1 = observationAndAction.actionIndex;
+
+    const float weight = sample.weight;
+
+    const bool isTerminal = !actionIndex1.has_value();
+    const float reward = calculateReward(observation0, observation1, isTerminal);
+
+    std::vector<Observation> olderObservationStack;
+    olderObservationStack.reserve(kObservationStackSize);
+    olderObservationStack.push_back(observation0);
+    {
+      ObservationAndActionStorage::Id tmp = previousObservationId;
+      while (olderObservationStack.size() < kObservationStackSize && observationAndActionStorage_.hasPrevious(tmp)) {
+        tmp = observationAndActionStorage_.getPreviousId(tmp);
+        const ObservationAndActionStorage::ObservationAndActionType &observationAndAction = observationAndActionStorage_.getObservationAndAction(tmp);
+        olderObservationStack.push_back(observationAndAction.observation);
+      }
+      std::reverse(olderObservationStack.begin(), olderObservationStack.end());
+    }
+    modelInputs.olderObservationStacks.push_back(std::move(olderObservationStack));
+
+    modelInputs.actionIndexs.push_back(actionIndex0.value());
+    modelInputs.isTerminals.push_back(isTerminal);
+    modelInputs.rewards.push_back(reward);
+
+    std::vector<Observation> newerObservationStack;
+    newerObservationStack.reserve(kObservationStackSize);
+    newerObservationStack.push_back(observation1);
+    {
+      ObservationAndActionStorage::Id tmp = observationId;
+      while (newerObservationStack.size() < kObservationStackSize && observationAndActionStorage_.hasPrevious(tmp)) {
+        tmp = observationAndActionStorage_.getPreviousId(tmp);
+        const ObservationAndActionStorage::ObservationAndActionType &observationAndAction = observationAndActionStorage_.getObservationAndAction(tmp);
+        newerObservationStack.push_back(observationAndAction.observation);
+      }
+      std::reverse(newerObservationStack.begin(), newerObservationStack.end());
+    }
+    modelInputs.newerObservationStacks.push_back(std::move(newerObservationStack));
+
+    modelInputs.weights.push_back(weight);
+  }
+
+  return modelInputs;
 }
 
 } // namespace rl

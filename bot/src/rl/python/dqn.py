@@ -103,7 +103,9 @@ def convertThenTrain(model, optimizerState, targetModel, observations, selectedA
   npRewards = jnp.array(rewards)
   npWeights = jnp.array(weights)
 
-  return jittedTrain(model, optimizerState, targetModel, observations, npSelectedActions, npIsTerminals, npRewards, nextObservations, npWeights)
+  result = jittedTrain(model, optimizerState, targetModel, observations, npSelectedActions, npIsTerminals, npRewards, nextObservations, npWeights)
+  jax.block_until_ready(result)
+  return result
 
 def getCopyOfModel(model, targetNetwork):
   graph, params = nnx.split(model)

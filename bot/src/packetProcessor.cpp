@@ -872,6 +872,13 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
     }
   };
 
+  // Check if operation failed.
+  if (!packet.success()) {
+    // Publish an event for the failed operation
+    eventBroker_.publishEvent<event::ItemMoveFailed>(selfEntity_->globalId, packet.errorCode());
+    return;
+  }
+
   // TODO: If we used an item and it moved, we'll need to update the "reference" to this item in the used item queue
   const std::vector<packet::structures::ItemMovement> &itemMovements = packet.itemMovements();
   for (const auto &movement : itemMovements) {

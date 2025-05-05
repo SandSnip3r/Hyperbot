@@ -16,6 +16,7 @@
   F(InternalSkillCooldownEnded) \
   F(SkillCooldownEnded) \
   F(ItemMoved) \
+  F(ItemMoveFailed) \
   F(SkillCastAboutToEnd) \
   F(ItemUseSuccess) \
   F(ItemUseFailed) \

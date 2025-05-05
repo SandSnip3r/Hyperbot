@@ -163,8 +163,13 @@ JaxInterface::TrainAuxOutput JaxInterface::train(int observationStackSize,
     });
     py::gil_scoped_acquire acquire;
     try {
-      ZoneScopedN("JaxInterface::train_PYTHON");
-      py::object auxOutput = dqnModule_->attr("convertThenTrain")(*model_, *optimizerState_, *targetModel_, observationStacksToNumpy(observationStackSize, olderObservationStacks), actionIndex, isTerminal, reward, observationStacksToNumpy(observationStackSize, newerObservationStacks), weight);
+      py::object olderObservationStacksNumpy = observationStacksToNumpy(observationStackSize, olderObservationStacks);
+      py::object newerObservationStacksNumpy = observationStacksToNumpy(observationStackSize, newerObservationStacks);
+      py::object auxOutput;
+      {
+        ZoneScopedN("JaxInterface::train_PYTHON");
+        auxOutput = dqnModule_->attr("convertThenTrain")(*model_, *optimizerState_, *targetModel_, olderObservationStacksNumpy, actionIndex, isTerminal, reward, newerObservationStacksNumpy, weight);
+      }
       py::tuple auxOutputTuple = auxOutput.cast<py::tuple>();
       result.tdErrors = auxOutputTuple[0].cast<std::vector<float>>();
       result.meanMinQValue = auxOutputTuple[1].cast<float>();

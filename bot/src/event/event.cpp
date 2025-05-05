@@ -46,6 +46,9 @@ SkillCooldownEnded::SkillCooldownEnded(EventId id, sro::scalar_types::EntityGlob
 ItemMoved::ItemMoved(EventId id, sro::scalar_types::EntityGlobalId globalId, std::optional<sro::storage::Position> source, std::optional<sro::storage::Position> destination) :
     Event(id, EventCode::kItemMoved), globalId(globalId), source(source), destination(destination) {}
 
+ItemMoveFailed::ItemMoveFailed(EventId id, sro::scalar_types::EntityGlobalId globalId, uint16_t errorCode) :
+    Event(id, EventCode::kItemMoveFailed), globalId(globalId), errorCode(errorCode) {}
+
 ItemUseSuccess::ItemUseSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::StorageIndexType slotNum, sro::scalar_types::ReferenceObjectId refId) :
     Event(id, EventCode::kItemUseSuccess), globalId(globalId), slotNum(slotNum), refId(refId) {}
 
