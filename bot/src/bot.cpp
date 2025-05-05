@@ -199,6 +199,10 @@ void Bot::handleEvent(const event::Event *event) {
         handleLearnedSkill(castedEvent);
         break;
       }
+      case event::EventCode::kTimeout: {
+        LOG(INFO) << absl::StreamFormat("[%s] Timeout event %d received", selfEntity_->name, event->eventId);
+        break;
+      }
       default:
         break;
     }

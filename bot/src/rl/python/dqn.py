@@ -30,10 +30,8 @@ def selectAction(model, observation, actionMask, key):
   return jnp.argmax(values)
 
 # Function to compute weighted loss and TD error for a SINGLE transition
-def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight):
+def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight, gamma):
   observation, selectedAction, isTerminal, reward, nextObservation = transition
-
-  gamma = 0.99
 
   # --- DDQN Target Calculation ---
   # Define the calculation for the non-terminal case using DDQN logic
@@ -74,23 +72,23 @@ def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight):
 
   return weightedLoss, (tdError, jnp.min(values), jnp.mean(values), jnp.max(values))
 
-def computeWeightedLossAndTdErrorBatch(model, targetModel, transitions, weights):
-  batched = jax.vmap(computeWeightedLossAndTdErrorSingle, in_axes=( None, None, (0, 0, 0, 0, 0), 0 ), out_axes=(0, 0))
-  weightedLosses, (tdErrors, minValues, meanValues, maxValues) = batched(model, targetModel, transitions, weights)
+def computeWeightedLossAndTdErrorBatch(model, targetModel, transitions, weights, gamma):
+  batched = jax.vmap(computeWeightedLossAndTdErrorSingle, in_axes=( None, None, (0, 0, 0, 0, 0), 0, None ), out_axes=(0, 0))
+  weightedLosses, (tdErrors, minValues, meanValues, maxValues) = batched(model, targetModel, transitions, weights, gamma)
   return jnp.mean(weightedLosses), (tdErrors, jnp.mean(minValues), jnp.mean(meanValues), jnp.mean(maxValues))
 
 @nnx.jit
-def jittedTrain(model, optimizerState, targetModel, observations, selectedActions, isTerminals, rewards, nextObservations, weights):
+def jittedTrain(model, optimizerState, targetModel, observations, selectedActions, isTerminals, rewards, nextObservations, weights, gamma):
   npSelectedActions = jnp.array(selectedActions)
   npIsTerminals = jnp.array(isTerminals)
   npRewards = jnp.array(rewards)
   npWeights = jnp.array(weights)
 
-  (meanLoss, auxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdErrorBatch, has_aux=True)(model, targetModel, (observations, npSelectedActions, npIsTerminals, npRewards, nextObservations), npWeights)
+  (meanLoss, auxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdErrorBatch, has_aux=True)(model, targetModel, (observations, npSelectedActions, npIsTerminals, npRewards, nextObservations), npWeights, gamma)
   optimizerState.update(gradients)
   return auxOutput
 
-def convertThenTrain(model, optimizerState, targetModel, observations, selectedActions, isTerminals, rewards, nextObservations, weights):
+def convertThenTrain(model, optimizerState, targetModel, observations, selectedActions, isTerminals, rewards, nextObservations, weights, gamma):
   # print(f'observations: {type(observations)}.{observations.shape}: {observations}')
   # print(f'selectedActions: {type(selectedActions)}: {selectedActions}')
   # print(f'isTerminals: {type(isTerminals)}: {isTerminals}')
@@ -103,7 +101,7 @@ def convertThenTrain(model, optimizerState, targetModel, observations, selectedA
   npRewards = jnp.array(rewards)
   npWeights = jnp.array(weights)
 
-  result = jittedTrain(model, optimizerState, targetModel, observations, npSelectedActions, npIsTerminals, npRewards, nextObservations, npWeights)
+  result = jittedTrain(model, optimizerState, targetModel, observations, npSelectedActions, npIsTerminals, npRewards, nextObservations, npWeights, gamma)
   jax.block_until_ready(result)
   return result
 
@@ -111,6 +109,35 @@ def getCopyOfModel(model, targetNetwork):
   graph, params = nnx.split(model)
   targetGraph, targetParams = nnx.split(targetNetwork)
   return nnx.merge(targetGraph, params)
+
+@nnx.jit
+def polyakUpdateTargetModel(model, targetModel, tau):
+  """
+  Perform Polyak averaging (soft update) of model parameters to target model.
+
+  targetParams = (1 - tau) * targetParams + tau * sourceParams
+
+  Args:
+      model: Source model
+      targetModel: Target model to be updated
+      tau: Interpolation parameter (0 < tau < 1)
+
+  Returns:
+      Updated target model
+  """
+  # Extract parameters
+  sourceGraph, sourceParams = nnx.split(model)
+  targetGraph, targetParams = nnx.split(targetModel)
+
+  # Perform the Polyak averaging
+  def update_param(source_param, target_param):
+    return (1 - tau) * target_param + tau * source_param
+
+  # Apply the update to each parameter
+  updated_params = jax.tree_util.tree_map(update_param, sourceParams, targetParams)
+
+  # Merge back the graph with updated parameters
+  return nnx.merge(targetGraph, updated_params)
 
 def checkpointModel(model, path):
   print(f'Checkpointing model to {path}')

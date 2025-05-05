@@ -17,7 +17,7 @@ namespace rl {
 
 class JaxInterface {
 public:
-  JaxInterface() = default;
+  JaxInterface(float gamma, float learningRate) : gamma_(gamma), learningRate_(learningRate) {}
   ~JaxInterface();
   void initialize(int observationStackSize);
 
@@ -41,6 +41,7 @@ public:
                        const std::vector<std::vector<Observation>> &newerObservationStacks,
                        const std::vector<float> &weight);
   void updateTargetModel();
+  void updateTargetModelPolyak(float tau);
   void printModels();
 
   // Note: Parent directory does not need to exist.
@@ -50,8 +51,12 @@ public:
   void addScalar(std::string_view name, double yValue, double xValue);
 private:
   static constexpr int kActionSpaceSize{36}; // TODO: If changed, also change rl::ActionBuilder
-  static constexpr float kLearningRate{3e-6};
   static constexpr int kSeed{0};
+
+  // Store gamma and learning rate as member variables
+  const float gamma_;
+  const float learningRate_;
+
   std::optional<pybind11::module> dqnModule_;
   std::optional<pybind11::module> randomModule_;
   std::optional<pybind11::module> nnxModule_;

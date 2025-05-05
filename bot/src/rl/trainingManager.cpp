@@ -116,7 +116,11 @@ void TrainingManager::train() {
       jaxInterface_.addScalar("Q_Value/Mean", trainOutput.meanMeanQValue, trainStepCount_);
       jaxInterface_.addScalar("Q_Value/Max", trainOutput.meanMaxQValue, trainStepCount_);
       ++trainStepCount_;
-      if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
+      if (kUsePolyakTargetNetworkUpdate) {
+        // Soft update target network every step with Polyak averaging
+        jaxInterface_.updateTargetModelPolyak(kTargetNetworkPolyakTau);
+      } else if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
+        // Hard update target network at fixed intervals
         LOG(INFO) << "Train step #" << trainStepCount_ << ". Updating target network";
         jaxInterface_.updateTargetModel();
       }

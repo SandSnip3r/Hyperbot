@@ -57,7 +57,7 @@ Status MoveItem::onUpdate(const event::Event *event) {
         }
         CHAR_LOG(INFO) << absl::StreamFormat("Retrying... (attempt %d/%d)", retryCount_, kMaxRetries);
       }
-    } else if (event->eventCode == event::EventCode::kTimeout) {
+    } else if (event->eventCode == event::EventCode::kTimeout && timeoutEventId_ && *timeoutEventId_ == event->eventId) {
       CHAR_LOG(WARNING) << "MoveItem: Timeout event received";
       timeoutEventId_.reset();
       ++retryCount_;
@@ -112,6 +112,7 @@ Status MoveItem::onUpdate(const event::Event *event) {
   }
   injectPacket(moveItemPacket, PacketContainer::Direction::kBotToServer);
   timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(1000));
+  CHAR_LOG(INFO) << "Event ID is " << *timeoutEventId_;
   return Status::kNotDone;
 }
 

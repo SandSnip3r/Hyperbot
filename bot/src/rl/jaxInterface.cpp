@@ -168,7 +168,7 @@ JaxInterface::TrainAuxOutput JaxInterface::train(int observationStackSize,
       py::object auxOutput;
       {
         ZoneScopedN("JaxInterface::train_PYTHON");
-        auxOutput = dqnModule_->attr("convertThenTrain")(*model_, *optimizerState_, *targetModel_, olderObservationStacksNumpy, actionIndex, isTerminal, reward, newerObservationStacksNumpy, weight);
+        auxOutput = dqnModule_->attr("convertThenTrain")(*model_, *optimizerState_, *targetModel_, olderObservationStacksNumpy, actionIndex, isTerminal, reward, newerObservationStacksNumpy, weight, gamma_);
       }
       py::tuple auxOutputTuple = auxOutput.cast<py::tuple>();
       result.tdErrors = auxOutputTuple[0].cast<std::vector<float>>();
@@ -196,6 +196,24 @@ void JaxInterface::updateTargetModel() {
       targetModel_ = dqnModule_->attr("getCopyOfModel")(*model_, *targetModel_);
     } catch (std::exception &ex) {
       LOG(ERROR) << "Caught exception in JaxInterface::updateTargetModel: " << ex.what();
+      throw;
+    }
+  }
+  modelConditionVariable_.notify_all();
+}
+
+void JaxInterface::updateTargetModelPolyak(float tau) {
+  ZoneScopedN("JaxInterface::updateTargetModelPolyak");
+  {
+    std::unique_lock modelLock(modelMutex_);
+    modelConditionVariable_.wait(modelLock, [this]() -> bool {
+      return !waitingToSelectAction_.load();
+    });
+    py::gil_scoped_acquire acquire;
+    try {
+      targetModel_ = dqnModule_->attr("polyakUpdateTargetModel")(*model_, *targetModel_, tau);
+    } catch (std::exception &ex) {
+      LOG(ERROR) << "Caught exception in JaxInterface::updateTargetModelPolyak: " << ex.what();
       throw;
     }
   }
@@ -267,7 +285,7 @@ void JaxInterface::addScalar(std::string_view name, double yValue, double xValue
 }
 
 py::object JaxInterface::getOptimizer() {
-  return dqnModule_->attr("getOptaxAdamWOptimizer")(kLearningRate);
+  return dqnModule_->attr("getOptaxAdamWOptimizer")(learningRate_);
 }
 
 py::object JaxInterface::getNextRngKey() {

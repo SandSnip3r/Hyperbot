@@ -59,8 +59,12 @@ private:
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
   static constexpr int kReplayBufferCapacity{1'000'000};
-  static constexpr int kTargetNetworkUpdateInterval{1'000};
+  static constexpr int kTargetNetworkUpdateInterval{10'000};
   static constexpr int kTrainStepCheckpointInterval{10'000};
+  static constexpr float kTargetNetworkPolyakTau{0.0005f};
+  static constexpr bool kUsePolyakTargetNetworkUpdate{false};
+  static constexpr float kGamma{0.99f};
+  static constexpr float kLearningRate{3e-6f};
 
   std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;
@@ -75,7 +79,7 @@ private:
   std::vector<SessionId> sessionsReadyForAssignment_;
   common::PvpDescriptor::PvpId nextPvpId_{0};
   IntelligencePool intelligencePool_{*this};
-  JaxInterface jaxInterface_;
+  JaxInterface jaxInterface_{kGamma, kLearningRate};
   CheckpointManager checkpointManager_{rlUserInterface_};
   std::atomic<int> trainStepCount_{0};
 
