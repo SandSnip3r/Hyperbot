@@ -35,18 +35,6 @@ public:
 
 //=========================================================================================================================================================
 
-class ParsedServerAgentAbnormalInfo : public ParsedPacket {
-public:
-  ParsedServerAgentAbnormalInfo(const PacketContainer &packet);
-  uint32_t stateBitmask() const;
-  const std::array<packet::structures::vitals::AbnormalState, 32>& states() const;
-private:
-  uint32_t stateBitmask_;
-  std::array<packet::structures::vitals::AbnormalState, 32> states_ = {0};
-};
-
-//=========================================================================================================================================================
-
 class ParsedClientItemMove : public ParsedPacket {
 public:
   ParsedClientItemMove(const PacketContainer &packet);

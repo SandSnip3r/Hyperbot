@@ -19,36 +19,6 @@ ParsedPacket::~ParsedPacket() {}
 
 //=========================================================================================================================================================
 
-uint32_t ParsedServerAgentAbnormalInfo::stateBitmask() const {
-  return stateBitmask_;
-}
-
-const std::array<packet::structures::vitals::AbnormalState, 32>& ParsedServerAgentAbnormalInfo::states() const {
-  return states_;
-}
-
-ParsedServerAgentAbnormalInfo::ParsedServerAgentAbnormalInfo(const PacketContainer &packet) : ParsedPacket(packet) {
-  StreamUtility stream = packet.data;
-  stateBitmask_ = stream.Read<uint32_t>();
-  for (uint32_t i=0; i<32; ++i) {
-    const auto bit = (1 << i);
-    if (stateBitmask_ & bit) {
-      auto &state = states_[i];
-      state.totalTime = stream.Read<uint32_t>();
-      state.timeElapsed = stream.Read<uint16_t>();
-      if (bit <= static_cast<uint32_t>(packet::enums::AbnormalStateFlag::kZombie)) {
-        // Legacy states
-        state.effectOrLevel = stream.Read<uint16_t>();
-      } else {
-        // Modern states
-        state.effectOrLevel = stream.Read<uint16_t>();
-      }
-    }
-  }
-}
-
-//=========================================================================================================================================================
-
 ParsedClientItemMove::ParsedClientItemMove(const PacketContainer &packet) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   movement_.type = static_cast<packet::enums::ItemMovementType>(stream.Read<uint8_t>());

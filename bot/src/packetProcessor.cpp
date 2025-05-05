@@ -260,7 +260,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityRemoveOwnership, serverAgentEntityRemoveOwnershipReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityUpdateStatus, serverAgentEntityUpdateStatusReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentEntityDamageEffect, serverAgentEntityDamageEffectReceived);
-    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ParsedServerAgentAbnormalInfo, serverAgentAbnormalInfoReceived);
+    TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentAbnormalInfo, serverAgentAbnormalInfoReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCharacterUpdateStats, serverAgentCharacterUpdateStatsReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCharacterIncreaseIntResponse, serverAgentCharacterIncreaseIntResponseReceived);
     TRY_CAST_AND_HANDLE_PACKET(packet::parsing::ServerAgentCharacterIncreaseStrResponse, serverAgentCharacterIncreaseStrResponseReceived);
@@ -703,9 +703,9 @@ void PacketProcessor::serverAgentEntityDamageEffectReceived(const packet::parsin
   }
 }
 
-void PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const {
+void PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::ServerAgentAbnormalInfo &packet) const {
   for (int i=0; i<=helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie); ++i) {
-    selfEntity_->setLegacyStateEffect(helpers::fromBitNum(i), packet.states()[i].effectOrLevel);
+    selfEntity_->setLegacyStateEffect(helpers::fromBitNum(i), packet.states().at(i).effectOrLevel);
   }
   eventBroker_.publishEvent<event::EntityStatesChanged>(selfEntity_->globalId);
 }

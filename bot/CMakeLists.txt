@@ -171,6 +171,8 @@ add_executable(${PROJECT_NAME}
   src/packet/parsing/packetParser.hpp
   src/packet/parsing/parsedPacket.cpp
   src/packet/parsing/parsedPacket.hpp
+  src/packet/parsing/serverAgentAbnormalInfo.cpp
+  src/packet/parsing/serverAgentAbnormalInfo.hpp
   src/packet/parsing/serverAgentActionCommandResponse.cpp
   src/packet/parsing/serverAgentActionCommandResponse.hpp
   src/packet/parsing/serverAgentActionDeselectResponse.cpp

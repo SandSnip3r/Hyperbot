@@ -9,6 +9,7 @@
 #include "packet/parsing/clientAgentActionCommandRequest.hpp"
 #include "packet/parsing/clientAgentActionTalkRequest.hpp"
 #include "packet/parsing/frameworkMessageIdentify.hpp"
+#include "packet/parsing/serverAgentAbnormalInfo.hpp"
 #include "packet/parsing/serverAgentActionCommandResponse.hpp"
 #include "packet/parsing/serverAgentActionDeselectResponse.hpp"
 #include "packet/parsing/serverAgentActionSelectResponse.hpp"
@@ -140,7 +141,7 @@ private:
   void serverAgentEntityRemoveOwnershipReceived(const packet::parsing::ServerAgentEntityRemoveOwnership &packet) const;
   void serverAgentEntityUpdateStatusReceived(const packet::parsing::ServerAgentEntityUpdateStatus &packet) const;
   void serverAgentEntityDamageEffectReceived(const packet::parsing::ServerAgentEntityDamageEffect &packet) const;
-  void serverAgentAbnormalInfoReceived(const packet::parsing::ParsedServerAgentAbnormalInfo &packet) const;
+  void serverAgentAbnormalInfoReceived(const packet::parsing::ServerAgentAbnormalInfo &packet) const;
   void serverAgentCharacterUpdateStatsReceived(const packet::parsing::ServerAgentCharacterUpdateStats &packet) const;
   void serverAgentCharacterIncreaseIntResponseReceived(const packet::parsing::ServerAgentCharacterIncreaseIntResponse &packet) const;
   void serverAgentCharacterIncreaseStrResponseReceived(const packet::parsing::ServerAgentCharacterIncreaseStrResponse &packet) const;

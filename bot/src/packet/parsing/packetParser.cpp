@@ -8,6 +8,7 @@
 #include "clientAgentChatRequest.hpp"
 #include "clientAgentInventoryItemUseRequest.hpp"
 #include "frameworkMessageIdentify.hpp"
+#include "serverAgentAbnormalInfo.hpp"
 #include "serverAgentActionCommandResponse.hpp"
 #include "serverAgentActionDeselectResponse.hpp"
 #include "serverAgentActionSelectResponse.hpp"
@@ -128,7 +129,7 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       case Opcode::kServerAgentEntityUpdateExperience:
         return std::make_unique<ServerAgentEntityUpdateExperience>(packet);
       case Opcode::kServerAgentAbnormalInfo:
-        return std::make_unique<ParsedServerAgentAbnormalInfo>(packet);
+        return std::make_unique<ServerAgentAbnormalInfo>(packet);
       case Opcode::kServerAgentInventoryUpdateItem:
         return std::make_unique<ServerAgentInventoryUpdateItem>(packet);
       case Opcode::kServerAgentEntityUpdatePoints:
