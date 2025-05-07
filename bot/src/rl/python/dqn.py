@@ -10,12 +10,15 @@ class DqnModel(nnx.Module):
     intermediateSize = 512
     key = rngs.params()
     self.linear1 = nnx.Linear(inSize, intermediateSize, rngs=rngs)
-    self.linear2 = nnx.Linear(intermediateSize, outSize, rngs=rngs)
+    self.linear2 = nnx.Linear(intermediateSize, intermediateSize, rngs=rngs)
+    self.linear3 = nnx.Linear(intermediateSize, outSize, rngs=rngs)
 
   def __call__(self, x):
     x = self.linear1(x)
     x = jax.nn.relu(x)
     x = self.linear2(x)
+    x = jax.nn.relu(x)
+    x = self.linear3(x)
     return x
 
 def printWeights(model):
@@ -177,4 +180,9 @@ def getOptaxAdamWOptimizer(learningRate):
       weight_decay=1e-2,
       mask=isKernel
   )
-  return adamW
+
+  tx = optax.chain(
+    optax.clip_by_global_norm(1.0),
+    adamW
+  )
+  return tx

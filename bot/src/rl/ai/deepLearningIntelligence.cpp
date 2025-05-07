@@ -18,7 +18,7 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
 
   // Update epsilon.
   const float epsilon = getEpsilon();
-  trainingManager_.getJaxInterface().addScalar("Epsilon", epsilon, stepCount_);
+  trainingManager_.getJaxInterface().addScalar("anneal/Epsilon", epsilon, stepCount_);
   ++stepCount_;
 
   if (lastObservations_.size() >= trainingManager_.getObservationStackSize()) {

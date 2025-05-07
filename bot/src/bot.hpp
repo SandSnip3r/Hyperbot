@@ -91,8 +91,8 @@ private:
   void handleEntityDespawned(const event::EntityDespawned &event);
 
   // Misc
-  void handleKnockbackStunEnded();
-  void handleKnockdownStunEnded();
+  void handleKnockbackStunEnded(const event::KnockbackStunEnded &event);
+  void handleKnockdownStunEnded(const event::KnockdownStunEnded &event);
   void setCurrentPositionAsTrainingCenter();
   void handleLearnedSkill(const event::LearnSkillSuccess &event);
 

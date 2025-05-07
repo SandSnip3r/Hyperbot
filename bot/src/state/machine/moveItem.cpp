@@ -21,15 +21,15 @@ MoveItem::~MoveItem() {}
 
 Status MoveItem::onUpdate(const event::Event *event) {
   if (!initialized_) {
-    CHAR_LOG(INFO) << absl::StreamFormat("MoveItem: Moving item from %s-%d to %s-%d", toString(source_.storage), source_.slotNum, toString(destination_.storage), destination_.slotNum);
+    CHAR_VLOG(1) << absl::StreamFormat("MoveItem: Moving item from %s-%d to %s-%d", toString(source_.storage), source_.slotNum, toString(destination_.storage), destination_.slotNum);
     initialized_ = true;
   }
   if (event != nullptr) {
-    if (const auto *itemMovedEvent = reinterpret_cast<const event::ItemMoved*>(event)) {
+    if (const auto *itemMovedEvent = dynamic_cast<const event::ItemMoved*>(event); itemMovedEvent != nullptr) {
       if (itemMovedEvent->globalId == bot_.selfState()->globalId) {
         if (itemMovedEvent->source && *itemMovedEvent->source == source_) {
           // The target item moved
-          CHAR_LOG(INFO) << absl::StreamFormat("Item moved from %s-%d to %s-%d", toString(source_.storage), source_.slotNum, toString(destination_.storage), destination_.slotNum);
+          CHAR_VLOG(1) << absl::StreamFormat("Item moved from %s-%d to %s-%d", toString(source_.storage), source_.slotNum, toString(destination_.storage), destination_.slotNum);
           bot_.eventBroker().cancelDelayedEvent(*timeoutEventId_);
           timeoutEventId_.reset();
           if (!itemMovedEvent->destination) {
@@ -45,26 +45,24 @@ Status MoveItem::onUpdate(const event::Event *event) {
           throw std::runtime_error(absl::StrFormat("Some other item %s was moved to our destination slot %d", bot_.gameData().getItemName(bot_.inventory().getItem(destinationSlot)->refItemId), destinationSlot));
         }
       }
-    } else if (const auto *itemMoveFailedEvent = reinterpret_cast<const event::ItemMoveFailed*>(event)) {
+    } else if (const auto *itemMoveFailedEvent = dynamic_cast<const event::ItemMoveFailed*>(event); itemMoveFailedEvent != nullptr) {
       if (itemMoveFailedEvent->globalId == bot_.selfState()->globalId) {
         // Reset and try again.
-        CHAR_LOG(WARNING) << absl::StreamFormat("Item move operation failed with error %d", itemMoveFailedEvent->errorCode);
         bot_.eventBroker().cancelDelayedEvent(*timeoutEventId_);
         timeoutEventId_.reset();
         ++retryCount_;
         if (retryCount_ > kMaxRetries) {
           throw std::runtime_error("Item move operation failed");
         }
-        CHAR_LOG(INFO) << absl::StreamFormat("Retrying... (attempt %d/%d)", retryCount_, kMaxRetries);
+        CHAR_VLOG(1) << absl::StreamFormat("Item move operation failed with error %d. Retrying... (attempt %d/%d)", itemMoveFailedEvent->errorCode, retryCount_, kMaxRetries);
       }
     } else if (event->eventCode == event::EventCode::kTimeout && timeoutEventId_ && *timeoutEventId_ == event->eventId) {
-      CHAR_LOG(WARNING) << "MoveItem: Timeout event received";
       timeoutEventId_.reset();
       ++retryCount_;
       if (retryCount_ > kMaxRetries) {
         throw std::runtime_error("Item move operation failed");
       }
-      CHAR_LOG(INFO) << absl::StreamFormat("Retrying... (attempt %d/%d)", retryCount_, kMaxRetries);
+      CHAR_VLOG(1) << absl::StreamFormat("MoveItem timed out. Retrying... (attempt %d/%d)", retryCount_, kMaxRetries);
     }
   }
 
@@ -97,22 +95,21 @@ Status MoveItem::onUpdate(const event::Event *event) {
   PacketContainer moveItemPacket;
   if (source_.storage == sro::storage::Storage::kInventory && destination_.storage == sro::storage::Storage::kInventory) {
     // Move item within inventory
-    CHAR_LOG(INFO) << absl::StreamFormat("Moving item within inventory from %d to %d", source_.slotNum, destination_.slotNum);
+    CHAR_VLOG(1) << absl::StreamFormat("Moving item within inventory from %d to %d", source_.slotNum, destination_.slotNum);
     moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::withinInventoryPacket(source_.slotNum, destination_.slotNum, /*quantity=*/1);
   } else if (source_.storage == sro::storage::Storage::kInventory && destination_.storage == sro::storage::Storage::kAvatarInventory) {
     // Move item from inventory to avatar
-    CHAR_LOG(INFO) << absl::StreamFormat("Moving item from inventory to avatar from %d to %d", source_.slotNum, destination_.slotNum);
+    CHAR_VLOG(1) << absl::StreamFormat("Moving item from inventory to avatar from %d to %d", source_.slotNum, destination_.slotNum);
     moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::inventoryToAvatarPacket(source_.slotNum, destination_.slotNum);
   } else if (source_.storage == sro::storage::Storage::kAvatarInventory && destination_.storage == sro::storage::Storage::kInventory) {
     // Move item from avatar to inventory
-    CHAR_LOG(INFO) << absl::StreamFormat("Moving item from avatar to inventory from %d to %d", source_.slotNum, destination_.slotNum);
+    CHAR_VLOG(1) << absl::StreamFormat("Moving item from avatar to inventory from %d to %d", source_.slotNum, destination_.slotNum);
     moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::avatarToInventoryPacket(source_.slotNum, destination_.slotNum);
   } else {
     throw std::runtime_error(absl::StrFormat("Unhandled source %s and destination %s", toString(source_.storage), toString(destination_.storage)));
   }
   injectPacket(moveItemPacket, PacketContainer::Direction::kBotToServer);
   timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(1000));
-  CHAR_LOG(INFO) << "Event ID is " << *timeoutEventId_;
   return Status::kNotDone;
 }
 

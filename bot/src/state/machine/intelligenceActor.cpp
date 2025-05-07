@@ -45,6 +45,60 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
     childState_.reset();
   }
 
+  if (event != nullptr) {
+    // There are some events which we want to filter out, as they are not relevant to us.
+    // TODO: Filter more.
+    if (const event::CommandError *commandError = dynamic_cast<const event::CommandError*>(event); commandError != nullptr) {
+      if (commandError->issuingGlobalId != bot_.selfState()->globalId) {
+        // Is someone else's command error, not relevant to us.
+        CHAR_VLOG(2) << "Command error from " << commandError->issuingGlobalId << ", not relevant to us";
+        return Status::kNotDone;
+      }
+    } else if (event->eventCode == event::EventCode::kEntityMovementTimerEnded) {
+      // This is an internal event, even for our own entity. If something movement related results of it, another event will come.
+      CHAR_VLOG(2) << "Entity movement timer ended, not relevant to us";
+      return Status::kNotDone;
+    } else if (const event::ItemUseFailed *itemUseFailed = dynamic_cast<const event::ItemUseFailed*>(event); itemUseFailed != nullptr) {
+      if (itemUseFailed->globalId != bot_.selfState()->globalId) {
+        // Is someone else's item use failed, not relevant to us.
+        CHAR_VLOG(2) << "Item use failed for " << itemUseFailed->globalId << ", not relevant to us";
+        return Status::kNotDone;
+      }
+    } else if (event->eventCode == event::EventCode::kTimeout) {
+      // Currently, agents do not create timeout events. They are typically used by tradition state machines.
+      CHAR_VLOG(2) << "Timeout event, not relevant to us";
+      return Status::kNotDone;
+    } else if (const event::SkillCooldownEnded *skillCooldownEnded = dynamic_cast<const event::SkillCooldownEnded*>(event); skillCooldownEnded != nullptr) {
+      if (skillCooldownEnded->globalId != bot_.selfState()->globalId) {
+        // We do not want to have visibility into other agents' skill cooldowns.
+        CHAR_VLOG(2) << "Skill cooldown ended for " << skillCooldownEnded->globalId << ", not relevant to us";
+        return Status::kNotDone;
+      }
+    } else if (const event::ItemUseSuccess *itemUseSuccess = dynamic_cast<const event::ItemUseSuccess*>(event); itemUseSuccess != nullptr) {
+      if (itemUseSuccess->globalId != bot_.selfState()->globalId) {
+        // Is someone else's item use success, not relevant to us.
+        CHAR_VLOG(2) << "Item use success for " << itemUseSuccess->globalId << ", not relevant to us";
+        return Status::kNotDone;
+      }
+    } else if (const event::ItemCooldownEnded *itemCooldownEnded = dynamic_cast<const event::ItemCooldownEnded*>(event); itemCooldownEnded != nullptr) {
+      if (itemCooldownEnded->globalId != bot_.selfState()->globalId) {
+        // Is someone else's item cooldown ended, not relevant to us.
+        CHAR_VLOG(2) << "Item cooldown ended for " << itemCooldownEnded->globalId << ", not relevant to us";
+        return Status::kNotDone;
+      }
+    } else if (const event::ItemMoved *itemMoved = dynamic_cast<const event::ItemMoved*>(event); itemMoved != nullptr) {
+      if (itemMoved->globalId != bot_.selfState()->globalId) {
+        // Is someone else's item moved, not relevant to us.
+        CHAR_VLOG(2) << "Item moved for " << itemMoved->globalId << ", not relevant to us";
+        return Status::kNotDone;
+      }
+    } else if (event->eventCode == event::EventCode::kCommandSkipped) {
+      // Commands being skipped are not useful for us.
+      CHAR_VLOG(2) << "Command skipped, not useful to us";
+      return Status::kNotDone;
+    }
+  }
+
   const rl::Observation observation = buildObservation(bot_, event, opponentGlobalId_);
 
   // Check if this is a terminal state.

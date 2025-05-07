@@ -8,6 +8,7 @@
 #include "packet/opcode.hpp"
 #include "type_id/categories.hpp"
 
+#include <silkroad_lib/game_constants.hpp>
 #include <silkroad_lib/position.hpp>
 #include <silkroad_lib/position_math.hpp>
 
@@ -754,7 +755,7 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
         packet.errorCode() != packet::enums::InventoryErrorCode::kItemDoesNotExist) {
       LOG(INFO) << "Unknown error while trying to use an item: " << static_cast<int>(packet.errorCode());
     }
-    eventBroker_.publishEvent<event::ItemUseFailed>(packet.slotNum(), packet.typeData(), packet.errorCode());
+    eventBroker_.publishEvent<event::ItemUseFailed>(selfEntity_->globalId, packet.slotNum(), packet.typeData(), packet.errorCode());
     return;
   }
   // Successfully used an item
@@ -1286,7 +1287,7 @@ void PacketProcessor::serverAgentInventoryUpdateDurabilityReceived(const packet:
   }
   // Update item's durability
   itemAsEquip->durability = packet.durability();
-  eventBroker_.publishEvent<event::InventoryItemUpdated>(packet.slotIndex());
+  eventBroker_.publishEvent<event::InventoryItemUpdated>(selfEntity_->globalId, sro::storage::Position(sro::storage::Storage::kInventory, packet.slotIndex()));
 }
 
 void PacketProcessor::serverAgentInventoryUpdateItemReceived(const packet::parsing::ServerAgentInventoryUpdateItem &packet) const {
@@ -1856,9 +1857,6 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
         if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKill)) {
           // Effectively killed it, but I don't know if it makes sense to change the life state right now
           character->setCurrentHp(0);
-          if (casterGlobalId && selfEntity_ && *casterGlobalId == selfEntity_->globalId) {
-            eventBroker_.publishEvent<event::KilledEntity>(hitObject.targetGlobalId);
-          }
         } else {
           if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
             VLOG(1) << "      Entity has been knocked down";
@@ -1890,23 +1888,21 @@ void PacketProcessor::handleSkillAction(const packet::structures::SkillAction &a
             // We are the target
             bool knockedBackOrKnockedDown{false};
             if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockback)) {
-              constexpr const int kKnockbackStunDuration{2000};
-              VLOG(1) << "      We were knocked back " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockbackStunDuration << "ms";
+              VLOG(1) << "      We were knocked back " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << sro::game_constants::kKnockbackStunDuration.count() << "ms";
               selfEntity_->stunnedFromKnockback = true;
               knockedBackOrKnockedDown = true;
               // Publish knocked back event
-              eventBroker_.publishEvent(event::EventCode::kKnockedBack);
+              eventBroker_.publishEvent<event::KnockedBack>(selfEntity_->globalId);
               // Publish delayed knocked back stun completed event
-              eventBroker_.publishDelayedEvent(event::EventCode::kKnockbackStunEnded, std::chrono::milliseconds(kKnockbackStunDuration));
+              eventBroker_.publishDelayedEvent<event::KnockbackStunEnded>(sro::game_constants::kKnockbackStunDuration, selfEntity_->globalId);
             } else if (flags::isSet(hitResult.hitResultFlag, packet::enums::HitResult::kKnockdown)) {
-              constexpr const int kKnockdownStunDuration{6000};
-              VLOG(1) << "      We were knocked down " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << kKnockdownStunDuration << "ms";
+              VLOG(1) << "      We were knocked down " << static_cast<int>(hitResult.hitResultFlag) << ", sending stun delayed event " << sro::game_constants::kKnockdownStunDuration.count() << "ms";
               selfEntity_->stunnedFromKnockdown = true;
               knockedBackOrKnockedDown = true;
               // Publish knocked down event
-              eventBroker_.publishEvent(event::EventCode::kKnockedDown);
+              eventBroker_.publishEvent<event::KnockedDown>(selfEntity_->globalId);
               // Publish delayed knocked down stun completed event
-              eventBroker_.publishDelayedEvent(event::EventCode::kKnockdownStunEnded, std::chrono::milliseconds(kKnockdownStunDuration));
+              eventBroker_.publishDelayedEvent<event::KnockdownStunEnded>(sro::game_constants::kKnockdownStunDuration, selfEntity_->globalId);
             }
             if (knockedBackOrKnockedDown) {
               // Whatever commands we had queued should probably be cleared

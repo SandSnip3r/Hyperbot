@@ -25,9 +25,8 @@ public:
 
   // --- Configuration ---
   // alpha: How much prioritization to use (0=uniform, 1=full priority)
-  // beta: Initial importance sampling exponent (annealed externally, or stays constant)
   // epsilon: Small value added to priorities to ensure non-zero probability
-  ReplayBuffer(size_t capacity, float alpha, float beta, float epsilon);
+  ReplayBuffer(size_t capacity, float alpha, float epsilon);
 
   // Adds a transition and updates PER structures. Buffer must not be full. It is the user's responsibility to delete transitions if the buffer is full before adding new ones.
   TransitionId addTransition(const TransitionType &transition);
@@ -42,7 +41,8 @@ public:
   };
 
   // Samples a batch of transitions based on priority.
-  std::vector<SampleResult> sample(int count, std::mt19937 &rng);
+  // beta: Initial importance sampling exponent (annealed externally, or stays constant)
+  std::vector<SampleResult> sample(int count, std::mt19937 &rng, float beta);
 
   // Updates the priorities of specific transitions after they've been processed.
   void updatePriorities(const std::vector<TransitionId> &ids, const std::vector<float> &priorities);
@@ -54,7 +54,6 @@ private:
   // --- Configuration ---
   const size_t capacity_;
   const float alpha_;
-  const float beta_;
   const float epsilon_;
 
   // --- PER Data Structures ---

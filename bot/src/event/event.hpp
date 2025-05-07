@@ -145,7 +145,8 @@ public:
 
 struct ItemUseFailed : public Event {
 public:
-  ItemUseFailed(EventId id, uint8_t slotNum, type_id::TypeId typeId, packet::enums::InventoryErrorCode reason_param);
+  ItemUseFailed(EventId id, sro::scalar_types::EntityGlobalId globalId, uint8_t slotNum, type_id::TypeId typeId, packet::enums::InventoryErrorCode reason_param);
+  sro::scalar_types::EntityGlobalId globalId;
   uint8_t inventorySlotNum;
   type_id::TypeId itemTypeId;
   packet::enums::InventoryErrorCode reason;
@@ -261,6 +262,34 @@ public:
   virtual ~EntityExitedGeometry() = default;
 };
 
+struct KnockedBack : public Event {
+public:
+  KnockedBack(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~KnockedBack() = default;
+};
+
+struct KnockedDown : public Event {
+public:
+  KnockedDown(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~KnockedDown() = default;
+};
+
+struct KnockbackStunEnded : public Event {
+public:
+  KnockbackStunEnded(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~KnockbackStunEnded() = default;
+};
+
+struct KnockdownStunEnded : public Event {
+public:
+  KnockdownStunEnded(EventId id, sro::scalar_types::EntityGlobalId globalId);
+  const sro::scalar_types::EntityGlobalId globalId;
+  virtual ~KnockdownStunEnded() = default;
+};
+
 struct SkillBegan : public Event {
 public:
   SkillBegan(EventId id, sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId);
@@ -284,13 +313,6 @@ public:
   const sro::scalar_types::EntityGlobalId targetId;
   const uint32_t damageAmount;
   virtual ~DealtDamage() = default;
-};
-
-struct KilledEntity : public Event {
-public:
-  KilledEntity(EventId id, sro::scalar_types::EntityGlobalId targetId);
-  const sro::scalar_types::EntityGlobalId targetId;
-  virtual ~KilledEntity() = default;
 };
 
 struct SkillFailed : public Event {
@@ -401,8 +423,9 @@ public:
 
 struct InventoryItemUpdated : public Event {
 public:
-  InventoryItemUpdated(EventId id, const uint8_t &slot);
-  const uint8_t slotIndex;
+  InventoryItemUpdated(EventId id, sro::scalar_types::EntityGlobalId globalId, const sro::storage::Position &position);
+  const sro::scalar_types::EntityGlobalId globalId;
+  const sro::storage::Position position;
   virtual ~InventoryItemUpdated() = default;
 };
 

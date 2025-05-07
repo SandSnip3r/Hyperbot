@@ -189,4 +189,61 @@ std::ostream& operator<<(std::ostream &stream, const AbnormalStateFlag &enumVal)
   return stream;
 }
 
+std::string toString(AbnormalStateFlag flag) {
+  switch (flag) {
+    case AbnormalStateFlag::kNone:
+      return "None";
+    case AbnormalStateFlag::kFrozen:
+      return "Frozen";
+    case AbnormalStateFlag::kFrostbitten:
+      return "Frostbitten";
+    case AbnormalStateFlag::kShocked:
+      return "Shocked";
+    case AbnormalStateFlag::kBurnt:
+      return "Burnt";
+    case AbnormalStateFlag::kPoisoned:
+      return "Poisoned";
+    case AbnormalStateFlag::kZombie:
+      return "Zombie";
+    case AbnormalStateFlag::kSleep:
+      return "Sleep";
+    case AbnormalStateFlag::kBind:
+      return "Bind";
+    case AbnormalStateFlag::kDull:
+      return "Dull";
+    case AbnormalStateFlag::kFear:
+      return "Fear";
+    case AbnormalStateFlag::kShortSighted:
+      return "ShortSighted";
+    case AbnormalStateFlag::kBleed:
+      return "Bleed";
+    case AbnormalStateFlag::kPetrify:
+      return "Petrify";
+    case AbnormalStateFlag::kDarkness:
+      return "Darkness";
+    case AbnormalStateFlag::kStunned:
+      return "Stunned";
+    case AbnormalStateFlag::kDisease:
+      return "Disease";
+    case AbnormalStateFlag::kConfusion:
+      return "Confusion";
+    case AbnormalStateFlag::kDecay:
+      return "Decay";
+    case AbnormalStateFlag::kImpotent:
+      return "Impotent";
+    case AbnormalStateFlag::kDivision:
+      return "Division";
+    case AbnormalStateFlag::kPanic:
+      return "Panic";
+    case AbnormalStateFlag::kCombustion:
+      return "Combustion";
+    case AbnormalStateFlag::kEmptyBit23:
+      return "EmptyBit23";
+    case AbnormalStateFlag::kHidden:
+      return "Hidden";
+    default:
+      return "UNKNOWN";
+  }
+}
+
 } // namespace packet::enums

@@ -42,7 +42,7 @@
 - Maybe use a more functional approach using JAX for training so that we dont need to lock mutexes for the models in JaxInterface
 - In the UI, when sending requests, poll for reply rather than block on it. If polling fails, Hyperbot might've died immediately after our send. We should reset the socket and exit.
 - ClientManagerInterface will be blocked on sending a heartbeat if the client manager is not running. If something else in the bot crashes, ClientManagerInterface cannot shut down. We should probably poll on recv and reconstruct the socket if it fails.
-- Plot cumulative episode return
 - Display state machine trees in UI
 - Prevent any user input while pvping
-- Implement periodic checkpointing in case of crashes
+- Figure out how the client knows about the remaining buff duration when a character spawns. Currently, the parsing of the spawn packet does not contain a cast time.
+- Add debuffs to Observation

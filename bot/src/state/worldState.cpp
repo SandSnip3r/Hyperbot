@@ -58,7 +58,7 @@ void WorldState::addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar
   std::shared_ptr<entity::Entity> entity = getEntity(globalId);
   if (auto *character = dynamic_cast<entity::Character*>(entity.get())) {
     if (dynamic_cast<const entity::PlayerCharacter*>(entity.get()) == nullptr) {
-      VLOG(1) << "Handling a buff for a non-player character; it is a " << entity::toString(entity->entityType());
+      VLOG(1) << "Handling a buff for a non-player character; it is a " << toString(entity->entityType());
     }
     buffTokenToEntityAndSkillIdMap_.emplace(std::piecewise_construct, std::forward_as_tuple(tokenId), std::forward_as_tuple(globalId, skillRefId));
     character->addBuff(skillRefId, tokenId, castTime);

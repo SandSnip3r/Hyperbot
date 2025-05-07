@@ -59,12 +59,15 @@ private:
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
   static constexpr int kReplayBufferCapacity{1'000'000};
-  static constexpr int kTargetNetworkUpdateInterval{10'000};
+  static constexpr int kTargetNetworkUpdateInterval{20'000};
   static constexpr int kTrainStepCheckpointInterval{10'000};
   static constexpr float kTargetNetworkPolyakTau{0.0005f};
   static constexpr bool kUsePolyakTargetNetworkUpdate{false};
-  static constexpr float kGamma{0.99f};
-  static constexpr float kLearningRate{3e-6f};
+  static constexpr float kGamma{0.9975f};
+  static constexpr float kLearningRate{1e-6f};
+  static constexpr float kPerBetaStart{0.4f};
+  static constexpr float kPerBetaEnd{1.0f};
+  static constexpr int kPerTrainStepCountAnneal{150'000};
 
   std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;
@@ -86,10 +89,16 @@ private:
   // Sample collection rate tracking
   int sampleCount_{0};
   std::chrono::high_resolution_clock::time_point lastSampleTime_{std::chrono::high_resolution_clock::now()};
+  static constexpr std::chrono::milliseconds kSampleRateReportInterval{2000};
+
+  // Replay buffer size tracking
+  std::chrono::high_resolution_clock::time_point lastReplayBufferSizeUpdateTime_{std::chrono::high_resolution_clock::now()};
+  static constexpr std::chrono::milliseconds kReplayBufferSizeUpdateInterval{5000};
 
   // Training rate tracking
   int trainingCount_{0};
   std::chrono::high_resolution_clock::time_point lastTrainingTime_{std::chrono::high_resolution_clock::now()};
+  static constexpr std::chrono::milliseconds kTrainRateReportInterval{2000};
 
   void setUpIntelligencePool();
 
@@ -106,7 +115,7 @@ private:
 
   ObservationAndActionStorage observationAndActionStorage_{kReplayBufferCapacity};
   using ReplayBufferType = ReplayBuffer<ObservationAndActionStorage::Id>;
-  ReplayBufferType replayBuffer_{kReplayBufferCapacity, /*alpha=*/0.6f, /*beta=*/0.8f, /*epsilon=*/1e-5f};
+  ReplayBufferType replayBuffer_{kReplayBufferCapacity, /*alpha=*/0.6f, /*epsilon=*/1e-5f};
   absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> observationIdToTransitionIdMap_;
   absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> transitionIdToObservationIdMap_;
   mutable std::mutex observationTransitionIdMapMutex_;

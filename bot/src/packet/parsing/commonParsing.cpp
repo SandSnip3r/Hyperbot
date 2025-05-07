@@ -499,7 +499,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
     for (int i=0; i<buffCount; ++i) {
       sro::scalar_types::ReferenceSkillId skillRefId = stream.Read<sro::scalar_types::ReferenceSkillId>();
       sro::scalar_types::BuffTokenType token = stream.Read<sro::scalar_types::BuffTokenType>();
-      characterPtr->addBuff(skillRefId, token);
+      characterPtr->addBuff(skillRefId, token, std::nullopt);
       if (!skillData.haveSkillWithId(skillRefId)) {
         throw std::runtime_error(absl::StrFormat("Parsing ServerAgentGroupSpawn, found buff (%d) which we have no data on", skillRefId));
       }

@@ -122,7 +122,7 @@ void Bot::handleEvent(const event::Event *event) {
   ZoneScopedN("Bot::handleEvent");
   if (event->eventCode == event::EventCode::kInternalItemCooldownEnded ||
       event->eventCode == event::EventCode::kInternalSkillCooldownEnded) {
-    // We have no business handling "internal" events.
+    // We have no business handling "internal" events. They are currently handled by the entity itself.
     return;
   }
   std::unique_lock worldStateLock(worldState_.mutex);
@@ -176,11 +176,13 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
       case event::EventCode::kKnockbackStunEnded: {
-        handleKnockbackStunEnded();
+        const event::KnockbackStunEnded &castedEvent = dynamic_cast<const event::KnockbackStunEnded&>(*event);
+        handleKnockbackStunEnded(castedEvent);
         break;
       }
       case event::EventCode::kKnockdownStunEnded: {
-        handleKnockdownStunEnded();
+        const event::KnockdownStunEnded &castedEvent = dynamic_cast<const event::KnockdownStunEnded&>(*event);
+        handleKnockdownStunEnded(castedEvent);
         break;
       }
 
@@ -197,10 +199,6 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kLearnSkillSuccess: {
         const auto &castedEvent = dynamic_cast<const event::LearnSkillSuccess&>(*event);
         handleLearnedSkill(castedEvent);
-        break;
-      }
-      case event::EventCode::kTimeout: {
-        LOG(INFO) << absl::StreamFormat("[%s] Timeout event %d received", selfEntity_->name, event->eventId);
         break;
       }
       default:
@@ -394,22 +392,18 @@ void Bot::handleEntityDespawned(const event::EntityDespawned &event) {
 // ============================================================Misc============================================================
 // ============================================================================================================================
 
-void Bot::handleKnockbackStunEnded() {
+void Bot::handleKnockbackStunEnded(const event::KnockbackStunEnded &event) {
   std::shared_ptr<entity::Self> selfEntity = selfState();
-  if (!selfEntity) {
-    LOG(WARNING) << "Knockback stun ended, but self is not spawned";
-    return;
+  if (selfEntity && selfEntity->globalId == event.globalId) {
+    selfEntity->stunnedFromKnockback = false;
   }
-  selfEntity->stunnedFromKnockback = false;
 }
 
-void Bot::handleKnockdownStunEnded() {
+void Bot::handleKnockdownStunEnded(const event::KnockdownStunEnded &event) {
   std::shared_ptr<entity::Self> selfEntity = selfState();
-  if (!selfEntity) {
-    LOG(WARNING) << "Knockdown stun ended, but self is not spawned";
-    return;
+  if (selfEntity && selfEntity->globalId == event.globalId) {
+    selfEntity->stunnedFromKnockdown = false;
   }
-  selfEntity->stunnedFromKnockdown = false;
 }
 
 void Bot::setCurrentPositionAsTrainingCenter() {

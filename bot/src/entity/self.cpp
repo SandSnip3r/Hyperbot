@@ -1,4 +1,5 @@
 #include "helpers.hpp"
+#include "packet/enums/packetEnums.hpp"
 #include "self.hpp"
 #include "state/worldState.hpp"
 #include "type_id/categories.hpp"
@@ -408,20 +409,20 @@ void Self::setStateBitmask(uint32_t stateBitmask) {
 }
 
 void Self::setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect) {
-  const auto index = helpers::toBitNum(flag);
-  legacyStateEffects_[index] = effect;
+  const int index = helpers::toBitNum(flag);
+  legacyStateEffects_.at(index) = effect;
 }
 
 void Self::setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level) {
-  const auto index = helpers::toBitNum(flag);
-  modernStateLevels_[index] = level;
+  const int index = helpers::toBitNum(flag);
+  modernStateLevels_.at(index) = level;
 }
 
 void Self::setMasteriesAndSkills(const std::vector<packet::structures::Mastery> &masteries,
                                  const std::vector<packet::structures::Skill> &skills) {
   masteries_ = masteries;
   skills_ = skills;
-  for (const auto &skill : skills_) {
+  for (const packet::structures::Skill &skill : skills_) {
     if (!skill.enabled) {
       LOG(WARNING) << absl::StreamFormat("Received a skill (%d) which is not enabled", skill.id);
     }

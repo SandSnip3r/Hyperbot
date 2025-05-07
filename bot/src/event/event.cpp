@@ -52,8 +52,8 @@ ItemMoveFailed::ItemMoveFailed(EventId id, sro::scalar_types::EntityGlobalId glo
 ItemUseSuccess::ItemUseSuccess(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::StorageIndexType slotNum, sro::scalar_types::ReferenceObjectId refId) :
     Event(id, EventCode::kItemUseSuccess), globalId(globalId), slotNum(slotNum), refId(refId) {}
 
-ItemUseFailed::ItemUseFailed(EventId id, uint8_t slotNum, type_id::TypeId typeId, packet::enums::InventoryErrorCode reason_param) :
-    Event(id, EventCode::kItemUseFailed), inventorySlotNum(slotNum), itemTypeId(typeId), reason(reason_param) {}
+ItemUseFailed::ItemUseFailed(EventId id, sro::scalar_types::EntityGlobalId globalId, uint8_t slotNum, type_id::TypeId typeId, packet::enums::InventoryErrorCode reason_param) :
+    Event(id, EventCode::kItemUseFailed), globalId(globalId), inventorySlotNum(slotNum), itemTypeId(typeId), reason(reason_param) {}
 
 ItemUseTimeout::ItemUseTimeout(EventId id, uint8_t slot, type_id::TypeId tid) :
     Event(id, EventCode::kItemUseTimeout), slotNum(slot), typeData(tid) {}
@@ -100,6 +100,18 @@ EntityEnteredGeometry::EntityEnteredGeometry(EventId id, sro::scalar_types::Enti
 EntityExitedGeometry::EntityExitedGeometry(EventId id, sro::scalar_types::EntityGlobalId globalId) :
     Event(id, EventCode::kEntityExitedGeometry), globalId(globalId) {}
 
+KnockedBack::KnockedBack(EventId id, sro::scalar_types::EntityGlobalId globalId) :
+    Event(id, EventCode::kKnockedBack), globalId(globalId) {}
+
+KnockedDown::KnockedDown(EventId id, sro::scalar_types::EntityGlobalId globalId) :
+    Event(id, EventCode::kKnockedDown), globalId(globalId) {}
+
+KnockbackStunEnded::KnockbackStunEnded(EventId id, sro::scalar_types::EntityGlobalId globalId) :
+    Event(id, EventCode::kKnockbackStunEnded), globalId(globalId) {}
+
+KnockdownStunEnded::KnockdownStunEnded(EventId id, sro::scalar_types::EntityGlobalId globalId) :
+    Event(id, EventCode::kKnockdownStunEnded), globalId(globalId) {}
+
 SkillBegan::SkillBegan(EventId id, sro::scalar_types::EntityGlobalId casterId, sro::scalar_types::ReferenceObjectId skillId) :
     Event(id, EventCode::kSkillBegan), casterGlobalId(casterId), skillRefId(skillId) {}
 
@@ -108,9 +120,6 @@ SkillEnded::SkillEnded(EventId id, sro::scalar_types::EntityGlobalId casterId, s
 
 DealtDamage::DealtDamage(EventId id, sro::scalar_types::EntityGlobalId sourceId, sro::scalar_types::EntityGlobalId targetId, uint32_t damageAmount) :
     Event(id, EventCode::kDealtDamage), sourceId(sourceId), targetId(targetId), damageAmount(damageAmount) {}
-
-KilledEntity::KilledEntity(EventId id, sro::scalar_types::EntityGlobalId targetId) :
-    Event(id, EventCode::kKilledEntity), targetId(targetId) {}
 
 SkillFailed::SkillFailed(EventId id, sro::scalar_types::EntityGlobalId casterGlobalId, sro::scalar_types::ReferenceSkillId skillId, uint16_t err) :
     Event(id, EventCode::kSkillFailed), casterGlobalId(casterGlobalId), skillRefId(skillId), errorCode(err) {}
@@ -154,8 +163,8 @@ ItemCooldownEnded::ItemCooldownEnded(EventId eventId, sro::scalar_types::EntityG
 WalkingPathUpdated::WalkingPathUpdated(EventId id, const std::vector<packet::building::NetworkReadyPosition> &waypoints) :
     Event(id, EventCode::kWalkingPathUpdated), waypoints(waypoints) {}
 
-InventoryItemUpdated::InventoryItemUpdated(EventId id, const uint8_t &slot) :
-    Event(id, EventCode::kInventoryItemUpdated), slotIndex(slot) {}
+InventoryItemUpdated::InventoryItemUpdated(EventId id, sro::scalar_types::EntityGlobalId globalId, const sro::storage::Position &position) :
+    Event(id, EventCode::kInventoryItemUpdated), globalId(globalId), position(position) {}
 
 ChatReceived::ChatReceived(EventId id, packet::enums::ChatType type, sro::scalar_types::EntityGlobalId senderGlobalId, const std::string &msg) :
     Event(id, EventCode::kChatReceived), chatType(type), sender(senderGlobalId), message(msg) {}

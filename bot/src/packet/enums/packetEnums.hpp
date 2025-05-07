@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <ostream>
 #include <type_traits>
+#include <string>
 
 namespace flags {
 
@@ -496,6 +497,8 @@ std::ostream& operator<<(std::ostream &stream, const CommandType &enumVal);
 std::ostream& operator<<(std::ostream &stream, const ActionType &enumVal);
 std::ostream& operator<<(std::ostream &stream, const TargetType &enumVal);
 std::ostream& operator<<(std::ostream &stream, const AbnormalStateFlag &enumVal);
+
+std::string toString(AbnormalStateFlag flag);
 
 } // namespace packet::enums
 

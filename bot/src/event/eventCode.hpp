@@ -49,7 +49,6 @@
   F(SkillBegan) \
   F(SkillEnded) \
   F(DealtDamage) \
-  F(KilledEntity) \
   F(SkillFailed) \
   F(PlayerCharacterBuffAdded) \
   F(PlayerCharacterBuffRemoved) \

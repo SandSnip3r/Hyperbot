@@ -50,7 +50,7 @@ public:
 
   void addScalar(std::string_view name, double yValue, double xValue);
 private:
-  static constexpr int kActionSpaceSize{36}; // TODO: If changed, also change rl::ActionBuilder
+  static constexpr int kActionSpaceSize{35}; // TODO: If changed, also change rl::ActionBuilder
   static constexpr int kSeed{0};
 
   // Store gamma and learning rate as member variables
@@ -82,9 +82,17 @@ private:
   pybind11::object observationStackToNumpy(int stackSize, const std::vector<Observation> &observationStack);
   pybind11::object observationsToNumpy(const std::vector<Observation> &observations);
   pybind11::object observationStacksToNumpy(int stackSize, const std::vector<std::vector<Observation>> &observationStacks);
+
+  // Note, this also works with a default constructed observation.
   size_t getObservationNumpySize(const Observation &observation) const;
+
   void writeEmptyObservationToNumpyArray(int observationSize, float *array);
-  void writeObservationToNumpyArray(const Observation &observation, float *array);
+
+  // Returns the number of floats written to the array.
+  size_t writeObservationToRawArray(const Observation &observation, float *array);
+
+  size_t writeOneHotEvent(event::EventCode eventCode, float *array);
+
   pybind11::object createActionMask(bool canSendPacket);
 };
 

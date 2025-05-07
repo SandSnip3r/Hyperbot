@@ -21,10 +21,10 @@ Status MaybeRemoveAvatarEquipment::onUpdate(const event::Event *event) {
     const Status status = childState_->onUpdate(event);
     if (status == Status::kDone) {
       // Child state is done
-      CHAR_LOG(INFO) << absl::StreamFormat("Child state is done");
+      CHAR_VLOG(2) << absl::StreamFormat("Child state is done");
       childState_.reset();
       if (unequipping_) {
-        CHAR_LOG(INFO) << "Was unequipping, now maybe need to move item to target slot";
+        CHAR_VLOG(2) << "Was unequipping, now maybe need to move item to target slot";
         unequipping_ = false;
         const sro::scalar_types::StorageIndexType targetSlot = targetSlot_(bot_);
         if (intermediateSlot_ == targetSlot) {
@@ -32,13 +32,13 @@ Status MaybeRemoveAvatarEquipment::onUpdate(const event::Event *event) {
           return Status::kDone;
         } else {
           // Now need to do one more move to the target slot.
-          CHAR_LOG(INFO) << absl::StreamFormat("Moving item from intermediate slot %d to target slot %d", intermediateSlot_, targetSlot);
+          CHAR_VLOG(1) << absl::StreamFormat("Moving item from intermediate slot %d to target slot %d", intermediateSlot_, targetSlot);
           setChildStateMachine<MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, intermediateSlot_),
                                          sro::storage::Position(sro::storage::Storage::kInventory, targetSlot));
           return onUpdate(event);
         }
       } else {
-        CHAR_LOG(INFO) << "Was final move, all done";
+        CHAR_VLOG(2) << "Was final move, all done";
         return Status::kDone;
       }
       throw std::runtime_error("Logic check. Should not be able to get here.");
@@ -49,7 +49,7 @@ Status MaybeRemoveAvatarEquipment::onUpdate(const event::Event *event) {
   // Check if there is an item in the avatar slot.
   if (!bot_.selfState()->avatarInventory.hasItem(avatarSlot_)) {
     // No item.
-    CHAR_LOG(INFO) << absl::StreamFormat("No avatar item equipped in pos %d", avatarSlot_);
+    CHAR_VLOG(1) << absl::StreamFormat("No avatar item equipped in pos %d", avatarSlot_);
     return Status::kDone;
   }
 
@@ -60,7 +60,7 @@ Status MaybeRemoveAvatarEquipment::onUpdate(const event::Event *event) {
     throw std::runtime_error(absl::StrFormat("No free slot in inventory"));
   }
   intermediateSlot_ = *firstFreeSlot;
-  CHAR_LOG(INFO) << absl::StreamFormat("Constructing state machine to move item from avatar inventory %d to inventory %d", avatarSlot_, intermediateSlot_);
+  CHAR_VLOG(1) << absl::StreamFormat("Constructing state machine to move item from avatar inventory %d to inventory %d", avatarSlot_, intermediateSlot_);
   setChildStateMachine<MoveItem>(sro::storage::Position(sro::storage::Storage::kAvatarInventory, avatarSlot_),
                                  sro::storage::Position(sro::storage::Storage::kInventory, intermediateSlot_));
   unequipping_ = true;

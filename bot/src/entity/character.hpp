@@ -37,7 +37,10 @@ public:
   std::set<sro::scalar_types::ReferenceSkillId> activeBuffs() const;
   bool buffIsActive(sro::scalar_types::ReferenceSkillId skillRefId) const;
   std::optional<BuffData::ClockType::time_point> buffCastTime(sro::scalar_types::ReferenceSkillId skillRefId) const;
-  void addBuff(sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::BuffTokenType tokenId, std::optional<BuffData::ClockType::time_point> castTime = std::nullopt);
+
+  // When parsing a character spawned packet, no cast time is given.
+  void addBuff(sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::BuffTokenType tokenId, std::optional<BuffData::ClockType::time_point> castTime);
+
   void removeBuff(sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::BuffTokenType tokenId);
   void clearBuffs();
   EntityType entityType() const override { return EntityType::kCharacter; }

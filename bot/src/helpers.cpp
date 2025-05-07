@@ -49,7 +49,24 @@ void printItem(uint8_t slot, const storage::Item *item, const pk2::GameData &gam
 }
 
 int toBitNum(packet::enums::AbnormalStateFlag stateFlag) {
-  uint32_t num = static_cast<uint32_t>(stateFlag);
+  const uint32_t num = static_cast<uint32_t>(stateFlag);
+  {
+    // Check that exactly one bit is set.
+    uint32_t tmp = num;
+    if (tmp == 0) {
+      throw std::runtime_error("No bit is set.");
+    }
+    while (tmp != 0) {
+      if (tmp & 1) {
+        // Found a bit, check if there are more.
+        if ((tmp>>1) > 0) {
+          throw std::runtime_error("Multiple bits are set.");
+        }
+        break;
+      }
+      tmp >>= 1;
+    }
+  }
   for (uint32_t i=0; i<32; ++i) {
     if (num & (1<<i)) {
       return i;

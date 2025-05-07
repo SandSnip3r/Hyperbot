@@ -1,16 +1,12 @@
 template<typename TransitionType>
-ReplayBuffer<TransitionType>::ReplayBuffer(size_t capacity, float alpha, float beta, float epsilon)
+ReplayBuffer<TransitionType>::ReplayBuffer(size_t capacity, float alpha, float epsilon)
       : capacity_(capacity),
         alpha_(alpha),
-        beta_(beta),
         epsilon_(epsilon),
         sumTree_(2 * capacity - 1, 0.0f)
 {
   if (alpha_ < 0.0f || alpha_ > 1.0f) {
     throw std::invalid_argument("Alpha must be in the range [0, 1].");
-  }
-  if (beta_ < 0.0f || beta_ > 1.0f) {
-    throw std::invalid_argument("Beta must be in the range [0, 1].");
   }
   if (epsilon_ < 0.0f) {
     throw std::invalid_argument("Epsilon must be non-negative.");
@@ -62,7 +58,7 @@ void ReplayBuffer<TransitionType>::deleteTransition(TransitionId id) {
 }
 
 template<typename TransitionType>
-std::vector<typename ReplayBuffer<TransitionType>::SampleResult> ReplayBuffer<TransitionType>::sample(int count, std::mt19937 &rng) {
+std::vector<typename ReplayBuffer<TransitionType>::SampleResult> ReplayBuffer<TransitionType>::sample(int count, std::mt19937 &rng, float beta) {
   std::unique_lock lock{replayBufferMutex_};
   if (count > currentBufferSize_) {
     throw std::runtime_error("Not enough transitions in buffer to sample a full batch.");
@@ -94,7 +90,7 @@ std::vector<typename ReplayBuffer<TransitionType>::SampleResult> ReplayBuffer<Tr
 
     // Calculate Importance Sampling (IS) weight: w_i = (N * P(i))^-beta
     // Note: Using currentBufferSize_ as N
-    const float weight = std::pow(static_cast<float>(currentBufferSize_) * samplingProbability, -beta_);
+    const float weight = std::pow(static_cast<float>(currentBufferSize_) * samplingProbability, -beta);
     maxWeight = std::max(maxWeight, weight); // Track max weight for normalization
 
     results.push_back({leafIndexToTransitionId(leafIndex), weight});

@@ -5,10 +5,10 @@
 
 #include <silkroad_lib/scalar_types.hpp>
 
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <string>
-#include <vector>
 
 class Bot;
 
@@ -30,13 +30,19 @@ public:
   uint32_t ourMaxHp_;
   uint32_t ourCurrentMp_;
   uint32_t ourMaxMp_;
+  bool weAreKnockedDown_;
   uint32_t opponentCurrentHp_;
   uint32_t opponentMaxHp_;
   uint32_t opponentCurrentMp_;
   uint32_t opponentMaxMp_;
+  bool opponentIsKnockedDown_;
   int hpPotionCount_;
-  std::vector<int> skillCooldowns_;
-  std::vector<int> itemCooldowns_;
+  std::array<int, 17> remainingTimeOurBuffs_;
+  std::array<int, 17> remainingTimeOpponentBuffs_;
+  std::array<int, 2> remainingTimeOurDebuffs_;
+  std::array<int, 2> remainingTimeOpponentDebuffs_;
+  std::array<int, 32> skillCooldowns_;
+  std::array<int, 3> itemCooldowns_;
 };
 
 } // namespace rl

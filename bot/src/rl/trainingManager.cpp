@@ -71,13 +71,16 @@ void TrainingManager::train() {
         continue;
       }
 
+      const float beta = std::min(kPerBetaEnd, kPerBetaStart + (kPerBetaEnd - kPerBetaStart) * (static_cast<float>(trainStepCount_) / static_cast<float>(kPerTrainStepCountAnneal)));
+      jaxInterface_.addScalar("anneal/Beta", beta, trainStepCount_);
+
       // Sample a batch of transitions from the replay buffer.
-      std::vector<ReplayBufferType::SampleResult> sampleResult = replayBuffer_.sample(kBatchSize, randomEngine);
+      std::vector<ReplayBufferType::SampleResult> sampleResult = replayBuffer_.sample(kBatchSize, randomEngine, beta);
 
       // Track training rate
       const std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
       const std::chrono::high_resolution_clock::duration timeDiff = currentTime - lastTrainingTime_;
-      if (timeDiff > std::chrono::seconds(1)) {
+      if (timeDiff > kTrainRateReportInterval) {
         const float trainingRate = static_cast<float>(trainingCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(timeDiff).count()/1000.0);
         jaxInterface_.addScalar("perf/Training Rate", trainingRate, trainStepCount_);
         trainingCount_ = 0;
@@ -221,12 +224,20 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
     // Track sample collection rate
     sampleCount_++;
     const std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
-    const std::chrono::high_resolution_clock::duration timeDiff = currentTime - lastSampleTime_;
-    if (timeDiff > std::chrono::seconds(1)) {
-      const float sampleRate = static_cast<float>(sampleCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(timeDiff).count()/1000.0);
+    const std::chrono::high_resolution_clock::duration sampleCountTimeDiff = currentTime - lastSampleTime_;
+    if (sampleCountTimeDiff > kSampleRateReportInterval) {
+      const float sampleRate = static_cast<float>(sampleCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(sampleCountTimeDiff).count()/1000.0);
       jaxInterface_.addScalar("perf/Sample Collection Rate", sampleRate, trainStepCount_);
       sampleCount_ = 0;
       lastSampleTime_ = currentTime;
+    }
+
+    // Track replay buffer size
+    const std::chrono::high_resolution_clock::duration replayBufferSizeTimeDiff = currentTime - lastReplayBufferSizeUpdateTime_;
+    if (replayBufferSizeTimeDiff > kReplayBufferSizeUpdateInterval) {
+      const int replayBufferSize = replayBuffer_.size();
+      jaxInterface_.addScalar("perf/Replay Buffer Size", replayBufferSize, trainStepCount_);
+      lastReplayBufferSizeUpdateTime_ = currentTime;
     }
   }
 
@@ -376,6 +387,11 @@ float TrainingManager::calculateReward(const Observation &lastObservation, const
   reward += (static_cast<int64_t>(observation.ourCurrentHp_) - lastObservation.ourCurrentHp_) / static_cast<double>(observation.ourMaxHp_);
   // We get some positive reward proportional to how much our opponent's health decreased, negative if it increased.
   reward += (static_cast<int64_t>(lastObservation.opponentCurrentHp_) - observation.opponentCurrentHp_) / static_cast<double>(observation.opponentMaxHp_);
+  // We get some negative reward if the event is an error.
+  if (observation.eventCode_ == event::EventCode::kCommandError ||
+      observation.eventCode_ == event::EventCode::kItemUseFailed) {
+    reward -= 0.0005f;
+  }
   if (isTerminal) {
     // Give an extra bump for a win or loss.
     if (observation.ourCurrentHp_ == 0) {

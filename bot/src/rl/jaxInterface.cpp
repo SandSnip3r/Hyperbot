@@ -92,7 +92,7 @@ void JaxInterface::initialize(int observationStackSize) {
     nnxRngs_ = nnxModule_->attr("Rngs")(getNextRngKey());
     // Now, we want to create a randomly initialized model. Specifically, we want randomly initialized weights. To do this, we'll instantiate our NNX model, then split the abstract graph and the concrete weights.
     DqnModelType = dqnModule_->attr("DqnModel");
-    const int kInputSize = observationStackSize * (4 + 1 + 32*2 + 3*2); // IF-CHANGE: If we change this, also change JaxInterface::getObservationNumpySize
+    const int kInputSize = observationStackSize * (6 + 1 + 23 + 17*2 + 17*2 + 32*2 + 3*2); // IF-CHANGE: If we change this, also change JaxInterface::getObservationNumpySize
     const int kOutputSize = kActionSpaceSize;
     model_ = DqnModelType(kInputSize, kOutputSize, *nnxRngs_);
     targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
@@ -302,7 +302,7 @@ py::object JaxInterface::observationToNumpy(const Observation &observation) {
   py::array_t<float> array(getObservationNumpySize(observation));
   auto mutableArray = array.mutable_unchecked<1>();
   float *mutableData = mutableArray.mutable_data(0);
-  writeObservationToNumpyArray(observation, mutableData);
+  writeObservationToRawArray(observation, mutableData);
   return array;
 }
 
@@ -325,7 +325,7 @@ py::object JaxInterface::observationStackToNumpy(int stackSize, const std::vecto
   }
   // Write the actual observations to the numpy array.
   for (const Observation &observation : observationStack) {
-    writeObservationToNumpyArray(observation, mutableData + index*observationSize);
+    writeObservationToRawArray(observation, mutableData + index*observationSize);
     ++index;
   }
   return array;
@@ -338,7 +338,7 @@ py::object JaxInterface::observationsToNumpy(const std::vector<Observation> &obs
   for (size_t batchIndex=0; batchIndex<observations.size(); ++batchIndex) {
     const Observation &observation = observations.at(batchIndex);
     float *mutableData = mutableArray.mutable_data(batchIndex, 0);
-    writeObservationToNumpyArray(observation, mutableData);
+    writeObservationToRawArray(observation, mutableData);
   }
   return array;
 }
@@ -369,7 +369,7 @@ py::object JaxInterface::observationStacksToNumpy(int stackSize, const std::vect
     }
     // Write the actual observations to the numpy array.
     for (const Observation &observation : observationStack) {
-      writeObservationToNumpyArray(observation, mutableData + index*observationSize);
+      writeObservationToRawArray(observation, mutableData + index*observationSize);
       ++index;
     }
   }
@@ -378,7 +378,7 @@ py::object JaxInterface::observationStacksToNumpy(int stackSize, const std::vect
 
 size_t JaxInterface::getObservationNumpySize(const Observation &observation) const {
   // IF-CHANGE: If we change this, also change JaxInterface::initialize of DqnModel
-  return 4 + 1 + observation.skillCooldowns_.size()*2 + observation.itemCooldowns_.size()*2;
+  return 6 + 1 + 23 + observation.remainingTimeOurBuffs_.size()*2 + observation.remainingTimeOpponentBuffs_.size()*2 + observation.skillCooldowns_.size()*2 + observation.itemCooldowns_.size()*2;
 }
 
 void JaxInterface::writeEmptyObservationToNumpyArray(int observationSize, float *array) {
@@ -386,23 +386,72 @@ void JaxInterface::writeEmptyObservationToNumpyArray(int observationSize, float 
   std::fill_n(array, observationSize, 0.0f);
 }
 
-void JaxInterface::writeObservationToNumpyArray(const Observation &observation, float *array) {
-  int index{0};
+size_t JaxInterface::writeObservationToRawArray(const Observation &observation, float *array) {
+  size_t index{0};
   array[index++] = observation.ourCurrentHp_ / static_cast<float>(observation.ourMaxHp_);
   array[index++] = observation.ourCurrentMp_ / static_cast<float>(observation.ourMaxMp_);
+  array[index++] = observation.weAreKnockedDown_ ? 1.0 : 0.0;
   array[index++] = observation.opponentCurrentHp_ / static_cast<float>(observation.opponentMaxHp_);
   array[index++] = observation.opponentCurrentMp_ / static_cast<float>(observation.opponentMaxMp_);
+  array[index++] = observation.opponentIsKnockedDown_ ? 1.0 : 0.0;
+
   array[index++] = observation.hpPotionCount_ / static_cast<float>(5); // IF-CHANGE: If we change this, also change TrainingManager::buildItemRequirementList
+
+  index += writeOneHotEvent(observation.eventCode_, &array[index]);
+
+  for (int i=0; i<observation.remainingTimeOurBuffs_.size(); ++i) {
+    array[index++] = observation.remainingTimeOurBuffs_[i] != 0 ? 1.0 : 0.0;
+    array[index++] = static_cast<float>(observation.remainingTimeOurBuffs_[i]) / 1000.0; // Convert milliseconds to seconds
+  }
+  for (int i=0; i<observation.remainingTimeOpponentBuffs_.size(); ++i) {
+    array[index++] = observation.remainingTimeOpponentBuffs_[i] != 0 ? 1.0 : 0.0;
+    array[index++] = static_cast<float>(observation.remainingTimeOpponentBuffs_[i]) / 1000.0; // Convert milliseconds to seconds
+  }
   for (int cooldown : observation.skillCooldowns_) {
-    array[index] = cooldown == 0 ? 1.0 : 0.0;
-    array[index+1] = static_cast<float>(cooldown) / 1000.0; // Convert milliseconds to seconds
-    index += 2;
+    array[index++] = cooldown == 0 ? 1.0 : 0.0;
+    array[index++] = static_cast<float>(cooldown) / 1000.0; // Convert milliseconds to seconds
   }
   for (int cooldown : observation.itemCooldowns_) {
-    array[index] = cooldown == 0 ? 1.0 : 0.0;
-    array[index+1] = static_cast<float>(cooldown) / 1000.0; // Convert milliseconds to seconds
-    index += 2;
+    array[index++] = cooldown == 0 ? 1.0 : 0.0;
+    array[index++] = static_cast<float>(cooldown) / 1000.0; // Convert milliseconds to seconds
   }
+  return index;
+}
+
+size_t JaxInterface::writeOneHotEvent(event::EventCode eventCode, float *array) {
+  constexpr std::array kEventsWeCareAbout = {
+    event::EventCode::kEntityBodyStateChanged,
+    event::EventCode::kKnockdownStunEnded,
+    event::EventCode::kKnockedDown,
+    event::EventCode::kEntityPositionUpdated,
+    event::EventCode::kEntityLifeStateChanged,
+    event::EventCode::kEntityNotMovingAngleChanged,
+    event::EventCode::kEntityMovementEnded,
+    event::EventCode::kEntityMovementBegan,
+    event::EventCode::kItemUseFailed,
+    event::EventCode::kSkillCooldownEnded,
+    event::EventCode::kEntityStatesChanged,
+    event::EventCode::kPlayerCharacterBuffRemoved,
+    event::EventCode::kPlayerCharacterBuffAdded,
+    event::EventCode::kItemUseSuccess,
+    event::EventCode::kItemCooldownEnded,
+    event::EventCode::kItemMoved,
+    event::EventCode::kSkillEnded,
+    event::EventCode::kSkillBegan,
+    event::EventCode::kEntityMpChanged,
+    event::EventCode::kDealtDamage,
+    event::EventCode::kEntityHpChanged,
+    event::EventCode::kSkillFailed,
+    event::EventCode::kCommandError
+  };
+  std::fill_n(array, kEventsWeCareAbout.size(), 0.0f);
+  const auto it = std::find(kEventsWeCareAbout.begin(), kEventsWeCareAbout.end(), eventCode);
+  if (it != kEventsWeCareAbout.end()) {
+    array[std::distance(kEventsWeCareAbout.begin(), it)] = 1.0f;
+  } else {
+    // If the given event is not in the list, no event will be set.
+  }
+  return kEventsWeCareAbout.size();
 }
 
 pybind11::object JaxInterface::createActionMask(bool canSendPacket) {
