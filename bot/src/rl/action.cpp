@@ -4,6 +4,8 @@
 #include "packet/building/clientAgentActionCommandRequest.hpp"
 #include "packet/building/clientAgentInventoryItemUseRequest.hpp"
 
+#include <silkroad_lib/game_constants.hpp>
+
 namespace rl {
 
 using namespace state::machine;
@@ -68,12 +70,15 @@ Status TargetedSkill::onUpdate(const event::Event *event) {
 Status UseItem::onUpdate(const event::Event *event) {
   if (!sentPacket_) {
     sentPacket_ = true; // TODO: "sentPacket" is not an accurate variable name.
-    const std::optional<sro::scalar_types::StorageIndexType> slot = bot_.selfState()->inventory.findFirstItemWithRefId(itemRefId_);
+    std::optional<sro::scalar_types::StorageIndexType> slot = bot_.selfState()->inventory.findFirstItemWithRefId(itemRefId_);
+    const type_id::TypeId itemTypeId = type_id::getTypeId(bot_.gameData().itemData().getItemById(itemRefId_));
     if (!slot.has_value()) {
-      LOG(WARNING) << "UseItem Action: Item not in inventory.";
-      return Status::kDone;
+      // Item is not in inventory. In order to allow the model to see that it is not possible, we will send a packet to use the item, but at an empty slot. The server should send back an error.
+      slot = bot_.selfState()->inventory.firstFreeSlot(sro::game_constants::kFirstInventorySlot);
+      if (!slot.has_value()) {
+        throw std::runtime_error("No free inventory slot");
+      }
     }
-    const auto itemTypeId = bot_.selfState()->inventory.getItem(*slot)->typeId();
     CHAR_VLOG(1) << "Using item " << bot_.gameData().getItemName(itemRefId_) << " at slot " << static_cast<int>(*slot);
     injectPacket(packet::building::ClientAgentInventoryItemUseRequest::packet(*slot, itemTypeId), PacketContainer::Direction::kBotToServer);
   }

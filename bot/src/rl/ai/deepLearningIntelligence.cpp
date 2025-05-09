@@ -37,11 +37,18 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
     if (canSendPacket) {
       // Release the world state mutex while we call into JAX
       bot.worldState().mutex.unlock();
-      std::vector<Observation> observationStack;
-      for (const auto &obs : lastObservations_) {
-        observationStack.push_back(obs);
+
+      // Create a ModelInput to pass to the JaxInterface
+      ModelInput modelInput;
+      modelInput.currentObservation = observation;
+      modelInput.pastObservationStack.reserve(lastObservations_.size() - 1);
+
+      // Copy all but the current observation (which is the last one in lastObservations_)
+      for (size_t i = 0; i < lastObservations_.size() - 1; ++i) {
+        modelInput.pastObservationStack.push_back(lastObservations_[i]);
       }
-      actionIndex = trainingManager_.getJaxInterface().selectAction(trainingManager_.getObservationStackSize(), observationStack, canSendPacket);
+
+      actionIndex = trainingManager_.getJaxInterface().selectAction(modelInput, canSendPacket);
       bot.worldState().mutex.lock();
     } else {
       // We cannot send a packet, we'll entirely side-step JAX and immediately return the do-nothing action

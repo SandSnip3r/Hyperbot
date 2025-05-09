@@ -1,5 +1,7 @@
 #include "pk2/ref/skill.hpp"
 
+#include <absl/strings/str_format.h>
+
 #include <algorithm>
 #include <stdexcept>
 
@@ -101,11 +103,11 @@ bool Skill::isPseudoinstant() const {
 int32_t Skill::durationMs() const {
   auto it = std::find(params.begin(), params.end(), kDuraVal);
   if (it == params.end()) {
-    throw std::runtime_error("Trying to get duration of skill which does not have a DURA param");
+    throw std::runtime_error(absl::StrFormat("Trying to get duration of skill %d which does not have a DURA param", id));
   }
   auto valueIt = std::next(it);
   if (valueIt == params.end()) {
-    throw std::runtime_error("Trying to get duration, but there is no remaining parameter space for the value");
+    throw std::runtime_error(absl::StrFormat("Trying to get duration of skill %d, but there is no remaining parameter space for the value", id));
   }
   return *valueIt;
 }

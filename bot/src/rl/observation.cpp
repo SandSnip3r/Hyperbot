@@ -58,40 +58,54 @@ Observation::Observation(const Bot &bot, const event::Event *event, sro::scalar_
     if (bot.selfState()->buffIsActive(skillId)) {
       std::optional<entity::Character::BuffData::ClockType::time_point> castTime = bot.selfState()->buffCastTime(skillId);
       if (castTime) {
-        remainingTimeOurBuffs_[i] = std::chrono::duration_cast<std::chrono::milliseconds>(entity::Character::BuffData::ClockType::now()-*castTime).count();
+        // Get total duration so that we can normalize the remaining time to [0,1]
+        const sro::pk2::ref::Skill &skill = bot.gameData().skillData().getSkillById(skillId);
+        if (skill.hasParam("DURA")) {
+          remainingTimeOurBuffs_[i] = std::chrono::duration_cast<std::chrono::milliseconds>(entity::Character::BuffData::ClockType::now()-*castTime).count() / static_cast<float>(skill.durationMs());
+        } else {
+          // So far, I have only seen this for the fire wall skill.
+          remainingTimeOurBuffs_[i] = 1.0;
+        }
       } else {
         LOG(WARNING) << "Buff " << bot.gameData().getSkillName(skillId) << " is active for us, but no cast time is known";
-        remainingTimeOurBuffs_[i] = 0;
+        remainingTimeOurBuffs_[i] = 0.0;
       }
     } else {
-      remainingTimeOurBuffs_[i] = 0;
+      remainingTimeOurBuffs_[i] = 0.0;
     }
     // ================================= Opponent =================================
     if (opponent->buffIsActive(skillId)) {
       std::optional<entity::Character::BuffData::ClockType::time_point> castTime = opponent->buffCastTime(skillId);
       if (castTime) {
-        remainingTimeOpponentBuffs_[i] = std::chrono::duration_cast<std::chrono::milliseconds>(entity::Character::BuffData::ClockType::now()-*castTime).count();
+        // Get total duration so that we can normalize the remaining time to [0,1]
+        const sro::pk2::ref::Skill &skill = bot.gameData().skillData().getSkillById(skillId);
+        if (skill.hasParam("DURA")) {
+          remainingTimeOpponentBuffs_[i] = std::chrono::duration_cast<std::chrono::milliseconds>(entity::Character::BuffData::ClockType::now()-*castTime).count() / static_cast<float>(skill.durationMs());
+        } else {
+          // So far, I have only seen this for the fire wall skill.
+          remainingTimeOpponentBuffs_[i] = 1.0;
+        }
       } else {
         LOG(WARNING) << "Buff " << bot.gameData().getSkillName(skillId) << " is active for opponent, but no cast time is known";
-        remainingTimeOpponentBuffs_[i] = 0;
+        remainingTimeOpponentBuffs_[i] = 0.0;
       }
     } else {
-      remainingTimeOpponentBuffs_[i] = 0;
+      remainingTimeOpponentBuffs_[i] = 0.0;
     }
     // ============================================================================
   }
 
-  static constexpr std::array kDebuffs{packet::enums::AbnormalStateFlag::kShocked, packet::enums::AbnormalStateFlag::kBurnt};
-  if (kDebuffs.size() != remainingTimeOurDebuffs_.size() ||
-      kDebuffs.size() != remainingTimeOpponentDebuffs_.size()) {
-    throw std::runtime_error("Local debuff array and observation's debuff array do not have the same size");
-  }
-  for (int i=0; i<kDebuffs.size(); ++i) {
-    const packet::enums::AbnormalStateFlag debuff = kDebuffs[i];
-    // TODO:
-    // std::array<int, 2> remainingTimeOurDebuffs_;
-    // std::array<int, 2> remainingTimeOpponentDebuffs_;
-  }
+  // static constexpr std::array kDebuffs{packet::enums::AbnormalStateFlag::kShocked, packet::enums::AbnormalStateFlag::kBurnt};
+  // if (kDebuffs.size() != remainingTimeOurDebuffs_.size() ||
+  //     kDebuffs.size() != remainingTimeOpponentDebuffs_.size()) {
+  //   throw std::runtime_error("Local debuff array and observation's debuff array do not have the same size");
+  // }
+  // for (int i=0; i<kDebuffs.size(); ++i) {
+  //   const packet::enums::AbnormalStateFlag debuff = kDebuffs[i];
+  //   // TODO:
+  //   // std::array<int, 2> remainingTimeOurDebuffs_;
+  //   // std::array<int, 2> remainingTimeOpponentDebuffs_;
+  // }
 
   static constexpr std::array kSkills{28, 131, 554, 1253, 1256, 1271, 1272, 1281, 1335, 1377, 1380, 1398, 1399, 1410, 1421, 1441, 8312, 21209, 30577, 37, 114, 298, 300, 322, 339, 371, 588, 610, 644, 1315, 1343, 1449};
   if (kSkills.size() != skillCooldowns_.size()) {
@@ -100,22 +114,39 @@ Observation::Observation(const Bot &bot, const event::Event *event, sro::scalar_
   for (int i=0; i<kSkills.size(); ++i) {
     const sro::scalar_types::ReferenceSkillId skillId = kSkills[i];
     std::optional<std::chrono::milliseconds> remainingCooldown = bot.selfState()->skillEngine.skillRemainingCooldown(skillId, bot.eventBroker());
-    skillCooldowns_[i] = remainingCooldown.value_or(std::chrono::milliseconds(0)).count();
+    // Get total duration so that we can normalize the remaining time to [0,1]
+    const int32_t totalCooldownDurationMs = bot.gameData().skillData().getSkillById(skillId).actionReuseDelay;
+    skillCooldowns_[i] = remainingCooldown.value_or(std::chrono::milliseconds(0)).count() / static_cast<float>(totalCooldownDurationMs);
   }
 
-  static constexpr std::array kItems{5, 12, 56};
+  static constexpr std::array kItems{
+    5, // HP Potion
+    12, // MP Potion
+    56 // Universal Pill
+  };
   if (kItems.size() != itemCooldowns_.size()) {
     throw std::runtime_error("Local item array and observation's item array do not have the same size");
   }
   const std::map<type_id::TypeId, broker::EventBroker::EventId> &itemCooldownEventIds = bot.selfState()->getItemCooldownEventIdMap();
   for (int i=0; i<kItems.size(); ++i) {
     const sro::scalar_types::ReferenceObjectId itemId = kItems[i];
+    const int32_t totalCooldownDurationMs = [&](){
+      if (itemId == 5) {
+        return bot.selfState()->getHpPotionDelay();
+      } else if (itemId == 12) {
+        return bot.selfState()->getMpPotionDelay();
+      } else if (itemId == 56) {
+        return bot.selfState()->getUniversalPillDelay();
+      } else {
+        throw std::runtime_error("Unknown item id: " + std::to_string(itemId));
+      }
+    }();
     const auto it = itemCooldownEventIds.find(itemId);
     if (it == itemCooldownEventIds.end()) {
-      itemCooldowns_[i] = 0;
+      itemCooldowns_[i] = 0.0;
     } else {
       std::optional<std::chrono::milliseconds> remainingCooldown = bot.eventBroker().timeRemainingOnDelayedEvent(it->second);
-      itemCooldowns_[i] = remainingCooldown.value_or(std::chrono::milliseconds(0)).count();
+      itemCooldowns_[i] = remainingCooldown.value_or(std::chrono::milliseconds(0)).count() / static_cast<float>(totalCooldownDurationMs);
     }
   }
 }

@@ -39,8 +39,8 @@ public:
   int hpPotionCount_;
   std::array<int, 17> remainingTimeOurBuffs_;
   std::array<int, 17> remainingTimeOpponentBuffs_;
-  std::array<int, 2> remainingTimeOurDebuffs_;
-  std::array<int, 2> remainingTimeOpponentDebuffs_;
+  // std::array<int, 2> remainingTimeOurDebuffs_;
+  // std::array<int, 2> remainingTimeOpponentDebuffs_;
   std::array<int, 32> skillCooldowns_;
   std::array<int, 3> itemCooldowns_;
 };

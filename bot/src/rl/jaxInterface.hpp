@@ -6,6 +6,7 @@
 #include <tracy/Tracy.hpp>
 
 #include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 
 #include <atomic>
 #include <condition_variable>
@@ -15,14 +16,26 @@
 
 namespace rl {
 
+// TODO: We can instead have this take pointers to Observations.
+struct ModelInput {
+  // Observations are stacked so that the model can see history.
+  int pastObservationStackSize;
+  // Older observations are at the front and newer observations are at the back.
+  std::vector<Observation> pastObservationStack;
+  // Along with past observations, we provide the actions which were taken.
+  std::vector<int> pastActionStack;
+
+  Observation currentObservation;
+};
+
 class JaxInterface {
 public:
-  JaxInterface(float gamma, float learningRate) : gamma_(gamma), learningRate_(learningRate) {}
+  JaxInterface(int observationStackSize, float gamma, float learningRate) : observationStackSize_(observationStackSize), gamma_(gamma), learningRate_(learningRate) {}
   ~JaxInterface();
-  void initialize(int observationStackSize);
+  void initialize();
 
-  // Excpects a stack of observations. Newest is at the back, oldest is at the front.
-  int selectAction(int observationStackSize, const std::vector<Observation> &observationStack, bool canSendPacket);
+  // `canSendPacket` is used for action masking to limit the rate at which packets are sent.
+  int selectAction(const ModelInput &modelInput, bool canSendPacket);
 
   struct TrainAuxOutput {
     std::vector<float> tdErrors;
@@ -32,14 +45,13 @@ public:
     float meanMaxQValue;
   };
 
-  // Excpects stacks of observations. Newest is at the back, oldest is at the front.
-  TrainAuxOutput train(int observationStackSize,
-                       const std::vector<std::vector<Observation>> &olderObservationStacks,
-                       const std::vector<int> &actionIndex,
-                       const std::vector<bool> &isTerminal,
-                       const std::vector<float> &reward,
-                       const std::vector<std::vector<Observation>> &newerObservationStacks,
-                       const std::vector<float> &weight);
+  // All vectors should have the same size, this is the batch size.
+  TrainAuxOutput train(const std::vector<ModelInput> &oldModelInputs,
+                       const std::vector<int> &actionsTaken,
+                       const std::vector<bool> &isTerminals,
+                       const std::vector<float> &rewards,
+                       const std::vector<ModelInput> &modelInputs,
+                       const std::vector<float> &importanceSamplingWeights);
   void updateTargetModel();
   void updateTargetModelPolyak(float tau);
   void printModels();
@@ -54,6 +66,7 @@ private:
   static constexpr int kSeed{0};
 
   // Store gamma and learning rate as member variables
+  const int observationStackSize_;
   const float gamma_;
   const float learningRate_;
 
@@ -79,14 +92,27 @@ private:
   pybind11::object getOptimizer();
   pybind11::object getNextRngKey();
   pybind11::object observationToNumpy(const Observation &observation);
+
+  // stackSize is the target size of the observation stack. The given vector might have fewer observations, so the implementation should pad.
   pybind11::object observationStackToNumpy(int stackSize, const std::vector<Observation> &observationStack);
+
   pybind11::object observationsToNumpy(const std::vector<Observation> &observations);
+
+  // stackSize is the target size of the observation stacks. The given vectors might have fewer observations, so the implementation should pad.
   pybind11::object observationStacksToNumpy(int stackSize, const std::vector<std::vector<Observation>> &observationStacks);
+
+  // Convert a ModelInput to a numpy array
+  pybind11::array_t<float> modelInputToNumpy(const ModelInput &modelInput);
+
+  // Convert a vector of ModelInputs to a batch of numpy arrays
+  pybind11::array_t<float> modelInputsToNumpy(const std::vector<ModelInput> &modelInputs);
+
+  size_t writeModelInputToRawArray(const ModelInput &modelInput, float *array);
 
   // Note, this also works with a default constructed observation.
   size_t getObservationNumpySize(const Observation &observation) const;
 
-  void writeEmptyObservationToNumpyArray(int observationSize, float *array);
+  size_t writeEmptyObservationToRawArray(int observationSize, float *array);
 
   // Returns the number of floats written to the array.
   size_t writeObservationToRawArray(const Observation &observation, float *array);

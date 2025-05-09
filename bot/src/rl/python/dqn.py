@@ -81,30 +81,22 @@ def computeWeightedLossAndTdErrorBatch(model, targetModel, transitions, weights,
   return jnp.mean(weightedLosses), (tdErrors, jnp.mean(minValues), jnp.mean(meanValues), jnp.mean(maxValues))
 
 @nnx.jit
-def jittedTrain(model, optimizerState, targetModel, observations, selectedActions, isTerminals, rewards, nextObservations, weights, gamma):
-  npSelectedActions = jnp.array(selectedActions)
-  npIsTerminals = jnp.array(isTerminals)
-  npRewards = jnp.array(rewards)
-  npWeights = jnp.array(weights)
+def jittedTrain(model, optimizerState, targetModel, oldObservations, selectedActions, isTerminals, rewards, newObservations, weights, gamma):
+  selectedActions = jnp.array(selectedActions)
+  isTerminals = jnp.array(isTerminals)
+  rewards = jnp.array(rewards)
+  weights = jnp.array(weights)
 
-  (meanLoss, auxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdErrorBatch, has_aux=True)(model, targetModel, (observations, npSelectedActions, npIsTerminals, npRewards, nextObservations), npWeights, gamma)
+  (meanLoss, auxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdErrorBatch, has_aux=True)(model, targetModel, (oldObservations, selectedActions, isTerminals, rewards, newObservations), weights, gamma)
   optimizerState.update(gradients)
   return auxOutput
 
-def convertThenTrain(model, optimizerState, targetModel, observations, selectedActions, isTerminals, rewards, nextObservations, weights, gamma):
-  # print(f'observations: {type(observations)}.{observations.shape}: {observations}')
-  # print(f'selectedActions: {type(selectedActions)}: {selectedActions}')
-  # print(f'isTerminals: {type(isTerminals)}: {isTerminals}')
-  # print(f'rewards: {type(rewards)}: {rewards}')
-  # print(f'nextObservations: {type(nextObservations)}.{nextObservations.shape}: {nextObservations}')
-  # print(f'weights: {type(weights)}: {weights}')
-
-  npSelectedActions = jnp.array(selectedActions)
-  npIsTerminals = jnp.array(isTerminals)
-  npRewards = jnp.array(rewards)
-  npWeights = jnp.array(weights)
-
-  result = jittedTrain(model, optimizerState, targetModel, observations, npSelectedActions, npIsTerminals, npRewards, nextObservations, npWeights, gamma)
+def convertThenTrain(model, optimizerState, targetModel, oldObservations, selectedActions, isTerminals, rewards, newObservations, weights, gamma):
+  selectedActions = jnp.array(selectedActions)
+  isTerminals = jnp.array(isTerminals)
+  rewards = jnp.array(rewards)
+  weights = jnp.array(weights)
+  result = jittedTrain(model, optimizerState, targetModel, oldObservations, selectedActions, isTerminals, rewards, newObservations, weights, gamma)
   jax.block_until_ready(result)
   return result
 

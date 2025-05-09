@@ -64,7 +64,7 @@ JaxInterface::~JaxInterface() {
   }
 }
 
-void JaxInterface::initialize(int observationStackSize) {
+void JaxInterface::initialize() {
   using namespace pybind11::literals;
 
   VLOG(1) << "Constructing JaxInterface";
@@ -92,7 +92,7 @@ void JaxInterface::initialize(int observationStackSize) {
     nnxRngs_ = nnxModule_->attr("Rngs")(getNextRngKey());
     // Now, we want to create a randomly initialized model. Specifically, we want randomly initialized weights. To do this, we'll instantiate our NNX model, then split the abstract graph and the concrete weights.
     DqnModelType = dqnModule_->attr("DqnModel");
-    const int kInputSize = observationStackSize * (6 + 1 + 23 + 17*2 + 17*2 + 32*2 + 3*2); // IF-CHANGE: If we change this, also change JaxInterface::getObservationNumpySize
+    const int kInputSize = observationStackSize_ * (6 + 1 + 23 + 17*2 + 17*2 + 32*2 + 3*2); // IF-CHANGE: If we change this, also change JaxInterface::getObservationNumpySize
     const int kOutputSize = kActionSpaceSize;
     model_ = DqnModelType(kInputSize, kOutputSize, *nnxRngs_);
     targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
@@ -104,11 +104,8 @@ void JaxInterface::initialize(int observationStackSize) {
   modelConditionVariable_.notify_all();
 }
 
-int JaxInterface::selectAction(int observationStackSize, const std::vector<Observation> &observationStack, bool canSendPacket) {
+int JaxInterface::selectAction(const ModelInput &modelInput, bool canSendPacket) {
   ZoneScopedN("JaxInterface::selectAction");
-  VLOG(1) << absl::StreamFormat("Getting action for observations [%s], canSendPacket=%v", absl::StrJoin(observationStack, ", ", [](std::string *out, const Observation &obs) {
-    absl::StrAppend(out, obs.toString());
-  }), canSendPacket);
   int actionIndex;
   try {
     waitingToSelectAction_ = true;
@@ -116,7 +113,7 @@ int JaxInterface::selectAction(int observationStackSize, const std::vector<Obser
     waitingToSelectAction_ = false;
     py::gil_scoped_acquire acquire;
     // Convert C++ observation into numpy observation
-    py::object numpyObservation = observationStackToNumpy(observationStackSize, observationStack);
+    py::array_t<float> numpyObservation = modelInputToNumpy(modelInput);
     // Create an action mask based on whether or not we can send a packet
     py::object actionMask = createActionMask(canSendPacket);
     // Get the action from the model
@@ -136,23 +133,23 @@ int JaxInterface::selectAction(int observationStackSize, const std::vector<Obser
   return actionIndex;
 }
 
-JaxInterface::TrainAuxOutput JaxInterface::train(int observationStackSize,
-                                                 const std::vector<std::vector<Observation>> &olderObservationStacks,
-                                                 const std::vector<int> &actionIndex,
-                                                 const std::vector<bool> &isTerminal,
-                                                 const std::vector<float> &reward,
-                                                 const std::vector<std::vector<Observation>> &newerObservationStacks,
-                                                 const std::vector<float> &weight) {
+JaxInterface::TrainAuxOutput JaxInterface::train(const std::vector<ModelInput> &oldModelInputs,
+                                                 const std::vector<int> &actionsTaken,
+                                                 const std::vector<bool> &isTerminals,
+                                                 const std::vector<float> &rewards,
+                                                 const std::vector<ModelInput> &newModelInputs,
+                                                 const std::vector<float> &importanceSamplingWeights) {
   ZoneScopedN("JaxInterface::train");
   {
-    size_t size = olderObservationStacks.size();
+    size_t size = oldModelInputs.size();
     if (size == 0 ||
-        actionIndex.size() != size ||
-        isTerminal.size() != size ||
-        reward.size() != size ||
-        newerObservationStacks.size() != size ||
-        weight.size() != size) {
-      throw std::runtime_error(absl::StrFormat("JaxInterface::train: Batch size mismatch: %zu %zu %zu %zu %zu %zu", olderObservationStacks.size(), actionIndex.size(), isTerminal.size(), reward.size(), newerObservationStacks.size(), weight.size()));
+        actionsTaken.size() != size ||
+        isTerminals.size() != size ||
+        rewards.size() != size ||
+        newModelInputs.size() != size ||
+        importanceSamplingWeights.size() != size) {
+      throw std::runtime_error(absl::StrFormat("JaxInterface::train: Batch size mismatch: %zu %zu %zu %zu %zu %zu",
+        oldModelInputs.size(), actionsTaken.size(), isTerminals.size(), rewards.size(), newModelInputs.size(), importanceSamplingWeights.size()));
     }
   }
   TrainAuxOutput result;
@@ -163,12 +160,14 @@ JaxInterface::TrainAuxOutput JaxInterface::train(int observationStackSize,
     });
     py::gil_scoped_acquire acquire;
     try {
-      py::object olderObservationStacksNumpy = observationStacksToNumpy(observationStackSize, olderObservationStacks);
-      py::object newerObservationStacksNumpy = observationStacksToNumpy(observationStackSize, newerObservationStacks);
+      py::array_t<float> oldModelInputNumpy = modelInputsToNumpy(oldModelInputs);
+      py::array_t<float> newModelInputNumpy = modelInputsToNumpy(newModelInputs);
       py::object auxOutput;
       {
         ZoneScopedN("JaxInterface::train_PYTHON");
-        auxOutput = dqnModule_->attr("convertThenTrain")(*model_, *optimizerState_, *targetModel_, olderObservationStacksNumpy, actionIndex, isTerminal, reward, newerObservationStacksNumpy, weight, gamma_);
+        auxOutput = dqnModule_->attr("jittedTrain")(*model_, *optimizerState_, *targetModel_,
+                                                        oldModelInputNumpy, actionsTaken, isTerminals,
+                                                        rewards, newModelInputNumpy, importanceSamplingWeights, gamma_);
       }
       py::tuple auxOutputTuple = auxOutput.cast<py::tuple>();
       result.tdErrors = auxOutputTuple[0].cast<std::vector<float>>();
@@ -320,7 +319,7 @@ py::object JaxInterface::observationStackToNumpy(int stackSize, const std::vecto
   int index{0};
   // First, write empty observations if the given observation stack does not fill the expected stack size.
   for (int i=observationStack.size(); i<stackSize; ++i) {
-    writeEmptyObservationToNumpyArray(observationSize, mutableData + index*observationSize);
+    writeEmptyObservationToRawArray(observationSize, mutableData + index*observationSize);
     ++index;
   }
   // Write the actual observations to the numpy array.
@@ -364,7 +363,7 @@ py::object JaxInterface::observationStacksToNumpy(int stackSize, const std::vect
     int index{0};
     // First, write empty observations if the given observation stack does not fill the expected stack size.
     for (int i=observationStack.size(); i<stackSize; ++i) {
-      writeEmptyObservationToNumpyArray(observationSize, mutableData + index*observationSize);
+      writeEmptyObservationToRawArray(observationSize, mutableData + index*observationSize);
       ++index;
     }
     // Write the actual observations to the numpy array.
@@ -381,9 +380,10 @@ size_t JaxInterface::getObservationNumpySize(const Observation &observation) con
   return 6 + 1 + 23 + observation.remainingTimeOurBuffs_.size()*2 + observation.remainingTimeOpponentBuffs_.size()*2 + observation.skillCooldowns_.size()*2 + observation.itemCooldowns_.size()*2;
 }
 
-void JaxInterface::writeEmptyObservationToNumpyArray(int observationSize, float *array) {
+size_t JaxInterface::writeEmptyObservationToRawArray(int observationSize, float *array) {
   // Zero it out
   std::fill_n(array, observationSize, 0.0f);
+  return observationSize;
 }
 
 size_t JaxInterface::writeObservationToRawArray(const Observation &observation, float *array) {
@@ -461,6 +461,100 @@ pybind11::object JaxInterface::createActionMask(bool canSendPacket) {
   const float packetMaskValue = canSendPacket ? 0.0 : -std::numeric_limits<float>::infinity();
   std::fill_n(mutableArray.mutable_data(1), kActionSpaceSize-1, packetMaskValue);
   return array;
+}
+
+py::array_t<float> JaxInterface::modelInputToNumpy(const ModelInput &modelInput) {
+  ZoneScopedN("JaxInterface::modelInputToNumpy");
+
+  // Get the size of an observation
+  const size_t individualObservationSize = getObservationNumpySize(modelInput.currentObservation);
+
+  // Calculate the total size needed for past observations stack and current observation
+  const size_t totalSize = individualObservationSize * observationStackSize_;
+
+  // Allocate a 1d numpy array to hold a flattening of all observations
+  py::array_t<float> array(totalSize);
+
+  // Grab a raw pointer to the numpy array
+  auto mutableArray = array.mutable_unchecked<1>();
+  float *mutableData = mutableArray.mutable_data(0);
+
+  size_t floatsWritten = writeModelInputToRawArray(modelInput, mutableData);
+  if (floatsWritten != totalSize) {
+    throw std::runtime_error(absl::StrFormat("JaxInterface::modelInputToNumpy: writeModelInputToRawArray wrote an unexpected number of floats. %d != %d", floatsWritten, totalSize));
+  }
+
+  return array;
+}
+
+py::array_t<float> JaxInterface::modelInputsToNumpy(const std::vector<ModelInput> &modelInputs) {
+  ZoneScopedN("JaxInterface::modelInputsToNumpy");
+
+  if (modelInputs.empty()) {
+    throw std::runtime_error("JaxInterface::modelInputsToNumpy: Batch size is 0");
+  }
+
+  // Get the size of a single observation
+  const size_t individualObservationSize = getObservationNumpySize(modelInputs[0].currentObservation);
+
+  // Calculate the total size needed for each model input (past observations stack + current observation)
+  const size_t singleInputSize = individualObservationSize * observationStackSize_;
+
+  // Allocate a 2d numpy array to hold a batch of model inputs
+  py::array_t<float> array({modelInputs.size(), singleInputSize});
+
+  // Grab a raw pointer to the numpy array
+  auto mutableArray = array.mutable_unchecked<2>();
+
+  // Process each model input in the batch
+  for (size_t batchIndex = 0; batchIndex < modelInputs.size(); ++batchIndex) {
+    const ModelInput &modelInput = modelInputs[batchIndex];
+    float *mutableData = mutableArray.mutable_data(batchIndex, 0);
+
+    size_t floatsWritten = writeModelInputToRawArray(modelInput, mutableData);
+    if (floatsWritten != individualObservationSize * observationStackSize_) {
+      throw std::runtime_error(absl::StrFormat("JaxInterface::modelInputsToNumpy: writeModelInputToRawArray wrote an unexpected number of floats. %d != %d", floatsWritten, individualObservationSize * observationStackSize_));
+    }
+  }
+
+  return array;
+}
+
+size_t JaxInterface::writeModelInputToRawArray(const ModelInput &modelInput, float *array) {
+  const size_t individualObservationSize = getObservationNumpySize(modelInput.currentObservation);
+  size_t index = 0;
+
+  int emptyCount=0;
+  int nonEmptyCount=0;
+
+  // Write empty observations if the given observation stack does not fill the expected stack size.
+  for (int i=modelInput.pastObservationStack.size()+1; i<observationStackSize_; ++i) {
+    size_t written = writeEmptyObservationToRawArray(individualObservationSize, array+index);
+    if (written != individualObservationSize) {
+      LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
+    }
+    index += individualObservationSize;
+    ++emptyCount;
+  }
+
+  // Write the past observations to the numpy array
+  for (const Observation &observation : modelInput.pastObservationStack) {
+    size_t written = writeObservationToRawArray(observation, array+index);
+    if (written != individualObservationSize) {
+      LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
+    }
+    index += individualObservationSize;
+    ++nonEmptyCount;
+  }
+
+  // Write the current observation to the end of the array
+  size_t written = writeObservationToRawArray(modelInput.currentObservation, array+index);
+  if (written != individualObservationSize) {
+    LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
+  }
+  index += individualObservationSize;
+
+  return index;
 }
 
 } // namespace rl

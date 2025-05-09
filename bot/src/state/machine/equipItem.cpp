@@ -22,7 +22,7 @@ Status EquipItem::onUpdate(const event::Event *event) {
       throw std::runtime_error(absl::StrFormat("We don't have item %d to equip", itemRefId_));
     }
     itemSlot_ = *itemSlot;
-    CHAR_LOG(INFO) << absl::StreamFormat("Found item %s in slot %d", bot_.gameData().getItemName(itemRefId_), itemSlot_);
+    CHAR_VLOG(1) << absl::StreamFormat("Found item %s in slot %d", bot_.gameData().getItemName(itemRefId_), itemSlot_);
     initialized_ = true;
   }
 
@@ -33,7 +33,7 @@ Status EquipItem::onUpdate(const event::Event *event) {
       return Status::kNotDone;
     }
     // Child state finished, we're done.
-    CHAR_LOG(INFO) << "Child state finished, we're done.";
+    CHAR_VLOG(2) << "Child state finished, we're done.";
     childState_.reset();
     return Status::kDone;
   }
@@ -46,7 +46,7 @@ Status EquipItem::onUpdate(const event::Event *event) {
   if (!equipment->isOneOf({type_id::categories::kAvatarHat})) {
     throw std::runtime_error(absl::StrFormat("For now, only avatar hats are supported. \"%s\" is not an avatar hat", bot_.gameData().getItemName(itemRefId_)));
   }
-  CHAR_LOG(INFO) << absl::StreamFormat("Item %s is an avatar hat, moving from inventory slot %d to avatar slot %d", bot_.gameData().getItemName(itemRefId_), itemSlot_, sro::game_constants::kAvatarHatSlot);
+  CHAR_VLOG(1) << absl::StreamFormat("Item %s is an avatar hat, moving from inventory slot %d to avatar slot %d", bot_.gameData().getItemName(itemRefId_), itemSlot_, sro::game_constants::kAvatarHatSlot);
   setChildStateMachine<state::machine::MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, itemSlot_),
                                                  sro::storage::Position(sro::storage::Storage::kAvatarInventory, sro::game_constants::kAvatarHatSlot));
   return onUpdate(event);

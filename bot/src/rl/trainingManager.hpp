@@ -59,7 +59,7 @@ private:
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
   static constexpr int kReplayBufferCapacity{1'000'000};
-  static constexpr int kTargetNetworkUpdateInterval{20'000};
+  static constexpr int kTargetNetworkUpdateInterval{40'000};
   static constexpr int kTrainStepCheckpointInterval{10'000};
   static constexpr float kTargetNetworkPolyakTau{0.0005f};
   static constexpr bool kUsePolyakTargetNetworkUpdate{false};
@@ -82,7 +82,7 @@ private:
   std::vector<SessionId> sessionsReadyForAssignment_;
   common::PvpDescriptor::PvpId nextPvpId_{0};
   IntelligencePool intelligencePool_{*this};
-  JaxInterface jaxInterface_{kGamma, kLearningRate};
+  JaxInterface jaxInterface_{kObservationStackSize, kGamma, kLearningRate};
   CheckpointManager checkpointManager_{rlUserInterface_};
   std::atomic<int> trainStepCount_{0};
 
@@ -123,12 +123,12 @@ private:
   void saveCheckpoint(const std::string &checkpointName, bool overwrite);
 
   struct ModelInputs {
-    std::vector<std::vector<Observation>> olderObservationStacks;
-    std::vector<int> actionIndexs;
+    std::vector<ModelInput> oldModelInputs;
+    std::vector<int> actionsTaken;
     std::vector<bool> isTerminals;
     std::vector<float> rewards;
-    std::vector<std::vector<Observation>> newerObservationStacks;
-    std::vector<float> weights;
+    std::vector<ModelInput> newModelInputs;
+    std::vector<float> importanceSamplingWeights;
   };
 
   ModelInputs buildModelInputsFromReplayBufferSamples(const std::vector<ReplayBufferType::SampleResult> &samples) const;
