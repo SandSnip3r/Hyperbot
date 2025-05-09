@@ -58,15 +58,19 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   absl::str_format
 )
 
-# TODO: Make private
-target_include_directories(${PROJECT_NAME} PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}>"
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
-)
+# Create include/silkroad_lib directory structure at build time
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/silkroad_lib)
+file(GLOB_RECURSE HEADER_FILES "src/*.hpp")
+foreach(HEADER ${HEADER_FILES})
+  file(RELATIVE_PATH REL_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src ${HEADER})
+  configure_file(${HEADER} ${CMAKE_CURRENT_BINARY_DIR}/include/silkroad_lib/${REL_HEADER} COPYONLY)
+endforeach()
 
+# Configure include paths for this library and clients
 target_include_directories(${PROJECT_NAME} PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  "$<INSTALL_INTERFACE:include>"
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
 )
 
 # ==============================================================================
