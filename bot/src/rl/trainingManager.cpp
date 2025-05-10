@@ -457,17 +457,17 @@ TrainingManager::ModelInputs TrainingManager::buildModelInputsFromReplayBufferSa
 
     // Create oldModelInput
     ModelInput oldModelInput;
-    oldModelInput.currentObservation = observation0;
+    oldModelInput.currentObservation = &observation0;
     oldModelInput.pastObservationStack.reserve(kObservationStackSize - 1);
     {
-      std::vector<Observation> pastObservations;
+      std::vector<const Observation*> pastObservations;
       pastObservations.reserve(kObservationStackSize - 1);
 
       ObservationAndActionStorage::Id tmp = previousObservationId;
       while (pastObservations.size() < kObservationStackSize - 1 && observationAndActionStorage_.hasPrevious(tmp)) {
         tmp = observationAndActionStorage_.getPreviousId(tmp);
         const ObservationAndActionStorage::ObservationAndActionType &obsAndAction = observationAndActionStorage_.getObservationAndAction(tmp);
-        pastObservations.push_back(obsAndAction.observation);
+        pastObservations.push_back(&obsAndAction.observation);
       }
 
       // Add past observations in correct order (oldest first)
@@ -478,17 +478,17 @@ TrainingManager::ModelInputs TrainingManager::buildModelInputsFromReplayBufferSa
 
     // Create newModelInput
     ModelInput newModelInput;
-    newModelInput.currentObservation = observation1;
+    newModelInput.currentObservation = &observation1;
     newModelInput.pastObservationStack.reserve(kObservationStackSize - 1);
     {
-      std::vector<Observation> pastObservations;
+      std::vector<const Observation*> pastObservations;
       pastObservations.reserve(kObservationStackSize - 1);
 
       ObservationAndActionStorage::Id tmp = observationId;
       while (pastObservations.size() < kObservationStackSize - 1 && observationAndActionStorage_.hasPrevious(tmp)) {
         tmp = observationAndActionStorage_.getPreviousId(tmp);
         const ObservationAndActionStorage::ObservationAndActionType &obsAndAction = observationAndActionStorage_.getObservationAndAction(tmp);
-        pastObservations.push_back(obsAndAction.observation);
+        pastObservations.push_back(&obsAndAction.observation);
       }
 
       // Add past observations in correct order (oldest first)

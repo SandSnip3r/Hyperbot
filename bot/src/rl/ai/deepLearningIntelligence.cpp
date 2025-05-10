@@ -40,12 +40,12 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
 
       // Create a ModelInput to pass to the JaxInterface
       ModelInput modelInput;
-      modelInput.currentObservation = observation;
+      modelInput.currentObservation = &observation;
       modelInput.pastObservationStack.reserve(lastObservations_.size() - 1);
 
       // Copy all but the current observation (which is the last one in lastObservations_)
       for (size_t i = 0; i < lastObservations_.size() - 1; ++i) {
-        modelInput.pastObservationStack.push_back(lastObservations_[i]);
+        modelInput.pastObservationStack.push_back(&lastObservations_[i]);
       }
 
       actionIndex = trainingManager_.getJaxInterface().selectAction(modelInput, canSendPacket);

@@ -36,7 +36,7 @@ public:
 
   // Result structure for sampling
   struct SampleResult {
-    TransitionId transitionId{0xBFBFBFBF};
+    TransitionId transitionId;
     float weight;
   };
 

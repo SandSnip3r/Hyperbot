@@ -16,16 +16,15 @@
 
 namespace rl {
 
-// TODO: We can instead have this take pointers to Observations.
 struct ModelInput {
   // Observations are stacked so that the model can see history.
   int pastObservationStackSize;
   // Older observations are at the front and newer observations are at the back.
-  std::vector<Observation> pastObservationStack;
+  std::vector<const Observation*> pastObservationStack;
   // Along with past observations, we provide the actions which were taken.
   std::vector<int> pastActionStack;
 
-  Observation currentObservation;
+  const Observation *currentObservation;
 };
 
 class JaxInterface {

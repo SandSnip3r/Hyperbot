@@ -82,10 +82,12 @@ def computeWeightedLossAndTdErrorBatch(model, targetModel, transitions, weights,
 
 @nnx.jit
 def jittedTrain(model, optimizerState, targetModel, oldObservations, selectedActions, isTerminals, rewards, newObservations, weights, gamma):
+  oldObservations = jnp.array(oldObservations)
   selectedActions = jnp.array(selectedActions)
   isTerminals = jnp.array(isTerminals)
   rewards = jnp.array(rewards)
   weights = jnp.array(weights)
+  newObservations = jnp.array(newObservations)
 
   (meanLoss, auxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdErrorBatch, has_aux=True)(model, targetModel, (oldObservations, selectedActions, isTerminals, rewards, newObservations), weights, gamma)
   optimizerState.update(gradients)
