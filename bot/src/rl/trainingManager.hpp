@@ -52,10 +52,10 @@ public:
 
   JaxInterface& getJaxInterface() { return jaxInterface_; }
   int getTrainStepCount() const { return trainStepCount_.load(); }
-  constexpr int getObservationStackSize() const { return kObservationStackSize; }
+  constexpr int getPastObservationStackSize() const { return kPastObservationStackSize; }
 
 private:
-  static constexpr int kObservationStackSize = 64;
+  static constexpr int kPastObservationStackSize = 64;
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
   static constexpr int kReplayBufferCapacity{1'000'000};
@@ -82,7 +82,7 @@ private:
   std::vector<SessionId> sessionsReadyForAssignment_;
   common::PvpDescriptor::PvpId nextPvpId_{0};
   IntelligencePool intelligencePool_{*this};
-  JaxInterface jaxInterface_{kObservationStackSize, kGamma, kLearningRate};
+  JaxInterface jaxInterface_{kPastObservationStackSize, kGamma, kLearningRate};
   CheckpointManager checkpointManager_{rlUserInterface_};
   std::atomic<int> trainStepCount_{0};
 
@@ -132,6 +132,7 @@ private:
   };
 
   ModelInputs buildModelInputsFromReplayBufferSamples(const std::vector<ReplayBufferType::SampleResult> &samples) const;
+  ModelInput buildModelInputUpToObservation(ObservationAndActionStorage::Id currentObservationId) const;
 };
 
 } // namespace rl

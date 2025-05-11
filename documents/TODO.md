@@ -46,3 +46,6 @@
 - Prevent any user input while pvping
 - Figure out how the client knows about the remaining buff duration when a character spawns. Currently, the parsing of the spawn packet does not contain a cast time.
 - Add debuffs to Observation
+- Make sure that the agent is receiving:
+  - Skill use failed because insufficient MP
+  - Item use failed because trying to use item which does not exist

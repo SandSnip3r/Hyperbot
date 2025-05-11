@@ -17,15 +17,29 @@
 namespace rl {
 
 struct ModelInput {
-  // Observations are stacked so that the model can see history.
-  int pastObservationStackSize;
+  // Observations & actions are stacked so that the model can see history.
   // Older observations are at the front and newer observations are at the back.
   std::vector<const Observation*> pastObservationStack;
-  // Along with past observations, we provide the actions which were taken.
   std::vector<int> pastActionStack;
-
   const Observation *currentObservation;
 };
+
+namespace detail {
+struct ModelInputNumpy {
+  pybind11::array_t<float> pastObservationStack;
+  pybind11::array_t<float> pastObservationTimestamps;
+  pybind11::array_t<float> pastActions;
+  pybind11::array_t<float> pastMask;
+  pybind11::array_t<float> currentObservation;
+};
+
+template <typename T>
+pybind11::array_t<T> vector1dToNumpy(const std::vector<T> &vector) {
+  pybind11::array_t<T> numpyArray(vector.size());
+  std::copy(vector.begin(), vector.end(), numpyArray.mutable_data(0));
+  return numpyArray;
+}
+} // namespace detail
 
 class JaxInterface {
 public:
@@ -45,11 +59,11 @@ public:
   };
 
   // All vectors should have the same size, this is the batch size.
-  TrainAuxOutput train(const std::vector<ModelInput> &oldModelInputs,
+  TrainAuxOutput train(const std::vector<ModelInput> &pastModelInputs,
                        const std::vector<int> &actionsTaken,
                        const std::vector<bool> &isTerminals,
                        const std::vector<float> &rewards,
-                       const std::vector<ModelInput> &modelInputs,
+                       const std::vector<ModelInput> &currentModelInputs,
                        const std::vector<float> &importanceSamplingWeights);
   void updateTargetModel();
   void updateTargetModelPolyak(float tau);
@@ -61,11 +75,11 @@ public:
 
   void addScalar(std::string_view name, double yValue, double xValue);
 private:
-  static constexpr int kActionSpaceSize{35}; // TODO: If changed, also change rl::ActionBuilder
+  static constexpr size_t kActionSpaceSize{35}; // TODO: If changed, also change rl::ActionBuilder
   static constexpr int kSeed{0};
 
   // Store gamma and learning rate as member variables
-  const int observationStackSize_;
+  const size_t observationStackSize_;
   const float gamma_;
   const float learningRate_;
 
@@ -100,25 +114,29 @@ private:
   // stackSize is the target size of the observation stacks. The given vectors might have fewer observations, so the implementation should pad.
   pybind11::object observationStacksToNumpy(int stackSize, const std::vector<std::vector<Observation>> &observationStacks);
 
-  // Convert a ModelInput to a numpy array
-  pybind11::array_t<float> modelInputToNumpy(const ModelInput &modelInput);
+  // Convert a ModelInput to corresponding numpy arrays
+  detail::ModelInputNumpy modelInputToNumpy(const ModelInput &modelInput);
 
-  // Convert a vector of ModelInputs to a batch of numpy arrays
-  pybind11::array_t<float> modelInputsToNumpy(const std::vector<ModelInput> &modelInputs);
+  // Convert a vector of ModelInputs to batches of corresponding numpy arrays
+  detail::ModelInputNumpy modelInputsToNumpy(const std::vector<ModelInput> &modelInputs);
 
   size_t writeModelInputToRawArray(const ModelInput &modelInput, float *array);
 
   // Note, this also works with a default constructed observation.
   size_t getObservationNumpySize(const Observation &observation) const;
 
-  size_t writeEmptyObservationToRawArray(int observationSize, float *array);
+  size_t writeEmptyObservationToRawArray(size_t observationSize, float *array);
 
   // Returns the number of floats written to the array.
   size_t writeObservationToRawArray(const Observation &observation, float *array);
 
   size_t writeOneHotEvent(event::EventCode eventCode, float *array);
 
-  pybind11::object createActionMask(bool canSendPacket);
+  void writeEmptyActionToRawArray(float *array);
+
+  void writeActionToRawArray(int action, float *array);
+
+  pybind11::array_t<float> createActionMaskNumpy(bool canSendPacket);
 };
 
 // We need 3 main interfaces:

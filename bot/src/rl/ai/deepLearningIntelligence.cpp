@@ -10,7 +10,7 @@
 namespace rl::ai {
 
 void DeepLearningIntelligence::resetForNewEpisode() {
-  lastObservations_.clear();
+  pastObservationsAndActions_.clear();
 }
 
 int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket) {
@@ -20,13 +20,6 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
   const float epsilon = getEpsilon();
   trainingManager_.getJaxInterface().addScalar("anneal/Epsilon", epsilon, stepCount_);
   ++stepCount_;
-
-  if (lastObservations_.size() >= trainingManager_.getObservationStackSize()) {
-    // We have enough observations, we can remove the oldest one.
-    lastObservations_.pop_front();
-  }
-  // Add the new observation to the stack.
-  lastObservations_.push_back(observation);
 
   std::bernoulli_distribution randomActionDistribution(epsilon);
   int actionIndex;
@@ -41,11 +34,13 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
       // Create a ModelInput to pass to the JaxInterface
       ModelInput modelInput;
       modelInput.currentObservation = &observation;
-      modelInput.pastObservationStack.reserve(lastObservations_.size() - 1);
+      modelInput.pastObservationStack.reserve(pastObservationsAndActions_.size());
+      modelInput.pastActionStack.reserve(pastObservationsAndActions_.size());
 
-      // Copy all but the current observation (which is the last one in lastObservations_)
-      for (size_t i = 0; i < lastObservations_.size() - 1; ++i) {
-        modelInput.pastObservationStack.push_back(&lastObservations_[i]);
+      // Fill the model input with the past observations and actions.
+      for (size_t i=0; i<pastObservationsAndActions_.size(); ++i) {
+        modelInput.pastObservationStack.push_back(&pastObservationsAndActions_[i].first);
+        modelInput.pastActionStack.push_back(pastObservationsAndActions_[i].second);
       }
 
       actionIndex = trainingManager_.getJaxInterface().selectAction(modelInput, canSendPacket);
@@ -56,6 +51,14 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
       actionIndex = 0;
     }
   }
+
+  // Add the current observation and action to the stack.
+  if (pastObservationsAndActions_.size() >= trainingManager_.getPastObservationStackSize()) {
+    // We are at capacity, remove the oldest one.
+    pastObservationsAndActions_.pop_front();
+  }
+  pastObservationsAndActions_.emplace_back(observation, actionIndex);
+
   return actionIndex;
 }
 

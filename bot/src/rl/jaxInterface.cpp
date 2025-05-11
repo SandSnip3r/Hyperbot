@@ -93,9 +93,8 @@ void JaxInterface::initialize() {
     // Now, we want to create a randomly initialized model. Specifically, we want randomly initialized weights. To do this, we'll instantiate our NNX model, then split the abstract graph and the concrete weights.
     DqnModelType = dqnModule_->attr("DqnModel");
 
-    const int kInputSize = observationStackSize_ * getObservationNumpySize(Observation());
-    const int kOutputSize = kActionSpaceSize;
-    model_ = DqnModelType(kInputSize, kOutputSize, *nnxRngs_);
+    const int observationSize = getObservationNumpySize(Observation());
+    model_ = DqnModelType(observationSize, observationStackSize_, kActionSpaceSize, *nnxRngs_);
     targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
 
     optaxModule_ = py::module::import("optax");
@@ -114,14 +113,29 @@ int JaxInterface::selectAction(const ModelInput &modelInput, bool canSendPacket)
     waitingToSelectAction_ = false;
     py::gil_scoped_acquire acquire;
     // Convert C++ observation into numpy observation
-    py::array_t<float> numpyObservation = modelInputToNumpy(modelInput);
+    detail::ModelInputNumpy numpyModelInput = modelInputToNumpy(modelInput);
     // Create an action mask based on whether or not we can send a packet
-    py::object actionMask = createActionMask(canSendPacket);
+    py::array_t<float> actionMask = createActionMaskNumpy(canSendPacket);
     // Get the action from the model
     py::object actionPyObject;
     {
       ZoneScopedN("JaxInterface::selectAction_PYTHON");
-      actionPyObject = dqnModule_->attr("selectAction")(*model_, numpyObservation, actionMask, getNextRngKey());
+      // Input is:
+      // - pastObservationStack:      (stackSize, observationSize)
+      // - pastObservationTimestamps: (stackSize, 1)
+      // - pastActions:               (stackSize, actionSpaceSize)
+      // - pastMask:                  (stackSize, 1)
+      // - currentObservation:        (observationSize)
+      // - actionMask:                (actionSpaceSize)
+      // - rngKey
+      actionPyObject = dqnModule_->attr("selectAction")(*model_,
+                                                        numpyModelInput.pastObservationStack,
+                                                        numpyModelInput.pastObservationTimestamps,
+                                                        numpyModelInput.pastActions,
+                                                        numpyModelInput.pastMask,
+                                                        numpyModelInput.currentObservation,
+                                                        actionMask,
+                                                        getNextRngKey());
     }
     actionIndex = actionPyObject.cast<int>();
   } catch (std::exception &ex) {
@@ -134,23 +148,23 @@ int JaxInterface::selectAction(const ModelInput &modelInput, bool canSendPacket)
   return actionIndex;
 }
 
-JaxInterface::TrainAuxOutput JaxInterface::train(const std::vector<ModelInput> &oldModelInputs,
+JaxInterface::TrainAuxOutput JaxInterface::train(const std::vector<ModelInput> &pastModelInputs,
                                                  const std::vector<int> &actionsTaken,
                                                  const std::vector<bool> &isTerminals,
                                                  const std::vector<float> &rewards,
-                                                 const std::vector<ModelInput> &newModelInputs,
+                                                 const std::vector<ModelInput> &currentModelInputs,
                                                  const std::vector<float> &importanceSamplingWeights) {
   ZoneScopedN("JaxInterface::train");
   {
-    size_t size = oldModelInputs.size();
+    size_t size = pastModelInputs.size();
     if (size == 0 ||
         actionsTaken.size() != size ||
         isTerminals.size() != size ||
         rewards.size() != size ||
-        newModelInputs.size() != size ||
+        currentModelInputs.size() != size ||
         importanceSamplingWeights.size() != size) {
       throw std::runtime_error(absl::StrFormat("JaxInterface::train: Batch size mismatch: %zu %zu %zu %zu %zu %zu",
-        oldModelInputs.size(), actionsTaken.size(), isTerminals.size(), rewards.size(), newModelInputs.size(), importanceSamplingWeights.size()));
+        pastModelInputs.size(), actionsTaken.size(), isTerminals.size(), rewards.size(), currentModelInputs.size(), importanceSamplingWeights.size()));
     }
   }
   TrainAuxOutput result;
@@ -161,14 +175,36 @@ JaxInterface::TrainAuxOutput JaxInterface::train(const std::vector<ModelInput> &
     });
     py::gil_scoped_acquire acquire;
     try {
-      py::array_t<float> oldModelInputNumpy = modelInputsToNumpy(oldModelInputs);
-      py::array_t<float> newModelInputNumpy = modelInputsToNumpy(newModelInputs);
+      detail::ModelInputNumpy pastModelInputsNumpy = modelInputsToNumpy(pastModelInputs);
+      py::tuple pastModelInputTuple = py::make_tuple(
+        pastModelInputsNumpy.pastObservationStack,
+        pastModelInputsNumpy.pastObservationTimestamps,
+        pastModelInputsNumpy.pastActions,
+        pastModelInputsNumpy.pastMask,
+        pastModelInputsNumpy.currentObservation
+      );
+      detail::ModelInputNumpy currentModelInputsNumpy = modelInputsToNumpy(currentModelInputs);
+      py::tuple currentModelInputTuple = py::make_tuple(
+        currentModelInputsNumpy.pastObservationStack,
+        currentModelInputsNumpy.pastObservationTimestamps,
+        currentModelInputsNumpy.pastActions,
+        currentModelInputsNumpy.pastMask,
+        currentModelInputsNumpy.currentObservation
+      );
+
       py::object auxOutput;
       {
         ZoneScopedN("JaxInterface::train_PYTHON");
-        auxOutput = dqnModule_->attr("jittedTrain")(*model_, *optimizerState_, *targetModel_,
-                                                    oldModelInputNumpy, actionsTaken, isTerminals,
-                                                    rewards, newModelInputNumpy, importanceSamplingWeights, gamma_);
+        auxOutput = dqnModule_->attr("jittedTrain")(*model_,
+                                                    *optimizerState_,
+                                                    *targetModel_,
+                                                    pastModelInputTuple,
+                                                    detail::vector1dToNumpy(actionsTaken),
+                                                    detail::vector1dToNumpy(isTerminals),
+                                                    detail::vector1dToNumpy(rewards),
+                                                    currentModelInputTuple,
+                                                    detail::vector1dToNumpy(importanceSamplingWeights),
+                                                    gamma_);
       }
       py::tuple auxOutputTuple = auxOutput.cast<py::tuple>();
       result.tdErrors = auxOutputTuple[0].cast<std::vector<float>>();
@@ -380,7 +416,7 @@ size_t JaxInterface::getObservationNumpySize(const Observation &observation) con
   return 6 + 1 + 23 + observation.remainingTimeOurBuffs_.size()*2 + observation.remainingTimeOpponentBuffs_.size()*2 + observation.skillCooldowns_.size()*2 + observation.itemCooldowns_.size()*2;
 }
 
-size_t JaxInterface::writeEmptyObservationToRawArray(int observationSize, float *array) {
+size_t JaxInterface::writeEmptyObservationToRawArray(size_t observationSize, float *array) {
   // Zero it out
   std::fill_n(array, observationSize, 0.0f);
   return observationSize;
@@ -454,7 +490,16 @@ size_t JaxInterface::writeOneHotEvent(event::EventCode eventCode, float *array) 
   return kEventsWeCareAbout.size();
 }
 
-pybind11::object JaxInterface::createActionMask(bool canSendPacket) {
+void JaxInterface::writeEmptyActionToRawArray(float *array) {
+  std::fill_n(array, kActionSpaceSize, 0.0f);
+}
+
+void JaxInterface::writeActionToRawArray(int action, float *array) {
+  std::fill_n(array, kActionSpaceSize, 0.0f);
+  array[action] = 1.0f;
+}
+
+py::array_t<float> JaxInterface::createActionMaskNumpy(bool canSendPacket) {
   py::array_t<float> array(kActionSpaceSize);
   auto mutableArray = array.mutable_unchecked<1>();
   mutableArray(0) = 0.0;
@@ -463,7 +508,7 @@ pybind11::object JaxInterface::createActionMask(bool canSendPacket) {
   return array;
 }
 
-py::array_t<float> JaxInterface::modelInputToNumpy(const ModelInput &modelInput) {
+detail::ModelInputNumpy JaxInterface::modelInputToNumpy(const ModelInput &modelInput) {
   ZoneScopedN("JaxInterface::modelInputToNumpy");
 
   // Get the size of an observation
@@ -472,22 +517,117 @@ py::array_t<float> JaxInterface::modelInputToNumpy(const ModelInput &modelInput)
   // Calculate the total size needed for past observations stack and current observation
   const size_t totalSize = individualObservationSize * observationStackSize_;
 
-  // Allocate a 1d numpy array to hold a flattening of all observations
-  py::array_t<float> array(totalSize);
+  // ==================================== Allocate numpy arrays ====================================
+  detail::ModelInputNumpy result;
+  result.pastObservationStack      = py::array_t<float>({observationStackSize_, individualObservationSize});
+  result.pastObservationTimestamps = py::array_t<float>({observationStackSize_, size_t(1)});
+  result.pastActions               = py::array_t<float>({observationStackSize_, kActionSpaceSize});
+  result.pastMask                  = py::array_t<float>({observationStackSize_, size_t(1)});
+  result.currentObservation        = py::array_t<float>(individualObservationSize);
 
-  // Grab a raw pointer to the numpy array
-  auto mutableArray = array.mutable_unchecked<1>();
-  float *mutableData = mutableArray.mutable_data(0);
-
-  size_t floatsWritten = writeModelInputToRawArray(modelInput, mutableData);
-  if (floatsWritten != totalSize) {
-    throw std::runtime_error(absl::StrFormat("JaxInterface::modelInputToNumpy: writeModelInputToRawArray wrote an unexpected number of floats. %d != %d", floatsWritten, totalSize));
+  // ============================ Write past observations to numpy array ===========================
+  {
+    auto mutablePastObservationStackArray = result.pastObservationStack.mutable_unchecked<2>();
+    int pastObservationIndex = 0;
+    // First write empty observations if the given observation stack does not fill the expected stack size.
+    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+      float *observationDataPtr = mutablePastObservationStackArray.mutable_data(pastObservationIndex, 0);
+      size_t written = writeEmptyObservationToRawArray(individualObservationSize, observationDataPtr);
+      if (written != individualObservationSize) {
+        LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
+      }
+      ++pastObservationIndex;
+    }
+    // Now, write the past observations to the numpy array.
+    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
+      const Observation &observation = *modelInput.pastObservationStack[i];
+      float *observationDataPtr = mutablePastObservationStackArray.mutable_data(pastObservationIndex, 0);
+      size_t written = writeObservationToRawArray(observation, observationDataPtr);
+      if (written != individualObservationSize) {
+        LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
+      }
+      ++pastObservationIndex;
+    }
+    if (pastObservationIndex != observationStackSize_) {
+      LOG(WARNING) << "Wrote " << pastObservationIndex << " observations but expected to write " << observationStackSize_;
+    }
   }
 
-  return array;
+  // ======================= Write past observation timestamps to numpy array ======================
+  {
+    auto mutablePastObservationTimestampsArray = result.pastObservationTimestamps.mutable_unchecked<2>();
+    // First write empty timestamps if the given observation stack does not fill the expected stack size.
+    int pastObservationIndex = 0;
+    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+      *mutablePastObservationTimestampsArray.mutable_data(pastObservationIndex, 0) = 0.0;
+      ++pastObservationIndex;
+    }
+    // Now, write the past observation timestamps to the numpy array.
+    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
+      // Calculate the time delta between the current observation and the past observation.
+      const int millisecondsAgo = std::chrono::duration_cast<std::chrono::milliseconds>(modelInput.currentObservation->timestamp_ - modelInput.pastObservationStack[i]->timestamp_).count();
+      // For now, we hard-code the regularization target to be 2000ms.
+      static constexpr int kRegularizationTargetMs = 2000;
+      *mutablePastObservationTimestampsArray.mutable_data(pastObservationIndex, 0) = millisecondsAgo / static_cast<float>(kRegularizationTargetMs);
+      ++pastObservationIndex;
+    }
+    if (pastObservationIndex != observationStackSize_) {
+      LOG(WARNING) << "Wrote " << pastObservationIndex << " timestamps but expected to write " << observationStackSize_;
+    }
+  }
+
+  // ============================== Write past actions to numpy array ==============================
+  {
+    auto mutablePastActionsArray = result.pastActions.mutable_unchecked<2>();
+    // First write empty actions if the given observation stack does not fill the expected stack size.
+    int pastActionIndex = 0;
+    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+      float *actionDataPtr = mutablePastActionsArray.mutable_data(pastActionIndex, 0);
+      writeEmptyActionToRawArray(actionDataPtr);
+      ++pastActionIndex;
+    }
+    // Now, write the past actions to the numpy array.
+    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
+      float *actionDataPtr = mutablePastActionsArray.mutable_data(pastActionIndex, 0);
+      writeActionToRawArray(modelInput.pastActionStack[i], actionDataPtr);
+      ++pastActionIndex;
+    }
+    if (pastActionIndex != observationStackSize_) {
+      LOG(WARNING) << "Wrote " << pastActionIndex << " actions but expected to write " << observationStackSize_;
+    }
+  }
+
+  // ================================ Write past mask to numpy array ===============================
+  {
+    auto mutablePastMaskArray = result.pastMask.mutable_unchecked<2>();
+    // First write 0s if the given observation stack does not fill the expected stack size.
+    int index = 0;
+    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+      *mutablePastMaskArray.mutable_data(index, 0) = 0.0;
+      ++index;
+    }
+    // Now, write 1s to the numpy array.
+    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
+      *mutablePastMaskArray.mutable_data(index, 0) = 1.0;
+      ++index;
+    }
+    if (index != observationStackSize_) {
+      LOG(WARNING) << "Wrote " << index << " masks but expected to write " << observationStackSize_;
+    }
+  }
+
+  // =========================== Write current observation to numpy array ==========================
+  auto mutableCurrentObservationArray = result.currentObservation.mutable_unchecked<1>();
+  float *mutableCurrentObservationData = mutableCurrentObservationArray.mutable_data(0);
+  size_t written = writeObservationToRawArray(*modelInput.currentObservation, mutableCurrentObservationData);
+  if (written != individualObservationSize) {
+    LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
+  }
+
+  return result;
 }
 
-py::array_t<float> JaxInterface::modelInputsToNumpy(const std::vector<ModelInput> &modelInputs) {
+detail::ModelInputNumpy JaxInterface::modelInputsToNumpy(const std::vector<ModelInput> &modelInputs) {
   ZoneScopedN("JaxInterface::modelInputsToNumpy");
 
   if (modelInputs.empty()) {
@@ -500,24 +640,123 @@ py::array_t<float> JaxInterface::modelInputsToNumpy(const std::vector<ModelInput
   // Calculate the total size needed for each model input (past observations stack + current observation)
   const size_t singleInputSize = individualObservationSize * observationStackSize_;
 
-  // Allocate a 2d numpy array to hold a batch of model inputs
-  py::array_t<float> array({modelInputs.size(), singleInputSize});
+  const size_t batchSize = modelInputs.size();
 
-  // Grab a raw pointer to the numpy array
-  auto mutableArray = array.mutable_unchecked<2>();
+  // ==================================== Allocate numpy arrays ====================================
+  detail::ModelInputNumpy result;
+  result.pastObservationStack      = py::array_t<float>({batchSize, observationStackSize_, individualObservationSize});
+  result.pastObservationTimestamps = py::array_t<float>({batchSize, observationStackSize_, size_t(1)});
+  result.pastActions               = py::array_t<float>({batchSize, observationStackSize_, kActionSpaceSize});
+  result.pastMask                  = py::array_t<float>({batchSize, observationStackSize_, size_t(1)});
+  result.currentObservation        = py::array_t<float>({batchSize, individualObservationSize});
 
-  // Process each model input in the batch
-  for (size_t batchIndex = 0; batchIndex < modelInputs.size(); ++batchIndex) {
+  // ============================ Write past observations to numpy array ===========================
+  for (int batchIndex=0; batchIndex<batchSize; ++batchIndex) {
     const ModelInput &modelInput = modelInputs[batchIndex];
-    float *mutableData = mutableArray.mutable_data(batchIndex, 0);
-
-    size_t floatsWritten = writeModelInputToRawArray(modelInput, mutableData);
-    if (floatsWritten != individualObservationSize * observationStackSize_) {
-      throw std::runtime_error(absl::StrFormat("JaxInterface::modelInputsToNumpy: writeModelInputToRawArray wrote an unexpected number of floats. %d != %d", floatsWritten, individualObservationSize * observationStackSize_));
+    auto mutablePastObservationStackArray = result.pastObservationStack.mutable_unchecked<3>();
+    int pastObservationIndex = 0;
+    // First write empty observations if the given observation stack does not fill the expected stack size.
+    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+      float *observationDataPtr = mutablePastObservationStackArray.mutable_data(batchIndex, pastObservationIndex, 0);
+      size_t written = writeEmptyObservationToRawArray(individualObservationSize, observationDataPtr);
+      if (written != individualObservationSize) {
+        LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
+      }
+      ++pastObservationIndex;
+    }
+    // Now, write the past observations to the numpy array.
+    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
+      const Observation &observation = *modelInput.pastObservationStack[i];
+      float *observationDataPtr = mutablePastObservationStackArray.mutable_data(batchIndex, pastObservationIndex, 0);
+      size_t written = writeObservationToRawArray(observation, observationDataPtr);
+      if (written != individualObservationSize) {
+        LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
+      }
+      ++pastObservationIndex;
+    }
+    if (pastObservationIndex != observationStackSize_) {
+      LOG(WARNING) << "Wrote " << pastObservationIndex << " observations but expected to write " << observationStackSize_;
     }
   }
 
-  return array;
+  // ======================= Write past observation timestamps to numpy array ======================
+  for (int batchIndex=0; batchIndex<batchSize; ++batchIndex) {
+    const ModelInput &modelInput = modelInputs[batchIndex];
+    auto mutablePastObservationTimestampsArray = result.pastObservationTimestamps.mutable_unchecked<3>();
+    // First write empty timestamps if the given observation stack does not fill the expected stack size.
+    int pastObservationIndex = 0;
+    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+      *mutablePastObservationTimestampsArray.mutable_data(batchIndex, pastObservationIndex, 0) = 0.0;
+      ++pastObservationIndex;
+    }
+    // Now, write the past observation timestamps to the numpy array.
+    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
+      // Calculate the time delta between the current observation and the past observation.
+      const int millisecondsAgo = std::chrono::duration_cast<std::chrono::milliseconds>(modelInput.currentObservation->timestamp_ - modelInput.pastObservationStack[i]->timestamp_).count();
+      // For now, we hard-code the regularization target to be 2000ms.
+      static constexpr int kRegularizationTargetMs = 2000;
+      *mutablePastObservationTimestampsArray.mutable_data(batchIndex, pastObservationIndex, 0) = millisecondsAgo / static_cast<float>(kRegularizationTargetMs);
+      ++pastObservationIndex;
+    }
+    if (pastObservationIndex != observationStackSize_) {
+      LOG(WARNING) << "Wrote " << pastObservationIndex << " timestamps but expected to write " << observationStackSize_;
+    }
+  }
+
+  // ============================== Write past actions to numpy array ==============================
+  for (int batchIndex=0; batchIndex<batchSize; ++batchIndex) {
+    const ModelInput &modelInput = modelInputs[batchIndex];
+    auto mutablePastActionsArray = result.pastActions.mutable_unchecked<3>();
+    // First write empty actions if the given observation stack does not fill the expected stack size.
+    int pastActionIndex = 0;
+    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+      float *actionDataPtr = mutablePastActionsArray.mutable_data(batchIndex, pastActionIndex, 0);
+      writeEmptyActionToRawArray(actionDataPtr);
+      ++pastActionIndex;
+    }
+    // Now, write the past actions to the numpy array.
+    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
+      float *actionDataPtr = mutablePastActionsArray.mutable_data(batchIndex, pastActionIndex, 0);
+      writeActionToRawArray(modelInput.pastActionStack[i], actionDataPtr);
+      ++pastActionIndex;
+    }
+    if (pastActionIndex != observationStackSize_) {
+      LOG(WARNING) << "Wrote " << pastActionIndex << " actions but expected to write " << observationStackSize_;
+    }
+  }
+
+  // ================================ Write past mask to numpy array ===============================
+  for (int batchIndex=0; batchIndex<batchSize; ++batchIndex) {
+    const ModelInput &modelInput = modelInputs[batchIndex];
+    auto mutablePastMaskArray = result.pastMask.mutable_unchecked<3>();
+    // First write 0s if the given observation stack does not fill the expected stack size.
+    int index = 0;
+    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+      *mutablePastMaskArray.mutable_data(batchIndex, index, 0) = 0.0;
+      ++index;
+    }
+    // Now, write 1s to the numpy array.
+    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
+      *mutablePastMaskArray.mutable_data(batchIndex, index, 0) = 1.0;
+      ++index;
+    }
+    if (index != observationStackSize_) {
+      LOG(WARNING) << "Wrote " << index << " masks but expected to write " << observationStackSize_;
+    }
+  }
+
+  // =========================== Write current observation to numpy array ==========================
+  for (int batchIndex=0; batchIndex<batchSize; ++batchIndex) {
+    const ModelInput &modelInput = modelInputs[batchIndex];
+    auto mutableCurrentObservationArray = result.currentObservation.mutable_unchecked<2>();
+    float *mutableCurrentObservationData = mutableCurrentObservationArray.mutable_data(batchIndex, 0);
+    size_t written = writeObservationToRawArray(*modelInput.currentObservation, mutableCurrentObservationData);
+    if (written != individualObservationSize) {
+      LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
+    }
+  }
+
+  return result;
 }
 
 size_t JaxInterface::writeModelInputToRawArray(const ModelInput &modelInput, float *array) {

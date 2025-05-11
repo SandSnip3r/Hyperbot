@@ -25,7 +25,7 @@ private:
   float getEpsilon();
 
   // Newest are at the back, oldest are at the front.
-  std::deque<Observation> lastObservations_;
+  std::deque<std::pair<Observation, int>> pastObservationsAndActions_;
 };
 
 } // namespace rl::ai

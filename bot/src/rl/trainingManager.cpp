@@ -440,8 +440,10 @@ TrainingManager::ModelInputs TrainingManager::buildModelInputsFromReplayBufferSa
 
   for (int i=0; i<samples.size(); ++i) {
     const ReplayBufferType::SampleResult &sample = samples.at(i);
+
     const ObservationAndActionStorage::Id observationId = observationIds.at(i);
     const ObservationAndActionStorage::Id previousObservationId = observationAndActionStorage_.getPreviousId(observationId);
+
     const ObservationAndActionStorage::ObservationAndActionType &previousObservationAndAction = observationAndActionStorage_.getObservationAndAction(previousObservationId);
     const Observation &observation0 = previousObservationAndAction.observation;
     const std::optional<int> &actionIndex0 = previousObservationAndAction.actionIndex;
@@ -450,52 +452,12 @@ TrainingManager::ModelInputs TrainingManager::buildModelInputsFromReplayBufferSa
     const Observation &observation1 = observationAndAction.observation;
     const std::optional<int> &actionIndex1 = observationAndAction.actionIndex;
 
-    const float weight = sample.weight;
-
     const bool isTerminal = !actionIndex1.has_value();
     const float reward = calculateReward(observation0, observation1, isTerminal);
+    const float weight = sample.weight;
 
-    // Create oldModelInput
-    ModelInput oldModelInput;
-    oldModelInput.currentObservation = &observation0;
-    oldModelInput.pastObservationStack.reserve(kObservationStackSize - 1);
-    {
-      std::vector<const Observation*> pastObservations;
-      pastObservations.reserve(kObservationStackSize - 1);
-
-      ObservationAndActionStorage::Id tmp = previousObservationId;
-      while (pastObservations.size() < kObservationStackSize - 1 && observationAndActionStorage_.hasPrevious(tmp)) {
-        tmp = observationAndActionStorage_.getPreviousId(tmp);
-        const ObservationAndActionStorage::ObservationAndActionType &obsAndAction = observationAndActionStorage_.getObservationAndAction(tmp);
-        pastObservations.push_back(&obsAndAction.observation);
-      }
-
-      // Add past observations in correct order (oldest first)
-      for (auto it = pastObservations.rbegin(); it != pastObservations.rend(); ++it) {
-        oldModelInput.pastObservationStack.push_back(*it);
-      }
-    }
-
-    // Create newModelInput
-    ModelInput newModelInput;
-    newModelInput.currentObservation = &observation1;
-    newModelInput.pastObservationStack.reserve(kObservationStackSize - 1);
-    {
-      std::vector<const Observation*> pastObservations;
-      pastObservations.reserve(kObservationStackSize - 1);
-
-      ObservationAndActionStorage::Id tmp = observationId;
-      while (pastObservations.size() < kObservationStackSize - 1 && observationAndActionStorage_.hasPrevious(tmp)) {
-        tmp = observationAndActionStorage_.getPreviousId(tmp);
-        const ObservationAndActionStorage::ObservationAndActionType &obsAndAction = observationAndActionStorage_.getObservationAndAction(tmp);
-        pastObservations.push_back(&obsAndAction.observation);
-      }
-
-      // Add past observations in correct order (oldest first)
-      for (auto it = pastObservations.rbegin(); it != pastObservations.rend(); ++it) {
-        newModelInput.pastObservationStack.push_back(*it);
-      }
-    }
+    ModelInput oldModelInput = buildModelInputUpToObservation(previousObservationId);
+    ModelInput newModelInput = buildModelInputUpToObservation(observationId);
 
     modelInputs.oldModelInputs.push_back(std::move(oldModelInput));
     modelInputs.actionsTaken.push_back(actionIndex0.value());
@@ -506,6 +468,33 @@ TrainingManager::ModelInputs TrainingManager::buildModelInputsFromReplayBufferSa
   }
 
   return modelInputs;
+}
+
+ModelInput TrainingManager::buildModelInputUpToObservation(ObservationAndActionStorage::Id currentObservationId) const {
+  ModelInput modelInput;
+  modelInput.currentObservation = &observationAndActionStorage_.getObservationAndAction(currentObservationId).observation;
+  modelInput.pastObservationStack.reserve(kPastObservationStackSize);
+  {
+    std::vector<std::pair<const Observation*, int>> pastObservationsAndActions;
+    pastObservationsAndActions.reserve(kPastObservationStackSize);
+
+    ObservationAndActionStorage::Id tmp = currentObservationId;
+    while (pastObservationsAndActions.size() < kPastObservationStackSize && observationAndActionStorage_.hasPrevious(tmp)) {
+      tmp = observationAndActionStorage_.getPreviousId(tmp);
+      const ObservationAndActionStorage::ObservationAndActionType &obsAndAction = observationAndActionStorage_.getObservationAndAction(tmp);
+      if (!obsAndAction.actionIndex) {
+        throw std::runtime_error("Building stack of past observations, but have a missing action index");
+      }
+      pastObservationsAndActions.emplace_back(&obsAndAction.observation, obsAndAction.actionIndex.value());
+    }
+
+    // Add past observations in correct order (oldest first)
+    for (auto it = pastObservationsAndActions.rbegin(); it != pastObservationsAndActions.rend(); ++it) {
+      modelInput.pastObservationStack.push_back(it->first);
+      modelInput.pastActionStack.push_back(it->second);
+    }
+  }
+  return modelInput;
 }
 
 } // namespace rl
