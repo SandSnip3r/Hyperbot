@@ -18,8 +18,6 @@ public:
 private:
   static inline std::string kName{"EquipItem"};
   const sro::scalar_types::ReferenceObjectId itemRefId_;
-  bool initialized_{false};
-  sro::scalar_types::StorageIndexType itemSlot_;
 };
 
 } // namespace state::machine

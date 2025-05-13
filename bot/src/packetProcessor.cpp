@@ -1419,14 +1419,18 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
     // It seems like if a skill is completed without interruption, this end will come after the SkillEnd packet
     // If a skill is interrupted, this end will come BEFORE the SkillEnd packet
     if (selfEntity_->skillEngine.acceptedCommandQueue.empty()) {
-      CHAR_LOG(WARNING) << "Command ended, but we had no accepted command";
+      bool poppedACancel=false;
       if (!selfEntity_->skillEngine.pendingCommandQueue.empty()) {
         VLOG(1) << " Pending command queue is not empty though, maybe we ought to pop that?";
         if (selfEntity_->skillEngine.pendingCommandQueue.front().commandType == packet::enums::CommandType::kCancel) {
           VLOG(1) << "  Action is a cancel, popping";
           // TODO: I am not confident in the assumption that this means that we delete the first item in the pending queue
           selfEntity_->skillEngine.pendingCommandQueue.erase(selfEntity_->skillEngine.pendingCommandQueue.begin());
+          poppedACancel = true;
         }
+      }
+      if (!poppedACancel) {
+        CHAR_LOG(WARNING) << "Command ended, but we had no accepted command";
       }
     } else {
       // We arent told which command ended, we just assume it was the most recent.
@@ -1487,22 +1491,30 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
   if (packet.result() == 2) {
     // Error
     CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "Skill unsuccessful, err " << packet.errorCode();
-    // Which skill is this? It must be the first item in the skillEngine.pendingCommandQueue
-    if (!selfEntity_->skillEngine.pendingCommandQueue.empty()) {
-      const auto nextCommand = selfEntity_->skillEngine.pendingCommandQueue.front();
-      if (nextCommand.commandType == packet::enums::CommandType::kExecute) {
-        if (nextCommand.actionType == packet::enums::ActionType::kCast) {
-          const auto skillRefId = nextCommand.refSkillId;
-          // LOG(INFO) << "Our skill failed (" << skillRefId << ')';
-          eventBroker_.publishEvent<event::SkillFailed>(selfEntity_->globalId, skillRefId, packet.errorCode());
-        } else {
-          // LOG(INFO) << "Out skill failed, but the most recent pending command isn't a \"Cast\"";
+
+    bool found=false;
+    // Which skill failed? Let's look to see if there is something in the accepted command queue.
+    for (const state::SkillEngine::AcceptedCommandAndWasExecuted &command : selfEntity_->skillEngine.acceptedCommandQueue) {
+      if (command.command.commandType == packet::enums::CommandType::kExecute &&
+          command.command.actionType == packet::enums::ActionType::kCast) {
+        CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << absl::StreamFormat("Found skill %s in accepted command queue", gameData_.getSkillName(command.command.refSkillId));
+        if (!found) {
+          CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "  Publishing skill failed event";
+          eventBroker_.publishEvent<event::SkillFailed>(selfEntity_->globalId, command.command.refSkillId, packet.errorCode());
+          found = true;
         }
-      } else {
-        // LOG(INFO) << "Our skill failed, but the most recent pending command isn't an \"Execute\"";
       }
-    } else {
-      // LOG(INFO) << "Our skill failed, but we dont know which one!";
+    }
+    for (const packet::structures::ActionCommand &command : selfEntity_->skillEngine.pendingCommandQueue) {
+      if (command.commandType == packet::enums::CommandType::kExecute &&
+          command.actionType == packet::enums::ActionType::kCast) {
+        CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << absl::StreamFormat("Found skill %s in pending command queue", gameData_.getSkillName(command.refSkillId));
+        if (!found) {
+          CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "  Publishing skill failed event";
+          eventBroker_.publishEvent<event::SkillFailed>(selfEntity_->globalId, command.refSkillId, packet.errorCode());
+          found = true;
+        }
+      }
     }
     return;
   }

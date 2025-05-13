@@ -7,10 +7,6 @@
 
 #include <memory>
 
-namespace event {
-struct Event;
-} // namespace event
-
 namespace state::machine {
 class StateMachine;
 } // namespace state::machine
@@ -19,7 +15,7 @@ namespace rl {
 
 class ActionBuilder {
 public:
-  static std::unique_ptr<Action> buildAction(state::machine::StateMachine *parentStateMachine, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId, int actionIndex);
+  static std::unique_ptr<Action> buildAction(state::machine::StateMachine *parentStateMachine, sro::scalar_types::EntityGlobalId opponentGlobalId, int actionIndex);
   static constexpr int actionSpaceSize() { return 35; } // TODO: If changed, also change rl::JaxInterface
 };
 

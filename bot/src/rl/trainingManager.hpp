@@ -58,13 +58,16 @@ private:
   static constexpr int kPastObservationStackSize = 64;
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
+  static constexpr int kReplayBufferMinimumBeforeTraining{5'000};
   static constexpr int kReplayBufferCapacity{1'000'000};
-  static constexpr int kTargetNetworkUpdateInterval{40'000};
+  static constexpr int kTargetNetworkUpdateInterval{10'000};
   static constexpr int kTrainStepCheckpointInterval{10'000};
   static constexpr float kTargetNetworkPolyakTau{0.0005f};
-  static constexpr bool kUsePolyakTargetNetworkUpdate{false};
+  static constexpr int kTargetNetworkPolyakUpdateInterval{16};
+  static constexpr bool kTargetNetworkPolyakEnabled{true};
   static constexpr float kGamma{0.9975f};
-  static constexpr float kLearningRate{1e-6f};
+  static constexpr float kLearningRate{1e-5f};
+  static constexpr float kPerAlpha{0.5f};
   static constexpr float kPerBetaStart{0.4f};
   static constexpr float kPerBetaEnd{1.0f};
   static constexpr int kPerTrainStepCountAnneal{150'000};
@@ -115,7 +118,7 @@ private:
 
   ObservationAndActionStorage observationAndActionStorage_{kReplayBufferCapacity};
   using ReplayBufferType = ReplayBuffer<ObservationAndActionStorage::Id>;
-  ReplayBufferType replayBuffer_{kReplayBufferCapacity, /*alpha=*/0.6f, /*epsilon=*/1e-5f};
+  ReplayBufferType replayBuffer_{kReplayBufferCapacity, kPerAlpha, /*epsilon=*/1e-5f};
   absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> observationIdToTransitionIdMap_;
   absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> transitionIdToObservationIdMap_;
   mutable std::mutex observationTransitionIdMapMutex_;

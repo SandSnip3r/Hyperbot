@@ -96,27 +96,19 @@ def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight, 
   # Apply Importance Sampling weight to the loss
   weightedLoss = weight * unweightedLoss
 
+  # Return additional debugging information
   return weightedLoss, (tdError, jnp.min(values), jnp.mean(values), jnp.max(values))
 
 def computeWeightedLossAndTdErrorBatch(model, targetModel, transitions, weights, gamma):
   batched = jax.vmap(computeWeightedLossAndTdErrorSingle, in_axes=( None, None, (0, 0, 0, 0, 0), 0, None ), out_axes=(0, 0))
   weightedLosses, (tdErrors, minValues, meanValues, maxValues) = batched(model, targetModel, transitions, weights, gamma)
-  return jnp.mean(weightedLosses), (tdErrors, jnp.mean(minValues), jnp.mean(meanValues), jnp.mean(maxValues))
+  return jnp.mean(weightedLosses), (tdErrors, jnp.min(minValues), jnp.mean(meanValues), jnp.max(maxValues))
 
 @nnx.jit
 def jittedTrain(model, optimizerState, targetModel, pastModelInputTuple, selectedActions, isTerminals, rewards, currentModelInputTuple, weights, gamma):
   (meanLoss, auxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdErrorBatch, has_aux=True)(model, targetModel, (pastModelInputTuple, selectedActions, isTerminals, rewards, currentModelInputTuple), weights, gamma)
   optimizerState.update(gradients)
   return auxOutput
-
-def convertThenTrain(model, optimizerState, targetModel, oldObservations, selectedActions, isTerminals, rewards, newObservations, weights, gamma):
-  selectedActions = jnp.array(selectedActions)
-  isTerminals = jnp.array(isTerminals)
-  rewards = jnp.array(rewards)
-  weights = jnp.array(weights)
-  result = jittedTrain(model, optimizerState, targetModel, oldObservations, selectedActions, isTerminals, rewards, newObservations, weights, gamma)
-  jax.block_until_ready(result)
-  return result
 
 def getCopyOfModel(model, targetNetwork):
   graph, params = nnx.split(model)

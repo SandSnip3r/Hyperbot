@@ -2,7 +2,7 @@
 
 namespace rl {
 
-std::unique_ptr<Action> ActionBuilder::buildAction(state::machine::StateMachine *parentStateMachine, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId, int actionIndex) {
+std::unique_ptr<Action> ActionBuilder::buildAction(state::machine::StateMachine *parentStateMachine, sro::scalar_types::EntityGlobalId opponentGlobalId, int actionIndex) {
   switch (actionIndex) {
     case 0:
       return std::make_unique<Sleep>(parentStateMachine);

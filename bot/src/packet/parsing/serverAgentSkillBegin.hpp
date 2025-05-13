@@ -19,6 +19,7 @@ public:
   // 12292 Happens when trying to cast a skill and dont have enough MP
   // Not yet sure why 12293 happens. It's happening when we're knocked back and trying to cast an ice bolt
   //  Seems to happen when skill is already on cooldown
+  // 12294 Happens when the target is invalid. In one case, we tried to use the blade stab skill, but the target was not knocked down.
   // 12301 Happens when the wrong item is equipped
   uint16_t errorCode() const;
 

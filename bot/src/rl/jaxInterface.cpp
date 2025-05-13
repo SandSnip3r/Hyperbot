@@ -437,19 +437,19 @@ size_t JaxInterface::writeObservationToRawArray(const Observation &observation, 
 
   for (int i=0; i<observation.remainingTimeOurBuffs_.size(); ++i) {
     array[index++] = observation.remainingTimeOurBuffs_[i] != 0 ? 1.0 : 0.0;
-    array[index++] = static_cast<float>(observation.remainingTimeOurBuffs_[i]) / 1000.0; // Convert milliseconds to seconds
+    array[index++] = observation.remainingTimeOurBuffs_[i];
   }
   for (int i=0; i<observation.remainingTimeOpponentBuffs_.size(); ++i) {
     array[index++] = observation.remainingTimeOpponentBuffs_[i] != 0 ? 1.0 : 0.0;
-    array[index++] = static_cast<float>(observation.remainingTimeOpponentBuffs_[i]) / 1000.0; // Convert milliseconds to seconds
+    array[index++] = observation.remainingTimeOpponentBuffs_[i];
   }
   for (int cooldown : observation.skillCooldowns_) {
     array[index++] = cooldown == 0 ? 1.0 : 0.0;
-    array[index++] = static_cast<float>(cooldown) / 1000.0; // Convert milliseconds to seconds
+    array[index++] = cooldown;
   }
   for (int cooldown : observation.itemCooldowns_) {
     array[index++] = cooldown == 0 ? 1.0 : 0.0;
-    array[index++] = static_cast<float>(cooldown) / 1000.0; // Convert milliseconds to seconds
+    array[index++] = cooldown;
   }
   return index;
 }

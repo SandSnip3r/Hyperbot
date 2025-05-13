@@ -256,7 +256,10 @@ void Proxy::ProcessPackets(const boost::system::error_code &error) {
       // Send all pending outgoing packets to the client
       while (clientConnection.security->HasPacketToSend()) {
         if (!clientConnection.Send(clientConnection.security->GetPacketToSend())) {
-          LOG(ERROR) << "Client connection Send error";
+          LOG(ERROR) << "Client connection Send error. Closing connection.";
+          clientConnection.Close();
+          LOG(INFO) << "Going clientless";
+          setClientless(true);
           break;
         }
       }
@@ -418,6 +421,7 @@ void Proxy::ProcessPackets(const boost::system::error_code &error) {
       // Send packets that are currently in the security api
       while (serverConnection.security->HasPacketToSend()) {
         if (!serverConnection.Send(serverConnection.security->GetPacketToSend())) {
+          LOG(ERROR) << "Server connection Send error.";
           break;
         }
         // If we ever need to run clientless, we need to know when the last packet was sent.

@@ -49,3 +49,4 @@
 - Make sure that the agent is receiving:
   - Skill use failed because insufficient MP
   - Item use failed because trying to use item which does not exist
+- In EnsureFullVitalsAndNoStatuses, we need to check if any of the potions/pills are on cooldown before constructing a UseItem state machine, or either wait on the cooldown in UseItem

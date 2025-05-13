@@ -54,6 +54,11 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
     childState_.reset();
   }
 
+  if (waitForPotionEventId_) {
+    CHAR_VLOG(1) << "Need to wait for potion to stop healing";
+    return Status::kNotDone;
+  }
+
   CHAR_VLOG(1) << "No child state machine. Checking vitals";
   std::vector<common::ItemRequirement> fullVitalsItemRequirements;
   const bool hpNotFull = bot_.selfState()->currentHp() < bot_.selfState()->maxHp();
@@ -96,10 +101,6 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
 
   if (fullVitalsItemRequirements.empty()) {
     CHAR_VLOG(1) << "Vitals are full and there are no statuses";
-    if (waitForPotionEventId_) {
-      CHAR_VLOG(1) << "Need to wait for potion to stop healing";
-      return Status::kNotDone;
-    }
     return Status::kDone;
   }
 

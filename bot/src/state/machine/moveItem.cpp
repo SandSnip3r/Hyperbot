@@ -73,7 +73,7 @@ Status MoveItem::onUpdate(const event::Event *event) {
 
   const storage::Item *item = bot_.inventory().getItem(source_.slotNum);
   if (item == nullptr) {
-    throw std::runtime_error("Item is null");
+    throw std::runtime_error(absl::StrFormat("MoveItem::Item at slot %d is null for char %s", source_.slotNum, bot_.selfState()->name));
   }
   const storage::ItemEquipment *equipment = dynamic_cast<const storage::ItemEquipment*>(item);
   if (equipment == nullptr) {

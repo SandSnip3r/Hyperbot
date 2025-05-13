@@ -36,13 +36,20 @@ public:
   uint32_t opponentCurrentMp_;
   uint32_t opponentMaxMp_;
   bool opponentIsKnockedDown_;
-  int hpPotionCount_;
-  std::array<int, 17> remainingTimeOurBuffs_;
-  std::array<int, 17> remainingTimeOpponentBuffs_;
-  // std::array<int, 2> remainingTimeOurDebuffs_;
-  // std::array<int, 2> remainingTimeOpponentDebuffs_;
-  std::array<int, 32> skillCooldowns_;
-  std::array<int, 3> itemCooldowns_;
+  int hpPotionCount_; // TODO: Normalize here rather than in JaxInterface
+
+  // Normalized to [0,1] for buff duration.
+  std::array<float, 17> remainingTimeOurBuffs_;
+  std::array<float, 17> remainingTimeOpponentBuffs_;
+
+  // std::array<float, 2> remainingTimeOurDebuffs_;
+  // std::array<float, 2> remainingTimeOpponentDebuffs_;
+
+  // Normalized to [0,1] for skill cooldown.
+  std::array<float, 32> skillCooldowns_;
+
+  // Normalized to [0,1] for item cooldown.
+  std::array<float, 3> itemCooldowns_;
 };
 
 } // namespace rl

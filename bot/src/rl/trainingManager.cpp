@@ -12,6 +12,7 @@
 #include <silkroad_lib/position.hpp>
 #include <silkroad_lib/position_math.hpp>
 
+#include <absl/strings/str_join.h>
 namespace rl {
 
 TrainingManager::TrainingManager(const pk2::GameData &gameData,
@@ -65,7 +66,7 @@ void TrainingManager::train() {
   std::mt19937 randomEngine = common::createRandomEngine();
   while (runTraining_) {
     try {
-      if (replayBuffer_.size() < kBatchSize) {
+      if (replayBuffer_.size() < kBatchSize || replayBuffer_.size() < kReplayBufferMinimumBeforeTraining) {
         // We don't have enough transitions to sample from yet.
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
@@ -111,15 +112,21 @@ void TrainingManager::train() {
       }
       replayBuffer_.updatePriorities(ids, newPriorities);
 
+      const float minTdError = *std::min_element(trainOutput.tdErrors.begin(), trainOutput.tdErrors.end());
       const float meanTdError = std::accumulate(trainOutput.tdErrors.begin(), trainOutput.tdErrors.end(), 0.0f) / trainOutput.tdErrors.size();
-      jaxInterface_.addScalar("TD Error", meanTdError, trainStepCount_);
+      const float maxTdError = *std::max_element(trainOutput.tdErrors.begin(), trainOutput.tdErrors.end());
+      jaxInterface_.addScalar("TD_Error/Min", minTdError, trainStepCount_);
+      jaxInterface_.addScalar("TD_Error/Mean", meanTdError, trainStepCount_);
+      jaxInterface_.addScalar("TD_Error/Max", maxTdError, trainStepCount_);
       jaxInterface_.addScalar("Q_Value/Min", trainOutput.meanMinQValue, trainStepCount_);
       jaxInterface_.addScalar("Q_Value/Mean", trainOutput.meanMeanQValue, trainStepCount_);
       jaxInterface_.addScalar("Q_Value/Max", trainOutput.meanMaxQValue, trainStepCount_);
       ++trainStepCount_;
-      if (kUsePolyakTargetNetworkUpdate) {
-        // Soft update target network every step with Polyak averaging
-        jaxInterface_.updateTargetModelPolyak(kTargetNetworkPolyakTau);
+      if (kTargetNetworkPolyakEnabled) {
+        if (trainStepCount_ % kTargetNetworkPolyakUpdateInterval == 0) {
+          // Soft update target network every step with Polyak averaging
+          jaxInterface_.updateTargetModelPolyak(kTargetNetworkPolyakTau);
+        }
       } else if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
         // Hard update target network at fixed intervals
         LOG(INFO) << "Train step #" << trainStepCount_ << ". Updating target network";
