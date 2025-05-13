@@ -218,7 +218,22 @@ void Bot::handleEvent(const event::Event *event) {
 
 void Bot::onUpdate(const event::Event *event) {
   ZoneScopedN("Bot::onUpdate");
-  // sequentialStateMachines_.onUpdate(event);
+
+  if (loginStateMachine_) {
+    state::machine::Status status = loginStateMachine_->onUpdate(event);
+    if (status == state::machine::Status::kDone) {
+      if (!loggedIn()) {
+        throw std::runtime_error("Login state machine completed, but we're not logged in");
+      }
+      LOG(INFO) << "Login state machine completed for " << selfState()->name;
+      loginStateMachine_.reset();
+      logInPromise_.set_value();
+    } else {
+      // Login state machine is not done, do not invoke any other state machines.
+      return;
+    }
+  }
+
   if (pvpManagerStateMachine_) {
     pvpManagerStateMachine_->onUpdate(event);
   }
@@ -708,6 +723,17 @@ std::future<void> Bot::asyncOpenClient() {
   return clientOpenPromise_.get_future();
 }
 
+std::future<void> Bot::asyncLogIn() {
+  if (loggedIn()) {
+    // This state machine expected to be created when we're not logged in.
+    throw std::runtime_error("Asking bot to log in, but already logged in");
+  }
+  LOG(INFO) << "Logging in " << characterLoginInfo_.characterName;
+  loginStateMachine_ = std::make_unique<state::machine::Login>(*this, characterLoginInfo_);
+  onUpdate(nullptr);
+  return logInPromise_.get_future();
+}
+
 bool Bot::loggedIn() const {
   return selfEntity_ != nullptr;
 }
@@ -717,5 +743,6 @@ void Bot::asyncStandbyForPvp() {
   if (pvpManagerStateMachine_ != nullptr) {
     throw std::runtime_error("PvpManager state machine already set");
   }
-  pvpManagerStateMachine_ = std::make_unique<state::machine::PvpManager>(*this, characterLoginInfo_);
+  pvpManagerStateMachine_ = std::make_unique<state::machine::PvpManager>(*this);
+  onUpdate(nullptr);
 }

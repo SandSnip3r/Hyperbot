@@ -289,8 +289,8 @@ void TrainingManager::createSessions() {
   session1.runAsync();
   session2.runAsync();
 
-  auto character1ClientOpenFuture = session1.asyncOpenClient();
-  auto character2ClientOpenFuture = session2.asyncOpenClient();
+  std::future<void> character1ClientOpenFuture = session1.asyncOpenClient();
+  std::future<void> character2ClientOpenFuture = session2.asyncOpenClient();
   LOG(INFO) << "Waiting for clients to open";
   character1ClientOpenFuture.wait();
   character2ClientOpenFuture.wait();
@@ -298,6 +298,13 @@ void TrainingManager::createSessions() {
 
   Bot &bot1 = session1.getBot();
   Bot &bot2 = session2.getBot();
+
+  std::future<void> bot1LoginFuture = bot1.asyncLogIn();
+  std::future<void> bot2LoginFuture = bot2.asyncLogIn();
+
+  bot1LoginFuture.wait();
+  bot2LoginFuture.wait();
+  LOG(INFO) << "Characters are logged in.";
 
   bot1.asyncStandbyForPvp();
   bot2.asyncStandbyForPvp();

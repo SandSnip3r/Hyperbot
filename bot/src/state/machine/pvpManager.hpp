@@ -10,18 +10,16 @@
 
 namespace state::machine {
 
-/** This state machine first logs the character in.
-  * Then it sits idly until a pvp assignment arrives.
+/** This state machine sits idly until a pvp assignment arrives.
   * If an assignment arrives for the controlled character, this state machine prepares for pvp then pvps.
 ***/
 class PvpManager : public StateMachine {
 public:
-  PvpManager(Bot &bot, const CharacterLoginInfo &characterLoginInfo);
+  PvpManager(Bot &bot);
   ~PvpManager() override;
   Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"PvpManager"};
-  const CharacterLoginInfo characterLoginInfo_;
   Status startPvp(const event::Event *event);
   void resetAndNotifyReadyForAssignment();
   void setPrepareForPvpStateMachine();

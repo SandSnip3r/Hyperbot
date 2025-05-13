@@ -44,7 +44,7 @@ Player ourPlayer(const common::PvpDescriptor &pvpDescriptor, const std::string_v
 
 } // namespace
 
-PvpManager::PvpManager(Bot &bot, const CharacterLoginInfo &characterLoginInfo) : StateMachine(bot), characterLoginInfo_(characterLoginInfo) {
+PvpManager::PvpManager(Bot &bot) : StateMachine(bot) {
   LOG(INFO) << "PvpManager Constructed";
 }
 
@@ -54,32 +54,10 @@ PvpManager::~PvpManager() {
 Status PvpManager::onUpdate(const event::Event *event) {
   ZoneScopedN("PvpManager::onUpdate");
   if (!initialized_) {
-    initialized_ = true;
-    if (bot_.loggedIn()) {
-      // This state machine expected to be created when we're not logged in.
-      throw std::runtime_error("We should not be logged in when we start the PvpManager");
-    }
-
-    LOG(INFO) << characterLoginInfo_.characterName << ". Need to log in";
-    setChildStateMachine<state::machine::Login>(characterLoginInfo_);
-    return onUpdate(event);
-  }
-
-  // If the child state is Login, immediately delegate to it.
-  if (childState_ != nullptr && dynamic_cast<Login*>(childState_.get()) != nullptr) {
-    const Status status = childState_->onUpdate(event);
-    if (status == Status::kNotDone) {
-      // We're still logging in. Nothing else to do.
-      return status;
-    }
-    // We just finished logging in.
-    CHAR_LOG(INFO) << "Finished logging in";
-    childState_.reset();
     resetAndNotifyReadyForAssignment();
+    initialized_ = true;
     return Status::kNotDone;
   }
-
-  // We are logged in at this point.
 
   // Before maybe delegating to our child state machine:
   // - Check to see if someone despawned.

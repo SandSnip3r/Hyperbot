@@ -68,6 +68,7 @@ protected:
 
 private:
   CharacterLoginInfo characterLoginInfo_;
+  std::unique_ptr<state::machine::StateMachine> loginStateMachine_;
   std::unique_ptr<state::machine::StateMachine> pvpManagerStateMachine_;
 
   void subscribeToEvents();
@@ -105,12 +106,14 @@ public:
 
   // Interface for RL training.
   std::future<void> asyncOpenClient();
+  std::future<void> asyncLogIn();
   bool loggedIn() const;
   void asyncStandbyForPvp();
 
 private:
   // Data for RL training interface.
   std::promise<void> clientOpenPromise_;
+  std::promise<void> logInPromise_;
 };
 
 #endif
