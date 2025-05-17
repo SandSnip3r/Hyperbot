@@ -15,6 +15,7 @@ public:
   Status onUpdate(const event::Event *event) override;
 private:
   static inline std::string kName{"WaitForAllCooldownsToEnd"};
+  bool initialized_{false};
 };
 
 } // namespace state::machine

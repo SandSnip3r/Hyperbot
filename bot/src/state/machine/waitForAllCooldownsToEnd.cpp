@@ -10,6 +10,10 @@ WaitForAllCooldownsToEnd::WaitForAllCooldownsToEnd(StateMachine *parent) : State
 WaitForAllCooldownsToEnd::~WaitForAllCooldownsToEnd() {}
 
 Status WaitForAllCooldownsToEnd::onUpdate(const event::Event *event) {
+  if (!initialized_) {
+    CHAR_VLOG(1) << "Initializing " << kName;
+    initialized_ = true;
+  }
   // TODO(efficiency): Watch for item/skill cooldown ended events, rather than fetching this data on every event.
   const std::map<type_id::TypeId, broker::EventBroker::EventId> &itemCooldownEventIds = bot_.selfState()->getItemCooldownEventIdMap();
   const absl::flat_hash_map<sro::scalar_types::ReferenceObjectId, broker::EventBroker::EventId> &skillCooldownEventIds = bot_.selfState()->skillEngine.getSkillCooldownEventIdMap();
@@ -22,14 +26,14 @@ Status WaitForAllCooldownsToEnd::onUpdate(const event::Event *event) {
     if (!remainingTime) {
       throw std::runtime_error("Have an event ID for item cooldown, but no time left");
     }
-    CHAR_VLOG(1) << "Event ID " << eventId << ", item with typeId " << type_id::toString(itemTypeId) << " has " << remainingTime->count() << "ms left";
+    CHAR_VLOG(2) << "Event ID " << eventId << ", item with typeId " << type_id::toString(itemTypeId) << " has " << remainingTime->count() << "ms left";
   }
   for (const auto &[skillId, eventId] : skillCooldownEventIds) {
     std::optional<std::chrono::milliseconds> remainingTime = bot_.eventBroker().timeRemainingOnDelayedEvent(eventId);
     if (!remainingTime) {
       throw std::runtime_error("Have an event ID for skill cooldown, but no time left");
     }
-    CHAR_VLOG(1) << "Event ID " << eventId << ", skill " << bot_.gameData().getSkillName(skillId) << " has " << remainingTime->count() << "ms left";
+    CHAR_VLOG(2) << "Event ID " << eventId << ", skill " << bot_.gameData().getSkillName(skillId) << " has " << remainingTime->count() << "ms left";
   }
   return Status::kNotDone;
 }

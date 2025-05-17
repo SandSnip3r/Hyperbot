@@ -5,6 +5,7 @@
 
 #include <tracy/Tracy.hpp>
 
+#include <absl/flags/flag.h>
 #include <absl/log/log.h>
 #include <absl/strings/str_join.h>
 #include <absl/strings/str_format.h>
@@ -13,6 +14,8 @@
 #include <thread>
 
 namespace py = pybind11;
+
+ABSL_FLAG(bool, debug_nan, false, "Debug nan values");
 
 namespace rl {
 
@@ -64,7 +67,7 @@ JaxInterface::~JaxInterface() {
   }
 }
 
-void JaxInterface::initialize() {
+void JaxInterface::initialize(float dropoutRate) {
   using namespace pybind11::literals;
 
   VLOG(1) << "Constructing JaxInterface";
@@ -94,7 +97,7 @@ void JaxInterface::initialize() {
     DqnModelType = dqnModule_->attr("DqnModel");
 
     const int observationSize = getObservationNumpySize(Observation());
-    model_ = DqnModelType(observationSize, observationStackSize_, kActionSpaceSize, *nnxRngs_);
+    model_ = DqnModelType(observationSize, observationStackSize_, kActionSpaceSize, dropoutRate, *nnxRngs_);
     targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
 
     optaxModule_ = py::module::import("optax");
@@ -134,8 +137,7 @@ int JaxInterface::selectAction(const ModelInput &modelInput, bool canSendPacket)
                                                         numpyModelInput.pastActions,
                                                         numpyModelInput.pastMask,
                                                         numpyModelInput.currentObservation,
-                                                        actionMask,
-                                                        getNextRngKey());
+                                                        actionMask);
     }
     actionIndex = actionPyObject.cast<int>();
   } catch (std::exception &ex) {
@@ -204,13 +206,15 @@ JaxInterface::TrainAuxOutput JaxInterface::train(const std::vector<ModelInput> &
                                                     detail::vector1dToNumpy(rewards),
                                                     currentModelInputTuple,
                                                     detail::vector1dToNumpy(importanceSamplingWeights),
-                                                    gamma_);
+                                                    gamma_,
+                                                    getNextRngKey());
       }
       py::tuple auxOutputTuple = auxOutput.cast<py::tuple>();
-      result.tdErrors = auxOutputTuple[0].cast<std::vector<float>>();
-      result.meanMinQValue = auxOutputTuple[1].cast<float>();
-      result.meanMeanQValue = auxOutputTuple[2].cast<float>();
-      result.meanMaxQValue = auxOutputTuple[3].cast<float>();
+      result.globalNorm = auxOutputTuple[0].cast<float>();
+      result.tdErrors = auxOutputTuple[1].cast<std::vector<float>>();
+      result.meanMinQValue = auxOutputTuple[2].cast<float>();
+      result.meanMeanQValue = auxOutputTuple[3].cast<float>();
+      result.meanMaxQValue = auxOutputTuple[4].cast<float>();
     } catch (std::exception &ex) {
       LOG(ERROR) << "Caught exception in JaxInterface::train: " << ex.what();
       throw;
@@ -316,6 +320,17 @@ void JaxInterface::loadCheckpoint(const std::string &modelCheckpointPath, const 
 }
 
 void JaxInterface::addScalar(std::string_view name, double yValue, double xValue) {
+  if (absl::GetFlag(FLAGS_debug_nan)) {
+    if (std::isnan(yValue)) {
+      LOG(ERROR) << "[" << name << "] yValue is nan: " << yValue;
+    } else if (std::isinf(yValue)) {
+      if (yValue > 0) {
+        LOG(ERROR) << "[" << name << "] yValue is +inf: " << yValue;
+      } else {
+        LOG(ERROR) << "[" << name << "] yValue is -inf: " << yValue;
+      }
+    }
+  }
   py::gil_scoped_acquire acquire;
   summaryWriter_->attr("add_scalar")(name, yValue, xValue);
 }
@@ -422,17 +437,32 @@ size_t JaxInterface::writeEmptyObservationToRawArray(size_t observationSize, flo
   return observationSize;
 }
 
+#define LOG_IF_BEYOND_RANGE(value, min, max) \
+do { \
+  if (absl::GetFlag(FLAGS_debug_nan)) { \
+    if (value < min) { \
+      LOG(WARNING) << value << " is less than " << min; \
+    } else if (value > max) { \
+      LOG(WARNING) << value << " is greater than " << max; \
+    } \
+  } \
+} while(false)
+
 size_t JaxInterface::writeObservationToRawArray(const Observation &observation, float *array) {
   size_t index{0};
-  array[index++] = observation.ourCurrentHp_ / static_cast<float>(observation.ourMaxHp_);
-  array[index++] = observation.ourCurrentMp_ / static_cast<float>(observation.ourMaxMp_);
+  array[index++] = observation.ourCurrentHp_ / static_cast<float>(observation.ourMaxHp_), 0.0, 1.0;
+  LOG_IF_BEYOND_RANGE(array[index-1], 0.0, 1.0);
+  array[index++] = observation.ourCurrentMp_ / static_cast<float>(observation.ourMaxMp_), 0.0, 1.0;
+  LOG_IF_BEYOND_RANGE(array[index-1], 0.0, 1.0);
   array[index++] = observation.weAreKnockedDown_ ? 1.0 : 0.0;
-  array[index++] = observation.opponentCurrentHp_ / static_cast<float>(observation.opponentMaxHp_);
-  array[index++] = observation.opponentCurrentMp_ / static_cast<float>(observation.opponentMaxMp_);
+  array[index++] = observation.opponentCurrentHp_ / static_cast<float>(observation.opponentMaxHp_), 0.0, 1.0;
+  LOG_IF_BEYOND_RANGE(array[index-1], 0.0, 1.0);
+  array[index++] = observation.opponentCurrentMp_ / static_cast<float>(observation.opponentMaxMp_), 0.0, 1.0;
+  LOG_IF_BEYOND_RANGE(array[index-1], 0.0, 1.0);
   array[index++] = observation.opponentIsKnockedDown_ ? 1.0 : 0.0;
 
-  array[index++] = observation.hpPotionCount_ / static_cast<float>(5); // IF-CHANGE: If we change this, also change TrainingManager::buildItemRequirementList
-
+  array[index++] = observation.hpPotionCount_ / static_cast<float>(5), 0.0, 1.0; // IF-CHANGE: If we change this, also change TrainingManager::buildItemRequirementList
+  LOG_IF_BEYOND_RANGE(array[index-1], 0.0, 1.0);
   index += writeOneHotEvent(observation.eventCode_, &array[index]);
 
   for (int i=0; i<observation.remainingTimeOurBuffs_.size(); ++i) {

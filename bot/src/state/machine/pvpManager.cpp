@@ -110,7 +110,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
                 resetAndNotifyReadyForAssignment();
                 return Status::kNotDone;
               } else {
-                CHAR_VLOG(1) << "We died!";
+                CHAR_VLOG(1) << "We died while pvping";
               }
               if (childStatus != Status::kDone) {
                 // Sent a terminal state to the child state machine, it should have returned "Done".
@@ -120,17 +120,16 @@ Status PvpManager::onUpdate(const event::Event *event) {
           }
           if (lifeStateChanged->globalId == bot_.selfState()->globalId) {
             // If we died, we need to resurrect ourself, regardless of what we're doing.
-            CHAR_VLOG(1) << "We died!";
+            CHAR_VLOG(1) << "We died, resurrecting";
             setChildStateMachine<ResurrectInPlace>(receivedResurrectionOption_);
             return onUpdate(event);
           }
         }
       }
     } else if (const auto *readyForPvpEvent = dynamic_cast<const event::ReadyForPvp*>(event); readyForPvpEvent != nullptr) {
-      CHAR_VLOG(1) << "ReadyForPvp";
       const sro::scalar_types::EntityGlobalId opponentsGlobalId = getOpponentGlobalId();
       if (readyForPvpEvent->globalId == opponentsGlobalId) {
-        CHAR_VLOG(1) << "Received ReadyForPvp for our opponent";
+        CHAR_VLOG(1) << "Received ReadyForPvp from our opponent";
         opponentIsReady_ = true;
         if (weAreReady_) {
           return startPvp(event);
@@ -147,6 +146,36 @@ Status PvpManager::onUpdate(const event::Event *event) {
           throw std::runtime_error("We can only handle resurrecting in place");
         }
         receivedResurrectionOption_ = true;
+      }
+    } else if (const auto *beginPvpEvent = dynamic_cast<const event::BeginPvp*>(event); beginPvpEvent != nullptr) {
+      CHAR_VLOG(1) << "Received BeginPvp";
+      const common::PvpDescriptor &pvpDescriptor = beginPvpEvent->pvpDescriptor;
+      if (!bot_.selfState()) {
+        throw std::runtime_error("We don't have a self state");
+      }
+      if (pvpDescriptor.player1Name == bot_.selfState()->name ||
+          pvpDescriptor.player2Name == bot_.selfState()->name) {
+        // We are one of the characters in the PVP.
+        if (pvpDescriptor_) {
+          throw std::runtime_error("We should not have a pvp descriptor already");
+        }
+        pvpDescriptor_ = pvpDescriptor;
+        // Since the pvp descriptor refers to our opponent by name, we will separately track the global id of our opponent.
+        const std::string_view opponentName = pvpDescriptor_->player1Name == bot_.selfState()->name ? pvpDescriptor_->player2Name : pvpDescriptor_->player1Name;
+        CHAR_LOG(INFO) << "Preparing to fight against " << opponentName;
+        std::shared_ptr<entity::PlayerCharacter> opponent = bot_.entityTracker().getPlayerByName(opponentName);
+        if (!opponent) {
+          throw std::runtime_error("We don't have an opponent");
+        }
+        opponentGlobalId_ = opponent->globalId;
+        publishedThatWeAreReadyForAssignment_ = false;
+        CHAR_VLOG(1) << "We've been told to fight against " << opponentName << "!";
+        if (childState_ == nullptr) {
+          setPrepareForPvpStateMachine();
+          return onUpdate(nullptr);
+        } else {
+          CHAR_VLOG(1) << "We already have a child state machine. We will wait until that finishes before preparing for pvp";
+        }
       }
     }
   }
@@ -171,6 +200,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
       // We're done resurrecting.
       CHAR_VLOG(1) << "Finished resurrecting";
       if (pvpDescriptor_) {
+        CHAR_VLOG(1) << "Have our pvp assignment, preparing for pvp";
         // Have our pvp assignment, prepare for pvp
         setPrepareForPvpStateMachine();
         return onUpdate(event);
@@ -178,14 +208,16 @@ Status PvpManager::onUpdate(const event::Event *event) {
         // Do not have our pvp assignment. Have we already notified the manager that we're ready for our next assignment?
         if (!publishedThatWeAreReadyForAssignment_) {
           // We haven't notified the manager that we're ready for our next assignment. Do so now.
+          CHAR_VLOG(1) << "Do not have a pvp assignment. We haven't notified the manager that we're ready for our next assignment. Do so now.";
           resetAndNotifyReadyForAssignment();
         } else {
           // We have notified the manager that we're ready for our next assignment. We now just need to wait for that assignment to arrive.
+          CHAR_VLOG(1) << "Do not have a pvp assignment. We have already notified the manager that we're ready for our next assignment. We now just need to wait for that assignment to arrive.";
         }
         return Status::kNotDone;
       }
     } else if (childStateWasSequential) {
-      CHAR_VLOG(1) << "Finished preparing for PVP";
+      CHAR_VLOG(1) << "Finished preparing for PVP, publishing ReadyForPvp event";
       // Finished preparing for pvp.
       bot_.eventBroker().publishEvent<event::ReadyForPvp>(bot_.selfState()->globalId);
       weAreReady_ = true;
@@ -198,36 +230,6 @@ Status PvpManager::onUpdate(const event::Event *event) {
       }
     }
     throw std::runtime_error("PvpManager child state machine finished but reached a point which we expect to be unreachable");
-  }
-
-  if (event != nullptr) {
-    if (const auto *beginPvpEvent = dynamic_cast<const event::BeginPvp*>(event); beginPvpEvent != nullptr) {
-      CHAR_VLOG(1) << "Received BeginPvp";
-      const common::PvpDescriptor &pvpDescriptor = beginPvpEvent->pvpDescriptor;
-      if (!bot_.selfState()) {
-        throw std::runtime_error("We don't have a self state");
-      }
-      if (pvpDescriptor.player1Name == bot_.selfState()->name ||
-          pvpDescriptor.player2Name == bot_.selfState()->name) {
-        // We are one of the characters in the PVP.
-        if (pvpDescriptor_) {
-          throw std::runtime_error("We should not have a pvp descriptor already");
-        }
-        pvpDescriptor_ = pvpDescriptor;
-        // Since the pvp descriptor refers to our opponent by name, we will separately track the global id of our opponent.
-        const std::string_view opponentName = pvpDescriptor_->player1Name == bot_.selfState()->name ? pvpDescriptor_->player2Name : pvpDescriptor_->player1Name;
-        CHAR_LOG(INFO) << "Preparing to fight against " << opponentName;
-        std::shared_ptr<entity::PlayerCharacter> opponent = bot_.entityTracker().getPlayerByName(opponentName);
-        if (!opponent) {
-          throw std::runtime_error("We don't have an opponent");
-        }
-        opponentGlobalId_ = opponent->globalId;
-        publishedThatWeAreReadyForAssignment_ = false;
-        CHAR_VLOG(1) << "We've been told to fight against " << opponentName << "!";
-        setPrepareForPvpStateMachine();
-        return onUpdate(event);
-      }
-    }
   }
 
   // We are probably here because we are handling an event which is irrelevant for us.

@@ -45,12 +45,13 @@ class JaxInterface {
 public:
   JaxInterface(int observationStackSize, float gamma, float learningRate) : observationStackSize_(observationStackSize), gamma_(gamma), learningRate_(learningRate) {}
   ~JaxInterface();
-  void initialize();
+  void initialize(float dropoutRate);
 
   // `canSendPacket` is used for action masking to limit the rate at which packets are sent.
   int selectAction(const ModelInput &modelInput, bool canSendPacket);
 
   struct TrainAuxOutput {
+    float globalNorm;
     std::vector<float> tdErrors;
     // The following values are means over the batch.
     float meanMinQValue;

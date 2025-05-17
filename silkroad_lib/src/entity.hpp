@@ -44,7 +44,8 @@ enum class LifeState : uint8_t {
 
 std::ostream& operator<<(std::ostream &stream, MonsterRarity rarity);
 std::ostream& operator<<(std::ostream &stream, ItemRarity rarity);
-std::ostream& operator<<(std::ostream &stream, LifeState rarity);
+
+std::string toString(LifeState lifeState);
 
 } // namespace sro::entity
 

@@ -16,6 +16,7 @@
 #include "rl/observation.hpp"
 #include "session.hpp"
 #include "state/worldState.hpp"
+#include "characterLoginInfo.hpp"
 
 #include <silkroad_lib/position.hpp>
 
@@ -27,6 +28,8 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include <utility>
+#include <optional>
 
 namespace ui {
 class RlUserInterface;
@@ -55,10 +58,21 @@ public:
   constexpr int getPastObservationStackSize() const { return kPastObservationStackSize; }
 
 private:
+  // Definition for a character pairing at a specific position
+  struct CharacterPairing {
+    CharacterLoginInfo character1;
+    CharacterLoginInfo character2;
+    int positionIndex;
+
+    // Track session IDs when characters are active
+    std::optional<SessionId> session1Id;
+    std::optional<SessionId> session2Id;
+  };
+
   static constexpr int kPastObservationStackSize = 64;
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
-  static constexpr int kReplayBufferMinimumBeforeTraining{5'000};
+  static constexpr int kReplayBufferMinimumBeforeTraining{10'000};
   static constexpr int kReplayBufferCapacity{1'000'000};
   static constexpr int kTargetNetworkUpdateInterval{10'000};
   static constexpr int kTrainStepCheckpointInterval{10'000};
@@ -66,11 +80,12 @@ private:
   static constexpr int kTargetNetworkPolyakUpdateInterval{16};
   static constexpr bool kTargetNetworkPolyakEnabled{true};
   static constexpr float kGamma{0.9975f};
-  static constexpr float kLearningRate{1e-5f};
+  static constexpr float kLearningRate{1e-6f};
+  static constexpr float kDropoutRate{0.1f};
   static constexpr float kPerAlpha{0.5f};
   static constexpr float kPerBetaStart{0.4f};
   static constexpr float kPerBetaEnd{1.0f};
-  static constexpr int kPerTrainStepCountAnneal{150'000};
+  static constexpr int kPerTrainStepCountAnneal{250'000};
 
   std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;
@@ -89,6 +104,11 @@ private:
   CheckpointManager checkpointManager_{rlUserInterface_};
   std::atomic<int> trainStepCount_{0};
 
+  // New variables for character pairings and positions
+  std::vector<sro::Position> pvpPositions_;
+  std::vector<CharacterPairing> characterPairings_;
+  absl::flat_hash_map<SessionId, int> sessionToPairingMap_; // Maps session ID to pairing index
+
   // Sample collection rate tracking
   int sampleCount_{0};
   std::chrono::high_resolution_clock::time_point lastSampleTime_{std::chrono::high_resolution_clock::now()};
@@ -104,11 +124,12 @@ private:
   static constexpr std::chrono::milliseconds kTrainRateReportInterval{2000};
 
   void setUpIntelligencePool();
+  void defineCharacterPairingsAndPositions();
 
   void createSessions();
   void train();
-  common::PvpDescriptor buildPvpDescriptor(Session &char1, Session &char2);
-  void createAndPublishPvpDescriptor();
+  common::PvpDescriptor buildPvpDescriptor(Session &char1, Session &char2, int positionIndex);
+  void checkAndPublishPvpDescriptors();
   Session& getSession(SessionId sessionId);
 
   void pvp(Bot &char1, Bot &char2);

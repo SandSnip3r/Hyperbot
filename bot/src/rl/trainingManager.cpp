@@ -26,6 +26,7 @@ TrainingManager::TrainingManager(const pk2::GameData &gameData,
                       worldState_(worldState),
                       clientManagerInterface_(clientManagerInterface) {
   buildItemRequirementList();
+  defineCharacterPairingsAndPositions();
 }
 
 void TrainingManager::run() {
@@ -41,7 +42,7 @@ void TrainingManager::run() {
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiLoadCheckpoint, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiDeleteCheckpoints, eventHandleFunction);
 
-  jaxInterface_.initialize();
+  jaxInterface_.initialize(kDropoutRate);
 
   // 1. Wait here until we're told to start training.
   // 2. Enter training loop once we're told to do so.
@@ -115,6 +116,7 @@ void TrainingManager::train() {
       const float minTdError = *std::min_element(trainOutput.tdErrors.begin(), trainOutput.tdErrors.end());
       const float meanTdError = std::accumulate(trainOutput.tdErrors.begin(), trainOutput.tdErrors.end(), 0.0f) / trainOutput.tdErrors.size();
       const float maxTdError = *std::max_element(trainOutput.tdErrors.begin(), trainOutput.tdErrors.end());
+      jaxInterface_.addScalar("Global Norm", trainOutput.globalNorm, trainStepCount_);
       jaxInterface_.addScalar("TD_Error/Min", minTdError, trainStepCount_);
       jaxInterface_.addScalar("TD_Error/Mean", meanTdError, trainStepCount_);
       jaxInterface_.addScalar("TD_Error/Max", maxTdError, trainStepCount_);
@@ -150,9 +152,9 @@ void TrainingManager::onUpdate(const event::Event *event) {
   if (const auto *readyForAssignmentEvent = dynamic_cast<const event::PvpManagerReadyForAssignment*>(event); readyForAssignmentEvent != nullptr) {
     sessionsReadyForAssignment_.push_back(readyForAssignmentEvent->sessionId);
     LOG(INFO) << "Received PvpManagerReadyForAssignment. Now have " << sessionsReadyForAssignment_.size() << " sessions ready for assignment";
-    if (sessionsReadyForAssignment_.size() >= 2) {
-      createAndPublishPvpDescriptor();
-    }
+
+    // Check if any character pairings can now be assigned
+    checkAndPublishPvpDescriptors();
   } else if (event->eventCode == event::EventCode::kRlUiStartTraining) {
     // Start training.
     std::unique_lock lock(runTrainingMutex_);
@@ -270,47 +272,64 @@ void TrainingManager::setUpIntelligencePool() {
 }
 
 void TrainingManager::createSessions() {
-  // For now, explicitly have two characters fight against each other.
-  sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
-  Session &session1 = *sessions_.back().get();
-  sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
-  Session &session2 = *sessions_.back().get();
+  LOG(INFO) << "Creating sessions for " << characterPairings_.size() << " character pairings";
 
-  session1.initialize();
-  session2.initialize();
+  // Create sessions for each character pair
+  for (auto& pairing : characterPairings_) {
+    // Create two sessions for the pairing
+    sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
+    Session& session1 = *sessions_.back().get();
+    sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
+    Session& session2 = *sessions_.back().get();
 
-  // Explicitly pick which characters we'll use for each session.
-  CharacterLoginInfo cli1{/*username=*/"rl0", /*password=*/"0", /*characterName=*/"RL_0"};
-  CharacterLoginInfo cli2{/*username=*/"rl1", /*password=*/"0", /*characterName=*/"RL_1"};
-  session1.setCharacter(cli1);
-  session2.setCharacter(cli2);
+    // Initialize sessions
+    session1.initialize();
+    session2.initialize();
 
-  // Start the sessions.
-  session1.runAsync();
-  session2.runAsync();
+    // Set characters
+    session1.setCharacter(pairing.character1);
+    session2.setCharacter(pairing.character2);
 
-  std::future<void> character1ClientOpenFuture = session1.asyncOpenClient();
-  std::future<void> character2ClientOpenFuture = session2.asyncOpenClient();
-  LOG(INFO) << "Waiting for clients to open";
-  character1ClientOpenFuture.wait();
-  character2ClientOpenFuture.wait();
-  LOG(INFO) << "Clients are open. Preparing characters for PVP";
+    // Start the sessions
+    session1.runAsync();
+    session2.runAsync();
 
-  Bot &bot1 = session1.getBot();
-  Bot &bot2 = session2.getBot();
+    // Open clients
+    std::future<void> character1ClientOpenFuture = session1.asyncOpenClient();
+    std::future<void> character2ClientOpenFuture = session2.asyncOpenClient();
+    LOG(INFO) << "Waiting for clients to open for " << pairing.character1.characterName << " and " << pairing.character2.characterName;
+    character1ClientOpenFuture.wait();
+    character2ClientOpenFuture.wait();
+    LOG(INFO) << "Clients are open. Preparing characters for PVP";
 
-  std::future<void> bot1LoginFuture = bot1.asyncLogIn();
-  std::future<void> bot2LoginFuture = bot2.asyncLogIn();
+    // Log in bots
+    Bot& bot1 = session1.getBot();
+    Bot& bot2 = session2.getBot();
 
-  bot1LoginFuture.wait();
-  bot2LoginFuture.wait();
-  LOG(INFO) << "Characters are logged in.";
+    std::future<void> bot1LoginFuture = bot1.asyncLogIn();
+    std::future<void> bot2LoginFuture = bot2.asyncLogIn();
 
-  bot1.asyncStandbyForPvp();
-  bot2.asyncStandbyForPvp();
+    bot1LoginFuture.wait();
+    bot2LoginFuture.wait();
+    LOG(INFO) << "Characters are logged in.";
+
+    // Store session IDs in the pairing
+    pairing.session1Id = session1.sessionId();
+    pairing.session2Id = session2.sessionId();
+
+    // Map sessions to pairing
+    sessionToPairingMap_[session1.sessionId()] = &pairing - &characterPairings_[0];
+    sessionToPairingMap_[session2.sessionId()] = &pairing - &characterPairings_[0];
+
+    // Standby for PVP
+    bot1.asyncStandbyForPvp();
+    bot2.asyncStandbyForPvp();
+  }
+
+  LOG(INFO) << "All sessions created. Total active sessions: " << sessions_.size();
 }
 
-common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Session &char2) {
+common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Session &char2, int positionIndex) {
   common::PvpDescriptor pvpDescriptor;
   pvpDescriptor.pvpId = nextPvpId_++;
   if (!char1.getBot().selfState()) {
@@ -322,11 +341,12 @@ common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Sessio
   pvpDescriptor.player1Name = char1.getBot().selfState()->name;
   pvpDescriptor.player2Name = char2.getBot().selfState()->name;
 
-  // Massive Pvp Area
-  const sro::Position pvpCenterPosition(/*regionId=*/sro::position_math::worldRegionIdFromSectors(1,1),
-    /*xOffset=*/960.0,
-    /*yOffset=*/ 20.0,
-    /*zOffset=*/960.0);
+  // Use the specified position from our position list
+  if (positionIndex < 0 || positionIndex >= pvpPositions_.size()) {
+    throw std::runtime_error("Invalid position index: " + std::to_string(positionIndex));
+  }
+
+  const sro::Position& pvpCenterPosition = pvpPositions_[positionIndex];
 
   pvpDescriptor.pvpPositionPlayer1 = sro::position_math::createNewPositionWith2dOffset(pvpCenterPosition, +kPvpStartingCenterOffset, 0.0);
   pvpDescriptor.pvpPositionPlayer2 = sro::position_math::createNewPositionWith2dOffset(pvpCenterPosition, -kPvpStartingCenterOffset, 0.0);
@@ -339,25 +359,6 @@ common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Sessio
   pvpDescriptor.player2Intelligence->resetForNewEpisode();
 
   return pvpDescriptor;
-}
-
-void TrainingManager::createAndPublishPvpDescriptor() {
-  if (sessionsReadyForAssignment_.size() < 2) {
-    throw std::runtime_error("Not enough sessions ready for assignment");
-  }
-  SessionId char1Id = sessionsReadyForAssignment_.at(0);
-  SessionId char2Id = sessionsReadyForAssignment_.at(1);
-  Session &char1 = getSession(char1Id);
-  Session &char2 = getSession(char2Id);
-
-  common::PvpDescriptor pvpDescriptor = buildPvpDescriptor(char1, char2);
-
-  // ----------------------Send the PvpDescriptor----------------------
-  eventBroker_.publishEvent<event::BeginPvp>(std::move(pvpDescriptor));
-
-  // These two sessions should now no longer be considered for a new Pvp.
-  sessionsReadyForAssignment_.erase(sessionsReadyForAssignment_.begin(), sessionsReadyForAssignment_.begin() + 2);
-  LOG(INFO) << "Published BeginPvp event for " << char1.getBot().selfState()->name << " & " << char2.getBot().selfState()->name << ". Now have " << sessionsReadyForAssignment_.size() << " sessions ready for assignment";
 }
 
 Session& TrainingManager::getSession(SessionId sessionId) {
@@ -509,6 +510,67 @@ ModelInput TrainingManager::buildModelInputUpToObservation(ObservationAndActionS
     }
   }
   return modelInput;
+}
+
+void TrainingManager::defineCharacterPairingsAndPositions() {
+  // Define PVP positions
+  // Massive Pvp Area at different coordinates
+  pvpPositions_.push_back({sro::Position(sro::position_math::worldRegionIdFromSectors(1,1), 960.0, 20.0, 960.0)});
+  // pvpPositions_.push_back({sro::Position(sro::position_math::worldRegionIdFromSectors(1,2), 960.0, 20.0, 960.0)});
+
+  // Define character pairings
+  characterPairings_.push_back({
+    CharacterLoginInfo{/*username=*/"rl0", /*password=*/"0", /*characterName=*/"RL_0"},
+    CharacterLoginInfo{/*username=*/"rl1", /*password=*/"0", /*characterName=*/"RL_1"},
+    0
+  });
+
+  // characterPairings_.push_back({
+  //   CharacterLoginInfo{/*username=*/"rl2", /*password=*/"0", /*characterName=*/"RL_2"},
+  //   CharacterLoginInfo{/*username=*/"rl3", /*password=*/"0", /*characterName=*/"RL_3"},
+  //   1
+  // });
+
+  // Verify we have at least as many positions as pairings
+  if (pvpPositions_.size() < characterPairings_.size()) {
+    throw std::runtime_error("Not enough PVP positions defined for all character pairings");
+  }
+}
+
+void TrainingManager::checkAndPublishPvpDescriptors() {
+  // Iterate through ready sessions and check if any pairs are ready
+  for (auto& pairing : characterPairings_) {
+    // Skip inactive pairings
+    if (!pairing.session1Id || !pairing.session2Id) {
+      continue;
+    }
+
+    // Check if both characters in this pairing are ready for assignment
+    auto it1 = std::find(sessionsReadyForAssignment_.begin(), sessionsReadyForAssignment_.end(), pairing.session1Id.value());
+    auto it2 = std::find(sessionsReadyForAssignment_.begin(), sessionsReadyForAssignment_.end(), pairing.session2Id.value());
+
+    if (it1 != sessionsReadyForAssignment_.end() && it2 != sessionsReadyForAssignment_.end()) {
+      // Both characters in this pairing are ready for assignment
+      Session& char1 = getSession(pairing.session1Id.value());
+      Session& char2 = getSession(pairing.session2Id.value());
+
+      // Build the PVP descriptor
+      common::PvpDescriptor pvpDescriptor = buildPvpDescriptor(char1, char2, pairing.positionIndex);
+
+      // Remove these sessions from the ready list
+      sessionsReadyForAssignment_.erase(it1);
+      // Need to find it2 again as erasing it1 may have invalidated the iterator
+      it2 = std::find(sessionsReadyForAssignment_.begin(), sessionsReadyForAssignment_.end(), pairing.session2Id.value());
+      sessionsReadyForAssignment_.erase(it2);
+
+      // Publish the PVP descriptor
+      eventBroker_.publishEvent<event::BeginPvp>(std::move(pvpDescriptor));
+
+      LOG(INFO) << "Published BeginPvp event for " << char1.getBot().selfState()->name << " & "
+                << char2.getBot().selfState()->name << " at position index " << pairing.positionIndex
+                << ". Now have " << sessionsReadyForAssignment_.size() << " sessions ready for assignment";
+    }
+  }
 }
 
 } // namespace rl

@@ -6,14 +6,19 @@ import orbax
 import orbax.checkpoint
 
 class DqnModel(nnx.Module):
-  def __init__(self, observationSize: int, stackSize: int, actionSpaceSize: int, rngs: nnx.Rngs):
+  def __init__(self, observationSize: int, stackSize: int, actionSpaceSize: int, dropoutRate: float, rngs: nnx.Rngs):
     key = rngs.params()
     self.featureExtractor1 = nnx.Linear(observationSize+1+actionSpaceSize, 128, rngs=rngs)
+    self.dropout1 = nnx.Dropout(rate=dropoutRate)
     self.featureExtractor2 = nnx.Linear(128, 64, rngs=rngs)
+    self.dropout2 = nnx.Dropout(rate=dropoutRate)
     self.featureExtractor3 = nnx.Linear(64, 32, rngs=rngs)
+    self.dropout3 = nnx.Dropout(rate=dropoutRate)
 
     self.finalLinear1 = nnx.Linear(32*stackSize + 1*stackSize + observationSize, 1024, rngs=rngs)
+    self.dropout4 = nnx.Dropout(rate=dropoutRate)
     self.finalLinear2 = nnx.Linear(1024, 256, rngs=rngs)
+    self.dropout5 = nnx.Dropout(rate=dropoutRate)
     self.finalLinear3 = nnx.Linear(256, actionSpaceSize, rngs=rngs)
 
   # Input is:
@@ -22,27 +27,49 @@ class DqnModel(nnx.Module):
   # - pastActions:               (stackSize, actionSpaceSize)
   # - pastMask:                  (stackSize, 1)
   # - currentObservation:        (observationSize)
-  def __call__(self, pastObservationStack, pastObservationTimestamps, pastActions, pastMask, currentObservation):
+  def __call__(self, pastObservationStack, pastObservationTimestamps, pastActions, pastMask, currentObservation, deterministic, rngKey=None):
+    rngStreams = {}
+    if not deterministic:
+      if rngKey is None:
+        raise ValueError("rngKey must be provided when deterministic is False")
+      rngKeys = jax.random.split(rngKey, 5)
+      rngStreams = {
+        'dropout1': nnx.Rngs(dropout=rngKeys[0]),
+        'dropout2': nnx.Rngs(dropout=rngKeys[1]),
+        'dropout3': nnx.Rngs(dropout=rngKeys[2]),
+        'dropout4': nnx.Rngs(dropout=rngKeys[3]),
+        'dropout5': nnx.Rngs(dropout=rngKeys[4]),
+      }
+
     # Run feature extractor from ~204->128->64->32
     pastDataStack = jnp.concat([pastObservationStack, pastObservationTimestamps, pastActions], axis=1)
+
     pastDataStack = self.featureExtractor1(pastDataStack)
     pastDataStack = jax.nn.relu(pastDataStack)
+    pastDataStack = self.dropout1(pastDataStack, deterministic=deterministic, rngs=rngStreams.get('dropout1'))
+
     pastDataStack = self.featureExtractor2(pastDataStack)
     pastDataStack = jax.nn.relu(pastDataStack)
+    pastDataStack = self.dropout2(pastDataStack, deterministic=deterministic, rngs=rngStreams.get('dropout2'))
+
     pastDataStack = self.featureExtractor3(pastDataStack)
     pastDataStack = jax.nn.relu(pastDataStack)
+    pastDataStack = self.dropout3(pastDataStack, deterministic=deterministic, rngs=rngStreams.get('dropout3'))
 
     # Flatten all data for final MLP
-    flattenedPastData = jnp.concat(pastDataStack, axis=0)
-    flattenedMask = jnp.concat(pastMask, axis=0)
+    flattenedPastData = pastDataStack.ravel()
+    flattenedMask = pastMask.ravel()
     concattedData = jnp.concat([flattenedPastData, flattenedMask, currentObservation], axis=0)
 
     x = self.finalLinear1(concattedData)
     x = jax.nn.relu(x)
+    x = self.dropout4(x, deterministic=deterministic, rngs=rngStreams.get('dropout4'))
+
     x = self.finalLinear2(x)
     x = jax.nn.relu(x)
-    x = self.finalLinear3(x)
+    x = self.dropout5(x, deterministic=deterministic, rngs=rngStreams.get('dropout5'))
 
+    x = self.finalLinear3(x)
     return x
 
 def printWeights(model):
@@ -50,13 +77,13 @@ def printWeights(model):
   print(params)
 
 @nnx.jit
-def selectAction(model, pastObservationStack, pastObservationTimestamps, pastActions, pastMask, currentObservation, actionMask, key):
-  values = model(pastObservationStack, pastObservationTimestamps, pastActions, pastMask, currentObservation)
+def selectAction(model, pastObservationStack, pastObservationTimestamps, pastActions, pastMask, currentObservation, actionMask):
+  values = model(pastObservationStack, pastObservationTimestamps, pastActions, pastMask, currentObservation, deterministic=True)
   values += actionMask
   return jnp.argmax(values)
 
 # Function to compute weighted loss and TD error for a SINGLE transition
-def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight, gamma):
+def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight, gamma, rngKey):
   pastModelInputTuple, selectedAction, isTerminal, reward, currentModelInputTuple = transition
 
   # --- DDQN Target Calculation ---
@@ -64,11 +91,11 @@ def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight, 
   def ddqnTargetCalculation(_):
     # 1. Select the best action for currentModelInputTuple using the *main* model's Q-values.
     #    We don't need gradients for this action selection step itself.
-    qValuesNextStateMain = model(*currentModelInputTuple)
+    qValuesNextStateMain = model(*currentModelInputTuple, deterministic=True)
     bestNextAction = jnp.argmax(qValuesNextStateMain)
 
     # 2. Evaluate the Q-value of that *selected* action using the *target* model.
-    qValuesNextStateTarget = targetModel(*currentModelInputTuple)
+    qValuesNextStateTarget = targetModel(*currentModelInputTuple, deterministic=True)
     # Index the target Q-values with the action chosen by the main model
     targetQValueForBestAction = qValuesNextStateTarget[bestNextAction]
 
@@ -84,7 +111,7 @@ def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight, 
   )
 
   # Prediction from main model
-  values = model(*pastModelInputTuple)
+  values = model(*pastModelInputTuple, deterministic=False, rngKey=rngKey)
   pred = values[selectedAction]
 
   # Calculate Huber loss (unweighted)
@@ -99,16 +126,17 @@ def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight, 
   # Return additional debugging information
   return weightedLoss, (tdError, jnp.min(values), jnp.mean(values), jnp.max(values))
 
-def computeWeightedLossAndTdErrorBatch(model, targetModel, transitions, weights, gamma):
-  batched = jax.vmap(computeWeightedLossAndTdErrorSingle, in_axes=( None, None, (0, 0, 0, 0, 0), 0, None ), out_axes=(0, 0))
-  weightedLosses, (tdErrors, minValues, meanValues, maxValues) = batched(model, targetModel, transitions, weights, gamma)
+def computeWeightedLossAndTdErrorBatch(model, targetModel, transitions, weights, gamma, rngKey):
+  batched = jax.vmap(computeWeightedLossAndTdErrorSingle, in_axes=( None, None, (0, 0, 0, 0, 0), 0, None, None), out_axes=(0, 0))
+  weightedLosses, (tdErrors, minValues, meanValues, maxValues) = batched(model, targetModel, transitions, weights, gamma, rngKey)
   return jnp.mean(weightedLosses), (tdErrors, jnp.min(minValues), jnp.mean(meanValues), jnp.max(maxValues))
 
 @nnx.jit
-def jittedTrain(model, optimizerState, targetModel, pastModelInputTuple, selectedActions, isTerminals, rewards, currentModelInputTuple, weights, gamma):
-  (meanLoss, auxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdErrorBatch, has_aux=True)(model, targetModel, (pastModelInputTuple, selectedActions, isTerminals, rewards, currentModelInputTuple), weights, gamma)
+def jittedTrain(model, optimizerState, targetModel, pastModelInputTuple, selectedActions, isTerminals, rewards, currentModelInputTuple, weights, gamma, rngKey):
+  (meanLoss, auxOutput), gradients = nnx.value_and_grad(computeWeightedLossAndTdErrorBatch, has_aux=True)(model, targetModel, (pastModelInputTuple, selectedActions, isTerminals, rewards, currentModelInputTuple), weights, gamma, rngKey)
+  globalNorm = optax.global_norm(gradients)
   optimizerState.update(gradients)
-  return auxOutput
+  return (globalNorm, *auxOutput)
 
 def getCopyOfModel(model, targetNetwork):
   graph, params = nnx.split(model)

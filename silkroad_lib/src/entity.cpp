@@ -83,25 +83,19 @@ std::ostream& operator<<(std::ostream &stream, ItemRarity rarity) {
   return stream;
 }
 
-std::ostream& operator<<(std::ostream &stream, LifeState lifeState) {
+std::string toString(LifeState lifeState) {
   switch(lifeState) {
     case LifeState::kEmbryo:
-      stream << "Embryo";
-      break;
+      return "Embryo";
     case LifeState::kAlive:
-      stream << "Alive";
-      break;
+      return "Alive";
     case LifeState::kDead:
-      stream << "Dead";
-      break;
+      return "Dead";
     case LifeState::kGone:
-      stream << "Gone";
-      break;
+      return "Gone";
     default:
-      stream << "UNKNOWN";
-      break;
+      return "UNKNOWN";
   }
-  return stream;
 }
 
 } // namespace sro::entity

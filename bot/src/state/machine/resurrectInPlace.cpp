@@ -7,9 +7,7 @@
 
 namespace state::machine {
 
-ResurrectInPlace::ResurrectInPlace(StateMachine *parent, bool receivedResurrectionOptionAlready) : StateMachine(parent), receivedResurrectionOptionAlready_(receivedResurrectionOptionAlready) {
-  VLOG(1) << "ctor " << receivedResurrectionOptionAlready_;
-}
+ResurrectInPlace::ResurrectInPlace(StateMachine *parent, bool receivedResurrectionOptionAlready) : StateMachine(parent), receivedResurrectionOptionAlready_(receivedResurrectionOptionAlready) {}
 
 ResurrectInPlace::~ResurrectInPlace() {
   if (requestTimeoutEventId_) {
@@ -25,7 +23,7 @@ Status ResurrectInPlace::onUpdate(const event::Event *event) {
       if (const auto *lifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event)) {
         CHAR_VLOG(1) << "Someone's life state changed";
         if (lifeStateChanged->globalId == bot_.selfState()->globalId) {
-          CHAR_VLOG(1) << "  it was ours " << static_cast<int>(bot_.selfState()->lifeState);
+          CHAR_VLOG(1) << "  it was ours " << sro::entity::toString(bot_.selfState()->lifeState);
           if (bot_.selfState()->lifeState == sro::entity::LifeState::kAlive) {
             if (requestTimeoutEventId_) {
               bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
@@ -39,11 +37,11 @@ Status ResurrectInPlace::onUpdate(const event::Event *event) {
                  *requestTimeoutEventId_ == event->eventId) {
         // We timed out waiting for our life state to change.
         CHAR_VLOG(1) << "We timed out while waiting for resurrect";
+        requestTimeoutEventId_.reset();
         sendResurrectRequest();
       }
     }
 
-    // TODO: Handle timeout.
     return Status::kNotDone;
   }
 

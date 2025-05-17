@@ -33,7 +33,8 @@ IntelligenceActor::~IntelligenceActor() {
 
 Status IntelligenceActor::onUpdate(const event::Event *event) {
   ZoneScopedN("IntelligenceActor::onUpdate");
-  if (childState_ != nullptr) {
+  const bool haveChildState = (childState_ != nullptr);
+  if (haveChildState) {
     // The child state machine didn't immediately finish.
     // Run the update.
     const Status status = childState_->onUpdate(event);
@@ -65,9 +66,11 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
         return Status::kNotDone;
       }
     } else if (event->eventCode == event::EventCode::kTimeout) {
-      // Currently, agents do not create timeout events. They are typically used by tradition state machines.
-      CHAR_VLOG(2) << "Timeout event, not relevant to us";
-      return Status::kNotDone;
+      if (!haveChildState) {
+        // Apart from Actions taken, which are run as child state machines, this state machine does not have any reason to see timeouts.
+        CHAR_VLOG(2) << "Timeout event, not relevant to us";
+        return Status::kNotDone;
+      }
     } else if (const event::SkillCooldownEnded *skillCooldownEnded = dynamic_cast<const event::SkillCooldownEnded*>(event); skillCooldownEnded != nullptr) {
       if (skillCooldownEnded->globalId != bot_.selfState()->globalId) {
         // We do not want to have visibility into other agents' skill cooldowns.

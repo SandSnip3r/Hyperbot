@@ -61,7 +61,7 @@ Observation::Observation(const Bot &bot, const event::Event *event, sro::scalar_
         // Get total duration so that we can normalize the remaining time to [0,1]
         const sro::pk2::ref::Skill &skill = bot.gameData().skillData().getSkillById(skillId);
         if (skill.hasParam("DURA")) {
-          remainingTimeOurBuffs_[i] = std::chrono::duration_cast<std::chrono::milliseconds>(entity::Character::BuffData::ClockType::now()-*castTime).count() / static_cast<float>(skill.durationMs());
+          remainingTimeOurBuffs_[i] = std::clamp(std::chrono::duration_cast<std::chrono::milliseconds>(entity::Character::BuffData::ClockType::now()-*castTime).count() / static_cast<float>(skill.durationMs()), 0.0f, 1.0f);
         } else {
           // So far, I have only seen this for the fire wall skill.
           remainingTimeOurBuffs_[i] = 1.0;
@@ -80,7 +80,7 @@ Observation::Observation(const Bot &bot, const event::Event *event, sro::scalar_
         // Get total duration so that we can normalize the remaining time to [0,1]
         const sro::pk2::ref::Skill &skill = bot.gameData().skillData().getSkillById(skillId);
         if (skill.hasParam("DURA")) {
-          remainingTimeOpponentBuffs_[i] = std::chrono::duration_cast<std::chrono::milliseconds>(entity::Character::BuffData::ClockType::now()-*castTime).count() / static_cast<float>(skill.durationMs());
+          remainingTimeOpponentBuffs_[i] = std::clamp(std::chrono::duration_cast<std::chrono::milliseconds>(entity::Character::BuffData::ClockType::now()-*castTime).count() / static_cast<float>(skill.durationMs()), 0.0f, 1.0f);
         } else {
           // So far, I have only seen this for the fire wall skill.
           remainingTimeOpponentBuffs_[i] = 1.0;
@@ -116,7 +116,7 @@ Observation::Observation(const Bot &bot, const event::Event *event, sro::scalar_
     std::optional<std::chrono::milliseconds> remainingCooldown = bot.selfState()->skillEngine.skillRemainingCooldown(skillId, bot.eventBroker());
     // Get total duration so that we can normalize the remaining time to [0,1]
     const int32_t totalCooldownDurationMs = bot.gameData().skillData().getSkillById(skillId).actionReuseDelay;
-    skillCooldowns_[i] = remainingCooldown.value_or(std::chrono::milliseconds(0)).count() / static_cast<float>(totalCooldownDurationMs);
+    skillCooldowns_[i] = std::clamp(remainingCooldown.value_or(std::chrono::milliseconds(0)).count() / static_cast<float>(totalCooldownDurationMs), 0.0f, 1.0f);
   }
 
   static constexpr std::array kItems{
@@ -146,7 +146,7 @@ Observation::Observation(const Bot &bot, const event::Event *event, sro::scalar_
       itemCooldowns_[i] = 0.0;
     } else {
       std::optional<std::chrono::milliseconds> remainingCooldown = bot.eventBroker().timeRemainingOnDelayedEvent(it->second);
-      itemCooldowns_[i] = remainingCooldown.value_or(std::chrono::milliseconds(0)).count() / static_cast<float>(totalCooldownDurationMs);
+      itemCooldowns_[i] = std::clamp(remainingCooldown.value_or(std::chrono::milliseconds(0)).count() / static_cast<float>(totalCooldownDurationMs), 0.0f, 1.0f);
     }
   }
 }
