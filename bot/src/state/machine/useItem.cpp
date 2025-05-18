@@ -33,7 +33,11 @@ Status UseItem::onUpdate(const event::Event *event) {
   }
   if (event) {
     // We don't care about any event if we haven't yet used an item
-    if (const auto *itemUseFailedEvent = dynamic_cast<const event::ItemUseFailed*>(event)) {
+    if (const event::ItemUseFailed *itemUseFailedEvent = dynamic_cast<const event::ItemUseFailed*>(event); itemUseFailedEvent != nullptr) {
+      if (itemUseFailedEvent->globalId != bot_.selfState()->globalId) {
+        // This event is not for us
+        return Status::kNotDone;
+      }
       if (itemUseTimeoutEventId_) {
           bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
           itemUseTimeoutEventId_.reset();
@@ -59,15 +63,6 @@ Status UseItem::onUpdate(const event::Event *event) {
             if (itemMovedEvent->destination->storage == sro::storage::Storage::kInventory) {
               // Item was moved to a new slot, track it
               inventoryIndex_ = itemMovedEvent->destination->slotNum;
-              if (itemUseTimeoutEventId_) {
-                // We need to cancel the existing timeout event (because it has the wrong inventory slot) and send a new item use timeout event with the updated inventory slot.
-                const auto eventEndTime = bot_.eventBroker().delayedEventEndTime(*itemUseTimeoutEventId_);
-                if (!eventEndTime) {
-                  throw std::runtime_error("This item use timeout event does not exist");
-                }
-                bot_.eventBroker().cancelDelayedEvent(*itemUseTimeoutEventId_);
-                itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(*eventEndTime, *inventoryIndex_, itemTypeId_);
-              }
             } else {
               // Maybe moved to COS or storage?
               throw std::runtime_error("Item was moved to a non-inventory slot");
@@ -75,7 +70,7 @@ Status UseItem::onUpdate(const event::Event *event) {
           }
         }
       }
-    } else if (const auto *itemUseSuccessEvent = dynamic_cast<const event::ItemUseSuccess*>(event); itemUseSuccessEvent != nullptr) {
+    } else if (const event::ItemUseSuccess *itemUseSuccessEvent = dynamic_cast<const event::ItemUseSuccess*>(event); itemUseSuccessEvent != nullptr) {
       if (itemUseSuccessEvent->globalId == bot_.selfState()->globalId &&
           itemUseSuccessEvent->slotNum == inventoryIndex_ &&
           itemUseTimeoutEventId_) {
@@ -123,12 +118,11 @@ Status UseItem::onUpdate(const event::Event *event) {
           return Status::kDone;
         }
       }
-    } else if (const auto *itemUseTimeout = dynamic_cast<const event::ItemUseTimeout*>(event)) {
+    } else if (event->eventCode == event::EventCode::kTimeout) {
       if (itemUseTimeoutEventId_) {
-        if (itemUseTimeout->slotNum == inventoryIndex_ && itemUseTimeout->typeData == itemTypeId_) {
+        if (event->eventId == *itemUseTimeoutEventId_) {
+          CHAR_VLOG(1) << "Item use timed out";
           itemUseTimeoutEventId_.reset();
-        } else {
-          // Item use timed out, but it's not for the item that we're waiting on.
         }
       }
     }
@@ -147,8 +141,7 @@ Status UseItem::onUpdate(const event::Event *event) {
   injectPacket(itemUsePacket, PacketContainer::Direction::kBotToServer);
 
   // Create a delayed event that will trigger if our item never gets used.
-  // TODO: Rather than having event::ItemUseTimeout, we can just use the generic kTimeout event.
-  itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::ItemUseTimeout>(std::chrono::milliseconds(kItemUseTimeoutMs), *inventoryIndex_, itemTypeId_);
+  itemUseTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(kItemUseTimeoutMs));
   return Status::kNotDone;
 }
 

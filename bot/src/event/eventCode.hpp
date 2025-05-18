@@ -20,7 +20,6 @@
   F(SkillCastAboutToEnd) \
   F(ItemUseSuccess) \
   F(ItemUseFailed) \
-  F(ItemUseTimeout) \
   F(InjectPacket) \
   F(RequestStartTraining) \
   F(RequestStopTraining) \
@@ -50,8 +49,8 @@
   F(SkillEnded) \
   F(DealtDamage) \
   F(SkillFailed) \
-  F(PlayerCharacterBuffAdded) \
-  F(PlayerCharacterBuffRemoved) \
+  F(BuffAdded) \
+  F(BuffRemoved) \
   F(CommandError) \
   F(CommandSkipped) \
   F(SkillCastTimeout) \

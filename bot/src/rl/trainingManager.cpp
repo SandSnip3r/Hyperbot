@@ -516,7 +516,7 @@ void TrainingManager::defineCharacterPairingsAndPositions() {
   // Define PVP positions
   // Massive Pvp Area at different coordinates
   pvpPositions_.push_back({sro::Position(sro::position_math::worldRegionIdFromSectors(1,1), 960.0, 20.0, 960.0)});
-  // pvpPositions_.push_back({sro::Position(sro::position_math::worldRegionIdFromSectors(1,2), 960.0, 20.0, 960.0)});
+  pvpPositions_.push_back({sro::Position(sro::position_math::worldRegionIdFromSectors(1,2), 960.0, 20.0, 960.0)});
 
   // Define character pairings
   characterPairings_.push_back({
@@ -525,11 +525,11 @@ void TrainingManager::defineCharacterPairingsAndPositions() {
     0
   });
 
-  // characterPairings_.push_back({
-  //   CharacterLoginInfo{/*username=*/"rl2", /*password=*/"0", /*characterName=*/"RL_2"},
-  //   CharacterLoginInfo{/*username=*/"rl3", /*password=*/"0", /*characterName=*/"RL_3"},
-  //   1
-  // });
+  characterPairings_.push_back({
+    CharacterLoginInfo{/*username=*/"rl2", /*password=*/"0", /*characterName=*/"RL_2"},
+    CharacterLoginInfo{/*username=*/"rl3", /*password=*/"0", /*characterName=*/"RL_3"},
+    1
+  });
 
   // Verify we have at least as many positions as pairings
   if (pvpPositions_.size() < characterPairings_.size()) {

@@ -25,12 +25,12 @@ Status GmWarpToPosition::onUpdate(const event::Event *event) {
   }
   if (event != nullptr) {
     if (const auto *operatorRequestSuccess = dynamic_cast<const event::OperatorRequestSuccess*>(event); operatorRequestSuccess != nullptr) {
-      if (operatorRequestSuccess->operatorCommand == packet::enums::OperatorCommand::kWarpPoint) {
+      if (operatorRequestSuccess->globalId == bot_.selfState()->globalId && operatorRequestSuccess->operatorCommand == packet::enums::OperatorCommand::kWarpPoint) {
         CHAR_VLOG(2) << "Warp command successful";
         // Wait for the character to spawn.
       }
     } else if (const auto *operatorCommandError = dynamic_cast<const event::OperatorRequestError*>(event); operatorCommandError != nullptr) {
-      if (operatorCommandError->operatorCommand == packet::enums::OperatorCommand::kWarpPoint) {
+      if (operatorCommandError->globalId == bot_.selfState()->globalId && operatorCommandError->operatorCommand == packet::enums::OperatorCommand::kWarpPoint) {
         CHAR_VLOG(2) << "Warp command failed";
         bot_.eventBroker().cancelDelayedEvent(*eventId_);
         eventId_.reset();

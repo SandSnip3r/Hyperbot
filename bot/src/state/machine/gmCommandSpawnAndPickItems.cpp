@@ -100,8 +100,8 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
       }
       return Status::kNotDone;
     } else if (event->eventCode == event::EventCode::kOperatorRequestError) {
-      const auto &castedEvent = dynamic_cast<const event::OperatorRequestError&>(*event);
-      if (castedEvent.operatorCommand == packet::enums::OperatorCommand::kMakeItem) {
+      const event::OperatorRequestError& castedEvent = dynamic_cast<const event::OperatorRequestError&>(*event);
+      if (castedEvent.globalId == bot_.selfState()->globalId && castedEvent.operatorCommand == packet::enums::OperatorCommand::kMakeItem) {
         // Failed to spawn item.
         CHAR_VLOG(1) << "GM Command to spawn item failed";
         if (requestTimeoutEventId_) {

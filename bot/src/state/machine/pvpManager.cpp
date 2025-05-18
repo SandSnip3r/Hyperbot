@@ -2,6 +2,7 @@
 
 #include "bot.hpp"
 #include "common/sessionId.hpp"
+#include "common/pvpDescriptor.hpp"
 #include "packet/building/serverAgentEntityUpdateHwanLevel.hpp"
 #include "state/machine/disableGmInvisible.hpp"
 #include "state/machine/dispelActiveBuffs.hpp"
@@ -25,6 +26,8 @@
 #include <tracy/Tracy.hpp>
 
 #include <absl/log/log.h>
+
+#include <stdexcept>
 
 namespace state::machine {
 
@@ -66,18 +69,21 @@ Status PvpManager::onUpdate(const event::Event *event) {
   // - Check to see if we received a resurrect option.
   if (event != nullptr) {
     if (const auto *entityDespawned = dynamic_cast<const event::EntityDespawned*>(event); entityDespawned != nullptr) {
-      if (opponentGlobalId_ && entityDespawned->globalId == *opponentGlobalId_) {
-        opponentGlobalId_.reset();
-      }
       if (isPvping()) {
-        if (opponentGlobalId_ && entityDespawned->globalId == *opponentGlobalId_) {
+        if (!opponentGlobalId_) {
+          throw std::runtime_error("We are pvping but don't have an opponent global id");
+        } else if (opponentGlobalId_ && entityDespawned->globalId == *opponentGlobalId_) {
           throw std::runtime_error("Our opponent despawned during pvp");
         } else if (!bot_.selfState()) {
           throw std::runtime_error("We despawned during pvp");
         }
       }
+      if (opponentGlobalId_ && entityDespawned->globalId == *opponentGlobalId_) {
+        CHAR_LOG(INFO) << "Our opponent despawned!";
+        opponentGlobalId_.reset();
+      }
     } else if (const auto *entitySpawned = dynamic_cast<const event::EntitySpawned*>(event); entitySpawned != nullptr) {
-      if (!opponentGlobalId_) {
+      if (pvpDescriptor_ && !opponentGlobalId_) {
         // We don't have an opponent yet. Check if this is our opponent.
         const std::shared_ptr<entity::PlayerCharacter> playerCharacter = bot_.entityTracker().getEntity<entity::PlayerCharacter>(entitySpawned->globalId);
         if (playerCharacter && playerCharacter->name == pvpDescriptor_->player2Name) {
@@ -139,13 +145,15 @@ Status PvpManager::onUpdate(const event::Event *event) {
         }
       }
     } else if (const auto *resurrectOption = dynamic_cast<const event::ResurrectOption*>(event)) {
-      if (childState_ != nullptr && dynamic_cast<ResurrectInPlace*>(childState_.get()) != nullptr) {
-        // Not yet resurrecting in place. Take note that we received this so that when the ResurrectInPlace state machine is run, it knows not to wait for this.
-        // We need to do this because the (resurrect options) and (died) packets can come in any order.
-        if (resurrectOption->option != packet::enums::ResurrectionOptionFlag::kAtPresentPoint) {
-          throw std::runtime_error("We can only handle resurrecting in place");
+      if (resurrectOption->globalId == bot_.selfState()->globalId) {
+        if (childState_ != nullptr && dynamic_cast<ResurrectInPlace*>(childState_.get()) != nullptr) {
+          // Not yet resurrecting in place. Take note that we received this so that when the ResurrectInPlace state machine is run, it knows not to wait for this.
+          // We need to do this because the (resurrect options) and (died) packets can come in any order.
+          if (resurrectOption->option != packet::enums::ResurrectionOptionFlag::kAtPresentPoint) {
+            throw std::runtime_error("We can only handle resurrecting in place");
+          }
+          receivedResurrectionOption_ = true;
         }
-        receivedResurrectionOption_ = true;
       }
     } else if (const auto *beginPvpEvent = dynamic_cast<const event::BeginPvp*>(event); beginPvpEvent != nullptr) {
       CHAR_VLOG(1) << "Received BeginPvp";

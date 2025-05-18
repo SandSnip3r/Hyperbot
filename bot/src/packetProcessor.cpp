@@ -1987,7 +1987,7 @@ void PacketProcessor::serverAgentGameResetReceived(const packet::parsing::Server
 }
 
 void PacketProcessor::serverAgentResurrectOptionReceived(const packet::parsing::ServerAgentResurrectOption &packet) const {
-  eventBroker_.publishEvent<event::ResurrectOption>(packet.option());
+  eventBroker_.publishEvent<event::ResurrectOption>(selfEntity_->globalId, packet.option());
 }
 
 void PacketProcessor::serverAgentOperatorResponseReceived(const packet::parsing::ServerAgentOperatorResponse &packet) const {

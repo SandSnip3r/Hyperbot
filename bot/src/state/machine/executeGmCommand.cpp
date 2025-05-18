@@ -31,15 +31,13 @@ Status ExecuteGmCommand::onUpdate(const event::Event *event) {
     // No event, nothing to do.
     return Status::kNotDone;
   }
-  if (event->eventCode == event::EventCode::kOperatorRequestSuccess) {
-    const auto &castedEvent = dynamic_cast<const event::OperatorRequestSuccess&>(*event);
-    if (castedEvent.globalId == bot_.selfState()->globalId && castedEvent.operatorCommand == gmCommand_) {
+  if (const event::OperatorRequestSuccess *operatorRequestSuccessEvent = dynamic_cast<const event::OperatorRequestSuccess*>(event); operatorRequestSuccessEvent != nullptr) {
+    if (operatorRequestSuccessEvent->globalId == bot_.selfState()->globalId && operatorRequestSuccessEvent->operatorCommand == gmCommand_) {
       CHAR_VLOG(1) << "Successfully executed GM command";
       return Status::kDone;
     }
-  } else if (event->eventCode == event::EventCode::kOperatorRequestError) {
-    const auto &castedEvent = dynamic_cast<const event::OperatorRequestError&>(*event);
-    if (castedEvent.globalId == bot_.selfState()->globalId && castedEvent.operatorCommand == gmCommand_) {
+  } else if (const event::OperatorRequestError *operatorRequestErrorEvent = dynamic_cast<const event::OperatorRequestError*>(event); operatorRequestErrorEvent != nullptr) {
+    if (operatorRequestErrorEvent->globalId == bot_.selfState()->globalId && operatorRequestErrorEvent->operatorCommand == gmCommand_) {
       throw std::runtime_error("Failed to execute GM command!");
     }
   } else if (event->eventCode == event::EventCode::kTimeout) {

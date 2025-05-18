@@ -26,7 +26,7 @@ Status EnablePvpMode::onUpdate(const event::Event *event) {
     return Status::kNotDone;
   } else {
     if (event != nullptr) {
-      if (const auto *equipCountdownStartEvent = dynamic_cast<const event::EquipCountdownStart*>(event)) {
+      if (const event::EquipCountdownStart *equipCountdownStartEvent = dynamic_cast<const event::EquipCountdownStart*>(event); equipCountdownStartEvent != nullptr) {
         if (equipCountdownStartEvent->globalId == bot_.selfState()->globalId) {
           if (state_ != State::kSentRequest) {
             LOG(WARNING) << "Expected to be in state \"kSentRequest\"";
@@ -39,7 +39,7 @@ Status EnablePvpMode::onUpdate(const event::Event *event) {
           state_ = State::kCountdownRunning;
           return Status::kNotDone;
         }
-      } else if (const auto *freePvpUpdateSuccessEvent = dynamic_cast<const event::FreePvpUpdateSuccess*>(event)) {
+      } else if (const event::FreePvpUpdateSuccess *freePvpUpdateSuccessEvent = dynamic_cast<const event::FreePvpUpdateSuccess*>(event); freePvpUpdateSuccessEvent != nullptr) {
         if (freePvpUpdateSuccessEvent->globalId == bot_.selfState()->globalId) {
           if (state_ != State::kCountdownRunning) {
             LOG(WARNING) << "Expected to be in state \"kCountdownRunning\"";

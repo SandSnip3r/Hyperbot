@@ -153,14 +153,6 @@ public:
   virtual ~ItemUseFailed() = default;
 };
 
-struct ItemUseTimeout : public Event {
-public:
-  ItemUseTimeout(EventId id, uint8_t slot, type_id::TypeId tid);
-  const uint8_t slotNum;
-  const type_id::TypeId typeData;
-  virtual ~ItemUseTimeout() = default;
-};
-
 struct InjectPacket : public Event {
 public:
   enum class Direction { kClientToServer, kServerToClient };
@@ -442,7 +434,8 @@ public:
 
 struct ResurrectOption : public Event {
 public:
-  explicit ResurrectOption(EventId id, packet::enums::ResurrectionOptionFlag option);
+  explicit ResurrectOption(EventId id, sro::scalar_types::EntityGlobalId globalId, packet::enums::ResurrectionOptionFlag option);
+  const sro::scalar_types::EntityGlobalId globalId;
   packet::enums::ResurrectionOptionFlag option;
   virtual ~ResurrectOption() = default;
 };

@@ -55,9 +55,6 @@ ItemUseSuccess::ItemUseSuccess(EventId id, sro::scalar_types::EntityGlobalId glo
 ItemUseFailed::ItemUseFailed(EventId id, sro::scalar_types::EntityGlobalId globalId, uint8_t slotNum, type_id::TypeId typeId, packet::enums::InventoryErrorCode reason_param) :
     Event(id, EventCode::kItemUseFailed), globalId(globalId), inventorySlotNum(slotNum), itemTypeId(typeId), reason(reason_param) {}
 
-ItemUseTimeout::ItemUseTimeout(EventId id, uint8_t slot, type_id::TypeId tid) :
-    Event(id, EventCode::kItemUseTimeout), slotNum(slot), typeData(tid) {}
-
 InjectPacket::InjectPacket(EventId id, InjectPacket::Direction dir, uint16_t op, const std::string &d) :
     Event(id, EventCode::kInjectPacket), direction(dir), opcode(op), data(d) {}
 
@@ -134,10 +131,10 @@ EntityStatesChanged::EntityStatesChanged(EventId id, sro::scalar_types::EntityGl
     Event(id, EventCode::kEntityStatesChanged), globalId(globalId) {}
 
 BuffAdded::BuffAdded(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceSkillId buffId) :
-    Event(id, EventCode::kPlayerCharacterBuffAdded), entityGlobalId(entityId), buffRefId(buffId) {}
+    Event(id, EventCode::kBuffAdded), entityGlobalId(entityId), buffRefId(buffId) {}
 
 BuffRemoved::BuffRemoved(EventId id, sro::scalar_types::EntityGlobalId entityId, sro::scalar_types::ReferenceSkillId buffId) :
-    Event(id, EventCode::kPlayerCharacterBuffRemoved), entityGlobalId(entityId), buffRefId(buffId) {}
+    Event(id, EventCode::kBuffRemoved), entityGlobalId(entityId), buffRefId(buffId) {}
 
 CommandError::CommandError(EventId id, sro::scalar_types::EntityGlobalId issuingGlobalId, const packet::structures::ActionCommand &cmd) :
     Event(id, EventCode::kCommandError), issuingGlobalId(issuingGlobalId), command(cmd) {}
@@ -171,8 +168,8 @@ ChatReceived::ChatReceived(EventId id, packet::enums::ChatType type, sro::scalar
 ChatReceived::ChatReceived(EventId id, packet::enums::ChatType type, const std::string &senderName, const std::string &msg) :
     Event(id, EventCode::kChatReceived), chatType(type), sender(senderName), message(msg) {}
 
-ResurrectOption::ResurrectOption(EventId id, packet::enums::ResurrectionOptionFlag option) :
-    Event(id, EventCode::kResurrectOption), option(option) {}
+ResurrectOption::ResurrectOption(EventId id, sro::scalar_types::EntityGlobalId globalId, packet::enums::ResurrectionOptionFlag option) :
+    Event(id, EventCode::kResurrectOption), globalId(globalId), option(option) {}
 
 LearnMasterySuccess::LearnMasterySuccess(EventId id, sro::scalar_types::ReferenceMasteryId masteryId) :
     Event(id, EventCode::kLearnMasterySuccess), masteryId(masteryId) {}

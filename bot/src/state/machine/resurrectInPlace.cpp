@@ -25,15 +25,12 @@ Status ResurrectInPlace::onUpdate(const event::Event *event) {
         if (lifeStateChanged->globalId == bot_.selfState()->globalId) {
           CHAR_VLOG(1) << "  it was ours " << sro::entity::toString(bot_.selfState()->lifeState);
           if (bot_.selfState()->lifeState == sro::entity::LifeState::kAlive) {
-            if (requestTimeoutEventId_) {
-              bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
-              requestTimeoutEventId_.reset();
-            }
+            bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
+            requestTimeoutEventId_.reset();
             return Status::kDone;
           }
         }
       } else if (event->eventCode == event::EventCode::kTimeout &&
-                 requestTimeoutEventId_ &&
                  *requestTimeoutEventId_ == event->eventId) {
         // We timed out waiting for our life state to change.
         CHAR_VLOG(1) << "We timed out while waiting for resurrect";
@@ -53,13 +50,15 @@ Status ResurrectInPlace::onUpdate(const event::Event *event) {
   }
 
   if (event != nullptr) {
-    if (const auto *resurrectOption = dynamic_cast<const event::ResurrectOption*>(event)) {
-      CHAR_VLOG(1) << "Just got a resurrect option. send resurrect";
-      if (resurrectOption->option != packet::enums::ResurrectionOptionFlag::kAtPresentPoint) {
-        throw std::runtime_error("We can only handle resurrecting in place");
+    if (const auto *resurrectOption = dynamic_cast<const event::ResurrectOption*>(event); resurrectOption != nullptr) {
+      if (resurrectOption->globalId == bot_.selfState()->globalId) {
+        CHAR_VLOG(1) << "Just got a resurrect option. send resurrect";
+        if ( resurrectOption->option != packet::enums::ResurrectionOptionFlag::kAtPresentPoint) {
+          throw std::runtime_error("We can only handle resurrecting in place");
+        }
+        sendResurrectRequest();
+        return Status::kNotDone;
       }
-      sendResurrectRequest();
-      return Status::kNotDone;
     }
   }
 

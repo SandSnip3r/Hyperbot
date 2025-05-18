@@ -29,7 +29,7 @@ Status DisableGmInvisible::onUpdate(const event::Event *event) {
 
   if (event != nullptr) {
     if (event->eventCode == event::EventCode::kEntityBodyStateChanged) {
-      const auto *castedEvent = dynamic_cast<const event::EntityBodyStateChanged*>(event);
+      const event::EntityBodyStateChanged *castedEvent = dynamic_cast<const event::EntityBodyStateChanged*>(event);
       if (castedEvent->globalId == bot_.selfState()->globalId) {
         if (bot_.selfState()->bodyState() == packet::enums::BodyState::kInvisibleGm) {
           CHAR_VLOG(1) << "Just received event that we've become invisible";

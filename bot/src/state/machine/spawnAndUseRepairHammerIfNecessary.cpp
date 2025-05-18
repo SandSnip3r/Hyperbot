@@ -33,7 +33,7 @@ Status SpawnAndUseRepairHammerIfNecessary::onUpdate(const event::Event *event) {
     bool needToRepair = false;
     // Check if we need to repair any items
     for (const storage::Item &item : bot_.inventory()) {
-      if (const auto *equipment = dynamic_cast<const storage::ItemEquipment*>(&item); equipment != nullptr) {
+      if (const storage::ItemEquipment *equipment = dynamic_cast<const storage::ItemEquipment*>(&item); equipment != nullptr) {
         CHAR_VLOG(1) << bot_.gameData().getItemName(equipment->refItemId) << " durability: " << equipment->durability << "/" << equipment->maxDurability(bot_.gameData());
         if (equipment->durability < equipment->maxDurability(bot_.gameData())) {
           needToRepair = true;

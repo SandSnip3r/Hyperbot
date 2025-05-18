@@ -28,6 +28,8 @@ private:
   const common::PvpDescriptor::PvpId pvpId_;
   const sro::scalar_types::EntityGlobalId opponentGlobalId_;
   std::optional<std::chrono::steady_clock::time_point> lastPacketTime_;
+
+  bool isRelevantEvent(const event::Event *event) const;
 };
 
 } // namespace state::machine

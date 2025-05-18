@@ -25,7 +25,7 @@ Status MoveItem::onUpdate(const event::Event *event) {
     initialized_ = true;
   }
   if (event != nullptr) {
-    if (const auto *itemMovedEvent = dynamic_cast<const event::ItemMoved*>(event); itemMovedEvent != nullptr) {
+    if (const event::ItemMoved *itemMovedEvent = dynamic_cast<const event::ItemMoved*>(event); itemMovedEvent != nullptr) {
       if (itemMovedEvent->globalId == bot_.selfState()->globalId) {
         if (itemMovedEvent->source && *itemMovedEvent->source == source_) {
           // The target item moved
@@ -45,7 +45,7 @@ Status MoveItem::onUpdate(const event::Event *event) {
           throw std::runtime_error(absl::StrFormat("Some other item %s was moved to our destination slot %d", bot_.gameData().getItemName(bot_.inventory().getItem(destinationSlot)->refItemId), destinationSlot));
         }
       }
-    } else if (const auto *itemMoveFailedEvent = dynamic_cast<const event::ItemMoveFailed*>(event); itemMoveFailedEvent != nullptr) {
+    } else if (const event::ItemMoveFailed *itemMoveFailedEvent = dynamic_cast<const event::ItemMoveFailed*>(event); itemMoveFailedEvent != nullptr) {
       if (itemMoveFailedEvent->globalId == bot_.selfState()->globalId) {
         // Reset and try again.
         bot_.eventBroker().cancelDelayedEvent(*timeoutEventId_);
