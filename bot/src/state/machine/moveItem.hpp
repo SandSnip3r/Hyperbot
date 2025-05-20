@@ -15,13 +15,13 @@ public:
   ~MoveItem() override;
   Status onUpdate(const event::Event *event) override;
 private:
-  static constexpr int kMaxRetries = 3;
+  static constexpr int kMaxAttempts = 3;
   static inline std::string kName{"MoveItem"};
   const sro::storage::Position source_;
   const sro::storage::Position destination_;
   bool initialized_{false};
   std::optional<broker::EventBroker::EventId> timeoutEventId_;
-  int retryCount_{0};
+  int attemptCount_{0};
 };
 
 } // namespace state::machine

@@ -10,15 +10,15 @@
 #include <thread>
 #include <vector>
 
-namespace rl::ai {
-class DeepLearningIntelligence;
-} // namespace rl::ai
-
 namespace ui {
 class RlUserInterface;
 } // namespace ui
 
 namespace rl {
+
+struct CheckpointValues {
+  int actionStepCount;
+};
 
 class CheckpointManager {
 public:
@@ -27,7 +27,7 @@ public:
   void saveCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, int stepCount, bool overwrite);
   bool checkpointExists(const std::string &checkpointName) const;
   std::vector<std::string> getCheckpointNames() const;
-  void loadCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, rl::ai::DeepLearningIntelligence *deepLearningIntelligence);
+  CheckpointValues loadCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface);
   void deleteCheckpoints(const std::vector<std::string> &checkpointNames);
 private:
   static constexpr std::string_view kCheckpointRegistryFilename{"checkpoint_registry"};

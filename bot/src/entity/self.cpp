@@ -7,6 +7,7 @@
 // From Pathfinder
 #include "math_helpers.h"
 
+#include <chrono>
 #include <silkroad_lib/position_math.hpp>
 #include <silkroad_lib/constants.hpp>
 #include <silkroad_lib/entity.hpp>
@@ -798,6 +799,10 @@ void Self::resetTrainingAreaGeometry() {
 void Self::skillCooldownBegin(sro::scalar_types::ReferenceSkillId skillId, broker::EventBroker::ClockType::time_point cooldownEndTime) {
   if (eventBroker_ == nullptr) {
     throw std::runtime_error("Registering skill cooldown event, but do not have an event broker");
+  }
+  if (skillEngine.skillIsOnCooldown(skillId)) {
+    LOG(WARNING) << absl::StreamFormat("Skill %s cooldown began, but this skill is already on cooldown (%d ms remaining). Trying to set end to %d ms from now", gameData_.getSkillName(skillId), skillEngine.skillRemainingCooldown(skillId, *eventBroker_).value_or(std::chrono::milliseconds(-1)).count(), std::chrono::duration_cast<std::chrono::milliseconds>(cooldownEndTime - std::chrono::high_resolution_clock::now()).count());
+    return;
   }
   const broker::EventBroker::EventId cooldownEndTimerId = eventBroker_->publishDelayedEvent<event::InternalSkillCooldownEnded>(cooldownEndTime, globalId, skillId);
   skillEngine.skillCooldownBegin(skillId, cooldownEndTimerId);

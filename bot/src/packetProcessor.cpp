@@ -5,6 +5,7 @@
 #include "entity/monster.hpp"
 #include "helpers.hpp"
 #include "packet/building/clientAgentActionCommandRequest.hpp"
+#include "packet/enums/packetEnums.hpp"
 #include "packet/opcode.hpp"
 #include "type_id/categories.hpp"
 
@@ -402,7 +403,7 @@ void PacketProcessor::serverGatewayLoginResponseReceived(const packet::parsing::
     eventBroker_.publishEvent<event::GatewayLoginResponseReceived>(sessionId_, packet.agentServerToken());
   } else {
     // TODO: Send an event.
-    LOG(WARNING) << " Login failed";
+    LOG(WARNING) << " Login failed " << packet::enums::toString(packet.errorCode()) << " for session " << sessionId_;
   }
 }
 

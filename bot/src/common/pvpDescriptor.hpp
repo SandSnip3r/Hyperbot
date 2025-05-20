@@ -6,6 +6,7 @@
 #include <silkroad_lib/position.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -30,8 +31,8 @@ struct PvpDescriptor {
   // These are the items which each character has in their inventory at the start of the Pvp.
   std::vector<common::ItemRequirement> itemRequirements;
 
-  rl::ai::BaseIntelligence *player1Intelligence{nullptr};
-  rl::ai::BaseIntelligence *player2Intelligence{nullptr};
+  std::shared_ptr<rl::ai::BaseIntelligence> player1Intelligence;
+  std::shared_ptr<rl::ai::BaseIntelligence> player2Intelligence;
 };
 
 } // namespace common

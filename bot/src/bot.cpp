@@ -728,7 +728,7 @@ std::future<void> Bot::asyncLogIn() {
     // This state machine expected to be created when we're not logged in.
     throw std::runtime_error("Asking bot to log in, but already logged in");
   }
-  LOG(INFO) << "Logging in " << characterLoginInfo_.characterName;
+  LOG(INFO) << "Logging in " << characterLoginInfo_.characterName << " for session " << sessionId_;
   loginStateMachine_ = std::make_unique<state::machine::Login>(*this, characterLoginInfo_);
   onUpdate(nullptr);
   return logInPromise_.get_future();

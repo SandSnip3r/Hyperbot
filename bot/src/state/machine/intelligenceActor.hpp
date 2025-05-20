@@ -9,6 +9,7 @@
 #include <silkroad_lib/pk2/ref/item.hpp>
 
 #include <chrono>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -16,7 +17,7 @@ namespace state::machine {
 
 class IntelligenceActor : public StateMachine {
 public:
-  IntelligenceActor(StateMachine *parent, rl::ai::BaseIntelligence *intelligence, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId);
+  IntelligenceActor(StateMachine *parent, std::shared_ptr<rl::ai::BaseIntelligence> intelligence, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId);
   ~IntelligenceActor() override;
   Status onUpdate(const event::Event *event) override;
 protected:
@@ -24,7 +25,7 @@ protected:
 private:
   static inline std::chrono::milliseconds kPacketSendCooldown{50};
   static inline std::string kName{"IntelligenceActor"};
-  rl::ai::BaseIntelligence *intelligence_;
+  std::shared_ptr<rl::ai::BaseIntelligence> intelligence_;
   const common::PvpDescriptor::PvpId pvpId_;
   const sro::scalar_types::EntityGlobalId opponentGlobalId_;
   std::optional<std::chrono::steady_clock::time_point> lastPacketTime_;

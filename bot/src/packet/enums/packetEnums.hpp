@@ -62,7 +62,9 @@ enum class LoginErrorCode : uint8_t {
   // See LoginBlockType.
   kBlocked = 2,
   // This user is already connected. The user may still be connected because of an error that forced the game to close. Please try again in 5 minutes.
-  kUserStillConnected = 4,
+  kUserStillConnected = 3,
+  // // This user is already connected. The user may still be connected because of an error that forced the game to close. Please try again in 5 minutes.
+  // kUserStillConnected = 4,
   // Failed to connect to server. (C5)
   kUserShardIsOutOfService = 5,
   // The server is full, please try again later.
@@ -499,6 +501,7 @@ std::ostream& operator<<(std::ostream &stream, const TargetType &enumVal);
 std::ostream& operator<<(std::ostream &stream, const AbnormalStateFlag &enumVal);
 
 std::string toString(AbnormalStateFlag flag);
+std::string toString(LoginErrorCode errorCode);
 
 } // namespace packet::enums
 

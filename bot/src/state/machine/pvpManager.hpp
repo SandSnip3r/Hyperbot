@@ -32,8 +32,6 @@ private:
   bool opponentIsReady_{false};
   bool receivedResurrectionOption_{false};
 
-  sro::scalar_types::EntityGlobalId getOpponentGlobalId();
-
   bool isPvping() const;
 };
 

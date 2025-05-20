@@ -1,5 +1,7 @@
 #include "packetEnums.hpp"
 
+#include <absl/strings/str_format.h>
+
 namespace packet::enums {
 
 std::ostream& operator<<(std::ostream &stream, const ActionState &enumVal) {
@@ -243,6 +245,43 @@ std::string toString(AbnormalStateFlag flag) {
       return "Hidden";
     default:
       return "UNKNOWN";
+  }
+}
+
+std::string toString(LoginErrorCode errorCode) {
+  switch (errorCode) {
+    case LoginErrorCode::kIncorrectUserInfo:
+      return "IncorrectUserInfo";
+    case LoginErrorCode::kBlocked:
+      return "Blocked";
+    case LoginErrorCode::kUserStillConnected:
+      return "UserStillConnected";
+    case LoginErrorCode::kUserShardIsOutOfService:
+      return "UserShardIsOutOfService";
+    case LoginErrorCode::kServerFull:
+      return "ServerFull";
+    case LoginErrorCode::kUserInternalError:
+      return "UserInternalError";
+    case LoginErrorCode::kUserInvalidShard:
+      return "UserInvalidShard";
+    case LoginErrorCode::kCannotConnectAgent:
+      return "CannotConnectAgent";
+    case LoginErrorCode::kServerInternalError:
+      return "ServerInternalError";
+    case LoginErrorCode::kIpLimitExceeded:
+      return "IpLimitExceeded";
+    case LoginErrorCode::kBillingFailed:
+      return "BillingFailed";
+    case LoginErrorCode::kBillingServerError:
+      return "BillingServerError";
+    case LoginErrorCode::kUnderAgeAdultOnlyServer:
+      return "UnderAgeAdultOnlyServer";
+    case LoginErrorCode::kUnderAgeTeenOnlyServer:
+      return "UnderAgeTeenOnlyServer";
+    case LoginErrorCode::kOverAgeTeenOnlyServer:
+      return "OverAgeTeenOnlyServer";
+    default:
+      return absl::StrFormat("UNKNOWN-%d", static_cast<int>(errorCode));
   }
 }
 

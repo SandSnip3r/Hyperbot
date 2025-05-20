@@ -13,8 +13,6 @@
 namespace state::machine {
 
 MoveItem::MoveItem(StateMachine *parent, sro::storage::Position source, sro::storage::Position destination) : StateMachine(parent), source_(source), destination_(destination) {
-  // Prevent the human from moving anything
-  pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
 }
 
 MoveItem::~MoveItem() {}
@@ -23,6 +21,8 @@ Status MoveItem::onUpdate(const event::Event *event) {
   if (!initialized_) {
     CHAR_VLOG(1) << absl::StreamFormat("MoveItem: Moving item from %s-%d to %s-%d", toString(source_.storage), source_.slotNum, toString(destination_.storage), destination_.slotNum);
     initialized_ = true;
+    // Prevent the human from moving anything
+    pushBlockedOpcode(packet::Opcode::kClientAgentInventoryOperationRequest);
   }
   if (event != nullptr) {
     if (const event::ItemMoved *itemMovedEvent = dynamic_cast<const event::ItemMoved*>(event); itemMovedEvent != nullptr) {
@@ -50,19 +50,17 @@ Status MoveItem::onUpdate(const event::Event *event) {
         // Reset and try again.
         bot_.eventBroker().cancelDelayedEvent(*timeoutEventId_);
         timeoutEventId_.reset();
-        ++retryCount_;
-        if (retryCount_ > kMaxRetries) {
-          throw std::runtime_error("Item move operation failed");
+        if (attemptCount_ >= kMaxAttempts) {
+          throw std::runtime_error(absl::StrFormat("[%s] Item move operation failed with error %d after %d retries", kName, itemMoveFailedEvent->errorCode, attemptCount_));
         }
-        CHAR_VLOG(1) << absl::StreamFormat("Item move operation failed with error %d. Retrying... (attempt %d/%d)", itemMoveFailedEvent->errorCode, retryCount_, kMaxRetries);
+        CHAR_VLOG(1) << absl::StreamFormat("Item move operation failed with error %d. Retrying... (attempt %d/%d)", itemMoveFailedEvent->errorCode, attemptCount_, kMaxAttempts);
       }
     } else if (event->eventCode == event::EventCode::kTimeout && timeoutEventId_ && *timeoutEventId_ == event->eventId) {
       timeoutEventId_.reset();
-      ++retryCount_;
-      if (retryCount_ > kMaxRetries) {
-        throw std::runtime_error("Item move operation failed");
+      if (attemptCount_ >= kMaxAttempts) {
+        throw std::runtime_error(absl::StrFormat("[%s] Item move operation failed with timeout after %d retries", kName, attemptCount_));
       }
-      CHAR_VLOG(1) << absl::StreamFormat("MoveItem timed out. Retrying... (attempt %d/%d)", retryCount_, kMaxRetries);
+      CHAR_VLOG(1) << absl::StreamFormat("MoveItem timed out. Retrying... (attempt %d/%d)", attemptCount_, kMaxAttempts);
     }
   }
 
@@ -110,6 +108,7 @@ Status MoveItem::onUpdate(const event::Event *event) {
   }
   injectPacket(moveItemPacket, PacketContainer::Direction::kBotToServer);
   timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(1000));
+  ++attemptCount_;
   return Status::kNotDone;
 }
 

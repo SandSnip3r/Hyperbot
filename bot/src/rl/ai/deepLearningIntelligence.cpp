@@ -9,18 +9,11 @@
 
 namespace rl::ai {
 
-void DeepLearningIntelligence::resetForNewEpisode() {
-  pastObservationsAndActions_.clear();
-}
-
 int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket) {
   ZoneScopedN("DeepLearningIntelligence::selectAction");
 
   // Update epsilon.
-  const float epsilon = getEpsilon();
-  trainingManager_.getJaxInterface().addScalar("anneal/Epsilon", epsilon, stepCount_);
-  ++stepCount_;
-
+  const float epsilon = trainingManager_.getEpsilon();
   std::bernoulli_distribution randomActionDistribution(epsilon);
   int actionIndex;
   if (randomActionDistribution(randomEngine_)) {
@@ -60,11 +53,6 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
   pastObservationsAndActions_.emplace_back(observation, actionIndex);
 
   return actionIndex;
-}
-
-float DeepLearningIntelligence::getEpsilon() {
-  // For now, epsilon will decay linearly with the number of steps.
-  return std::min(kInitialEpsilon, std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(stepCount_) / kEpsilonDecaySteps));
 }
 
 

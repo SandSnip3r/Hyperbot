@@ -17,7 +17,8 @@ GmWarpToPosition::~GmWarpToPosition() {
 
 Status GmWarpToPosition::onUpdate(const event::Event *event) {
   if (bot_.selfState() == nullptr) {
-    throw std::runtime_error("Self not spawned");
+    // Not spawned, event cannot matter for us.
+    return Status::kNotDone;
   }
   if (sro::position_math::calculateDistance2d(bot_.selfState()->position(), position_) < 1000.0f) {
     CHAR_VLOG(1) << "Already close enough to our target position, not warping";

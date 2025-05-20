@@ -50,3 +50,6 @@
   - Skill use failed because insufficient MP
   - Item use failed because trying to use item which does not exist
 - In EnsureFullVitalsAndNoStatuses, we need to check if any of the potions/pills are on cooldown before constructing a UseItem state machine, or either wait on the cooldown in UseItem
+- If login error code is 3, there is no way to rectify by trying again. We actually need to kill the client (server connection, actually), and restart it.
+- When a state machine is done, we should pop blocked opcodes. As opposed to how we currently only pop blocked ones on destruction.
+- We can get more pvp throughput if we pair characters which are completely ready to fight. For example, there might be 4 characters who are preparing to pvp: A, B, C, and D. A & B are set to fight each other and C & D also. If A and C are both stuck waiting for a couple minutes due to a long skill cooldown, all 4 are stuck idle. Instead, B and D might be able to fight against each other.

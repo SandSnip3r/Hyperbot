@@ -107,22 +107,20 @@ std::vector<std::string> CheckpointManager::getCheckpointNames() const {
   return checkpointNames;
 }
 
-void CheckpointManager::loadCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, rl::ai::DeepLearningIntelligence *deepLearningIntelligence) {
+CheckpointValues CheckpointManager::loadCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface) {
   std::unique_lock lock(registryMutex_);
   for (const rl_checkpointing::Checkpoint &checkpoint : checkpointRegistry_.checkpoints()) {
     if (checkpoint.checkpoint_name() == checkpointName) {
+      CheckpointValues result;
       const std::string modelCheckpointPath = checkpoint.model_checkpoint_path();
       const std::string targetModelCheckpointPath = checkpoint.target_model_checkpoint_path();
       const std::string optimizerCheckpointPath = checkpoint.optimizer_checkpoint_path();
-      const int stepCount = checkpoint.step_count();
       LOG(INFO) << "Loading checkpoint \"" << checkpointName << "\" from paths \"" << modelCheckpointPath << "\", \"" << targetModelCheckpointPath << "\", and \"" << optimizerCheckpointPath << "\"";
       jaxInterface.loadCheckpoint(modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath);
-      if (deepLearningIntelligence != nullptr) {
-        deepLearningIntelligence->setStepCount(stepCount);
-      }
+      result.actionStepCount = checkpoint.step_count();
       // Notify the UI that a checkpoint has been loaded
       rlUserInterface_.sendCheckpointLoaded(checkpointName);
-      return;
+      return result;
     }
   }
   throw std::runtime_error("Checkpoint not found");

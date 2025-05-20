@@ -9,7 +9,6 @@
 #include "common/sessionId.hpp"
 #include "pk2/gameData.hpp"
 #include "rl/checkpointManager.hpp"
-#include "rl/intelligencePool.hpp"
 #include "rl/jaxInterface.hpp"
 #include "rl/observationAndActionStorage.hpp"
 #include "rl/replayBuffer.hpp"
@@ -56,6 +55,7 @@ public:
   JaxInterface& getJaxInterface() { return jaxInterface_; }
   int getTrainStepCount() const { return trainStepCount_.load(); }
   constexpr int getPastObservationStackSize() const { return kPastObservationStackSize; }
+  float getEpsilon() const;
 
 private:
   // Definition for a character pairing at a specific position
@@ -69,7 +69,7 @@ private:
     std::optional<SessionId> session2Id;
   };
 
-  static constexpr int kPastObservationStackSize = 64;
+  static constexpr int kPastObservationStackSize{64};
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
   static constexpr int kReplayBufferMinimumBeforeTraining{10'000};
@@ -79,13 +79,17 @@ private:
   static constexpr float kTargetNetworkPolyakTau{0.0005f};
   static constexpr int kTargetNetworkPolyakUpdateInterval{16};
   static constexpr bool kTargetNetworkPolyakEnabled{true};
-  static constexpr float kGamma{0.9975f};
+  static constexpr float kGamma{0.99f};
   static constexpr float kLearningRate{1e-6f};
   static constexpr float kDropoutRate{0.1f};
   static constexpr float kPerAlpha{0.5f};
   static constexpr float kPerBetaStart{0.4f};
   static constexpr float kPerBetaEnd{1.0f};
   static constexpr int kPerTrainStepCountAnneal{250'000};
+  static constexpr float kInitialEpsilon{1.0f};
+  static constexpr float kFinalEpsilon{0.01f};
+  static constexpr int kEpsilonDecaySteps{250'000};
+  static constexpr int kPvpCount{4};
 
   std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;
@@ -99,15 +103,14 @@ private:
   std::vector<std::unique_ptr<Session>> sessions_;
   std::vector<SessionId> sessionsReadyForAssignment_;
   common::PvpDescriptor::PvpId nextPvpId_{0};
-  IntelligencePool intelligencePool_{*this};
   JaxInterface jaxInterface_{kPastObservationStackSize, kGamma, kLearningRate};
   CheckpointManager checkpointManager_{rlUserInterface_};
   std::atomic<int> trainStepCount_{0};
+  std::atomic<int> actionStepCount_{0};
 
   // New variables for character pairings and positions
   std::vector<sro::Position> pvpPositions_;
   std::vector<CharacterPairing> characterPairings_;
-  absl::flat_hash_map<SessionId, int> sessionToPairingMap_; // Maps session ID to pairing index
 
   // Sample collection rate tracking
   int sampleCount_{0};

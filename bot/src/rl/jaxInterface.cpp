@@ -450,18 +450,18 @@ do { \
 
 size_t JaxInterface::writeObservationToRawArray(const Observation &observation, float *array) {
   size_t index{0};
-  array[index++] = observation.ourCurrentHp_ / static_cast<float>(observation.ourMaxHp_), 0.0, 1.0;
+  array[index++] = observation.ourCurrentHp_ / static_cast<float>(observation.ourMaxHp_);
   LOG_IF_BEYOND_RANGE(array[index-1], 0.0, 1.0);
-  array[index++] = observation.ourCurrentMp_ / static_cast<float>(observation.ourMaxMp_), 0.0, 1.0;
+  array[index++] = observation.ourCurrentMp_ / static_cast<float>(observation.ourMaxMp_);
   LOG_IF_BEYOND_RANGE(array[index-1], 0.0, 1.0);
   array[index++] = observation.weAreKnockedDown_ ? 1.0 : 0.0;
-  array[index++] = observation.opponentCurrentHp_ / static_cast<float>(observation.opponentMaxHp_), 0.0, 1.0;
+  array[index++] = observation.opponentCurrentHp_ / static_cast<float>(observation.opponentMaxHp_);
   LOG_IF_BEYOND_RANGE(array[index-1], 0.0, 1.0);
-  array[index++] = observation.opponentCurrentMp_ / static_cast<float>(observation.opponentMaxMp_), 0.0, 1.0;
+  array[index++] = observation.opponentCurrentMp_ / static_cast<float>(observation.opponentMaxMp_);
   LOG_IF_BEYOND_RANGE(array[index-1], 0.0, 1.0);
   array[index++] = observation.opponentIsKnockedDown_ ? 1.0 : 0.0;
 
-  array[index++] = observation.hpPotionCount_ / static_cast<float>(5), 0.0, 1.0; // IF-CHANGE: If we change this, also change TrainingManager::buildItemRequirementList
+  array[index++] = observation.hpPotionCount_ / static_cast<float>(5); // IF-CHANGE: If we change this, also change TrainingManager::buildItemRequirementList
   LOG_IF_BEYOND_RANGE(array[index-1], 0.0, 1.0);
   index += writeOneHotEvent(observation.eventCode_, &array[index]);
 

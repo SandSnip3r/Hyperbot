@@ -35,7 +35,7 @@ Status MaybeRemoveAvatarEquipment::onUpdate(const event::Event *event) {
           CHAR_VLOG(1) << absl::StreamFormat("Moving item from intermediate slot %d to target slot %d", intermediateSlot_, targetSlot);
           setChildStateMachine<MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, intermediateSlot_),
                                          sro::storage::Position(sro::storage::Storage::kInventory, targetSlot));
-          return onUpdate(event);
+          return onUpdate(nullptr);
         }
       } else {
         CHAR_VLOG(2) << "Was final move, all done";
@@ -61,10 +61,10 @@ Status MaybeRemoveAvatarEquipment::onUpdate(const event::Event *event) {
   }
   intermediateSlot_ = *firstFreeSlot;
   CHAR_VLOG(1) << absl::StreamFormat("Constructing state machine to move item from avatar inventory %d to inventory %d", avatarSlot_, intermediateSlot_);
+  unequipping_ = true;
   setChildStateMachine<MoveItem>(sro::storage::Position(sro::storage::Storage::kAvatarInventory, avatarSlot_),
                                  sro::storage::Position(sro::storage::Storage::kInventory, intermediateSlot_));
-  unequipping_ = true;
-  return onUpdate(event);
+  return onUpdate(nullptr);
 }
 
 } // namespace state::machine

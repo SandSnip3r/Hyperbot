@@ -32,10 +32,10 @@ Status Login::onUpdate(const event::Event *event) {
     pushBlockedOpcode(packet::Opcode::kClientAgentAuthRequest);
 
     if (bot_.worldState().shardListResponse_) {
-      VLOG(1) << "Already have shard list";
+      VLOG(1) << absl::StreamFormat("[%s] Already have shard list", characterName_);
       waitingOnShardList_ = false;
     } else {
-      VLOG(1) << "Don't yet have a shard list, we'll get it ourself";
+      VLOG(1) << absl::StreamFormat("[%s] Don't yet have a shard list, we'll get it ourself", characterName_);
       // Since this state machine is doing the login, we send these two packets. Normally the client sends them. If instead the user wants to manually log in using the client, we should let the client send them.
       pushBlockedOpcode(packet::Opcode::kClientGatewayShardListRequest);
       pushBlockedOpcode(packet::Opcode::kClientGatewayShardListPingRequest);
@@ -44,7 +44,7 @@ Status Login::onUpdate(const event::Event *event) {
 
   if (!waitingOnShardList_ && !bot_.worldState().shardListResponse_.has_value()) {
     // Don't yet have a shard list, request it.
-    VLOG(1) << "Requesting shard list";
+    VLOG(1) << absl::StreamFormat("[%s] Requesting shard list", characterName_);
     injectPacket(packet::building::ClientGatewayShardListRequest::packet(), PacketContainer::Direction::kBotToServer);
     waitingOnShardList_ = true;
     return Status::kNotDone;
@@ -53,7 +53,7 @@ Status Login::onUpdate(const event::Event *event) {
   // Everything else in this function expects an event.
   if (event == nullptr) {
     // No event, nothing to do.
-    VLOG(3) << "No event, nothing to do.";
+    VLOG(3) << absl::StreamFormat("[%s] No event, nothing to do.", characterName_);
     return Status::kNotDone;
   }
 
@@ -61,7 +61,7 @@ Status Login::onUpdate(const event::Event *event) {
   if (const auto *sessionSpecificEvent = dynamic_cast<const event::SessionSpecificEvent*>(event); sessionSpecificEvent != nullptr) {
     if (sessionSpecificEvent->sessionId != bot_.sessionId()) {
       // Not for us.
-      VLOG(3) << "Session specific event for someone else";
+      VLOG(3) << absl::StreamFormat("[%s] Session specific event for someone else", characterName_);
       return Status::kNotDone;
     }
 
@@ -74,21 +74,21 @@ Status Login::onUpdate(const event::Event *event) {
           throw std::runtime_error("Received shard list, but it is empty");
         }
         if (shardListReceivedEvent->shards.size() > 1) {
-          LOG(WARNING) << "  There are multiple shards, picking the first one";
+          LOG(WARNING) << absl::StreamFormat("[%s] There are multiple shards, picking the first one", characterName_);
         }
-        VLOG(1) << absl::StreamFormat("  Trying to login with username \"%s\" and password \"%s\", to shard ID %d", username_, password_, shardListReceivedEvent->shards.at(0).shardId);
+        VLOG(1) << absl::StreamFormat("[%s] Trying to login with username \"%s\" and password \"%s\", to shard ID %d", characterName_, username_, password_, shardListReceivedEvent->shards.at(0).shardId);
         const auto loginAuthPacket = packet::building::ClientGatewayLoginRequest::packet(bot_.gameData().divisionInfo().locale, username_, password_, shardListReceivedEvent->shards.at(0).shardId);
         injectPacket(loginAuthPacket, PacketContainer::Direction::kBotToServer);
         waitingOnShardList_ = false;
         loginRequestSent_ = true;
       } else {
-        VLOG(1) << "Already sent login request, not resending";
+        VLOG(1) << absl::StreamFormat("[%s] Already sent login request, not resending", characterName_);
       }
     }
 
     if (waitingOnShardList_) {
       // Have not yet received the shard list.
-      VLOG(1) << "Still waiting on shard list";
+      VLOG(1) << absl::StreamFormat("[%s] Still waiting on shard list", characterName_);
       return Status::kNotDone;
     }
 
@@ -97,7 +97,6 @@ Status Login::onUpdate(const event::Event *event) {
       agentServerToken_ = gatewayLoginResponseReceived->agentServerToken;
     } else if (const auto *connectedToAgentServerEvent = dynamic_cast<const event::ConnectedToAgentServer*>(sessionSpecificEvent); connectedToAgentServerEvent != nullptr) {
       VLOG(1) << absl::StreamFormat("[%s] Connected to agentserver", characterName_);
-      VLOG(2) << "Connected to agentserver";
       // Send our auth packet.
       if (!agentServerToken_) {
         throw std::runtime_error("Connected to agentserver but don't have token");
@@ -114,12 +113,12 @@ Status Login::onUpdate(const event::Event *event) {
         return character.name == characterName_;
       });
       if (it == characterListReceivedEvent->characters.end()) {
-        LOG(WARNING) << "  Unable to find character \"" << characterName_ << "\"";
+        LOG(WARNING) << absl::StreamFormat("[%s] Unable to find character", characterName_);
         return Status::kDone;
       }
 
       // Found our character, select it
-      VLOG(1) << "  Selecting \"" << characterName_ << "\"";
+      VLOG(1) << absl::StreamFormat("[%s] Selecting character", characterName_);
       const auto charSelectionPacket = packet::building::ClientAgentCharacterSelectionJoinRequest::packet(characterName_);
       injectPacket(charSelectionPacket, PacketContainer::Direction::kBotToServer);
     } else if (const auto *ibuvChallengeReceivedEvent = dynamic_cast<const event::IbuvChallengeReceived*>(sessionSpecificEvent); ibuvChallengeReceivedEvent != nullptr) {

@@ -6,7 +6,7 @@ namespace state {
 
 void SkillEngine::skillCooldownBegin(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker::EventId cooldownEndEventId) {
   if (skillCooldownEventIdMap_.find(skillRefId) != skillCooldownEventIdMap_.end()) {
-    throw std::runtime_error("Skill cooldown began, but this skill is already on cooldown");
+    throw std::runtime_error(absl::StrFormat("Skill %d cooldown began, but this skill is already on cooldown", skillRefId));
   }
   skillCooldownEventIdMap_[skillRefId] = cooldownEndEventId;
 }

@@ -1,6 +1,7 @@
 #include "bot.hpp"
 #include "characterLoginInfo.hpp"
 #include "common/pvpDescriptor.hpp"
+#include "rl/ai/deepLearningIntelligence.hpp"
 #include "rl/ai/randomIntelligence.hpp"
 #include "rl/trainingManager.hpp"
 #include "session.hpp"
@@ -25,12 +26,11 @@ TrainingManager::TrainingManager(const pk2::GameData &gameData,
                       rlUserInterface_(rlUserInterface),
                       worldState_(worldState),
                       clientManagerInterface_(clientManagerInterface) {
-  buildItemRequirementList();
-  defineCharacterPairingsAndPositions();
 }
 
 void TrainingManager::run() {
-  setUpIntelligencePool();
+  buildItemRequirementList();
+  defineCharacterPairingsAndPositions();
 
   auto eventHandleFunction = std::bind(&TrainingManager::onUpdate, this, std::placeholders::_1);
   // Subscribe to events.
@@ -179,7 +179,8 @@ void TrainingManager::onUpdate(const event::Event *event) {
       throw std::runtime_error("Received kRlUiLoadCheckpoint event but failed to cast to event::RlUiLoadCheckpoint");
     }
     LOG(INFO) << "Received load checkpoint request for " << loadCheckpointEvent->checkpointName;
-    checkpointManager_.loadCheckpoint(loadCheckpointEvent->checkpointName, jaxInterface_, intelligencePool_.getDeepLearningIntelligence());
+    const CheckpointValues checkpointValues = checkpointManager_.loadCheckpoint(loadCheckpointEvent->checkpointName, jaxInterface_);
+    actionStepCount_ = checkpointValues.actionStepCount;
     LOG(INFO) << "Done loading";
   } else if (event->eventCode == event::EventCode::kRlUiDeleteCheckpoints) {
     const auto *deleteCheckpointsEvent = dynamic_cast<const event::RlUiDeleteCheckpoints*>(event);
@@ -194,6 +195,8 @@ void TrainingManager::onUpdate(const event::Event *event) {
 }
 
 void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
+  ++actionStepCount_;
+  jaxInterface_.addScalar("anneal/Epsilon", getEpsilon(), actionStepCount_);
   using Id = ObservationAndActionStorage::Id;
   using ObservationAndActionType = ObservationAndActionStorage::ObservationAndActionType;
 
@@ -267,8 +270,8 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
   }
 }
 
-void TrainingManager::setUpIntelligencePool() {
-
+float TrainingManager::getEpsilon() const {
+  return std::min(kInitialEpsilon, std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(actionStepCount_) / kEpsilonDecaySteps));
 }
 
 void TrainingManager::createSessions() {
@@ -300,7 +303,7 @@ void TrainingManager::createSessions() {
     LOG(INFO) << "Waiting for clients to open for " << pairing.character1.characterName << " and " << pairing.character2.characterName;
     character1ClientOpenFuture.wait();
     character2ClientOpenFuture.wait();
-    LOG(INFO) << "Clients are open. Preparing characters for PVP";
+    LOG(INFO) << "Clients are open. Logging in characters";
 
     // Log in bots
     Bot& bot1 = session1.getBot();
@@ -316,17 +319,85 @@ void TrainingManager::createSessions() {
     // Store session IDs in the pairing
     pairing.session1Id = session1.sessionId();
     pairing.session2Id = session2.sessionId();
-
-    // Map sessions to pairing
-    sessionToPairingMap_[session1.sessionId()] = &pairing - &characterPairings_[0];
-    sessionToPairingMap_[session2.sessionId()] = &pairing - &characterPairings_[0];
-
-    // Standby for PVP
-    bot1.asyncStandbyForPvp();
-    bot2.asyncStandbyForPvp();
   }
 
-  LOG(INFO) << "All sessions created. Total active sessions: " << sessions_.size();
+  // Standby for PVP
+  LOG(INFO) << "Telling all characters to prepare for PVP";
+  for (std::unique_ptr<Session> &session : sessions_) {
+    Bot& bot = session->getBot();
+    bot.asyncStandbyForPvp();
+  }
+
+  LOG(INFO) << "All sessions created and ready for PVP. Total active sessions: " << sessions_.size();
+
+  // --->->--->->--->->--->->--->-> ----------------------------------------------------- <-<---<-<---<-<---<-<---<-<---
+  // --->->--->->--->->--->->--->-> Below is a version which launches all clients at once <-<---<-<---<-<---<-<---<-<---
+  // --->->--->->--->->--->->--->-> ----------------------------------------------------- <-<---<-<---<-<---<-<---<-<---
+
+  // LOG(INFO) << "Creating sessions for " << characterPairings_.size() << " character pairings";
+  // // Create sessions for each character pair
+  // for (auto& pairing : characterPairings_) {
+  //   // Create two sessions for the pairing
+  //   sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
+  //   Session& session1 = *sessions_.back().get();
+  //   sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
+  //   Session& session2 = *sessions_.back().get();
+
+  //   // Initialize sessions
+  //   session1.initialize();
+  //   session2.initialize();
+
+  //   // Set characters
+  //   session1.setCharacter(pairing.character1);
+  //   session2.setCharacter(pairing.character2);
+
+  //   // Start the sessions
+  //   session1.runAsync();
+  //   session2.runAsync();
+  // }
+
+  // // Open clients
+  // std::vector<std::future<void>> clientOpenFutures;
+  // for (std::unique_ptr<Session> &session : sessions_) {
+  //   clientOpenFutures.push_back(session->asyncOpenClient());
+  // }
+
+  // LOG(INFO) << "Waiting for " << clientOpenFutures.size() << " clients to open";
+  // for (std::future<void> &clientOpenFuture : clientOpenFutures) {
+  //   clientOpenFuture.wait();
+  // }
+
+  // // Log in characters
+  // LOG(INFO) << "Clients are open. Logging in characters";
+  // std::vector<std::future<void>> botLoginFutures;
+  // for (std::unique_ptr<Session> &session : sessions_) {
+  //   // Log in bot
+  //   Bot& bot = session->getBot();
+  //   botLoginFutures.push_back(bot.asyncLogIn());
+  // }
+
+  // LOG(INFO) << "Waiting for " << botLoginFutures.size() << " characters to log in";
+  // for (std::future<void> &botLoginFuture : botLoginFutures) {
+  //   botLoginFuture.wait();
+  // }
+
+  // LOG(INFO) << "Characters are logged in.";
+  // // Store session IDs in the pairing
+  // for (std::unique_ptr<Session> &session : sessions_) {
+  //   const std::string &characterName = session->getBot().selfState()->name;
+  //   for (CharacterPairing &characterPairing : characterPairings_) {
+  //     if (characterPairing.character1.characterName == characterName) {
+  //       characterPairing.session1Id = session->sessionId();
+  //       break;
+  //     } else if (characterPairing.character2.characterName == characterName) {
+  //       characterPairing.session2Id = session->sessionId();
+  //       break;
+  //     }
+  //   }
+
+  //   // Standby for PVP
+  //   session->getBot().asyncStandbyForPvp();
+  // }
 }
 
 common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Session &char2, int positionIndex) {
@@ -353,10 +424,8 @@ common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Sessio
 
   pvpDescriptor.itemRequirements = itemRequirements_;
 
-  pvpDescriptor.player1Intelligence = intelligencePool_.getDeepLearningIntelligence();
-  pvpDescriptor.player2Intelligence = intelligencePool_.getRandomIntelligence();
-  pvpDescriptor.player1Intelligence->resetForNewEpisode();
-  pvpDescriptor.player2Intelligence->resetForNewEpisode();
+  pvpDescriptor.player1Intelligence = std::make_shared<rl::ai::RandomIntelligence>(*this);
+  pvpDescriptor.player2Intelligence = std::make_shared<rl::ai::DeepLearningIntelligence>(*this);
 
   return pvpDescriptor;
 }
@@ -428,7 +497,7 @@ void TrainingManager::saveCheckpoint(const std::string &checkpointName, bool ove
     LOG(INFO) << "  Checkpoint does not yet exist";
   }
 
-  checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, intelligencePool_.getDeepLearningIntelligence()->getStepCount(), overwrite);
+  checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, actionStepCount_, overwrite);
 }
 
 TrainingManager::ModelInputs TrainingManager::buildModelInputsFromReplayBufferSamples(const std::vector<ReplayBufferType::SampleResult> &samples) const {
@@ -514,22 +583,31 @@ ModelInput TrainingManager::buildModelInputUpToObservation(ObservationAndActionS
 
 void TrainingManager::defineCharacterPairingsAndPositions() {
   // Define PVP positions
-  // Massive Pvp Area at different coordinates
-  pvpPositions_.push_back({sro::Position(sro::position_math::worldRegionIdFromSectors(1,1), 960.0, 20.0, 960.0)});
-  pvpPositions_.push_back({sro::Position(sro::position_math::worldRegionIdFromSectors(1,2), 960.0, 20.0, 960.0)});
+  int currentIndex = 0;
+  for (int sum=0;; ++sum) {
+    for (int col=0; col<=sum; ++col) {
+      int row = sum - col;
+      LOG(INFO) << "Adding position at region (" << row+1 << "," << col+1 << ")";
+      pvpPositions_.push_back({sro::Position(sro::position_math::worldRegionIdFromSectors(row+1, col+1), 960.0, 20.0, 960.0)});
+      ++currentIndex;
+      if (currentIndex >= kPvpCount) {
+        break;
+      }
+    }
+    if (currentIndex >= kPvpCount) {
+      break;
+    }
+  }
 
-  // Define character pairings
-  characterPairings_.push_back({
-    CharacterLoginInfo{/*username=*/"rl0", /*password=*/"0", /*characterName=*/"RL_0"},
-    CharacterLoginInfo{/*username=*/"rl1", /*password=*/"0", /*characterName=*/"RL_1"},
-    0
-  });
-
-  characterPairings_.push_back({
-    CharacterLoginInfo{/*username=*/"rl2", /*password=*/"0", /*characterName=*/"RL_2"},
-    CharacterLoginInfo{/*username=*/"rl3", /*password=*/"0", /*characterName=*/"RL_3"},
-    1
-  });
+  for (int i=0; i<kPvpCount; ++i) {
+    // Define character pairings
+    LOG(INFO) << "Adding character pairing: " << absl::StrFormat("rl%d", i*2) << ',' << absl::StrFormat("RL_%d", i*2) << ',' << absl::StrFormat("rl%d", i*2+1) << ',' << absl::StrFormat("RL_%d", i*2+1);
+    characterPairings_.push_back({
+      CharacterLoginInfo{/*username=*/absl::StrFormat("rl%d", i*2),   /*password=*/"0", /*characterName=*/absl::StrFormat("RL_%d", i*2)},
+      CharacterLoginInfo{/*username=*/absl::StrFormat("rl%d", i*2+1), /*password=*/"0", /*characterName=*/absl::StrFormat("RL_%d", i*2+1)},
+      i
+    });
+  }
 
   // Verify we have at least as many positions as pairings
   if (pvpPositions_.size() < characterPairings_.size()) {
@@ -540,7 +618,7 @@ void TrainingManager::defineCharacterPairingsAndPositions() {
 void TrainingManager::checkAndPublishPvpDescriptors() {
   // Iterate through ready sessions and check if any pairs are ready
   for (auto& pairing : characterPairings_) {
-    // Skip inactive pairings
+    // Skip pairings with no sessions
     if (!pairing.session1Id || !pairing.session2Id) {
       continue;
     }
