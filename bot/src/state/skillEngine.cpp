@@ -5,9 +5,13 @@
 namespace state {
 
 void SkillEngine::skillCooldownBegin(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker::EventId cooldownEndEventId) {
-  if (skillCooldownEventIdMap_.find(skillRefId) != skillCooldownEventIdMap_.end()) {
-    throw std::runtime_error(absl::StrFormat("Skill %d cooldown began, but this skill is already on cooldown", skillRefId));
+  if (auto it = skillCooldownEventIdMap_.find(skillRefId); it != skillCooldownEventIdMap_.end()) {
+    // Skill is already on cooldown. We must trust that the user cancelled the old cooldown ended event and triggered a new one.
+    // We will overwrite the old one with the newly given one.
+    it->second = cooldownEndEventId;
+    return;
   }
+  // Skill is not already on cooldown.
   skillCooldownEventIdMap_[skillRefId] = cooldownEndEventId;
 }
 
@@ -25,12 +29,12 @@ bool SkillEngine::skillIsOnCooldown(sro::scalar_types::ReferenceObjectId skillRe
   return skillCooldownEventIdMap_.find(skillRefId) != skillCooldownEventIdMap_.end();
 }
 
-std::optional<std::chrono::milliseconds> SkillEngine::skillRemainingCooldown(sro::scalar_types::ReferenceObjectId skillRefId, const broker::EventBroker &eventBroker) const {
+std::optional<broker::EventBroker::EventId> SkillEngine::getSkillCooldownEndEventId(sro::scalar_types::ReferenceObjectId skillRefId) const {
   const auto it = skillCooldownEventIdMap_.find(skillRefId);
   if (it == skillCooldownEventIdMap_.end()) {
     return {};
   }
-  return eventBroker.timeRemainingOnDelayedEvent(it->second);
+  return it->second;
 }
 
 bool SkillEngine::alreadyTriedToCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const {

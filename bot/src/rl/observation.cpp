@@ -113,7 +113,7 @@ Observation::Observation(const Bot &bot, const event::Event *event, sro::scalar_
   }
   for (int i=0; i<kSkills.size(); ++i) {
     const sro::scalar_types::ReferenceSkillId skillId = kSkills[i];
-    std::optional<std::chrono::milliseconds> remainingCooldown = bot.selfState()->skillEngine.skillRemainingCooldown(skillId, bot.eventBroker());
+    std::optional<std::chrono::milliseconds> remainingCooldown = bot.selfState()->skillRemainingCooldown(skillId);
     // Get total duration so that we can normalize the remaining time to [0,1]
     const int32_t totalCooldownDurationMs = bot.gameData().skillData().getSkillById(skillId).actionReuseDelay;
     skillCooldowns_[i] = std::clamp(remainingCooldown.value_or(std::chrono::milliseconds(0)).count() / static_cast<float>(totalCooldownDurationMs), 0.0f, 1.0f);

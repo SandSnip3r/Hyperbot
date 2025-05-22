@@ -511,20 +511,19 @@ void Self::setGuildStorageGold(uint64_t goldAmount) {
 }
 
 void Self::usedAnItem(type_id::TypeId typeData, std::optional<std::chrono::milliseconds> cooldown) {
-  // For now, we figure out the cooldown duration right here. Maybe in the future, it should be passed into this function.
-  auto it = itemCooldownEventIdMap_.find(typeData);
-  if (it != itemCooldownEventIdMap_.end()) {
-    // This should never happen if all cooldowns are accurate.
-    //  However, in the case of purification pills, which are maybe the only item with no real cooldown, if we create an artificial cooldown in the bot and use multiple through the client, this can trigger.
-    // throw std::runtime_error("Used an item (" + type_id::toString(typeData) + "), but it's already on cooldown");
-    std::optional<std::chrono::milliseconds> timeRemaining = eventBroker_->timeRemainingOnDelayedEvent(it->second);
-    LOG(WARNING) << "Used an item (" << type_id::toString(typeData) << "), but it's already on cooldown. Current cooldown is " << timeRemaining.value_or(std::chrono::milliseconds(-1)).count() << "ms";
-    return;
-  }
-
   if (!cooldown) {
     LOG(WARNING) << "Used an item (" << type_id::toString(typeData) << "), but we don't know its cooldown time.";
     return;
+  }
+
+  if (auto it = itemCooldownEventIdMap_.find(typeData); it != itemCooldownEventIdMap_.end()) {
+    // Cooldowns are not guaranteed to be accurate because, at the very least, we cannot account for network latency.
+    // In the case that a cooldown already exists, we should overwrite it.
+    if (!eventBroker_) {
+      throw std::runtime_error("Used an item (" + type_id::toString(typeData) + ") which already has a cooldown, but don't have event broker");
+    }
+    eventBroker_->cancelDelayedEvent(it->second);
+    itemCooldownEventIdMap_.erase(it);
   }
 
   if (eventBroker_) {
@@ -801,11 +800,27 @@ void Self::skillCooldownBegin(sro::scalar_types::ReferenceSkillId skillId, broke
     throw std::runtime_error("Registering skill cooldown event, but do not have an event broker");
   }
   if (skillEngine.skillIsOnCooldown(skillId)) {
-    LOG(WARNING) << absl::StreamFormat("Skill %s cooldown began, but this skill is already on cooldown (%d ms remaining). Trying to set end to %d ms from now", gameData_.getSkillName(skillId), skillEngine.skillRemainingCooldown(skillId, *eventBroker_).value_or(std::chrono::milliseconds(-1)).count(), std::chrono::duration_cast<std::chrono::milliseconds>(cooldownEndTime - std::chrono::high_resolution_clock::now()).count());
-    return;
+    // Skill is already on cooldown. We trust that this new cooldown is correct. We will cancel the old cooldown end event and trigger a new one.
+    const broker::EventBroker::EventId cooldownEndTimerId = skillEngine.getSkillCooldownEndEventId(skillId).value();
+    eventBroker_->cancelDelayedEvent(cooldownEndTimerId);
   }
   const broker::EventBroker::EventId cooldownEndTimerId = eventBroker_->publishDelayedEvent<event::InternalSkillCooldownEnded>(cooldownEndTime, globalId, skillId);
   skillEngine.skillCooldownBegin(skillId, cooldownEndTimerId);
+}
+
+std::optional<std::chrono::milliseconds> Self::skillRemainingCooldown(sro::scalar_types::ReferenceSkillId skillId) const {
+  if (eventBroker_ == nullptr) {
+    throw std::runtime_error("Querying skill remaining cooldown, but do not have an event broker");
+  }
+  std::optional<broker::EventBroker::EventId> cooldownEndTimerId = skillEngine.getSkillCooldownEndEventId(skillId);
+  if (!cooldownEndTimerId) {
+    return std::nullopt;
+  }
+  std::optional<std::chrono::milliseconds> remainingTime = eventBroker_->timeRemainingOnDelayedEvent(*cooldownEndTimerId);
+  if (!remainingTime) {
+    return std::nullopt;
+  }
+  return *remainingTime;
 }
 
 // =================================================================================================

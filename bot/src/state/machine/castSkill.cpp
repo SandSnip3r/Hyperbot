@@ -336,7 +336,7 @@ Status CastSkill::onUpdate(const event::Event *event) {
         const int32_t buffRemainingTimeMs = bot_.gameData().skillData().getSkillById(*imbueSkillRefId_).durationMs() - elapsedMs;
         if (buffRemainingTimeMs < kEstimatedPingMs) {
           // Imbue might end before our skill-use packet even gets to the server
-          const auto skillRemainingCooldown = bot_.selfState()->skillEngine.skillRemainingCooldown(*imbueSkillRefId_, bot_.eventBroker());
+          const std::optional<std::chrono::milliseconds> skillRemainingCooldown = bot_.selfState()->skillRemainingCooldown(*imbueSkillRefId_);
           if (skillRemainingCooldown) {
             if (skillRemainingCooldown->count() > kEstimatedPingMs) {
               // Imbue has too much remaining cooldown to request it be cast (accounting for ping time)

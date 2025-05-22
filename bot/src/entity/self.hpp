@@ -256,6 +256,7 @@ public:
   // TODO: Skill cooldowns transcend the lifetime of the self entity (or any entity). This should not exist inside the entity.
   state::SkillEngine skillEngine;
   void skillCooldownBegin(sro::scalar_types::ReferenceSkillId skillId, broker::EventBroker::ClockType::time_point cooldownEndTime);
+  std::optional<std::chrono::milliseconds> skillRemainingCooldown(sro::scalar_types::ReferenceSkillId skillId) const;
 
   // Misc
   // TODO: Remove. This is a temporary mechanism to measure the maximum visibility range.

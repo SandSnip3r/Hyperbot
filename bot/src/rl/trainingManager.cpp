@@ -311,6 +311,10 @@ void TrainingManager::createSessions() {
 
     std::future<void> bot1LoginFuture = bot1.asyncLogIn();
     std::future<void> bot2LoginFuture = bot2.asyncLogIn();
+    // The above calls have constructed login state machines within each bot.
+    // Unfortunately, if there are no events on the event bus, the state machines will not progress.
+    // We'll send one dummy event to kick them off.
+    eventBroker_.publishEvent(event::EventCode::kDummy);
 
     bot1LoginFuture.wait();
     bot2LoginFuture.wait();
@@ -327,6 +331,9 @@ void TrainingManager::createSessions() {
     Bot& bot = session->getBot();
     bot.asyncStandbyForPvp();
   }
+  // Similar to the bot login state machines, asking bots to standby constructs a state machine for each bot.
+  // We will again send a dummy event to ensure that they have a chance to progress.
+  eventBroker_.publishEvent(event::EventCode::kDummy);
 
   LOG(INFO) << "All sessions created and ready for PVP. Total active sessions: " << sessions_.size();
 
@@ -455,7 +462,7 @@ void TrainingManager::buildItemRequirementList() {
     return type_id::categories::kUniversalPill.contains(type_id::getTypeId(item)) && item.itemClass == 2;
   });
 
-  constexpr int kSmallHpPotionRequiredCount = 5; // IF-CHANGE: If we change this, also change the max potion count in JaxInterface::observationToNumpy
+  constexpr int kSmallHpPotionRequiredCount = 5; // IF-CHANGE: If we change this, also change the max potion count in JaxInterface::writeObservationToRawArray
   constexpr int kSmallMpPotionRequiredCount = 5;
   constexpr int kMediumUniversalPillRequiredCount = 5;
   itemRequirements_.push_back({smallHpPotionRefId, kSmallHpPotionRequiredCount});

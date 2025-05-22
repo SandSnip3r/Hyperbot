@@ -730,7 +730,6 @@ std::future<void> Bot::asyncLogIn() {
   }
   LOG(INFO) << "Logging in " << characterLoginInfo_.characterName << " for session " << sessionId_;
   loginStateMachine_ = std::make_unique<state::machine::Login>(*this, characterLoginInfo_);
-  onUpdate(nullptr);
   return logInPromise_.get_future();
 }
 
@@ -739,10 +738,8 @@ bool Bot::loggedIn() const {
 }
 
 void Bot::asyncStandbyForPvp() {
-  // Constuct the single-and-only state machine in the Bot.
   if (pvpManagerStateMachine_ != nullptr) {
     throw std::runtime_error("PvpManager state machine already set");
   }
   pvpManagerStateMachine_ = std::make_unique<state::machine::PvpManager>(*this);
-  onUpdate(nullptr);
 }

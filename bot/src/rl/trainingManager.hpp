@@ -76,19 +76,19 @@ private:
   static constexpr int kReplayBufferCapacity{1'000'000};
   static constexpr int kTargetNetworkUpdateInterval{10'000};
   static constexpr int kTrainStepCheckpointInterval{10'000};
-  static constexpr float kTargetNetworkPolyakTau{0.0005f};
+  static constexpr float kTargetNetworkPolyakTau{0.0004f};
   static constexpr int kTargetNetworkPolyakUpdateInterval{16};
   static constexpr bool kTargetNetworkPolyakEnabled{true};
-  static constexpr float kGamma{0.99f};
-  static constexpr float kLearningRate{1e-6f};
-  static constexpr float kDropoutRate{0.1f};
+  static constexpr float kGamma{0.997f};
+  static constexpr float kLearningRate{1e-5f};
+  static constexpr float kDropoutRate{0.05f};
   static constexpr float kPerAlpha{0.5f};
   static constexpr float kPerBetaStart{0.4f};
   static constexpr float kPerBetaEnd{1.0f};
   static constexpr int kPerTrainStepCountAnneal{250'000};
   static constexpr float kInitialEpsilon{1.0f};
   static constexpr float kFinalEpsilon{0.01f};
-  static constexpr int kEpsilonDecaySteps{250'000};
+  static constexpr int kEpsilonDecaySteps{1'000'000};
   static constexpr int kPvpCount{4};
 
   std::atomic<bool> runTraining_{true};

@@ -15,7 +15,7 @@
 
 namespace py = pybind11;
 
-ABSL_FLAG(bool, debug_nan, false, "Debug nan values");
+ABSL_FLAG(bool, debug_nans, false, "Debug nan values");
 
 namespace rl {
 
@@ -320,7 +320,7 @@ void JaxInterface::loadCheckpoint(const std::string &modelCheckpointPath, const 
 }
 
 void JaxInterface::addScalar(std::string_view name, double yValue, double xValue) {
-  if (absl::GetFlag(FLAGS_debug_nan)) {
+  if (absl::GetFlag(FLAGS_debug_nans)) {
     if (std::isnan(yValue)) {
       LOG(ERROR) << "[" << name << "] yValue is nan: " << yValue;
     } else if (std::isinf(yValue)) {
@@ -348,85 +348,6 @@ py::object JaxInterface::getNextRngKey() {
   return keys[1];
 }
 
-py::object JaxInterface::observationToNumpy(const Observation &observation) {
-  ZoneScopedN("JaxInterface::observationToNumpy");
-  py::array_t<float> array(getObservationNumpySize(observation));
-  auto mutableArray = array.mutable_unchecked<1>();
-  float *mutableData = mutableArray.mutable_data(0);
-  writeObservationToRawArray(observation, mutableData);
-  return array;
-}
-
-py::object JaxInterface::observationStackToNumpy(int stackSize, const std::vector<Observation> &observationStack) {
-  ZoneScopedN("JaxInterface::observationStackToNumpy");
-  if (observationStack.empty()) {
-    throw std::runtime_error("JaxInterface::observationStackToNumpy: empty observation stack");
-  }
-  // Allocate a 1d numpy array to hold a flattening of all observations.
-  const size_t observationSize = getObservationNumpySize(observationStack.at(0));
-  py::array_t<float> array(stackSize * observationSize);
-  // Grab a raw pointer to the numpy array.
-  auto mutableArray = array.mutable_unchecked<1>();
-  float *mutableData = mutableArray.mutable_data(0);
-  int index{0};
-  // First, write empty observations if the given observation stack does not fill the expected stack size.
-  for (int i=observationStack.size(); i<stackSize; ++i) {
-    writeEmptyObservationToRawArray(observationSize, mutableData + index*observationSize);
-    ++index;
-  }
-  // Write the actual observations to the numpy array.
-  for (const Observation &observation : observationStack) {
-    writeObservationToRawArray(observation, mutableData + index*observationSize);
-    ++index;
-  }
-  return array;
-}
-
-py::object JaxInterface::observationsToNumpy(const std::vector<Observation> &observations) {
-  ZoneScopedN("JaxInterface::observationsToNumpy");
-  py::array_t<float> array({observations.size(), getObservationNumpySize(observations.at(0))});
-  auto mutableArray = array.mutable_unchecked<2>();
-  for (size_t batchIndex=0; batchIndex<observations.size(); ++batchIndex) {
-    const Observation &observation = observations.at(batchIndex);
-    float *mutableData = mutableArray.mutable_data(batchIndex, 0);
-    writeObservationToRawArray(observation, mutableData);
-  }
-  return array;
-}
-
-py::object JaxInterface::observationStacksToNumpy(int stackSize, const std::vector<std::vector<Observation>> &observationStacks) {
-  ZoneScopedN("JaxInterface::observationStacksToNumpy");
-  if (observationStacks.empty()) {
-    throw std::runtime_error("JaxInterface::observationStacksToNumpy: Batch size is 0");
-  }
-  for (const auto &observationStack : observationStacks) {
-    if (observationStack.empty()) {
-      throw std::runtime_error("JaxInterface::observationStacksToNumpy: empty observation stack");
-    }
-  }
-  // Allocate a 2d numpy array to hold a batch of a flattening of all observations.
-  const size_t observationSize = getObservationNumpySize(observationStacks.at(0).at(0));
-  py::array_t<float> array({observationStacks.size(), stackSize * observationSize});
-  // Grab a raw pointer to the numpy array.
-  auto mutableArray = array.mutable_unchecked<2>();
-  for (size_t batchIndex=0; batchIndex<observationStacks.size(); ++batchIndex) {
-    const std::vector<Observation> &observationStack = observationStacks.at(batchIndex);
-    float *mutableData = mutableArray.mutable_data(batchIndex, 0);
-    int index{0};
-    // First, write empty observations if the given observation stack does not fill the expected stack size.
-    for (int i=observationStack.size(); i<stackSize; ++i) {
-      writeEmptyObservationToRawArray(observationSize, mutableData + index*observationSize);
-      ++index;
-    }
-    // Write the actual observations to the numpy array.
-    for (const Observation &observation : observationStack) {
-      writeObservationToRawArray(observation, mutableData + index*observationSize);
-      ++index;
-    }
-  }
-  return array;
-}
-
 size_t JaxInterface::getObservationNumpySize(const Observation &observation) const {
   return 6 + 1 + 23 + observation.remainingTimeOurBuffs_.size()*2 + observation.remainingTimeOpponentBuffs_.size()*2 + observation.skillCooldowns_.size()*2 + observation.itemCooldowns_.size()*2;
 }
@@ -439,7 +360,7 @@ size_t JaxInterface::writeEmptyObservationToRawArray(size_t observationSize, flo
 
 #define LOG_IF_BEYOND_RANGE(value, min, max) \
 do { \
-  if (absl::GetFlag(FLAGS_debug_nan)) { \
+  if (absl::GetFlag(FLAGS_debug_nans)) { \
     if (value < min) { \
       LOG(WARNING) << value << " is less than " << min; \
     } else if (value > max) { \
@@ -787,43 +708,6 @@ detail::ModelInputNumpy JaxInterface::modelInputsToNumpy(const std::vector<Model
   }
 
   return result;
-}
-
-size_t JaxInterface::writeModelInputToRawArray(const ModelInput &modelInput, float *array) {
-  const size_t individualObservationSize = getObservationNumpySize(*modelInput.currentObservation);
-  size_t index = 0;
-
-  int emptyCount=0;
-  int nonEmptyCount=0;
-
-  // Write empty observations if the given observation stack does not fill the expected stack size.
-  for (int i=modelInput.pastObservationStack.size()+1; i<observationStackSize_; ++i) {
-    size_t written = writeEmptyObservationToRawArray(individualObservationSize, array+index);
-    if (written != individualObservationSize) {
-      LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
-    }
-    index += individualObservationSize;
-    ++emptyCount;
-  }
-
-  // Write the past observations to the numpy array
-  for (const Observation *observation : modelInput.pastObservationStack) {
-    size_t written = writeObservationToRawArray(*observation, array+index);
-    if (written != individualObservationSize) {
-      LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
-    }
-    index += individualObservationSize;
-    ++nonEmptyCount;
-  }
-
-  // Write the current observation to the end of the array
-  size_t written = writeObservationToRawArray(*modelInput.currentObservation, array+index);
-  if (written != individualObservationSize) {
-    LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
-  }
-  index += individualObservationSize;
-
-  return index;
 }
 
 } // namespace rl

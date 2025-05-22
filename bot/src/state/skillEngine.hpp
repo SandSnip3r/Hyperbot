@@ -15,10 +15,12 @@ namespace state {
 
 class SkillEngine {
 public:
+  // If a cooldown end event already exists for this skill, it will be overwritten.
   void skillCooldownBegin(sro::scalar_types::ReferenceObjectId skillRefId, broker::EventBroker::EventId cooldownEndEventId);
+
   void skillCooldownEnded(sro::scalar_types::ReferenceObjectId skillRefId);
   bool skillIsOnCooldown(sro::scalar_types::ReferenceObjectId skillRefId) const;
-  std::optional<std::chrono::milliseconds> skillRemainingCooldown(sro::scalar_types::ReferenceObjectId skillRefId, const broker::EventBroker &eventBroker) const;
+  std::optional<broker::EventBroker::EventId> getSkillCooldownEndEventId(sro::scalar_types::ReferenceObjectId skillRefId) const;
   bool alreadyTriedToCastSkill(sro::scalar_types::ReferenceObjectId skillRefId) const;
   void reset();
   void cancelEvents(broker::EventBroker &eventBroker);

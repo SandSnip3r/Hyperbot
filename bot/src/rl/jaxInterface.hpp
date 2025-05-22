@@ -105,23 +105,12 @@ private:
 
   pybind11::object getOptimizer();
   pybind11::object getNextRngKey();
-  pybind11::object observationToNumpy(const Observation &observation);
-
-  // stackSize is the target size of the observation stack. The given vector might have fewer observations, so the implementation should pad.
-  pybind11::object observationStackToNumpy(int stackSize, const std::vector<Observation> &observationStack);
-
-  pybind11::object observationsToNumpy(const std::vector<Observation> &observations);
-
-  // stackSize is the target size of the observation stacks. The given vectors might have fewer observations, so the implementation should pad.
-  pybind11::object observationStacksToNumpy(int stackSize, const std::vector<std::vector<Observation>> &observationStacks);
 
   // Convert a ModelInput to corresponding numpy arrays
   detail::ModelInputNumpy modelInputToNumpy(const ModelInput &modelInput);
 
   // Convert a vector of ModelInputs to batches of corresponding numpy arrays
   detail::ModelInputNumpy modelInputsToNumpy(const std::vector<ModelInput> &modelInputs);
-
-  size_t writeModelInputToRawArray(const ModelInput &modelInput, float *array);
 
   // Note, this also works with a default constructed observation.
   size_t getObservationNumpySize(const Observation &observation) const;
