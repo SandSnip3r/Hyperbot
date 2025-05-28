@@ -16,7 +16,7 @@ public:
   const std::array<packet::structures::vitals::AbnormalState, 32>& states() const { return states_; }
 private:
   uint32_t stateBitmask_;
-  std::array<packet::structures::vitals::AbnormalState, 32> states_ = {0};
+  std::array<packet::structures::vitals::AbnormalState, 32> states_{};
 };
 
 } // namespace packet::parsing

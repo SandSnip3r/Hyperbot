@@ -28,7 +28,6 @@
 - In the state machine which enables PVP, if it gets cancelled, start again
 - In `SkillEngine::skillRemainingCooldown`, store the expected end of the skill's cooldown explicitly rather than querying the `EventBroker`
   - Implement a similar mechanism for items
-- In `JaxInterface::initialize()`, call all XLA JITted at least once, so that no time is spent JITing during combat
 - Handle any kind of teleportation (spawn & despawn) while pvping & preparing for pvp
 - Fix bug in EventBroker where an event cannot unsubscribe from itself
 - Move GameData & parsing to silkroad lib
@@ -53,3 +52,4 @@
 - If login error code is 3, there is no way to rectify by trying again. We actually need to kill the client (server connection, actually), and restart it.
 - When a state machine is done, we should pop blocked opcodes. As opposed to how we currently only pop blocked ones on destruction.
 - We can get more pvp throughput if we pair characters which are completely ready to fight. For example, there might be 4 characters who are preparing to pvp: A, B, C, and D. A & B are set to fight each other and C & D also. If A and C are both stuck waiting for a couple minutes due to a long skill cooldown, all 4 are stuck idle. Instead, B and D might be able to fight against each other.
+- Add timestamps to the creation of Events as well as the reception of packets

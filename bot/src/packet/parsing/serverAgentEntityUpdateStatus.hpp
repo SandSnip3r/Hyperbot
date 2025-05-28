@@ -6,13 +6,14 @@
 
 #include <silkroad_lib/scalar_types.hpp>
 
+#include <array>
 #include <cstdint>
-#include <vector>
 
 namespace packet::parsing {
 
 class ServerAgentEntityUpdateStatus : public ParsedPacket {
 public:
+  using ModernStateLevelArrayType = std::array<uint8_t, 32>;
   ServerAgentEntityUpdateStatus(const PacketContainer &packet);
   sro::scalar_types::EntityGlobalId globalId() const;
   enums::UpdateFlag updateFlag() const;
@@ -21,7 +22,8 @@ public:
   uint32_t newMpValue() const;
   uint16_t newHgpValue() const;
   uint32_t stateBitmask() const;
-  const std::vector<uint8_t>& stateLevels() const;
+  // Note that the indices for legacy states will always be 0.
+  const ModernStateLevelArrayType& modernStateLevels() const;
 private:
   sro::scalar_types::EntityGlobalId entityUniqueId_;
   enums::UpdateFlag updateFlag_;
@@ -30,7 +32,7 @@ private:
   uint32_t newMpValue_;
   uint16_t newHgpValue_;
   uint32_t stateBitmask_;
-  std::vector<uint8_t> stateLevels_;
+  ModernStateLevelArrayType modernStateLevels_{};
 };
 
 } // namespace packet::parsing

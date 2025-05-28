@@ -106,7 +106,7 @@ Status MoveItem::onUpdate(const event::Event *event) {
         for (sro::scalar_types::StorageIndexType slotNum = low; slotNum <= high; ++slotNum) {
           items.push_back(bot_.inventory().getItem(slotNum));
         }
-        CHAR_LOG(WARNING) << absl::StreamFormat("Trying to unequip avatar item to inventory index %d, but, due to SRO, it will go to %d. Items in slots are []", destination_.slotNum, *firstFreeSlot, absl::StrJoin(items, ", ", [this](std::string *out, const storage::Item *item) {
+        CHAR_LOG(WARNING) << absl::StreamFormat("Trying to unequip avatar item to inventory index %d, but, due to SRO, it will go to %d. Items in slots are [%s]", destination_.slotNum, *firstFreeSlot, absl::StrJoin(items, ", ", [this](std::string *out, const storage::Item *item) {
           if (item) {
             absl::StrAppend(out, bot_.gameData().getItemName(item->refItemId));
           } else {
@@ -126,11 +126,11 @@ Status MoveItem::onUpdate(const event::Event *event) {
     moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::withinInventoryPacket(source_.slotNum, destination_.slotNum, /*quantity=*/1);
   } else if (source_.storage == sro::storage::Storage::kInventory && destination_.storage == sro::storage::Storage::kAvatarInventory) {
     // Move item from inventory to avatar
-    CHAR_VLOG(1) << absl::StreamFormat("Moving item from inventory to avatar from %d to %d", source_.slotNum, destination_.slotNum);
+    CHAR_VLOG(1) << absl::StreamFormat("Moving item from inventory-%d to avatar-%d", source_.slotNum, destination_.slotNum);
     moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::inventoryToAvatarPacket(source_.slotNum, destination_.slotNum);
   } else if (source_.storage == sro::storage::Storage::kAvatarInventory && destination_.storage == sro::storage::Storage::kInventory) {
     // Move item from avatar to inventory
-    CHAR_VLOG(1) << absl::StreamFormat("Moving item from avatar to inventory from %d to %d", source_.slotNum, destination_.slotNum);
+    CHAR_VLOG(1) << absl::StreamFormat("Moving item from avatar-%d to inventory-%d", source_.slotNum, destination_.slotNum);
     moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::avatarToInventoryPacket(source_.slotNum, destination_.slotNum);
   } else {
     throw std::runtime_error(absl::StrFormat("Unhandled source %s and destination %s", toString(source_.storage), toString(destination_.storage)));

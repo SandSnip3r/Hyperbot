@@ -72,8 +72,8 @@ private:
   static constexpr int kPastObservationStackSize{64};
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{128};
-  static constexpr int kReplayBufferMinimumBeforeTraining{10'000};
-  static constexpr int kReplayBufferCapacity{1'000'000};
+  static constexpr int kReplayBufferMinimumBeforeTraining{40'000};
+  static constexpr int kReplayBufferCapacity{10'000'000};
   static constexpr int kTargetNetworkUpdateInterval{10'000};
   static constexpr int kTrainStepCheckpointInterval{10'000};
   static constexpr float kTargetNetworkPolyakTau{0.0004f};
@@ -89,9 +89,9 @@ private:
   static constexpr float kInitialEpsilon{1.0f};
   static constexpr float kFinalEpsilon{0.01f};
   static constexpr int kEpsilonDecaySteps{1'000'000};
-  static constexpr int kPvpCount{4};
+  static constexpr int kPvpCount{1};
 
-  std::atomic<bool> runTraining_{true};
+  std::atomic<bool> runTraining_{false};
   std::mutex runTrainingMutex_;
   std::condition_variable runTrainingCondition_;
 
@@ -106,7 +106,6 @@ private:
   JaxInterface jaxInterface_{kPastObservationStackSize, kGamma, kLearningRate};
   CheckpointManager checkpointManager_{rlUserInterface_};
   std::atomic<int> trainStepCount_{0};
-  std::atomic<int> actionStepCount_{0};
 
   // New variables for character pairings and positions
   std::vector<sro::Position> pvpPositions_;
@@ -126,7 +125,8 @@ private:
   std::chrono::high_resolution_clock::time_point lastTrainingTime_{std::chrono::high_resolution_clock::now()};
   static constexpr std::chrono::milliseconds kTrainRateReportInterval{2000};
 
-  void setUpIntelligencePool();
+  void precompileModels();
+
   void defineCharacterPairingsAndPositions();
 
   void createSessions();

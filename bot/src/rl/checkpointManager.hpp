@@ -17,7 +17,7 @@ class RlUserInterface;
 namespace rl {
 
 struct CheckpointValues {
-  int actionStepCount;
+  int stepCount;
 };
 
 class CheckpointManager {

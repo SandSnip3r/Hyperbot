@@ -48,37 +48,6 @@ void printItem(uint8_t slot, const storage::Item *item, const pk2::GameData &gam
   }
 }
 
-int toBitNum(packet::enums::AbnormalStateFlag stateFlag) {
-  const uint32_t num = static_cast<uint32_t>(stateFlag);
-  {
-    // Check that exactly one bit is set.
-    uint32_t tmp = num;
-    if (tmp == 0) {
-      throw std::runtime_error("No bit is set.");
-    }
-    while (tmp != 0) {
-      if (tmp & 1) {
-        // Found a bit, check if there are more.
-        if ((tmp>>1) > 0) {
-          throw std::runtime_error("Multiple bits are set.");
-        }
-        break;
-      }
-      tmp >>= 1;
-    }
-  }
-  for (uint32_t i=0; i<32; ++i) {
-    if (num & (1<<i)) {
-      return i;
-    }
-  }
-  throw std::runtime_error("Tried to get bit for a state "+static_cast<int>(stateFlag));
-}
-
-packet::enums::AbnormalStateFlag fromBitNum(int n) {
-  return static_cast<packet::enums::AbnormalStateFlag>(uint32_t(1) << n);
-}
-
 std::shared_ptr<storage::Item> createItemFromScrap(const sro::pk2::ref::ScrapOfPackageItem &itemScrap, const sro::pk2::ref::Item &itemRef) {
   std::shared_ptr<storage::Item> item(storage::newItemByTypeData(itemRef));
 

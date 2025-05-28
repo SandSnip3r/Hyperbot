@@ -355,27 +355,26 @@ void Self::setStatPoints(uint16_t strPoints, uint16_t intPoints) {
   }
 }
 
-void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels) {
-  const auto oldStateBitmask = this->stateBitmask();
-  uint32_t newlyReceivedStates = (oldStateBitmask ^ stateBitmask) & stateBitmask;
-  uint32_t expiredStates = (oldStateBitmask ^ stateBitmask) & oldStateBitmask;
+void Self::updateStates(uint32_t stateBitmask, const std::array<uint8_t, 32> &modernStateLevels) {
+  const uint32_t oldStateBitmask = this->stateBitmask();
+  const uint32_t newlyReceivedStates = (oldStateBitmask ^ stateBitmask) & stateBitmask;
+  const uint32_t expiredStates = (oldStateBitmask ^ stateBitmask) & oldStateBitmask;
   this->setStateBitmask(stateBitmask);
 
-  int stateLevelIndex=0;
+  constexpr int zombieBitNum = helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>();
   if (newlyReceivedStates != 0) {
     // We have some new states!
     for (int bitNum=0; bitNum<32; ++bitNum) {
-      const auto kBit = static_cast<uint32_t>(1) << bitNum;
+      const uint32_t kBit = static_cast<uint32_t>(1) << bitNum;
       if ((newlyReceivedStates & kBit) != 0) {
-        const auto kState = static_cast<packet::enums::AbnormalStateFlag>(kBit);
-        if (kState <= packet::enums::AbnormalStateFlag::kZombie) {
+        const packet::enums::AbnormalStateFlag kState = static_cast<packet::enums::AbnormalStateFlag>(kBit);
+        if (bitNum <= zombieBitNum) {
           // Legacy state
           // We now are kState
         } else {
           // Modern state
           // We now are under kState
-          this->setModernStateLevel(helpers::fromBitNum(bitNum), stateLevels[stateLevelIndex]);
-          ++stateLevelIndex;
+          this->setModernStateLevel(helpers::fromBitNum<packet::enums::AbnormalStateFlag>(bitNum), modernStateLevels[bitNum]);
         }
       }
     }
@@ -383,25 +382,26 @@ void Self::updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &state
   if (expiredStates != 0) {
     // We have some expired states
     for (int bitNum=0; bitNum<32; ++bitNum) {
-      const auto kBit = static_cast<uint32_t>(1) << bitNum;
+      const uint32_t kBit = static_cast<uint32_t>(1) << bitNum;
       if ((expiredStates & kBit) != 0) {
-        const auto kState = static_cast<packet::enums::AbnormalStateFlag>(kBit);
-        if (kState <= packet::enums::AbnormalStateFlag::kZombie) {
+        const packet::enums::AbnormalStateFlag kState = static_cast<packet::enums::AbnormalStateFlag>(kBit);
+        if (bitNum <= zombieBitNum) {
           // Legacy state
           // We are no longer kState
         } else {
           // Modern state
           // We are no longer under kState
-          this->setModernStateLevel(helpers::fromBitNum(bitNum), 0);
+          this->setModernStateLevel(helpers::fromBitNum<packet::enums::AbnormalStateFlag>(bitNum), 0);
         }
       }
     }
   }
-  // TODO: Only send this event if the states actually changed
-  if (eventBroker_) {
-    eventBroker_->publishEvent<event::EntityStatesChanged>(globalId);
-  } else {
-    LOG(WARNING) << "Trying to publish event::EntityStatesChanged, but don't have event broker";
+  if (newlyReceivedStates != 0 || expiredStates != 0) {
+    if (eventBroker_) {
+      eventBroker_->publishEvent<event::EntityStatesChanged>(globalId);
+    } else {
+      LOG(WARNING) << "Trying to publish event::EntityStatesChanged, but don't have event broker";
+    }
   }
 }
 
@@ -409,9 +409,11 @@ void Self::setStateBitmask(uint32_t stateBitmask) {
   stateBitmask_ = stateBitmask;
 }
 
-void Self::setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect) {
+void Self::setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect, std::chrono::high_resolution_clock::time_point endTime, std::chrono::milliseconds totalDuration) {
   const int index = helpers::toBitNum(flag);
   legacyStateEffects_.at(index) = effect;
+  legacyStateEndTimes_.at(index) = endTime;
+  legacyStateTotalDurations_.at(index) = totalDuration;
 }
 
 void Self::setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level) {
@@ -586,12 +588,12 @@ uint64_t Self::getCurrentSpExperience() const {
 }
 
 int Self::getHpPotionDelay() const {
-  const bool havePanic = (modernStateLevels_[helpers::toBitNum(packet::enums::AbnormalStateFlag::kPanic)] > 0);
+  const bool havePanic = (modernStateLevels_[helpers::toBitNum<packet::enums::AbnormalStateFlag::kPanic>()] > 0);
   return potionDelayMs_ + (havePanic ? kPanicPotionDelayIncreaseMs_ : 0);
 }
 
 int Self::getMpPotionDelay() const {
-  const bool haveCombustion = (modernStateLevels_[helpers::toBitNum(packet::enums::AbnormalStateFlag::kCombustion)] > 0);
+  const bool haveCombustion = (modernStateLevels_[helpers::toBitNum<packet::enums::AbnormalStateFlag::kCombustion>()] > 0);
   return potionDelayMs_ + (haveCombustion ? kCombustionPotionDelayIncreaseMs_ : 0);
 }
 
@@ -601,12 +603,12 @@ int Self::getVigorPotionDelay() const {
 }
 
 int Self::getHpGrainDelay() const {
-  const bool havePanic = (modernStateLevels_[helpers::toBitNum(packet::enums::AbnormalStateFlag::kPanic)] > 0);
+  const bool havePanic = (modernStateLevels_[helpers::toBitNum<packet::enums::AbnormalStateFlag::kPanic>()] > 0);
   return kGrainDelayMs_ + (havePanic ? kPanicPotionDelayIncreaseMs_ : 0);
 }
 
 int Self::getMpGrainDelay() const {
-  const bool haveCombustion = (modernStateLevels_[helpers::toBitNum(packet::enums::AbnormalStateFlag::kCombustion)] > 0);
+  const bool haveCombustion = (modernStateLevels_[helpers::toBitNum<packet::enums::AbnormalStateFlag::kCombustion>()] > 0);
   return kGrainDelayMs_ + (haveCombustion ? kCombustionPotionDelayIncreaseMs_ : 0);
 }
 
@@ -662,8 +664,16 @@ uint32_t Self::stateBitmask() const {
   return stateBitmask_;
 }
 
-std::array<uint16_t,6> Self::legacyStateEffects() const {
+Self::LegacyStateEffectArrayType Self::legacyStateEffects() const {
   return legacyStateEffects_;
+}
+
+Self::LegacyStateEndTimeArrayType Self::legacyStateEndTimes() const {
+  return legacyStateEndTimes_;
+}
+
+Self::LegacyStateTotalDurationArrayType Self::legacyStateTotalDurations() const {
+  return legacyStateTotalDurations_;
 }
 
 std::array<uint8_t,32> Self::modernStateLevels() const {

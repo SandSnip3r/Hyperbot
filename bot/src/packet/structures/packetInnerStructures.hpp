@@ -70,8 +70,8 @@ public:
 namespace vitals {
 
 struct AbnormalState {
-  uint32_t totalTime;
-  uint16_t timeElapsed;
+  uint32_t totalTime; // x100 = ms
+  uint16_t timeElapsed; // x100 = ms
   uint16_t effectOrLevel;
 };
 

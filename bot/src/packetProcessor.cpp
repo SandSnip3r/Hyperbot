@@ -679,9 +679,7 @@ void PacketProcessor::serverAgentEntityUpdateStatusReceived(const packet::parsin
 
     if (flags::isSet(packet.vitalBitmask(), packet::enums::VitalInfoFlag::kVitalInfoAbnormal)) {
       // Our states changed
-      auto stateBitmask = packet.stateBitmask();
-      auto stateLevels = packet.stateLevels();
-      selfEntity_->updateStates(stateBitmask, stateLevels);
+      selfEntity_->updateStates(packet.stateBitmask(), packet.modernStateLevels());
     }
   } else {
     // Not for my character
@@ -706,10 +704,21 @@ void PacketProcessor::serverAgentEntityDamageEffectReceived(const packet::parsin
 }
 
 void PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::ServerAgentAbnormalInfo &packet) const {
-  for (int i=0; i<=helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie); ++i) {
-    selfEntity_->setLegacyStateEffect(helpers::fromBitNum(i), packet.states().at(i).effectOrLevel);
+  bool changed=false;
+  const entity::Self::LegacyStateEffectArrayType &legacyStateEffects = selfEntity_->legacyStateEffects();
+  for (int bitNum=0; bitNum<=helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>(); ++bitNum) {
+    const packet::structures::vitals::AbnormalState &state = packet.states().at(bitNum);
+    if (legacyStateEffects[bitNum] != state.effectOrLevel) {
+      changed = true;
+      const std::chrono::milliseconds stateTotalTime{state.totalTime * 100};
+      // It is possible for time elapsed to be greater than total time.
+      const std::chrono::milliseconds stateRemainingTime = std::max(std::chrono::milliseconds(0), stateTotalTime - std::chrono::milliseconds(state.timeElapsed * 100));
+      selfEntity_->setLegacyStateEffect(helpers::fromBitNum<packet::enums::AbnormalStateFlag>(bitNum), state.effectOrLevel, std::chrono::high_resolution_clock::now() + stateRemainingTime, stateTotalTime);
+    }
   }
-  eventBroker_.publishEvent<event::EntityStatesChanged>(selfEntity_->globalId);
+  if (changed) {
+    eventBroker_.publishEvent<event::EntityStatesChanged>(selfEntity_->globalId);
+  }
 }
 
 void PacketProcessor::serverAgentCharacterUpdateStatsReceived(const packet::parsing::ServerAgentCharacterUpdateStats &packet) const {

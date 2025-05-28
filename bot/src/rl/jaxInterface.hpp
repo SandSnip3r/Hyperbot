@@ -47,6 +47,31 @@ public:
   ~JaxInterface();
   void initialize(float dropoutRate);
 
+  class Model {
+  public:
+    ~Model();
+  private:
+    Model(pybind11::object model);
+    std::optional<pybind11::object> model_;
+    friend class JaxInterface;
+  };
+
+  Model getModel() const;
+  Model getTargetModel() const;
+  Model getDummyModel() const;
+
+  class Optimizer {
+  public:
+    ~Optimizer();
+  private:
+    Optimizer(pybind11::object optimizer);
+    std::optional<pybind11::object> optimizer_;
+    friend class JaxInterface;
+  };
+
+  Optimizer getOptimizer() const;
+  Optimizer getDummyOptimizer() const;
+
   // `canSendPacket` is used for action masking to limit the rate at which packets are sent.
   int selectAction(const ModelInput &modelInput, bool canSendPacket);
 
@@ -60,7 +85,10 @@ public:
   };
 
   // All vectors should have the same size, this is the batch size.
-  TrainAuxOutput train(const std::vector<ModelInput> &pastModelInputs,
+  TrainAuxOutput train(const Model &model,
+                       const Optimizer &optimizer,
+                       const Model &targetModel,
+                       const std::vector<ModelInput> &pastModelInputs,
                        const std::vector<int> &actionsTaken,
                        const std::vector<bool> &isTerminals,
                        const std::vector<float> &rewards,
@@ -97,13 +125,13 @@ private:
 
   // We use a special synchronization routine to give action selection a higher priority than everything else, since it requires low latency.
   // Context: https://github.com/SandSnip3r/ContentionBenchmark
-  std::mutex modelMutex_;
+  mutable std::mutex modelMutex_;
   // Tracy lockable does not seem to work with a condition variable.
   // TracyLockableN(std::mutex, modelMutex_, "JaxInterface::modelMutex");
   std::condition_variable modelConditionVariable_;
   std::atomic<bool> waitingToSelectAction_{false};
 
-  pybind11::object getOptimizer();
+  pybind11::object getPythonOptimizer();
   pybind11::object getNextRngKey();
 
   // Convert a ModelInput to corresponding numpy arrays

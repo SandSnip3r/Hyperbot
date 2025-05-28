@@ -184,7 +184,7 @@ bool AutoPotion::tryUseHpPotion() {
   const double hpPercentage = static_cast<double>(bot_.selfState()->currentHp()) / *bot_.selfState()->maxHp();
 
   const auto legacyStateEffects = bot_.selfState()->legacyStateEffects();
-  const bool haveZombie = (legacyStateEffects[helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie)] > 0);
+  const bool haveZombie = (legacyStateEffects[helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>()] > 0);
   if (haveZombie) {
     // Don't want to use a health or vigor potion, there is nothing else to do in this function
     return false;
@@ -221,7 +221,7 @@ bool AutoPotion::tryUseMpPotion() {
 
   bool usedAnItem = false;
   const auto legacyStateEffects = bot_.selfState()->legacyStateEffects();
-  const bool haveZombie = (legacyStateEffects[helpers::toBitNum(packet::enums::AbnormalStateFlag::kZombie)] > 0);
+  const bool haveZombie = (legacyStateEffects[helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>()] > 0);
 
   // Prioritize vigors since they're generally used in more dire situations.
   // Don't use vigors when we have zombie.

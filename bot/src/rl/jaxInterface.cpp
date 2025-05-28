@@ -101,10 +101,71 @@ void JaxInterface::initialize(float dropoutRate) {
     targetModel_ = py::module::import("copy").attr("deepcopy")(*model_);
 
     optaxModule_ = py::module::import("optax");
-    py::object optimizer = getOptimizer();
+    py::object optimizer = getPythonOptimizer();
     optimizerState_ = nnxModule_->attr("Optimizer")(*model_, optimizer);
   }
   modelConditionVariable_.notify_all();
+}
+
+JaxInterface::Model::Model(pybind11::object model) : model_(model) {}
+JaxInterface::Model::~Model() {
+  if (model_) {
+    py::gil_scoped_acquire acquire;
+    model_.reset();
+  }
+}
+
+JaxInterface::Model JaxInterface::getModel() const {
+  if (!model_) {
+    throw std::runtime_error("model is not yet initialized");
+  }
+  std::unique_lock modelLock(modelMutex_);
+  py::gil_scoped_acquire acquire;
+  return Model(*model_);
+}
+
+JaxInterface::Model JaxInterface::getTargetModel() const {
+  if (!targetModel_) {
+    throw std::runtime_error("targetModel is not yet initialized");
+  }
+  std::unique_lock modelLock(modelMutex_);
+  py::gil_scoped_acquire acquire;
+  return Model(*targetModel_);
+}
+
+JaxInterface::Model JaxInterface::getDummyModel() const {
+  if (!model_) {
+    throw std::runtime_error("model is not yet initialized");
+  }
+  std::unique_lock modelLock(modelMutex_);
+  py::gil_scoped_acquire acquire;
+  return Model(py::module::import("copy").attr("deepcopy")(*model_));
+}
+
+JaxInterface::Optimizer::Optimizer(pybind11::object optimizer) : optimizer_(optimizer) {}
+JaxInterface::Optimizer::~Optimizer() {
+  if (optimizer_) {
+    py::gil_scoped_acquire acquire;
+    optimizer_.reset();
+  }
+}
+
+JaxInterface::Optimizer JaxInterface::getOptimizer() const {
+  if (!optimizerState_) {
+    throw std::runtime_error("optimizerState is not yet initialized");
+  }
+  std::unique_lock modelLock(modelMutex_);
+  py::gil_scoped_acquire acquire;
+  return Optimizer(*optimizerState_);
+}
+
+JaxInterface::Optimizer JaxInterface::getDummyOptimizer() const {
+  if (!optimizerState_) {
+    throw std::runtime_error("optimizerState is not yet initialized");
+  }
+  std::unique_lock modelLock(modelMutex_);
+  py::gil_scoped_acquire acquire;
+  return Optimizer(py::module::import("copy").attr("deepcopy")(*optimizerState_));
 }
 
 int JaxInterface::selectAction(const ModelInput &modelInput, bool canSendPacket) {
@@ -150,7 +211,10 @@ int JaxInterface::selectAction(const ModelInput &modelInput, bool canSendPacket)
   return actionIndex;
 }
 
-JaxInterface::TrainAuxOutput JaxInterface::train(const std::vector<ModelInput> &pastModelInputs,
+JaxInterface::TrainAuxOutput JaxInterface::train(const Model &model,
+                                                 const Optimizer &optimizer,
+                                                 const Model &targetModel,
+                                                 const std::vector<ModelInput> &pastModelInputs,
                                                  const std::vector<int> &actionsTaken,
                                                  const std::vector<bool> &isTerminals,
                                                  const std::vector<float> &rewards,
@@ -197,9 +261,9 @@ JaxInterface::TrainAuxOutput JaxInterface::train(const std::vector<ModelInput> &
       py::object auxOutput;
       {
         ZoneScopedN("JaxInterface::train_PYTHON");
-        auxOutput = dqnModule_->attr("jittedTrain")(*model_,
-                                                    *optimizerState_,
-                                                    *targetModel_,
+        auxOutput = dqnModule_->attr("jittedTrain")(model.model_,
+                                                    optimizer.optimizer_,
+                                                    targetModel.model_,
                                                     pastModelInputTuple,
                                                     detail::vector1dToNumpy(actionsTaken),
                                                     detail::vector1dToNumpy(isTerminals),
@@ -307,7 +371,7 @@ void JaxInterface::loadCheckpoint(const std::string &modelCheckpointPath, const 
     model_ = dqnModule_->attr("loadModelCheckpoint")(*model_, modelCheckpointPath);
     targetModel_ = dqnModule_->attr("loadModelCheckpoint")(*targetModel_, targetModelCheckpointPath);
     // Construct new optimizer for the loaded model.
-    py::object optimizer = getOptimizer();
+    py::object optimizer = getPythonOptimizer();
     optimizerState_ = nnxModule_->attr("Optimizer")(*model_, optimizer);
     // Load the optimizer state into the newly created optimizer.
     optimizerState_ = dqnModule_->attr("loadOptimizerCheckpoint")(*optimizerState_, optimizerStateCheckpointPath);
@@ -335,7 +399,7 @@ void JaxInterface::addScalar(std::string_view name, double yValue, double xValue
   summaryWriter_->attr("add_scalar")(name, yValue, xValue);
 }
 
-py::object JaxInterface::getOptimizer() {
+py::object JaxInterface::getPythonOptimizer() {
   return dqnModule_->attr("getOptaxAdamWOptimizer")(learningRate_);
 }
 

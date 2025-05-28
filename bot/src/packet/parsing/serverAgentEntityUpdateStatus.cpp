@@ -1,32 +1,32 @@
 #include "serverAgentEntityUpdateStatus.hpp"
+#include "helpers.hpp"
 
 namespace packet::parsing {
 
 ServerAgentEntityUpdateStatus::ServerAgentEntityUpdateStatus(const PacketContainer &packet) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-
-  entityUniqueId_ = stream.Read<sro::scalar_types::EntityGlobalId>();
-  updateFlag_ = static_cast<enums::UpdateFlag>(stream.Read<uint16_t>());
-  vitalBitmask_ = stream.Read<enums::VitalInfoFlag>();
+  stream.Read(entityUniqueId_);
+  stream.Read(updateFlag_);
+  stream.Read(vitalBitmask_);
 
   if (flags::isSet(vitalBitmask_, enums::VitalInfoFlag::kVitalInfoHp)) {
-    newHpValue_ = stream.Read<uint32_t>();
+    stream.Read(newHpValue_);
   }
 
   if (flags::isSet(vitalBitmask_, enums::VitalInfoFlag::kVitalInfoMp)) {
-    newMpValue_ = stream.Read<uint32_t>();
+    stream.Read(newMpValue_);
   }
 
   if (flags::isSet(vitalBitmask_, enums::VitalInfoFlag::kVitalInfoHgp)) {
-    newHgpValue_ = stream.Read<uint16_t>();
+    stream.Read(newHgpValue_);
   }
 
   if (flags::isSet(vitalBitmask_, enums::VitalInfoFlag::kVitalInfoAbnormal)) {
-    stateBitmask_ = stream.Read<uint32_t>();
-    for (uint32_t i=0; i<32; ++i) {
-      const auto bit = (1 << i);
-      if (bit > static_cast<uint32_t>(enums::AbnormalStateFlag::kZombie) && (stateBitmask_ & bit)) {
-        stateLevels_.push_back(stream.Read<uint8_t>());
+    stream.Read(stateBitmask_);
+    for (uint32_t bitNum=helpers::toBitNum<enums::AbnormalStateFlag::kZombie>()+1; bitNum<32; ++bitNum) {
+      const uint32_t flag = (uint32_t(1) << bitNum);
+      if (stateBitmask_ & flag) {
+        stream.Read(modernStateLevels_.at(bitNum));
       }
     }
   }
@@ -60,8 +60,8 @@ uint32_t ServerAgentEntityUpdateStatus::stateBitmask() const {
   return stateBitmask_;
 }
 
-const std::vector<uint8_t>& ServerAgentEntityUpdateStatus::stateLevels() const {
-  return stateLevels_;
+const ServerAgentEntityUpdateStatus::ModernStateLevelArrayType& ServerAgentEntityUpdateStatus::modernStateLevels() const {
+  return modernStateLevels_;
 }
 
 } // namespace packet::parsing

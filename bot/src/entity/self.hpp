@@ -5,6 +5,7 @@
 #include "broker/timerManager.hpp"
 #include "entity/playerCharacter.hpp"
 #include "entity/geometry.hpp"
+#include "helpers.hpp"
 #include "pk2/gameData.hpp"
 #include "packet/enums/packetEnums.hpp"
 #include "packet/parsing/parsedPacket.hpp"
@@ -46,6 +47,10 @@ enum class Gender {
 //  Or, when we're doing game logic
 class Self : public PlayerCharacter {
 public:
+  using LegacyStateEffectArrayType = std::array<uint16_t, helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>()+1>;
+  using LegacyStateEndTimeArrayType = std::array<std::chrono::high_resolution_clock::time_point, helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>()+1>;
+  using LegacyStateTotalDurationArrayType = std::array<std::chrono::milliseconds, helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>()+1>;
+
   Self(const pk2::GameData &gameData, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId);
   ~Self() override;
 
@@ -79,9 +84,9 @@ public:
   void setCurrentMp(uint32_t mp);
   void setMaxHpMp(uint32_t maxHp, uint32_t maxMp);
   void setStatPoints(uint16_t strPoints, uint16_t intPoints);
-  void updateStates(uint32_t stateBitmask, const std::vector<uint8_t> &stateLevels);
+  void updateStates(uint32_t stateBitmask, const std::array<uint8_t, 32> &modernStateLevels);
   void setStateBitmask(uint32_t stateBitmask);
-  void setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect);
+  void setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect, std::chrono::high_resolution_clock::time_point endTime, std::chrono::milliseconds totalDuration);
   void setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level);
   void setMasteriesAndSkills(const std::vector<packet::structures::Mastery> &masteries,
                              const std::vector<packet::structures::Skill> &skills);
@@ -138,7 +143,11 @@ public:
   std::optional<uint16_t> intPoints() const;
 
   uint32_t stateBitmask() const;
-  std::array<uint16_t,6> legacyStateEffects() const;
+  LegacyStateEffectArrayType legacyStateEffects() const;
+  // The end time does not mean anything if the effect is 0.
+  LegacyStateEndTimeArrayType legacyStateEndTimes() const;
+  // The total duration does not mean anything if the effect is 0.
+  LegacyStateTotalDurationArrayType legacyStateTotalDurations() const;
   std::array<uint8_t,32> modernStateLevels() const;
 
   storage::Storage& getCosInventory(uint32_t globalId);
@@ -210,15 +219,17 @@ private:
   std::optional<uint32_t> maxMp_;
   std::optional<uint16_t> strPoints_;
   std::optional<uint16_t> intPoints_;
-public:
 
   // Statuses
   // Bitmask of all states (initialized as having no states)
   uint32_t stateBitmask_{0};
   // Set all states as effect/level 0 (meaning there is no state)
-  std::array<uint16_t,6> legacyStateEffects_ = {0};
-  std::array<uint8_t,32> modernStateLevels_ = {0};
+  LegacyStateEffectArrayType legacyStateEffects_{};
+  LegacyStateEndTimeArrayType legacyStateEndTimes_{};
+  LegacyStateTotalDurationArrayType legacyStateTotalDurations_{};
+  std::array<uint8_t,32> modernStateLevels_{};
 
+public:
   // Skills
   std::vector<packet::structures::Mastery> masteries_;
   std::vector<packet::structures::Skill> skills_;

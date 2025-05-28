@@ -43,6 +43,7 @@ void TrainingManager::run() {
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiDeleteCheckpoints, eventHandleFunction);
 
   jaxInterface_.initialize(kDropoutRate);
+  precompileModels();
 
   // 1. Wait here until we're told to start training.
   // 2. Enter training loop once we're told to do so.
@@ -65,6 +66,9 @@ void TrainingManager::run() {
 
 void TrainingManager::train() {
   std::mt19937 randomEngine = common::createRandomEngine();
+  JaxInterface::Model model = jaxInterface_.getModel();
+  JaxInterface::Optimizer optimizer = jaxInterface_.getOptimizer();
+  JaxInterface::Model targetModel = jaxInterface_.getTargetModel();
   while (runTraining_) {
     try {
       if (replayBuffer_.size() < kBatchSize || replayBuffer_.size() < kReplayBufferMinimumBeforeTraining) {
@@ -92,7 +96,10 @@ void TrainingManager::train() {
 
       const ModelInputs modelInputs = buildModelInputsFromReplayBufferSamples(sampleResult);
 
-      const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(modelInputs.oldModelInputs,
+      const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(model,
+                                                                           optimizer,
+                                                                           targetModel,
+                                                                           modelInputs.oldModelInputs,
                                                                            modelInputs.actionsTaken,
                                                                            modelInputs.isTerminals,
                                                                            modelInputs.rewards,
@@ -180,7 +187,7 @@ void TrainingManager::onUpdate(const event::Event *event) {
     }
     LOG(INFO) << "Received load checkpoint request for " << loadCheckpointEvent->checkpointName;
     const CheckpointValues checkpointValues = checkpointManager_.loadCheckpoint(loadCheckpointEvent->checkpointName, jaxInterface_);
-    actionStepCount_ = checkpointValues.actionStepCount;
+    trainStepCount_ = checkpointValues.stepCount;
     LOG(INFO) << "Done loading";
   } else if (event->eventCode == event::EventCode::kRlUiDeleteCheckpoints) {
     const auto *deleteCheckpointsEvent = dynamic_cast<const event::RlUiDeleteCheckpoints*>(event);
@@ -195,8 +202,7 @@ void TrainingManager::onUpdate(const event::Event *event) {
 }
 
 void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex) {
-  ++actionStepCount_;
-  jaxInterface_.addScalar("anneal/Epsilon", getEpsilon(), actionStepCount_);
+  jaxInterface_.addScalar("anneal/Epsilon", getEpsilon(), trainStepCount_);
   using Id = ObservationAndActionStorage::Id;
   using ObservationAndActionType = ObservationAndActionStorage::ObservationAndActionType;
 
@@ -271,7 +277,7 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
 }
 
 float TrainingManager::getEpsilon() const {
-  return std::min(kInitialEpsilon, std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(actionStepCount_) / kEpsilonDecaySteps));
+  return std::min(kInitialEpsilon, std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(trainStepCount_) / kEpsilonDecaySteps));
 }
 
 void TrainingManager::createSessions() {
@@ -504,7 +510,7 @@ void TrainingManager::saveCheckpoint(const std::string &checkpointName, bool ove
     LOG(INFO) << "  Checkpoint does not yet exist";
   }
 
-  checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, actionStepCount_, overwrite);
+  checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, trainStepCount_, overwrite);
 }
 
 TrainingManager::ModelInputs TrainingManager::buildModelInputsFromReplayBufferSamples(const std::vector<ReplayBufferType::SampleResult> &samples) const {
@@ -586,6 +592,31 @@ ModelInput TrainingManager::buildModelInputUpToObservation(ObservationAndActionS
     }
   }
   return modelInput;
+}
+
+void TrainingManager::precompileModels() {
+  // Create some spoof inputs so that we can invoke the model and trigger compilation.
+  Observation observation;
+  ModelInput modelInput;
+  modelInput.pastObservationStack.resize(kPastObservationStackSize, &observation);
+  modelInput.pastActionStack.resize(kPastObservationStackSize, 0);
+  modelInput.currentObservation = &observation;
+
+
+  JaxInterface::Model dummyModel = jaxInterface_.getDummyModel();
+  JaxInterface::Optimizer dummyOptimizer = jaxInterface_.getDummyOptimizer();
+  JaxInterface::Model dummyTargetModel = jaxInterface_.getDummyModel();
+  std::vector<ModelInput> pastModelInputs(kBatchSize, modelInput);
+  std::vector<int> actionsTaken(kBatchSize, 0);
+  std::vector<bool> isTerminals(kBatchSize, false);
+  std::vector<float> rewards(kBatchSize, 0.0f);
+  std::vector<ModelInput> currentModelInputs(kBatchSize, modelInput);
+  std::vector<float> importanceSamplingWeights(kBatchSize, 0.0f);
+  LOG(INFO) << "Precompiling selectAction";
+  jaxInterface_.selectAction(modelInput, /*canSendPacket=*/false);
+  LOG(INFO) << "Precompiling train";
+  JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(dummyModel, dummyOptimizer, dummyTargetModel, pastModelInputs, actionsTaken, isTerminals, rewards, currentModelInputs, importanceSamplingWeights);
+  LOG(INFO) << "Precompilation complete";
 }
 
 void TrainingManager::defineCharacterPairingsAndPositions() {

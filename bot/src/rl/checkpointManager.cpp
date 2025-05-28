@@ -117,7 +117,7 @@ CheckpointValues CheckpointManager::loadCheckpoint(const std::string &checkpoint
       const std::string optimizerCheckpointPath = checkpoint.optimizer_checkpoint_path();
       LOG(INFO) << "Loading checkpoint \"" << checkpointName << "\" from paths \"" << modelCheckpointPath << "\", \"" << targetModelCheckpointPath << "\", and \"" << optimizerCheckpointPath << "\"";
       jaxInterface.loadCheckpoint(modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath);
-      result.actionStepCount = checkpoint.step_count();
+      result.stepCount = checkpoint.step_count();
       // Notify the UI that a checkpoint has been loaded
       rlUserInterface_.sendCheckpointLoaded(checkpointName);
       return result;
