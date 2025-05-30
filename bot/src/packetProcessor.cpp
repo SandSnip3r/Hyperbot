@@ -210,7 +210,8 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
       packet::Opcode::kServerAgentAuthResponse,
       packet::Opcode::kServerAgentCharacterData,
       packet::Opcode::kServerAgentCharacterSelectionActionResponse,
-      packet::Opcode::kServerAgentCharacterSelectionJoinResponse
+      packet::Opcode::kServerAgentCharacterSelectionJoinResponse,
+      packet::Opcode::kServerGatewayLoginIbuvChallenge
     };
     const packet::Opcode thisPacketOpcode = static_cast<packet::Opcode>(packet.opcode);
     if (!expectedOpcodes.contains(thisPacketOpcode)) {

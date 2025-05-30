@@ -281,54 +281,79 @@ float TrainingManager::getEpsilon() const {
 }
 
 void TrainingManager::createSessions() {
-  LOG(INFO) << "Creating sessions for " << characterPairings_.size() << " character pairings";
+  LOG(INFO) << "Creating sessions for " << characterPairings_.size() << " total character pairings";
 
-  // Create sessions for each character pair
-  for (auto& pairing : characterPairings_) {
-    // Create two sessions for the pairing
-    sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
-    Session& session1 = *sessions_.back().get();
-    sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
-    Session& session2 = *sessions_.back().get();
+  static constexpr int kNumCharacterPairingsToStartAtATime = 7;
 
-    // Initialize sessions
-    session1.initialize();
-    session2.initialize();
+  size_t characterPairingIndex = 0;
+  while (characterPairingIndex < characterPairings_.size()) {
+    std::vector<Session*> sessions;
+    std::vector<std::future<void>> clientOpenFutures;
+    for (size_t i=characterPairingIndex; i<characterPairingIndex+kNumCharacterPairingsToStartAtATime && i < characterPairings_.size(); ++i) {
+      const CharacterPairing &pairing = characterPairings_.at(i);
+      sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
+      Session& session1 = *sessions_.back().get();
+      sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
+      Session& session2 = *sessions_.back().get();
 
-    // Set characters
-    session1.setCharacter(pairing.character1);
-    session2.setCharacter(pairing.character2);
+      // Initialize sessions
+      session1.initialize();
+      session2.initialize();
 
-    // Start the sessions
-    session1.runAsync();
-    session2.runAsync();
+      // Set characters
+      session1.setCharacter(pairing.character1);
+      session2.setCharacter(pairing.character2);
 
-    // Open clients
-    std::future<void> character1ClientOpenFuture = session1.asyncOpenClient();
-    std::future<void> character2ClientOpenFuture = session2.asyncOpenClient();
-    LOG(INFO) << "Waiting for clients to open for " << pairing.character1.characterName << " and " << pairing.character2.characterName;
-    character1ClientOpenFuture.wait();
-    character2ClientOpenFuture.wait();
+      // Start the sessions
+      session1.runAsync();
+      session2.runAsync();
+
+      // Open clients
+      sessions.push_back(&session1);
+      sessions.push_back(&session2);
+      clientOpenFutures.push_back(session1.asyncOpenClient());
+      clientOpenFutures.push_back(session2.asyncOpenClient());
+    }
+
+    // Wait on all clients to open
+    LOG(INFO) << "Waiting for " << clientOpenFutures.size() << " clients to open";
+    for (std::future<void> &clientOpenFuture : clientOpenFutures) {
+      clientOpenFuture.wait();
+    }
+    clientOpenFutures.clear();
+
+    // Log in all sessions
     LOG(INFO) << "Clients are open. Logging in characters";
+    std::vector<std::future<void>> botLoginFutures;
+    for (Session* session : sessions) {
+      // Log in bot
+      Bot& bot = session->getBot();
+      botLoginFutures.push_back(bot.asyncLogIn());
+    }
 
-    // Log in bots
-    Bot& bot1 = session1.getBot();
-    Bot& bot2 = session2.getBot();
-
-    std::future<void> bot1LoginFuture = bot1.asyncLogIn();
-    std::future<void> bot2LoginFuture = bot2.asyncLogIn();
     // The above calls have constructed login state machines within each bot.
     // Unfortunately, if there are no events on the event bus, the state machines will not progress.
     // We'll send one dummy event to kick them off.
     eventBroker_.publishEvent(event::EventCode::kDummy);
 
-    bot1LoginFuture.wait();
-    bot2LoginFuture.wait();
-    LOG(INFO) << "Characters are logged in.";
+    // Wait for all characters to finish logging in
+    LOG(INFO) << "Waiting for " << botLoginFutures.size() << " characters to log in";
+    for (std::future<void> &botLoginFuture : botLoginFutures) {
+      botLoginFuture.wait();
+    }
+    LOG(INFO) << "These " << botLoginFutures.size() << " characters are logged in.";
+    botLoginFutures.clear();
 
-    // Store session IDs in the pairing
-    pairing.session1Id = session1.sessionId();
-    pairing.session2Id = session2.sessionId();
+    // Save session IDs in the pairings
+    for (size_t i=characterPairingIndex; i<characterPairingIndex+kNumCharacterPairingsToStartAtATime && i < characterPairings_.size(); ++i) {
+      CharacterPairing &pairing = characterPairings_.at(i);
+      Session& session1 = *sessions.at((i-characterPairingIndex)*2);
+      Session& session2 = *sessions.at((i-characterPairingIndex)*2 + 1);
+      pairing.session1Id = session1.sessionId();
+      pairing.session2Id = session2.sessionId();
+    }
+
+    characterPairingIndex += kNumCharacterPairingsToStartAtATime;
   }
 
   // Standby for PVP
@@ -342,75 +367,6 @@ void TrainingManager::createSessions() {
   eventBroker_.publishEvent(event::EventCode::kDummy);
 
   LOG(INFO) << "All sessions created and ready for PVP. Total active sessions: " << sessions_.size();
-
-  // --->->--->->--->->--->->--->-> ----------------------------------------------------- <-<---<-<---<-<---<-<---<-<---
-  // --->->--->->--->->--->->--->-> Below is a version which launches all clients at once <-<---<-<---<-<---<-<---<-<---
-  // --->->--->->--->->--->->--->-> ----------------------------------------------------- <-<---<-<---<-<---<-<---<-<---
-
-  // LOG(INFO) << "Creating sessions for " << characterPairings_.size() << " character pairings";
-  // // Create sessions for each character pair
-  // for (auto& pairing : characterPairings_) {
-  //   // Create two sessions for the pairing
-  //   sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
-  //   Session& session1 = *sessions_.back().get();
-  //   sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
-  //   Session& session2 = *sessions_.back().get();
-
-  //   // Initialize sessions
-  //   session1.initialize();
-  //   session2.initialize();
-
-  //   // Set characters
-  //   session1.setCharacter(pairing.character1);
-  //   session2.setCharacter(pairing.character2);
-
-  //   // Start the sessions
-  //   session1.runAsync();
-  //   session2.runAsync();
-  // }
-
-  // // Open clients
-  // std::vector<std::future<void>> clientOpenFutures;
-  // for (std::unique_ptr<Session> &session : sessions_) {
-  //   clientOpenFutures.push_back(session->asyncOpenClient());
-  // }
-
-  // LOG(INFO) << "Waiting for " << clientOpenFutures.size() << " clients to open";
-  // for (std::future<void> &clientOpenFuture : clientOpenFutures) {
-  //   clientOpenFuture.wait();
-  // }
-
-  // // Log in characters
-  // LOG(INFO) << "Clients are open. Logging in characters";
-  // std::vector<std::future<void>> botLoginFutures;
-  // for (std::unique_ptr<Session> &session : sessions_) {
-  //   // Log in bot
-  //   Bot& bot = session->getBot();
-  //   botLoginFutures.push_back(bot.asyncLogIn());
-  // }
-
-  // LOG(INFO) << "Waiting for " << botLoginFutures.size() << " characters to log in";
-  // for (std::future<void> &botLoginFuture : botLoginFutures) {
-  //   botLoginFuture.wait();
-  // }
-
-  // LOG(INFO) << "Characters are logged in.";
-  // // Store session IDs in the pairing
-  // for (std::unique_ptr<Session> &session : sessions_) {
-  //   const std::string &characterName = session->getBot().selfState()->name;
-  //   for (CharacterPairing &characterPairing : characterPairings_) {
-  //     if (characterPairing.character1.characterName == characterName) {
-  //       characterPairing.session1Id = session->sessionId();
-  //       break;
-  //     } else if (characterPairing.character2.characterName == characterName) {
-  //       characterPairing.session2Id = session->sessionId();
-  //       break;
-  //     }
-  //   }
-
-  //   // Standby for PVP
-  //   session->getBot().asyncStandbyForPvp();
-  // }
 }
 
 common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Session &char2, int positionIndex) {
