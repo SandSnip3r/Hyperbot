@@ -33,6 +33,7 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
     throw std::runtime_error("Proxy given Division without any addresses");
   }
   gatewayAddress_ = divisionInfo_.divisions[0].gatewayIpAddresses[0];
+  VLOG(1) << "Constructed Proxy with listening port " << ourListeningPort_ << " and gateway address " << gatewayAddress_;
 
   packetBroker_.setInjectionFunction(std::bind(&Proxy::inject, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -163,12 +164,10 @@ void Proxy::setClientless(bool clientless) {
 }
 
 // Starts accepting new connections
-void Proxy::PostAccept(uint32_t count) {
-  for (uint32_t x=0; x<count; ++x) {
-    // The newly created socket will be used when something connects
-    boost::shared_ptr<boost::asio::ip::tcp::socket> s(boost::make_shared<boost::asio::ip::tcp::socket>(ioService_));
-    acceptor.async_accept(*s, boost::bind(&Proxy::HandleAccept, this, s, boost::asio::placeholders::error));
-  }
+void Proxy::PostAccept() {
+  // The newly created socket will be used when something connects
+  boost::shared_ptr<boost::asio::ip::tcp::socket> s(boost::make_shared<boost::asio::ip::tcp::socket>(ioService_));
+  acceptor.async_accept(*s, boost::bind(&Proxy::HandleAccept, this, s, boost::asio::placeholders::error));
 }
 
 // Handles new connections
@@ -177,6 +176,7 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
     LOG(WARNING) << "Error accepting new connection: \"" << error.message() << '"';
     return;
   }
+  VLOG(1) << "New connection accepted";
 
   // Close active connections
   clientConnection.Close();

@@ -15,7 +15,7 @@ public:
   void logPacket(const PacketContainer &packet, bool blocked, PacketContainer::Direction direction);
 private:
   static const bool kLogToFile;
-  static const int kLogToConsoleMinimumVlogLevel;
+  bool logPackets_{false};
   const std::string logFileDirectoryPath_;
   const std::string logFilePath_;
   std::ofstream logfile_;

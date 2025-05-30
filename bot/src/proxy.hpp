@@ -66,7 +66,7 @@ private:
 	SilkroadConnection serverConnection{ioService_, "Server"};
 
 	//Starts accepting new connections
-	void PostAccept(uint32_t count = 1);
+	void PostAccept();
 
 	//Handles new connections
 	void HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, const boost::system::error_code & error);

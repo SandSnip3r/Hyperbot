@@ -48,6 +48,12 @@ Status Walking::onUpdate(const event::Event *event) {
     } else if (event->eventCode == event::EventCode::kMovementRequestTimedOut) {
       CHAR_VLOG(1) << "Movement request timed out";
       movementRequestTimeoutEventId_.reset();
+    } else if (const event::EntityDespawned *despawnedEvent = dynamic_cast<const event::EntityDespawned*>(event); despawnedEvent != nullptr) {
+      if (!bot_.selfState()) {
+        // Our character despawned, we cannot continue walking.
+        LOG(ERROR) << "We despawned while walking";
+        return Status::kDone;
+      }
     }
   }
 

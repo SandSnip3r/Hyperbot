@@ -2,8 +2,8 @@
 
 #include "packet/opcode.hpp"
 
+#include <absl/flags/flag.h>
 #include <absl/log/log.h>
-#include <absl/log/vlog_is_on.h>
 #include <absl/strings/str_format.h>
 
 #include <chrono>
@@ -11,6 +11,8 @@
 #include <iostream>
 #include <sstream>
 #include <thread>
+
+ABSL_FLAG(bool, log_packets, false, "Log incoming and outgoing packets to the console");
 
 namespace {
 
@@ -26,7 +28,6 @@ int64_t getMsSinceEpoch() {
 } // anonymous namespace
 
 const bool PacketLogger::kLogToFile = false;
-const int PacketLogger::kLogToConsoleMinimumVlogLevel = 10;
 
 PacketLogger::PacketLogger(const std::string &logDirectoryPath) : logFileDirectoryPath_(logDirectoryPath), logFilePath_(getLogFilePath()) {
   if (kLogToFile) {
@@ -35,6 +36,7 @@ PacketLogger::PacketLogger(const std::string &logDirectoryPath) : logFileDirecto
       throw std::runtime_error("Unable to initialize logfile_ \""+logFilePath_+"\"");
     }
   }
+  logPackets_ = absl::GetFlag(FLAGS_log_packets);
 }
 
 void PacketLogger::logPacket(const PacketContainer &packet, bool blocked, PacketContainer::Direction direction) {
@@ -42,7 +44,8 @@ void PacketLogger::logPacket(const PacketContainer &packet, bool blocked, Packet
   if (kLogToFile) {
     logPacketToFile(msSinceEpoch, packet, blocked, direction);
   }
-  if (VLOG_IS_ON(kLogToConsoleMinimumVlogLevel) ||
+
+  if (logPackets_ ||
       std::find(opcodeConsoleLoggingWhitelist_.begin(),
                 opcodeConsoleLoggingWhitelist_.end(),
                 static_cast<packet::Opcode>(packet.opcode)) != opcodeConsoleLoggingWhitelist_.end()) {
