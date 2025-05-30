@@ -14,8 +14,10 @@
 ABSL_FLAG(int, v, -1, "Verbose logging level");
 ABSL_FLAG(std::vector<std::string>, vmodule, {}, "Per-module verbose logging level");
 ABSL_FLAG(std::string, ip_address, "127.0.0.1", "IP address of Hyperbot");
-ABSL_FLAG(int32_t, port, 2235, "Port of Hyperbot");
-ABSL_FLAG(std::string, client_path, "C:\\dev\\Daxter Silkroad server files\\Silkroad Client", "Path to sro_client.exe");
+ABSL_FLAG(int32_t, protobufPort, 2235, "Port of Hyperbot");
+ABSL_FLAG(int32_t, gatewayPort, 15779, "Original port of the Silkroad Gateway Server");
+ABSL_FLAG(int32_t, agentPort, 15884, "Original port of the Silkroad Agent Server");
+ABSL_FLAG(std::string, client_path, "C:\\dev\\VSRO_Client", "Path to sro_client.exe");
 
 void initializeLogging();
 
@@ -24,13 +26,15 @@ int main(int argc, char *argv[]) {
   initializeLogging();
 
   const std::string ipAddress = absl::GetFlag(FLAGS_ip_address);
-  const int32_t port = absl::GetFlag(FLAGS_port);
+  const int32_t protobufPort = absl::GetFlag(FLAGS_protobufPort);
+  const int32_t gatewayPort = absl::GetFlag(FLAGS_gatewayPort);
+  const int32_t agentPort = absl::GetFlag(FLAGS_agentPort);
   const std::string client_path = absl::GetFlag(FLAGS_client_path);
-  VLOG(2) << "Parsed IP address: \"" << ipAddress << "\" and port: " << port;
+  VLOG(2) << "Parsed IP address: \"" << ipAddress << "\" and protobufPort: " << protobufPort;
   VLOG(2) << "Parsed client path: \"" << client_path << "\"";
 
   try {
-    ClientManager clientManager{ipAddress, port, client_path};
+    ClientManager clientManager{ipAddress, protobufPort, gatewayPort, agentPort, client_path};
     clientManager.run();
   } catch (const std::exception &ex) {
     LOG(ERROR) << absl::StreamFormat("Error running ClientManager: \"%s\"", ex.what());

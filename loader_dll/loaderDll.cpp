@@ -7,6 +7,7 @@
 
 #include "detours/detours.h"
 
+#include <silkroad_lib/dll_config.hpp>
 #include <silkroad_lib/edx_labs.hpp>
 #include <silkroad_lib/file_util.hpp>
 #include <silkroad_lib/pk2/divisionInfo.hpp>
@@ -42,7 +43,7 @@ std::string defaultAgentIP = "127.0.0.1";
 
 //-------------------------------------------------------------------------
 
-void UserOnInject();
+void UserOnInject(sro::edx_labs::DllConfig *config);
 void UserOnUninject();
 void OnConsoleInput(std::string input);
 
@@ -76,14 +77,21 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ulReason, LPVOID lpReserved)
 //-------------------------------------------------------------------------
 
 // This is the main function that is called when the DLL is injected into the process
-extern "C" __declspec(dllexport) void OnInject(DWORD address, LPDWORD bytes)
-{
+extern "C" __declspec(dllexport) void OnInject(DWORD address, LPDWORD bytes) {
   // Restore the original bytes at the OEP
   DWORD wrote = 0;
   WriteProcessMemory(GetCurrentProcess(), UlongToPtr(address), bytes, 6, &wrote);
 
+  sro::edx_labs::DllConfig *config = reinterpret_cast<sro::edx_labs::DllConfig*>(reinterpret_cast<uint8_t*>(bytes) + 6);
+  if (sizeof(sro::edx_labs::DllConfig) != config->size) {
+    // If the size is not correct, we cannot use the config
+    const std::string errorMsg = "Config size mismatch: expected " + std::to_string(sizeof(sro::edx_labs::DllConfig)) + ", got " + std::to_string(config->size);
+    MessageBox(0, errorMsg.c_str(), "Fatal Error", MB_ICONERROR);
+    ExitProcess(1);
+  }
+
   // Call our user function to keep this function clean
-  UserOnInject();
+  UserOnInject(config);
 }
 
 //-------------------------------------------------------------------------
@@ -358,28 +366,12 @@ namespace nsEnglishCaptcha
 
 //-------------------------------------------------------------------------
 
-void modifyRoutelist() {
-  uint16_t botPort;
-  {
-    const auto appDataDirectoryPath = sro::file_util::getAppDataPath();
-    auto portInfoFilePath = appDataDirectoryPath / (std::to_string(GetCurrentProcessId())+".txt");
-    {
-      std::ifstream portInfoFile(portInfoFilePath);
-      if (!portInfoFile) {
-        MessageBox(0, "Unable to determine port of bot!", "Fatal Error", MB_ICONERROR);
-        // TODO: Kill process or something similar?
-        return;
-      }
-      portInfoFile >> botPort;
-    }
-    bool fileSuccessfullyRemoved = std::filesystem::remove(portInfoFilePath);
-  }
-
+void modifyRoutelist(sro::edx_labs::DllConfig *config) {
   if (bDoRedirectGateway) {
     // Redirecting gateway
     using namespace nsDetourConnect;
 
-    // MessageBox(0, ("Redirecting gateway to " + defaultGatewayIP + " " + std::to_string(botPort)).c_str(), "Redirect", MB_OK);
+    // MessageBox(0, ("Redirecting gateway to " + defaultGatewayIP + " " + std::to_string(config->hyperbotPort)).c_str(), "Redirect", MB_OK);
 
     std::vector<std::string> tokens = sro::edx_labs::TokenizeString(defaultGatewayIP, " .");
     if (tokens.size() != 4) {
@@ -392,7 +384,7 @@ void modifyRoutelist() {
       routeArray[x].dstB = atoi(tokens[1].c_str());
       routeArray[x].dstC = atoi(tokens[2].c_str());
       routeArray[x].dstD = atoi(tokens[3].c_str());
-      routeArray[x].dstPort = botPort;
+      routeArray[x].dstPort = config->hyperbotPort;
     }
 
     WSADATA wsaData = { 0 };
@@ -413,8 +405,7 @@ void modifyRoutelist() {
           routeArray[routeListCount].srcC = atoi(tokens[2].c_str());
           routeArray[routeListCount].srcD = atoi(tokens[3].c_str());
 
-          routeArray[routeListCount].srcPort = 19000; // TODO: This is hardcoded for now. This will be a failurepoint on other private servers if they use the default 15779
-          //  Previous comment said "rather than doing another GATEPORT access"
+          routeArray[routeListCount].srcPort = config->gatewayPort; // rather than doing another GATEPORT access
 
           routeListCount++;
         } else {
@@ -429,7 +420,7 @@ void modifyRoutelist() {
     // Redirecting agent
     using namespace nsDetourConnect;
 
-    // MessageBox(0, ("Redirecting agent to " + defaultAgentIP + " " + std::to_string(botPort)).c_str(), "Redirect", MB_OK);
+    // MessageBox(0, ("Redirecting agent to " + defaultAgentIP + " " + std::to_string(config->hyperbotPort)).c_str(), "Redirect", MB_OK);
 
     std::vector<std::string> tokens = sro::edx_labs::TokenizeString(defaultAgentIP, " .");
 
@@ -442,15 +433,14 @@ void modifyRoutelist() {
     routeArray[routeListCount].dstB = atoi(tokens[1].c_str());
     routeArray[routeListCount].dstC = atoi(tokens[2].c_str());
     routeArray[routeListCount].dstD = atoi(tokens[3].c_str());
-    routeArray[routeListCount].dstPort = botPort;
+    routeArray[routeListCount].dstPort = config->hyperbotPort;
 
     routeArray[routeListCount].srcA = 255;
     routeArray[routeListCount].srcB = 255;
     routeArray[routeListCount].srcC = 255;
     routeArray[routeListCount].srcD = 255;
 
-    routeArray[routeListCount].srcPort = 19001; // TODO: This is hardcoded for now. This will be a failurepoint on other private servers if they use the default 15779
-    //  Previous comment said "rather than doing another GATEPORT access"
+    routeArray[routeListCount].srcPort = config->agentPort; // rather than doing another GATEPORT access
 
     routeListCount++;
   }
@@ -459,8 +449,7 @@ void modifyRoutelist() {
 //-------------------------------------------------------------------------
 
 // The function where we place all our logic
-void UserOnInject()
-{
+void UserOnInject(sro::edx_labs::DllConfig *config) {
   char moduleName[MAX_PATH + 1] = { 0 };
   GetModuleFileName(0, moduleName, MAX_PATH);
 
@@ -495,7 +484,7 @@ void UserOnInject()
   }
 
   // Create the configuration dialog
-  modifyRoutelist();
+  modifyRoutelist(config);
   /*HWND hWnd = CreateDialogParam(gInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, Main_DlgProc, (LPARAM)gInstance);
   MSG msg;
   while (GetMessage(&msg, NULL, 0, 0))

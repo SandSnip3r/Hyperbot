@@ -1,4 +1,5 @@
 #include <silkroad_lib/edx_labs.hpp>
+#include <silkroad_lib/dll_config.hpp>
 
 #include <absl/log/log.h>
 
@@ -21,7 +22,7 @@ namespace sro::edx_labs {
 #if defined(_WIN32)
 
 // Injects a DLL into a process at the specified address
-BOOL InjectDLL(HANDLE hProcess, const char *dllNameToLoad, const char *funcNameToLoad, DWORD injectAddress, bool bDebugAttach) {
+BOOL InjectDLL(HANDLE hProcess, const char *dllNameToLoad, const char *funcNameToLoad, DWORD injectAddress, bool bDebugAttach, DllConfig* config) {
   // # of bytes to replace
   DWORD byteCountToReplace = 6;
 
@@ -123,10 +124,10 @@ BOOL InjectDLL(HANDLE hProcess, const char *dllNameToLoad, const char *funcNameT
   _snprintf(injectError2, MAX_PATH, "Could not load the function \"%s\"", injectFuncName);
 
   // Create the workspace
-  workspace = (LPBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 1024);
+  workspace = (LPBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 4096);
 
   // Allocate space for the codecave in the process
-  codecaveAddress = VirtualAllocEx(hProcess, 0, 1024, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+  codecaveAddress = VirtualAllocEx(hProcess, 0, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
   dwCodecaveAddress = PtrToUlong(codecaveAddress);
 
   //------------------------------------------//
@@ -155,6 +156,11 @@ BOOL InjectDLL(HANDLE hProcess, const char *dllNameToLoad, const char *funcNameT
   offsetOrigBytes = workspaceIndex + dwCodecaveAddress;
   memcpy(workspace + workspaceIndex, userPatch, 6);
   workspaceIndex += 6;
+
+  // Write the binary config data for the dll to use
+  config->size = sizeof(DllConfig);
+  memcpy(workspace + workspaceIndex, config, sizeof(DllConfig));
+  workspaceIndex += sizeof(DllConfig);
 
   // Write out the address for the injected DLL's module
   userVar = workspaceIndex + dwCodecaveAddress;
@@ -505,8 +511,7 @@ BOOL InjectDLL(HANDLE hProcess, const char *dllNameToLoad, const char *funcNameT
 }
 
 // Returns the entry point of an EXE
-ULONGLONG GetEntryPoint(const char * filename)
-{
+ULONGLONG GetEntryPoint(const char * filename) {
   // Macro for adding pointers/DWORDs together without C arithmetic interfering
   #define MakePtr( cast, ptr, addValue ) (cast)( (DWORD)(ptr)+(DWORD)(addValue))
 

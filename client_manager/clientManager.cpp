@@ -2,6 +2,8 @@
 
 #include <ui_proto/client_manager_request.pb.h>
 
+#include <silkroad_lib/dll_config.hpp>
+#include <silkroad_lib/edx_labs.hpp>
 #include <silkroad_lib/file_util.hpp>
 #include <silkroad_lib/pk2/parsing/parsing.hpp>
 #include <silkroad_lib/pk2/pk2.hpp>
@@ -15,7 +17,7 @@
 #include <fstream>
 #include <filesystem>
 
-ClientManager::ClientManager(std::string_view hyperbotIpAddress, int32_t hyperbotPort, std::string_view clientDirectoryPath) : hyperbotIpAddress_(hyperbotIpAddress), hyperbotPort_(hyperbotPort), clientDirectoryPath_(clientDirectoryPath) {
+ClientManager::ClientManager(std::string_view hyperbotIpAddress, int32_t hyperbotPort, int32_t gatewayPort, int32_t agentPort, std::string_view clientDirectoryPath) : hyperbotIpAddress_(hyperbotIpAddress), hyperbotPort_(hyperbotPort), gatewayPort_(gatewayPort), agentPort_(agentPort), clientDirectoryPath_(clientDirectoryPath) {
 }
 
 void ClientManager::run() {
@@ -32,7 +34,7 @@ void ClientManager::run() {
 
   while (1) {
     zmq::message_t request;
-    VLOG(4) << "Waiting for request";
+    VLOG(5) << "Waiting for request";
     std::vector<zmq::pollitem_t> pollItems = { { socket_, 0, ZMQ_POLLIN, 0 } };
     // Wait up to a certain amount of time for a message.
     int eventCount = zmq::poll(pollItems, kMissedHeartbeatTimeout_);
@@ -200,29 +202,21 @@ int32_t ClientManager::launchClient(int32_t portToConnectTo) {
   }
   VLOG(1) << "Client " << clientPath_ << " (PID:" << processInformation.dwProcessId << ") launched with arguments \"" << arguments_ << '"';
   VLOG(1) << "The client should connect to port " << portToConnectTo;
-  {
-    // Write to a file (<Client PID>.txt) the port that the client should connect to
-    // TODO: Replace %APPDATA% with %TEMP% to prevent stray file buildup
-    const std::filesystem::path appDataDirectoryPath = sro::file_util::getAppDataPath();
-    if (appDataDirectoryPath.empty()) {
-      throw std::runtime_error("Unable to find %APPDATA%\n");
-    }
-    const std::filesystem::path portInfoFilename = appDataDirectoryPath / (std::to_string(processInformation.dwProcessId)+".txt");
-    VLOG(2) << "Writing file to " << portInfoFilename;
-    std::ofstream portInfoFile(portInfoFilename);
-    if (portInfoFile) {
-      portInfoFile << portToConnectTo << '\n';
-    } else {
-      throw std::runtime_error("Unable to open file \"" + portInfoFilename.string() + "\" to communicate port to DLL\n");
-    }
-  }
+
+  sro::edx_labs::DllConfig dllConfig;
+  dllConfig.gatewayPort = gatewayPort_;
+  dllConfig.agentPort = agentPort_;
+  dllConfig.hyperbotPort = portToConnectTo;
 
   // Inject the DLL so we can have some fun
-  result = (FALSE != sro::edx_labs::InjectDLL(processInformation.hProcess, dllPath_.string().c_str(), "OnInject", static_cast<DWORD>(sro::edx_labs::GetEntryPoint(clientPath_.string().c_str())), false));
-  if (result == false) {
+  const ULONGLONG entryPoint = sro::edx_labs::GetEntryPoint(clientPath_.string().c_str());
+  VLOG(2) << "Entry point of client is " << std::hex << entryPoint << std::dec;
+  result = sro::edx_labs::InjectDLL(processInformation.hProcess, dllPath_.string().c_str(), "OnInject", static_cast<DWORD>(entryPoint), false, &dllConfig);
+  if (!result) {
     TerminateThread(processInformation.hThread, 0);
-    throw std::runtime_error("Could not inject into the Silkroad client process");
+    throw std::runtime_error(absl::StrFormat("Could not inject into the Silkroad client process"));
   }
+  VLOG(1) << "Injected DLL into client process";
 
   // Finally resume the client.
   ResumeThread(processInformation.hThread);
@@ -234,9 +228,9 @@ int32_t ClientManager::launchClient(int32_t portToConnectTo) {
 }
 
 int32_t ClientManager::saveProcessInformation(PROCESS_INFORMATION processInformation) {
-  ClientId clientId = nextClientId_;
+  const ClientId clientId = nextClientId_;
   clientIdToProcessInformationMap_[clientId] = processInformation;
-  VLOG(3) << "Saving process ID " << processInformation.hProcess << " as client ID " << clientId;
+  VLOG(3) << "Saved process handle " << processInformation.hProcess << " for client ID " << clientId;
   ++nextClientId_;
   return clientId;
 }

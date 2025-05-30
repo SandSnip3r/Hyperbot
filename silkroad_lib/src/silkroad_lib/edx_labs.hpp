@@ -10,10 +10,17 @@
 
 namespace sro::edx_labs {
 
+struct DllConfig;
+
 #if defined(_WIN32)
 
 // Injects a DLL into a process at the specified address
-BOOL InjectDLL(HANDLE hProcess, const char * dllNameToLoad, const char * funcNameToLoad, DWORD injectAddress, bool bDebugAttach);
+BOOL InjectDLL(HANDLE hProcess,
+               const char *dllNameToLoad,
+               const char *funcNameToLoad,
+               DWORD injectAddress,
+               bool bDebugAttach,
+               DllConfig* config);
 
 // Returns the entry point of an EXE
 ULONGLONG GetEntryPoint(const char * filename);

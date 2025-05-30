@@ -15,19 +15,22 @@
 
 class ClientManager {
 public:
-  ClientManager(std::string_view hyperbotIpAddress, int32_t hyperbotPort, std::string_view clientDirectoryPath);
+  ClientManager(std::string_view hyperbotIpAddress, int32_t hyperbotPort, int32_t gatewayPort, int32_t agentPort, std::string_view clientDirectoryPath);
   void run();
 private:
   using ClientId = int32_t;
 
   // In the bot, the heartbeat should be sent every 100ms. This timeout allows for a 3x margin of error.
-  static constexpr std::chrono::milliseconds kMissedHeartbeatTimeout_{300};
+  static constexpr std::chrono::milliseconds kMissedHeartbeatTimeout_{1000};
+
+  const std::string hyperbotIpAddress_;
+  const int32_t hyperbotPort_;
+  const int32_t gatewayPort_;
+  const int32_t agentPort_;
+  const std::filesystem::path clientDirectoryPath_;
 
   zmq::context_t context_;
   zmq::socket_t socket_{context_, zmq::socket_type::rep};
-  const std::string hyperbotIpAddress_;
-  const int32_t hyperbotPort_;
-  const std::filesystem::path clientDirectoryPath_;
 
   std::filesystem::path dllPath_;
   std::filesystem::path clientPath_;
