@@ -105,14 +105,14 @@ public:
   sro::scalar_types::EntityGlobalId getClosestNpcGlobalId() const;
 
   // Interface for RL training.
-  std::future<void> asyncOpenClient();
+  std::future<void> getReadyToLoginFuture();
   std::future<void> asyncLogIn();
   bool loggedIn() const;
   void asyncStandbyForPvp();
 
 private:
   // Data for RL training interface.
-  std::promise<void> clientOpenPromise_;
+  std::promise<void> readyToLoginPromise_;
   std::promise<void> logInPromise_;
 };
 

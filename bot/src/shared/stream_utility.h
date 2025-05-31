@@ -51,14 +51,6 @@ public:
 	std::wstring Read_AsciiToUnicode( int32_t count );
 	std::wstring Read_Unicode( int32_t count );
 	std::string Read_UnicodeToAscii( int32_t count );
-	void Write_Ascii( const std::string & mbs_text );
-	void Write_AsciiToUnicode( const std::string & mbs_text );
-	void Write_UnicodeToAscii( const std::wstring & wcs_text );
-	void Write_Unicode( const std::wstring & wcs_text );
-	void Write_Ascii( const char * mbs_text, int32_t count );
-	void Write_AsciiToUnicode( const char * mbs_text, int32_t count );
-	void Write_UnicodeToAscii( const wchar_t * wcs_text, int32_t count );
-	void Write_Unicode( const wchar_t * wcs_text, int32_t count );
 	StreamUtility Extract( int32_t index, int32_t count );
 
 	template <typename type>
@@ -96,19 +88,19 @@ public:
   }
 
 	template <typename type>
-	void Write( const std::vector< type > & val )
-	{
+	void Write( const std::vector< type > & val ) {
 		Write< type >( val.empty() ? 0 : &val[0], static_cast< int32_t >( val.size() ) );
 	}
 
-  template <typename T>
+  void Write(std::string_view str);
+
+  template <typename T, typename = std::enable_if_t<!std::is_convertible_v<T, std::string_view>>>
   void Write(T val) {
-   Write<T>( &val, 1 );
+    Write<T>( &val, 1 );
   }
 
-  template <typename T>
+  template <typename T, typename = std::enable_if_t<std::is_integral_v<T> || std::is_floating_point_v<T> || std::is_enum_v<T>>>
   void Write(const T * const input, int32_t count) {
-    static_assert(std::is_integral_v<T> || std::is_floating_point_v<T> || std::is_enum_v<T>, "T must be an integral type, floating point type, or an enum");
     if (count) {
       std::copy( (uint8_t *)input, (count * sizeof(T)) + (uint8_t *)input, std::back_inserter( m_stream ) );
     }

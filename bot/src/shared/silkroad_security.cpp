@@ -572,8 +572,7 @@ public:
         PacketContainer response2;
         response2.opcode = 0x2001;
         response2.encrypted = true;
-        response2.data.Write< uint16_t >( static_cast< uint16_t >( m_identity_name.size() ) );
-        response2.data.Write_Ascii( m_identity_name );
+        response2.data.Write(m_identity_name);
         response2.data.Write< uint8_t >( m_identity_flag );
 
         {

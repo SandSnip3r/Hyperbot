@@ -1995,6 +1995,7 @@ void PacketProcessor::serverAgentChatUpdateReceived(const packet::parsing::Serve
 void PacketProcessor::serverAgentGameResetReceived(const packet::parsing::ServerAgentGameReset &packet) {
   worldState_.entityDespawned(selfEntity_->globalId, eventBroker_);
   selfEntity_.reset();
+  eventBroker_.publishEvent<event::GameReset>(sessionId_);
 }
 
 void PacketProcessor::serverAgentResurrectOptionReceived(const packet::parsing::ServerAgentResurrectOption &packet) const {

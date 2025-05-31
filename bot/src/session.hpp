@@ -42,6 +42,7 @@ public:
   SessionId sessionId() const { return sessionId_; }
 
   std::future<void> asyncOpenClient();
+  std::future<void> connectClientlessAsync();
 private:
   SessionId sessionId_{createUniqueSessionId()};
   bool initialized_{false};

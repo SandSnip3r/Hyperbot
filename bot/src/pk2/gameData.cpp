@@ -205,8 +205,7 @@ void parseDataFile(const std::string &data,
     start = posOfNewline+1;
   }
   if (start < data.size()-1) {
-    // File doesnt end in newline. One more line to read
-    LOG(INFO) << "One more\n";
+    // File doesn't end in newline. One more line to read
     const auto line = data.substr(start);
     if (isValidDataLine(line)) {
       saveParsedDataObject(parseDataLine(line));

@@ -283,7 +283,8 @@ float TrainingManager::getEpsilon() const {
 void TrainingManager::createSessions() {
   LOG(INFO) << "Creating sessions for " << characterPairings_.size() << " total character pairings";
 
-  static constexpr int kNumCharacterPairingsToStartAtATime = 7;
+  static constexpr bool kClientless = true;
+  static constexpr int kNumCharacterPairingsToStartAtATime = 10000000;
 
   size_t characterPairingIndex = 0;
   while (characterPairingIndex < characterPairings_.size()) {
@@ -311,8 +312,14 @@ void TrainingManager::createSessions() {
       // Open clients
       sessions.push_back(&session1);
       sessions.push_back(&session2);
-      clientOpenFutures.push_back(session1.asyncOpenClient());
-      clientOpenFutures.push_back(session2.asyncOpenClient());
+
+      if constexpr (kClientless) {
+        clientOpenFutures.push_back(session1.connectClientlessAsync());
+        clientOpenFutures.push_back(session2.connectClientlessAsync());
+      } else {
+        clientOpenFutures.push_back(session1.asyncOpenClient());
+        clientOpenFutures.push_back(session2.asyncOpenClient());
+      }
     }
 
     // Wait on all clients to open
@@ -576,19 +583,32 @@ void TrainingManager::precompileModels() {
 }
 
 void TrainingManager::defineCharacterPairingsAndPositions() {
+  constexpr int kAreaWidth = 20;
+  constexpr int kAreaHeight = 50;
   // Define PVP positions
   int currentIndex = 0;
   for (int sum=0;; ++sum) {
-    for (int col=0; col<=sum; ++col) {
-      int row = sum - col;
-      LOG(INFO) << "Adding position at region (" << row+1 << "," << col+1 << ")";
-      pvpPositions_.push_back({sro::Position(sro::position_math::worldRegionIdFromSectors(row+1, col+1), 960.0, 20.0, 960.0)});
+    bool foundOne = false;
+    for (int col=0; col<=sum && col<kAreaWidth; ++col) {
+      const int row = sum - col;
+      if (row >= kAreaHeight) {
+        LOG(INFO) << "Skipping " << col+1 << ',' << row+1 << " as it is outside the defined area";
+        continue;
+      }
+      LOG(INFO) << "Adding position at region (" << col+1 << "," << row+1 << ")";
+      pvpPositions_.push_back({sro::Position(sro::position_math::worldRegionIdFromSectors(col+1, row+1), 960.0, 20.0, 960.0)});
+      foundOne = true;
       ++currentIndex;
       if (currentIndex >= kPvpCount) {
         break;
       }
     }
     if (currentIndex >= kPvpCount) {
+      break;
+    }
+    if (!foundOne) {
+      // No more open positions.
+      LOG(ERROR) << "Added only " << currentIndex << " positions. No more fit. We need " << kPvpCount << ". Stopping position generation.";
       break;
     }
   }

@@ -14,7 +14,10 @@ Position interpolateBetweenPoints(const Position &srcPos, const Position &destPo
 Position getNewPositionGivenAngleAndDistance(const Position &srcPos, Angle angle, float distance);
 Position createNewPositionWith2dOffset(const Position &startingPos, const float xOffset, const float zOffset);
 RegionId worldRegionIdFromSectors(const Sector xSector, const Sector zSector);
+
+// Returns X and Z sectors from a world region ID.
 std::pair<Sector,Sector> sectorsFromWorldRegionId(const RegionId regionId);
+
 bool regionIsDungeon(const RegionId regionId);
 bool pointIsInRect2d(const Position &point, const Position &rectStart, const Position &rectEnd);
 // Returns the x and z offset of `point` based on the region of `other`

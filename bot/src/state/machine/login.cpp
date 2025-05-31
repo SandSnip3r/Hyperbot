@@ -3,6 +3,7 @@
 #include "bot.hpp"
 #include "event/event.hpp"
 #include "packet/building/clientAgentAuthRequest.hpp"
+#include "packet/building/clientAgentCharacterSelectionActionRequest.hpp"
 #include "packet/building/clientAgentCharacterSelectionJoinRequest.hpp"
 #include "packet/building/clientGatewayLoginIbuvAnswer.hpp"
 #include "packet/building/clientGatewayLoginRequest.hpp"
@@ -127,6 +128,12 @@ Status Login::onUpdate(const event::Event *event) {
       injectPacket(captchaAnswerPacket, PacketContainer::Direction::kBotToServer);
     } else if (const auto *serverAuthSuccessEvent = dynamic_cast<const event::ServerAuthSuccess*>(sessionSpecificEvent); serverAuthSuccessEvent != nullptr) {
       VLOG(1) << absl::StreamFormat("[%s] Successfully logged in.", characterName_);
+      if (bot_.proxy().isClientless()) {
+        // Normally, the client would send ClientAgentCharacterSelectionActionRequest. Since we are clientless, we will send it ourselves.
+        VLOG(1) << absl::StreamFormat("[%s] Sending ClientAgentCharacterSelectionActionRequest", characterName_);
+        const PacketContainer charSelectionActionPacket = packet::building::ClientAgentCharacterSelectionActionRequest::packet(packet::enums::CharacterSelectionAction::kList);
+        injectPacket(charSelectionActionPacket, PacketContainer::Direction::kBotToServer);
+      }
     } else if (const auto *characterSelectionJoinSuccessEvent = dynamic_cast<const event::CharacterSelectionJoinSuccess*>(sessionSpecificEvent); characterSelectionJoinSuccessEvent != nullptr) {
       VLOG(1) << absl::StreamFormat("[%s] Successfully selected character", characterName_);
     } else if (const auto *selfSpawnedEvent = dynamic_cast<const event::SelfSpawned*>(sessionSpecificEvent); selfSpawnedEvent != nullptr) {

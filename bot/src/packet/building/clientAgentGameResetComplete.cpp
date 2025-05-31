@@ -1,10 +1,10 @@
-#include "clientGatewayLoginIbuvAnswer.hpp"
+#include "clientAgentGameResetComplete.hpp"
 
 namespace packet::building {
 
-PacketContainer ClientGatewayLoginIbuvAnswer::packet(const std::string &answer) {
+PacketContainer ClientAgentGameResetComplete::packet() {
   StreamUtility stream;
-  stream.Write(answer);
+  // Empty
   return PacketContainer(static_cast<uint16_t>(kOpcode_), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
 }
 

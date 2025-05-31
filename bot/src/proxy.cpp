@@ -1,5 +1,8 @@
 #include "proxy.hpp"
+#include "packet/building/clientGatewayPatchRequest.hpp"
 #include "packet/building/frameworkAliveNotify.hpp"
+#include "packet/building/serverGatewayLoginResponse.hpp"
+#include "packet/parsing/serverGatewayLoginResponse.hpp"
 
 #include <common/TracySystem.hpp>
 #include <tracy/Tracy.hpp>
@@ -59,8 +62,12 @@ void Proxy::inject(const PacketContainer &packet, const PacketContainer::Directi
   //  This allows us to run injected packets through the same pipeline as normal packets, i.e. we can subscribe to our own injected packets.
   if (direction == PacketContainer::Direction::kClientToServer ||
       direction == PacketContainer::Direction::kBotToServer) {
-    if (clientConnection.security) {
-      clientConnection.InjectAsReceived(packet);
+    if (clientless_) {
+      injectedClientPacketsForClientless_.push_back(packet);
+    } else {
+      if (clientConnection.security) {
+        clientConnection.InjectAsReceived(packet);
+      }
     }
   } else if (direction == PacketContainer::Direction::kServerToClient ||
              direction == PacketContainer::Direction::kBotToClient) {
@@ -190,7 +197,7 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
   clientConnection.security->GenerateHandshake();
 
   boost::system::error_code ec;
-  if (connectToAgent) {
+  if (connectToAgent_) {
     // Connect to the agent server
     VLOG(1) << absl::StreamFormat("Received connection; connecting to the agent server at %s:%d", agentIP_, agentPort_);
     ec = serverConnection.Connect(agentIP_, agentPort_);
@@ -202,7 +209,7 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
 
   // Error check
   if (ec) {
-    LOG(INFO) << "Unable to connect to " << (connectToAgent ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent ? agentPort_ : gatewayPort_) << ": \"" << ec.message() << '"';
+    LOG(INFO) << "Unable to connect to " << (connectToAgent_ ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent_ ? agentPort_ : gatewayPort_) << ": \"" << ec.message() << '"';
 
     // Silkroad connection is no longer needed
     clientConnection.Close();
@@ -212,55 +219,110 @@ void Proxy::HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, cons
   }
 
   // Next connection goes to the gateway server
-  connectToAgent = false;
+  connectToAgent_ = false;
 
   // Post another accept
   PostAccept();
 }
 
+void Proxy::connectClientlessAsync() {
+  clientless_ = true;
+  ioService_.post(boost::bind(&Proxy::connectClientless, this));
+
+  // Construct a timer to send a keepalive based on when we last sent a packet to the server.
+  keepAlivePacketTimer_ = boost::make_shared<boost::asio::deadline_timer>(ioService_);
+  setKeepaliveTimer();
+}
+
+void Proxy::connectClientless() {
+  boost::system::error_code ec;
+  if (connectToAgent_) {
+    // Connect to the agent server
+    LOG(INFO) << absl::StreamFormat("Connecting clientlessly to the agent server at %s:%d", agentIP_, agentPort_);
+    ec = serverConnection.Connect(agentIP_, agentPort_);
+  } else {
+    // Connect to the gateway server
+    static std::atomic<int> count=0;
+    LOG(INFO) << absl::StreamFormat("#%d Connecting clientlessly to the gateway server at %s:%d", count++, gatewayAddress_, gatewayPort_);
+    ec = serverConnection.Connect(gatewayAddress_, gatewayPort_);
+  }
+
+  // Error check
+  if (ec) {
+    LOG(INFO) << "Unable to connect to " << (connectToAgent_ ? agentIP_ : gatewayAddress_) << ":" << (connectToAgent_ ? agentPort_ : gatewayPort_) << ": \"" << ec.message() << '"';
+  } else {
+    serverConnection.PostRead();
+  }
+
+  // Next connection goes to the gateway server
+  // connectToAgent_ = false;
+}
+
 void Proxy::ProcessPackets(const boost::system::error_code &error) {
   if (!error) {
-    if (clientConnection.security) {
-      // Receive all pending incoming packets sent from the client
-      while (clientConnection.security->HasPacketToRecv()) {
-        ZoneScopedN("Proxy::ProcessPackets ClientHasPacketToRecv");
-        // Client sent a packet
-        bool forward = true;
+    if (clientless_) {
+      while (!injectedClientPacketsForClientless_.empty()) {
+        const PacketContainer packet = injectedClientPacketsForClientless_.front();
+        injectedClientPacketsForClientless_.pop_front();
 
-        // Retrieve the packet out of the security api
-        const auto [packet, wasInjected] = clientConnection.security->GetPacketToRecv();
+        const bool wasInjected = true; // Clientless packets are always injected
         const PacketContainer::Direction direction = (wasInjected ? PacketContainer::Direction::kBotToServer : PacketContainer::Direction::kClientToServer);
 
-        // Check the blocked list
-        // Don't block injected packets
-        if (!wasInjected && blockedOpcodes_.find(packet.opcode) != blockedOpcodes_.end()) {
-          forward = false;
-        }
-
         // Log packet
-        packetLogger.logPacket(packet, !forward, direction);
-
-        if (packet.opcode == 0x2001) {
-          forward = false;
-        }
+        packetLogger.logPacket(packet, /*blocked=*/false, direction);
 
         // Run packet through bot, regardless if it's blocked
         packetBroker_.packetReceived(packet, direction);
 
         // Forward the packet to gateway/agent server.
-        if (forward && serverConnection.security) {
+        if (serverConnection.security) {
           serverConnection.InjectToSend(packet);
         }
       }
+    } else {
+      // Only run this if we are not clientless.
+      if (clientConnection.security) {
+        // Receive all pending incoming packets sent from the client
+        while (clientConnection.security->HasPacketToRecv()) {
+          ZoneScopedN("Proxy::ProcessPackets ClientHasPacketToRecv");
+          // Client sent a packet
+          bool forward = true;
 
-      // Send all pending outgoing packets to the client
-      while (clientConnection.security->HasPacketToSend()) {
-        if (!clientConnection.Send(clientConnection.security->GetPacketToSend())) {
-          LOG(ERROR) << "Client connection Send error. Closing connection.";
-          clientConnection.Close();
-          LOG(INFO) << "Going clientless";
-          setClientless(true);
-          break;
+          // Retrieve the packet out of the security api
+          const auto [packet, wasInjected] = clientConnection.security->GetPacketToRecv();
+          const PacketContainer::Direction direction = (wasInjected ? PacketContainer::Direction::kBotToServer : PacketContainer::Direction::kClientToServer);
+
+          // Check the blocked list
+          // Don't block injected packets
+          if (!wasInjected && blockedOpcodes_.find(packet.opcode) != blockedOpcodes_.end()) {
+            forward = false;
+          }
+
+          if (packet.opcode == 0x2001) {
+            forward = false;
+          }
+
+          // Log packet
+          packetLogger.logPacket(packet, !forward, direction);
+
+          // Run packet through bot, regardless if it's blocked
+          packetBroker_.packetReceived(packet, direction);
+
+          // Forward the packet to gateway/agent server.
+          if (forward && serverConnection.security) {
+            serverConnection.InjectToSend(packet);
+          }
+        }
+
+        // Send all pending outgoing packets to the client
+        while (clientConnection.security->HasPacketToSend()) {
+          if (!clientConnection.Send(clientConnection.security->GetPacketToSend())) {
+            LOG(ERROR) << "Client connection Send error. Closing connection.";
+            clientConnection.Close();
+            LOG(INFO) << "Going clientless";
+            setClientless(true);
+            break;
+          }
         }
       }
     }
@@ -285,41 +347,66 @@ void Proxy::ProcessPackets(const boost::system::error_code &error) {
         packetLogger.logPacket(packet, !forward, direction);
 
         if (static_cast<packet::Opcode>(packet.opcode) == packet::Opcode::kServerGatewayLoginResponse) {
-          StreamUtility r = packet.data;
-          if (r.Read<uint8_t>() == 1) {
+          packet::parsing::ServerGatewayLoginResponse serverGatewayLoginResponsePacket(packet);
+          if (serverGatewayLoginResponsePacket.result() == packet::enums::LoginResult::kSuccess) {
+            // Successful login.
+            // Save address of actual agent server to later use.
+            agentIP_ = serverGatewayLoginResponsePacket.agentServerIp();
+            agentPort_ = serverGatewayLoginResponsePacket.agentServerPort();
+
             // The next connection will go to the agent server
-            connectToAgent = true;
+            connectToAgent_ = true;
 
-            uint32_t loginID = r.Read<uint32_t>();        // Login ID
-            agentIP_ = r.Read_Ascii(r.Read<uint16_t>());  // Agent IP
-            VLOG(1) << "Gateway login response gave us Agentserver IP: \"" << agentIP_ << '"';
-            agentPort_ = r.Read<uint16_t>();              // Agent port
+            if (!clientless_) {
+              // Rewrite the login response packet with a different address and port then send it to the client.
+              PacketContainer rewrittenLoginResponsePacket = packet::building::ServerGatewayLoginResponse::success(
+                  serverGatewayLoginResponsePacket.agentServerToken(),
+                  "127.0.0.1",
+                  ourListeningPort_
+              );
 
-            StreamUtility w;
-            w.Write<uint8_t>(1);                    // Success flag
-            w.Write<uint32_t>(loginID);             // Login ID
-            w.Write<uint16_t>(9);                   // Length of 127.0.0.1
-            w.Write_Ascii("127.0.0.1");             // IP
-            w.Write<uint16_t>(ourListeningPort_);   // Port
+              // Inject the packet
+              clientConnection.InjectToSend(rewrittenLoginResponsePacket);
+              {
+                packetLogger.logPacket(rewrittenLoginResponsePacket, /*blocked=*/false, PacketContainer::Direction::kBotToClient);
+              }
 
-            // Inject the packet
-            clientConnection.InjectToSend(packet.opcode, w);
-
-            // Inject the packet immediately
-            while (clientConnection.security->HasPacketToSend()) {
-              clientConnection.Send(clientConnection.security->GetPacketToSend());
+              // Inject the packet immediately
+              while (clientConnection.security->HasPacketToSend()) {
+                clientConnection.Send(clientConnection.security->GetPacketToSend());
+              }
             }
 
             // Close active connections
-            VLOG(2) << "Closing gateway connection, connecting to agentserver";
-            clientConnection.Close();
+            VLOG(2) << "Closing gateway connection, connecting to agent server";
+            if (!clientless_) {
+              clientConnection.Close();
+            }
             serverConnection.Close();
 
             // Want to forward this to the bot so it can grab the token
             packetBroker_.packetReceived(packet, direction);
+
+            if (clientless_) {
+              ioService_.post(boost::bind(&Proxy::connectClientless, this));
+            }
+
             // Security pointer is now valid so skip to the end
             // Skipping to "Post" wont forward this packet to the client
             goto Post;
+          }
+        } else if (clientless_ && static_cast<packet::Opcode>(packet.opcode) == packet::Opcode::kFrameworkStateRequest) {
+          if (!connectToAgent_) {
+            VLOG(2) << "Received framework state request, sending patch request";
+            const PacketContainer patchRequestPacket = packet::building::ClientGatewayPatchRequest::packet(divisionInfo_.locale, "SR_Client", /*version=*/188);
+
+            packetLogger.logPacket(patchRequestPacket, /*blocked=*/false, PacketContainer::Direction::kBotToServer);
+            serverConnection.InjectToSend(patchRequestPacket);
+            // Inject the packet immediately
+            while (serverConnection.security->HasPacketToSend()) {
+              serverConnection.Send(serverConnection.security->GetPacketToSend());
+            }
+            VLOG(2) << "Sent gateway patch request response";
           }
         }
 
@@ -426,10 +513,6 @@ void Proxy::ProcessPackets(const boost::system::error_code &error) {
         }
         // If we ever need to run clientless, we need to know when the last packet was sent.
         lastPacketSentToServer_ = std::chrono::steady_clock::now();
-        if (injectedKeepalive_) {
-          // This is either the keepalive or some packet which we are sending earlier than the keepalive we injected.
-          setKeepaliveTimer();
-        }
       }
     }
 
@@ -443,7 +526,6 @@ Post:
 }
 
 void Proxy::setKeepaliveTimer() {
-  injectedKeepalive_ = false;
   // Set the timer to trigger when we need to send a keepalive packet.
   std::chrono::duration timeSinceLastPacketToServer = std::chrono::steady_clock::now() - lastPacketSentToServer_;
   const int millisecondsUntilNextKeepalive = std::floor(kMillisecondsBetweenKeepalives - timeSinceLastPacketToServer.count()/1'000'000.0);
@@ -458,11 +540,17 @@ void Proxy::checkClientlessKeepalive(const boost::system::error_code &error) {
   int millisecondsUntilNextKeepalive = std::floor(kMillisecondsBetweenKeepalives - timeSinceLastPacketToServer.count()/1'000'000.0);
   if (millisecondsUntilNextKeepalive <= 0) {
     // It has been long enough and we now need to send a keepalive.
-    inject(packet::building::FrameworkAliveNotify::packet(), PacketContainer::Direction::kBotToServer);
-    // TODO: Technically, it is not accurate to set this timer here, as we have not yet sent the packet. But it's close enough.
-    injectedKeepalive_ = true;
-  } else {
-    // We must have sent a packet since we set this timer.
-    setKeepaliveTimer();
+    const PacketContainer packet = packet::building::FrameworkAliveNotify::packet();
+
+    packetLogger.logPacket(packet, /*blocked=*/false, PacketContainer::Direction::kBotToServer);
+
+    // Inject the packet immediately
+    serverConnection.InjectToSend(packet);
+    while (serverConnection.security->HasPacketToSend()) {
+      serverConnection.Send(serverConnection.security->GetPacketToSend());
+    }
+
+    lastPacketSentToServer_ = std::chrono::steady_clock::now();
   }
+  setKeepaliveTimer();
 }

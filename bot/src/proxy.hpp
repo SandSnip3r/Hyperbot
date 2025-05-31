@@ -13,6 +13,7 @@
 #include <boost/asio.hpp>
 
 #include <chrono>
+#include <deque>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -30,7 +31,11 @@ public:
   void blockOpcode(packet::Opcode opcode);
   void unblockOpcode(packet::Opcode opcode);
   [[nodiscard]] bool blockingOpcode(packet::Opcode opcode) const;
+  bool isClientless() const { return clientless_; }
   void setClientless(bool clientless);
+
+  void connectClientlessAsync();
+  void connectClientless();
 
 	//Stops all networking objects
 	void stop();
@@ -44,7 +49,7 @@ private:
   std::string agentIP_;
   uint16_t agentPort_{0};
   std::set<uint16_t> blockedOpcodes_;
-  bool connectToAgent{false};
+  bool connectToAgent_{false};
   boost::asio::io_service ioService_;
   const int kPacketProcessDelayMs{10};
 	PacketLogger packetLogger{"C:\\Users\\Victor\\Documents\\Development\\packet-logs\\"};
@@ -53,7 +58,7 @@ private:
   std::atomic<bool> clientless_{false};
   std::chrono::steady_clock::time_point lastPacketSentToServer_{std::chrono::steady_clock::now()};
 	boost::shared_ptr<boost::asio::deadline_timer> keepAlivePacketTimer_;
-  bool injectedKeepalive_{false};
+  std::deque<PacketContainer> injectedClientPacketsForClientless_;
 
 	//Accepts TCP connections
 	boost::asio::ip::tcp::acceptor acceptor;

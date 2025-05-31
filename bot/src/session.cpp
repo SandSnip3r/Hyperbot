@@ -40,7 +40,13 @@ Bot& Session::getBot() {
 
 std::future<void> Session::asyncOpenClient() {
   clientId_ = clientManagerInterface_.startClient(proxy_.getOurListeningPort());
-  return bot_.asyncOpenClient();
+  return bot_.getReadyToLoginFuture();
+}
+
+std::future<void> Session::connectClientlessAsync() {
+  std::future<void> future = bot_.getReadyToLoginFuture();
+  proxy_.connectClientlessAsync();
+  return future;
 }
 
 void Session::handleClientDiedEvent(const event::Event *event) {

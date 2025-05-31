@@ -262,74 +262,9 @@ std::string StreamUtility::Read_UnicodeToAscii( int32_t count )
 	return mbsStr;
 }
 
-void StreamUtility::Write_Ascii( const std::string & mbs_text )
-{
-	Write_Ascii( mbs_text.c_str(), static_cast< int32_t >( mbs_text.size() ) );
-}
-
-void StreamUtility::Write_AsciiToUnicode( const std::string & mbs_text )
-{
-	Write_AsciiToUnicode( mbs_text.c_str(), static_cast< int32_t >( mbs_text.size() ) );
-}
-
-void StreamUtility::Write_UnicodeToAscii( const std::wstring & wcs_text )
-{
-	Write_UnicodeToAscii( wcs_text.c_str(), static_cast< int32_t >( wcs_text.size()  ) );
-}
-
-void StreamUtility::Write_Unicode( const std::wstring & wcs_text )
-{
-	Write_Unicode( wcs_text.c_str(), static_cast< int32_t >( wcs_text.size() ) );
-}
-
-void StreamUtility::Write_Ascii( const char * mbs_text, int32_t count )
-{
-	Write< char >( mbs_text, count );
-}
-
-void StreamUtility::Write_AsciiToUnicode( const char * mbs_text, int32_t count )
-{
-	if( count == 0 )
-	{
-		return;
-	}
-	int32_t converted = static_cast< int32_t >( mbstowcs( NULL, mbs_text, count ) );
-	if( converted == 0 || ( converted - 1 ) != count )
-	{
-		m_write_error = true;
-		return;
-	}
-	std::wstring wcsStr;
-	wcsStr.resize( converted );
-	mbstowcs( &wcsStr[0], mbs_text, count );
-	Write_Unicode( wcsStr.c_str(), converted - 1 );
-}
-
-void StreamUtility::Write_UnicodeToAscii( const wchar_t * wcs_text, int32_t count )
-{
-	if( count == 0 )
-	{
-		return;
-	}
-// Disable the nonnull warning temporarily. It is a common pattern to call wcstombs with NULL to first check the expected size of the conversion.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wnonnull"
-	int32_t converted = static_cast< int32_t >( wcstombs( NULL, wcs_text, count ) );
-#pragma GCC diagnostic pop
-  if( converted == 0 || ( converted - 1 ) != count )
-	{
-		m_write_error = true;
-		return;
-	}
-	std::string mbsStr;
-	mbsStr.resize( converted );
-	wcstombs( &mbsStr[0], wcs_text, count );
-	Write_Ascii( mbsStr.c_str(), converted - 1 );
-}
-
-void StreamUtility::Write_Unicode( const wchar_t * wcs_text, int32_t count )
-{
-	Write< wchar_t >( wcs_text, count );
+void StreamUtility::Write(std::string_view str) {
+  Write(static_cast<uint16_t>(str.size()));
+  Write<char>(str.data(), static_cast<int32_t>(str.size()));
 }
 
 StreamUtility StreamUtility::Extract( int32_t index, int32_t count )

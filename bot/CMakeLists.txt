@@ -105,6 +105,10 @@ add_executable(${PROJECT_NAME}
   src/packet/building/clientAgentCosCommandRequest.hpp
   src/packet/building/clientAgentFreePvpUpdateRequest.cpp
   src/packet/building/clientAgentFreePvpUpdateRequest.hpp
+  src/packet/building/clientAgentGameReady.cpp
+  src/packet/building/clientAgentGameReady.hpp
+  src/packet/building/clientAgentGameResetComplete.cpp
+  src/packet/building/clientAgentGameResetComplete.hpp
   src/packet/building/clientAgentInventoryItemUseRequest.cpp
   src/packet/building/clientAgentInventoryItemUseRequest.hpp
   src/packet/building/clientAgentInventoryOperationRequest.cpp
@@ -123,6 +127,8 @@ add_executable(${PROJECT_NAME}
   src/packet/building/clientGatewayLoginIbuvAnswer.hpp
   src/packet/building/clientGatewayLoginRequest.cpp
   src/packet/building/clientGatewayLoginRequest.hpp
+  src/packet/building/clientGatewayPatchRequest.cpp
+  src/packet/building/clientGatewayPatchRequest.hpp
   src/packet/building/clientGatewayShardListRequest.cpp
   src/packet/building/clientGatewayShardListRequest.hpp
   src/packet/building/commonBuilding.cpp
@@ -145,6 +151,8 @@ add_executable(${PROJECT_NAME}
   src/packet/building/serverAgentSkillBegin.hpp
   src/packet/building/serverAgentSkillEnd.cpp
   src/packet/building/serverAgentSkillEnd.hpp
+  src/packet/building/serverGatewayLoginResponse.cpp
+  src/packet/building/serverGatewayLoginResponse.hpp
   src/packet/enums/packetEnums.cpp
   src/packet/enums/packetEnums.hpp
   src/packet/opcode.cpp

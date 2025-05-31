@@ -103,6 +103,7 @@
   F(ReadyForPvp) \
   F(DispelSuccess) \
   F(ClientDied) \
+  F(GameReset) \
   F(RlUiStartTraining) \
   F(RlUiStopTraining) \
   F(RlUiRequestCheckpointList) \

@@ -201,6 +201,9 @@ ReadyForPvp::ReadyForPvp(EventId id, sro::scalar_types::EntityGlobalId globalId)
 ClientDied::ClientDied(EventId id, ClientManagerInterface::ClientId clientId) :
     Event(id, EventCode::kClientDied), clientId(clientId) {}
 
+GameReset::GameReset(EventId id, SessionId sessionId) :
+    Event(id, EventCode::kGameReset), sessionId(sessionId) {}
+
 RlUiSaveCheckpoint::RlUiSaveCheckpoint(EventId id, const std::string &checkpointName) :
     Event(id, EventCode::kRlUiSaveCheckpoint), checkpointName(checkpointName) {}
 

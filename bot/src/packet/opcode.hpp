@@ -31,7 +31,8 @@
   F(CLIENT_PATCH_REQUEST, 0x6100) \
   F(ClientAgentAuthRequest, 0x6103) \
   F(ClientAgentInventoryOperationRequest, 0x7034) \
-  F(CLIENT_INGAME_NOTIFY, 0x3012) \
+  F(ClientAgentGameResetComplete, 0x34B6) \
+  F(ClientAgentGameReady, 0x3012) \
   F(CLIENT_CLOSE, 0x7005) \
   F(CLIENT_COUNTDOWN_INTERRUPT, 0x7006) \
   F(ClientAgentCharacterSelectionActionRequest, 0x7007) \

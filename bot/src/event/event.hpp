@@ -505,6 +505,12 @@ struct ClientDied : public Event {
   virtual ~ClientDied() = default;
 };
 
+struct GameReset : public Event {
+  explicit GameReset(EventId id, SessionId sessionId);
+  SessionId sessionId;
+  virtual ~GameReset() = default;
+};
+
 struct RlUiSaveCheckpoint : public Event {
   explicit RlUiSaveCheckpoint(EventId id, const std::string &checkpointName);
   const std::string checkpointName;

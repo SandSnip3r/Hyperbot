@@ -6,6 +6,8 @@
 #include "packet/building/clientAgentActionSelectRequest.hpp"
 #include "packet/building/clientAgentActionTalkRequest.hpp"
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
+#include "packet/building/clientAgentGameReady.hpp"
+#include "packet/building/clientAgentGameResetComplete.hpp"
 #include "packet/building/clientAgentInventoryOperationRequest.hpp"
 #include "packet/building/clientAgentInventoryStorageOpenRequest.hpp"
 #include "proto_convert/convert.hpp"
@@ -130,13 +132,27 @@ void Bot::handleEvent(const event::Event *event) {
     // Do special handling for specific events before calling onUpdate.
     const auto eventCode = event->eventCode;
     switch (eventCode) {
-      // Login
+      // =================== Clientless support ===================
+      case event::EventCode::kGameReset: {
+        if (const event::GameReset *gameResetEvent = dynamic_cast<const event::GameReset*>(event); gameResetEvent != nullptr) {
+          if (gameResetEvent->sessionId == sessionId_) {
+            if (proxy().isClientless()) {
+              // The character has despawned and will spawn somewhere else. Since we're clientless, we need to respond with ClientAgentGameResetComplete.
+              VLOG(1) << "Our game reset and we're in clientless, sending ClientAgentGameResetComplete";
+              const PacketContainer packet = packet::building::ClientAgentGameResetComplete::packet();
+              packetBroker_.injectPacket(packet, PacketContainer::Direction::kBotToServer);
+            }
+          }
+        }
+      }
+
+      // ========================== Login =========================
       case event::EventCode::kGatewayPatchResponseReceived: {
         // Make sure this is for our session
         if (const auto *castedEvent = dynamic_cast<const event::GatewayPatchResponseReceived*>(event)) {
           if (castedEvent->sessionId == sessionId_) {
             // This is the last of the communication between the client and the server as the client opens.
-            clientOpenPromise_.set_value();
+            readyToLoginPromise_.set_value();
           }
         }
         break;
@@ -146,7 +162,7 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
 
-      // Bot actions from UI
+      // =================== Bot actions from UI ==================
       case event::EventCode::kRequestStartTraining: {
         handleRequestStartTraining();
         break;
@@ -156,20 +172,20 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
 
-      // Debug help
+      // ======================= Debug help =======================
       case event::EventCode::kInjectPacket: {
         const event::InjectPacket &castedEvent = dynamic_cast<const event::InjectPacket&>(*event);
         handleInjectPacket(castedEvent);
         break;
       }
 
-      // Character info events
+      // ================== Character info events =================
       case event::EventCode::kSelfSpawned: {
         handleSelfSpawned(event);
         break;
       }
 
-      // Misc
+      // ========================== Misc ==========================
       case event::EventCode::kEntityDespawned: {
         const auto &castedEvent = dynamic_cast<const event::EntityDespawned&>(*event);
         handleEntityDespawned(castedEvent);
@@ -186,7 +202,7 @@ void Bot::handleEvent(const event::Event *event) {
         break;
       }
 
-      // Skills
+      // ========================= Skills =========================
       case event::EventCode::kChatReceived: {
         const auto &castedEvent = dynamic_cast<const event::ChatReceived&>(*event);
         handleChatCommand(castedEvent);
@@ -388,6 +404,12 @@ void Bot::handleSelfSpawned(const event::Event *event) {
     return;
   }
   selfEntity_ = worldState_.getEntity<entity::Self>(selfSpawnedEvent->globalId);
+
+  if (proxy().isClientless()) {
+    const PacketContainer gameReadyPacket = packet::building::ClientAgentGameReady::packet();
+    packetBroker_.injectPacket(gameReadyPacket, PacketContainer::Direction::kBotToServer);
+    VLOG(1) << absl::StreamFormat("[%s] Sent ClientAgentGameReady packet", selfEntity_->name);
+  }
 }
 
 void Bot::handleEntityDespawned(const event::EntityDespawned &event) {
@@ -719,8 +741,8 @@ sro::scalar_types::EntityGlobalId Bot::getClosestNpcGlobalId() const {
 // =========================================================RL training========================================================
 // ============================================================================================================================
 
-std::future<void> Bot::asyncOpenClient() {
-  return clientOpenPromise_.get_future();
+std::future<void> Bot::getReadyToLoginFuture() {
+  return readyToLoginPromise_.get_future();
 }
 
 std::future<void> Bot::asyncLogIn() {
