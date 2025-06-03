@@ -80,6 +80,11 @@ private:
   void setKeepaliveTimer();
 	void checkClientlessKeepalive(const boost::system::error_code &error);
 
+  void receivePacketsFromClient();
+  void sendPacketsToClient();
+  void receivePacketsFromServer();
+  void sendPacketsToServer();
+
   void run();
 };
 
