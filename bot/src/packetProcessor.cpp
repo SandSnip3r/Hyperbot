@@ -543,9 +543,8 @@ void PacketProcessor::serverAgentCharacterDataReceived(const packet::parsing::Se
   if (ABSL_VLOG_IS_ON(1)) {
     // ================= Masteries =================
     VLOG(1) << "Masteries:";
-    for (const auto &m : packet.masteries()) {
-      const auto &mastery = gameData_.masteryData().getMasteryById(m.id);
-      VLOG(1) << "  Mastery " << mastery.masteryNameCode << "(" << m.id << ") is level " << (int)m.level;
+    for (const packet::structures::Mastery &m : packet.masteries()) {
+      VLOG(1) << "  Mastery " << gameData_.getMasteryName(m.id) << "(" << m.id << ") is level " << (int)m.level;
     }
     // ================== Skills ===================
     std::vector<std::pair<std::string, sro::pk2::ref::Skill::Param1Type>> skillTypes = {

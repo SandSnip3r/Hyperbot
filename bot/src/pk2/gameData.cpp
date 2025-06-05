@@ -3,6 +3,7 @@
 #include "math_helpers.h"
 
 #include <silkroad_lib/pk2/navmeshParser.hpp>
+#include <silkroad_lib/pk2/parsing/helper.hpp>
 #include <silkroad_lib/pk2/parsing/parsing.hpp>
 #include <silkroad_lib/pk2/parsing/regionInfoParser.hpp>
 #include <silkroad_lib/pk2/pk2.hpp>
@@ -11,6 +12,7 @@
 #include <common/TracySystem.hpp>
 
 #include <absl/log/log.h>
+#include <absl/log/vlog_is_on.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
 #include <absl/strings/str_split.h>
@@ -24,8 +26,21 @@
 
 namespace pk2 {
 
+namespace {
+
+bool isEmptyOrWhitespace(std::string_view line) {
+  return line.empty() || absl::StripAsciiWhitespace(line).empty();
+}
+
+bool isCommentLine(std::string_view line) {
+  line = absl::StripLeadingAsciiWhitespace(line);
+  return line.size() >= 2 && line[0] == '/' && line[1] == '/';
+}
+
+} // anonymous namespace
+
 void GameData::parseSilkroadFiles(const std::filesystem::path &clientPath) {
-  LOG(INFO) << "Parsing Silkroad files";
+  LOG(INFO) << "Parsing Silkroad files at path \"" << clientPath.string() << "\"";
   try {
     const auto kDataPath = clientPath / "Data.pk2";
     sro::pk2::Pk2ReaderModern pk2Reader{kDataPath};
@@ -54,19 +69,12 @@ void GameData::parseData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 void GameData::parseMedia(sro::pk2::Pk2ReaderModern &pk2Reader) {
   VLOG(1) << "Parsing Media.pk2";
   std::vector<std::thread> thrs;
-  VLOG(2) << "Parsing Gateway Port";
   parseGatewayPort(pk2Reader);
-  VLOG(2) << "Parsing Division Info";
   parseDivisionInfo(pk2Reader);
-  VLOG(2) << "Parsing Shop Data";
   parseShopData(pk2Reader);
-  VLOG(2) << "Parsing Magic Option Data";
   parseMagicOptionData(pk2Reader);
-  VLOG(2) << "Parsing Level Data";
   parseLevelData(pk2Reader);
-  VLOG(2) << "Parsing Ref Region";
   parseRefRegion(pk2Reader);
-  VLOG(2) << "Parsing Text Data";
   parseTextData(pk2Reader);
   VLOG(2) << "Parsing Character, Item, Skill, and Teleport Data in multiple threads";
   thrs.emplace_back(&GameData::parseCharacterData, this, std::ref(pk2Reader));
@@ -171,17 +179,21 @@ sro::pk2::ref::MasteryId GameData::getMasteryId(std::string masteryName) const {
 }
 
 void GameData::parseGatewayPort(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(2) << "Parsing Gateway Port";
   const std::string kGatePortEntryName = "GATEPORT.TXT";
   sro::pk2::PK2Entry gatePortEntry = pk2Reader.getEntry(kGatePortEntryName);
   auto gatePortData = pk2Reader.getEntryData(gatePortEntry);
   gatewayPort_ = sro::pk2::parsing::parseGatePort(gatePortData);
+  VLOG(2) << "Parsed gateway port: " << gatewayPort_;
 }
 
 void GameData::parseDivisionInfo(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(2) << "Parsing Division Info";
   const std::string kDivisionInfoEntryName = "DIVISIONINFO.TXT";
   sro::pk2::PK2Entry divisionInfoEntry = pk2Reader.getEntry(kDivisionInfoEntryName);
   auto divisionInfoData = pk2Reader.getEntryData(divisionInfoEntry);
   divisionInfo_ = sro::pk2::parsing::parseDivisionInfo(divisionInfoData);
+  VLOG(2) << "Parsed division info: " << divisionInfo_.toString();
 }
 
 namespace {
@@ -227,7 +239,7 @@ void parseDataFile2(const std::vector<std::string> &lines,
 
 std::string getFileDataAsString(sro::pk2::Pk2ReaderModern &pk2Reader, const std::string &path) {
   sro::pk2::PK2Entry entry = pk2Reader.getEntry(path);
-  auto entryData = pk2Reader.getEntryData(entry);
+  const std::vector<uint8_t> entryData = pk2Reader.getEntryData(entry);
   return sro::pk2::parsing::fileDataToString(entryData);
 }
 
@@ -235,34 +247,58 @@ std::string getFileDataAsString(sro::pk2::Pk2ReaderModern &pk2Reader, const std:
 
 void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   tracy::SetThreadName("GameData::ParseCharacterData");
-  const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
-  const std::string kMasterCharacterdataName = "characterdata.txt";
-  const std::string kMasterCharacterdataPath = kTextdataDirectory + kMasterCharacterdataName;
-  sro::pk2::PK2Entry masterCharacterdataEntry = pk2Reader.getEntry(kMasterCharacterdataPath);
-
-  auto masterCharacterdataData = pk2Reader.getEntryData(masterCharacterdataEntry);
-  // auto masterCharacterdataStr = sro::pk2::parsing::fileDataToString(masterCharacterdataData);
-  // auto characterdataFilenames = sro::pk2::parsing::split(masterCharacterdataStr, "\r\n");
-  auto characterdataFilenames = sro::pk2::parsing::fileDataToStringLines(masterCharacterdataData);
-
-  {
+  if (VLOG_IS_ON(1)) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(1) << "Parsing character data";
   }
-  for (auto characterdataFilename : characterdataFilenames) {
-    auto characterdataPath = kTextdataDirectory + characterdataFilename;
-    sro::pk2::PK2Entry characterdataEntry = pk2Reader.getEntry(characterdataPath);
-    auto characterdataData = pk2Reader.getEntryData(characterdataEntry);
-    // auto characterdataStr = sro::pk2::parsing::fileDataToString(characterdataData);
-    auto characterdataLines = sro::pk2::parsing::fileDataToStringLines(characterdataData);
-    try {
-      parseDataFile2<sro::pk2::ref::Character>(characterdataLines, sro::pk2::parsing::isValidCharacterdataLine, sro::pk2::parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
-      // parseDataFile<sro::pk2::ref::Character>(characterdataStr, sro::pk2::parsing::isValidCharacterdataLine, sro::pk2::parsing::parseCharacterdataLine, std::bind(&CharacterData::addCharacter, &characterData_, std::placeholders::_1));
-    } catch (std::exception &ex) {
-      LOG(ERROR) << "Exception while parsing character data: \"" << ex.what() << '"';
+  const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kMasterCharacterdataName = "characterdata.txt";
+  const std::string kMasterCharacterdataPath = kTextdataDirectory + kMasterCharacterdataName;
+  const std::string characterdataFilenamesString = getFileDataAsString(pk2Reader, kMasterCharacterdataPath);
+  const std::vector<std::string_view> characterdataFilenames = absl::StrSplit(characterdataFilenamesString, "\r\n", absl::SkipWhitespace());
+  if (VLOG_IS_ON(2)) {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    VLOG(2) << "Found " << characterdataFilenames.size() << " characterdata files to parse: " << absl::StrJoin(characterdataFilenames, ", ");
+  }
+
+  for (const std::string_view &characterdataFilename : characterdataFilenames) {
+    const std::string characterdataPath = kTextdataDirectory + std::string(characterdataFilename);
+    const std::string characterdataDataString = getFileDataAsString(pk2Reader, characterdataPath);
+    sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(characterdataDataString, "\r\n");
+    for (const std::string_view &line : lineIteratorContainer) {
+      std::vector<std::string_view> linePieces = absl::StrSplit(line, '\t');
+      if (isEmptyOrWhitespace(line)) {
+        if (VLOG_IS_ON(4)) {
+          std::unique_lock<std::mutex> lock(printMutex_);
+          VLOG(4) << "Line \"" << line << "\" is empty or whitespace, skipping";
+        }
+        continue;
+      }
+      if (isCommentLine(line)) {
+        if (VLOG_IS_ON(4)) {
+          std::unique_lock<std::mutex> lock(printMutex_);
+          VLOG(4) << "Comment line \"" << line << "\" found, skipping";
+        }
+        continue;
+      }
+      std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
+      if (pieces.size() < 104) {
+        if (VLOG_IS_ON(4)) {
+          std::unique_lock<std::mutex> lock(printMutex_);
+          VLOG(4) << "Line \"" << line << "\" has less than 104 pieces, skipping";
+        }
+        continue;
+      }
+      try {
+        characterData_.addCharacter(sro::pk2::parsing::parseCharacterdataLine(pieces));
+      } catch (const std::exception &ex) {
+        std::unique_lock<std::mutex> lock(printMutex_);
+        LOG(ERROR) << "Error parsing character data line \"" << line << "\": " << ex.what();
+        continue;
+      }
     }
   }
-  {
+  if (VLOG_IS_ON(1)) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(1) << "  Cached " << characterData_.size() << " character(s)";
   }
@@ -270,22 +306,58 @@ void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 
 void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   tracy::SetThreadName("GameData::ParseItemData");
-  const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
-  const std::string kMasterItemdataName = "itemdata.txt";
-  const std::string kMasterItemdataPath = kTextdataDirectory + kMasterItemdataName;
-  auto masterItemdataStr = getFileDataAsString(pk2Reader, kMasterItemdataPath);
-  auto itemdataFilenames = sro::pk2::parsing::split(masterItemdataStr, "\r\n");
-
-  {
+  if (VLOG_IS_ON(1)) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(1) << "Parsing item data";
   }
-  for (auto itemdataFilename : itemdataFilenames) {
-    auto itemdataPath = kTextdataDirectory + itemdataFilename;
-    auto itemdataStr = getFileDataAsString(pk2Reader, itemdataPath);
-    parseDataFile<sro::pk2::ref::Item>(itemdataStr, sro::pk2::parsing::isValidItemdataLine, sro::pk2::parsing::parseItemdataLine, std::bind(&ItemData::addItem, &itemData_, std::placeholders::_1));
+  const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
+  const std::string kMasterItemdataName = "itemdata.txt";
+  const std::string kMasterItemdataPath = kTextdataDirectory + kMasterItemdataName;
+  const std::string masterItemdataStr = getFileDataAsString(pk2Reader, kMasterItemdataPath);
+  const std::vector<std::string_view> itemdataFilenames = absl::StrSplit(masterItemdataStr, "\r\n", absl::SkipWhitespace());
+  if (VLOG_IS_ON(2)) {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    VLOG(2) << "Found " << itemdataFilenames.size() << " itemdata files to parse: " << absl::StrJoin(itemdataFilenames, ", ");
   }
-  {
+
+  for (const std::string_view &itemdataFilename : itemdataFilenames) {
+    const std::string itemdataPath = kTextdataDirectory + std::string(itemdataFilename);
+    const std::string itemdataStr = getFileDataAsString(pk2Reader, itemdataPath);
+    sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(itemdataStr, "\r\n");
+    for (const std::string_view &line : lineIteratorContainer) {
+      std::vector<std::string_view> linePieces = absl::StrSplit(line, '\t');
+      if (isEmptyOrWhitespace(line)) {
+        if (VLOG_IS_ON(4)) {
+          std::unique_lock<std::mutex> lock(printMutex_);
+          VLOG(4) << "Line \"" << line << "\" is empty or whitespace, skipping";
+        }
+        continue;
+      }
+      if (isCommentLine(line)) {
+        if (VLOG_IS_ON(4)) {
+          std::unique_lock<std::mutex> lock(printMutex_);
+          VLOG(4) << "Comment line \"" << line << "\" found, skipping";
+        }
+        continue;
+      }
+      std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
+      if (pieces.size() < 160) {
+        if (VLOG_IS_ON(4)) {
+          std::unique_lock<std::mutex> lock(printMutex_);
+          VLOG(4) << "Line \"" << line << "\" has less than 160 pieces, skipping";
+        }
+        continue;
+      }
+      try {
+        itemData_.addItem(sro::pk2::parsing::parseItemdataLine(pieces));
+      } catch (const std::exception &ex) {
+        std::unique_lock<std::mutex> lock(printMutex_);
+        LOG(ERROR) << "Error parsing item data line \"" << line << "\": " << ex.what();
+        continue;
+      }
+    }
+  }
+  if (VLOG_IS_ON(1)) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(1) << "  Cached " << itemData_.size() << " item(s)";
   }
@@ -293,27 +365,63 @@ void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 
 void GameData::parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   tracy::SetThreadName("GameData::ParseSkillData");
+  if (VLOG_IS_ON(1)) {
+    std::unique_lock<std::mutex> lock(printMutex_);
+    VLOG(1) << "Parsing skill data";
+  }
   const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   // Prefer the encrypted file, as the client uses this and not the unencrypted version (skilldata.txt)
   const std::string kMasterSkilldataName = "skilldataenc.txt";
   const std::string kMasterSkilldataPath = kTextdataDirectory + kMasterSkilldataName;
-  auto masterSkilldataStr = getFileDataAsString(pk2Reader, kMasterSkilldataPath);
-  auto skilldataFilenames = sro::pk2::parsing::split(masterSkilldataStr, "\r\n");
-
-  {
+  const std::string masterSkilldataStr = getFileDataAsString(pk2Reader, kMasterSkilldataPath);
+  const std::vector<std::string_view> skilldataFilenames = absl::StrSplit(masterSkilldataStr, "\r\n", absl::SkipWhitespace());
+  if (VLOG_IS_ON(2)) {
     std::unique_lock<std::mutex> lock(printMutex_);
-    VLOG(1) << "Parsing skill data";
+    VLOG(2) << "Found " << skilldataFilenames.size() << " skilldata files to parse: " << absl::StrJoin(skilldataFilenames, ", ");
   }
-  for (auto skilldataFilename : skilldataFilenames) {
-    auto skilldataPath = kTextdataDirectory + skilldataFilename;
+
+  for (const std::string_view &skilldataFilename : skilldataFilenames) {
+    const std::string skilldataPath = kTextdataDirectory + std::string(skilldataFilename);
     sro::pk2::PK2Entry skilldataEntry = pk2Reader.getEntry(skilldataPath);
-    auto skilldataData = pk2Reader.getEntryData(skilldataEntry);
+    std::vector<uint8_t> skilldataData = pk2Reader.getEntryData(skilldataEntry);
     // Decrypt this skill data
     sro::pk2::parsing::decryptSkillData(skilldataData);
-    auto skilldataStr = sro::pk2::parsing::fileDataToString(skilldataData);
-    parseDataFile<sro::pk2::ref::Skill>(skilldataStr, sro::pk2::parsing::isValidSkilldataLine, sro::pk2::parsing::parseSkilldataLine, std::bind(&SkillData::addSkill, &skillData_, std::placeholders::_1));
+    const std::string skilldataStr = sro::pk2::parsing::fileDataToString(skilldataData);
+    sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(skilldataStr, "\r\n");
+    for (const std::string_view &line : lineIteratorContainer) {
+      std::vector<std::string_view> linePieces = absl::StrSplit(line, '\t');
+      if (isEmptyOrWhitespace(line)) {
+        if (VLOG_IS_ON(4)) {
+          std::unique_lock<std::mutex> lock(printMutex_);
+          VLOG(4) << "Line \"" << line << "\" is empty or whitespace, skipping";
+        }
+        continue;
+      }
+      if (isCommentLine(line)) {
+        if (VLOG_IS_ON(4)) {
+          std::unique_lock<std::mutex> lock(printMutex_);
+          VLOG(4) << "Comment line \"" << line << "\" found, skipping";
+        }
+        continue;
+      }
+      std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
+      if (pieces.size() < 118) {
+        if (VLOG_IS_ON(4)) {
+          std::unique_lock<std::mutex> lock(printMutex_);
+          VLOG(4) << "Line \"" << line << "\" has less than 118 pieces, skipping";
+        }
+        continue;
+      }
+      try {
+        skillData_.addSkill(sro::pk2::parsing::parseSkilldataLine(pieces));
+      } catch (const std::exception &ex) {
+        std::unique_lock<std::mutex> lock(printMutex_);
+        LOG(ERROR) << "Error parsing skill data line \"" << line << "\": " << ex.what();
+        continue;
+      }
+    }
   }
-  {
+  if (VLOG_IS_ON(1)) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(1) << "  Cached " << skillData_.size() << " skill(s)";
   }
@@ -336,6 +444,7 @@ void GameData::parseTeleportData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(2) << "Parsing Shop Data";
   // Maps Package name to item data
   std::map<std::string, sro::pk2::ref::ScrapOfPackageItem> scrapOfPackageItemMap;
   // Maps a ShopTabGroup(I think an option within the NPC's dialog) to N tabs
@@ -359,8 +468,8 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(1) << "Parsing scrap of package item.";
   }
-  auto scrapOfPackageItemPath = kTextdataDirectory + kScrapOfPackageItemFilename;
-  auto scrapOfPackageItemStr = getFileDataAsString(pk2Reader, scrapOfPackageItemPath);
+  const std::string scrapOfPackageItemPath = kTextdataDirectory + kScrapOfPackageItemFilename;
+  const std::string scrapOfPackageItemStr = getFileDataAsString(pk2Reader, scrapOfPackageItemPath);
   parseDataFile<sro::pk2::ref::ScrapOfPackageItem>(scrapOfPackageItemStr, sro::pk2::parsing::isValidScrapOfPackageItemLine, sro::pk2::parsing::parseScrapOfPackageItemLine, [&scrapOfPackageItemMap](sro::pk2::ref::ScrapOfPackageItem &&package){
     scrapOfPackageItemMap.emplace(package.refPackageItemCodeName, std::move(package));
   });
@@ -526,96 +635,142 @@ void GameData::parseShopData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseMagicOptionData(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(2) << "Parsing Magic Option Data";
   const std::string kMagicOptionDataPath = "server_dep\\silkroad\\textdata\\magicoption.txt";
-  auto magicOptionStr = getFileDataAsString(pk2Reader, kMagicOptionDataPath);
+  const std::string magicOptionStr = getFileDataAsString(pk2Reader, kMagicOptionDataPath);
   parseDataFile<sro::pk2::ref::MagicOption>(magicOptionStr, sro::pk2::parsing::isValidMagicOptionDataLine, sro::pk2::parsing::parseMagicOptionDataLine, std::bind(&MagicOptionData::addItem, &magicOptionData_, std::placeholders::_1));
 }
 
 void GameData::parseLevelData(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(2) << "Parsing Level Data";
   const std::string kLevelDataPath = "server_dep\\silkroad\\textdata\\leveldata.txt";
   auto levelDataStr = getFileDataAsString(pk2Reader, kLevelDataPath);
   parseDataFile<sro::pk2::ref::Level>(levelDataStr, sro::pk2::parsing::isValidLevelDataLine, sro::pk2::parsing::parseLevelDataLine, std::bind(&LevelData::addLevelItem, &levelData_, std::placeholders::_1));
 }
 
 void GameData::parseRefRegion(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(2) << "Parsing Ref Region";
   const std::string kRefRegionPath = "server_dep\\silkroad\\textdata\\refregion.txt";
   auto refRegionStr = getFileDataAsString(pk2Reader, kRefRegionPath);
   parseDataFile<sro::pk2::ref::Region>(refRegionStr, sro::pk2::parsing::isValidRefRegionLine, sro::pk2::parsing::parseRefRegionLine, std::bind(&RefRegion::addRegion, &refRegion_, std::placeholders::_1));
 }
 
 void GameData::parseTextData(sro::pk2::Pk2ReaderModern &pk2Reader) {
-  VLOG(3) << "Parsing Text Zone Name";
+  VLOG(2) << "Parsing Text Data";
   parseTextZoneName(pk2Reader);
-  VLOG(3) << "Parsing Text";
   parseText(pk2Reader);
-  VLOG(3) << "Parsing Mastery Data";
   parseMasteryData(pk2Reader);
-  VLOG(3) << "Parsing Text Ui System";
   parseTextUiSystem(pk2Reader);
 }
 
 void GameData::parseTextZoneName(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(3) << " Parsing Text Zone Name";
   const std::string kTextZoneNamePath = "server_dep\\silkroad\\textdata\\textzonename.txt";
-  auto textZoneNameStr = getFileDataAsString(pk2Reader, kTextZoneNamePath);
-  parseDataFile<sro::pk2::ref::TextZoneName>(textZoneNameStr, sro::pk2::parsing::isValidTextDataLine, sro::pk2::parsing::parseTextZoneNameLine, std::bind(&TextZoneNameData::addItem, &textZoneNameData_, std::placeholders::_1));
+  const std::string textZoneNameStr = getFileDataAsString(pk2Reader, kTextZoneNamePath);
+  sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(textZoneNameStr, "\r\n");
+  for (std::string_view line : lineIteratorContainer) {
+    if (isEmptyOrWhitespace(line)) {
+      VLOG(4) << "Line \"" << line << "\" is empty or whitespace, skipping";
+      continue;
+    }
+    if (isCommentLine(line)) {
+      VLOG(4) << "Comment line \"" << line << "\" found, skipping";
+      continue;
+    }
+    std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
+    if (pieces.size() < 15) {
+      VLOG(4) << "Line \"" << line << "\" has less than 15 pieces, skipping";
+      continue;
+    }
+    try {
+      textZoneNameData_.addItem(sro::pk2::parsing::parseTextZoneNameLine(pieces));
+    } catch (const std::exception &ex) {
+      LOG(ERROR) << "Error parsing text zone name line \"" << line << "\": " << ex.what();
+      continue;
+    }
+  }
 }
 
 void GameData::parseText(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(3) << " Parsing Text";
   const std::string kTextdataDirectory = "server_dep\\silkroad\\textdata\\";
   const std::string kMasterTextDataName = "textdataname.txt";
   const std::string kMasterTextDataPath = kTextdataDirectory + kMasterTextDataName;
-  sro::pk2::PK2Entry masterTextDataEntry = pk2Reader.getEntry(kMasterTextDataPath);
-  auto masterTextDataData = pk2Reader.getEntryData(masterTextDataEntry);
-  auto textDataFilenames = sro::pk2::parsing::fileDataToStringLines(masterTextDataData);
-  for (auto textDataFilename : textDataFilenames) {
-    auto textDataPath = kTextdataDirectory + textDataFilename;
-    VLOG(1) << absl::StreamFormat("Parsing file \"%s\"", textDataPath);
-    sro::pk2::PK2Entry textEntry = pk2Reader.getEntry(textDataPath);
-    auto textData = pk2Reader.getEntryData(textEntry);
-    auto textLines = sro::pk2::parsing::fileDataToStringLines(textData);
-    parseDataFile2<sro::pk2::ref::Text>(textLines, sro::pk2::parsing::isValidTextDataLine, sro::pk2::parsing::parseTextLine, std::bind(&TextData::addItem, &textData_, std::placeholders::_1));
+  const std::string masterTextDataString = getFileDataAsString(pk2Reader, kMasterTextDataPath);
+  std::vector<std::string_view> filenames = absl::StrSplit(masterTextDataString, "\r\n", absl::SkipWhitespace());
+  for (std::string_view filename : filenames) {
+    const std::string textDataPath = absl::StrCat(kTextdataDirectory, filename);
+    VLOG(1) << absl::StreamFormat("  Parsing file \"%s\"", textDataPath);
+    const std::string textDataString = getFileDataAsString(pk2Reader, textDataPath);
+    sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(textDataString, "\r\n");
+    for (std::string_view line : lineIteratorContainer) {
+      if (isEmptyOrWhitespace(line)) {
+        continue;
+      }
+      if (isCommentLine(line)) {
+        VLOG(4) << "Comment line \"" << line << "\" found, skipping";
+        continue;
+      }
+      std::vector<std::string_view> pieces = absl::StrSplit(line, "\t");
+      if (pieces.size() < 15) {
+        VLOG(4) << "Line \"" << line << "\" has less than 15 pieces, skipping";
+        continue;
+      }
+      try {
+        textData_.addItem(sro::pk2::parsing::parseTextLine(pieces));
+      } catch (const std::exception &ex) {
+        LOG(ERROR) << "Error parsing text line \"" << line << "\": " << ex.what();
+        continue;
+      }
+    }
   }
 }
 
 void GameData::parseMasteryData(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(3) << " Parsing Mastery Data";
   const std::string kPath = "server_dep\\silkroad\\textdata\\skillmasterydata.txt";
-  sro::pk2::PK2Entry entry = pk2Reader.getEntry(kPath);
-  const auto data = pk2Reader.getEntryData(entry);
-  const auto lines = sro::pk2::parsing::fileDataToStringLines(data);
-  // TODO: Template on the add function instead
-  parseDataFile2<sro::pk2::ref::Mastery>(lines, sro::pk2::parsing::isValidMasteryLine, sro::pk2::parsing::parseMasteryLine, std::bind(&MasteryData::addMastery, &masteryData_, std::placeholders::_1));
+  const std::string textDataString = getFileDataAsString(pk2Reader, kPath);
+  sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(textDataString, "\r\n");
+  for (std::string_view line : lineIteratorContainer) {
+    if (isEmptyOrWhitespace(line)) {
+      continue;
+    }
+    if (isCommentLine(line)) {
+      VLOG(4) << "Comment line \"" << line << "\" found, skipping";
+      continue;
+    }
+    std::vector<std::string_view> pieces = absl::StrSplit(line, "\t");
+    if (pieces.size() < 13) {
+      VLOG(4) << "Line \"" << line << "\" has less than 13 pieces, skipping";
+      continue;
+    }
+    try {
+      masteryData_.addMastery(sro::pk2::parsing::parseMasteryLine(pieces));
+    } catch (const std::exception &ex) {
+      LOG(ERROR) << "Error parsing mastery line \"" << line << "\": " << ex.what();
+      continue;
+    }
+  }
 }
 
 void GameData::parseTextUiSystem(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(3) << " Parsing Text Ui System";
   const std::string kPath = "server_dep\\silkroad\\textdata\\textuisystem.txt";
-  sro::pk2::PK2Entry entry = pk2Reader.getEntry(kPath);
-  const auto data = pk2Reader.getEntryData(entry);
-  const auto lines = sro::pk2::parsing::fileDataToStringLines(data);
-  bool isMasteryNameSection{false};
-  for (const std::string &line : lines) {
-    if (line.size() >= 2 && line[0] == '/' && line[1] == '/') {
-      // This line starts a new section.
-      const std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
-      if (pieces.size() > 0 && pieces[0] == "// Mastery Name") {
-        isMasteryNameSection = true;
-      } else {
-        if (isMasteryNameSection) {
-          // Done with Mastery Name section.
-          // For now, there's nothing else we want in this file.
-          return;
-        }
-      }
-    } else {
-      // Is not a section header.
-      if (isMasteryNameSection) {
-        // This is the section we care about.
-        if (sro::pk2::parsing::isValidTextDataLine(line)) {
-          textData_.addItem(sro::pk2::parsing::parseTextLine(line));
-        } else {
-          throw std::runtime_error(absl::StrFormat("When parsing textuisystem.txt for mastery names, encountered \"%s\" which is not a valid text data line", line));
-        }
-      }
+  const std::string textDataString = getFileDataAsString(pk2Reader, kPath);
+  sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(textDataString, "\r\n");
+  for (std::string_view line : lineIteratorContainer) {
+    if (isEmptyOrWhitespace(line)) {
+      continue;
     }
+    if (isCommentLine(line)) {
+      continue;
+    }
+    const std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
+    if (pieces.size() < 15) {
+      LOG(WARNING) << absl::StreamFormat("When parsing textuisystem.txt for mastery names, encountered \"%s\" which has less than 15 pieces", line);
+      continue;
+    }
+    textData_.addItem(sro::pk2::parsing::parseTextLine(pieces));
   }
 }
 
@@ -632,6 +787,9 @@ void GameData::parseRegionInfo(sro::pk2::Pk2ReaderModern &pk2Reader) {
   sro::pk2::PK2Entry regionInfoEntry = pk2Reader.getEntry(kRegionInfoEntryName);
   auto regionInfoData = pk2Reader.getEntryData(regionInfoEntry);
   regionInfo_ = sro::pk2::parsing::parseRegionInfo(regionInfoData);
+  VLOG(2) << absl::StreamFormat("  Cached %d continent(s) with region counts [%s]", regionInfo_.continents.size(), absl::StrJoin(regionInfo_.continents, ", ", [](std::string *out, const sro::pk2::RegionInfo::Continent &continent) {
+    absl::StrAppend(out, std::to_string(continent.regionRects.size()));
+  }));
 }
 
 } // namespace pk2

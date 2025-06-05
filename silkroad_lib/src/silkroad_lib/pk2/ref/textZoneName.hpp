@@ -9,21 +9,20 @@ namespace sro::pk2::ref {
 
 struct TextZoneName {
   int32_t service;
-  std::string key;
+  std::string codeName128;
   std::string korean;
   std::string unkLang0;
-  std::string unkLang1;
-  std::string unkLang2;
-  std::string unkLang3;
-  std::string unkLang4;
+  std::string chineseTraditional;
+  std::string chineseSimplified;
+  std::string german;
+  std::string japanese;
   std::string english;
   std::string vietnamese;
-  std::string unkLang5;
-  std::string unkLang6;
-  std::string unkLang7;
-  std::string unkLang8;
-  std::string unkLang9;
-  std::string unkLang10;
+  std::string portuguese;
+  std::string russian;
+  std::string turkish;
+  std::string spanish;
+  std::string arabic;
 };
 
 std::ostream& operator<<(std::ostream &stream, const TextZoneName &zoneName);

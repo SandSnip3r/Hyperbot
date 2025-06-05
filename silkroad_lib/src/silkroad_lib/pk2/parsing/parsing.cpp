@@ -2,6 +2,8 @@
 
 #include <silkroad_lib/pk2/parsing/parsing.hpp>
 
+#include <absl/log/log.h>
+
 #include <array>
 #include <codecvt>
 #include <cstring>
@@ -77,110 +79,28 @@ std::string utf16leToUtf8(const uint16_t* data, size_t count) {
 } // anonymous namespace
 
 std::string fileDataToString(const std::vector<uint8_t> &data) {
-  // TODO: This is UTF16-LE, Improve this function using a proper conversion
-  //  This function takes roughly twice as long as the parsing function
-  //  PK2Reader::getEntryData took 1ms
-  //  This function took 526ms
-  //  Parsing took 299ms
-  // const auto size = data.size()-2;
-  // std::u16string u16((size/2)+1, '\0');
-  // std::memcpy(u16.data(), data.data()+2, size);
-  // return std::wstring_convert<
-  //     std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(u16);
-  // // https://stackoverflow.com/a/56723923/1148866
+  // codecvt is removed in C++20.
+  // If using C++20, maybe use https://github.com/nemtrif/utfcpp instead.
+  if (data.size() % 2 != 0) {
+    throw std::runtime_error("File size is not a multiple of 2 bytes.");
+  }
 
-  if (data.size()%2 != 0) {
-    throw std::runtime_error("Data is not evenly sized");
+  size_t start = 0;
+  // Check for BOM 0xFF 0xFE
+  if (data.size() >= 2 && static_cast<uint8_t>(data[0]) == 0xFF && static_cast<uint8_t>(data[1]) == 0xFE) {
+    start = 2;
   }
-  std::string result;
-  result.reserve((data.size()-2)/2);
-  // Skipping first 2 bytes for BOM
-  for (int i=2; i<data.size(); i+=2) {
-    result += (char)data[i];
+
+  std::u16string result;
+  for (size_t i = start; i < data.size(); i += 2) {
+    char16_t ch = static_cast<unsigned char>(data[i]) |
+                  (static_cast<unsigned char>(data[i + 1]) << 8);
+    result.push_back(ch);
   }
-  return result;
+
+  std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> conv;
+  return conv.to_bytes(result);
 }
-
-// std::vector<std::string> fileDataToStringLines(const std::vector<uint8_t> &data) {
-//   std::vector<std::string> lines;
-
-//   // Convert data to std::wstring
-//   std::wstring wstr;
-//   wstr.resize(data.size()/2);
-//   std::memcpy(wstr.data(), data.data(), data.size());
-
-//   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter;
-
-//   std::wistringstream is16(wstr);
-//   is16.imbue(std::locale(is16.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>()));
-//   is16.seekg(1, std::ios::beg);
-//   std::wstring wline;
-//   std::string u8line;
-//   while (getline(is16, wline)) {
-//     if (wline.empty()) {
-//       continue;
-//     }
-//     u8line = converter.to_bytes(wline);
-//     if (u8line.back() == '\r') {
-//       u8line.pop_back();
-//     }
-//     lines.emplace_back(std::move(u8line));
-//   }
-//   return lines;
-// }
-
-// Converts the raw UTF-16LE data to UTF-8 lines.
-std::vector<std::string> fileDataToStringLines(const std::vector<uint8_t> &data) {
-  // 1. If the file contains a BOM (0xFF 0xFE), skip it
-  size_t offset = 0;
-  if (data.size() >= 2 && data[0] == 0xFF && data[1] == 0xFE) {
-    offset = 2;
-  }
-
-  // 2. Convert the raw bytes into 16-bit code units (little-endian)
-  if ((data.size() - offset) % 2 != 0) {
-    throw std::runtime_error("Invalid file: size is not multiple of 2 bytes.");
-  }
-  const size_t u16Count = (data.size() - offset) / 2;
-  std::vector<uint16_t> u16Buffer(u16Count);
-  for (size_t i = 0; i < u16Count; ++i) {
-    // data is little-endian: low byte, then high byte
-    uint16_t low  = data[offset + 2*i + 0];
-    uint16_t high = data[offset + 2*i + 1];
-    u16Buffer[i]  = static_cast<uint16_t>((high << 8) | low);
-  }
-
-  // 3. Convert the entire UTF-16 buffer to a single UTF-8 string
-  std::string utf8 = utf16leToUtf8(u16Buffer.data(), u16Buffer.size());
-
-  // 4. Split UTF-8 string by newline into individual lines
-  std::vector<std::string> lines;
-  std::istringstream iss(utf8);
-  std::string line;
-  while (std::getline(iss, line)) {
-    // Trim trailing '\r' if needed
-    if (!line.empty() && line.back() == '\r') {
-      line.pop_back();
-    }
-    if (!line.empty()) {
-      lines.push_back(line);
-    }
-  }
-  return lines;
-}
-
-// std::vector<std::string> fileDataToStringLines2(const std::vector<uint8_t> &data) {
-//   // Convert data to std::wstring
-//   std::wstring wstr;
-//   wstr.resize(data.size()/2-1);
-//   std::memcpy(wstr.data(), data.data()+2, data.size()-2);
-
-//   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter;
-//   std::string result;
-//   result = converter.to_bytes(wstr);
-//   auto lines = split(result, "\r\n");
-//   return lines;
-// }
 
 namespace {
 class Decryptor {
@@ -351,7 +271,7 @@ bool isValidMappingShopWithTabLine(const std::string &line) {
 }
 
 bool isValidTextDataLine(const std::string &line) {
-  constexpr int kDataCount = 16;
+  constexpr int kDataCount = 15;
   return isValidLine(kDataCount, line);
 }
 
@@ -360,279 +280,277 @@ bool isValidMasteryLine(const std::string &line) {
   return isValidLine(kDataCount, line);
 }
 
-ref::Character parseCharacterdataLine(const std::string &line) {
+ref::Character parseCharacterdataLine(const std::vector<std::string_view> &linePieces) {
   ref::Character character;
-  const char *ptr = line.data();
-  ptr = parse(ptr, character.service);
-  ptr = parse(ptr, character.id);
-  ptr = parse(ptr, character.codeName128);
-  ptr = parse(ptr, character.objName128);
-  ptr = parse(ptr, character.orgObjCodeName128);
-  ptr = parse(ptr, character.nameStrID128);
-  ptr = parse(ptr, character.descStrID128);
-  ptr = parse(ptr, character.cashItem);
-  ptr = parse(ptr, character.bionic);
-  ptr = parse(ptr, character.typeId1);
-  ptr = parse(ptr, character.typeId2);
-  ptr = parse(ptr, character.typeId3);
-  ptr = parse(ptr, character.typeId4);
-  ptr = parse(ptr, character.decayTime);
-  ptr = parse(ptr, character.country);
-  ptr = parse(ptr, character.rarity);
-  ptr = parse(ptr, character.canTrade);
-  ptr = parse(ptr, character.canSell);
-  ptr = parse(ptr, character.canBuy);
-  ptr = parse(ptr, character.canBorrow);
-  ptr = parse(ptr, character.canDrop);
-  ptr = parse(ptr, character.canPick);
-  ptr = parse(ptr, character.canRepair);
-  ptr = parse(ptr, character.canRevive);
-  ptr = parse(ptr, character.canUse);
-  ptr = parse(ptr, character.canThrow);
-  ptr = parse(ptr, character.price);
-  ptr = parse(ptr, character.costRepair);
-  ptr = parse(ptr, character.costRevive);
-  ptr = parse(ptr, character.costBorrow);
-  ptr = parse(ptr, character.keepingFee);
-  ptr = parse(ptr, character.sellPrice);
-  ptr = parse(ptr, character.reqLevelType1);
-  ptr = parse(ptr, character.reqLevel1);
-  ptr = parse(ptr, character.reqLevelType2);
-  ptr = parse(ptr, character.reqLevel2);
-  ptr = parse(ptr, character.reqLevelType3);
-  ptr = parse(ptr, character.reqLevel3);
-  ptr = parse(ptr, character.reqLevelType4);
-  ptr = parse(ptr, character.reqLevel4);
-  ptr = parse(ptr, character.maxContain);
-  ptr = parse(ptr, character.regionID);
-  ptr = parse(ptr, character.dir);
-  ptr = parse(ptr, character.offsetX);
-  ptr = parse(ptr, character.offsetY);
-  ptr = parse(ptr, character.offsetZ);
-  ptr = parse(ptr, character.speed1);
-  ptr = parse(ptr, character.speed2);
-  ptr = parse(ptr, character.scale);
-  ptr = parse(ptr, character.bCHeight);
-  ptr = parse(ptr, character.bCRadius);
-  ptr = parse(ptr, character.eventID);
-  ptr = parse(ptr, character.assocFileObj128);
-  ptr = parse(ptr, character.assocFileDrop128);
-  ptr = parse(ptr, character.assocFileIcon128);
-  ptr = parse(ptr, character.assocFile1_128);
-  ptr = parse(ptr, character.assocFile2_128);
-  ptr = parse(ptr, character.lvl);
-  ptr = parse(ptr, character.charGender);
-  ptr = parse(ptr, character.maxHp);
-  ptr = parse(ptr, character.maxMp);
-  ptr = parse(ptr, character.inventorySize);
-  ptr = parse(ptr, character.canStore_TID1);
-  ptr = parse(ptr, character.canStore_TID2);
-  ptr = parse(ptr, character.canStore_TID3);
-  ptr = parse(ptr, character.canStore_TID4);
-  ptr = parse(ptr, character.canBeVehicle);
-  ptr = parse(ptr, character.canControl);
-  ptr = parse(ptr, character.damagePortion);
-  ptr = parse(ptr, character.maxPassenger);
-  ptr = parse(ptr, character.assocTactics);
-  ptr = parse(ptr, character.pd);
-  ptr = parse(ptr, character.md);
-  ptr = parse(ptr, character.par);
-  ptr = parse(ptr, character.mar);
-  ptr = parse(ptr, character.er);
-  ptr = parse(ptr, character.br);
-  ptr = parse(ptr, character.hr);
-  ptr = parse(ptr, character.chr);
-  ptr = parse(ptr, character.expToGive);
-  ptr = parse(ptr, character.creepType);
-  ptr = parse(ptr, character.knockdown);
-  ptr = parse(ptr, character.kO_RecoverTime);
-  ptr = parse(ptr, character.defaultSkill_1);
-  ptr = parse(ptr, character.defaultSkill_2);
-  ptr = parse(ptr, character.defaultSkill_3);
-  ptr = parse(ptr, character.defaultSkill_4);
-  ptr = parse(ptr, character.defaultSkill_5);
-  ptr = parse(ptr, character.defaultSkill_6);
-  ptr = parse(ptr, character.defaultSkill_7);
-  ptr = parse(ptr, character.defaultSkill_8);
-  ptr = parse(ptr, character.defaultSkill_9);
-  ptr = parse(ptr, character.defaultSkill_10);
-  ptr = parse(ptr, character.textureType);
-  ptr = parse(ptr, character.except_1);
-  ptr = parse(ptr, character.except_2);
-  ptr = parse(ptr, character.except_3);
-  ptr = parse(ptr, character.except_4);
-  ptr = parse(ptr, character.except_5);
-  ptr = parse(ptr, character.except_6);
-  ptr = parse(ptr, character.except_7);
-  ptr = parse(ptr, character.except_8);
-  ptr = parse(ptr, character.except_9);
-  ptr = parse(ptr, character.except_10);
+  parse(linePieces[0], character.service);
+  parse(linePieces[1], character.id);
+  parse(linePieces[2], character.codeName128);
+  parse(linePieces[3], character.objName128);
+  parse(linePieces[4], character.orgObjCodeName128);
+  parse(linePieces[5], character.nameStrID128);
+  parse(linePieces[6], character.descStrID128);
+  parse(linePieces[7], character.cashItem);
+  parse(linePieces[8], character.bionic);
+  parse(linePieces[9], character.typeId1);
+  parse(linePieces[10], character.typeId2);
+  parse(linePieces[11], character.typeId3);
+  parse(linePieces[12], character.typeId4);
+  parse(linePieces[13], character.decayTime);
+  parse(linePieces[14], character.country);
+  parse(linePieces[15], character.rarity);
+  parse(linePieces[16], character.canTrade);
+  parse(linePieces[17], character.canSell);
+  parse(linePieces[18], character.canBuy);
+  parse(linePieces[19], character.canBorrow);
+  parse(linePieces[20], character.canDrop);
+  parse(linePieces[21], character.canPick);
+  parse(linePieces[22], character.canRepair);
+  parse(linePieces[23], character.canRevive);
+  parse(linePieces[24], character.canUse);
+  parse(linePieces[25], character.canThrow);
+  parse(linePieces[26], character.price);
+  parse(linePieces[27], character.costRepair);
+  parse(linePieces[28], character.costRevive);
+  parse(linePieces[29], character.costBorrow);
+  parse(linePieces[30], character.keepingFee);
+  parse(linePieces[31], character.sellPrice);
+  parse(linePieces[32], character.reqLevelType1);
+  parse(linePieces[33], character.reqLevel1);
+  parse(linePieces[34], character.reqLevelType2);
+  parse(linePieces[35], character.reqLevel2);
+  parse(linePieces[36], character.reqLevelType3);
+  parse(linePieces[37], character.reqLevel3);
+  parse(linePieces[38], character.reqLevelType4);
+  parse(linePieces[39], character.reqLevel4);
+  parse(linePieces[40], character.maxContain);
+  parse(linePieces[41], character.regionID);
+  parse(linePieces[42], character.dir);
+  parse(linePieces[43], character.offsetX);
+  parse(linePieces[44], character.offsetY);
+  parse(linePieces[45], character.offsetZ);
+  parse(linePieces[46], character.speed1);
+  parse(linePieces[47], character.speed2);
+  parse(linePieces[48], character.scale);
+  parse(linePieces[49], character.bCHeight);
+  parse(linePieces[50], character.bCRadius);
+  parse(linePieces[51], character.eventID);
+  parse(linePieces[52], character.assocFileObj128);
+  parse(linePieces[53], character.assocFileDrop128);
+  parse(linePieces[54], character.assocFileIcon128);
+  parse(linePieces[55], character.assocFile1_128);
+  parse(linePieces[56], character.assocFile2_128);
+  parse(linePieces[57], character.lvl);
+  parse(linePieces[58], character.charGender);
+  parse(linePieces[59], character.maxHp);
+  parse(linePieces[60], character.maxMp);
+  parse(linePieces[61], character.inventorySize);
+  parse(linePieces[62], character.canStore_TID1);
+  parse(linePieces[63], character.canStore_TID2);
+  parse(linePieces[64], character.canStore_TID3);
+  parse(linePieces[65], character.canStore_TID4);
+  parse(linePieces[66], character.canBeVehicle);
+  parse(linePieces[67], character.canControl);
+  parse(linePieces[68], character.damagePortion);
+  parse(linePieces[69], character.maxPassenger);
+  parse(linePieces[70], character.assocTactics);
+  parse(linePieces[71], character.pd);
+  parse(linePieces[72], character.md);
+  parse(linePieces[73], character.par);
+  parse(linePieces[74], character.mar);
+  parse(linePieces[75], character.er);
+  parse(linePieces[76], character.br);
+  parse(linePieces[77], character.hr);
+  parse(linePieces[78], character.chr);
+  parse(linePieces[79], character.expToGive);
+  parse(linePieces[80], character.creepType);
+  parse(linePieces[81], character.knockdown);
+  parse(linePieces[82], character.kO_RecoverTime);
+  parse(linePieces[83], character.defaultSkill_1);
+  parse(linePieces[84], character.defaultSkill_2);
+  parse(linePieces[85], character.defaultSkill_3);
+  parse(linePieces[86], character.defaultSkill_4);
+  parse(linePieces[87], character.defaultSkill_5);
+  parse(linePieces[88], character.defaultSkill_6);
+  parse(linePieces[89], character.defaultSkill_7);
+  parse(linePieces[90], character.defaultSkill_8);
+  parse(linePieces[91], character.defaultSkill_9);
+  parse(linePieces[92], character.defaultSkill_10);
+  parse(linePieces[93], character.textureType);
+  parse(linePieces[94], character.except_1);
+  parse(linePieces[95], character.except_2);
+  parse(linePieces[96], character.except_3);
+  parse(linePieces[97], character.except_4);
+  parse(linePieces[98], character.except_5);
+  parse(linePieces[99], character.except_6);
+  parse(linePieces[100], character.except_7);
+  parse(linePieces[101], character.except_8);
+  parse(linePieces[102], character.except_9);
+  parse(linePieces[103], character.except_10);
   return character;
 }
 
-ref::Item parseItemdataLine(const std::string &line) {
+ref::Item parseItemdataLine(const std::vector<std::string_view> &linePieces) {
   ref::Item item;
-  const char *ptr = line.data();
-  ptr = parse(ptr, item.service);
-  ptr = parse(ptr, item.id);
-  ptr = parse(ptr, item.codeName128);
-  ptr = parse(ptr, item.objName128);
-  ptr = parse(ptr, item.orgObjCodeName128);
-  ptr = parse(ptr, item.nameStrID128);
-  ptr = parse(ptr, item.descStrID128);
-  ptr = parse(ptr, item.cashItem);
-  ptr = parse(ptr, item.bionic);
-  ptr = parse(ptr, item.typeId1);
-  ptr = parse(ptr, item.typeId2);
-  ptr = parse(ptr, item.typeId3);
-  ptr = parse(ptr, item.typeId4);
-  ptr = parse(ptr, item.decayTime);
-  ptr = parse(ptr, item.country);
-  ptr = parse(ptr, item.rarity);
-  ptr = parse(ptr, item.canTrade);
-  ptr = parse(ptr, item.canSell);
-  ptr = parse(ptr, item.canBuy);
-  ptr = parse(ptr, item.canBorrow);
-  ptr = parse(ptr, item.canDrop);
-  ptr = parse(ptr, item.canPick);
-  ptr = parse(ptr, item.canRepair);
-  ptr = parse(ptr, item.canRevive);
-  ptr = parse(ptr, item.canUse);
-  ptr = parse(ptr, item.canThrow);
-  ptr = parse(ptr, item.price);
-  ptr = parse(ptr, item.costRepair);
-  ptr = parse(ptr, item.costRevive);
-  ptr = parse(ptr, item.costBorrow);
-  ptr = parse(ptr, item.keepingFee);
-  ptr = parse(ptr, item.sellPrice);
-  ptr = parse(ptr, item.reqLevelType1);
-  ptr = parse(ptr, item.reqLevel1);
-  ptr = parse(ptr, item.reqLevelType2);
-  ptr = parse(ptr, item.reqLevel2);
-  ptr = parse(ptr, item.reqLevelType3);
-  ptr = parse(ptr, item.reqLevel3);
-  ptr = parse(ptr, item.reqLevelType4);
-  ptr = parse(ptr, item.reqLevel4);
-  ptr = parse(ptr, item.maxContain);
-  ptr = parse(ptr, item.regionID);
-  ptr = parse(ptr, item.dir);
-  ptr = parse(ptr, item.offsetX);
-  ptr = parse(ptr, item.offsetY);
-  ptr = parse(ptr, item.offsetZ);
-  ptr = parse(ptr, item.speed1);
-  ptr = parse(ptr, item.speed2);
-  ptr = parse(ptr, item.scale);
-  ptr = parse(ptr, item.bCHeight);
-  ptr = parse(ptr, item.bCRadius);
-  ptr = parse(ptr, item.eventID);
-  ptr = parse(ptr, item.assocFileObj128);
-  ptr = parse(ptr, item.assocFileDrop128);
-  ptr = parse(ptr, item.assocFileIcon128);
-  ptr = parse(ptr, item.assocFile1_128);
-  ptr = parse(ptr, item.assocFile2_128);
-  ptr = parse(ptr, item.maxStack);
-  ptr = parse(ptr, item.reqGender);
-  ptr = parse(ptr, item.reqStr);
-  ptr = parse(ptr, item.reqInt);
-  ptr = parse(ptr, item.itemClass);
-  ptr = parse(ptr, item.setID);
-  ptr = parse(ptr, item.dur_L);
-  ptr = parse(ptr, item.dur_U);
-  ptr = parse(ptr, item.pd_L);
-  ptr = parse(ptr, item.pd_U);
-  ptr = parse(ptr, item.pdInc);
-  ptr = parse(ptr, item.er_L);
-  ptr = parse(ptr, item.er_U);
-  ptr = parse(ptr, item.eRInc);
-  ptr = parse(ptr, item.par_L);
-  ptr = parse(ptr, item.par_U);
-  ptr = parse(ptr, item.parInc);
-  ptr = parse(ptr, item.br_L);
-  ptr = parse(ptr, item.br_U);
-  ptr = parse(ptr, item.md_L);
-  ptr = parse(ptr, item.md_U);
-  ptr = parse(ptr, item.mdInc);
-  ptr = parse(ptr, item.mar_L);
-  ptr = parse(ptr, item.mar_U);
-  ptr = parse(ptr, item.marInc);
-  ptr = parse(ptr, item.pdStr_L);
-  ptr = parse(ptr, item.pdStr_U);
-  ptr = parse(ptr, item.mdInt_L);
-  ptr = parse(ptr, item.mdInt_U);
-  ptr = parse(ptr, item.quivered);
-  ptr = parse(ptr, item.ammo1_TID4);
-  ptr = parse(ptr, item.ammo2_TID4);
-  ptr = parse(ptr, item.ammo3_TID4);
-  ptr = parse(ptr, item.ammo4_TID4);
-  ptr = parse(ptr, item.ammo5_TID4);
-  ptr = parse(ptr, item.speedClass);
-  ptr = parse(ptr, item.twoHanded);
-  ptr = parse(ptr, item.range);
-  ptr = parse(ptr, item.pAttackMin_L);
-  ptr = parse(ptr, item.pAttackMin_U);
-  ptr = parse(ptr, item.pAttackMax_L);
-  ptr = parse(ptr, item.pAttackMax_U);
-  ptr = parse(ptr, item.pAttackInc);
-  ptr = parse(ptr, item.mAttackMin_L);
-  ptr = parse(ptr, item.mAttackMin_U);
-  ptr = parse(ptr, item.mAttackMax_L);
-  ptr = parse(ptr, item.mAttackMax_U);
-  ptr = parse(ptr, item.mAttackInc);
-  ptr = parse(ptr, item.paStrMin_L);
-  ptr = parse(ptr, item.paStrMin_U);
-  ptr = parse(ptr, item.paStrMax_L);
-  ptr = parse(ptr, item.paStrMax_U);
-  ptr = parse(ptr, item.maInt_Min_L);
-  ptr = parse(ptr, item.maInt_Min_U);
-  ptr = parse(ptr, item.maInt_Max_L);
-  ptr = parse(ptr, item.maInt_Max_U);
-  ptr = parse(ptr, item.hr_L);
-  ptr = parse(ptr, item.hr_U);
-  ptr = parse(ptr, item.hRInc);
-  ptr = parse(ptr, item.cHR_L);
-  ptr = parse(ptr, item.cHR_U);
-  ptr = parse(ptr, item.param1);
-  ptr = parse(ptr, item.desc1_128);
-  ptr = parse(ptr, item.param2);
-  ptr = parse(ptr, item.desc2_128);
-  ptr = parse(ptr, item.param3);
-  ptr = parse(ptr, item.desc3_128);
-  ptr = parse(ptr, item.param4);
-  ptr = parse(ptr, item.desc4_128);
-  ptr = parse(ptr, item.param5);
-  ptr = parse(ptr, item.desc5_128);
-  ptr = parse(ptr, item.param6);
-  ptr = parse(ptr, item.desc6_128);
-  ptr = parse(ptr, item.param7);
-  ptr = parse(ptr, item.desc7_128);
-  ptr = parse(ptr, item.param8);
-  ptr = parse(ptr, item.desc8_128);
-  ptr = parse(ptr, item.param9);
-  ptr = parse(ptr, item.desc9_128);
-  ptr = parse(ptr, item.param10);
-  ptr = parse(ptr, item.desc10_128);
-  ptr = parse(ptr, item.param11);
-  ptr = parse(ptr, item.desc11_128);
-  ptr = parse(ptr, item.param12);
-  ptr = parse(ptr, item.desc12_128);
-  ptr = parse(ptr, item.param13);
-  ptr = parse(ptr, item.desc13_128);
-  ptr = parse(ptr, item.param14);
-  ptr = parse(ptr, item.desc14_128);
-  ptr = parse(ptr, item.param15);
-  ptr = parse(ptr, item.desc15_128);
-  ptr = parse(ptr, item.param16);
-  ptr = parse(ptr, item.desc16_128);
-  ptr = parse(ptr, item.param17);
-  ptr = parse(ptr, item.desc17_128);
-  ptr = parse(ptr, item.param18);
-  ptr = parse(ptr, item.desc18_128);
-  ptr = parse(ptr, item.param19);
-  ptr = parse(ptr, item.desc19_128);
-  ptr = parse(ptr, item.param20);
-  ptr = parse(ptr, item.desc20_128);
-  ptr = parse(ptr, item.maxMagicOptCount);
-  parse(ptr, item.childItemCount);
+  parse(linePieces[0], item.service);
+  parse(linePieces[1], item.id);
+  parse(linePieces[2], item.codeName128);
+  parse(linePieces[3], item.objName128);
+  parse(linePieces[4], item.orgObjCodeName128);
+  parse(linePieces[5], item.nameStrID128);
+  parse(linePieces[6], item.descStrID128);
+  parse(linePieces[7], item.cashItem);
+  parse(linePieces[8], item.bionic);
+  parse(linePieces[9], item.typeId1);
+  parse(linePieces[10], item.typeId2);
+  parse(linePieces[11], item.typeId3);
+  parse(linePieces[12], item.typeId4);
+  parse(linePieces[13], item.decayTime);
+  parse(linePieces[14], item.country);
+  parse(linePieces[15], item.rarity);
+  parse(linePieces[16], item.canTrade);
+  parse(linePieces[17], item.canSell);
+  parse(linePieces[18], item.canBuy);
+  parse(linePieces[19], item.canBorrow);
+  parse(linePieces[20], item.canDrop);
+  parse(linePieces[21], item.canPick);
+  parse(linePieces[22], item.canRepair);
+  parse(linePieces[23], item.canRevive);
+  parse(linePieces[24], item.canUse);
+  parse(linePieces[25], item.canThrow);
+  parse(linePieces[26], item.price);
+  parse(linePieces[27], item.costRepair);
+  parse(linePieces[28], item.costRevive);
+  parse(linePieces[29], item.costBorrow);
+  parse(linePieces[30], item.keepingFee);
+  parse(linePieces[31], item.sellPrice);
+  parse(linePieces[32], item.reqLevelType1);
+  parse(linePieces[33], item.reqLevel1);
+  parse(linePieces[34], item.reqLevelType2);
+  parse(linePieces[35], item.reqLevel2);
+  parse(linePieces[36], item.reqLevelType3);
+  parse(linePieces[37], item.reqLevel3);
+  parse(linePieces[38], item.reqLevelType4);
+  parse(linePieces[39], item.reqLevel4);
+  parse(linePieces[40], item.maxContain);
+  parse(linePieces[41], item.regionID);
+  parse(linePieces[42], item.dir);
+  parse(linePieces[43], item.offsetX);
+  parse(linePieces[44], item.offsetY);
+  parse(linePieces[45], item.offsetZ);
+  parse(linePieces[46], item.speed1);
+  parse(linePieces[47], item.speed2);
+  parse(linePieces[48], item.scale);
+  parse(linePieces[49], item.bCHeight);
+  parse(linePieces[50], item.bCRadius);
+  parse(linePieces[51], item.eventID);
+  parse(linePieces[52], item.assocFileObj128);
+  parse(linePieces[53], item.assocFileDrop128);
+  parse(linePieces[54], item.assocFileIcon128);
+  parse(linePieces[55], item.assocFile1_128);
+  parse(linePieces[56], item.assocFile2_128);
+  parse(linePieces[57], item.maxStack);
+  parse(linePieces[58], item.reqGender);
+  parse(linePieces[59], item.reqStr);
+  parse(linePieces[60], item.reqInt);
+  parse(linePieces[61], item.itemClass);
+  parse(linePieces[62], item.setID);
+  parse(linePieces[63], item.dur_L);
+  parse(linePieces[64], item.dur_U);
+  parse(linePieces[65], item.pd_L);
+  parse(linePieces[66], item.pd_U);
+  parse(linePieces[67], item.pdInc);
+  parse(linePieces[68], item.er_L);
+  parse(linePieces[69], item.er_U);
+  parse(linePieces[70], item.eRInc);
+  parse(linePieces[71], item.par_L);
+  parse(linePieces[72], item.par_U);
+  parse(linePieces[73], item.parInc);
+  parse(linePieces[74], item.br_L);
+  parse(linePieces[75], item.br_U);
+  parse(linePieces[76], item.md_L);
+  parse(linePieces[77], item.md_U);
+  parse(linePieces[78], item.mdInc);
+  parse(linePieces[79], item.mar_L);
+  parse(linePieces[80], item.mar_U);
+  parse(linePieces[81], item.marInc);
+  parse(linePieces[82], item.pdStr_L);
+  parse(linePieces[83], item.pdStr_U);
+  parse(linePieces[84], item.mdInt_L);
+  parse(linePieces[85], item.mdInt_U);
+  parse(linePieces[86], item.quivered);
+  parse(linePieces[87], item.ammo1_TID4);
+  parse(linePieces[88], item.ammo2_TID4);
+  parse(linePieces[89], item.ammo3_TID4);
+  parse(linePieces[90], item.ammo4_TID4);
+  parse(linePieces[91], item.ammo5_TID4);
+  parse(linePieces[92], item.speedClass);
+  parse(linePieces[93], item.twoHanded);
+  parse(linePieces[94], item.range);
+  parse(linePieces[95], item.pAttackMin_L);
+  parse(linePieces[96], item.pAttackMin_U);
+  parse(linePieces[97], item.pAttackMax_L);
+  parse(linePieces[98], item.pAttackMax_U);
+  parse(linePieces[99], item.pAttackInc);
+  parse(linePieces[100], item.mAttackMin_L);
+  parse(linePieces[101], item.mAttackMin_U);
+  parse(linePieces[102], item.mAttackMax_L);
+  parse(linePieces[103], item.mAttackMax_U);
+  parse(linePieces[104], item.mAttackInc);
+  parse(linePieces[105], item.paStrMin_L);
+  parse(linePieces[106], item.paStrMin_U);
+  parse(linePieces[107], item.paStrMax_L);
+  parse(linePieces[108], item.paStrMax_U);
+  parse(linePieces[109], item.maInt_Min_L);
+  parse(linePieces[110], item.maInt_Min_U);
+  parse(linePieces[111], item.maInt_Max_L);
+  parse(linePieces[112], item.maInt_Max_U);
+  parse(linePieces[113], item.hr_L);
+  parse(linePieces[114], item.hr_U);
+  parse(linePieces[115], item.hRInc);
+  parse(linePieces[116], item.cHR_L);
+  parse(linePieces[117], item.cHR_U);
+  parse(linePieces[118], item.param1);
+  parse(linePieces[119], item.desc1_128);
+  parse(linePieces[120], item.param2);
+  parse(linePieces[121], item.desc2_128);
+  parse(linePieces[122], item.param3);
+  parse(linePieces[123], item.desc3_128);
+  parse(linePieces[124], item.param4);
+  parse(linePieces[125], item.desc4_128);
+  parse(linePieces[126], item.param5);
+  parse(linePieces[127], item.desc5_128);
+  parse(linePieces[128], item.param6);
+  parse(linePieces[129], item.desc6_128);
+  parse(linePieces[130], item.param7);
+  parse(linePieces[131], item.desc7_128);
+  parse(linePieces[132], item.param8);
+  parse(linePieces[133], item.desc8_128);
+  parse(linePieces[134], item.param9);
+  parse(linePieces[135], item.desc9_128);
+  parse(linePieces[136], item.param10);
+  parse(linePieces[137], item.desc10_128);
+  parse(linePieces[138], item.param11);
+  parse(linePieces[139], item.desc11_128);
+  parse(linePieces[140], item.param12);
+  parse(linePieces[141], item.desc12_128);
+  parse(linePieces[142], item.param13);
+  parse(linePieces[143], item.desc13_128);
+  parse(linePieces[144], item.param14);
+  parse(linePieces[145], item.desc14_128);
+  parse(linePieces[146], item.param15);
+  parse(linePieces[147], item.desc15_128);
+  parse(linePieces[148], item.param16);
+  parse(linePieces[149], item.desc16_128);
+  parse(linePieces[150], item.param17);
+  parse(linePieces[151], item.desc17_128);
+  parse(linePieces[152], item.param18);
+  parse(linePieces[153], item.desc18_128);
+  parse(linePieces[154], item.param19);
+  parse(linePieces[155], item.desc19_128);
+  parse(linePieces[156], item.param20);
+  parse(linePieces[157], item.desc20_128);
+  parse(linePieces[158], item.maxMagicOptCount);
+  parse(linePieces[159], item.childItemCount);
   return item;
 }
 
@@ -733,127 +651,126 @@ ref::Region parseRefRegionLine(const std::string &line) {
   return region;
 }
 
-ref::Skill parseSkilldataLine(const std::string &line) {
+ref::Skill parseSkilldataLine(const std::vector<std::string_view> &linePieces) {
   ref::Skill skill;
-  const char *ptr = line.data();
-  ptr = parse(ptr, skill.service);
-  ptr = parse(ptr, skill.id);
-  ptr = parse(ptr, skill.groupId);
-  ptr = parse(ptr, skill.basicCode);
-  ptr = parse(ptr, skill.basicName);
-  ptr = parse(ptr, skill.basicGroup);
-  ptr = parse(ptr, skill.basicOriginal);
-  ptr = parse(ptr, skill.basicLevel);
-  ptr = parse(ptr, skill.basicActivity);
-  ptr = parse(ptr, skill.basicChainCode);
-  ptr = parse(ptr, skill.basicRecycleCost);
-  ptr = parse(ptr, skill.actionPreparingTime);
-  ptr = parse(ptr, skill.actionCastingTime);
-  ptr = parse(ptr, skill.actionActionDuration);
-  ptr = parse(ptr, skill.actionReuseDelay);
-  ptr = parse(ptr, skill.actionCoolTime);
-  ptr = parse(ptr, skill.actionFlyingSpeed);
-  ptr = parse(ptr, skill.actionInterruptable);
-  ptr = parse(ptr, skill.actionOverlap);
-  ptr = parse(ptr, skill.actionAutoAttackType);
-  ptr = parse(ptr, skill.actionInTown);
-  ptr = parse(ptr, skill.actionRange);
-  ptr = parse(ptr, skill.targetRequired);
-  ptr = parse(ptr, skill.targetTypeAnimal);
-  ptr = parse(ptr, skill.targetTypeLand);
-  ptr = parse(ptr, skill.targetTypeBuilding);
-  ptr = parse(ptr, skill.targetGroupSelf);
-  ptr = parse(ptr, skill.targetGroupAlly);
-  ptr = parse(ptr, skill.targetGroupParty);
-  ptr = parse(ptr, skill.targetGroupEnemy_M);
-  ptr = parse(ptr, skill.targetGroupEnemy_P);
-  ptr = parse(ptr, skill.targetGroupNeutral);
-  ptr = parse(ptr, skill.targetGroupDontCare);
-  ptr = parse(ptr, skill.targetEtcSelectDeadBody);
-  ptr = parse(ptr, skill.reqCommonMastery1);
-  ptr = parse(ptr, skill.reqCommonMastery2);
-  ptr = parse(ptr, skill.reqCommonMasteryLevel1);
-  ptr = parse(ptr, skill.reqCommonMasteryLevel2);
-  ptr = parse(ptr, skill.reqCommonStr);
-  ptr = parse(ptr, skill.reqCommonInt);
-  ptr = parse(ptr, skill.reqLearnSkill1);
-  ptr = parse(ptr, skill.reqLearnSkill2);
-  ptr = parse(ptr, skill.reqLearnSkill3);
-  ptr = parse(ptr, skill.reqLearnSkillLevel1);
-  ptr = parse(ptr, skill.reqLearnSkillLevel2);
-  ptr = parse(ptr, skill.reqLearnSkillLevel3);
-  ptr = parse(ptr, skill.reqLearnSP);
-  ptr = parse(ptr, skill.reqLearnRace);
-  ptr = parse(ptr, skill.reqRestriction1);
-  ptr = parse(ptr, skill.reqRestriction2);
-  ptr = parse(ptr, skill.reqCastWeapon1);
-  ptr = parse(ptr, skill.reqCastWeapon2);
-  ptr = parse(ptr, skill.consumeHP);
-  ptr = parse(ptr, skill.consumeMP);
-  ptr = parse(ptr, skill.consumeHPRatio);
-  ptr = parse(ptr, skill.consumeMPRatio);
-  ptr = parse(ptr, skill.consumeWHAN);
-  ptr = parse(ptr, skill.uiSkillTab);
-  ptr = parse(ptr, skill.uiSkillPage);
-  ptr = parse(ptr, skill.uiSkillColumn);
-  ptr = parse(ptr, skill.uiSkillRow);
-  ptr = parse(ptr, skill.uiIconFile);
-  ptr = parse(ptr, skill.uiSkillName);
-  ptr = parse(ptr, skill.uiSkillToolTip);
-  ptr = parse(ptr, skill.uiSkillToolTip_Desc);
-  ptr = parse(ptr, skill.uiSkillStudy_Desc);
-  ptr = parse(ptr, skill.aiAttackChance);
-  ptr = parse(ptr, skill.aiSkillType);
-  ptr = parse(ptr, skill.params[0]);
-  ptr = parse(ptr, skill.params[1]);
-  ptr = parse(ptr, skill.params[2]);
-  ptr = parse(ptr, skill.params[3]);
-  ptr = parse(ptr, skill.params[4]);
-  ptr = parse(ptr, skill.params[5]);
-  ptr = parse(ptr, skill.params[6]);
-  ptr = parse(ptr, skill.params[7]);
-  ptr = parse(ptr, skill.params[8]);
-  ptr = parse(ptr, skill.params[9]);
-  ptr = parse(ptr, skill.params[10]);
-  ptr = parse(ptr, skill.params[11]);
-  ptr = parse(ptr, skill.params[12]);
-  ptr = parse(ptr, skill.params[13]);
-  ptr = parse(ptr, skill.params[14]);
-  ptr = parse(ptr, skill.params[15]);
-  ptr = parse(ptr, skill.params[16]);
-  ptr = parse(ptr, skill.params[17]);
-  ptr = parse(ptr, skill.params[18]);
-  ptr = parse(ptr, skill.params[19]);
-  ptr = parse(ptr, skill.params[20]);
-  ptr = parse(ptr, skill.params[21]);
-  ptr = parse(ptr, skill.params[22]);
-  ptr = parse(ptr, skill.params[23]);
-  ptr = parse(ptr, skill.params[24]);
-  ptr = parse(ptr, skill.params[25]);
-  ptr = parse(ptr, skill.params[26]);
-  ptr = parse(ptr, skill.params[27]);
-  ptr = parse(ptr, skill.params[28]);
-  ptr = parse(ptr, skill.params[29]);
-  ptr = parse(ptr, skill.params[30]);
-  ptr = parse(ptr, skill.params[31]);
-  ptr = parse(ptr, skill.params[32]);
-  ptr = parse(ptr, skill.params[33]);
-  ptr = parse(ptr, skill.params[34]);
-  ptr = parse(ptr, skill.params[35]);
-  ptr = parse(ptr, skill.params[36]);
-  ptr = parse(ptr, skill.params[37]);
-  ptr = parse(ptr, skill.params[38]);
-  ptr = parse(ptr, skill.params[39]);
-  ptr = parse(ptr, skill.params[40]);
-  ptr = parse(ptr, skill.params[41]);
-  ptr = parse(ptr, skill.params[42]);
-  ptr = parse(ptr, skill.params[43]);
-  ptr = parse(ptr, skill.params[44]);
-  ptr = parse(ptr, skill.params[45]);
-  ptr = parse(ptr, skill.params[46]);
-  ptr = parse(ptr, skill.params[47]);
-  ptr = parse(ptr, skill.params[48]);
-  parse(ptr, skill.params[49]);
+  parse(linePieces[0], skill.service);
+  parse(linePieces[1], skill.id);
+  parse(linePieces[2], skill.groupId);
+  parse(linePieces[3], skill.basicCode);
+  parse(linePieces[4], skill.basicName);
+  parse(linePieces[5], skill.basicGroup);
+  parse(linePieces[6], skill.basicOriginal);
+  parse(linePieces[7], skill.basicLevel);
+  parse(linePieces[8], skill.basicActivity);
+  parse(linePieces[9], skill.basicChainCode);
+  parse(linePieces[10], skill.basicRecycleCost);
+  parse(linePieces[11], skill.actionPreparingTime);
+  parse(linePieces[12], skill.actionCastingTime);
+  parse(linePieces[13], skill.actionActionDuration);
+  parse(linePieces[14], skill.actionReuseDelay);
+  parse(linePieces[15], skill.actionCoolTime);
+  parse(linePieces[16], skill.actionFlyingSpeed);
+  parse(linePieces[17], skill.actionInterruptable);
+  parse(linePieces[18], skill.actionOverlap);
+  parse(linePieces[19], skill.actionAutoAttackType);
+  parse(linePieces[20], skill.actionInTown);
+  parse(linePieces[21], skill.actionRange);
+  parse(linePieces[22], skill.targetRequired);
+  parse(linePieces[23], skill.targetTypeAnimal);
+  parse(linePieces[24], skill.targetTypeLand);
+  parse(linePieces[25], skill.targetTypeBuilding);
+  parse(linePieces[26], skill.targetGroupSelf);
+  parse(linePieces[27], skill.targetGroupAlly);
+  parse(linePieces[28], skill.targetGroupParty);
+  parse(linePieces[29], skill.targetGroupEnemy_M);
+  parse(linePieces[30], skill.targetGroupEnemy_P);
+  parse(linePieces[31], skill.targetGroupNeutral);
+  parse(linePieces[32], skill.targetGroupDontCare);
+  parse(linePieces[33], skill.targetEtcSelectDeadBody);
+  parse(linePieces[34], skill.reqCommonMastery1);
+  parse(linePieces[35], skill.reqCommonMastery2);
+  parse(linePieces[36], skill.reqCommonMasteryLevel1);
+  parse(linePieces[37], skill.reqCommonMasteryLevel2);
+  parse(linePieces[38], skill.reqCommonStr);
+  parse(linePieces[39], skill.reqCommonInt);
+  parse(linePieces[40], skill.reqLearnSkill1);
+  parse(linePieces[41], skill.reqLearnSkill2);
+  parse(linePieces[42], skill.reqLearnSkill3);
+  parse(linePieces[43], skill.reqLearnSkillLevel1);
+  parse(linePieces[44], skill.reqLearnSkillLevel2);
+  parse(linePieces[45], skill.reqLearnSkillLevel3);
+  parse(linePieces[46], skill.reqLearnSP);
+  parse(linePieces[47], skill.reqLearnRace);
+  parse(linePieces[48], skill.reqRestriction1);
+  parse(linePieces[49], skill.reqRestriction2);
+  parse(linePieces[50], skill.reqCastWeapon1);
+  parse(linePieces[51], skill.reqCastWeapon2);
+  parse(linePieces[52], skill.consumeHP);
+  parse(linePieces[53], skill.consumeMP);
+  parse(linePieces[54], skill.consumeHPRatio);
+  parse(linePieces[55], skill.consumeMPRatio);
+  parse(linePieces[56], skill.consumeWHAN);
+  parse(linePieces[57], skill.uiSkillTab);
+  parse(linePieces[58], skill.uiSkillPage);
+  parse(linePieces[59], skill.uiSkillColumn);
+  parse(linePieces[60], skill.uiSkillRow);
+  parse(linePieces[61], skill.uiIconFile);
+  parse(linePieces[62], skill.uiSkillName);
+  parse(linePieces[63], skill.uiSkillToolTip);
+  parse(linePieces[64], skill.uiSkillToolTip_Desc);
+  parse(linePieces[65], skill.uiSkillStudy_Desc);
+  parse(linePieces[66], skill.aiAttackChance);
+  parse(linePieces[67], skill.aiSkillType);
+  parse(linePieces[68], skill.params[0]);
+  parse(linePieces[69], skill.params[1]);
+  parse(linePieces[70], skill.params[2]);
+  parse(linePieces[71], skill.params[3]);
+  parse(linePieces[72], skill.params[4]);
+  parse(linePieces[73], skill.params[5]);
+  parse(linePieces[74], skill.params[6]);
+  parse(linePieces[75], skill.params[7]);
+  parse(linePieces[76], skill.params[8]);
+  parse(linePieces[77], skill.params[9]);
+  parse(linePieces[78], skill.params[10]);
+  parse(linePieces[79], skill.params[11]);
+  parse(linePieces[80], skill.params[12]);
+  parse(linePieces[81], skill.params[13]);
+  parse(linePieces[82], skill.params[14]);
+  parse(linePieces[83], skill.params[15]);
+  parse(linePieces[84], skill.params[16]);
+  parse(linePieces[85], skill.params[17]);
+  parse(linePieces[86], skill.params[18]);
+  parse(linePieces[87], skill.params[19]);
+  parse(linePieces[88], skill.params[20]);
+  parse(linePieces[89], skill.params[21]);
+  parse(linePieces[90], skill.params[22]);
+  parse(linePieces[91], skill.params[23]);
+  parse(linePieces[92], skill.params[24]);
+  parse(linePieces[93], skill.params[25]);
+  parse(linePieces[94], skill.params[26]);
+  parse(linePieces[95], skill.params[27]);
+  parse(linePieces[96], skill.params[28]);
+  parse(linePieces[97], skill.params[29]);
+  parse(linePieces[98], skill.params[30]);
+  parse(linePieces[99], skill.params[31]);
+  parse(linePieces[100], skill.params[32]);
+  parse(linePieces[101], skill.params[33]);
+  parse(linePieces[102], skill.params[34]);
+  parse(linePieces[103], skill.params[35]);
+  parse(linePieces[104], skill.params[36]);
+  parse(linePieces[105], skill.params[37]);
+  parse(linePieces[106], skill.params[38]);
+  parse(linePieces[107], skill.params[39]);
+  parse(linePieces[108], skill.params[40]);
+  parse(linePieces[109], skill.params[41]);
+  parse(linePieces[110], skill.params[42]);
+  parse(linePieces[111], skill.params[43]);
+  parse(linePieces[112], skill.params[44]);
+  parse(linePieces[113], skill.params[45]);
+  parse(linePieces[114], skill.params[46]);
+  parse(linePieces[115], skill.params[47]);
+  parse(linePieces[116], skill.params[48]);
+  parse(linePieces[117], skill.params[49]);
   return skill;
 }
 
@@ -1026,66 +943,61 @@ ref::MappingShopWithTab parseMappingShopWithTabLine(const std::string &line) {
   return mapping;
 }
 
-ref::TextZoneName parseTextZoneNameLine(const std::string &line) {
+ref::TextZoneName parseTextZoneNameLine(const std::vector<std::string_view> &linePieces) {
   ref::TextZoneName textZoneName;
-  const char *ptr = line.data();
-  ptr = parse(ptr, textZoneName.service);
-  ptr = parse(ptr, textZoneName.key);
-  ptr = parse(ptr, textZoneName.korean);
-  ptr = parse(ptr, textZoneName.unkLang0);
-  ptr = parse(ptr, textZoneName.unkLang1);
-  ptr = parse(ptr, textZoneName.unkLang2);
-  ptr = parse(ptr, textZoneName.unkLang3);
-  ptr = parse(ptr, textZoneName.unkLang4);
-  ptr = parse(ptr, textZoneName.english);
-  ptr = parse(ptr, textZoneName.vietnamese);
-  ptr = parse(ptr, textZoneName.unkLang5);
-  ptr = parse(ptr, textZoneName.unkLang6);
-  ptr = parse(ptr, textZoneName.unkLang7);
-  ptr = parse(ptr, textZoneName.unkLang8);
-  ptr = parse(ptr, textZoneName.unkLang9);
-  parse(ptr, textZoneName.unkLang10);
+  parse(linePieces[0], textZoneName.service);
+  parse(linePieces[1], textZoneName.codeName128);
+  parse(linePieces[2], textZoneName.korean);
+  parse(linePieces[3], textZoneName.unkLang0);
+  parse(linePieces[4], textZoneName.chineseTraditional);
+  parse(linePieces[5], textZoneName.chineseSimplified);
+  parse(linePieces[6], textZoneName.german);
+  parse(linePieces[7], textZoneName.japanese);
+  parse(linePieces[8], textZoneName.english);
+  parse(linePieces[9], textZoneName.vietnamese);
+  parse(linePieces[10], textZoneName.portuguese);
+  parse(linePieces[11], textZoneName.russian);
+  parse(linePieces[12], textZoneName.turkish);
+  parse(linePieces[13], textZoneName.spanish);
+  parse(linePieces[14], textZoneName.arabic);
   return textZoneName;
 }
 
-ref::Text parseTextLine(const std::string &line) {
+ref::Text parseTextLine(const std::vector<std::string_view> &linePieces) {
   ref::Text text;
-  const char *ptr = line.data();
-  ptr = parse(ptr, text.service);
-  ptr = parse(ptr, text.key);
-  ptr = parse(ptr, text.korean);
-  ptr = parse(ptr, text.unkLang0);
-  ptr = parse(ptr, text.unkLang1);
-  ptr = parse(ptr, text.unkLang2);
-  ptr = parse(ptr, text.unkLang3);
-  ptr = parse(ptr, text.unkLang4);
-  ptr = parse(ptr, text.english);
-  ptr = parse(ptr, text.vietnamese);
-  ptr = parse(ptr, text.unkLang5);
-  ptr = parse(ptr, text.unkLang6);
-  ptr = parse(ptr, text.unkLang7);
-  ptr = parse(ptr, text.unkLang8);
-  ptr = parse(ptr, text.unkLang9);
-  parse(ptr, text.unkLang10);
+  parse(linePieces[0], text.service);
+  parse(linePieces[1], text.codeName128);
+  parse(linePieces[2], text.korean);
+  parse(linePieces[3], text.unkLang0);
+  parse(linePieces[4], text.chineseTraditional);
+  parse(linePieces[5], text.chineseSimplified);
+  parse(linePieces[6], text.german);
+  parse(linePieces[7], text.japanese);
+  parse(linePieces[8], text.english);
+  parse(linePieces[9], text.vietnamese);
+  parse(linePieces[10], text.portuguese);
+  parse(linePieces[11], text.russian);
+  parse(linePieces[12], text.turkish);
+  parse(linePieces[13], text.spanish);
+  parse(linePieces[14], text.arabic);
   return text;
 }
 
-ref::Mastery parseMasteryLine(const std::string &line) {
-  ref::Mastery mastery; // TODO: make these pk2::ref items constructable from a string, create a common base class.
-  const char *ptr = line.data();
-  ptr = parse(ptr, mastery.masteryId);
-  ptr = parse(ptr, mastery.masteryName);
-  ptr = parse(ptr, mastery.masteryNameCode);
-  ptr = parse(ptr, mastery.groupNum);
-  ptr = parse(ptr, mastery.masteryDescriptionId);
-  ptr = parse(ptr, mastery.tabNameCode);
-  ptr = parse(ptr, mastery.tabId);
-  ptr = parse(ptr, mastery.skillToolTipType);
-  ptr = parse(ptr, mastery.weaponType1);
-  ptr = parse(ptr, mastery.weaponType2);
-  ptr = parse(ptr, mastery.weaponType3);
-  ptr = parse(ptr, mastery.masteryIcon);
-  parse(ptr, mastery.masteryFocusIcon);
+ref::Mastery parseMasteryLine(const std::vector<std::string_view> &linePieces) {
+  ref::Mastery mastery;
+  parse(linePieces[0], mastery.masteryId);
+  parse(linePieces[1], mastery.masteryName);
+  parse(linePieces[2], mastery.masteryNameCode);
+  parse(linePieces[3], mastery.groupNum);
+  parse(linePieces[4], mastery.masteryDescriptionId);
+  parse(linePieces[5], mastery.tabNameCode);
+  parse(linePieces[6], mastery.tabId);
+  parse(linePieces[7], mastery.skillToolTipType);
+  parse(linePieces[8], mastery.weaponType1);
+  parse(linePieces[9], mastery.weaponType2);
+  parse(linePieces[10], mastery.weaponType3);
+  parse(linePieces[11], mastery.masteryIcon);
+  parse(linePieces[12], mastery.masteryFocusIcon);
   return mastery;
 }
 

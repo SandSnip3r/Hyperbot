@@ -18,6 +18,7 @@ set(PROJECT_SOURCES
   src/silkroad_lib/pk2/navmeshParser.cpp
   src/silkroad_lib/pk2/pk2Reader.cpp
   src/silkroad_lib/pk2/pk2ReaderModern.cpp
+  src/silkroad_lib/pk2/parsing/helper.cpp
   src/silkroad_lib/pk2/parsing/parsing.cpp
   src/silkroad_lib/pk2/parsing/regionInfoParser.cpp
   src/silkroad_lib/pk2/regionInfo.cpp

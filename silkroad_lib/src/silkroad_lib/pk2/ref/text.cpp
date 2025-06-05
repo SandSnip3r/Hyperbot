@@ -4,7 +4,7 @@ namespace sro::pk2::ref {
 
 std::ostream& operator<<(std::ostream &stream, const Text &text) {
 	stream << "{service:" << (text.service ? "true":"false") << ','
-         << "key: \"" << text.key << "\","
+         << "codeName128: \"" << text.codeName128 << "\","
          << "english: \"" << text.english << "\"}";
 	return stream;
 }

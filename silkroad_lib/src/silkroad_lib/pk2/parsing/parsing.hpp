@@ -19,6 +19,7 @@
 #include <silkroad_lib/pk2/ref/text.hpp>
 #include <silkroad_lib/pk2/ref/textZoneName.hpp>
 
+#include <charconv>
 #include <filesystem>
 #include <ostream>
 #include <string_view>
@@ -32,31 +33,11 @@ namespace sro::pk2::parsing {
 // [param] data   Data from a PK2Entry
 // [return]       data as an std::string
 std::string fileDataToString(const std::vector<uint8_t> &data);
-std::vector<std::string> fileDataToStringLines(const std::vector<uint8_t> &data);
-// std::vector<std::string> fileDataToStringLines2(const std::vector<uint8_t> &data);
 
 // Decrypts skilldata_<>enc.txt files
 //
 // [param] data   File data to decrypt
 void decryptSkillData(std::vector<uint8_t> &data);
-
-// Validates if the line of skill data is valid
-//
-// [param] line   Line from PK2 file representing skill data
-// [return]       Whether the line is valid or not
-bool isValidSkilldataLine(const std::string &line);
-
-// Validates if the line of character data is valid
-//
-// [param] line   Line from PK2 file representing character data
-// [return]       Whether the line is valid or not
-bool isValidCharacterdataLine(const std::string &line);
-
-// Validates if the line of item data is valid
-//
-// [param] line   Line from PK2 file representing item data
-// [return]       Whether the line is valid or not
-bool isValidItemdataLine(const std::string &line);
 
 // Validates if the line of magic option data is valid
 //
@@ -118,35 +99,14 @@ bool isValidMappingShopGroupLine(const std::string &line);
 // [return]       Whether the line is valid or not
 bool isValidMappingShopWithTabLine(const std::string &line);
 
-// Validates if the line of text data is valid. This could be zone name, equipment, or skill name
-//
-// [param] line   Line from PK2 file representing some text data
-// [return]       Whether the line is valid or not
-bool isValidTextDataLine(const std::string &line);
-
-// Validates if the line of skill mastery data is valid.
-//
-// [param] line   Line from PK2 file representing a mastery
-// [return]       Whether the line is valid or not
-bool isValidMasteryLine(const std::string &line);
-
 // Parses string representing a line of text from skilldata_xxxx.txt in the Media.pk2 into a Skill object
-//
-// [param] line   A line of text
-// [return]       A populated Skill object
-ref::Skill parseSkilldataLine(const std::string &line);
+ref::Skill parseSkilldataLine(const std::vector<std::string_view> &linePieces);
 
 // Parses string representing a line of text from characterdata_xxxx.txt in the Media.pk2 into an Character object
-//
-// [param] line   A line of text
-// [return]       A populated Character object
-ref::Character parseCharacterdataLine(const std::string &line);
+ref::Character parseCharacterdataLine(const std::vector<std::string_view> &linePieces);
 
 // Parses string representing a line of text from itemdata_xxxx.txt in the Media.pk2 into an Item object
-//
-// [param] line   A line of text
-// [return]       A populated Item object
-ref::Item parseItemdataLine(const std::string &line);
+ref::Item parseItemdataLine(const std::vector<std::string_view> &linePieces);
 
 // Parses string representing a line of text from magicoption.txt in the Media.pk2 into a MagicOption object
 //
@@ -209,19 +169,15 @@ ref::MappingShopGroup parseMappingShopGroupLine(const std::string &line);
 ref::MappingShopWithTab parseMappingShopWithTabLine(const std::string &line);
 
 // Parses string representing a line of text from textzonename.txt in the Media.pk2 into a TextZoneName object
-//
-// [param] line   A line of text
-// [return]       A populated TextZoneName object
-ref::TextZoneName parseTextZoneNameLine(const std::string &line);
+ref::TextZoneName parseTextZoneNameLine(const std::vector<std::string_view> &linePieces);
 
 // Parses string representing a line of text from textdata_equip&skill.txt or textdata_object.txt in the Media.pk2 into a Text object
 //  Note: This isn't the only type of data in these files
-//
-// [param] line   A line of text
-// [return]       A populated Text object
-ref::Text parseTextLine(const std::string &line);
+ref::Text parseTextLine(const std::vector<std::string_view> &linePieces);
 
-ref::Mastery parseMasteryLine(const std::string &line);
+// Parses string representing a line of text from skillmasterydata.txt in the Media.pk2 into a Mastery object
+//  Note: This isn't the only type of data in these files
+ref::Mastery parseMasteryLine(const std::vector<std::string_view> &linePieces);
 
 // Parses raw pk2 data into a gateway server port
 //
@@ -249,6 +205,39 @@ std::vector<std::string> split(const std::string &str, const std::string &delim)
 // [param] fields which fields to keep
 // [return]       Populated DivisionInfo object
 std::vector<std::string> splitAndSelectFields(const std::string &str, const std::string &delim, const std::vector<int> &fields);
+
+template<typename T>
+void parse(std::string_view data, T &result) {
+  if constexpr (std::is_integral_v<T> || std::is_enum_v<T> || std::is_floating_point_v<T>) {
+    const char* begin = data.data();
+    const char* end   = data.data() + data.size();
+    auto [ptr, ec] = std::from_chars(begin, end, result);
+    if (ec != std::errc{}) {
+      // How many characters did std::from_chars successfully consume?
+      std::size_t offset = ptr - begin;
+
+      // Convert std::errc into a human‐readable string:
+      std::string errMsg = std::make_error_code(ec).message();
+
+      // Include the type name of T (mangled, but still useful for debug):
+      const char* typeName = typeid(T).name();
+
+      throw std::runtime_error(
+        "parse<" + std::string(typeName) + ">: failed to parse integer from \"" +
+        std::string(data) + "\"\n"
+        "  error: " + errMsg + "\n"
+        "  characters consumed: " + std::to_string(offset) + " of " +
+        std::to_string(data.size()) + "\n"
+        "  remaining input (from failure point): \"" +
+        std::string(ptr, end) + "\""
+      );
+    }
+  } else if constexpr (std::is_same_v<T, std::string>) {
+    result = std::string(data);
+  } else {
+    static_assert(false, "Unsupported type for StringViewStreamParser::read");
+  }
+}
 
 template<typename T>
 const char* parse(const char *begin, T &result);

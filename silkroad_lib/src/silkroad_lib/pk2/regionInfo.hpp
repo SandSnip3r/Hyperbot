@@ -9,7 +9,7 @@ namespace sro::pk2 {
 
 // These "regions" represent music zones. They're similar to safe zones, but not quite the same. They additionally include areas like fortresses.
 struct RegionInfo {
-  struct Region {
+  struct Continent {
     enum class Type { kTown, kField };
     Type regionType;
 
@@ -23,7 +23,7 @@ struct RegionInfo {
     std::vector<RegionRect> regionRects;
   };
 
-  std::vector<Region> regions;
+  std::vector<Continent> continents;
 };
 
 } // namespace sro::pk2

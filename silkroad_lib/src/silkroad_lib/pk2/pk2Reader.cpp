@@ -1,6 +1,8 @@
 #include <silkroad_lib/pk2/pk2Reader.hpp>
 #include <silkroad_lib/shared_io.hpp>
 
+#include <absl/log/log.h>
+
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -425,22 +427,25 @@ bool PK2Reader::ForEachEntryDo(bool (* UserFunc)(PK2Reader *, const std::string 
 }
 
 bool PK2Reader::ExtractToMemory(PK2Entry & entry, std::vector<uint8_t> & buffer) {
-	if (entry.type != 2) {
-		m_error.str(""); m_error << "The entry is not a file.";
-		return false;
-	}
-	buffer.resize(entry.size);
-	if (buffer.empty()) {
-		return true;
-	}
-	shared_io::file_seek(m_file, entry.position, SEEK_SET);
-	size_t read_count = fread(&buffer[0], 1, entry.size, m_file);
-	if (read_count != entry.size) {
-		buffer.clear();
-		m_error.str(""); m_error << "Could read all of the file data.";
-		return false;
-	}
-	return true;
+  if (entry.type != 2) {
+    m_error.str("");
+    m_error << "The entry is not a file.";
+    return false;
+  }
+  buffer.resize(entry.size);
+  if (buffer.empty()) {
+    LOG(WARNING) << "Curious if this ever happens";
+    return true;
+  }
+  shared_io::file_seek(m_file, entry.position, SEEK_SET);
+  size_t read_count = fread(&buffer[0], 1, entry.size, m_file);
+  if (read_count != entry.size) {
+    buffer.clear();
+    m_error.str("");
+    m_error << "Could read all of the file data.";
+    return false;
+  }
+  return true;
 }
 
 bool PK2Reader::ExtractToMemoryChar(PK2Entry & entry, std::vector<char> & buffer) {

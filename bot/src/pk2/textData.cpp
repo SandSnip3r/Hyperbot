@@ -35,7 +35,7 @@ void TextData::addItem(sro::pk2::ref::Text &&text) {
   }
   const std::string kSkillPrefix{"SN_SKILL"};
   const std::string kMasteryPrefix{"UIIT_STT_"};
-  auto isMastery = [](std::string_view str){
+  auto isMastery = [](std::string_view str) {
     static constexpr std::array arr = {
       "UIIT_STT_WARRIOR",
       "UIIT_STT_ROG",
@@ -60,12 +60,12 @@ void TextData::addItem(sro::pk2::ref::Text &&text) {
             absl::EndsWith(str, "_STUDY"));
   };
 
-  if (absl::StartsWith(text.key, kItemPrefix) && !isStudyOrDesc(text.key)) {
-    itemNames_.emplace(text.key, removeCarriageReturnAndLineFeed(text.english));
-  } else if (absl::StartsWith(text.key, kSkillPrefix) && !isStudyOrDesc(text.key)) {
-    skillNames_.emplace(text.key, removeCarriageReturnAndLineFeed(text.english));
-  } else if (isMastery(text.key)) {
-    masteryNames_.emplace(text.key, removeCarriageReturnAndLineFeed(text.english));
+  if (absl::StartsWith(text.codeName128, kItemPrefix) && !isStudyOrDesc(text.codeName128)) {
+    itemNames_.emplace(text.codeName128, removeCarriageReturnAndLineFeed(text.english));
+  } else if (absl::StartsWith(text.codeName128, kSkillPrefix) && !isStudyOrDesc(text.codeName128)) {
+    skillNames_.emplace(text.codeName128, removeCarriageReturnAndLineFeed(text.english));
+  } else if (isMastery(text.codeName128)) {
+    masteryNames_.emplace(text.codeName128, removeCarriageReturnAndLineFeed(text.english));
   } else {
     // TODO: Other types can be added
     //  All possible types: SN_COS, SN_EU, SN_EVENT, SN_FORTRESS,
