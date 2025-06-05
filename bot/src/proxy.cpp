@@ -265,10 +265,14 @@ void Proxy::ProcessPackets(const boost::system::error_code &error) {
     return;
   }
 
-  receivePacketsFromClient();
-  sendPacketsToClient();
-  receivePacketsFromServer();
-  sendPacketsToServer();
+  try {
+    receivePacketsFromClient();
+    sendPacketsToClient();
+    receivePacketsFromServer();
+    sendPacketsToServer();
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception while processing packets: \"" << ex.what() << '"';
+  }
 
   // Repost the timer
   packetProcessingTimer_->expires_from_now(boost::posix_time::milliseconds(kPacketProcessDelayMs));
@@ -329,7 +333,8 @@ void Proxy::receivePacketsFromClient() {
     }
   } else {
     if (!clientConnection.security) {
-      throw std::runtime_error("receivePacketsFromClient called but clientConnection.security is null");
+      // No client connection, no packets to receive
+      return;
     }
     // Receive all pending incoming packets from the client
     while (clientConnection.security->HasPacketToRecv()) {
@@ -370,7 +375,8 @@ void Proxy::sendPacketsToClient() {
     return;
   }
   if (!clientConnection.security) {
-    throw std::runtime_error("sendPacketsToClient called but clientConnection.security is null");
+    // No client connection, nobody to send packets to
+    return;
   }
   // Send all pending outgoing packets to the client
   while (clientConnection.security->HasPacketToSend()) {
@@ -386,7 +392,8 @@ void Proxy::sendPacketsToClient() {
 
 void Proxy::receivePacketsFromServer() {
   if (!serverConnection.security) {
-    throw std::runtime_error("receivePacketsFromServer called but serverConnection.security is null");
+    // No server connection, nothing to receive
+    return;
   }
   while (serverConnection.security->HasPacketToRecv()) {
     // We received a packet from the server, handle it
@@ -572,8 +579,12 @@ void Proxy::receivePacketsFromServer() {
 }
 
 void Proxy::sendPacketsToServer() {
+  if (!serverConnection.security) {
+    // No server connection, nobody to send packets to
+    return;
+  }
   // Send packets that are currently in the security api
-  while (serverConnection.security && serverConnection.security->HasPacketToSend()) {
+  while (serverConnection.security->HasPacketToSend()) {
     if (!serverConnection.Send(serverConnection.security->GetPacketToSend())) {
       LOG(ERROR) << "Server connection Send error.";
       break;
