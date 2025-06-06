@@ -3,6 +3,7 @@
 
 #include "config.hpp"
 #include "hyperbot.hpp"
+#include "dashboardWidget.hpp"
 
 #include <QMainWindow>
 #include <QStringList>
