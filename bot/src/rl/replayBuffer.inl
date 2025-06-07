@@ -119,7 +119,7 @@ void ReplayBuffer<TransitionType>::updatePriorities(const std::vector<ReplayBuff
   for (size_t i=0; i<ids.size(); ++i) {
     LeafIndexType leafIndex = transitionIdToLeafIndex(ids[i]);
     const float priorityAlpha = calculatePriority(priorities[i]);
-    maxPriority_ = std::max(maxPriority_, priorityAlpha); // Ensure max_priority stays current
+    maxPriority_ = std::max(maxPriority_, priorityAlpha); // Ensure maxPriority_ stays current
     updateTreeForChangedLeaf(leafIndex, priorityAlpha);
   }
 }

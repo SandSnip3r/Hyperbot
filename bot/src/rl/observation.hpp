@@ -42,8 +42,9 @@ public:
   std::array<float, 17> remainingTimeOurBuffs_;
   std::array<float, 17> remainingTimeOpponentBuffs_;
 
-  // std::array<float, 2> remainingTimeOurDebuffs_;
-  // std::array<float, 2> remainingTimeOpponentDebuffs_;
+  // Normalized to [0,1] for debuff duration. For now, this only refers to legacy debuffs.
+  std::array<float, 12> remainingTimeOurDebuffs_;
+  std::array<float, 12> remainingTimeOpponentDebuffs_;
 
   // Normalized to [0,1] for skill cooldown.
   std::array<float, 32> skillCooldowns_;

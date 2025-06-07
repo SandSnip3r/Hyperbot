@@ -95,17 +95,40 @@ Observation::Observation(const Bot &bot, const event::Event *event, sro::scalar_
     // ============================================================================
   }
 
-  // static constexpr std::array kDebuffs{packet::enums::AbnormalStateFlag::kShocked, packet::enums::AbnormalStateFlag::kBurnt};
-  // if (kDebuffs.size() != remainingTimeOurDebuffs_.size() ||
-  //     kDebuffs.size() != remainingTimeOpponentDebuffs_.size()) {
-  //   throw std::runtime_error("Local debuff array and observation's debuff array do not have the same size");
-  // }
-  // for (int i=0; i<kDebuffs.size(); ++i) {
-  //   const packet::enums::AbnormalStateFlag debuff = kDebuffs[i];
-  //   // TODO:
-  //   // std::array<int, 2> remainingTimeOurDebuffs_;
-  //   // std::array<int, 2> remainingTimeOpponentDebuffs_;
-  // }
+  static constexpr std::array kDebuffs{packet::enums::AbnormalStateFlag::kShocked, packet::enums::AbnormalStateFlag::kBurnt};
+  static constexpr std::array kDebuffLevels{36, 41, 48,  54, 62, 82};
+  if (kDebuffs.size()*kDebuffLevels.size() != remainingTimeOurDebuffs_.size() ||
+      kDebuffs.size()*kDebuffLevels.size() != remainingTimeOpponentDebuffs_.size()) {
+    throw std::runtime_error("Local debuff array and observation's debuff array do not have the same size");
+  }
+
+  const auto &ourLegacyStateEffects = bot.selfState()->legacyStateEffects();
+  const auto &ourLegacyStateEndTimes = bot.selfState()->legacyStateEndTimes();
+  const auto &ourLegacyStateTotalDurations = bot.selfState()->legacyStateTotalDurations();
+  const auto &opponentLegacyStateEffects = opponent->legacyStateEffects();
+  const auto &opponentLegacyStateEndTimes = opponent->legacyStateEndTimes();
+  const auto &opponentLegacyStateTotalDurations = opponent->legacyStateTotalDurations();
+  int index=0;
+  for (packet::enums::AbnormalStateFlag debuff : kDebuffs) {
+    for (int level : kDebuffLevels) {
+      // ==================================== Us ====================================
+      if (ourLegacyStateEffects[helpers::toBitNum(debuff)] == level) {
+        std::chrono::milliseconds remainingTime = std::chrono::duration_cast<std::chrono::milliseconds>(ourLegacyStateEndTimes[helpers::toBitNum(debuff)] - timestamp_);
+        remainingTimeOurDebuffs_[index] = std::clamp(remainingTime.count() / static_cast<float>(ourLegacyStateTotalDurations[helpers::toBitNum(debuff)].count()), 0.0f, 1.0f);
+      } else {
+        remainingTimeOurDebuffs_[index] = 0.0;
+      }
+      // ================================= Opponent =================================
+      if (opponentLegacyStateEffects[helpers::toBitNum(debuff)] == level) {
+        std::chrono::milliseconds remainingTime = std::chrono::duration_cast<std::chrono::milliseconds>(opponentLegacyStateEndTimes[helpers::toBitNum(debuff)] - timestamp_);
+        remainingTimeOpponentDebuffs_[index] = std::clamp(remainingTime.count() / static_cast<float>(opponentLegacyStateTotalDurations[helpers::toBitNum(debuff)].count()), 0.0f, 1.0f);
+      } else {
+        remainingTimeOpponentDebuffs_[index] = 0.0;
+      }
+      // ============================================================================
+      ++index;
+    }
+  }
 
   static constexpr std::array kSkills{28, 131, 554, 1253, 1256, 1271, 1272, 1281, 1335, 1377, 1380, 1398, 1399, 1410, 1421, 1441, 8312, 21209, 30577, 37, 114, 298, 300, 322, 339, 371, 588, 610, 644, 1315, 1343, 1449};
   if (kSkills.size() != skillCooldowns_.size()) {

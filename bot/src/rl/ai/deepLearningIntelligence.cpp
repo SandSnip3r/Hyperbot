@@ -1,5 +1,6 @@
 #include "bot.hpp"
 #include "rl/ai/deepLearningIntelligence.hpp"
+#include "rl/modelInputs.hpp"
 #include "rl/trainingManager.hpp"
 
 #include <tracy/Tracy.hpp>
@@ -25,18 +26,18 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
       bot.worldState().mutex.unlock();
 
       // Create a ModelInput to pass to the JaxInterface
-      ModelInput modelInput;
-      modelInput.currentObservation = &observation;
-      modelInput.pastObservationStack.reserve(pastObservationsAndActions_.size());
-      modelInput.pastActionStack.reserve(pastObservationsAndActions_.size());
+      model_inputs::ModelInputView modelInputView;
+      modelInputView.currentObservation = &observation;
+      modelInputView.pastObservationStack.reserve(pastObservationsAndActions_.size());
+      modelInputView.pastActionStack.reserve(pastObservationsAndActions_.size());
 
       // Fill the model input with the past observations and actions.
       for (size_t i=0; i<pastObservationsAndActions_.size(); ++i) {
-        modelInput.pastObservationStack.push_back(&pastObservationsAndActions_[i].first);
-        modelInput.pastActionStack.push_back(pastObservationsAndActions_[i].second);
+        modelInputView.pastObservationStack.push_back(&pastObservationsAndActions_[i].first);
+        modelInputView.pastActionStack.push_back(pastObservationsAndActions_[i].second);
       }
 
-      actionIndex = trainingManager_.getJaxInterface().selectAction(modelInput, canSendPacket);
+      actionIndex = trainingManager_.getJaxInterface().selectAction(modelInputView, canSendPacket);
       bot.worldState().mutex.lock();
     } else {
       // We cannot send a packet, we'll entirely side-step JAX and immediately return the do-nothing action

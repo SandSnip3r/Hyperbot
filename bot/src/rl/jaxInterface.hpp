@@ -1,6 +1,7 @@
 #ifndef RL_JAX_INTERFACE_HPP_
 #define RL_JAX_INTERFACE_HPP_
 
+#include "rl/modelInputs.hpp"
 #include "rl/observation.hpp"
 
 #include <tracy/Tracy.hpp>
@@ -15,14 +16,6 @@
 #include <vector>
 
 namespace rl {
-
-struct ModelInput {
-  // Observations & actions are stacked so that the model can see history.
-  // Older observations are at the front and newer observations are at the back.
-  std::vector<const Observation*> pastObservationStack;
-  std::vector<int> pastActionStack;
-  const Observation *currentObservation;
-};
 
 namespace detail {
 struct ModelInputNumpy {
@@ -73,7 +66,7 @@ public:
   Optimizer getDummyOptimizer() const;
 
   // `canSendPacket` is used for action masking to limit the rate at which packets are sent.
-  int selectAction(const ModelInput &modelInput, bool canSendPacket);
+  int selectAction(const model_inputs::ModelInputView &modelInputView, bool canSendPacket);
 
   struct TrainAuxOutput {
     float globalNorm;
@@ -88,11 +81,11 @@ public:
   TrainAuxOutput train(const Model &model,
                        const Optimizer &optimizer,
                        const Model &targetModel,
-                       const std::vector<ModelInput> &pastModelInputs,
+                       const std::vector<model_inputs::ModelInputView> &pastModelInputViews,
                        const std::vector<int> &actionsTaken,
                        const std::vector<bool> &isTerminals,
                        const std::vector<float> &rewards,
-                       const std::vector<ModelInput> &currentModelInputs,
+                       const std::vector<model_inputs::ModelInputView> &currentModelInputViews,
                        const std::vector<float> &importanceSamplingWeights);
   void updateTargetModel();
   void updateTargetModelPolyak(float tau);
@@ -135,10 +128,10 @@ private:
   pybind11::object getNextRngKey();
 
   // Convert a ModelInput to corresponding numpy arrays
-  detail::ModelInputNumpy modelInputToNumpy(const ModelInput &modelInput);
+  detail::ModelInputNumpy modelInputToNumpy(const model_inputs::ModelInputView &modelInputView);
 
   // Convert a vector of ModelInputs to batches of corresponding numpy arrays
-  detail::ModelInputNumpy modelInputsToNumpy(const std::vector<ModelInput> &modelInputs);
+  detail::ModelInputNumpy modelInputsToNumpy(const std::vector<model_inputs::ModelInputView> &modelInputViews);
 
   // Note, this also works with a default constructed observation.
   size_t getObservationNumpySize(const Observation &observation) const;

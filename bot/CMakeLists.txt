@@ -335,6 +335,8 @@ add_executable(${PROJECT_NAME}
   src/rl/checkpointManager.hpp
   src/rl/jaxInterface.cpp
   src/rl/jaxInterface.hpp
+  src/rl/modelInputs.cpp
+  src/rl/modelInputs.hpp
   src/rl/observation.cpp
   src/rl/observation.hpp
   src/rl/observationAndActionStorage.cpp

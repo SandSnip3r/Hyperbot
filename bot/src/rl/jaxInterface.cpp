@@ -168,7 +168,7 @@ JaxInterface::Optimizer JaxInterface::getDummyOptimizer() const {
   return Optimizer(py::module::import("copy").attr("deepcopy")(*optimizerState_));
 }
 
-int JaxInterface::selectAction(const ModelInput &modelInput, bool canSendPacket) {
+int JaxInterface::selectAction(const model_inputs::ModelInputView &modelInputView, bool canSendPacket) {
   ZoneScopedN("JaxInterface::selectAction");
   int actionIndex;
   try {
@@ -177,7 +177,7 @@ int JaxInterface::selectAction(const ModelInput &modelInput, bool canSendPacket)
     waitingToSelectAction_ = false;
     py::gil_scoped_acquire acquire;
     // Convert C++ observation into numpy observation
-    detail::ModelInputNumpy numpyModelInput = modelInputToNumpy(modelInput);
+    detail::ModelInputNumpy numpyModelInput = modelInputToNumpy(modelInputView);
     // Create an action mask based on whether or not we can send a packet
     py::array_t<float> actionMask = createActionMaskNumpy(canSendPacket);
     // Get the action from the model
@@ -214,23 +214,23 @@ int JaxInterface::selectAction(const ModelInput &modelInput, bool canSendPacket)
 JaxInterface::TrainAuxOutput JaxInterface::train(const Model &model,
                                                  const Optimizer &optimizer,
                                                  const Model &targetModel,
-                                                 const std::vector<ModelInput> &pastModelInputs,
+                                                 const std::vector<model_inputs::ModelInputView> &pastModelInputViews,
                                                  const std::vector<int> &actionsTaken,
                                                  const std::vector<bool> &isTerminals,
                                                  const std::vector<float> &rewards,
-                                                 const std::vector<ModelInput> &currentModelInputs,
+                                                 const std::vector<model_inputs::ModelInputView> &currentModelInputViews,
                                                  const std::vector<float> &importanceSamplingWeights) {
   ZoneScopedN("JaxInterface::train");
   {
-    size_t size = pastModelInputs.size();
+    size_t size = pastModelInputViews.size();
     if (size == 0 ||
         actionsTaken.size() != size ||
         isTerminals.size() != size ||
         rewards.size() != size ||
-        currentModelInputs.size() != size ||
+        currentModelInputViews.size() != size ||
         importanceSamplingWeights.size() != size) {
       throw std::runtime_error(absl::StrFormat("JaxInterface::train: Batch size mismatch: %zu %zu %zu %zu %zu %zu",
-        pastModelInputs.size(), actionsTaken.size(), isTerminals.size(), rewards.size(), currentModelInputs.size(), importanceSamplingWeights.size()));
+        pastModelInputViews.size(), actionsTaken.size(), isTerminals.size(), rewards.size(), currentModelInputViews.size(), importanceSamplingWeights.size()));
     }
   }
   TrainAuxOutput result;
@@ -241,7 +241,7 @@ JaxInterface::TrainAuxOutput JaxInterface::train(const Model &model,
     });
     py::gil_scoped_acquire acquire;
     try {
-      detail::ModelInputNumpy pastModelInputsNumpy = modelInputsToNumpy(pastModelInputs);
+      detail::ModelInputNumpy pastModelInputsNumpy = modelInputsToNumpy(pastModelInputViews);
       py::tuple pastModelInputTuple = py::make_tuple(
         pastModelInputsNumpy.pastObservationStack,
         pastModelInputsNumpy.pastObservationTimestamps,
@@ -249,7 +249,7 @@ JaxInterface::TrainAuxOutput JaxInterface::train(const Model &model,
         pastModelInputsNumpy.pastMask,
         pastModelInputsNumpy.currentObservation
       );
-      detail::ModelInputNumpy currentModelInputsNumpy = modelInputsToNumpy(currentModelInputs);
+      detail::ModelInputNumpy currentModelInputsNumpy = modelInputsToNumpy(currentModelInputViews);
       py::tuple currentModelInputTuple = py::make_tuple(
         currentModelInputsNumpy.pastObservationStack,
         currentModelInputsNumpy.pastObservationTimestamps,
@@ -413,7 +413,13 @@ py::object JaxInterface::getNextRngKey() {
 }
 
 size_t JaxInterface::getObservationNumpySize(const Observation &observation) const {
-  return 6 + 1 + 23 + observation.remainingTimeOurBuffs_.size()*2 + observation.remainingTimeOpponentBuffs_.size()*2 + observation.skillCooldowns_.size()*2 + observation.itemCooldowns_.size()*2;
+  return 6 + 1 + 23 +
+      observation.remainingTimeOurBuffs_.size()*2 +
+      observation.remainingTimeOpponentBuffs_.size()*2 +
+      observation.remainingTimeOurDebuffs_.size()*2 +
+      observation.remainingTimeOpponentDebuffs_.size()*2 +
+      observation.skillCooldowns_.size()*2 +
+      observation.itemCooldowns_.size()*2;
 }
 
 size_t JaxInterface::writeEmptyObservationToRawArray(size_t observationSize, float *array) {
@@ -457,6 +463,14 @@ size_t JaxInterface::writeObservationToRawArray(const Observation &observation, 
   for (int i=0; i<observation.remainingTimeOpponentBuffs_.size(); ++i) {
     array[index++] = observation.remainingTimeOpponentBuffs_[i] != 0 ? 1.0 : 0.0;
     array[index++] = observation.remainingTimeOpponentBuffs_[i];
+  }
+  for (int i=0; i<observation.remainingTimeOurDebuffs_.size(); ++i) {
+    array[index++] = observation.remainingTimeOurDebuffs_[i] != 0 ? 1.0 : 0.0;
+    array[index++] = observation.remainingTimeOurDebuffs_[i];
+  }
+  for (int i=0; i<observation.remainingTimeOpponentDebuffs_.size(); ++i) {
+    array[index++] = observation.remainingTimeOpponentDebuffs_[i] != 0 ? 1.0 : 0.0;
+    array[index++] = observation.remainingTimeOpponentDebuffs_[i];
   }
   for (int cooldown : observation.skillCooldowns_) {
     array[index++] = cooldown == 0 ? 1.0 : 0.0;
@@ -523,11 +537,11 @@ py::array_t<float> JaxInterface::createActionMaskNumpy(bool canSendPacket) {
   return array;
 }
 
-detail::ModelInputNumpy JaxInterface::modelInputToNumpy(const ModelInput &modelInput) {
+detail::ModelInputNumpy JaxInterface::modelInputToNumpy(const model_inputs::ModelInputView &modelInputView) {
   ZoneScopedN("JaxInterface::modelInputToNumpy");
 
   // Get the size of an observation
-  const size_t individualObservationSize = getObservationNumpySize(*modelInput.currentObservation);
+  const size_t individualObservationSize = getObservationNumpySize(*modelInputView.currentObservation);
 
   // Calculate the total size needed for past observations stack and current observation
   const size_t totalSize = individualObservationSize * observationStackSize_;
@@ -545,7 +559,7 @@ detail::ModelInputNumpy JaxInterface::modelInputToNumpy(const ModelInput &modelI
     auto mutablePastObservationStackArray = result.pastObservationStack.mutable_unchecked<2>();
     int pastObservationIndex = 0;
     // First write empty observations if the given observation stack does not fill the expected stack size.
-    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+    for (int i=modelInputView.pastObservationStack.size(); i<observationStackSize_; ++i) {
       float *observationDataPtr = mutablePastObservationStackArray.mutable_data(pastObservationIndex, 0);
       size_t written = writeEmptyObservationToRawArray(individualObservationSize, observationDataPtr);
       if (written != individualObservationSize) {
@@ -554,8 +568,8 @@ detail::ModelInputNumpy JaxInterface::modelInputToNumpy(const ModelInput &modelI
       ++pastObservationIndex;
     }
     // Now, write the past observations to the numpy array.
-    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
-      const Observation &observation = *modelInput.pastObservationStack[i];
+    for (int i=0; i<modelInputView.pastObservationStack.size(); ++i) {
+      const Observation &observation = *modelInputView.pastObservationStack[i];
       float *observationDataPtr = mutablePastObservationStackArray.mutable_data(pastObservationIndex, 0);
       size_t written = writeObservationToRawArray(observation, observationDataPtr);
       if (written != individualObservationSize) {
@@ -573,14 +587,14 @@ detail::ModelInputNumpy JaxInterface::modelInputToNumpy(const ModelInput &modelI
     auto mutablePastObservationTimestampsArray = result.pastObservationTimestamps.mutable_unchecked<2>();
     // First write empty timestamps if the given observation stack does not fill the expected stack size.
     int pastObservationIndex = 0;
-    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+    for (int i=modelInputView.pastObservationStack.size(); i<observationStackSize_; ++i) {
       *mutablePastObservationTimestampsArray.mutable_data(pastObservationIndex, 0) = 0.0;
       ++pastObservationIndex;
     }
     // Now, write the past observation timestamps to the numpy array.
-    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
+    for (int i=0; i<modelInputView.pastObservationStack.size(); ++i) {
       // Calculate the time delta between the current observation and the past observation.
-      const int millisecondsAgo = std::chrono::duration_cast<std::chrono::milliseconds>(modelInput.currentObservation->timestamp_ - modelInput.pastObservationStack[i]->timestamp_).count();
+      const int millisecondsAgo = std::chrono::duration_cast<std::chrono::milliseconds>(modelInputView.currentObservation->timestamp_ - modelInputView.pastObservationStack[i]->timestamp_).count();
       // For now, we hard-code the regularization target to be 2000ms.
       static constexpr int kRegularizationTargetMs = 2000;
       *mutablePastObservationTimestampsArray.mutable_data(pastObservationIndex, 0) = millisecondsAgo / static_cast<float>(kRegularizationTargetMs);
@@ -596,15 +610,15 @@ detail::ModelInputNumpy JaxInterface::modelInputToNumpy(const ModelInput &modelI
     auto mutablePastActionsArray = result.pastActions.mutable_unchecked<2>();
     // First write empty actions if the given observation stack does not fill the expected stack size.
     int pastActionIndex = 0;
-    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+    for (int i=modelInputView.pastObservationStack.size(); i<observationStackSize_; ++i) {
       float *actionDataPtr = mutablePastActionsArray.mutable_data(pastActionIndex, 0);
       writeEmptyActionToRawArray(actionDataPtr);
       ++pastActionIndex;
     }
     // Now, write the past actions to the numpy array.
-    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
+    for (int i=0; i<modelInputView.pastObservationStack.size(); ++i) {
       float *actionDataPtr = mutablePastActionsArray.mutable_data(pastActionIndex, 0);
-      writeActionToRawArray(modelInput.pastActionStack[i], actionDataPtr);
+      writeActionToRawArray(modelInputView.pastActionStack[i], actionDataPtr);
       ++pastActionIndex;
     }
     if (pastActionIndex != observationStackSize_) {
@@ -617,12 +631,12 @@ detail::ModelInputNumpy JaxInterface::modelInputToNumpy(const ModelInput &modelI
     auto mutablePastMaskArray = result.pastMask.mutable_unchecked<2>();
     // First write 0s if the given observation stack does not fill the expected stack size.
     int index = 0;
-    for (int i=modelInput.pastObservationStack.size(); i<observationStackSize_; ++i) {
+    for (int i=modelInputView.pastObservationStack.size(); i<observationStackSize_; ++i) {
       *mutablePastMaskArray.mutable_data(index, 0) = 0.0;
       ++index;
     }
     // Now, write 1s to the numpy array.
-    for (int i=0; i<modelInput.pastObservationStack.size(); ++i) {
+    for (int i=0; i<modelInputView.pastObservationStack.size(); ++i) {
       *mutablePastMaskArray.mutable_data(index, 0) = 1.0;
       ++index;
     }
@@ -634,7 +648,7 @@ detail::ModelInputNumpy JaxInterface::modelInputToNumpy(const ModelInput &modelI
   // =========================== Write current observation to numpy array ==========================
   auto mutableCurrentObservationArray = result.currentObservation.mutable_unchecked<1>();
   float *mutableCurrentObservationData = mutableCurrentObservationArray.mutable_data(0);
-  size_t written = writeObservationToRawArray(*modelInput.currentObservation, mutableCurrentObservationData);
+  size_t written = writeObservationToRawArray(*modelInputView.currentObservation, mutableCurrentObservationData);
   if (written != individualObservationSize) {
     LOG(WARNING) << "Wrote " << written << " but only expected to write " << individualObservationSize;
   }
@@ -642,20 +656,20 @@ detail::ModelInputNumpy JaxInterface::modelInputToNumpy(const ModelInput &modelI
   return result;
 }
 
-detail::ModelInputNumpy JaxInterface::modelInputsToNumpy(const std::vector<ModelInput> &modelInputs) {
+detail::ModelInputNumpy JaxInterface::modelInputsToNumpy(const std::vector<model_inputs::ModelInputView> &modelInputViews) {
   ZoneScopedN("JaxInterface::modelInputsToNumpy");
 
-  if (modelInputs.empty()) {
+  if (modelInputViews.empty()) {
     throw std::runtime_error("JaxInterface::modelInputsToNumpy: Batch size is 0");
   }
 
   // Get the size of a single observation
-  const size_t individualObservationSize = getObservationNumpySize(*modelInputs[0].currentObservation);
+  const size_t individualObservationSize = getObservationNumpySize(*modelInputViews[0].currentObservation);
 
   // Calculate the total size needed for each model input (past observations stack + current observation)
   const size_t singleInputSize = individualObservationSize * observationStackSize_;
 
-  const size_t batchSize = modelInputs.size();
+  const size_t batchSize = modelInputViews.size();
 
   // ==================================== Allocate numpy arrays ====================================
   detail::ModelInputNumpy result;
@@ -667,7 +681,7 @@ detail::ModelInputNumpy JaxInterface::modelInputsToNumpy(const std::vector<Model
 
   // ============================ Write past observations to numpy array ===========================
   for (int batchIndex=0; batchIndex<batchSize; ++batchIndex) {
-    const ModelInput &modelInput = modelInputs[batchIndex];
+    const model_inputs::ModelInputView &modelInput = modelInputViews[batchIndex];
     auto mutablePastObservationStackArray = result.pastObservationStack.mutable_unchecked<3>();
     int pastObservationIndex = 0;
     // First write empty observations if the given observation stack does not fill the expected stack size.
@@ -696,7 +710,7 @@ detail::ModelInputNumpy JaxInterface::modelInputsToNumpy(const std::vector<Model
 
   // ======================= Write past observation timestamps to numpy array ======================
   for (int batchIndex=0; batchIndex<batchSize; ++batchIndex) {
-    const ModelInput &modelInput = modelInputs[batchIndex];
+    const model_inputs::ModelInputView &modelInput = modelInputViews[batchIndex];
     auto mutablePastObservationTimestampsArray = result.pastObservationTimestamps.mutable_unchecked<3>();
     // First write empty timestamps if the given observation stack does not fill the expected stack size.
     int pastObservationIndex = 0;
@@ -720,7 +734,7 @@ detail::ModelInputNumpy JaxInterface::modelInputsToNumpy(const std::vector<Model
 
   // ============================== Write past actions to numpy array ==============================
   for (int batchIndex=0; batchIndex<batchSize; ++batchIndex) {
-    const ModelInput &modelInput = modelInputs[batchIndex];
+    const model_inputs::ModelInputView &modelInput = modelInputViews[batchIndex];
     auto mutablePastActionsArray = result.pastActions.mutable_unchecked<3>();
     // First write empty actions if the given observation stack does not fill the expected stack size.
     int pastActionIndex = 0;
@@ -742,7 +756,7 @@ detail::ModelInputNumpy JaxInterface::modelInputsToNumpy(const std::vector<Model
 
   // ================================ Write past mask to numpy array ===============================
   for (int batchIndex=0; batchIndex<batchSize; ++batchIndex) {
-    const ModelInput &modelInput = modelInputs[batchIndex];
+    const model_inputs::ModelInputView &modelInput = modelInputViews[batchIndex];
     auto mutablePastMaskArray = result.pastMask.mutable_unchecked<3>();
     // First write 0s if the given observation stack does not fill the expected stack size.
     int index = 0;
@@ -762,7 +776,7 @@ detail::ModelInputNumpy JaxInterface::modelInputsToNumpy(const std::vector<Model
 
   // =========================== Write current observation to numpy array ==========================
   for (int batchIndex=0; batchIndex<batchSize; ++batchIndex) {
-    const ModelInput &modelInput = modelInputs[batchIndex];
+    const model_inputs::ModelInputView &modelInput = modelInputViews[batchIndex];
     auto mutableCurrentObservationArray = result.currentObservation.mutable_unchecked<2>();
     float *mutableCurrentObservationData = mutableCurrentObservationArray.mutable_data(batchIndex, 0);
     size_t written = writeObservationToRawArray(*modelInput.currentObservation, mutableCurrentObservationData);

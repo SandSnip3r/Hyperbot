@@ -37,7 +37,7 @@ public:
   // If the storage is full, it will delete the oldest PVP and return the IDs of all observations and actions in the deleted PVP (second of pair).
   std::pair<Id, std::vector<Id>> addObservationAndAction(common::PvpDescriptor::PvpId pvpId, const std::string &intelligenceName, const Observation &observation, std::optional<int> actionIndex);
 
-  // Note that insertion & deletion do not invalidate references.
+  // Note that insertion & deletion do not invalidate references. Be careful not to hold on to references which may be deleted when the buffer is full.
   const ObservationAndActionType& getObservationAndAction(Id id) const;
   bool hasPrevious(Id id) const;
 
