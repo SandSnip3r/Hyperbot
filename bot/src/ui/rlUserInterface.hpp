@@ -16,6 +16,10 @@ namespace broker {
 class EventBroker;
 } // namespace broker
 
+namespace entity {
+class Self;
+} // namespace entity
+
 namespace ui {
 
 class RlUserInterface {
@@ -31,6 +35,7 @@ public:
   void sendCheckpointLoaded(const std::string &checkpointName);
 
   void plot(std::string_view plotName, double x, double y);
+  void sendCharacterStatus(const entity::Self &self);
 private:
   static constexpr std::chrono::milliseconds kHeartbeatInterval{250};
   const std::string kReqReplyAddress{"tcp://*:5555"};
