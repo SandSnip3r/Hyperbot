@@ -141,6 +141,14 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
       emit plotData(plotDataMsg.x(), plotDataMsg.y());
       break;
     }
+    case rl_ui_messages::BroadcastMessage::BodyCase::kCharacterStatus: {
+      const rl_ui_messages::CharacterStatus &status =
+          broadcastMessage.character_status();
+      emit characterStatusReceived(
+          QString::fromStdString(status.name()), status.current_hp(),
+          status.max_hp(), status.current_mp(), status.max_mp());
+      break;
+    }
     default: {
       LOG(WARNING) << "Received unexpected broadcast message.";
       break;

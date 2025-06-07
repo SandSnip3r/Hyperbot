@@ -73,6 +73,14 @@ message CheckpointLoaded {
   string name = 1;
 }
 
+message CharacterStatus {
+  string name = 1;
+  int32 current_hp = 2;
+  int32 max_hp = 3;
+  int32 current_mp = 4;
+  int32 max_mp = 5;
+}
+
 message BroadcastMessage {
   oneof body {
     google.protobuf.Empty heartbeat = 1;
@@ -81,6 +89,7 @@ message BroadcastMessage {
     google.protobuf.Empty saving_checkpoint = 4;
     PlotData plot_data = 5;
     CheckpointLoaded checkpoint_loaded = 6;
+    CharacterStatus character_status = 7;
   }
 }
 

@@ -60,6 +60,16 @@
      </rect>
     </property>
    </widget>
+   <widget class="DashboardWidget" name="dashboardWidget" native="true">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>440</y>
+      <width>451</width>
+      <height>321</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -84,6 +94,12 @@
    <class>InteractiveChartView</class>
    <extends>QWidget</extends>
    <header>interactiveChartView.hpp</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DashboardWidget</class>
+   <extends>QWidget</extends>
+   <header>dashboardWidget.hpp</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

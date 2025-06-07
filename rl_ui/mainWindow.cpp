@@ -46,6 +46,8 @@ void MainWindow::connectSignals() {
 
   // TODO: Organize this better
   connect(&hyperbot_, &Hyperbot::plotData, this, &MainWindow::addDataPoint);
+  connect(&hyperbot_, &Hyperbot::characterStatusReceived, ui->dashboardWidget,
+          &DashboardWidget::onCharacterStatusReceived);
 }
 
 void MainWindow::showConnectionWindow(const QString &windowTitle) {

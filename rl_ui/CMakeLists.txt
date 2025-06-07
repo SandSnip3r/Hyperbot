@@ -27,6 +27,7 @@ qt_add_executable(rl_ui
   interactiveChartView.hpp interactiveChartView.cpp
   hyperbotSubscriberWorker.hpp hyperbotSubscriberWorker.cpp
   checkpointWidget.hpp checkpointWidget.cpp checkpointwidget.ui
+  dashboardWidget.hpp dashboardWidget.cpp dashboardwidget.ui
 )
 
 target_link_libraries(rl_ui PRIVATE
