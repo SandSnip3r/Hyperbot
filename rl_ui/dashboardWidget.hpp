@@ -15,7 +15,8 @@ public:
   ~DashboardWidget();
 
 public slots:
-  void onCharacterStatusListReceived(QStringList statusList);
+  void onCharacterStatusReceived(QString name, int currentHp, int maxHp,
+                                 int currentMp, int maxMp);
 
 private:
   Ui::DashboardWidget *ui;

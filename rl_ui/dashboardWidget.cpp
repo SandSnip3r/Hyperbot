@@ -16,24 +16,24 @@ DashboardWidget::~DashboardWidget() {
   delete ui;
 }
 
-void DashboardWidget::onCharacterStatusListReceived(QStringList statusList) {
-  ui->statusTable->clearContents();
-  ui->statusTable->setRowCount(statusList.size());
-  for (int i = 0; i < statusList.size(); ++i) {
-    const QString &entry = statusList.at(i);
-    const QStringList parts = entry.split(',');
-    QString name = parts.value(0).trimmed();
-    int currentHp = parts.value(1).trimmed().toInt();
-    int maxHp = parts.value(2).trimmed().toInt();
-    int currentMp = parts.value(3).trimmed().toInt();
-    int maxMp = parts.value(4).trimmed().toInt();
+void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
+                                               int maxHp, int currentMp,
+                                               int maxMp) {
+  int row = -1;
+  for (int i = 0; i < ui->statusTable->rowCount(); ++i) {
+    QTableWidgetItem *item = ui->statusTable->item(i, 0);
+    if (item && item->text() == name) {
+      row = i;
+      break;
+    }
+  }
 
-    ui->statusTable->setItem(i, 0, new QTableWidgetItem(name));
+  if (row == -1) {
+    row = ui->statusTable->rowCount();
+    ui->statusTable->insertRow(row);
+    ui->statusTable->setItem(row, 0, new QTableWidgetItem(name));
 
     QProgressBar *hpBar = new QProgressBar;
-    hpBar->setRange(0, maxHp);
-    hpBar->setValue(currentHp);
-    hpBar->setFormat(QString("%1/%2").arg(currentHp).arg(maxHp));
     hpBar->setStyleSheet(R"(
       QProgressBar {
         border: 1px solid black;
@@ -45,12 +45,9 @@ void DashboardWidget::onCharacterStatusListReceived(QStringList statusList) {
         background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #630410, stop: 0.5455 #ff3c52, stop: 1 #9c0010);
       }
     )");
-    ui->statusTable->setCellWidget(i, 1, hpBar);
+    ui->statusTable->setCellWidget(row, 1, hpBar);
 
     QProgressBar *mpBar = new QProgressBar;
-    mpBar->setRange(0, maxMp);
-    mpBar->setValue(currentMp);
-    mpBar->setFormat(QString("%1/%2").arg(currentMp).arg(maxMp));
     mpBar->setStyleSheet(R"(
       QProgressBar {
         border: 1px solid black;
@@ -62,6 +59,19 @@ void DashboardWidget::onCharacterStatusListReceived(QStringList statusList) {
         background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #101c4a, stop: 0.5455 #4a69ce, stop: 1 #182c73);
       }
     )");
-    ui->statusTable->setCellWidget(i, 2, mpBar);
+    ui->statusTable->setCellWidget(row, 2, mpBar);
+  }
+
+  auto *hpBar = qobject_cast<QProgressBar *>(ui->statusTable->cellWidget(row, 1));
+  auto *mpBar = qobject_cast<QProgressBar *>(ui->statusTable->cellWidget(row, 2));
+  if (hpBar) {
+    hpBar->setRange(0, maxHp);
+    hpBar->setValue(currentHp);
+    hpBar->setFormat(QString("%1/%2").arg(currentHp).arg(maxHp));
+  }
+  if (mpBar) {
+    mpBar->setRange(0, maxMp);
+    mpBar->setValue(currentMp);
+    mpBar->setFormat(QString("%1/%2").arg(currentMp).arg(maxMp));
   }
 }

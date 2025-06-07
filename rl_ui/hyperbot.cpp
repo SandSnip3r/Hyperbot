@@ -141,19 +141,12 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
       emit plotData(plotDataMsg.x(), plotDataMsg.y());
       break;
     }
-    case rl_ui_messages::BroadcastMessage::BodyCase::kCharacterStatusList: {
-      const rl_ui_messages::CharacterStatusList &statusList =
-          broadcastMessage.character_status_list();
-      QStringList list;
-      for (const auto &status : statusList.statuses()) {
-        QString entry = QString::fromStdString(status.name()) + "," +
-                        QString::number(status.current_hp()) + "," +
-                        QString::number(status.max_hp()) + "," +
-                        QString::number(status.current_mp()) + "," +
-                        QString::number(status.max_mp());
-        list.append(entry);
-      }
-      emit characterStatusListReceived(list);
+    case rl_ui_messages::BroadcastMessage::BodyCase::kCharacterStatus: {
+      const rl_ui_messages::CharacterStatus &status =
+          broadcastMessage.character_status();
+      emit characterStatusReceived(
+          QString::fromStdString(status.name()), status.current_hp(),
+          status.max_hp(), status.current_mp(), status.max_mp());
       break;
     }
     default: {

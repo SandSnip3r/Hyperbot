@@ -81,10 +81,6 @@ message CharacterStatus {
   int32 max_mp = 5;
 }
 
-message CharacterStatusList {
-  repeated CharacterStatus statuses = 1;
-}
-
 message BroadcastMessage {
   oneof body {
     google.protobuf.Empty heartbeat = 1;
@@ -93,7 +89,7 @@ message BroadcastMessage {
     google.protobuf.Empty saving_checkpoint = 4;
     PlotData plot_data = 5;
     CheckpointLoaded checkpoint_loaded = 6;
-    CharacterStatusList character_status_list = 7;
+    CharacterStatus character_status = 7;
   }
 }
 

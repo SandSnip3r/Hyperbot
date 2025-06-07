@@ -52,7 +52,8 @@ signals:
   void savingCheckpoint();
   void checkpointLoaded(QString checkpointName);
   void plotData(qreal x, qreal y);
-  void characterStatusListReceived(QStringList statusList);
+  void characterStatusReceived(QString name, int currentHp, int maxHp,
+                               int currentMp, int maxMp);
 
 private:
   static constexpr int kHeartbeatIntervalMs = 500;
