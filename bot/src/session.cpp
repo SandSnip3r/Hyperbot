@@ -3,11 +3,14 @@
 Session::Session(const pk2::GameData &gameData,
                  broker::EventBroker &eventBroker,
                  state::WorldState &worldState,
-                 ClientManagerInterface &clientManagerInterface) :
+                 ClientManagerInterface &clientManagerInterface,
+                 ui::RlUserInterface &rlUserInterface) :
     gameData_(gameData),
     eventBroker_(eventBroker),
-    bot_(sessionId_, gameData_, proxy_, packetBroker_, eventBroker_, worldState),
-    clientManagerInterface_(clientManagerInterface) {
+    bot_(sessionId_, gameData_, proxy_, packetBroker_, eventBroker_, worldState,
+         rlUserInterface),
+    clientManagerInterface_(clientManagerInterface),
+    rlUserInterface_(rlUserInterface) {
   eventBroker_.subscribeToEvent(event::EventCode::kClientDied, std::bind(&Session::handleClientDiedEvent, this, std::placeholders::_1));
 }
 

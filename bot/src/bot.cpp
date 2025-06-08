@@ -21,6 +21,7 @@
 #include "state/machine/login.hpp"
 #include "state/machine/maxMasteryAndSkills.hpp"
 #include "state/machine/pvpManager.hpp"
+#include "ui/rlUserInterface.hpp"
 #include "state/machine/spawnAndUseRepairHammerIfNecessary.hpp"
 #include "state/machine/walking.hpp"
 #include "type_id/categories.hpp"
@@ -44,13 +45,15 @@ Bot::Bot(SessionId sessionId,
          Proxy &proxy,
          broker::PacketBroker &packetBroker,
          broker::EventBroker &eventBroker,
-         state::WorldState &worldState) :
+         state::WorldState &worldState,
+         ui::RlUserInterface &rlUserInterface) :
       sessionId_(sessionId),
       gameData_(gameData),
       proxy_(proxy),
       packetBroker_(packetBroker),
       eventBroker_(eventBroker),
-      worldState_(worldState) {
+      worldState_(worldState),
+      rlUserInterface_(rlUserInterface) {
 }
 
 void Bot::initialize() {
@@ -182,6 +185,29 @@ void Bot::handleEvent(const event::Event *event) {
       // ================== Character info events =================
       case event::EventCode::kSelfSpawned: {
         handleSelfSpawned(event);
+        if (selfEntity_) {
+          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+        }
+        break;
+      }
+      case event::EventCode::kEntityHpChanged: {
+        const auto *hpEvent = dynamic_cast<const event::EntityHpChanged *>(event);
+        if (hpEvent && selfEntity_ && hpEvent->globalId == selfEntity_->globalId) {
+          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+        }
+        break;
+      }
+      case event::EventCode::kEntityMpChanged: {
+        const auto *mpEvent = dynamic_cast<const event::EntityMpChanged *>(event);
+        if (mpEvent && selfEntity_ && mpEvent->globalId == selfEntity_->globalId) {
+          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+        }
+        break;
+      }
+      case event::EventCode::kMaxHpMpChanged: {
+        if (selfEntity_) {
+          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+        }
         break;
       }
 

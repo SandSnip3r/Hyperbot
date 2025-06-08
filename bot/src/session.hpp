@@ -10,6 +10,10 @@
 #include "proxy.hpp"
 #include "state/worldState.hpp"
 
+namespace ui {
+class RlUserInterface;
+} // namespace ui
+
 #include <atomic>
 #include <functional>
 #include <optional>
@@ -32,7 +36,8 @@ public:
   Session(const pk2::GameData &gameData,
           broker::EventBroker &eventBroker,
           state::WorldState &worldState,
-          ClientManagerInterface &clientManagerInterface);
+          ClientManagerInterface &clientManagerInterface,
+          ui::RlUserInterface &rlUserInterface);
   ~Session() = default;
   void setCharacter(const CharacterLoginInfo &characterLoginInfo);
   void initialize();
@@ -51,6 +56,7 @@ private:
   broker::PacketBroker packetBroker_;
   Proxy proxy_{gameData_, packetBroker_};
   Bot bot_;
+  ui::RlUserInterface &rlUserInterface_;
   ClientManagerInterface &clientManagerInterface_;
   std::optional<ClientManagerInterface::ClientId> clientId_;
 

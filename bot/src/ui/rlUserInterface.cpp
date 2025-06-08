@@ -1,5 +1,6 @@
 #include "broker/eventBroker.hpp"
 #include "event/event.hpp"
+#include "entity/self.hpp"
 #include "ui/rlUserInterface.hpp"
 
 // Tracy
@@ -11,7 +12,8 @@ using namespace proto;
 
 namespace ui {
 
-RlUserInterface::RlUserInterface(zmq::context_t &context, broker::EventBroker &eventBroker) : context_(context), eventBroker_(eventBroker) {
+RlUserInterface::RlUserInterface(zmq::context_t &context, broker::EventBroker &eventBroker)
+    : context_(context), eventBroker_(eventBroker) {
 
 }
 
@@ -30,7 +32,6 @@ RlUserInterface::~RlUserInterface() {
 }
 
 void RlUserInterface::initialize() {
-
 }
 
 void RlUserInterface::runAsync() {
@@ -197,6 +198,17 @@ void RlUserInterface::handleRequest(const zmq::message_t &request, zmq::socket_t
 void RlUserInterface::broadcastMessage(const rl_ui_messages::BroadcastMessage &message) {
   std::unique_lock lock(publisherMutex_);
   publisher_.send(zmq::message_t(message.SerializeAsString()), zmq::send_flags::none);
+}
+
+void RlUserInterface::sendCharacterStatus(const entity::Self &self) {
+  rl_ui_messages::BroadcastMessage msg;
+  auto *status = msg.mutable_character_status();
+  status->set_name(self.name);
+  status->set_current_hp(self.currentHp());
+  status->set_max_hp(self.maxHp().value_or(self.currentHp()));
+  status->set_current_mp(self.currentMp());
+  status->set_max_mp(self.maxMp().value_or(self.currentMp()));
+  broadcastMessage(msg);
 }
 
 } // namespace ui

@@ -320,9 +320,9 @@ void TrainingManager::createSessions() {
     std::vector<std::future<void>> clientOpenFutures;
     for (size_t i=characterPairingIndex; i<characterPairingIndex+kNumCharacterPairingsToStartAtATime && i < characterPairings_.size(); ++i) {
       const CharacterPairing &pairing = characterPairings_.at(i);
-      sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
+      sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_, rlUserInterface_));
       Session& session1 = *sessions_.back().get();
-      sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_));
+      sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_, rlUserInterface_));
       Session& session2 = *sessions_.back().get();
 
       // Initialize sessions

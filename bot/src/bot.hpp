@@ -17,6 +17,10 @@
 #include "state/machine/sequentialStateMachines.hpp"
 #include "state/machine/stateMachine.hpp"
 
+namespace ui {
+class RlUserInterface;
+}
+
 #include <future>
 #include <optional>
 #include <memory>
@@ -32,7 +36,8 @@ public:
       Proxy &proxy,
       broker::PacketBroker &packetBroker,
       broker::EventBroker &eventBroker,
-      state::WorldState &worldState);
+      state::WorldState &worldState,
+      ui::RlUserInterface &rlUserInterface);
 
   void initialize();
   void setCharacter(const CharacterLoginInfo &characterLoginInfo);
@@ -59,6 +64,7 @@ protected:
   broker::PacketBroker &packetBroker_;
   broker::EventBroker &eventBroker_;
   state::WorldState &worldState_;
+  ui::RlUserInterface &rlUserInterface_;
   PacketProcessor packetProcessor_{sessionId_, worldState_, packetBroker_, eventBroker_, gameData_};
   // StatAggregator statAggregator_{worldState_, eventBroker_};
 
