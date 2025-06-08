@@ -3,13 +3,17 @@
 
 #include <QProgressBar>
 #include <QTableWidgetItem>
+#include <QHeaderView>
 
-DashboardWidget::DashboardWidget(QWidget *parent) : QWidget(parent), ui(new Ui::DashboardWidget) {
+DashboardWidget::DashboardWidget(QWidget *parent)
+    : QWidget(parent), ui(new Ui::DashboardWidget) {
   ui->setupUi(this);
   ui->statusTable->setColumnCount(3);
   QStringList headers;
   headers << "Character" << "HP" << "MP";
   ui->statusTable->setHorizontalHeaderLabels(headers);
+  ui->statusTable->setSortingEnabled(true);
+  ui->statusTable->verticalHeader()->setDefaultSectionSize(20);
 }
 
 DashboardWidget::~DashboardWidget() {
@@ -31,6 +35,7 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
   if (row == -1) {
     row = ui->statusTable->rowCount();
     ui->statusTable->insertRow(row);
+    ui->statusTable->setRowHeight(row, 20);
     ui->statusTable->setItem(row, 0, new QTableWidgetItem(name));
 
     QProgressBar *hpBar = new QProgressBar;
@@ -74,4 +79,5 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
     mpBar->setValue(currentMp);
     mpBar->setFormat(QString("%1/%2").arg(currentMp).arg(maxMp));
   }
+  ui->statusTable->sortItems(0);
 }
