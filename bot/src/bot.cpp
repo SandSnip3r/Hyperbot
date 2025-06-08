@@ -43,14 +43,12 @@
 Bot::Bot(SessionId sessionId,
          const pk2::GameData &gameData,
          Proxy &proxy,
-         broker::PacketBroker &packetBroker,
          broker::EventBroker &eventBroker,
          state::WorldState &worldState,
          ui::RlUserInterface &rlUserInterface) :
       sessionId_(sessionId),
       gameData_(gameData),
       proxy_(proxy),
-      packetBroker_(packetBroker),
       eventBroker_(eventBroker),
       worldState_(worldState),
       rlUserInterface_(rlUserInterface) {
@@ -58,7 +56,6 @@ Bot::Bot(SessionId sessionId,
 
 void Bot::initialize() {
   subscribeToEvents();
-  packetProcessor_.initialize();
 }
 
 void Bot::setCharacter(const CharacterLoginInfo &characterLoginInfo) {
@@ -77,8 +74,8 @@ Proxy& Bot::proxy() const {
   return proxy_;
 }
 
-broker::PacketBroker& Bot::packetBroker() const {
-  return packetBroker_;
+void Bot::injectPacket(const PacketContainer &packet, PacketContainer::Direction direction) {
+  proxy_.inject(packet, direction);
 }
 
 broker::EventBroker& Bot::eventBroker() {
@@ -143,7 +140,7 @@ void Bot::handleEvent(const event::Event *event) {
               // The character has despawned and will spawn somewhere else. Since we're clientless, we need to respond with ClientAgentGameResetComplete.
               VLOG(1) << "Our game reset and we're in clientless, sending ClientAgentGameResetComplete";
               const PacketContainer packet = packet::building::ClientAgentGameResetComplete::packet();
-              packetBroker_.injectPacket(packet, PacketContainer::Direction::kBotToServer);
+              injectPacket(packet, PacketContainer::Direction::kBotToServer);
             }
           }
         }
@@ -413,7 +410,7 @@ void Bot::handleInjectPacket(const event::InjectPacket &castedEvent) {
   }
   const auto packet = PacketContainer(static_cast<uint16_t>(castedEvent.opcode), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
   LOG(INFO) << "Injecting packet";
-  packetBroker_.injectPacket(packet, direction);
+  injectPacket(packet, direction);
 }
 
 // ============================================================================================================================
@@ -433,7 +430,7 @@ void Bot::handleSelfSpawned(const event::Event *event) {
 
   if (proxy().isClientless()) {
     const PacketContainer gameReadyPacket = packet::building::ClientAgentGameReady::packet();
-    packetBroker_.injectPacket(gameReadyPacket, PacketContainer::Direction::kBotToServer);
+    injectPacket(gameReadyPacket, PacketContainer::Direction::kBotToServer);
     VLOG(1) << absl::StreamFormat("[%s] Sent ClientAgentGameReady packet", selfEntity_->name);
   }
 }

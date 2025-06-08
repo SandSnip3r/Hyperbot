@@ -1,4 +1,3 @@
-#include "broker/packetBroker.hpp"
 #include "stateMachine.hpp"
 
 #include "bot.hpp"
@@ -39,7 +38,7 @@ void StateMachine::injectPacket(const PacketContainer &packet, PacketContainer::
     parent_->injectPacket(packet, direction);
   } else {
     // No parent, inject the packet ourselves.
-    bot_.packetBroker().injectPacket(packet, direction);
+    bot_.injectPacket(packet, direction);
   }
 }
 

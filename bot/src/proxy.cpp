@@ -13,10 +13,10 @@
 
 #include <thread>
 
-Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port) :
+Proxy::Proxy(const pk2::GameData &gameData, PacketProcessor &processor, uint16_t port) :
       gatewayPort_(gameData.gatewayPort()),
       divisionInfo_(gameData.divisionInfo()),
-      packetBroker_(broker),
+      packetProcessor_(processor),
       acceptor(ioService_, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
       packetProcessingTimer_(boost::make_shared<boost::asio::deadline_timer>(ioService_)) {
   // Get the port that the OS gave us to listen on
@@ -38,7 +38,6 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
   gatewayAddress_ = divisionInfo_.divisions[0].gatewayIpAddresses[0];
   VLOG(1) << "Constructed Proxy with listening port " << ourListeningPort_ << " and gateway address " << gatewayAddress_;
 
-  packetBroker_.setInjectionFunction(std::bind(&Proxy::inject, this, std::placeholders::_1, std::placeholders::_2));
 
   // Start accepting connections
   PostAccept();
@@ -325,7 +324,7 @@ void Proxy::receivePacketsFromClient() {
       packetLogger.logPacket(packet, /*blocked=*/false, direction);
 
       // Run packet through bot, regardless if it's blocked
-      packetBroker_.packetReceived(packet, direction);
+      packetProcessor_.handlePacket(packet);
 
       // Forward the packet to gateway/agent server.
       if (serverConnection.security) {
@@ -360,7 +359,7 @@ void Proxy::receivePacketsFromClient() {
       packetLogger.logPacket(packet, !forward, direction);
 
       // Run packet through bot, regardless if it's blocked
-      packetBroker_.packetReceived(packet, direction);
+      packetProcessor_.handlePacket(packet);
 
       // Forward the packet to gateway/agent server.
       if (forward && serverConnection.security) {
@@ -453,8 +452,8 @@ void Proxy::receivePacketsFromServer() {
         }
         serverConnection.Close();
 
-        // Want to forward this to the bot so it can grab the token
-        packetBroker_.packetReceived(packet, direction);
+        // Forward to packet processor so it can grab the token
+        packetProcessor_.handlePacket(packet);
 
         if (clientless_) {
           ioService_.post(boost::bind(&Proxy::connectClientless, this));
@@ -536,23 +535,23 @@ void Proxy::receivePacketsFromServer() {
     // Run packet through bot, regardless if it's blocked
     // Handle "begin", "data", and "end" pieces of split packets
     if (opcodeAsEnum == packet::Opcode::kServerAgentCharacterDataEnd) {
-      // Send packet to broker
-      packetBroker_.packetReceived(*characterInfoPacketContainer_, direction);
+      // Send packet to processor
+      packetProcessor_.handlePacket(*characterInfoPacketContainer_);
       // Reset data
       characterInfoPacketContainer_.reset();
     } else if (opcodeAsEnum == packet::Opcode::kServerAgentEntityGroupspawnEnd) {
-      // Send packet to broker
-      packetBroker_.packetReceived(*groupSpawnPacketContainer_, direction);
+      // Send packet to processor
+      packetProcessor_.handlePacket(*groupSpawnPacketContainer_);
       // Reset data
       groupSpawnPacketContainer_.reset();
     } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageEnd) {
-      // Send packet to broker
-      packetBroker_.packetReceived(*storagePacketContainer_, direction);
+      // Send packet to processor
+      packetProcessor_.handlePacket(*storagePacketContainer_);
       // Reset data
       storagePacketContainer_.reset();
     } else if (opcodeAsEnum == packet::Opcode::kServerAgentGuildStorageEnd) {
-      // Send packet to broker
-      packetBroker_.packetReceived(*guildStoragePacketContainer_, direction);
+      // Send packet to processor
+      packetProcessor_.handlePacket(*guildStoragePacketContainer_);
       // Reset data
       guildStoragePacketContainer_.reset();
     } else if (opcodeAsEnum != packet::Opcode::kServerAgentCharacterDataBegin &&
@@ -564,7 +563,7 @@ void Proxy::receivePacketsFromServer() {
                 opcodeAsEnum != packet::Opcode::kServerAgentGuildStorageBegin &&
                 opcodeAsEnum != packet::Opcode::kServerAgentGuildStorageData) {
       // In all other cases, if its not "begin" or "data", send it
-      packetBroker_.packetReceived(packet, direction);
+      packetProcessor_.handlePacket(packet);
     }
 
     // Forward the packet to the Silkroad client, if there is one
