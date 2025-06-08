@@ -94,3 +94,7 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
     mpBar->setFormat(QString("%1/%2").arg(currentMp).arg(maxMp));
   }
 }
+
+void DashboardWidget::clearStatusTable() {
+  ui->statusTable->setRowCount(0);
+}
