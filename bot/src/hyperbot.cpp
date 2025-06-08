@@ -20,6 +20,8 @@ void Hyperbot::run() {
 
   zmq::context_t context;
 
+  ui::RlUserInterface rlUserInterface{context, eventBroker_};
+  rlUserInterface.initialize();
   ClientManagerInterface clientManagerInterface(context, eventBroker_);
 
   clientManagerInterface.runAsync();
@@ -29,9 +31,6 @@ void Hyperbot::run() {
 
   // Create a single WorldState to be shared across all sessions.
   state::WorldState worldState{gameData_, eventBroker_};
-
-  ui::RlUserInterface rlUserInterface{context, eventBroker_};
-  rlUserInterface.initialize();
 
   rl::TrainingManager trainingManager{gameData_, eventBroker_, rlUserInterface, worldState, clientManagerInterface};
 
