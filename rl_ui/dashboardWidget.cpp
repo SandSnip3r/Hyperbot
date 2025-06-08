@@ -3,13 +3,26 @@
 
 #include <QProgressBar>
 #include <QTableWidgetItem>
+#include <QHeaderView>
+#include <QRegularExpression>
 
-DashboardWidget::DashboardWidget(QWidget *parent) : QWidget(parent), ui(new Ui::DashboardWidget) {
+DashboardWidget::DashboardWidget(QWidget *parent)
+    : QWidget(parent), ui(new Ui::DashboardWidget) {
   ui->setupUi(this);
   ui->statusTable->setColumnCount(3);
   QStringList headers;
   headers << "Character" << "HP" << "MP";
   ui->statusTable->setHorizontalHeaderLabels(headers);
+  ui->statusTable->verticalHeader()->setDefaultSectionSize(20);
+}
+
+static int characterId(const QString &name) {
+  QRegularExpression re("RL_(\\d+)");
+  QRegularExpressionMatch match = re.match(name);
+  if (match.hasMatch()) {
+    return match.captured(1).toInt();
+  }
+  return name.toInt();
 }
 
 DashboardWidget::~DashboardWidget() {
@@ -29,8 +42,14 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
   }
 
   if (row == -1) {
-    row = ui->statusTable->rowCount();
+    int id = characterId(name);
+    row = 0;
+    while (row < ui->statusTable->rowCount() &&
+           characterId(ui->statusTable->item(row, 0)->text()) < id) {
+      ++row;
+    }
     ui->statusTable->insertRow(row);
+    ui->statusTable->setRowHeight(row, 20);
     ui->statusTable->setItem(row, 0, new QTableWidgetItem(name));
 
     QProgressBar *hpBar = new QProgressBar;
