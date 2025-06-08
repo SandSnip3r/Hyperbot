@@ -142,7 +142,7 @@ private:
   std::vector<common::ItemRequirement> itemRequirements_;
 
   using ReplayBufferType = ReplayBuffer<ObservationAndActionStorage::Id>;
-  mutable std::mutex replayBufferAndStorageMutex_;
+  mutable TracyLockableN(std::mutex, replayBufferAndStorageMutex_, "ReplayBuffer");
   ObservationAndActionStorage observationAndActionStorage_{kReplayBufferCapacity}                                      ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
   ReplayBufferType replayBuffer_{kReplayBufferCapacity, kPerAlpha, /*epsilon=*/1e-5f}                                  ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
   absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> observationIdToTransitionIdMap_ ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
