@@ -102,96 +102,18 @@ bool skillActionKilledTarget(sro::scalar_types::EntityGlobalId targetGlobalId, c
 
 PacketProcessor::PacketProcessor(SessionId sessionId,
                                  state::WorldState &worldState,
-                                 broker::PacketBroker &brokerSystem,
                                  broker::EventBroker &eventBroker,
                                  const pk2::GameData &gameData) :
       sessionId_(sessionId),
       worldState_(worldState),
-      packetBroker_(brokerSystem),
       eventBroker_(eventBroker),
       gameData_(gameData) {
-}
-
-void PacketProcessor::initialize() {
-  subscribeToPackets();
 }
 
 std::shared_ptr<entity::Self> PacketProcessor::getSelfEntity() const {
   return selfEntity_;
 }
 
-void PacketProcessor::subscribeToPackets() {
-  auto packetHandleFunction = std::bind(&PacketProcessor::handlePacket, this, std::placeholders::_1);
-
-  // Server packets
-  //   Login packets
-  // packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentAuthRequest, packetHandleFunction); // TODO: Do we want to see this packet?
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayPatchResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayShardListResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayLoginResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kFrameworkMessageIdentify, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAuthResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterSelectionActionResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterSelectionJoinResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayLoginIbuvChallenge, packetHandleFunction);
-  // packetBroker_.subscribeToServerPacket(static_cast<packet::Opcode>(0x6005), packetHandleFunction);
-  //   Movement packets
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateAngle, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMovement, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePosition, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySyncPosition, packetHandleFunction);
-  //   Character info packets
-  packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentInventoryOperationRequest, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterData, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCosData, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryStorageData, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateHwanLevel, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateState, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateStatus, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityDamageEffect, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAbnormalInfo, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterUpdateStats, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterIncreaseIntResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterIncreaseStrResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryItemUseResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryOperationResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMoveSpeed, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityRemoveOwnership, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityGroupspawnData, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySpawn, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityDespawn, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillLearnResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillMasteryLearnResponse, packetHandleFunction);
-
-  //   Misc. packets
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionDeselectResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionSelectResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionTalkResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAlchemyElixirResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAlchemyStoneResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryRepairResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryUpdateDurability, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryUpdateItem, packetHandleFunction);
-  // packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionDeselectRequest, packetHandleFunction);
-  // packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionSelectRequest, packetHandleFunction);
-  packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionTalkRequest, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePoints, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateExperience, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentGuildStorageData, packetHandleFunction);
-  packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionCommandRequest, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionCommandResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillBegin, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillEnd, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffAdd, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffLink, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffRemove, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentChatUpdate, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentGameReset, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentResurrectOption, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentOperatorResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentFreePvpUpdateResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryEquipCountdownStart, packetHandleFunction);
-}
 
 void PacketProcessor::handlePacket(const PacketContainer &packet) {
   ZoneScopedN("PacketProcessor::handlePacket");
@@ -202,16 +124,25 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
   {
     // Do a quick check to see if any packets are coming while Self is despawned.
     static const absl::flat_hash_set<packet::Opcode> expectedOpcodes = {
+      packet::Opcode::kClientAgentAuthRequest,
       packet::Opcode::kFrameworkMessageIdentify,
       packet::Opcode::kServerGatewayPatchResponse,
       packet::Opcode::kServerGatewayShardListResponse,
       packet::Opcode::kServerGatewayLoginResponse,
-      packet::Opcode::kFrameworkMessageIdentify,
+      packet::Opcode::kFrameworkStateNotify,
+      packet::Opcode::kFrameworkStateRequest,
       packet::Opcode::kServerAgentAuthResponse,
       packet::Opcode::kServerAgentCharacterData,
       packet::Opcode::kServerAgentCharacterSelectionActionResponse,
       packet::Opcode::kServerAgentCharacterSelectionJoinResponse,
-      packet::Opcode::kServerGatewayLoginIbuvChallenge
+      packet::Opcode::kServerGatewayLoginIbuvChallenge,
+      packet::Opcode::kClientAgentCharacterSelectionActionRequest,
+      packet::Opcode::kClientGatewayShardListRequest,
+      packet::Opcode::kClientGatewayLoginRequest,
+      packet::Opcode::kClientGatewayLoginIbuvAnswer,
+      packet::Opcode::kServerGatewayLoginIbuvResult,
+      packet::Opcode::kClientGatewayShardListRequest,
+      packet::Opcode::kClientAgentCharacterSelectionJoinRequest
     };
     const packet::Opcode thisPacketOpcode = static_cast<packet::Opcode>(packet.opcode);
     if (!expectedOpcodes.contains(thisPacketOpcode)) {
@@ -230,7 +161,6 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
 
   if (!parsedPacket) {
     // Not yet parsing this packet
-    LOG(ERROR) << "Subscribed to a packet which we're not yet parsing " << std::hex << packet.opcode << std::dec;
     return;
   }
   std::unique_lock worldStateLock(worldState_.mutex);
@@ -309,7 +239,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
     return;
   }
 
-  LOG(WARNING) << absl::StreamFormat("Unhandled packet (%s; %#06x) subscribed to.", packet::toString(static_cast<packet::Opcode>(packet.opcode)), packet.opcode);
+  VLOG(2) << absl::StreamFormat("Unhandled packet (%s; %#06x) subscribed to.", packet::toString(static_cast<packet::Opcode>(packet.opcode)), packet.opcode);
   return;
 }
 

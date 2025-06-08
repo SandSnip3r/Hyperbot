@@ -2,7 +2,6 @@
 #define PACKET_PROCESSOR_HPP_
 
 #include "broker/eventBroker.hpp"
-#include "broker/packetBroker.hpp"
 #include "entity/self.hpp"
 // #include "packet/parsing/clientAgentActionDeselectRequest.hpp"
 // #include "packet/parsing/clientAgentActionSelectRequest.hpp"
@@ -88,16 +87,13 @@ class PacketProcessor {
 public:
   PacketProcessor(SessionId sessionId,
                   state::WorldState &worldState,
-                  broker::PacketBroker &brokerSystem,
                   broker::EventBroker &eventBroker,
                   const pk2::GameData &gameData);
 
-  void initialize();
   void handlePacket(const PacketContainer &packet);
 private:
   const SessionId sessionId_;
   state::WorldState &worldState_;
-  broker::PacketBroker &packetBroker_;
   broker::EventBroker &eventBroker_;
   const pk2::GameData &gameData_;
   packet::parsing::PacketParser packetParser_{worldState_.entityTracker(), gameData_};
@@ -114,7 +110,6 @@ private:
   mutable std::map<uint32_t, TrackedSkill> tracked_;
   // END DEBUGGING SkillBegin/SkillEnd
 
-  void subscribeToPackets();
 
   // Packet handle functions
   //  In principal, each of these functions should only update the state and maybe publish an event.
