@@ -17,6 +17,7 @@ public:
 public slots:
   void onCharacterStatusReceived(QString name, int currentHp, int maxHp,
                                  int currentMp, int maxMp);
+  void clearStatusTable();
 
 private:
   Ui::DashboardWidget *ui;
