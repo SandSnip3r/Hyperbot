@@ -1,3 +1,4 @@
+#include "packetProcessor.hpp"
 #include "proxy.hpp"
 #include "packet/building/clientGatewayPatchRequest.hpp"
 #include "packet/building/frameworkAliveNotify.hpp"

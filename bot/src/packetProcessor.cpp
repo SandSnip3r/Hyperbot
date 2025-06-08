@@ -124,16 +124,25 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
   {
     // Do a quick check to see if any packets are coming while Self is despawned.
     static const absl::flat_hash_set<packet::Opcode> expectedOpcodes = {
+      packet::Opcode::kClientAgentAuthRequest,
       packet::Opcode::kFrameworkMessageIdentify,
       packet::Opcode::kServerGatewayPatchResponse,
       packet::Opcode::kServerGatewayShardListResponse,
       packet::Opcode::kServerGatewayLoginResponse,
-      packet::Opcode::kFrameworkMessageIdentify,
+      packet::Opcode::kFrameworkStateNotify,
+      packet::Opcode::kFrameworkStateRequest,
       packet::Opcode::kServerAgentAuthResponse,
       packet::Opcode::kServerAgentCharacterData,
       packet::Opcode::kServerAgentCharacterSelectionActionResponse,
       packet::Opcode::kServerAgentCharacterSelectionJoinResponse,
-      packet::Opcode::kServerGatewayLoginIbuvChallenge
+      packet::Opcode::kServerGatewayLoginIbuvChallenge,
+      packet::Opcode::kClientAgentCharacterSelectionActionRequest,
+      packet::Opcode::kClientGatewayShardListRequest,
+      packet::Opcode::kClientGatewayLoginRequest,
+      packet::Opcode::kClientGatewayLoginIbuvAnswer,
+      packet::Opcode::kServerGatewayLoginIbuvResult,
+      packet::Opcode::kClientGatewayShardListRequest,
+      packet::Opcode::kClientAgentCharacterSelectionJoinRequest
     };
     const packet::Opcode thisPacketOpcode = static_cast<packet::Opcode>(packet.opcode);
     if (!expectedOpcodes.contains(thisPacketOpcode)) {
@@ -152,7 +161,6 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
 
   if (!parsedPacket) {
     // Not yet parsing this packet
-    LOG(ERROR) << "Subscribed to a packet which we're not yet parsing " << std::hex << packet.opcode << std::dec;
     return;
   }
   std::unique_lock worldStateLock(worldState_.mutex);
