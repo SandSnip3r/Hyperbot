@@ -56,7 +56,7 @@ private:
   QVector<SeriesData> series_;
 
   // Reservoir sampling configuration
-  static constexpr int kSampleSize = 4096;
+  static constexpr int kSampleSize = 1024;
   qreal latestX_{0};  ///< Latest observed x-value
   std::mt19937 rng_{createRandomEngine()};
 
