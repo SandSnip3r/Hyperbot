@@ -289,6 +289,10 @@ void Proxy::setKeepaliveTimer() {
 }
 
 void Proxy::checkClientlessKeepalive(const boost::system::error_code &error) {
+  if (!serverConnection.security) {
+    // No server connection, nothing to do
+    return;
+  }
   // We've been woken up because we might need to send a keepalive packet.
   // How long has it been since we've last sent a packet?
   const std::chrono::duration timeSinceLastPacketToServer = std::chrono::steady_clock::now() - lastPacketSentToServer_;
