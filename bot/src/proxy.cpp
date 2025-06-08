@@ -259,6 +259,7 @@ void Proxy::connectClientless() {
 }
 
 void Proxy::ProcessPackets(const boost::system::error_code &error) {
+  ZoneScopedN("Proxy::ProcessPackets");
   if (error) {
     LOG(ERROR) << "Error during async_wait for ProcessPackets:\"" << error.message() << '"';
     // Not reposting timer.
