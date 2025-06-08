@@ -25,6 +25,7 @@ ABSL_FLAG(std::vector<std::string>, vmodule, {}, "Per-module verbose logging lev
 void initializeLogging();
 std::filesystem::path getAppDataDirectory();
 
+
 int main(int argc, char *argv[]) {
   absl::ParseCommandLine(argc, argv);
   initializeLogging();
