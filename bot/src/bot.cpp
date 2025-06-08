@@ -432,8 +432,8 @@ void Bot::handleSelfSpawned(const event::Event *event) {
   selfEntity_ = worldState_.getEntity<entity::Self>(selfSpawnedEvent->globalId);
 
   if (proxy().isClientless()) {
-    const PacketContainer gameReadyPacket = packet::building::ClientAgentGameReady::packet();
-    packetBroker_.injectPacket(gameReadyPacket, PacketContainer::Direction::kBotToServer);
+    // When in clientless mode, we need to send a packet that the client would otherwise send. We need to send the ClientAgentGameReady packet to the server to indicate that the "client" is ready.
+    packetBroker_.injectPacket(packet::building::ClientAgentGameReady::packet(), PacketContainer::Direction::kBotToServer);
     VLOG(1) << absl::StreamFormat("[%s] Sent ClientAgentGameReady packet", selfEntity_->name);
   }
 }
