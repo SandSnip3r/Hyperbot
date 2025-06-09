@@ -90,8 +90,8 @@ void TrainingManager::train() {
       jaxInterface_.addScalar("anneal/Beta", beta, trainStepCount_);
 
       // Track training rate
-      const std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
-      const std::chrono::high_resolution_clock::duration timeDiff = currentTime - lastTrainingTime_;
+      const std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+      const std::chrono::steady_clock::duration timeDiff = currentTime - lastTrainingTime_;
       if (timeDiff > kTrainRateReportInterval) {
         const float trainingRate = static_cast<float>(trainingCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(timeDiff).count()/1000.0);
         jaxInterface_.addScalar("perf/Training Rate", trainingRate, trainStepCount_);
@@ -257,8 +257,8 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
 
       // Track sample collection rate
       sampleCount_++;
-      const std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
-      const std::chrono::high_resolution_clock::duration sampleCountTimeDiff = currentTime - lastSampleTime_;
+      const std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+      const std::chrono::steady_clock::duration sampleCountTimeDiff = currentTime - lastSampleTime_;
       if (sampleCountTimeDiff > kSampleRateReportInterval) {
         sampleRate = static_cast<float>(sampleCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(sampleCountTimeDiff).count()/1000.0);
         sampleCount_ = 0;
@@ -266,7 +266,7 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
       }
 
       // Track replay buffer size
-      const std::chrono::high_resolution_clock::duration replayBufferSizeTimeDiff = currentTime - lastReplayBufferSizeUpdateTime_;
+      const std::chrono::steady_clock::duration replayBufferSizeTimeDiff = currentTime - lastReplayBufferSizeUpdateTime_;
       if (replayBufferSizeTimeDiff > kReplayBufferSizeUpdateInterval) {
         replayBufferSize = replayBuffer_.size();
         lastReplayBufferSizeUpdateTime_ = currentTime;

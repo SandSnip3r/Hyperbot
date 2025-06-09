@@ -28,7 +28,7 @@ public:
 
   // ---- Buffs ----
   struct BuffData {
-    using ClockType = std::chrono::high_resolution_clock;
+    using ClockType = std::chrono::steady_clock;
     sro::scalar_types::ReferenceSkillId skillRefId;
     std::optional<ClockType::time_point> castTime;
   };

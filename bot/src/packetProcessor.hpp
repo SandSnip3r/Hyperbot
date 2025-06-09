@@ -104,7 +104,7 @@ private:
   struct TrackedSkill {
     uint32_t refSkillId;
     uint32_t casterGlobalId;
-    std::chrono::high_resolution_clock::time_point expTime;
+    std::chrono::steady_clock::time_point expTime;
     bool expectEnd;
   };
   mutable std::map<uint32_t, TrackedSkill> tracked_;

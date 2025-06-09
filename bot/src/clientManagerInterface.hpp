@@ -40,7 +40,7 @@ private:
   std::mutex mutex_;
   std::condition_variable conditionVariable_;
   std::deque<ClientOpenRequest> clientsPendingOpen_;
-  std::chrono::time_point<std::chrono::high_resolution_clock> lastMessageSent_;
+  std::chrono::time_point<std::chrono::steady_clock> lastMessageSent_;
 
   void run();
   ClientId privateStartClient(int32_t listeningPort);

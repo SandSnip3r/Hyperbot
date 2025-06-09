@@ -349,7 +349,7 @@ void Navmesh::postProcess() {
   // ================================ Postprocessing step #2 ================================
   // All object instances in a region are not always properly referenced
   // We need to check for any overlap and possibly add to the Region::objectInstanceIds list
-  const auto startTime = std::chrono::high_resolution_clock::now();
+  const auto startTime = std::chrono::steady_clock::now();
   auto calculateOverlappingRegions = [](const uint16_t regionId, const float minX, const float minZ, const float maxX, const float maxZ) {
     const auto [regionX, regionY] = sro::position_math::sectorsFromWorldRegionId(regionId);
     const int minRegionX = regionX + static_cast<int>(std::floor(minX/1920.0));
@@ -411,7 +411,7 @@ void Navmesh::postProcess() {
       }
     }
   }
-  const auto endTime = std::chrono::high_resolution_clock::now();
+  const auto endTime = std::chrono::steady_clock::now();
   std::cout << "Adding object instances took " << std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime).count()/1000.0 << "ms" << std::endl;
   // ========================================================================================
 }

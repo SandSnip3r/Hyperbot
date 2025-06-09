@@ -58,14 +58,14 @@ private:
   std::thread thr_;
   std::atomic<bool> clientless_{false};
   std::chrono::steady_clock::time_point lastPacketSentToServer_{std::chrono::steady_clock::now()};
-  boost::shared_ptr<boost::asio::deadline_timer> keepAlivePacketTimer_;
+  boost::shared_ptr<boost::asio::steady_timer> keepAlivePacketTimer_;
   std::deque<PacketContainer> injectedClientPacketsForClientless_;
 
   //Accepts TCP connections
   boost::asio::ip::tcp::acceptor acceptor;
 
   // Packet processing timer
-  boost::shared_ptr<boost::asio::deadline_timer> packetProcessingTimer_;
+  boost::shared_ptr<boost::asio::steady_timer> packetProcessingTimer_;
 
   //Silkroad connections
   SilkroadConnection clientConnection{ioService_, "Client"};
