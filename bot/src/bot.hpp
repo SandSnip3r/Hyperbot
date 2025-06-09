@@ -16,6 +16,7 @@
 #include "state/worldState.hpp"
 #include "state/machine/sequentialStateMachines.hpp"
 #include "state/machine/stateMachine.hpp"
+#include <string>
 
 namespace ui {
 class RlUserInterface;
@@ -115,6 +116,7 @@ public:
   std::future<void> asyncLogIn();
   bool loggedIn() const;
   void asyncStandbyForPvp();
+  std::string currentStateMachineName() const;
 
 private:
   // Data for RL training interface.

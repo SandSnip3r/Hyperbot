@@ -1,6 +1,9 @@
 #include "broker/packetBroker.hpp"
 #include "stateMachine.hpp"
 
+#include <absl/debugging/internal/demangle.h>
+#include <typeinfo>
+
 #include "bot.hpp"
 namespace state::machine {
 
@@ -61,6 +64,14 @@ void StateMachine::setChildStateMachine(std::unique_ptr<StateMachine> &&newChild
     throw std::runtime_error("Cannot set a nullptr child state machine");
   }
   childState_ = std::move(newChildStateMachine);
+}
+
+std::string StateMachine::activeStateMachineName() const {
+  const StateMachine *current = this;
+  while (current->childState_) {
+    current = current->childState_.get();
+  }
+  return absl::debugging_internal::DemangleString(typeid(*current).name());
 }
 
 std::ostream& operator<<(std::ostream &stream, Npc npc) {

@@ -16,7 +16,8 @@ public:
 
 public slots:
   void onCharacterStatusReceived(QString name, int currentHp, int maxHp,
-                                 int currentMp, int maxMp);
+                                 int currentMp, int maxMp,
+                                 QString currentStateMachine);
 
 private:
   Ui::DashboardWidget *ui;

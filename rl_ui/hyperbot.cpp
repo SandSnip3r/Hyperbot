@@ -146,7 +146,8 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
           broadcastMessage.character_status();
       emit characterStatusReceived(
           QString::fromStdString(status.name()), status.current_hp(),
-          status.max_hp(), status.current_mp(), status.max_mp());
+          status.max_hp(), status.current_mp(), status.max_mp(),
+          QString::fromStdString(status.current_state_machine()));
       break;
     }
     default: {

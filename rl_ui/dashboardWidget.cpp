@@ -9,9 +9,9 @@
 DashboardWidget::DashboardWidget(QWidget *parent)
     : QWidget(parent), ui(new Ui::DashboardWidget) {
   ui->setupUi(this);
-  ui->statusTable->setColumnCount(3);
   QStringList headers;
-  headers << "Character" << "HP" << "MP";
+  headers << "Character" << "HP" << "MP" << "State";
+  ui->statusTable->setColumnCount(headers.size());
   ui->statusTable->setHorizontalHeaderLabels(headers);
   ui->statusTable->verticalHeader()->setDefaultSectionSize(20);
 }
@@ -31,7 +31,8 @@ DashboardWidget::~DashboardWidget() {
 
 void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
                                                int maxHp, int currentMp,
-                                               int maxMp) {
+                                               int maxMp,
+                                               QString currentStateMachine) {
   int row = -1;
   for (int i = 0; i < ui->statusTable->rowCount(); ++i) {
     QTableWidgetItem *item = ui->statusTable->item(i, 0);
@@ -51,6 +52,7 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
     ui->statusTable->insertRow(row);
     ui->statusTable->setRowHeight(row, 20);
     ui->statusTable->setItem(row, 0, new QTableWidgetItem(name));
+    ui->statusTable->setItem(row, 3, new QTableWidgetItem(currentStateMachine));
 
     QProgressBar *hpBar = new QProgressBar;
     hpBar->setStyleSheet(R"(
@@ -92,5 +94,10 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
     mpBar->setRange(0, maxMp);
     mpBar->setValue(currentMp);
     mpBar->setFormat(QString("%1/%2").arg(currentMp).arg(maxMp));
+  }
+  if (!currentStateMachine.isEmpty()) {
+    ui->statusTable->setItem(row, 3, new QTableWidgetItem(currentStateMachine));
+  } else if (!ui->statusTable->item(row, 3)) {
+    ui->statusTable->setItem(row, 3, new QTableWidgetItem(""));
   }
 }

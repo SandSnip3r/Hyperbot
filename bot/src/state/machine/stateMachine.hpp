@@ -40,6 +40,7 @@ public:
   virtual Status onUpdate(const event::Event *event) = 0;
 
   std::future<void> getDestructionFuture();
+  std::string activeStateMachineName() const;
 protected:
   Bot &bot_;
   void pushBlockedOpcode(packet::Opcode opcode);

@@ -200,7 +200,7 @@ void RlUserInterface::broadcastMessage(const rl_ui_messages::BroadcastMessage &m
   publisher_.send(zmq::message_t(message.SerializeAsString()), zmq::send_flags::none);
 }
 
-void RlUserInterface::sendCharacterStatus(const entity::Self &self) {
+void RlUserInterface::sendCharacterStatus(const entity::Self &self, const std::string &stateMachine) {
   rl_ui_messages::BroadcastMessage msg;
   auto *status = msg.mutable_character_status();
   status->set_name(self.name);
@@ -208,6 +208,7 @@ void RlUserInterface::sendCharacterStatus(const entity::Self &self) {
   status->set_max_hp(self.maxHp().value_or(self.currentHp()));
   status->set_current_mp(self.currentMp());
   status->set_max_mp(self.maxMp().value_or(self.currentMp()));
+  status->set_current_state_machine(stateMachine);
   broadcastMessage(msg);
 }
 

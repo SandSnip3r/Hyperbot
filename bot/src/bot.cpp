@@ -186,27 +186,27 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kSelfSpawned: {
         handleSelfSpawned(event);
         if (selfEntity_) {
-          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+          rlUserInterface_.sendCharacterStatus(*selfEntity_, currentStateMachineName());
         }
         break;
       }
       case event::EventCode::kEntityHpChanged: {
         const auto *hpEvent = dynamic_cast<const event::EntityHpChanged *>(event);
         if (hpEvent && selfEntity_ && hpEvent->globalId == selfEntity_->globalId) {
-          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+          rlUserInterface_.sendCharacterStatus(*selfEntity_, currentStateMachineName());
         }
         break;
       }
       case event::EventCode::kEntityMpChanged: {
         const auto *mpEvent = dynamic_cast<const event::EntityMpChanged *>(event);
         if (mpEvent && selfEntity_ && mpEvent->globalId == selfEntity_->globalId) {
-          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+          rlUserInterface_.sendCharacterStatus(*selfEntity_, currentStateMachineName());
         }
         break;
       }
       case event::EventCode::kMaxHpMpChanged: {
         if (selfEntity_) {
-          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+          rlUserInterface_.sendCharacterStatus(*selfEntity_, currentStateMachineName());
         }
         break;
       }
@@ -790,4 +790,14 @@ void Bot::asyncStandbyForPvp() {
     throw std::runtime_error("PvpManager state machine already set");
   }
   pvpManagerStateMachine_ = std::make_unique<state::machine::PvpManager>(*this);
+}
+
+std::string Bot::currentStateMachineName() const {
+  if (loginStateMachine_) {
+    return loginStateMachine_->activeStateMachineName();
+  }
+  if (pvpManagerStateMachine_) {
+    return pvpManagerStateMachine_->activeStateMachineName();
+  }
+  return "";
 }
