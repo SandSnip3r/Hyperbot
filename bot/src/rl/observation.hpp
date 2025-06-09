@@ -24,7 +24,7 @@ public:
   Observation(const Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId);
   std::string toString() const;
 // private:
-  std::chrono::high_resolution_clock::time_point timestamp_;
+  std::chrono::steady_clock::time_point timestamp_;
   event::EventCode eventCode_;
   uint32_t ourCurrentHp_;
   uint32_t ourMaxHp_;

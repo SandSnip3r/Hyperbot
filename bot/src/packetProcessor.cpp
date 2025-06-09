@@ -643,7 +643,7 @@ void PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::Ser
       const std::chrono::milliseconds stateTotalTime{state.totalTime * 100};
       // It is possible for time elapsed to be greater than total time.
       const std::chrono::milliseconds stateRemainingTime = std::max(std::chrono::milliseconds(0), stateTotalTime - std::chrono::milliseconds(state.timeElapsed * 100));
-      selfEntity_->setLegacyStateEffect(helpers::fromBitNum<packet::enums::AbnormalStateFlag>(bitNum), state.effectOrLevel, std::chrono::high_resolution_clock::now() + stateRemainingTime, stateTotalTime);
+      selfEntity_->setLegacyStateEffect(helpers::fromBitNum<packet::enums::AbnormalStateFlag>(bitNum), state.effectOrLevel, std::chrono::steady_clock::now() + stateRemainingTime, stateTotalTime);
     }
   }
   if (changed) {
@@ -1506,12 +1506,12 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     auto &thing = tracked_[packet.castId()];
     thing.refSkillId = packet.refSkillId();;
     thing.casterGlobalId = packet.casterGlobalId();;
-    thing.expTime = std::chrono::high_resolution_clock::now() + std::chrono::seconds(10);
+    thing.expTime = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     thing.expectEnd = expectEnd;
     // Run through all of these and see if any expired on time
     for (auto it=tracked_.begin(); it!=tracked_.end();) {
       auto &trackedItem = it->second;
-      if (trackedItem.expTime <= std::chrono::high_resolution_clock::now()) {
+      if (trackedItem.expTime <= std::chrono::steady_clock::now()) {
         // This one expired
         if (trackedItem.expectEnd) {
           logNoEnd(trackedItem.refSkillId);

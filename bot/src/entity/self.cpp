@@ -409,7 +409,7 @@ void Self::setStateBitmask(uint32_t stateBitmask) {
   stateBitmask_ = stateBitmask;
 }
 
-void Self::setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect, std::chrono::high_resolution_clock::time_point endTime, std::chrono::milliseconds totalDuration) {
+void Self::setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect, std::chrono::steady_clock::time_point endTime, std::chrono::milliseconds totalDuration) {
   const int index = helpers::toBitNum(flag);
   legacyStateEffects_.at(index) = effect;
   legacyStateEndTimes_.at(index) = endTime;

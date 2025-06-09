@@ -48,7 +48,7 @@ enum class Gender {
 class Self : public PlayerCharacter {
 public:
   using LegacyStateEffectArrayType = std::array<uint16_t, helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>()+1>;
-  using LegacyStateEndTimeArrayType = std::array<std::chrono::high_resolution_clock::time_point, helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>()+1>;
+  using LegacyStateEndTimeArrayType = std::array<std::chrono::steady_clock::time_point, helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>()+1>;
   using LegacyStateTotalDurationArrayType = std::array<std::chrono::milliseconds, helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>()+1>;
 
   Self(const pk2::GameData &gameData, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId);
@@ -86,7 +86,7 @@ public:
   void setStatPoints(uint16_t strPoints, uint16_t intPoints);
   void updateStates(uint32_t stateBitmask, const std::array<uint8_t, 32> &modernStateLevels);
   void setStateBitmask(uint32_t stateBitmask);
-  void setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect, std::chrono::high_resolution_clock::time_point endTime, std::chrono::milliseconds totalDuration);
+  void setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect, std::chrono::steady_clock::time_point endTime, std::chrono::milliseconds totalDuration);
   void setModernStateLevel(packet::enums::AbnormalStateFlag flag, uint8_t level);
   void setMasteriesAndSkills(const std::vector<packet::structures::Mastery> &masteries,
                              const std::vector<packet::structures::Skill> &skills);
