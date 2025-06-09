@@ -186,27 +186,27 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kSelfSpawned: {
         handleSelfSpawned(event);
         if (selfEntity_) {
-          rlUserInterface_.sendCharacterStatus(*selfEntity_, currentStateMachineName());
+          rlUserInterface_.sendCharacterStatus(*selfEntity_, "");
         }
         break;
       }
       case event::EventCode::kEntityHpChanged: {
         const auto *hpEvent = dynamic_cast<const event::EntityHpChanged *>(event);
         if (hpEvent && selfEntity_ && hpEvent->globalId == selfEntity_->globalId) {
-          rlUserInterface_.sendCharacterStatus(*selfEntity_, currentStateMachineName());
+          rlUserInterface_.sendCharacterStatus(*selfEntity_, "");
         }
         break;
       }
       case event::EventCode::kEntityMpChanged: {
         const auto *mpEvent = dynamic_cast<const event::EntityMpChanged *>(event);
         if (mpEvent && selfEntity_ && mpEvent->globalId == selfEntity_->globalId) {
-          rlUserInterface_.sendCharacterStatus(*selfEntity_, currentStateMachineName());
+          rlUserInterface_.sendCharacterStatus(*selfEntity_, "");
         }
         break;
       }
       case event::EventCode::kMaxHpMpChanged: {
         if (selfEntity_) {
-          rlUserInterface_.sendCharacterStatus(*selfEntity_, currentStateMachineName());
+          rlUserInterface_.sendCharacterStatus(*selfEntity_, "");
         }
         break;
       }
@@ -436,6 +436,7 @@ void Bot::handleSelfSpawned(const event::Event *event) {
     packetBroker_.injectPacket(gameReadyPacket, PacketContainer::Direction::kBotToServer);
     VLOG(1) << absl::StreamFormat("[%s] Sent ClientAgentGameReady packet", selfEntity_->name);
   }
+  sendCurrentStateMachine();
 }
 
 void Bot::handleEntityDespawned(const event::EntityDespawned &event) {
@@ -778,6 +779,7 @@ std::future<void> Bot::asyncLogIn() {
   }
   LOG(INFO) << "Logging in " << characterLoginInfo_.characterName << " for session " << sessionId_;
   loginStateMachine_ = std::make_unique<state::machine::Login>(*this, characterLoginInfo_);
+  sendCurrentStateMachine();
   return logInPromise_.get_future();
 }
 
@@ -790,6 +792,7 @@ void Bot::asyncStandbyForPvp() {
     throw std::runtime_error("PvpManager state machine already set");
   }
   pvpManagerStateMachine_ = std::make_unique<state::machine::PvpManager>(*this);
+  sendCurrentStateMachine();
 }
 
 std::string Bot::currentStateMachineName() const {
@@ -800,4 +803,10 @@ std::string Bot::currentStateMachineName() const {
     return pvpManagerStateMachine_->activeStateMachineName();
   }
   return "";
+}
+
+void Bot::sendCurrentStateMachine() const {
+  if (selfEntity_) {
+    rlUserInterface_.sendCharacterStatus(*selfEntity_, currentStateMachineName());
+  }
 }

@@ -17,6 +17,7 @@ public:
   SequentialStateMachines(StateMachine *parent);
   ~SequentialStateMachines() override;
   Status onUpdate(const event::Event *event) override;
+  std::string activeStateMachineName() const override;
   // void push(std::unique_ptr<StateMachine> &&stateMachine);
 
   template<typename StateMachineType, typename... Args>

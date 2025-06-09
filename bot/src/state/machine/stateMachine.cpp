@@ -64,14 +64,14 @@ void StateMachine::setChildStateMachine(std::unique_ptr<StateMachine> &&newChild
     throw std::runtime_error("Cannot set a nullptr child state machine");
   }
   childState_ = std::move(newChildStateMachine);
+  bot_.sendCurrentStateMachine();
 }
 
 std::string StateMachine::activeStateMachineName() const {
-  const StateMachine *current = this;
-  while (current->childState_) {
-    current = current->childState_.get();
+  if (childState_) {
+    return childState_->activeStateMachineName();
   }
-  return absl::debugging_internal::DemangleString(typeid(*current).name());
+  return absl::debugging_internal::DemangleString(typeid(*this).name());
 }
 
 std::ostream& operator<<(std::ostream &stream, Npc npc) {

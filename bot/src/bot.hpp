@@ -117,6 +117,7 @@ public:
   bool loggedIn() const;
   void asyncStandbyForPvp();
   std::string currentStateMachineName() const;
+  void sendCurrentStateMachine() const;
 
 private:
   // Data for RL training interface.
