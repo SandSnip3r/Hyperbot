@@ -124,9 +124,9 @@ QPixmap MainWindow::loadDdjAsQPixmap(sro::pk2::Pk2ReaderModern &pk2Reader, const
 }
 
 void MainWindow::initializeMap() {
-  const auto startTime = std::chrono::steady_clock::now();
+  const auto startTime = std::chrono::high_resolution_clock::now();
   loadNavmeshIntoScene();
-  const auto endTime = std::chrono::steady_clock::now();
+  const auto endTime = std::chrono::high_resolution_clock::now();
   std::cout << "Loading the navmesh into the scene " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime-startTime).count()/1000.0 << "s" << std::endl;
 
   ui->navmeshGraphicsView->setScene(mapScene_);
@@ -268,7 +268,7 @@ void MainWindow::timerTriggered() {
   if (!selfData_.movement) {
     throw std::runtime_error("Timer triggered, but we're not moving");
   }
-  const auto currentTime = std::chrono::steady_clock::now();
+  const auto currentTime = std::chrono::high_resolution_clock::now();
   const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-selfData_.movement->startTime).count();
   sro::Position currentPosition;
   if (const auto *destPosPtr = std::get_if<entity_data::Movement::kToDestination>(&selfData_.movement->destPosOrAngle)) {
@@ -304,7 +304,7 @@ void MainWindow::entityMovementTimerTriggered() {
       continue;
     }
     const auto &movement = *mobileEntity->movement;
-    const auto currentTime = std::chrono::steady_clock::now();
+    const auto currentTime = std::chrono::high_resolution_clock::now();
     const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-movement.startTime).count();
     sro::Position currentPosition;
     std::optional<sro::Position> destinationPosition;
@@ -565,7 +565,7 @@ void MainWindow::onGuildStorageGoldAmountUpdate(uint64_t goldAmount) {
 void MainWindow::onCharacterPositionChanged(sro::Position currentPosition) {
   if (selfData_.movement) {
     // We are moving, update where we are
-    selfData_.movement->startTime = std::chrono::steady_clock::now();
+    selfData_.movement->startTime = std::chrono::high_resolution_clock::now();
     selfData_.movement->srcPos = currentPosition;
     // The running movement timer will move the item within the scene
   } else {
@@ -578,7 +578,7 @@ void MainWindow::onCharacterMovementBeganToDest(sro::Position currentPosition, s
   // Save info
   auto &movement = selfData_.movement.emplace();
   movement.speed = speed;
-  movement.startTime = std::chrono::steady_clock::now();
+  movement.startTime = std::chrono::high_resolution_clock::now();
   movement.srcPos = currentPosition;
   movement.destPosOrAngle = destinationPosition;
   triggerMovementTimer();
@@ -618,7 +618,7 @@ void MainWindow::updateDisplayedAngle(qreal angle) {
 void MainWindow::onCharacterMovementBeganTowardAngle(sro::Position currentPosition, uint16_t movementAngle, float speed) {
   auto &movement = selfData_.movement.emplace();
   movement.speed = speed;
-  movement.startTime = std::chrono::steady_clock::now();
+  movement.startTime = std::chrono::high_resolution_clock::now();
   movement.srcPos = currentPosition;
   movement.destPosOrAngle = movementAngle;
   triggerMovementTimer();
@@ -812,7 +812,7 @@ void MainWindow::onEntityPositionChanged(sro::scalar_types::EntityGlobalId globa
   auto &mobileEntity = getEntity<entity_data::MobileEntity>(globalId);
   if (mobileEntity.movement) {
     // Entity is moving, update where it is
-    mobileEntity.movement->startTime = std::chrono::steady_clock::now();
+    mobileEntity.movement->startTime = std::chrono::high_resolution_clock::now();
     mobileEntity.movement->srcPos = position;
     // The running movement timer will move the item within the scene
   } else {
@@ -834,7 +834,7 @@ void MainWindow::onEntityMovementBeganToDest(sro::scalar_types::EntityGlobalId g
   auto &mobileEntity = getEntity<entity_data::MobileEntity>(globalId);
   auto &movement = mobileEntity.movement.emplace();
   movement.speed = speed;
-  movement.startTime = std::chrono::steady_clock::now();
+  movement.startTime = std::chrono::high_resolution_clock::now();
   movement.srcPos = currentPosition;
   movement.destPosOrAngle = destinationPosition;
   updateEntityDisplayedPosition(globalId, currentPosition, destinationPosition);
@@ -848,7 +848,7 @@ void MainWindow::onEntityMovementBeganTowardAngle(sro::scalar_types::EntityGloba
   auto &mobileEntity = getEntity<entity_data::MobileEntity>(globalId);
   auto &movement = mobileEntity.movement.emplace();
   movement.speed = speed;
-  movement.startTime = std::chrono::steady_clock::now();
+  movement.startTime = std::chrono::high_resolution_clock::now();
   movement.srcPos = currentPosition;
   movement.destPosOrAngle = movementAngle;
   updateEntityDisplayedPosition(globalId, currentPosition);

@@ -10,7 +10,7 @@ namespace entity_data {
 
 struct Movement {
   float speed;
-  std::chrono::time_point<std::chrono::steady_clock> startTime;
+  std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
   sro::Position srcPos;
   enum MovementType {
     kToDestination,
