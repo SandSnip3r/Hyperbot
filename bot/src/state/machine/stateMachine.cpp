@@ -64,7 +64,7 @@ void StateMachine::setChildStateMachine(std::unique_ptr<StateMachine> &&newChild
     throw std::runtime_error("Cannot set a nullptr child state machine");
   }
   childState_ = std::move(newChildStateMachine);
-  bot_.sendCurrentStateMachine();
+  bot_.sendActiveStateMachine();
 }
 
 std::string StateMachine::activeStateMachineName() const {

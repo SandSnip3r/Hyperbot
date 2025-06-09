@@ -35,7 +35,8 @@ public:
   void sendCheckpointLoaded(const std::string &checkpointName);
 
   void plot(std::string_view plotName, double x, double y);
-  void sendCharacterStatus(const entity::Self &self, const std::string &stateMachine);
+  void sendCharacterStatus(const entity::Self &self);
+  void sendActiveStateMachine(const entity::Self &self, const std::string &stateMachine);
 private:
   static constexpr std::chrono::milliseconds kHeartbeatInterval{250};
   const std::string kReqReplyAddress{"tcp://*:5555"};

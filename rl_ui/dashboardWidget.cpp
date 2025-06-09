@@ -31,8 +31,7 @@ DashboardWidget::~DashboardWidget() {
 
 void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
                                                int maxHp, int currentMp,
-                                               int maxMp,
-                                               QString currentStateMachine) {
+                                               int maxMp) {
   int row = -1;
   for (int i = 0; i < ui->statusTable->rowCount(); ++i) {
     QTableWidgetItem *item = ui->statusTable->item(i, 0);
@@ -52,7 +51,7 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
     ui->statusTable->insertRow(row);
     ui->statusTable->setRowHeight(row, 20);
     ui->statusTable->setItem(row, 0, new QTableWidgetItem(name));
-    ui->statusTable->setItem(row, 3, new QTableWidgetItem(currentStateMachine));
+    ui->statusTable->setItem(row, 3, new QTableWidgetItem(""));
 
     QProgressBar *hpBar = new QProgressBar;
     hpBar->setStyleSheet(R"(
@@ -95,9 +94,27 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
     mpBar->setValue(currentMp);
     mpBar->setFormat(QString("%1/%2").arg(currentMp).arg(maxMp));
   }
-  if (!currentStateMachine.isEmpty()) {
-    ui->statusTable->setItem(row, 3, new QTableWidgetItem(currentStateMachine));
-  } else if (!ui->statusTable->item(row, 3)) {
+  if (!ui->statusTable->item(row, 3)) {
     ui->statusTable->setItem(row, 3, new QTableWidgetItem(""));
+  }
+}
+
+void DashboardWidget::onActiveStateMachine(QString name, QString stateMachine) {
+  int row = -1;
+  for (int i = 0; i < ui->statusTable->rowCount(); ++i) {
+    QTableWidgetItem *item = ui->statusTable->item(i, 0);
+    if (item && item->text() == name) {
+      row = i;
+      break;
+    }
+  }
+  if (row == -1) {
+    row = ui->statusTable->rowCount();
+    ui->statusTable->insertRow(row);
+    ui->statusTable->setRowHeight(row, 20);
+    ui->statusTable->setItem(row, 0, new QTableWidgetItem(name));
+    ui->statusTable->setItem(row, 3, new QTableWidgetItem(stateMachine));
+  } else {
+    ui->statusTable->setItem(row, 3, new QTableWidgetItem(stateMachine));
   }
 }

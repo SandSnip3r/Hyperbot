@@ -79,7 +79,11 @@ message CharacterStatus {
   int32 max_hp = 3;
   int32 current_mp = 4;
   int32 max_mp = 5;
-  string current_state_machine = 6;
+}
+
+message ActiveStateMachine {
+  string name = 1;
+  string state_machine = 2;
 }
 
 message BroadcastMessage {
@@ -91,6 +95,7 @@ message BroadcastMessage {
     PlotData plot_data = 5;
     CheckpointLoaded checkpoint_loaded = 6;
     CharacterStatus character_status = 7;
+    ActiveStateMachine active_state_machine = 8;
   }
 }
 
