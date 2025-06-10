@@ -52,8 +52,9 @@ protected:
 
   template<typename StateMachineType, typename... Args>
   void setChildStateMachine(Args&&... args) {
-    childState_.reset();
-    childState_ = std::unique_ptr<StateMachineType>(new StateMachineType(this, std::forward<Args>(args)...));
+    auto child = std::unique_ptr<StateMachineType>(
+        new StateMachineType(this, std::forward<Args>(args)...));
+    setChildStateMachine(std::move(child));
   }
   void setChildStateMachine(std::unique_ptr<StateMachine> &&newChildStateMachine);
   std::unique_ptr<StateMachine> childState_;

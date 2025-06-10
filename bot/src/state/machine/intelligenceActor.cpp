@@ -44,6 +44,7 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
     }
     // Child state is done, reset it then continue to get our next action.
     childState_.reset();
+    bot_.sendActiveStateMachine();
   }
 
   if (!eventIsRelevant) {
@@ -89,6 +90,7 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   if (status == Status::kDone) {
     // If the action immediately completes, deconstruct it.
     childState_.reset();
+    bot_.sendActiveStateMachine();
   }
 
   // We are never done.

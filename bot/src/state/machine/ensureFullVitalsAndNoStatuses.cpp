@@ -52,6 +52,7 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
     }
     CHAR_VLOG(1) << "Child state machine is done";
     childState_.reset();
+    bot_.sendActiveStateMachine();
   }
 
   if (waitForPotionEventId_) {

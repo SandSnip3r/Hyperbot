@@ -67,8 +67,10 @@ Status SpawnAndUseRepairHammerIfNecessary::onUpdate(const event::Event *event) {
     }
     // Child state machine is done.
     const bool wasUseItem = dynamic_cast<const UseItem*>(childState_.get()) != nullptr;
-    const bool wasGmSpawning = dynamic_cast<const GmCommandSpawnAndPickItems*>(childState_.get()) != nullptr;
+    const bool wasGmSpawning =
+        dynamic_cast<const GmCommandSpawnAndPickItems*>(childState_.get()) != nullptr;
     childState_.reset();
+    bot_.sendActiveStateMachine();
     if (wasGmSpawning) {
       // We finished spawning and picking up the repair hammer.
       haveRepairHammer_ = true;
