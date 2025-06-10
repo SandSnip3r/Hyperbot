@@ -9,10 +9,15 @@ namespace packet::parsing {
 
 //=========================================================================================================================================================
 
-ParsedPacket::ParsedPacket(const PacketContainer &packet) : opcode_(static_cast<Opcode>(packet.opcode)) {}
+ParsedPacket::ParsedPacket(const PacketContainer &packet)
+    : opcode_(static_cast<Opcode>(packet.opcode)), timestamp_(packet.timestamp) {}
 
 Opcode ParsedPacket::opcode() const {
   return opcode_;
+}
+
+const ParsedPacket::Clock::time_point& ParsedPacket::timestamp() const {
+  return timestamp_;
 }
 
 ParsedPacket::~ParsedPacket() {}

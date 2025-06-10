@@ -25,11 +25,17 @@ namespace packet::parsing {
 //=========================================================================================================================================================
 
 class ParsedPacket {
+public:
+  using Clock = PacketContainer::Clock;
+
 protected:
   const Opcode opcode_;
+  const Clock::time_point timestamp_;
+
 public:
   ParsedPacket(const PacketContainer &packet);
   Opcode opcode() const;
+  const Clock::time_point& timestamp() const;
   virtual ~ParsedPacket() = 0;
 };
 

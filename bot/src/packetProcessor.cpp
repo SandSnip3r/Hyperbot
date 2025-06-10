@@ -387,7 +387,7 @@ void PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::Serv
     }
     if (mobileEntity->angle() != packet.angle()) {
       // Changed angle while running
-      mobileEntity->setMovingTowardAngle(std::nullopt, packet.angle());
+      mobileEntity->setMovingTowardAngle(std::nullopt, packet.angle(), packet.timestamp());
     }
   } else {
     mobileEntity->setAngle(packet.angle());
@@ -396,7 +396,7 @@ void PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::Serv
 
 void PacketProcessor::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const {
   std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
-  mobileEntity->syncPosition(packet.position());
+  mobileEntity->syncPosition(packet.position(), packet.timestamp());
 }
 
 void PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const {
@@ -412,9 +412,9 @@ void PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::S
     sourcePosition = packet.sourcePosition();
   }
   if (packet.hasDestination()) {
-    mobileEntity->setMovingToDestination(sourcePosition, packet.destinationPosition());
+    mobileEntity->setMovingToDestination(sourcePosition, packet.destinationPosition(), packet.timestamp());
   } else {
-    mobileEntity->setMovingTowardAngle(sourcePosition, packet.angle());
+    mobileEntity->setMovingTowardAngle(sourcePosition, packet.angle(), packet.timestamp());
   }
 }
 
@@ -448,7 +448,7 @@ void initializeSelfFromCharacterDataPacket(entity::Self &self, const packet::par
   self.initializeAngle(packet.angle());
 
   // State
-  self.setLifeState(packet.lifeState());
+  self.setLifeState(packet.lifeState(), packet.timestamp());
   self.setMotionState(packet.motionState());
   self.initializeBodyState(packet.bodyState());
 
@@ -578,7 +578,7 @@ void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
   } else if (packet.stateType() == packet::enums::StateType::kLifeState) {
     std::shared_ptr<entity::Character> characterEntity = worldState_.getEntity<entity::Character>(packet.globalId());
     const auto newLifeState = static_cast<sro::entity::LifeState>(packet.state());
-    characterEntity->setLifeState(newLifeState);
+    characterEntity->setLifeState(newLifeState, packet.timestamp());
   } else if (selfEntity_ && packet.globalId() == selfEntity_->globalId) {
     if (packet.stateType() == packet::enums::StateType::kBodyState) {
       selfEntity_->setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
@@ -1035,7 +1035,7 @@ void PacketProcessor::serverAgentEntityGroupSpawnDataReceived(const packet::pars
   if (packet.groupSpawnType() == packet::enums::GroupSpawnType::kSpawn) {
     for (const std::shared_ptr<entity::Entity> &entity : packet.entities()) {
       if (entity) {
-        entitySpawned(entity);
+        entitySpawned(entity, packet.timestamp());
       } else {
         LOG(INFO) << "Received null entity from group spawn";
       }
@@ -1047,9 +1047,10 @@ void PacketProcessor::serverAgentEntityGroupSpawnDataReceived(const packet::pars
   }
 }
 
-void PacketProcessor::serverAgentEntitySpawnReceived(const packet::parsing::ServerAgentEntitySpawn &packet) const {
+void PacketProcessor::serverAgentEntitySpawnReceived(
+    const packet::parsing::ServerAgentEntitySpawn &packet) const {
   if (packet.entity()) {
-    entitySpawned(std::move(packet.entity()));
+    entitySpawned(std::move(packet.entity()), packet.timestamp());
   } else {
     LOG(INFO) << "Received null entity from spawn";
   }
@@ -1059,7 +1060,8 @@ void PacketProcessor::serverAgentEntityDespawnReceived(const packet::parsing::Se
   entityDespawned(packet.globalId());
 }
 
-void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) const {
+void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity,
+                                   const PacketContainer::Clock::time_point &timestamp) const {
   const sro::scalar_types::EntityGlobalId entityGlobalId = entity->globalId;
   const bool firstTimeSeeingEntity = worldState_.entitySpawned(std::move(entity), eventBroker_);
   if (!firstTimeSeeingEntity) {
@@ -1084,9 +1086,13 @@ void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) cons
     LOG(INFO) << "Entity is moving, making some changes";
     if (mobileEntity->destinationPosition) {
       // Entity spawned and is moving to a destination
-      mobileEntity->setMovingToDestination(mobileEntity->position(), *mobileEntity->destinationPosition);
+      mobileEntity->setMovingToDestination(mobileEntity->position(),
+                                           *mobileEntity->destinationPosition,
+                                           timestamp);
     } else {
-      mobileEntity->setMovingTowardAngle(mobileEntity->position(), mobileEntity->angle());
+      mobileEntity->setMovingTowardAngle(mobileEntity->position(),
+                                         mobileEntity->angle(),
+                                         timestamp);
     }
   }
 }
@@ -1425,8 +1431,8 @@ ActionActionDuration is the amount of time it takes for the skill to cast before
 ActionReuseDelay is the skill's cooldown
 */
 
-void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const {
-  const broker::EventBroker::ClockType::time_point currentTime = broker::EventBroker::ClockType::now();
+void PacketProcessor::serverAgentSkillBeginReceived(
+    const packet::parsing::ServerAgentSkillBegin &packet) const {
   CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "<Packet> ServerAgentSkillBeginReceived";
   if (packet.result() == 2) {
     // Error
@@ -1618,7 +1624,10 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
           // TODO: Move the sending of this event into the entity!
           // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-          selfEntity_->skillCooldownBegin(packet.refSkillId(), currentTime + std::chrono::milliseconds(skillData.actionReuseDelay));
+          selfEntity_->skillCooldownBegin(
+              packet.refSkillId(),
+              packet.timestamp() +
+                  std::chrono::milliseconds(skillData.actionReuseDelay));
         }
         if (skillData.basicActivity == 1) {
           // No "End" will come for Basic_Activity == 1, delete the item from the accepted command queue

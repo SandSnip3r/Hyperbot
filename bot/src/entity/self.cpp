@@ -190,13 +190,17 @@ void Self::setHwanPoints(uint8_t hwanPoints) {
   }
 }
 
-void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition) {
-  PlayerCharacter::setMovingToDestination(sourcePosition, destinationPosition);
+void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition,
+                                  const sro::Position &destinationPosition,
+                                  const PacketContainer::Clock::time_point &timestamp) {
+  PlayerCharacter::setMovingToDestination(sourcePosition, destinationPosition, timestamp);
   checkIfWillLeaveRegionAndSetTimer();
 }
 
-void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle) {
-  PlayerCharacter::setMovingTowardAngle(sourcePosition, angle);
+void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition,
+                                const sro::Angle angle,
+                                const PacketContainer::Clock::time_point &timestamp) {
+  PlayerCharacter::setMovingTowardAngle(sourcePosition, angle, timestamp);
   checkIfWillLeaveRegionAndSetTimer();
 }
 

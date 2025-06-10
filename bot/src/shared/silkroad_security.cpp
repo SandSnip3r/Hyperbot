@@ -13,6 +13,7 @@
 #include <random>
 #include <set>
 #include <vector>
+#include <chrono>
 
 //-----------------------------------------------------------------------------
 
@@ -751,17 +752,20 @@ void SilkroadSecurity::Send( uint16_t opcode, const StreamUtility & data, uint8_
 
 //-----------------------------------------------------------------------------
 
-void SilkroadSecurity::Recv( const std::vector< uint8_t > & stream )
+void SilkroadSecurity::Recv(const std::vector< uint8_t > &stream,
+                            PacketContainer::Clock::time_point timestamp)
 {
-  if( !stream.empty() )
+  if (!stream.empty())
   {
-    Recv( &stream[0], static_cast< int32_t >( stream.size() ) );
+    Recv(&stream[0], static_cast<int32_t>(stream.size()), timestamp);
   }
 }
 
 //-----------------------------------------------------------------------------
 
-void SilkroadSecurity::Recv( const uint8_t * stream, int32_t count )
+void SilkroadSecurity::Recv(const uint8_t *stream,
+                            int32_t count,
+                            PacketContainer::Clock::time_point recvTimestamp)
 {
   m_data->m_pending_stream.Write< uint8_t >( stream, count );
   int32_t total_bytes = m_data->m_pending_stream.GetStreamSize();
@@ -853,7 +857,7 @@ void SilkroadSecurity::Recv( const uint8_t * stream, int32_t count )
       }
 
       // Save the current packet's data
-      StreamUtility packet_data = m_data->m_pending_stream.Extract( 6, packet_size & 0x7FFF );
+      StreamUtility packet_data = m_data->m_pending_stream.Extract(6, packet_size & 0x7FFF);
 
       // Sliding window update of remaining bytes
       m_data->m_pending_stream.Delete( 0, required_size );
@@ -896,7 +900,12 @@ void SilkroadSecurity::Recv( const uint8_t * stream, int32_t count )
             if( m_data->m_massive_count == 0 )
             {
               std::unique_lock<std::mutex> incoming_packet_lock(m_data->m_incoming_packet_mutex);
-              m_data->m_incoming_packets.emplace_back(PacketContainer( m_data->m_massive_opcode, m_data->m_massive_packet, packet_encrypted, true ), false);
+              PacketContainer container(m_data->m_massive_opcode,
+                                        m_data->m_massive_packet,
+                                        packet_encrypted,
+                                        true,
+                                        recvTimestamp);
+              m_data->m_incoming_packets.emplace_back(std::move(container), false);
               m_data->m_massive_header = false;
               m_data->m_massive_packet = StreamUtility();
             }
@@ -905,7 +914,12 @@ void SilkroadSecurity::Recv( const uint8_t * stream, int32_t count )
         else // Everything else
         {
           std::unique_lock<std::mutex> incoming_packet_lock(m_data->m_incoming_packet_mutex);
-          m_data->m_incoming_packets.emplace_back(PacketContainer( packet_opcode, packet_data, packet_encrypted, false ), false);
+          PacketContainer container(packet_opcode,
+                                    packet_data,
+                                    packet_encrypted,
+                                    false,
+                                    recvTimestamp);
+          m_data->m_incoming_packets.emplace_back(std::move(container), false);
         }
       }
     }
@@ -1052,38 +1066,23 @@ std::vector< uint8_t > FormatPacket( SilkroadSecurity * silkroad_security, uint1
 
 //-----------------------------------------------------------------------------
 
-PacketContainer::PacketContainer()
-: opcode( 0 ), encrypted( 0 ), massive( 0 )
-{
-}
+PacketContainer::PacketContainer(uint16_t packet_opcode,
+                                 const StreamUtility &packet_data,
+                                 uint8_t packet_encrypted,
+                                 uint8_t packet_massive,
+                                 Clock::time_point packet_timestamp)
+    : opcode(packet_opcode),
+      data(packet_data),
+      encrypted(packet_encrypted),
+      massive(packet_massive),
+      timestamp(packet_timestamp) {}
 
-PacketContainer::PacketContainer( uint16_t packet_opcode, const StreamUtility & packet_data, uint8_t packet_encrypted, uint8_t packet_massive )
-: opcode( packet_opcode ), data( packet_data ), encrypted( packet_encrypted ), massive( packet_massive )
-{
-}
+PacketContainer::PacketContainer(const PacketContainer &rhs) = default;
+PacketContainer::PacketContainer(PacketContainer &&rhs) noexcept = default;
 
-PacketContainer::PacketContainer( const PacketContainer & rhs )
-{
-  opcode = rhs.opcode;
-  data = rhs.data;
-  encrypted = rhs.encrypted;
-  massive = rhs.massive;
-}
+PacketContainer &PacketContainer::operator=(const PacketContainer &rhs) = default;
+PacketContainer &PacketContainer::operator=(PacketContainer &&rhs) noexcept = default;
 
-PacketContainer & PacketContainer::operator =( const PacketContainer & rhs )
-{
-  if( this != &rhs )
-  {
-    opcode = rhs.opcode;
-    data = rhs.data;
-    encrypted = rhs.encrypted;
-    massive = rhs.massive;
-  }
-  return *this;
-}
-
-PacketContainer::~PacketContainer()
-{
-}
+PacketContainer::~PacketContainer() = default;
 
 //-----------------------------------------------------------------------------

@@ -125,9 +125,9 @@ void MobileEntity::setSpeed(float walkSpeed, float runSpeed) {
   this->runSpeed = runSpeed;
   if (moving()) {
     if (destinationPosition) {
-      privateSetMovingToDestination(interpolatedPosition, *destinationPosition);
+      privateSetMovingToDestination(interpolatedPosition, *destinationPosition, currentTime);
     } else {
-      privateSetMovingTowardAngle(interpolatedPosition, angle_);
+      privateSetMovingTowardAngle(interpolatedPosition, angle_, currentTime);
     }
   }
 }
@@ -175,9 +175,9 @@ void MobileEntity::setMotionState(entity::MotionState motionState) {
       throw std::runtime_error("Changes speed, but dont know our position when it happened");
     }
     if (destinationPosition) {
-      privateSetMovingToDestination(srcPosition, *destinationPosition);
+      privateSetMovingToDestination(srcPosition, *destinationPosition, currentTime);
     } else {
-      privateSetMovingTowardAngle(srcPosition, angle_);
+      privateSetMovingTowardAngle(srcPosition, angle_, currentTime);
     }
   }
 }
@@ -187,14 +187,14 @@ void MobileEntity::setStationaryAtPosition(const sro::Position &position) {
   privateSetStationaryAtPosition(position);
 }
 
-void MobileEntity::syncPosition(const sro::Position &position) {
-  const auto currentTime = std::chrono::steady_clock::now();
+void MobileEntity::syncPosition(const sro::Position &position,
+                               const PacketContainer::Clock::time_point &timestamp) {
   // std::unique_lock<std::mutex> lock(mutex_);
   if (moving()) {
     if (destinationPosition) {
-      privateSetMovingToDestination(position, *destinationPosition);
+      privateSetMovingToDestination(position, *destinationPosition, timestamp);
     } else {
-      privateSetMovingTowardAngle(position, angle_);
+      privateSetMovingTowardAngle(position, angle_, timestamp);
     }
   } else {
     position_ = position;
@@ -206,14 +206,18 @@ void MobileEntity::syncPosition(const sro::Position &position) {
   }
 }
 
-void MobileEntity::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition) {
+void MobileEntity::setMovingToDestination(const std::optional<sro::Position> &sourcePosition,
+                                         const sro::Position &destinationPosition,
+                                         const PacketContainer::Clock::time_point &timestamp) {
   // std::unique_lock<std::mutex> lock(mutex_);
-  privateSetMovingToDestination(sourcePosition, destinationPosition);
+  privateSetMovingToDestination(sourcePosition, destinationPosition, timestamp);
 }
 
-void MobileEntity::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle) {
+void MobileEntity::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition,
+                                        const sro::Angle angle,
+                                        const PacketContainer::Clock::time_point &timestamp) {
   // std::unique_lock<std::mutex> lock(mutex_);
-  privateSetMovingTowardAngle(sourcePosition, angle);
+  privateSetMovingTowardAngle(sourcePosition, angle, timestamp);
 }
 
 void MobileEntity::movementTimerCompleted() {
@@ -255,7 +259,7 @@ void MobileEntity::cancelMovement() {
   destinationPosition.reset();
 }
 
-sro::Position MobileEntity::interpolateCurrentPosition(const std::chrono::steady_clock::time_point &currentTime) const {
+sro::Position MobileEntity::interpolateCurrentPosition(const PacketContainer::Clock::time_point &currentTime) const {
   if (!moving()) {
     return position_;
   }
@@ -335,13 +339,14 @@ void MobileEntity::privateSetStationaryAtPosition(const sro::Position &position)
   }
 }
 
-void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition) {
-  const auto currentTime = std::chrono::steady_clock::now();
+void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Position> &sourcePosition,
+                                                 const sro::Position &destinationPosition,
+                                                 const PacketContainer::Clock::time_point &timestamp) {
   if (sourcePosition) {
     position_ = *sourcePosition;
   } else if (moving()) {
     // We've pivoted while moving, calculate where we are and save that
-    position_ = interpolateCurrentPosition(currentTime);
+    position_ = interpolateCurrentPosition(timestamp);
   }
   if (position_ == destinationPosition) {
     // Not going anywhere
@@ -350,7 +355,7 @@ void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Positi
   }
   cancelMovement();
   moving_ = true;
-  startedMovingTime = currentTime;
+  startedMovingTime = timestamp;
   this->destinationPosition = destinationPosition;
 
   // Start timer
@@ -364,17 +369,18 @@ void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Positi
   checkIfWillCrossGeometryBoundary();
 }
 
-void MobileEntity::privateSetMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle) {
-  const auto currentTime = std::chrono::steady_clock::now();
+void MobileEntity::privateSetMovingTowardAngle(const std::optional<sro::Position> &sourcePosition,
+                                               const sro::Angle angle,
+                                               const PacketContainer::Clock::time_point &timestamp) {
   if (sourcePosition) {
     position_ = *sourcePosition;
   } else if (moving()) {
     // We've pivoted while moving, calculate where we are and save that
-    position_ = interpolateCurrentPosition(currentTime);
+    position_ = interpolateCurrentPosition(timestamp);
   }
   cancelMovement();
   moving_ = true;
-  startedMovingTime = currentTime;
+  startedMovingTime = timestamp;
   this->angle_ = angle;
 
   if (eventBroker_) {
