@@ -14,6 +14,8 @@ DashboardWidget::DashboardWidget(QWidget *parent)
   ui->statusTable->setColumnCount(headers.size());
   ui->statusTable->setHorizontalHeaderLabels(headers);
   ui->statusTable->verticalHeader()->setDefaultSectionSize(20);
+  // Set the last column to stretch to fill the remaining space
+  ui->statusTable->horizontalHeader()->setSectionResizeMode(ui->statusTable->columnCount() - 1, QHeaderView::Stretch);
 }
 
 static int characterId(const QString &name) {
