@@ -111,6 +111,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
               Status childStatus = childState_->onUpdate(event);
               (void)childStatus; // We do not care what the child state returns because we are going to reset it regardless.
               childState_.reset();
+              bot_.sendActiveStateMachine();
               pvpDescriptor_.reset();
               // If it was the opponent who died, we can immediately report that we're ready for our next assignment.
               if (!opponentGlobalId_) {
@@ -207,8 +208,10 @@ Status PvpManager::onUpdate(const event::Event *event) {
       throw std::runtime_error("Intelligence actor should never naturally end");
     }
     const bool childStateWasResurrect = dynamic_cast<ResurrectInPlace*>(childState_.get()) != nullptr;
-    const bool childStateWasSequential = dynamic_cast<SequentialStateMachines*>(childState_.get()) != nullptr;
+    const bool childStateWasSequential =
+        dynamic_cast<SequentialStateMachines*>(childState_.get()) != nullptr;
     childState_.reset();
+    bot_.sendActiveStateMachine();
     if (childStateWasResurrect) {
       // We're done resurrecting.
       CHAR_VLOG(1) << "Finished resurrecting";

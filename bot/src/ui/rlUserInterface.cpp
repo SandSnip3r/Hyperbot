@@ -211,4 +211,12 @@ void RlUserInterface::sendCharacterStatus(const entity::Self &self) {
   broadcastMessage(msg);
 }
 
+void RlUserInterface::sendActiveStateMachine(const entity::Self &self, const std::string &stateMachine) {
+  rl_ui_messages::BroadcastMessage msg;
+  auto *payload = msg.mutable_active_state_machine();
+  payload->set_name(self.name);
+  payload->set_state_machine(stateMachine);
+  broadcastMessage(msg);
+}
+
 } // namespace ui

@@ -44,6 +44,7 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
     }
     // Child state is done, reset it then continue to get our next action.
     childState_.reset();
+    bot_.sendActiveStateMachine();
   }
 
   if (!eventIsRelevant) {
@@ -89,6 +90,7 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   if (status == Status::kDone) {
     // If the action immediately completes, deconstruct it.
     childState_.reset();
+    bot_.sendActiveStateMachine();
   }
 
   // We are never done.
@@ -102,6 +104,10 @@ void IntelligenceActor::injectPacket(const PacketContainer &packet, PacketContai
 
 bool IntelligenceActor::isRelevantEvent(const event::Event *event) const {
   if (event == nullptr) {
+    return true;
+  }
+  if (bot_.selfState() == nullptr) {
+    // We do not have a self state, so we cannot determine if this event is relevant.
     return true;
   }
   // There are some events which we want to filter out, as they are not relevant to us.

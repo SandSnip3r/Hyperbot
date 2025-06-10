@@ -54,6 +54,7 @@ Status DisableGmInvisible::onUpdate(const event::Event *event) {
     const Status status = childState_->onUpdate(event);
     if (status == Status::kDone) {
       childState_.reset();
+      bot_.sendActiveStateMachine();
       CHAR_VLOG(1) << "  GM command completed";
     }
     return Status::kNotDone;

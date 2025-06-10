@@ -194,6 +194,7 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
     } else {
       doneBuyingItems_ = true;
       childState_.reset();
+      bot_.sendActiveStateMachine();
     }
 
     // Done buying items at this point

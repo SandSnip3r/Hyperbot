@@ -25,6 +25,7 @@ Status EquipItem::onUpdate(const event::Event *event) {
     // Child state finished, we're done.
     CHAR_VLOG(2) << "Child state finished, we're done.";
     childState_.reset();
+    bot_.sendActiveStateMachine();
     return Status::kDone;
   }
 

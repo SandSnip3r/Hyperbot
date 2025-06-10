@@ -54,6 +54,7 @@ signals:
   void plotData(qreal x, qreal y);
   void characterStatusReceived(QString name, int currentHp, int maxHp,
                                int currentMp, int maxMp);
+  void activeStateMachineReceived(QString name, QString stateMachine);
 
 private:
   static constexpr int kHeartbeatIntervalMs = 500;

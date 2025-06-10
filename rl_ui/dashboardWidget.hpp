@@ -17,10 +17,12 @@ public:
 public slots:
   void onCharacterStatusReceived(QString name, int currentHp, int maxHp,
                                  int currentMp, int maxMp);
+  void onActiveStateMachine(QString name, QString stateMachine);
   void clearStatusTable();
 
 private:
   Ui::DashboardWidget *ui;
+  int ensureRowForCharacter(const QString &name);
 };
 
 #endif // DASHBOARD_WIDGET_HPP_

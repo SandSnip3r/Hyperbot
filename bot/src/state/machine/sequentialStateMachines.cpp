@@ -1,6 +1,8 @@
 #include "sequentialStateMachines.hpp"
 
 #include "bot.hpp"
+#include <absl/debugging/internal/demangle.h>
+#include <typeinfo>
 
 namespace state::machine {
 
@@ -28,6 +30,14 @@ Status SequentialStateMachines::onUpdate(const event::Event *event) {
   }
   CHAR_VLOG(2) << stateMachines_.size() << " state machines left. Not done";
   return Status::kNotDone;
+}
+
+std::string SequentialStateMachines::activeStateMachineName() const {
+  std::unique_lock lock(mutex_);
+  if (!stateMachines_.empty()) {
+    return stateMachines_.front()->activeStateMachineName();
+  }
+  return absl::debugging_internal::DemangleString(typeid(*this).name());
 }
 
 // TODO: When pushing a state machine, set ourself as its parent.
