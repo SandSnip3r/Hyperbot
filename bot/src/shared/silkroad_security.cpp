@@ -323,41 +323,39 @@ public:
     return ( uint8_t )( ( ( checksum >> 24 ) & 0xFF ) + ( ( checksum >> 8 ) & 0xFF ) + ( ( checksum >> 16 ) & 0xFF ) + ( checksum & 0xFF ) );
   }
 
-  void GenerateHandshake( uint8_t mode )
-  {
+  void GenerateHandshake( uint8_t mode ) {
     m_security_flag = mode;
     m_client_security = true;
-    PacketContainer response;
-    response.opcode = 0x5000;
-    response.data.Write< uint8_t >( mode );
-    if( m_security_flags->blowfish )
-    {
+    StreamUtility data;
+    data.Write< uint8_t >( mode );
+    if( m_security_flags->blowfish ) {
       m_initial_blowfish_key = rng();
       m_blowfish.Initialize( &m_initial_blowfish_key, sizeof( m_initial_blowfish_key ) );
-      response.data.Write< uint64_t >( m_initial_blowfish_key );
+      data.Write< uint64_t >( m_initial_blowfish_key );
     }
-    if( m_security_flags->security_bytes )
-    {
+    if (m_security_flags->security_bytes) {
       m_seed_count = static_cast< uint32_t >( rng() % 0xFF );
       SetupCountByte( m_seed_count );
       m_crc_seed = static_cast< uint32_t >( rng() % 0xFF );
-      response.data.Write< uint32_t >( m_seed_count );
-      response.data.Write< uint32_t >( m_crc_seed );
+      data.Write< uint32_t >( m_seed_count );
+      data.Write< uint32_t >( m_crc_seed );
     }
-    if( m_security_flags->handshake )
-    {
+    if (m_security_flags->handshake) {
       m_handshake_blowfish_key = rng();
       m_value_x = static_cast< uint32_t >( rng() & 0x7FFFFFFF );
       m_value_g = static_cast< uint32_t >( rng() & 0x7FFFFFFF );
       m_value_p = static_cast< uint32_t >( rng() & 0x7FFFFFFF );
       m_value_A = G_pow_X_mod_P( m_value_p, m_value_x, m_value_g );
-      response.data.Write< uint64_t >( m_handshake_blowfish_key );
-      response.data.Write< uint32_t >( m_value_g );
-      response.data.Write< uint32_t >( m_value_p );
-      response.data.Write< uint32_t >( m_value_A );
+      data.Write< uint64_t >( m_handshake_blowfish_key );
+      data.Write< uint32_t >( m_value_g );
+      data.Write< uint32_t >( m_value_p );
+      data.Write< uint32_t >( m_value_A );
     }
     std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
-    m_outgoing_packets.push_front( response );
+    m_outgoing_packets.push_front(PacketContainer(/*opcode=*/0x5000,
+                                                  std::move(data),
+                                                  /*encrypted=*/0,
+                                                  /*massive=*/0));
   }
 
   void Handshake( uint16_t packet_opcode, StreamUtility & packet_data, bool packet_encrypted )
