@@ -149,6 +149,14 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
           status.max_hp(), status.current_mp(), status.max_mp());
       break;
     }
+    case rl_ui_messages::BroadcastMessage::BodyCase::kActiveStateMachine: {
+      const rl_ui_messages::ActiveStateMachine &status =
+          broadcastMessage.active_state_machine();
+      emit activeStateMachineReceived(
+          QString::fromStdString(status.name()),
+          QString::fromStdString(status.state_machine()));
+      break;
+    }
     default: {
       LOG(WARNING) << "Received unexpected broadcast message.";
       break;

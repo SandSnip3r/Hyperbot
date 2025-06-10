@@ -215,6 +215,7 @@ Status Training::onUpdate(const event::Event *event) {
     if (status == Status::kDone) {
       LOG(INFO) << "Done applying stat points";
       applyStatPointsChildStateMachine_.reset();
+      bot_.sendActiveStateMachine();
     }
   }
 
@@ -223,6 +224,7 @@ Status Training::onUpdate(const event::Event *event) {
     const Status status = childState_->onUpdate(event);
     if (status == Status::kDone) {
       childState_.reset();
+      bot_.sendActiveStateMachine();
     } else {
       // Child state is not yet done.
       if (dynamic_cast<Walking*>(childState_.get()) == nullptr) {

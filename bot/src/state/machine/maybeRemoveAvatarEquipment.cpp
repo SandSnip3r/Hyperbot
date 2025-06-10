@@ -23,6 +23,7 @@ Status MaybeRemoveAvatarEquipment::onUpdate(const event::Event *event) {
       // Child state is done
       CHAR_VLOG(2) << absl::StreamFormat("Child state is done");
       childState_.reset();
+      bot_.sendActiveStateMachine();
       if (unequipping_) {
         CHAR_VLOG(2) << "Was unequipping, now maybe need to move item to target slot";
         unequipping_ = false;

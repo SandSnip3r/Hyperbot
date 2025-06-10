@@ -17,6 +17,7 @@ public:
   SequentialStateMachines(StateMachine *parent);
   ~SequentialStateMachines() override;
   Status onUpdate(const event::Event *event) override;
+  std::string activeStateMachineName() const override;
   // void push(std::unique_ptr<StateMachine> &&stateMachine);
 
   template<typename StateMachineType, typename... Args>
@@ -25,7 +26,7 @@ public:
     stateMachines_.emplace_back(std::unique_ptr<StateMachineType>(new StateMachineType(this, std::forward<Args>(args)...)));
   }
 private:
-  std::recursive_mutex mutex_;
+  mutable std::recursive_mutex mutex_;
   std::deque<std::unique_ptr<StateMachine>> stateMachines_;
 };
 

@@ -1,5 +1,8 @@
 #include "stateMachine.hpp"
 
+#include <absl/debugging/internal/demangle.h>
+#include <typeinfo>
+
 #include "bot.hpp"
 namespace state::machine {
 
@@ -60,6 +63,14 @@ void StateMachine::setChildStateMachine(std::unique_ptr<StateMachine> &&newChild
     throw std::runtime_error("Cannot set a nullptr child state machine");
   }
   childState_ = std::move(newChildStateMachine);
+  bot_.sendActiveStateMachine();
+}
+
+std::string StateMachine::activeStateMachineName() const {
+  if (childState_) {
+    return childState_->activeStateMachineName();
+  }
+  return absl::debugging_internal::DemangleString(typeid(*this).name());
 }
 
 std::ostream& operator<<(std::ostream &stream, Npc npc) {
