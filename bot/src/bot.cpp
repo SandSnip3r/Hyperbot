@@ -270,6 +270,7 @@ void Bot::onUpdate(const event::Event *event) {
       LOG(INFO) << "Login state machine completed for " << selfState()->name;
       loginStateMachine_.reset();
       logInPromise_.set_value();
+      sendActiveStateMachine();
     } else {
       // Login state machine is not done, do not invoke any other state machines.
       return;
