@@ -1,7 +1,6 @@
 #ifndef BOT_HPP_
 #define BOT_HPP_
 
-#include "broker/packetBroker.hpp"
 #include "characterLoginInfo.hpp"
 #include "config/characterConfig.hpp"
 #include "entity/self.hpp"
@@ -35,7 +34,6 @@ public:
   Bot(SessionId sessionId,
       const pk2::GameData &gameData,
       Proxy &proxy,
-      broker::PacketBroker &packetBroker,
       broker::EventBroker &eventBroker,
       state::WorldState &worldState,
       ui::RlUserInterface &rlUserInterface);
@@ -45,7 +43,7 @@ public:
   const config::CharacterConfig* config() const;
   const pk2::GameData& gameData() const;
   Proxy& proxy() const;
-  broker::PacketBroker& packetBroker() const;
+  void injectPacket(const PacketContainer &packet, PacketContainer::Direction direction);
   broker::EventBroker& eventBroker();
   const broker::EventBroker& eventBroker() const;
   state::WorldState& worldState();
@@ -62,11 +60,9 @@ protected:
   const SessionId sessionId_;
   const pk2::GameData &gameData_;
   Proxy &proxy_;
-  broker::PacketBroker &packetBroker_;
   broker::EventBroker &eventBroker_;
   state::WorldState &worldState_;
   ui::RlUserInterface &rlUserInterface_;
-  PacketProcessor packetProcessor_{sessionId_, worldState_, packetBroker_, eventBroker_, gameData_};
   // StatAggregator statAggregator_{worldState_, eventBroker_};
 
   // We track ourself by a pointer to the self entity. Alternatively, we could use the global ID and look up the entity each time. We do not use the global ID because the entity could be removed from the entity tracker before we receive the despawn event.

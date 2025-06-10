@@ -90,7 +90,7 @@ private:
   static constexpr float kInitialEpsilon{1.0f};
   static constexpr float kFinalEpsilon{0.01f};
   static constexpr int kEpsilonDecaySteps{200'000};
-  static constexpr int kPvpCount{16};
+  static constexpr int kPvpCount{32};
 
   std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;
@@ -114,16 +114,16 @@ private:
 
   // Sample collection rate tracking
   int sampleCount_{0};
-  std::chrono::high_resolution_clock::time_point lastSampleTime_{std::chrono::high_resolution_clock::now()};
+  std::chrono::steady_clock::time_point lastSampleTime_{std::chrono::steady_clock::now()};
   static constexpr std::chrono::milliseconds kSampleRateReportInterval{2000};
 
   // Replay buffer size tracking
-  std::chrono::high_resolution_clock::time_point lastReplayBufferSizeUpdateTime_{std::chrono::high_resolution_clock::now()};
+  std::chrono::steady_clock::time_point lastReplayBufferSizeUpdateTime_{std::chrono::steady_clock::now()};
   static constexpr std::chrono::milliseconds kReplayBufferSizeUpdateInterval{5000};
 
   // Training rate tracking
   int trainingCount_{0};
-  std::chrono::high_resolution_clock::time_point lastTrainingTime_{std::chrono::high_resolution_clock::now()};
+  std::chrono::steady_clock::time_point lastTrainingTime_{std::chrono::steady_clock::now()};
   static constexpr std::chrono::milliseconds kTrainRateReportInterval{2000};
 
   void precompileModels();

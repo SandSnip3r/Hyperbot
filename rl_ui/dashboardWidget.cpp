@@ -115,3 +115,7 @@ void DashboardWidget::onActiveStateMachine(QString name, QString stateMachine) {
   int row = ensureRowForCharacter(name);
   ui->statusTable->setItem(row, 3, new QTableWidgetItem(stateMachine));
 }
+
+void DashboardWidget::clearStatusTable() {
+  ui->statusTable->setRowCount(0);
+}

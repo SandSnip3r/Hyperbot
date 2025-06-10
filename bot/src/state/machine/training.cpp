@@ -439,7 +439,7 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
     if (bot_.selfState()->hwanPoints() == 5) {
       // TODO: Use berserk in a StateMachine.
       const auto packet = packet::building::ClientAgentCharacterUpdateBodyStateRequest::packet(packet::enums::BodyState::kHwan);
-      bot_.proxy().inject(packet, PacketContainer::Direction::kBotToServer);
+      bot_.injectPacket(packet, PacketContainer::Direction::kBotToServer);
     }
     CastSkillStateMachineBuilder castSkillBuilder(bot_, attackRefId);
     castSkillBuilder.withTarget(targetEntity->globalId);

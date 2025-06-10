@@ -26,7 +26,7 @@ public:
 class TimerManager {
 public:
   using TimerId = uint32_t;
-  using ClockType = std::chrono::high_resolution_clock;
+  using ClockType = std::chrono::steady_clock;
   using TimePoint = ClockType::time_point;
 
   TimerManager(CallbackTarget &callbackTarget);

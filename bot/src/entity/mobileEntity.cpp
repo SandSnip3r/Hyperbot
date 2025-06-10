@@ -25,14 +25,14 @@ MobileEntity::~MobileEntity() {
 void MobileEntity::initializeAsMoving(const sro::Position &destinationPosition) {
   // std::unique_lock<std::mutex> lock(mutex_);
   this->moving_ = true;
-  this->startedMovingTime = std::chrono::high_resolution_clock::now();
+  this->startedMovingTime = std::chrono::steady_clock::now();
   this->destinationPosition = destinationPosition;
 }
 
 void MobileEntity::initializeAsMoving(sro::Angle destinationAngle) {
   // std::unique_lock<std::mutex> lock(mutex_);
   this->moving_ = true;
-  this->startedMovingTime = std::chrono::high_resolution_clock::now();
+  this->startedMovingTime = std::chrono::steady_clock::now();
   this->angle_ = destinationAngle;
 }
 
@@ -98,7 +98,7 @@ bool MobileEntity::moving() const {
 
 sro::Position MobileEntity::position() const {
   // std::unique_lock<std::mutex> lock(mutex_);
-  const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto currentTime = std::chrono::steady_clock::now();
   return interpolateCurrentPosition(currentTime);
 }
 
@@ -108,12 +108,12 @@ float MobileEntity::currentSpeed() const {
 }
 
 sro::Position MobileEntity::positionAfterTime(float seconds) const {
-  const auto futureTime = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(static_cast<std::chrono::microseconds::rep>(seconds * 1'000'000));
+  const auto futureTime = std::chrono::steady_clock::now() + std::chrono::microseconds(static_cast<std::chrono::microseconds::rep>(seconds * 1'000'000));
   return interpolateCurrentPosition(futureTime);
 }
 
 void MobileEntity::setSpeed(float walkSpeed, float runSpeed) {
-  const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto currentTime = std::chrono::steady_clock::now();
   // std::unique_lock<std::mutex> lock(mutex_);
   if (walkSpeed == this->walkSpeed && runSpeed == this->runSpeed) {
     // Didn't actually change
@@ -146,7 +146,7 @@ void MobileEntity::setAngle(sro::Angle angle) {
 }
 
 void MobileEntity::setMotionState(entity::MotionState motionState) {
-  const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto currentTime = std::chrono::steady_clock::now();
   // std::unique_lock<std::mutex> lock(mutex_);
   bool changedSpeed{false};
   if (this->lastMotionState && *this->lastMotionState == entity::MotionState::kWalk && motionState == entity::MotionState::kRun) {
@@ -188,7 +188,7 @@ void MobileEntity::setStationaryAtPosition(const sro::Position &position) {
 }
 
 void MobileEntity::syncPosition(const sro::Position &position) {
-  const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto currentTime = std::chrono::steady_clock::now();
   // std::unique_lock<std::mutex> lock(mutex_);
   if (moving()) {
     if (destinationPosition) {
@@ -255,7 +255,7 @@ void MobileEntity::cancelMovement() {
   destinationPosition.reset();
 }
 
-sro::Position MobileEntity::interpolateCurrentPosition(const std::chrono::high_resolution_clock::time_point &currentTime) const {
+sro::Position MobileEntity::interpolateCurrentPosition(const std::chrono::steady_clock::time_point &currentTime) const {
   if (!moving()) {
     return position_;
   }
@@ -336,7 +336,7 @@ void MobileEntity::privateSetStationaryAtPosition(const sro::Position &position)
 }
 
 void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition) {
-  const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto currentTime = std::chrono::steady_clock::now();
   if (sourcePosition) {
     position_ = *sourcePosition;
   } else if (moving()) {
@@ -365,7 +365,7 @@ void MobileEntity::privateSetMovingToDestination(const std::optional<sro::Positi
 }
 
 void MobileEntity::privateSetMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle) {
-  const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto currentTime = std::chrono::steady_clock::now();
   if (sourcePosition) {
     position_ = *sourcePosition;
   } else if (moving()) {
@@ -394,7 +394,7 @@ void MobileEntity::checkIfWillCrossGeometryBoundary() {
     // No geometry to collide with
     return;
   }
-  const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto currentTime = std::chrono::steady_clock::now();
   const auto currentPosition = interpolateCurrentPosition(currentTime);
 
   if (destinationPosition) {

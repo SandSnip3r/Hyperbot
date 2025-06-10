@@ -2,12 +2,12 @@
 #define SESSION_HPP_
 
 #include "bot.hpp"
-#include "broker/packetBroker.hpp"
 #include "characterLoginInfo.hpp"
 #include "clientManagerInterface.hpp"
 #include "common/sessionId.hpp"
 #include "pk2/gameData.hpp"
 #include "proxy.hpp"
+#include "packetProcessor.hpp"
 #include "state/worldState.hpp"
 
 namespace ui {
@@ -23,8 +23,6 @@ class RlUserInterface;
 //  - Starts the Proxy
 //  - Starts the client and redirects its connection to Proxy
 //  - Acts upon packets by the intelligence in Bot
-// PacketBroker is the communication channel between Bot and Proxy
-//
 // Proper invocation order (repeated numbers mean order does not matter):
 //  1. Session()
 //  2. initialize()
@@ -53,10 +51,11 @@ private:
   bool initialized_{false};
   const pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
-  broker::PacketBroker packetBroker_;
-  Proxy proxy_{gameData_, packetBroker_};
-  Bot bot_;
+  state::WorldState &worldState_;
   ui::RlUserInterface &rlUserInterface_;
+  PacketProcessor packetProcessor_{sessionId_, worldState_, eventBroker_, gameData_};
+  Proxy proxy_{gameData_, packetProcessor_};
+  Bot bot_{sessionId_, gameData_, proxy_, eventBroker_, worldState_, rlUserInterface_};
   ClientManagerInterface &clientManagerInterface_;
   std::optional<ClientManagerInterface::ClientId> clientId_;
 

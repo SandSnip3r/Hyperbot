@@ -5,7 +5,7 @@
 namespace entity {
 
 void Character::setLifeState(sro::entity::LifeState newLifeState) {
-  const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto currentTime = std::chrono::steady_clock::now();
   const bool changed = lifeState != newLifeState;
   lifeState = newLifeState;
   if (newLifeState == sro::entity::LifeState::kDead) {

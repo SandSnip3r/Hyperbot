@@ -3,7 +3,6 @@
 
 #include "packetLogger.hpp"
 #include "silkroadConnection.hpp"
-#include "broker/packetBroker.hpp"
 #include "pk2/gameData.hpp"
 #include "shared/silkroad_security.h"
 
@@ -20,12 +19,14 @@
 #include <set>
 #include <thread>
 
-//Networking class (handles connections)
+class PacketProcessor;
+
+// Networking class (handles connections)
 class Proxy {
 public:
-	Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port=0);
-	~Proxy();
-	void inject(const PacketContainer &packet, const PacketContainer::Direction direction);
+  Proxy(const pk2::GameData &gameData, PacketProcessor &processor, uint16_t port = 0);
+  ~Proxy();
+  void inject(const PacketContainer &packet, const PacketContainer::Direction direction);
   void runAsync();
   uint16_t getOurListeningPort() const;
   void blockOpcode(packet::Opcode opcode);
@@ -37,14 +38,14 @@ public:
   void connectClientlessAsync();
   void connectClientless();
 
-	//Stops all networking objects
-	void stop();
+  // Stops all networking objects
+  void stop();
 private:
   static constexpr int kMillisecondsBetweenKeepalives{5000};
   uint16_t ourListeningPort_;
   uint16_t gatewayPort_;
   const sro::pk2::DivisionInfo divisionInfo_;
-  broker::PacketBroker &packetBroker_;
+  PacketProcessor &packetProcessor_;
   std::string gatewayAddress_;
   std::string agentIP_;
   uint16_t agentPort_{0};
@@ -52,33 +53,33 @@ private:
   bool connectToAgent_{false};
   boost::asio::io_service ioService_;
   const int kPacketProcessDelayMs{10};
-	PacketLogger packetLogger{"C:\\Users\\Victor\\Documents\\Development\\packet-logs\\"};
+  PacketLogger packetLogger{"C:\\Users\\Victor\\Documents\\Development\\packet-logs\\"};
   std::optional<PacketContainer> characterInfoPacketContainer_, groupSpawnPacketContainer_, storagePacketContainer_, guildStoragePacketContainer_;
   std::thread thr_;
   std::atomic<bool> clientless_{false};
   std::chrono::steady_clock::time_point lastPacketSentToServer_{std::chrono::steady_clock::now()};
-	boost::shared_ptr<boost::asio::deadline_timer> keepAlivePacketTimer_;
+  boost::shared_ptr<boost::asio::steady_timer> keepAlivePacketTimer_;
   std::deque<PacketContainer> injectedClientPacketsForClientless_;
 
-	//Accepts TCP connections
-	boost::asio::ip::tcp::acceptor acceptor;
+  //Accepts TCP connections
+  boost::asio::ip::tcp::acceptor acceptor;
 
-	// Packet processing timer
-	boost::shared_ptr<boost::asio::deadline_timer> packetProcessingTimer_;
+  // Packet processing timer
+  boost::shared_ptr<boost::asio::steady_timer> packetProcessingTimer_;
 
-	//Silkroad connections
-	SilkroadConnection clientConnection{ioService_, "Client"};
-	SilkroadConnection serverConnection{ioService_, "Server"};
+  //Silkroad connections
+  SilkroadConnection clientConnection{ioService_, "Client"};
+  SilkroadConnection serverConnection{ioService_, "Server"};
 
-	//Starts accepting new connections
-	void PostAccept();
+  //Starts accepting new connections
+  void PostAccept();
 
-	//Handles new connections
-	void HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, const boost::system::error_code & error);
+  //Handles new connections
+  void HandleAccept(boost::shared_ptr<boost::asio::ip::tcp::socket> s, const boost::system::error_code & error);
 
-	void ProcessPackets(const boost::system::error_code &error);
+  void ProcessPackets(const boost::system::error_code &error);
   void setKeepaliveTimer();
-	void checkClientlessKeepalive(const boost::system::error_code &error);
+  void checkClientlessKeepalive(const boost::system::error_code &error);
 
   void receivePacketsFromClient();
   void sendPacketsToClient();

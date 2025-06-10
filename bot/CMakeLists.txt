@@ -22,8 +22,6 @@ add_executable(${PROJECT_NAME}
   src/bot.hpp
   src/broker/eventBroker.cpp
   src/broker/eventBroker.hpp
-  src/broker/packetBroker.cpp
-  src/broker/packetBroker.hpp
   src/broker/timerManager.cpp
   src/broker/timerManager.hpp
   src/characterLoginInfo.hpp

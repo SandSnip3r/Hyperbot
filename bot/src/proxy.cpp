@@ -1,3 +1,4 @@
+#include "packetProcessor.hpp"
 #include "proxy.hpp"
 #include "packet/building/clientGatewayPatchRequest.hpp"
 #include "packet/building/frameworkAliveNotify.hpp"
@@ -13,12 +14,12 @@
 
 #include <thread>
 
-Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16_t port) :
+Proxy::Proxy(const pk2::GameData &gameData, PacketProcessor &processor, uint16_t port) :
       gatewayPort_(gameData.gatewayPort()),
       divisionInfo_(gameData.divisionInfo()),
-      packetBroker_(broker),
+      packetProcessor_(processor),
       acceptor(ioService_, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
-      packetProcessingTimer_(boost::make_shared<boost::asio::deadline_timer>(ioService_)) {
+      packetProcessingTimer_(boost::make_shared<boost::asio::steady_timer>(ioService_)) {
   // Get the port that the OS gave us to listen on
   if (port == 0) {
     // Using an OS-assigned port
@@ -38,13 +39,12 @@ Proxy::Proxy(const pk2::GameData &gameData, broker::PacketBroker &broker, uint16
   gatewayAddress_ = divisionInfo_.divisions[0].gatewayIpAddresses[0];
   VLOG(1) << "Constructed Proxy with listening port " << ourListeningPort_ << " and gateway address " << gatewayAddress_;
 
-  packetBroker_.setInjectionFunction(std::bind(&Proxy::inject, this, std::placeholders::_1, std::placeholders::_2));
 
   // Start accepting connections
   PostAccept();
 
   // Post the packet processing timer
-  packetProcessingTimer_->expires_from_now(boost::posix_time::milliseconds(kPacketProcessDelayMs));
+  packetProcessingTimer_->expires_from_now(std::chrono::milliseconds(kPacketProcessDelayMs));
   packetProcessingTimer_->async_wait(boost::bind(&Proxy::ProcessPackets, this, boost::asio::placeholders::error));
 }
 
@@ -165,7 +165,7 @@ void Proxy::setClientless(bool clientless) {
     VLOG(1) << "Proxy is switching to clientless";
     clientless_ = clientless;
     // Construct a timer to send a keepalive based on when we last sent a packet to the server.
-    keepAlivePacketTimer_ = boost::make_shared<boost::asio::deadline_timer>(ioService_);
+    keepAlivePacketTimer_ = boost::make_shared<boost::asio::steady_timer>(ioService_);
     setKeepaliveTimer();
   }
 }
@@ -230,7 +230,7 @@ void Proxy::connectClientlessAsync() {
   ioService_.post(boost::bind(&Proxy::connectClientless, this));
 
   // Construct a timer to send a keepalive based on when we last sent a packet to the server.
-  keepAlivePacketTimer_ = boost::make_shared<boost::asio::deadline_timer>(ioService_);
+  keepAlivePacketTimer_ = boost::make_shared<boost::asio::steady_timer>(ioService_);
   setKeepaliveTimer();
 }
 
@@ -259,6 +259,7 @@ void Proxy::connectClientless() {
 }
 
 void Proxy::ProcessPackets(const boost::system::error_code &error) {
+  ZoneScopedN("Proxy::ProcessPackets");
   if (error) {
     LOG(ERROR) << "Error during async_wait for ProcessPackets:\"" << error.message() << '"';
     // Not reposting timer.
@@ -275,7 +276,7 @@ void Proxy::ProcessPackets(const boost::system::error_code &error) {
   }
 
   // Repost the timer
-  packetProcessingTimer_->expires_from_now(boost::posix_time::milliseconds(kPacketProcessDelayMs));
+  packetProcessingTimer_->expires_from_now(std::chrono::milliseconds(kPacketProcessDelayMs));
   packetProcessingTimer_->async_wait(boost::bind(&Proxy::ProcessPackets, this, boost::asio::placeholders::error));
 }
 
@@ -283,11 +284,15 @@ void Proxy::setKeepaliveTimer() {
   // Set the timer to trigger when we need to send a keepalive packet.
   std::chrono::duration timeSinceLastPacketToServer = std::chrono::steady_clock::now() - lastPacketSentToServer_;
   const int millisecondsUntilNextKeepalive = std::floor(kMillisecondsBetweenKeepalives - timeSinceLastPacketToServer.count()/1'000'000.0);
-  keepAlivePacketTimer_->expires_from_now(boost::posix_time::milliseconds(millisecondsUntilNextKeepalive));
+  keepAlivePacketTimer_->expires_from_now(std::chrono::milliseconds(millisecondsUntilNextKeepalive));
   keepAlivePacketTimer_->async_wait(boost::bind(&Proxy::checkClientlessKeepalive, this, boost::asio::placeholders::error));
 }
 
 void Proxy::checkClientlessKeepalive(const boost::system::error_code &error) {
+  if (!serverConnection.security) {
+    // No server connection, nothing to do
+    return;
+  }
   // We've been woken up because we might need to send a keepalive packet.
   // How long has it been since we've last sent a packet?
   const std::chrono::duration timeSinceLastPacketToServer = std::chrono::steady_clock::now() - lastPacketSentToServer_;
@@ -324,7 +329,7 @@ void Proxy::receivePacketsFromClient() {
       packetLogger.logPacket(packet, /*blocked=*/false, direction);
 
       // Run packet through bot, regardless if it's blocked
-      packetBroker_.packetReceived(packet, direction);
+      packetProcessor_.handlePacket(packet);
 
       // Forward the packet to gateway/agent server.
       if (serverConnection.security) {
@@ -359,7 +364,7 @@ void Proxy::receivePacketsFromClient() {
       packetLogger.logPacket(packet, !forward, direction);
 
       // Run packet through bot, regardless if it's blocked
-      packetBroker_.packetReceived(packet, direction);
+      packetProcessor_.handlePacket(packet);
 
       // Forward the packet to gateway/agent server.
       if (forward && serverConnection.security) {
@@ -452,8 +457,8 @@ void Proxy::receivePacketsFromServer() {
         }
         serverConnection.Close();
 
-        // Want to forward this to the bot so it can grab the token
-        packetBroker_.packetReceived(packet, direction);
+        // Forward to packet processor so it can grab the token
+        packetProcessor_.handlePacket(packet);
 
         if (clientless_) {
           ioService_.post(boost::bind(&Proxy::connectClientless, this));
@@ -535,23 +540,23 @@ void Proxy::receivePacketsFromServer() {
     // Run packet through bot, regardless if it's blocked
     // Handle "begin", "data", and "end" pieces of split packets
     if (opcodeAsEnum == packet::Opcode::kServerAgentCharacterDataEnd) {
-      // Send packet to broker
-      packetBroker_.packetReceived(*characterInfoPacketContainer_, direction);
+      // Send packet to processor
+      packetProcessor_.handlePacket(*characterInfoPacketContainer_);
       // Reset data
       characterInfoPacketContainer_.reset();
     } else if (opcodeAsEnum == packet::Opcode::kServerAgentEntityGroupspawnEnd) {
-      // Send packet to broker
-      packetBroker_.packetReceived(*groupSpawnPacketContainer_, direction);
+      // Send packet to processor
+      packetProcessor_.handlePacket(*groupSpawnPacketContainer_);
       // Reset data
       groupSpawnPacketContainer_.reset();
     } else if (opcodeAsEnum == packet::Opcode::kServerAgentInventoryStorageEnd) {
-      // Send packet to broker
-      packetBroker_.packetReceived(*storagePacketContainer_, direction);
+      // Send packet to processor
+      packetProcessor_.handlePacket(*storagePacketContainer_);
       // Reset data
       storagePacketContainer_.reset();
     } else if (opcodeAsEnum == packet::Opcode::kServerAgentGuildStorageEnd) {
-      // Send packet to broker
-      packetBroker_.packetReceived(*guildStoragePacketContainer_, direction);
+      // Send packet to processor
+      packetProcessor_.handlePacket(*guildStoragePacketContainer_);
       // Reset data
       guildStoragePacketContainer_.reset();
     } else if (opcodeAsEnum != packet::Opcode::kServerAgentCharacterDataBegin &&
@@ -563,7 +568,7 @@ void Proxy::receivePacketsFromServer() {
                 opcodeAsEnum != packet::Opcode::kServerAgentGuildStorageBegin &&
                 opcodeAsEnum != packet::Opcode::kServerAgentGuildStorageData) {
       // In all other cases, if its not "begin" or "data", send it
-      packetBroker_.packetReceived(packet, direction);
+      packetProcessor_.handlePacket(packet);
     }
 
     // Forward the packet to the Silkroad client, if there is one

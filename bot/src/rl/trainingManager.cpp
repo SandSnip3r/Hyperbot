@@ -90,8 +90,8 @@ void TrainingManager::train() {
       jaxInterface_.addScalar("anneal/Beta", beta, trainStepCount_);
 
       // Track training rate
-      const std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
-      const std::chrono::high_resolution_clock::duration timeDiff = currentTime - lastTrainingTime_;
+      const std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+      const std::chrono::steady_clock::duration timeDiff = currentTime - lastTrainingTime_;
       if (timeDiff > kTrainRateReportInterval) {
         const float trainingRate = static_cast<float>(trainingCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(timeDiff).count()/1000.0);
         jaxInterface_.addScalar("perf/Training Rate", trainingRate, trainStepCount_);
@@ -257,8 +257,8 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
 
       // Track sample collection rate
       sampleCount_++;
-      const std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
-      const std::chrono::high_resolution_clock::duration sampleCountTimeDiff = currentTime - lastSampleTime_;
+      const std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+      const std::chrono::steady_clock::duration sampleCountTimeDiff = currentTime - lastSampleTime_;
       if (sampleCountTimeDiff > kSampleRateReportInterval) {
         sampleRate = static_cast<float>(sampleCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(sampleCountTimeDiff).count()/1000.0);
         sampleCount_ = 0;
@@ -266,7 +266,7 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
       }
 
       // Track replay buffer size
-      const std::chrono::high_resolution_clock::duration replayBufferSizeTimeDiff = currentTime - lastReplayBufferSizeUpdateTime_;
+      const std::chrono::steady_clock::duration replayBufferSizeTimeDiff = currentTime - lastReplayBufferSizeUpdateTime_;
       if (replayBufferSizeTimeDiff > kReplayBufferSizeUpdateInterval) {
         replayBufferSize = replayBuffer_.size();
         lastReplayBufferSizeUpdateTime_ = currentTime;
@@ -312,13 +312,13 @@ void TrainingManager::createSessions() {
   LOG(INFO) << "Creating sessions for " << characterPairings_.size() << " total character pairings";
 
   static constexpr bool kClientless = true;
-  static constexpr int kNumCharacterPairingsToStartAtATime = 10000000;
+  static constexpr int kNumCharacterPairingClientsToStartAtATime = 4;
 
   size_t characterPairingIndex = 0;
   while (characterPairingIndex < characterPairings_.size()) {
     std::vector<Session*> sessions;
     std::vector<std::future<void>> clientOpenFutures;
-    for (size_t i=characterPairingIndex; i<characterPairingIndex+kNumCharacterPairingsToStartAtATime && i < characterPairings_.size(); ++i) {
+    for (size_t i=characterPairingIndex; (kClientless || i<characterPairingIndex+kNumCharacterPairingClientsToStartAtATime) && i < characterPairings_.size(); ++i) {
       const CharacterPairing &pairing = characterPairings_.at(i);
       sessions_.push_back(std::make_unique<Session>(gameData_, eventBroker_, worldState_, clientManagerInterface_, rlUserInterface_));
       Session& session1 = *sessions_.back().get();
@@ -380,7 +380,7 @@ void TrainingManager::createSessions() {
     botLoginFutures.clear();
 
     // Save session IDs in the pairings
-    for (size_t i=characterPairingIndex; i<characterPairingIndex+kNumCharacterPairingsToStartAtATime && i < characterPairings_.size(); ++i) {
+    for (size_t i=characterPairingIndex; (kClientless || i<characterPairingIndex+kNumCharacterPairingClientsToStartAtATime) && i < characterPairings_.size(); ++i) {
       CharacterPairing &pairing = characterPairings_.at(i);
       Session& session1 = *sessions.at((i-characterPairingIndex)*2);
       Session& session2 = *sessions.at((i-characterPairingIndex)*2 + 1);
@@ -388,7 +388,12 @@ void TrainingManager::createSessions() {
       pairing.session2Id = session2.sessionId();
     }
 
-    characterPairingIndex += kNumCharacterPairingsToStartAtATime;
+    if constexpr (!kClientless) {
+      characterPairingIndex += kNumCharacterPairingClientsToStartAtATime;
+    } else {
+      // In clientless mode, we can start all character pairings at once.
+      characterPairingIndex = characterPairings_.size();
+    }
   }
 
   // Standby for PVP

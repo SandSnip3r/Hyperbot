@@ -40,7 +40,7 @@ enum class MotionState : uint8_t {
 class MobileEntity : public Entity {
 public:
   ~MobileEntity() override;
-  std::chrono::high_resolution_clock::time_point startedMovingTime;
+  std::chrono::steady_clock::time_point startedMovingTime;
   std::optional<sro::Position> destinationPosition;
   MotionState motionState;
   std::optional<MotionState> lastMotionState;
@@ -74,7 +74,7 @@ protected:
   // Only cancels movement timers and sets internal state; does not send any events.
   void privateCancelEvents();
   virtual void cancelMovement();
-  sro::Position interpolateCurrentPosition(const std::chrono::high_resolution_clock::time_point &currentTime) const;
+  sro::Position interpolateCurrentPosition(const std::chrono::steady_clock::time_point &currentTime) const;
   float privateCurrentSpeed() const;
   void privateSetStationaryAtPosition(const sro::Position &position);
   void privateSetMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition);

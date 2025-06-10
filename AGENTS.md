@@ -27,7 +27,7 @@ reinforcement learning logic.
 - `loader_dll/` – DLL injected into the game client for connection redirection
 - `silkroad_lib/` – shared utilities and game-specific data types
 - `rl_ui/` – Qt application for reinforcement learning monitoring
-- `ui/` – legacy UI code and widgets
+- `ui/` – legacy UI code and widgets *(deprecated; do not modify)*
 - `ui_proto/` – protobuf definitions shared between components
 - `tools/` – helper scripts for packet parsing and state machine creation
 - `third_party/` – vendored libraries; keep changes here to a minimum
