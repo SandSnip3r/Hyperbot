@@ -459,12 +459,14 @@ public:
       TFlags * tmp_flags = reinterpret_cast<TFlags *>( &tmp_flag );
       tmp_flags->handshake_response = 1;
 
-      PacketContainer response;
-      response.opcode = 0x5000;
-      response.data.Write< uint8_t >( tmp_flag );
-      response.data.Write< uint64_t >( m_challenge_key );
+      StreamUtility data;
+      data.Write<uint8_t>(tmp_flag);
+      data.Write<uint64_t>(m_challenge_key);
       std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
-      m_outgoing_packets.push_front( response );
+      m_outgoing_packets.push_front(PacketContainer(/*opcode=*/0x5000,
+                                                    std::move(data),
+                                                    /*encrypted=*/0,
+                                                    /*massive=*/0));
     }
     else
     {
@@ -543,13 +545,15 @@ public:
         }
 
         // Handshake challenge
-        PacketContainer response;
-        response.opcode = 0x5000;
-        response.data.Write< uint32_t >( m_value_B );
-        response.data.Write< uint64_t >( m_client_key );
         {
+          StreamUtility data;
+          data.Write<uint32_t>(m_value_B);
+          data.Write<uint64_t>(m_client_key);
           std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
-          m_outgoing_packets.push_front( response );
+          m_outgoing_packets.push_front(PacketContainer(/*opcode=*/0x5000,
+                                                        std::move(data),
+                                                        /*encrypted=*/0,
+                                                        /*massive=*/0));
         }
 
         // The handshake has started
