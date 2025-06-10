@@ -1322,6 +1322,10 @@ void PacketProcessor::serverAgentGuildStorageDataReceived(const packet::parsing:
 
 void PacketProcessor::clientAgentActionCommandRequestReceived(const packet::parsing::ClientAgentActionCommandRequest &packet) const {
   CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "<Packet> ClientAgentActionCommandRequest: " << packet.actionCommand().toString();
+  if (!selfEntity_) {
+    LOG(WARNING) << "Received action command request, but we don't have a self entity";
+    return;
+  }
   selfEntity_->skillEngine.pendingCommandQueue.push_back(packet.actionCommand());
   printCommandQueues();
 }

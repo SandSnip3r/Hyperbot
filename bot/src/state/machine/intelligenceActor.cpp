@@ -106,6 +106,10 @@ bool IntelligenceActor::isRelevantEvent(const event::Event *event) const {
   if (event == nullptr) {
     return true;
   }
+  if (bot_.selfState() == nullptr) {
+    // We do not have a self state, so we cannot determine if this event is relevant.
+    return true;
+  }
   // There are some events which we want to filter out, as they are not relevant to us.
   if (const event::CommandError *commandError = dynamic_cast<const event::CommandError*>(event); commandError != nullptr) {
     if (commandError->issuingGlobalId != bot_.selfState()->globalId) {
