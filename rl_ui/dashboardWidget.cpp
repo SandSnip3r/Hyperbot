@@ -29,9 +29,7 @@ DashboardWidget::~DashboardWidget() {
   delete ui;
 }
 
-void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
-                                               int maxHp, int currentMp,
-                                               int maxMp) {
+int DashboardWidget::ensureRowForCharacter(const QString &name) {
   int row = -1;
   for (int i = 0; i < ui->statusTable->rowCount(); ++i) {
     QTableWidgetItem *item = ui->statusTable->item(i, 0);
@@ -65,6 +63,9 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
         background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #630410, stop: 0.5455 #ff3c52, stop: 1 #9c0010);
       }
     )");
+    hpBar->setRange(0, 0);
+    hpBar->setValue(0);
+    hpBar->setFormat(QString("0/0"));
     ui->statusTable->setCellWidget(row, 1, hpBar);
 
     QProgressBar *mpBar = new QProgressBar;
@@ -79,8 +80,19 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
         background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #101c4a, stop: 0.5455 #4a69ce, stop: 1 #182c73);
       }
     )");
+    mpBar->setRange(0, 0);
+    mpBar->setValue(0);
+    mpBar->setFormat(QString("0/0"));
     ui->statusTable->setCellWidget(row, 2, mpBar);
   }
+
+  return row;
+}
+
+void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
+                                               int maxHp, int currentMp,
+                                               int maxMp) {
+  int row = ensureRowForCharacter(name);
 
   auto *hpBar = qobject_cast<QProgressBar *>(ui->statusTable->cellWidget(row, 1));
   auto *mpBar = qobject_cast<QProgressBar *>(ui->statusTable->cellWidget(row, 2));
@@ -100,21 +112,6 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
 }
 
 void DashboardWidget::onActiveStateMachine(QString name, QString stateMachine) {
-  int row = -1;
-  for (int i = 0; i < ui->statusTable->rowCount(); ++i) {
-    QTableWidgetItem *item = ui->statusTable->item(i, 0);
-    if (item && item->text() == name) {
-      row = i;
-      break;
-    }
-  }
-  if (row == -1) {
-    row = ui->statusTable->rowCount();
-    ui->statusTable->insertRow(row);
-    ui->statusTable->setRowHeight(row, 20);
-    ui->statusTable->setItem(row, 0, new QTableWidgetItem(name));
-    ui->statusTable->setItem(row, 3, new QTableWidgetItem(stateMachine));
-  } else {
-    ui->statusTable->setItem(row, 3, new QTableWidgetItem(stateMachine));
-  }
+  int row = ensureRowForCharacter(name);
+  ui->statusTable->setItem(row, 3, new QTableWidgetItem(stateMachine));
 }

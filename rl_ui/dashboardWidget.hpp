@@ -21,6 +21,7 @@ public slots:
 
 private:
   Ui::DashboardWidget *ui;
+  int ensureRowForCharacter(const QString &name);
 };
 
 #endif // DASHBOARD_WIDGET_HPP_
