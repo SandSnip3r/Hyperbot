@@ -26,7 +26,7 @@ public:
     stateMachines_.emplace_back(std::unique_ptr<StateMachineType>(new StateMachineType(this, std::forward<Args>(args)...)));
   }
 private:
-  std::recursive_mutex mutex_;
+  mutable std::recursive_mutex mutex_;
   std::deque<std::unique_ptr<StateMachine>> stateMachines_;
 };
 
