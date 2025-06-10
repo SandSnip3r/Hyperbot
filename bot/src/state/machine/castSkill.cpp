@@ -360,14 +360,15 @@ Status CastSkill::onUpdate(const event::Event *event) {
   VLOG(1) << "Casting skill " << skillName();
   // Finally, cast skill
   // TODO: Handle common attack
-  PacketContainer castSkillPacket;
-  if (targetGlobalId_) {
-    // Have a target
-    castSkillPacket = packet::building::ClientAgentActionCommandRequest::cast(skillRefId_, *targetGlobalId_);
-  } else {
-    // No target
-    castSkillPacket = packet::building::ClientAgentActionCommandRequest::cast(skillRefId_);
-  }
+  const PacketContainer castSkillPacket = [&]() {
+    if (targetGlobalId_) {
+      // Have a target
+      return packet::building::ClientAgentActionCommandRequest::cast(skillRefId_, *targetGlobalId_);
+    } else {
+      // No target
+      return packet::building::ClientAgentActionCommandRequest::cast(skillRefId_);
+    }
+  }();
   injectPacket(castSkillPacket, PacketContainer::Direction::kBotToServer);
   skillCastTimeoutEventId_ = bot_.eventBroker().publishDelayedEvent<event::SkillCastTimeout>(std::chrono::milliseconds(kSkillCastTimeoutMs), skillRefId_);
   return Status::kNotDone;

@@ -567,21 +567,23 @@ public:
           throw( std::runtime_error( "[SilkroadSecurityData::Handshake] Received an illogical handshake packet (duplicate 0x5000).") );
         }
 
-        // Handshake accepted
-        PacketContainer response1;
-        response1.opcode = 0x9000;
-
         // Identify
-        PacketContainer response2;
-        response2.opcode = 0x2001;
-        response2.encrypted = true;
-        response2.data.Write(m_identity_name);
-        response2.data.Write< uint8_t >( m_identity_flag );
+        StreamUtility identifyData;
+        identifyData.Write(m_identity_name);
+        identifyData.Write<uint8_t>(m_identity_flag);
 
         {
           std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
-          m_outgoing_packets.push_front( response2 );
-          m_outgoing_packets.push_front( response1 );
+          // Identify packet
+          m_outgoing_packets.push_front(PacketContainer(/*opcode=*/0x2001,
+                                                        std::move(identifyData),
+                                                        /*encrypted=*/1,
+                                                        /*massive=*/0));
+          // Handshake accepted packet
+          m_outgoing_packets.push_front(PacketContainer(/*opcode=*/0x9000,
+                                                        /*data=*/{},
+                                                        /*encrypted=*/0,
+                                                        /*massive=*/0));
         }
 
         // Mark the handshake as accepted now
@@ -646,19 +648,15 @@ uint8_t SilkroadSecurity::HasPacketToSend() const
 //-----------------------------------------------------------------------------
 
 std::vector<uint8_t> SilkroadSecurity::GetPacketToSend() {
-  PacketContainer packet_container;
-  {
+  PacketContainer packet_container = [&]() {
     std::unique_lock<std::mutex> outgoing_packet_lock(m_data->m_outgoing_packet_mutex);
     if (m_data->m_outgoing_packets.empty()) {
-      throw( std::runtime_error( "[SilkroadSecurity::GetPacketToSend] No packets are avaliable to send.") );
+      throw std::runtime_error("[SilkroadSecurity::GetPacketToSend] No packets are available to send.");
     }
-
-    {
-      const auto &nextPacket = m_data->m_outgoing_packets.front();
-      packet_container = nextPacket;
-      m_data->m_outgoing_packets.pop_front();
-    }
-  }
+    const PacketContainer nextPacket = m_data->m_outgoing_packets.front();
+    m_data->m_outgoing_packets.pop_front();
+    return nextPacket;
+  }();
 
   if (packet_container.massive) {
     uint8_t workspace[ 4089 ];

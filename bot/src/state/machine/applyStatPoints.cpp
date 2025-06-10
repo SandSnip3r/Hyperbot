@@ -78,14 +78,15 @@ Status ApplyStatPoints::onUpdate(const event::Event *event) {
   }
 
   const StatPointType pointToApply = statPointTypes_.back();
-  PacketContainer packet;
-  if (pointToApply == StatPointType::kInt) {
-    VLOG(2) << "Applying an Int stat point. Have " << bot_.selfState()->getAvailableStatPoints() << " stat point(s)";
-    packet = packet::building::ClientAgentCharacterIncreaseIntRequest::packet();
-  } else {
-    VLOG(2) << "Applying a Str stat point. Have " << bot_.selfState()->getAvailableStatPoints() << " stat point(s)";
-    packet = packet::building::ClientAgentCharacterIncreaseStrRequest::packet();
-  }
+  const PacketContainer packet = [&]() {
+    if (pointToApply == StatPointType::kInt) {
+      VLOG(2) << "Applying an Int stat point. Have " << bot_.selfState()->getAvailableStatPoints() << " stat point(s)";
+      return packet::building::ClientAgentCharacterIncreaseIntRequest::packet();
+    } else {
+      VLOG(2) << "Applying a Str stat point. Have " << bot_.selfState()->getAvailableStatPoints() << " stat point(s)";
+      return packet::building::ClientAgentCharacterIncreaseStrRequest::packet();
+    }
+  }();
   injectPacket(packet, PacketContainer::Direction::kBotToServer);
   timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(200));
   return Status::kNotDone;
