@@ -449,7 +449,7 @@ void initializeSelfFromCharacterDataPacket(entity::Self &self, const packet::par
 
   // State
   self.setLifeState(packet.lifeState(), packet.timestamp());
-  self.setMotionState(packet.motionState());
+  self.setMotionState(packet.motionState(), packet.timestamp());
   self.initializeBodyState(packet.bodyState());
 
   // Buffs
@@ -574,7 +574,7 @@ void PacketProcessor::serverAgentEntityUpdateHwanLevelReceived(packet::parsing::
 void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const {
   if (packet.stateType() == packet::enums::StateType::kMotionState) {
     std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
-    mobileEntity->setMotionState(static_cast<entity::MotionState>(packet.state()));
+    mobileEntity->setMotionState(static_cast<entity::MotionState>(packet.state()), packet.timestamp());
   } else if (packet.stateType() == packet::enums::StateType::kLifeState) {
     std::shared_ptr<entity::Character> characterEntity = worldState_.getEntity<entity::Character>(packet.globalId());
     const auto newLifeState = static_cast<sro::entity::LifeState>(packet.state());

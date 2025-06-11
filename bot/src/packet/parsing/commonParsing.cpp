@@ -328,6 +328,7 @@ sro::Position parsePosition(StreamUtility &stream) {
 }
 
 std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
+                                           const PacketContainer::Clock::time_point &timestamp,
                                            const pk2::CharacterData &characterData,
                                            const pk2::ItemData &itemData,
                                            const pk2::SkillData &skillData,
@@ -468,7 +469,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
         // Entity is not actually moving
       } else {
         // Entity is currently moving
-        characterPtr->initializeAsMoving({destinationRegionId, offsetX, offsetY, offsetZ});
+        characterPtr->initializeAsMoving({destinationRegionId, offsetX, offsetY, offsetZ}, timestamp);
       }
     } else {
       packet::enums::AngleAction angleAction_ = static_cast<packet::enums::AngleAction>(stream.Read<uint8_t>());
@@ -476,7 +477,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
       // For monsters, I think this means that they have never moved before, otherwise, they will have a destination that is the last point they moved to
       if (angleAction_ == packet::enums::AngleAction::kGoForward) {
         // Entity is currently moving
-        characterPtr->initializeAsMoving(angle);
+        characterPtr->initializeAsMoving(angle, timestamp);
       }
     }
 

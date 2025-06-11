@@ -22,17 +22,17 @@ MobileEntity::~MobileEntity() {
   }
 }
 
-void MobileEntity::initializeAsMoving(const sro::Position &destinationPosition) {
+void MobileEntity::initializeAsMoving(const sro::Position &destinationPosition, const PacketContainer::Clock::time_point &timestamp) {
   // std::unique_lock<std::mutex> lock(mutex_);
   this->moving_ = true;
-  this->startedMovingTime = std::chrono::steady_clock::now();
+  this->startedMovingTime = timestamp;
   this->destinationPosition = destinationPosition;
 }
 
-void MobileEntity::initializeAsMoving(sro::Angle destinationAngle) {
+void MobileEntity::initializeAsMoving(sro::Angle destinationAngle, const PacketContainer::Clock::time_point &timestamp) {
   // std::unique_lock<std::mutex> lock(mutex_);
   this->moving_ = true;
-  this->startedMovingTime = std::chrono::steady_clock::now();
+  this->startedMovingTime = timestamp;
   this->angle_ = destinationAngle;
 }
 
@@ -120,7 +120,7 @@ void MobileEntity::setSpeed(float walkSpeed, float runSpeed) {
     return;
   }
   // Get interpolated position before change speed, since that calculation depends on our current speed
-  const auto interpolatedPosition = interpolateCurrentPosition(currentTime);
+  const sro::Position interpolatedPosition = interpolateCurrentPosition(currentTime);
   this->walkSpeed = walkSpeed;
   this->runSpeed = runSpeed;
   if (moving()) {
@@ -145,8 +145,7 @@ void MobileEntity::setAngle(sro::Angle angle) {
   }
 }
 
-void MobileEntity::setMotionState(entity::MotionState motionState) {
-  const auto currentTime = std::chrono::steady_clock::now();
+void MobileEntity::setMotionState(entity::MotionState motionState, const PacketContainer::Clock::time_point &timestamp) {
   // std::unique_lock<std::mutex> lock(mutex_);
   bool changedSpeed{false};
   if (this->lastMotionState && *this->lastMotionState == entity::MotionState::kWalk && motionState == entity::MotionState::kRun) {
@@ -160,7 +159,7 @@ void MobileEntity::setMotionState(entity::MotionState motionState) {
   std::optional<sro::Position> srcPosition;
   if (changedSpeed) {
     // Since we changed speed, figure out where we currently are
-    srcPosition = interpolateCurrentPosition(currentTime);
+    srcPosition = interpolateCurrentPosition(timestamp);
   }
 
   // Update our motion state
@@ -175,9 +174,9 @@ void MobileEntity::setMotionState(entity::MotionState motionState) {
       throw std::runtime_error("Changes speed, but dont know our position when it happened");
     }
     if (destinationPosition) {
-      privateSetMovingToDestination(srcPosition, *destinationPosition, currentTime);
+      privateSetMovingToDestination(srcPosition, *destinationPosition, timestamp);
     } else {
-      privateSetMovingTowardAngle(srcPosition, angle_, currentTime);
+      privateSetMovingTowardAngle(srcPosition, angle_, timestamp);
     }
   }
 }
@@ -265,15 +264,16 @@ sro::Position MobileEntity::interpolateCurrentPosition(const PacketContainer::Cl
   }
   const auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime-startedMovingTime).count();
   if (destinationPosition) {
-    auto totalDistance = sro::position_math::calculateDistance2d(position_, *destinationPosition);
+    float totalDistance = sro::position_math::calculateDistance2d(position_, *destinationPosition);
     if (totalDistance < 0.0001 /* TODO: Use a double equal function */) {
       // We're at our destination
       return *destinationPosition;
     }
-    const auto expectedTravelTimeSeconds = totalDistance / privateCurrentSpeed();
+    const float expectedTravelTimeSeconds = totalDistance / privateCurrentSpeed();
     const double percentTraveled = (elapsedTimeMs/1000.0) / expectedTravelTimeSeconds;
     if (percentTraveled < 0) {
-      throw std::runtime_error("Self: Traveled negative distance");
+      throw std::runtime_error(absl::StrFormat("Self: Traveled negative distance. Elapsed time: %dms, expected travel time: %fms, total distance: %f, current speed: %f",
+                                               elapsedTimeMs, expectedTravelTimeSeconds*1000, totalDistance, privateCurrentSpeed()));
     } else if (percentTraveled == 0) {
       return position_;
     } else if (percentTraveled >= 1) {
