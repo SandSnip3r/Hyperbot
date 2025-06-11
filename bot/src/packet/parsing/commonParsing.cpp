@@ -464,8 +464,8 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
         offsetY = stream.Read<int16_t>();
         offsetZ = stream.Read<int16_t>();
       }
-      if (std::trunc(characterPtr->position().xOffset()) == offsetX &&
-          std::trunc(characterPtr->position().zOffset()) == offsetZ) {
+      if (std::trunc(characterPtr->positionAtTime(timestamp).xOffset()) == offsetX &&
+          std::trunc(characterPtr->positionAtTime(timestamp).zOffset()) == offsetZ) {
         // Entity is not actually moving
       } else {
         // Entity is currently moving

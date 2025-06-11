@@ -58,10 +58,11 @@ public:
 
   bool moving() const;
   sro::Position position() const override;
+  sro::Position positionAtTime(const PacketContainer::Clock::time_point &timestamp) const;
   float currentSpeed() const;
   sro::Position positionAfterTime(float seconds) const;
 
-  void setSpeed(float walkSpeed, float runSpeed);
+  void setSpeed(float walkSpeed, float runSpeed, const PacketContainer::Clock::time_point &timestamp);
   void setAngle(sro::Angle angle);
   void setMotionState(entity::MotionState motionState, const PacketContainer::Clock::time_point &timestamp);
   void setStationaryAtPosition(const sro::Position &position);

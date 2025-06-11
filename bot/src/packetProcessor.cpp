@@ -457,7 +457,7 @@ void initializeSelfFromCharacterDataPacket(entity::Self &self, const packet::par
   // worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken());
 
   // Speed
-  self.setSpeed(packet.walkSpeed(), packet.runSpeed());
+  self.setSpeed(packet.walkSpeed(), packet.runSpeed(), packet.timestamp());
   self.setHwanSpeed(packet.hwanSpeed());
   self.name = packet.characterName();
   self.initializeGold(packet.gold());
@@ -588,7 +588,7 @@ void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
 
 void PacketProcessor::serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const {
   std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
-  mobileEntity->setSpeed(packet.walkSpeed(), packet.runSpeed());
+  mobileEntity->setSpeed(packet.walkSpeed(), packet.runSpeed(), packet.timestamp());
 }
 
 void PacketProcessor::serverAgentEntityRemoveOwnershipReceived(const packet::parsing::ServerAgentEntityRemoveOwnership &packet) const {
@@ -1086,11 +1086,11 @@ void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity,
     LOG(INFO) << "Entity is moving, making some changes";
     if (mobileEntity->destinationPosition) {
       // Entity spawned and is moving to a destination
-      mobileEntity->setMovingToDestination(mobileEntity->position(),
+      mobileEntity->setMovingToDestination(mobileEntity->positionAtTime(timestamp),
                                            *mobileEntity->destinationPosition,
                                            timestamp);
     } else {
-      mobileEntity->setMovingTowardAngle(mobileEntity->position(),
+      mobileEntity->setMovingTowardAngle(mobileEntity->positionAtTime(timestamp),
                                          mobileEntity->angle(),
                                          timestamp);
     }
@@ -1691,7 +1691,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(
         // Will stop you if you're running
         std::shared_ptr<entity::MobileEntity> casterAsMobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.casterGlobalId());
         if (casterAsMobileEntity->moving()) {
-          casterAsMobileEntity->setStationaryAtPosition(casterAsMobileEntity->position());
+          casterAsMobileEntity->setStationaryAtPosition(casterAsMobileEntity->positionAtTime(packet.timestamp()));
         }
         break;
       }

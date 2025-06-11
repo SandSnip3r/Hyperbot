@@ -720,7 +720,7 @@ PacketContainerAndInjected SilkroadSecurity::GetPacketToRecv()
   std::unique_lock<std::mutex> incoming_packet_lock(m_data->m_incoming_packet_mutex);
   if( m_data->m_incoming_packets.empty() )
   {
-    throw( std::runtime_error( "[SilkroadSecurity::GetPacketToRecv] No packets are avaliable to process.") );
+    throw( std::runtime_error( "[SilkroadSecurity::GetPacketToRecv] No packets are available to process.") );
   }
 
   PacketContainerAndInjected packet_container = m_data->m_incoming_packets.front();
