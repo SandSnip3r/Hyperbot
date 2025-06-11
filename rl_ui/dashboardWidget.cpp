@@ -106,8 +106,10 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
   data.currentMp = currentMp;
   data.maxMp = maxMp;
 
-  auto *hpBar = qobject_cast<QProgressBar *>(ui->statusTable->cellWidget(row, 1));
-  auto *mpBar = qobject_cast<QProgressBar *>(ui->statusTable->cellWidget(row, 2));
+  QProgressBar *hpBar =
+      qobject_cast<QProgressBar *>(ui->statusTable->cellWidget(row, 1));
+  QProgressBar *mpBar =
+      qobject_cast<QProgressBar *>(ui->statusTable->cellWidget(row, 2));
   if (hpBar) {
     hpBar->setRange(0, maxHp);
     hpBar->setValue(currentHp);
@@ -142,8 +144,8 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
   }
   const QString name = item->text();
   CharacterDetailDialog *dialog = new CharacterDetailDialog(this);
+  dialog->setAttribute(Qt::WA_DeleteOnClose);
   dialog->setCharacterName(name);
   dialog->setCharacterData(characterData_.value(name));
-  dialog->exec();
-  dialog->deleteLater();
+  dialog->show();
 }
