@@ -82,6 +82,9 @@ public:
   std::optional<TimerEndTimePoint> delayedEventEndTime(EventId eventId) const;
   SubscriptionId subscribeToEvent(event::EventCode eventCode, EventHandleFunction &&handleFunc);
 
+  /// Returns the number of pending events.
+  size_t queuedEventCount() const;
+
   // Will block until any events currently being sent to any subscribers are complete due to a lock on the subscriber map.
   void unsubscribeFromEvent(SubscriptionId id);
 

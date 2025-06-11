@@ -40,6 +40,9 @@ public:
   std::optional<std::chrono::milliseconds> timeRemainingOnTimer(TimerId id) const;
   std::optional<TimePoint> timerEndTime(TimerId id) const;
 
+  /// Returns the number of pending timers.
+  size_t queueSize() const;
+
 private:
   struct Timer {
     TimerId id;

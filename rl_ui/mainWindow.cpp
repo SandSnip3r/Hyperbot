@@ -24,6 +24,7 @@
 MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot, QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow), config_(std::move(config)), hyperbot_(hyperbot) {
   ui->setupUi(this);
   ui->checkpointWidget->setHyperbot(hyperbot_);
+  ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
   connectSignals();
   // testChart();
