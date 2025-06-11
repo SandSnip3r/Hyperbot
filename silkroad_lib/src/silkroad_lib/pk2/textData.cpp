@@ -26,7 +26,7 @@ const std::string kItemPrefix{"SN_ITEM"};
 
 } // anonymous namespace
 
-namespace pk2 {
+namespace sro::pk2 {
 
 void TextData::addItem(sro::pk2::ref::Text &&text) {
   if (text.service == 0) {
@@ -164,4 +164,4 @@ const std::string* TextData::privateGetMasteryName(const std::string &masteryNam
 
 }
 
-} // namespace pk2
+} // namespace sro::pk2

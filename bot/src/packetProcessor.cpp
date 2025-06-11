@@ -44,7 +44,7 @@ do {                                                                         \
 
 ABSL_FLAG(bool, log_skills, false, "Log commands & skills");
 
-WrappedCommand::WrappedCommand(const packet::structures::ActionCommand &command, const pk2::GameData &gameData) : actionCommand(command), gameData_(gameData) {
+WrappedCommand::WrappedCommand(const packet::structures::ActionCommand &command, const sro::pk2::GameData &gameData) : actionCommand(command), gameData_(gameData) {
 
 }
 
@@ -103,7 +103,7 @@ bool skillActionKilledTarget(sro::scalar_types::EntityGlobalId targetGlobalId, c
 PacketProcessor::PacketProcessor(SessionId sessionId,
                                  state::WorldState &worldState,
                                  broker::EventBroker &eventBroker,
-                                 const pk2::GameData &gameData) :
+                                 const sro::pk2::GameData &gameData) :
       sessionId_(sessionId),
       worldState_(worldState),
       eventBroker_(eventBroker),

@@ -8,7 +8,7 @@
 #include <optional>
 #include <string>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class TextData {
 public:
@@ -33,6 +33,6 @@ private:
   const std::string* privateGetMasteryName(const std::string &masteryNameCode) const;
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_TEXT_DATA_HPP_

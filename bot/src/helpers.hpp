@@ -3,10 +3,10 @@
 
 #include "packet/enums/packetEnums.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
-#include "pk2/gameData.hpp"
 #include "storage/item.hpp"
 #include "storage/storage.hpp"
 
+#include <silkroad_lib/pk2/gameData.hpp>
 #include <silkroad_lib/pk2/ref/item.hpp>
 #include <silkroad_lib/pk2/ref/scrapOfPackageItem.hpp>
 #include <silkroad_lib/position.hpp>
@@ -21,7 +21,7 @@ namespace helpers {
 std::filesystem::path getAppDataDirectory();
 float secondsToTravel(const sro::Position &srcPosition, const sro::Position &destPosition, const float currentSpeed);
 void initializeInventory(storage::Storage &inventory, uint8_t inventorySize, const std::map<uint8_t, std::shared_ptr<storage::Item>> &inventoryItemMap);
-void printItem(uint8_t slot, const storage::Item *item, const pk2::GameData &gameData);
+void printItem(uint8_t slot, const storage::Item *item, const sro::pk2::GameData &gameData);
 
 template <auto F>
 constexpr int toBitNum() {

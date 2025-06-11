@@ -3,7 +3,7 @@
 
 namespace packet::parsing {
 
-ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData) : ParsedPacket(packet) {
+ServerAgentCharacterData::ServerAgentCharacterData(const PacketContainer &packet, const sro::pk2::ItemData &itemData, const sro::pk2::SkillData &skillData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   uint32_t serverTime = stream.Read<uint32_t>();
   stream.Read(refObjId_);

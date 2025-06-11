@@ -17,9 +17,9 @@
 #include <optional>
 #include <string_view>
 
-namespace pk2 {
+namespace sro::pk2 {
 class GameData;
-} // namespace pk2
+} // namespace sro::pk2
 
 namespace state {
 class WorldState;
@@ -31,7 +31,7 @@ namespace ui {
 class UserInterface {
 // TODO: std::string vs std::string_view. Might need to compile protobuf with c++17?
 public:
-  UserInterface(zmq::context_t &context, const pk2::GameData &gameData, broker::EventBroker &eventBroker);
+  UserInterface(zmq::context_t &context, const sro::pk2::GameData &gameData, broker::EventBroker &eventBroker);
   ~UserInterface();
   void initialize();
   void setWorldState(const state::WorldState &worldState);
@@ -42,7 +42,7 @@ private:
   std::atomic<bool> keepRunning_;
   zmq::context_t &context_;
   zmq::socket_t publisher_{context_, zmq::socket_type::pub};
-  const pk2::GameData &gameData_; // TODO: Remove. The actual UserInterface needs this anyways
+  const sro::pk2::GameData &gameData_; // TODO: Remove. The actual UserInterface needs this anyways
   broker::EventBroker &eventBroker_;
   const state::WorldState *worldState_{nullptr};
   std::thread thr_;

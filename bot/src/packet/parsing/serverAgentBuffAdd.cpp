@@ -2,7 +2,7 @@
 
 namespace packet::parsing {
 
-ServerAgentBuffAdd::ServerAgentBuffAdd(const PacketContainer &packet, const pk2::SkillData &skillData) :
+ServerAgentBuffAdd::ServerAgentBuffAdd(const PacketContainer &packet, const sro::pk2::SkillData &skillData) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   stream.Read(globalId_);

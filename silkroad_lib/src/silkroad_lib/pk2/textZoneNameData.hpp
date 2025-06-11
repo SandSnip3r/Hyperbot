@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <unordered_map>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class TextZoneNameData {
 public:
@@ -16,6 +16,6 @@ private:
   std::unordered_map<uint16_t, std::string> regionNames_;
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_TEXT_ZONE_NAME_DATA_HPP_

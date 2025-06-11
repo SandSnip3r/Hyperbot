@@ -38,6 +38,18 @@ set(PROJECT_SOURCES
   src/silkroad_lib/pk2/ref/teleport.cpp
   src/silkroad_lib/pk2/ref/text.cpp
   src/silkroad_lib/pk2/ref/textZoneName.cpp
+  src/silkroad_lib/pk2/characterData.cpp
+  src/silkroad_lib/pk2/gameData.cpp
+  src/silkroad_lib/pk2/itemData.cpp
+  src/silkroad_lib/pk2/levelData.cpp
+  src/silkroad_lib/pk2/magicOptionData.cpp
+  src/silkroad_lib/pk2/masteryData.cpp
+  src/silkroad_lib/pk2/refRegion.cpp
+  src/silkroad_lib/pk2/shopData.cpp
+  src/silkroad_lib/pk2/skillData.cpp
+  src/silkroad_lib/pk2/teleportData.cpp
+  src/silkroad_lib/pk2/textData.cpp
+  src/silkroad_lib/pk2/textZoneNameData.cpp
 )
 
 if ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))

@@ -4,7 +4,7 @@
 
 namespace packet::parsing {
 
-ServerAgentCosData::ServerAgentCosData(const PacketContainer &packet, const pk2::CharacterData &characterData, const pk2::ItemData &itemData) :
+ServerAgentCosData::ServerAgentCosData(const PacketContainer &packet, const sro::pk2::CharacterData &characterData, const sro::pk2::ItemData &itemData) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   globalId_ = stream.Read<uint32_t>();

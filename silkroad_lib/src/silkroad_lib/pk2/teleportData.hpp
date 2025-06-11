@@ -5,7 +5,7 @@
 
 #include <unordered_map>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class TeleportData {
 public:
@@ -18,6 +18,6 @@ private:
 	TeleportMap teleports_;
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_MEDIA_TELEPORT_DATA_HPP

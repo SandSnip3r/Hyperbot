@@ -30,7 +30,7 @@ bool optionalValueIsDifferentFromNewValue(const std::optional<T> &oldOptional, c
 
 } // anonymous namespace
 
-Self::Self(const pk2::GameData &gameData, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId) :
+Self::Self(const sro::pk2::GameData &gameData, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId) :
     gameData_(gameData)/* , globalId(globalId), refObjId(refObjId) */, jId(jId) {
   // TODO: Assignment of globalId and refObjId could be delegated to the Entity constructor.
   this->globalId = globalId;

@@ -9,7 +9,7 @@
 
 namespace state {
 
-WorldState::WorldState(const pk2::GameData &gameData, broker::EventBroker &eventBroker) : gameData_(gameData), eventBroker_(eventBroker) {
+WorldState::WorldState(const sro::pk2::GameData &gameData, broker::EventBroker &eventBroker) : gameData_(gameData), eventBroker_(eventBroker) {
 }
 
 state::EntityTracker& WorldState::entityTracker() {

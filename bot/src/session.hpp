@@ -5,10 +5,11 @@
 #include "characterLoginInfo.hpp"
 #include "clientManagerInterface.hpp"
 #include "common/sessionId.hpp"
-#include "pk2/gameData.hpp"
 #include "proxy.hpp"
 #include "packetProcessor.hpp"
 #include "state/worldState.hpp"
+
+#include <silkroad_lib/pk2/gameData.hpp>
 
 namespace ui {
 class RlUserInterface;
@@ -31,7 +32,7 @@ class RlUserInterface;
 //  3. runAsync()
 class Session {
 public:
-  Session(const pk2::GameData &gameData,
+  Session(const sro::pk2::GameData &gameData,
           broker::EventBroker &eventBroker,
           state::WorldState &worldState,
           ClientManagerInterface &clientManagerInterface,
@@ -49,7 +50,7 @@ public:
 private:
   SessionId sessionId_{createUniqueSessionId()};
   bool initialized_{false};
-  const pk2::GameData &gameData_;
+  const sro::pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
   state::WorldState &worldState_;
   ui::RlUserInterface &rlUserInterface_;
@@ -66,3 +67,4 @@ private:
 };
 
 #endif
+

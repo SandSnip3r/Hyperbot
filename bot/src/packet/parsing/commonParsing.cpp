@@ -19,7 +19,7 @@ namespace packet::parsing {
 
 namespace {
 
-std::shared_ptr<entity::Entity> newObjectFromId(sro::scalar_types::ReferenceObjectId refObjId, const pk2::CharacterData &characterData, const pk2::ItemData &itemData, const pk2::TeleportData &teleportData) {
+std::shared_ptr<entity::Entity> newObjectFromId(sro::scalar_types::ReferenceObjectId refObjId, const sro::pk2::CharacterData &characterData, const sro::pk2::ItemData &itemData, const sro::pk2::TeleportData &teleportData) {
   if (characterData.haveCharacterWithId(refObjId) &&
       characterData.getCharacterById(refObjId).typeId1 == 1) {
     const auto &character = characterData.getCharacterById(refObjId);
@@ -72,7 +72,7 @@ std::shared_ptr<entity::Entity> newObjectFromId(sro::scalar_types::ReferenceObje
 
 } // anonymous namespace
 
-std::shared_ptr<storage::Item> parseGenericItem(StreamUtility &stream, const pk2::ItemData &itemData) {
+std::shared_ptr<storage::Item> parseGenericItem(StreamUtility &stream, const sro::pk2::ItemData &itemData) {
   auto rentInfo = parseRentInfo(stream);
 
   uint32_t refItemId = stream.Read<uint32_t>();
@@ -328,10 +328,10 @@ sro::Position parsePosition(StreamUtility &stream) {
 }
 
 std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
-                                           const pk2::CharacterData &characterData,
-                                           const pk2::ItemData &itemData,
-                                           const pk2::SkillData &skillData,
-                                           const pk2::TeleportData &teleportData) {
+                                           const sro::pk2::CharacterData &characterData,
+                                           const sro::pk2::ItemData &itemData,
+                                           const sro::pk2::SkillData &skillData,
+                                           const sro::pk2::TeleportData &teleportData) {
   using namespace type_id;
   const auto refObjId = stream.Read<sro::scalar_types::ReferenceObjectId>();
   if (refObjId == std::numeric_limits<sro::scalar_types::ReferenceObjectId>::max()) {

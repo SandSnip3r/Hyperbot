@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class SkillData {
 private:
@@ -27,6 +27,6 @@ private:
   SkillMap skills_;
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_MEDIA_SKILL_DATA_HPP

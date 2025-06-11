@@ -63,19 +63,20 @@
 #include "packet/parsing/serverGatewayPatchResponse.hpp"
 #include "packet/parsing/serverGatewayShardListResponse.hpp"
 #include "packet/parsing/packetParser.hpp"
-#include "pk2/gameData.hpp"
 #include "state/worldState.hpp"
 #include "common/sessionId.hpp"
+
+#include <silkroad_lib/pk2/gameData.hpp>
 
 #define ENFORCE_PURIFICATION_PILL_COOLDOWN
 
 class WrappedCommand {
 public:
-  WrappedCommand(const packet::structures::ActionCommand &command, const pk2::GameData &gameData);
+  WrappedCommand(const packet::structures::ActionCommand &command, const sro::pk2::GameData &gameData);
   std::optional<std::string> skillName() const;
   const packet::structures::ActionCommand &actionCommand;
 private:
-  const pk2::GameData &gameData_;
+  const sro::pk2::GameData &gameData_;
 };
 
 std::ostream& operator<<(std::ostream &stream, const WrappedCommand &wrappedCommand);
@@ -88,14 +89,14 @@ public:
   PacketProcessor(SessionId sessionId,
                   state::WorldState &worldState,
                   broker::EventBroker &eventBroker,
-                  const pk2::GameData &gameData);
+                  const sro::pk2::GameData &gameData);
 
   void handlePacket(const PacketContainer &packet);
 private:
   const SessionId sessionId_;
   state::WorldState &worldState_;
   broker::EventBroker &eventBroker_;
-  const pk2::GameData &gameData_;
+  const sro::pk2::GameData &gameData_;
   packet::parsing::PacketParser packetParser_{worldState_.entityTracker(), gameData_};
   std::shared_ptr<entity::Self> selfEntity_;
   std::shared_ptr<entity::Self> getSelfEntity() const;

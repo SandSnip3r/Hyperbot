@@ -69,7 +69,7 @@
 
 namespace packet::parsing {
 
-PacketParser::PacketParser(const state::EntityTracker &entityTracker, const pk2::GameData &gameData) :
+PacketParser::PacketParser(const state::EntityTracker &entityTracker, const sro::pk2::GameData &gameData) :
       entityTracker_(entityTracker),
       gameData_(gameData) {
   //

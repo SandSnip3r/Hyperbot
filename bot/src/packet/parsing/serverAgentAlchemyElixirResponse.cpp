@@ -7,7 +7,7 @@
 
 namespace packet::parsing {
 
-ServerAgentAlchemyElixirResponse::ServerAgentAlchemyElixirResponse(const PacketContainer &packet, const pk2::ItemData &itemData) :
+ServerAgentAlchemyElixirResponse::ServerAgentAlchemyElixirResponse(const PacketContainer &packet, const sro::pk2::ItemData &itemData) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   stream.Read(result_);

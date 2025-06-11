@@ -6,7 +6,6 @@
 #include "entity/playerCharacter.hpp"
 #include "entity/geometry.hpp"
 #include "helpers.hpp"
-#include "pk2/gameData.hpp"
 #include "packet/enums/packetEnums.hpp"
 #include "packet/parsing/parsedPacket.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
@@ -14,6 +13,7 @@
 #include "storage/buybackQueue.hpp"
 #include "storage/storage.hpp"
 
+#include <silkroad_lib/pk2/gameData.hpp>
 #include <silkroad_lib/position.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
@@ -51,7 +51,7 @@ public:
   using LegacyStateEndTimeArrayType = std::array<std::chrono::steady_clock::time_point, helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>()+1>;
   using LegacyStateTotalDurationArrayType = std::array<std::chrono::milliseconds, helpers::toBitNum<packet::enums::AbnormalStateFlag::kZombie>()+1>;
 
-  Self(const pk2::GameData &gameData, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId);
+  Self(const sro::pk2::GameData &gameData, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId);
   ~Self() override;
 
   // The initialize functions are meant to be called during construction. No events will be published during these.
@@ -278,7 +278,7 @@ public:
   bool inTown() const;
 
 private:
-  const pk2::GameData &gameData_;
+  const sro::pk2::GameData &gameData_;
   std::vector<broker::EventBroker::SubscriptionId> eventSubscriptionIds_;
 
   void setRaceAndGender();

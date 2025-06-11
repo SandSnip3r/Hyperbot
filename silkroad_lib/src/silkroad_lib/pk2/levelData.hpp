@@ -5,7 +5,7 @@
 
 #include <unordered_map>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class LevelData {
 public:
@@ -16,6 +16,6 @@ private:
 	LevelMap Levels_;
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_LEVEL_DATA_HPP_

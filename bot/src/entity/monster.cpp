@@ -6,7 +6,7 @@
 
 namespace entity {
 
-uint32_t Monster::getMaxHp(const pk2::CharacterData &characterData) const {
+uint32_t Monster::getMaxHp(const sro::pk2::CharacterData &characterData) const {
   if (!characterData.haveCharacterWithId(refObjId)) {
     throw std::runtime_error("Don't have character data to get max HP");
   }

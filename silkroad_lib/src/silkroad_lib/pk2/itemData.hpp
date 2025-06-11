@@ -6,7 +6,7 @@
 #include <functional>
 #include <unordered_map>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class ItemData {
 public:
@@ -21,6 +21,6 @@ private:
 	ItemMap items_;
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_MEDIA_ITEM_DATA_HPP_

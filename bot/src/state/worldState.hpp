@@ -6,8 +6,7 @@
 #include "entity/entity.hpp"
 #include "entityTracker.hpp"
 #include "packet/parsing/serverGatewayShardListResponse.hpp"
-#include "pk2/gameData.hpp"
-
+#include <silkroad_lib/pk2/gameData.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
 #include <tracy/Tracy.hpp>
@@ -22,7 +21,7 @@ namespace state {
 
 class WorldState {
 public:
-  WorldState(const pk2::GameData &gameData, broker::EventBroker &eventBroker);
+  WorldState(const sro::pk2::GameData &gameData, broker::EventBroker &eventBroker);
   state::EntityTracker& entityTracker();
   const state::EntityTracker& entityTracker() const;
 
@@ -42,7 +41,7 @@ public:
   TracyLockableN(std::mutex, mutex, "WorldState");
   std::optional<packet::parsing::ServerGatewayShardListResponse> shardListResponse_;
 private:
-  const pk2::GameData &gameData_;
+  const sro::pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
   state::EntityTracker entityTracker_;
 

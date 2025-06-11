@@ -2,14 +2,14 @@
 #include "packet/opcode.hpp"
 #include "packet/enums/packetEnums.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
-#include "pk2/characterData.hpp"
-#include "pk2/gameData.hpp"
-#include "pk2/itemData.hpp"
-#include "pk2/skillData.hpp"
-#include "pk2/teleportData.hpp"
 #include "shared/silkroad_security.h"
 #include "storage/item.hpp"
 
+#include <silkroad_lib/pk2/characterData.hpp>
+#include <silkroad_lib/pk2/gameData.hpp>
+#include <silkroad_lib/pk2/itemData.hpp>
+#include <silkroad_lib/pk2/skillData.hpp>
+#include <silkroad_lib/pk2/teleportData.hpp>
 #include <silkroad_lib/position.hpp>
 
 #include <array>

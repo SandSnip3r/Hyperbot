@@ -1,6 +1,6 @@
 #include "characterData.hpp"
 
-namespace pk2 {
+namespace sro::pk2 {
 
 void CharacterData::addCharacter(sro::pk2::ref::Character &&character) {
   characters_.emplace(character.id, character);
@@ -22,4 +22,4 @@ const CharacterData::CharacterMap::size_type CharacterData::size() const {
   return characters_.size();
 }
 
-} // namespace pk2
+} // namespace sro::pk2

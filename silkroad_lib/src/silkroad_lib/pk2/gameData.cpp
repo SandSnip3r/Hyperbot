@@ -24,7 +24,7 @@
 #include <thread>
 #include <vector>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 namespace {
 
@@ -792,4 +792,4 @@ void GameData::parseRegionInfo(sro::pk2::Pk2ReaderModern &pk2Reader) {
   }));
 }
 
-} // namespace pk2
+} // namespace sro::pk2
