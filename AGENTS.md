@@ -12,6 +12,9 @@ reinforcement learning logic.
 - Private members often use a trailing underscore (`foo_`).
 - `.hpp`/`.cpp` files are preferred for headers and sources.
 - Avoid modifying anything under `third_party/` unless necessary.
+- Avoid `auto` unless the type is overwhelmingly verbose (like container iterators).
+- Place pointer asterisks next to the variable name (`Type *var`).
+- Place ampersands next to the type for references (`Type &var`).
 
 ## Design Philosophy
 

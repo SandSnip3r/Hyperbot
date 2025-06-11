@@ -20,7 +20,9 @@ do {                                                     \
 //Handles incoming packets
 void SilkroadConnection::HandleRead(size_t bytes_transferred, const boost::system::error_code & error) {
   if (!error && boostSocket_ && security) {
-    security->Recv(&data[0], bytes_transferred);
+    const PacketContainer::Clock::time_point recvTimestamp =
+        PacketContainer::Clock::now();
+    security->Recv(&data[0], bytes_transferred, recvTimestamp);
     PostRead();
   } else if (!closingConnection_) {
     if (error == boost::asio::error::eof) {

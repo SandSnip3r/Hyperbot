@@ -4,12 +4,12 @@
 
 namespace entity {
 
-void Character::setLifeState(sro::entity::LifeState newLifeState) {
-  const auto currentTime = std::chrono::steady_clock::now();
+void Character::setLifeState(sro::entity::LifeState newLifeState,
+                             const PacketContainer::Clock::time_point &timestamp) {
   const bool changed = lifeState != newLifeState;
   lifeState = newLifeState;
   if (newLifeState == sro::entity::LifeState::kDead) {
-    privateSetStationaryAtPosition(interpolateCurrentPosition(currentTime));
+    privateSetStationaryAtPosition(interpolateCurrentPosition(timestamp));
   }
   if (changed) {
     if (eventBroker_) {
