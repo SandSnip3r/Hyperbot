@@ -3,6 +3,7 @@
 
 #include <QProgressBar>
 #include <QTableWidgetItem>
+#include <QTableWidget>
 #include <QHeaderView>
 #include <QRegularExpression>
 
@@ -15,7 +16,10 @@ DashboardWidget::DashboardWidget(QWidget *parent)
   ui->statusTable->setHorizontalHeaderLabels(headers);
   ui->statusTable->verticalHeader()->setDefaultSectionSize(20);
   // Set the last column to stretch to fill the remaining space
-  ui->statusTable->horizontalHeader()->setSectionResizeMode(ui->statusTable->columnCount() - 1, QHeaderView::Stretch);
+  ui->statusTable->horizontalHeader()->setSectionResizeMode(
+      ui->statusTable->columnCount() - 1, QHeaderView::Stretch);
+  connect(ui->statusTable, &QTableWidget::cellDoubleClicked, this,
+          &DashboardWidget::showCharacterDetail);
 }
 
 static int characterId(const QString &name) {
@@ -96,6 +100,12 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
                                                int maxMp) {
   int row = ensureRowForCharacter(name);
 
+  CharacterData &data = characterData_[name];
+  data.currentHp = currentHp;
+  data.maxHp = maxHp;
+  data.currentMp = currentMp;
+  data.maxMp = maxMp;
+
   auto *hpBar = qobject_cast<QProgressBar *>(ui->statusTable->cellWidget(row, 1));
   auto *mpBar = qobject_cast<QProgressBar *>(ui->statusTable->cellWidget(row, 2));
   if (hpBar) {
@@ -116,8 +126,24 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
 void DashboardWidget::onActiveStateMachine(QString name, QString stateMachine) {
   int row = ensureRowForCharacter(name);
   ui->statusTable->setItem(row, 3, new QTableWidgetItem(stateMachine));
+  characterData_[name].stateMachine = stateMachine;
 }
 
 void DashboardWidget::clearStatusTable() {
   ui->statusTable->setRowCount(0);
+  characterData_.clear();
+}
+
+void DashboardWidget::showCharacterDetail(int row, int column) {
+  Q_UNUSED(column);
+  QTableWidgetItem *item = ui->statusTable->item(row, 0);
+  if (!item) {
+    return;
+  }
+  const QString name = item->text();
+  CharacterDetailDialog *dialog = new CharacterDetailDialog(this);
+  dialog->setCharacterName(name);
+  dialog->setCharacterData(characterData_.value(name));
+  dialog->exec();
+  dialog->deleteLater();
 }

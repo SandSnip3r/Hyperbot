@@ -3,6 +3,9 @@
 
 #include <QStringList>
 #include <QWidget>
+#include <QMap>
+
+#include "characterDetailDialog.hpp"
 
 namespace Ui {
 class DashboardWidget;
@@ -22,7 +25,9 @@ public slots:
 
 private:
   Ui::DashboardWidget *ui;
+  QMap<QString, CharacterData> characterData_;
   int ensureRowForCharacter(const QString &name);
+  void showCharacterDetail(int row, int column);
 };
 
 #endif // DASHBOARD_WIDGET_HPP_

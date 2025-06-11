@@ -28,6 +28,7 @@ qt_add_executable(rl_ui
   hyperbotSubscriberWorker.hpp hyperbotSubscriberWorker.cpp
   checkpointWidget.hpp checkpointWidget.cpp checkpointwidget.ui
   dashboardWidget.hpp dashboardWidget.cpp dashboardwidget.ui
+  characterDetailDialog.hpp characterDetailDialog.cpp characterDetailDialog.ui
 )
 
 target_link_libraries(rl_ui PRIVATE
