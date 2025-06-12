@@ -1,9 +1,12 @@
 #include "characterDetailDialog.hpp"
 #include "ui_characterDetailDialog.h"
+#include "barStyles.hpp"
 
 CharacterDetailDialog::CharacterDetailDialog(QWidget *parent)
     : QDialog(parent), ui_(new Ui::CharacterDetailDialog) {
   ui_->setupUi(this);
+  setupHpBar(ui_->hpBar);
+  setupMpBar(ui_->mpBar);
 }
 
 CharacterDetailDialog::~CharacterDetailDialog() {

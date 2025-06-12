@@ -3,6 +3,7 @@
 
 #include <QProgressBar>
 #include <QTableWidgetItem>
+#include "barStyles.hpp"
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QRegularExpression>
@@ -59,34 +60,14 @@ int DashboardWidget::ensureRowForCharacter(const QString &name) {
     ui->statusTable->setItem(row, 3, new QTableWidgetItem(""));
 
     QProgressBar *hpBar = new QProgressBar;
-    hpBar->setStyleSheet(R"(
-      QProgressBar {
-        border: 1px solid black;
-        border-radius: 2px;
-        color: white;
-        background-color: #131113;
-      }
-      QProgressBar::chunk {
-        background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #630410, stop: 0.5455 #ff3c52, stop: 1 #9c0010);
-      }
-    )");
+    setupHpBar(hpBar);
     hpBar->setRange(0, 0);
     hpBar->setValue(0);
     hpBar->setFormat(QString("0/0"));
     ui->statusTable->setCellWidget(row, 1, hpBar);
 
     QProgressBar *mpBar = new QProgressBar;
-    mpBar->setStyleSheet(R"(
-      QProgressBar {
-        border: 1px solid black;
-        border-radius: 2px;
-        color: white;
-        background-color: #131113;
-      }
-      QProgressBar::chunk {
-        background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #101c4a, stop: 0.5455 #4a69ce, stop: 1 #182c73);
-      }
-    )");
+    setupMpBar(mpBar);
     mpBar->setRange(0, 0);
     mpBar->setValue(0);
     mpBar->setFormat(QString("0/0"));
