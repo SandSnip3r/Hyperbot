@@ -88,7 +88,7 @@ InteractiveChartView::InteractiveChartView(QWidget *parent)
 
   // Create X axis (e.g., time) and attach it to the series.
   axisX_ = new QValueAxis;
-  axisX_->setLabelFormat("%g");
+  axisX_->setLabelFormat("%.0f");
   axisX_->setTitleText("Time");
   chart()->addAxis(axisX_, Qt::AlignBottom);
   defaultData.series->attachAxis(axisX_);
