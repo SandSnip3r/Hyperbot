@@ -56,8 +56,9 @@ qreal InteractiveChartView::niceNumberCeil(qreal value) {
   return niceFraction * std::pow(10.0, exponent);
 }
 
-void InteractiveChartView::setNiceYRange(qreal min, qreal max, bool preferSmaller) {
-  int ticks = axisY_->tickCount();
+void InteractiveChartView::setNiceRange(QValueAxis *axis, qreal min, qreal max,
+                                        bool preferSmaller) {
+  int ticks = axis->tickCount();
   if (ticks < 3) {
     ticks = 5;
   }
@@ -70,7 +71,7 @@ void InteractiveChartView::setNiceYRange(qreal min, qreal max, bool preferSmalle
   qreal niceSpan = step * (ticks - 1);
   qreal center = (min + max) / 2.0;
   qreal half = niceSpan / 2.0;
-  axisY_->setRange(center - half, center + half);
+  axis->setRange(center - half, center + half);
 }
 
 InteractiveChartView::InteractiveChartView(QWidget *parent)
@@ -103,6 +104,7 @@ InteractiveChartView::InteractiveChartView(QWidget *parent)
   // Here we assume a default horizontal width (e.g., 10 units of time) and a vertical range [0,10].
   defaultRect_ = QRectF(0, 0, 10, 10);
   axisX_->setRange(defaultRect_.left(), defaultRect_.right());
+  axisX_->applyNiceNumbers();
   axisY_->setRange(defaultRect_.top(), defaultRect_.bottom());
   axisY_->applyNiceNumbers();
 
@@ -173,6 +175,7 @@ void InteractiveChartView::resetView() {
   // Reset the horizontal axis to show the default width ending at the latest data point.
   if (!series_.isEmpty() && latestX_ != 0) {
     axisX_->setRange(latestX_ - defaultRect_.width(), latestX_);
+    axisX_->applyNiceNumbers();
   }
   // Reset the vertical axis to default range.
   axisY_->setRange(defaultRect_.top(), defaultRect_.bottom());
@@ -202,7 +205,7 @@ void InteractiveChartView::wheelEvent(QWheelEvent *event) {
     qreal xMax = axisX_->max();
     qreal center = (xMin + xMax) / 2.0;
     qreal halfRange = (xMax - xMin) / 2.0 * factor;
-    axisX_->setRange(center - halfRange, center + halfRange);
+    setNiceRange(axisX_, center - halfRange, center + halfRange, factor < 1.0);
 
     // Check if the new x-range max is nearly equal to the latest data point.
     if (!series_.isEmpty() && latestX_ != 0) {
@@ -221,7 +224,7 @@ void InteractiveChartView::wheelEvent(QWheelEvent *event) {
     qreal yMax = axisY_->max();
     qreal center = (yMin + yMax) / 2.0;
     qreal halfRange = (yMax - yMin) / 2.0 * factor;
-    setNiceYRange(center - halfRange, center + halfRange, factor < 1.0);
+    setNiceRange(axisY_, center - halfRange, center + halfRange, factor < 1.0);
     userYZoom_ = true;
   }
   event->accept();
@@ -271,7 +274,8 @@ void InteractiveChartView::mouseMoveEvent(QMouseEvent *event) {
 void InteractiveChartView::mouseReleaseEvent(QMouseEvent *event) {
   if (panning_ && event->button() == Qt::RightButton) {
     panning_ = false;
-    setNiceYRange(axisY_->min(), axisY_->max(), false);
+    setNiceRange(axisX_, axisX_->min(), axisX_->max(), false);
+    setNiceRange(axisY_, axisY_->min(), axisY_->max(), false);
   } else if (rubberBandActive_ && event->button() == Qt::LeftButton) {
     rubberBandActive_ = false;
     // Map the rubberband rectangle to chart coordinates.
@@ -282,8 +286,8 @@ void InteractiveChartView::mouseReleaseEvent(QMouseEvent *event) {
 
     // Only apply zoom if the rectangle has a valid (nonzero) area.
     if (zoomRect.width() > 0 && zoomRect.height() > 0) {
-      axisX_->setRange(zoomRect.left(), zoomRect.right());
-      setNiceYRange(zoomRect.top(), zoomRect.bottom(), false);
+      setNiceRange(axisX_, zoomRect.left(), zoomRect.right(), false);
+      setNiceRange(axisY_, zoomRect.top(), zoomRect.bottom(), false);
       followLatest_ = false;
       userXZoom_ = true;
       userYZoom_ = true;
@@ -335,6 +339,6 @@ void InteractiveChartView::updateVerticalAxis() {
   }
 
   if (minY < maxY) {
-    setNiceYRange(minY, maxY, false);
+    setNiceRange(axisY_, minY, maxY, false);
   }
 }

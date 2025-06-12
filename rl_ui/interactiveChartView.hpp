@@ -39,10 +39,10 @@ protected:
   void paintEvent(QPaintEvent *event) override;
 
 private:
-  /// Adjusts the vertical range to nice numbers while preserving the center.
-  /// If preferSmaller is true, the resulting span will not exceed the provided
-  /// range; otherwise it may expand slightly to the next nice step.
-  void setNiceYRange(qreal min, qreal max, bool preferSmaller);
+  /// Adjusts the provided axis range to nice numbers while preserving the
+  /// center. If preferSmaller is true, the resulting span will not exceed the
+  /// provided range; otherwise it may expand slightly to the next nice step.
+  void setNiceRange(QValueAxis *axis, qreal min, qreal max, bool preferSmaller);
 
   static qreal niceNumberFloor(qreal value);
   static qreal niceNumberCeil(qreal value);
