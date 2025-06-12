@@ -4,7 +4,7 @@
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
-#include <QPushButton>
+#include <QToolButton>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QRectF>
@@ -89,8 +89,8 @@ private:
   QRectF defaultRect_;
 
   // Buttons for resetting zoom and following data.
-  QPushButton *homeButton_;
-  QPushButton *followButton_;
+  QToolButton *homeButton_;
+  QToolButton *followButton_;
 };
 
 #endif // INTERACTIVE_CHART_VIEW_HPP_

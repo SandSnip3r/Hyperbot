@@ -4,6 +4,8 @@
 #include <QHBoxLayout>
 #include <QPainter>
 #include <QtMath>
+#include <QStyle>
+#include <QToolButton>
 #include <cmath>
 
 #include <absl/log/log.h>
@@ -88,12 +90,18 @@ InteractiveChartView::InteractiveChartView(QWidget *parent)
 
   // Create X axis (e.g., time) and attach it to the series.
   axisX_ = new QValueAxis;
-  axisX_->setLabelFormat("%.0f");
-  axisX_->setTitleText("Time");
-  chart()->addAxis(axisX_, Qt::AlignBottom);
-  defaultData.series->attachAxis(axisX_);
-
-  // Create Y axis (e.g., value) and attach it to the series.
+  homeButton_ = new QToolButton(this);
+  homeButton_->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+  homeButton_->setToolTip(tr("Default Zoom"));
+  homeButton_->setAutoRaise(true);
+  homeButton_->setFixedSize(24, 24);
+  connect(homeButton_, &QToolButton::clicked, this, &InteractiveChartView::resetView);
+  followButton_ = new QToolButton(this);
+  followButton_->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
+  followButton_->setToolTip(tr("Follow Data"));
+  followButton_->setAutoRaise(true);
+  followButton_->setFixedSize(24, 24);
+  connect(followButton_, &QToolButton::clicked, this, &InteractiveChartView::followData);
   axisY_ = new QValueAxis;
   axisY_->setLabelFormat("%.0f");
   axisY_->setTitleText("Value");
