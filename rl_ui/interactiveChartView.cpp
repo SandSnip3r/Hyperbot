@@ -90,18 +90,12 @@ InteractiveChartView::InteractiveChartView(QWidget *parent)
 
   // Create X axis (e.g., time) and attach it to the series.
   axisX_ = new QValueAxis;
-  homeButton_ = new QToolButton(this);
-  homeButton_->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
-  homeButton_->setToolTip(tr("Default Zoom"));
-  homeButton_->setAutoRaise(true);
-  homeButton_->setFixedSize(24, 24);
-  connect(homeButton_, &QToolButton::clicked, this, &InteractiveChartView::resetView);
-  followButton_ = new QToolButton(this);
-  followButton_->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
-  followButton_->setToolTip(tr("Follow Data"));
-  followButton_->setAutoRaise(true);
-  followButton_->setFixedSize(24, 24);
-  connect(followButton_, &QToolButton::clicked, this, &InteractiveChartView::followData);
+  axisX_->setLabelFormat("%.0f");
+  axisX_->setTitleText("Time");
+  chart()->addAxis(axisX_, Qt::AlignBottom);
+  defaultData.series->attachAxis(axisX_);
+
+  // Create Y axis (e.g., value) and attach it to the series.
   axisY_ = new QValueAxis;
   axisY_->setLabelFormat("%.0f");
   axisY_->setTitleText("Value");
@@ -116,19 +110,19 @@ InteractiveChartView::InteractiveChartView(QWidget *parent)
   axisY_->setRange(defaultRect_.top(), defaultRect_.bottom());
   axisY_->applyNiceNumbers();
 
-  // Create and position the "Default Zoom" button.
-  homeButton_ = new QPushButton("Default Zoom", this);
-  homeButton_->setFixedSize(100, 25);
-  homeButton_->move(10, 10);
-  connect(homeButton_, &QPushButton::clicked, this, &InteractiveChartView::resetView);
-  homeButton_->raise();
+  homeButton_ = new QToolButton(this);
+  homeButton_->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+  homeButton_->setToolTip(tr("Default Zoom"));
+  homeButton_->setAutoRaise(true);
+  homeButton_->setFixedSize(24, 24);
+  connect(homeButton_, &QToolButton::clicked, this, &InteractiveChartView::resetView);
 
-  // Create and position the "Follow Data" button.
-  followButton_ = new QPushButton("Follow Data", this);
-  followButton_->setFixedSize(100, 25);
-  followButton_->move(10, 40);
-  connect(followButton_, &QPushButton::clicked, this, &InteractiveChartView::followData);
-  followButton_->raise();
+  followButton_ = new QToolButton(this);
+  followButton_->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
+  followButton_->setToolTip(tr("Follow Data"));
+  followButton_->setAutoRaise(true);
+  followButton_->setFixedSize(24, 24);
+  connect(followButton_, &QToolButton::clicked, this, &InteractiveChartView::followData);
 
   // Enable antialiasing for smoother rendering.
   setRenderHint(QPainter::Antialiasing);
