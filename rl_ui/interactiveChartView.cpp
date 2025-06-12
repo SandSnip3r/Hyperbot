@@ -137,9 +137,13 @@ void InteractiveChartView::followData() {
 
 void InteractiveChartView::wheelEvent(QWheelEvent *event) {
   // Zoom in/out horizontally or vertically based on the wheel event.
-  if (event->angleDelta().x() != 0.0) {
+  QPoint angleDelta = event->angleDelta();
+  if (angleDelta.isNull()) {
+    angleDelta = event->pixelDelta();
+  }
+  if (angleDelta.x() != 0) {
     // Horizontal zooming:
-    qreal factor = (event->angleDelta().x() > 0) ? 0.9 : 1.1;
+    qreal factor = (angleDelta.x() > 0) ? 0.9 : 1.1;
     qreal xMin = axisX_->min();
     qreal xMax = axisX_->max();
     qreal center = (xMin + xMax) / 2.0;
@@ -156,9 +160,9 @@ void InteractiveChartView::wheelEvent(QWheelEvent *event) {
         userXZoom_ = true;
       }
     }
-  } else if (event->angleDelta().y() != 0.0) {
+  } else if (angleDelta.y() != 0) {
     // Vertical zooming:
-    qreal factor = (event->angleDelta().y() > 0) ? 0.9 : 1.1;
+    qreal factor = (angleDelta.y() > 0) ? 0.9 : 1.1;
     qreal yMin = axisY_->min();
     qreal yMax = axisY_->max();
     qreal center = (yMin + yMax) / 2.0;
