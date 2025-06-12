@@ -4,6 +4,7 @@
 #include <QHBoxLayout>
 #include <QPainter>
 #include <QtMath>
+#include <cmath>
 
 #include <absl/log/log.h>
 #include <array>
@@ -17,6 +18,59 @@ std::mt19937 InteractiveChartView::createRandomEngine() {
   std::generate_n(seed_data.data(), seed_data.size(), std::ref(rd));
   std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
   return std::mt19937(seq);
+}
+
+qreal InteractiveChartView::niceNumberFloor(qreal value) {
+  if (value <= 0) {
+    return 0;
+  }
+  qreal exponent = std::floor(std::log10(value));
+  qreal fraction = value / std::pow(10.0, exponent);
+  qreal niceFraction;
+  if (fraction >= 5.0) {
+    niceFraction = 5.0;
+  } else if (fraction >= 2.0) {
+    niceFraction = 2.0;
+  } else {
+    niceFraction = 1.0;
+  }
+  return niceFraction * std::pow(10.0, exponent);
+}
+
+qreal InteractiveChartView::niceNumberCeil(qreal value) {
+  if (value <= 0) {
+    return 0;
+  }
+  qreal exponent = std::floor(std::log10(value));
+  qreal fraction = value / std::pow(10.0, exponent);
+  qreal niceFraction;
+  if (fraction <= 1.0) {
+    niceFraction = 1.0;
+  } else if (fraction <= 2.0) {
+    niceFraction = 2.0;
+  } else if (fraction <= 5.0) {
+    niceFraction = 5.0;
+  } else {
+    niceFraction = 10.0;
+  }
+  return niceFraction * std::pow(10.0, exponent);
+}
+
+void InteractiveChartView::setNiceYRange(qreal min, qreal max, bool preferSmaller) {
+  int ticks = axisY_->tickCount();
+  if (ticks < 3) {
+    ticks = 5;
+  }
+  qreal span = max - min;
+  qreal step = preferSmaller ? niceNumberFloor(span / (ticks - 1))
+                             : niceNumberCeil(span / (ticks - 1));
+  if (step <= 0) {
+    step = 1;
+  }
+  qreal niceSpan = step * (ticks - 1);
+  qreal center = (min + max) / 2.0;
+  qreal half = niceSpan / 2.0;
+  axisY_->setRange(center - half, center + half);
 }
 
 InteractiveChartView::InteractiveChartView(QWidget *parent)
@@ -167,8 +221,7 @@ void InteractiveChartView::wheelEvent(QWheelEvent *event) {
     qreal yMax = axisY_->max();
     qreal center = (yMin + yMax) / 2.0;
     qreal halfRange = (yMax - yMin) / 2.0 * factor;
-    axisY_->setRange(center - halfRange, center + halfRange);
-    axisY_->applyNiceNumbers();
+    setNiceYRange(center - halfRange, center + halfRange, factor < 1.0);
     userYZoom_ = true;
   }
   event->accept();
@@ -218,7 +271,7 @@ void InteractiveChartView::mouseMoveEvent(QMouseEvent *event) {
 void InteractiveChartView::mouseReleaseEvent(QMouseEvent *event) {
   if (panning_ && event->button() == Qt::RightButton) {
     panning_ = false;
-    axisY_->applyNiceNumbers();
+    setNiceYRange(axisY_->min(), axisY_->max(), false);
   } else if (rubberBandActive_ && event->button() == Qt::LeftButton) {
     rubberBandActive_ = false;
     // Map the rubberband rectangle to chart coordinates.
@@ -230,8 +283,7 @@ void InteractiveChartView::mouseReleaseEvent(QMouseEvent *event) {
     // Only apply zoom if the rectangle has a valid (nonzero) area.
     if (zoomRect.width() > 0 && zoomRect.height() > 0) {
       axisX_->setRange(zoomRect.left(), zoomRect.right());
-      axisY_->setRange(zoomRect.top(), zoomRect.bottom());
-      axisY_->applyNiceNumbers();
+      setNiceYRange(zoomRect.top(), zoomRect.bottom(), false);
       followLatest_ = false;
       userXZoom_ = true;
       userYZoom_ = true;
@@ -283,7 +335,6 @@ void InteractiveChartView::updateVerticalAxis() {
   }
 
   if (minY < maxY) {
-    axisY_->setRange(minY, maxY);
-    axisY_->applyNiceNumbers();
+    setNiceYRange(minY, maxY, false);
   }
 }

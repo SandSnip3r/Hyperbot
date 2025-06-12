@@ -39,6 +39,14 @@ protected:
   void paintEvent(QPaintEvent *event) override;
 
 private:
+  /// Adjusts the vertical range to nice numbers while preserving the center.
+  /// If preferSmaller is true, the resulting span will not exceed the provided
+  /// range; otherwise it may expand slightly to the next nice step.
+  void setNiceYRange(qreal min, qreal max, bool preferSmaller);
+
+  static qreal niceNumberFloor(qreal value);
+  static qreal niceNumberCeil(qreal value);
+
   /// Container for one series and its sampling data.
   struct SeriesData {
     QLineSeries *series{nullptr};
