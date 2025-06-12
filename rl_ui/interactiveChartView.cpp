@@ -194,7 +194,6 @@ void InteractiveChartView::mouseMoveEvent(QMouseEvent *event) {
     QPointF deltaValue = chart()->mapToValue(QPoint(0,0)) - chart()->mapToValue(delta);
     axisX_->setRange(axisX_->min() + deltaValue.x(), axisX_->max() + deltaValue.x());
     axisY_->setRange(axisY_->min() + deltaValue.y(), axisY_->max() + deltaValue.y());
-    axisY_->applyNiceNumbers();
 
     // When panning, mark that the user has manually adjusted both axes.
     userXZoom_ = true;
@@ -215,6 +214,7 @@ void InteractiveChartView::mouseMoveEvent(QMouseEvent *event) {
 void InteractiveChartView::mouseReleaseEvent(QMouseEvent *event) {
   if (panning_ && event->button() == Qt::RightButton) {
     panning_ = false;
+    axisY_->applyNiceNumbers();
   } else if (rubberBandActive_ && event->button() == Qt::LeftButton) {
     rubberBandActive_ = false;
     // Map the rubberband rectangle to chart coordinates.
