@@ -4,7 +4,7 @@
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
-#include <QPushButton>
+#include <QToolButton>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QRectF>
@@ -39,6 +39,14 @@ protected:
   void paintEvent(QPaintEvent *event) override;
 
 private:
+  /// Adjusts the provided axis range to nice numbers while preserving the
+  /// center. If preferSmaller is true, the resulting span will not exceed the
+  /// provided range; otherwise it may expand slightly to the next nice step.
+  void setNiceRange(QValueAxis *axis, qreal min, qreal max, bool preferSmaller);
+
+  static qreal niceNumberFloor(qreal value);
+  static qreal niceNumberCeil(qreal value);
+
   /// Container for one series and its sampling data.
   struct SeriesData {
     QLineSeries *series{nullptr};
@@ -81,8 +89,8 @@ private:
   QRectF defaultRect_;
 
   // Buttons for resetting zoom and following data.
-  QPushButton *homeButton_;
-  QPushButton *followButton_;
+  QToolButton *homeButton_;
+  QToolButton *followButton_;
 };
 
 #endif // INTERACTIVE_CHART_VIEW_HPP_
