@@ -23,6 +23,9 @@ public slots:
   void onActiveStateMachine(QString name, QString stateMachine);
   void clearStatusTable();
 
+signals:
+  void characterDataUpdated(QString name, CharacterData data);
+
 private:
   Ui::DashboardWidget *ui;
   QMap<QString, CharacterData> characterData_;

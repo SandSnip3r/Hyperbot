@@ -2,27 +2,35 @@
 #include "ui_characterDetailDialog.h"
 
 CharacterDetailDialog::CharacterDetailDialog(QWidget *parent)
-    : QDialog(parent), ui(new Ui::CharacterDetailDialog) {
-  ui->setupUi(this);
+    : QDialog(parent), ui_(new Ui::CharacterDetailDialog) {
+  ui_->setupUi(this);
 }
 
 CharacterDetailDialog::~CharacterDetailDialog() {
-  delete ui;
+  delete ui_;
 }
 
 void CharacterDetailDialog::setCharacterName(const QString &name) {
-  setWindowTitle(name);
-  ui->nameLabel->setText(name);
+  name_ = name;
+  setWindowTitle(name_);
+  ui_->nameLabel->setText(name_);
 }
 
-void CharacterDetailDialog::setCharacterData(const CharacterData &data) {
-  ui->hpBar->setRange(0, data.maxHp);
-  ui->hpBar->setValue(data.currentHp);
-  ui->hpBar->setFormat(QString("%1/%2").arg(data.currentHp).arg(data.maxHp));
+void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
+  ui_->hpBar->setRange(0, data.maxHp);
+  ui_->hpBar->setValue(data.currentHp);
+  ui_->hpBar->setFormat(QString("%1/%2").arg(data.currentHp).arg(data.maxHp));
 
-  ui->mpBar->setRange(0, data.maxMp);
-  ui->mpBar->setValue(data.currentMp);
-  ui->mpBar->setFormat(QString("%1/%2").arg(data.currentMp).arg(data.maxMp));
+  ui_->mpBar->setRange(0, data.maxMp);
+  ui_->mpBar->setValue(data.currentMp);
+  ui_->mpBar->setFormat(QString("%1/%2").arg(data.currentMp).arg(data.maxMp));
 
-  ui->stateMachineLabel->setText(data.stateMachine);
+  ui_->stateMachineLabel->setText(data.stateMachine);
+}
+
+void CharacterDetailDialog::onCharacterDataUpdated(QString name,
+                                                   CharacterData data) {
+  if (name == name_) {
+    updateCharacterData(data);
+  }
 }

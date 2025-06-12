@@ -20,6 +20,7 @@ DashboardWidget::DashboardWidget(QWidget *parent)
       ui->statusTable->columnCount() - 1, QHeaderView::Stretch);
   connect(ui->statusTable, &QTableWidget::cellDoubleClicked, this,
           &DashboardWidget::showCharacterDetail);
+  qRegisterMetaType<CharacterData>("CharacterData");
 }
 
 static int characterId(const QString &name) {
@@ -123,12 +124,14 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
   if (!ui->statusTable->item(row, 3)) {
     ui->statusTable->setItem(row, 3, new QTableWidgetItem(""));
   }
+  emit characterDataUpdated(name, data);
 }
 
 void DashboardWidget::onActiveStateMachine(QString name, QString stateMachine) {
   int row = ensureRowForCharacter(name);
   ui->statusTable->setItem(row, 3, new QTableWidgetItem(stateMachine));
   characterData_[name].stateMachine = stateMachine;
+  emit characterDataUpdated(name, characterData_.value(name));
 }
 
 void DashboardWidget::clearStatusTable() {
@@ -146,6 +149,8 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
   CharacterDetailDialog *dialog = new CharacterDetailDialog(this);
   dialog->setAttribute(Qt::WA_DeleteOnClose);
   dialog->setCharacterName(name);
-  dialog->setCharacterData(characterData_.value(name));
+  dialog->updateCharacterData(characterData_.value(name));
+  connect(this, &DashboardWidget::characterDataUpdated, dialog,
+          &CharacterDetailDialog::onCharacterDataUpdated);
   dialog->show();
 }

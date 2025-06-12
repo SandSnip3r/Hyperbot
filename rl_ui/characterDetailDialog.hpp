@@ -22,10 +22,18 @@ public:
   ~CharacterDetailDialog();
 
   void setCharacterName(const QString &name);
-  void setCharacterData(const CharacterData &data);
+  void updateCharacterData(const CharacterData &data);
+
+public slots:
+  void onCharacterDataUpdated(QString name, CharacterData data);
 
 private:
-  Ui::CharacterDetailDialog *ui;
+  Ui::CharacterDetailDialog *ui_;
+  QString name_;
 };
+
+#include <QMetaType>
+
+Q_DECLARE_METATYPE(CharacterData)
 
 #endif // CHARACTER_DETAIL_DIALOG_HPP_
