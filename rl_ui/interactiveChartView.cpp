@@ -40,7 +40,7 @@ InteractiveChartView::InteractiveChartView(QWidget *parent)
 
   // Create Y axis (e.g., value) and attach it to the series.
   axisY_ = new QValueAxis;
-  axisY_->setLabelFormat("%g");
+  axisY_->setLabelFormat("%.0f");
   axisY_->setTitleText("Value");
   chart()->addAxis(axisY_, Qt::AlignLeft);
   defaultData.series->attachAxis(axisY_);
@@ -50,6 +50,7 @@ InteractiveChartView::InteractiveChartView(QWidget *parent)
   defaultRect_ = QRectF(0, 0, 10, 10);
   axisX_->setRange(defaultRect_.left(), defaultRect_.right());
   axisY_->setRange(defaultRect_.top(), defaultRect_.bottom());
+  axisY_->applyNiceNumbers();
 
   // Create and position the "Default Zoom" button.
   homeButton_ = new QPushButton("Default Zoom", this);
@@ -121,6 +122,7 @@ void InteractiveChartView::resetView() {
   }
   // Reset the vertical axis to default range.
   axisY_->setRange(defaultRect_.top(), defaultRect_.bottom());
+  axisY_->applyNiceNumbers();
 }
 
 void InteractiveChartView::followData() {
@@ -162,6 +164,7 @@ void InteractiveChartView::wheelEvent(QWheelEvent *event) {
     qreal center = (yMin + yMax) / 2.0;
     qreal halfRange = (yMax - yMin) / 2.0 * factor;
     axisY_->setRange(center - halfRange, center + halfRange);
+    axisY_->applyNiceNumbers();
     userYZoom_ = true;
   }
   event->accept();
@@ -191,6 +194,7 @@ void InteractiveChartView::mouseMoveEvent(QMouseEvent *event) {
     QPointF deltaValue = chart()->mapToValue(QPoint(0,0)) - chart()->mapToValue(delta);
     axisX_->setRange(axisX_->min() + deltaValue.x(), axisX_->max() + deltaValue.x());
     axisY_->setRange(axisY_->min() + deltaValue.y(), axisY_->max() + deltaValue.y());
+    axisY_->applyNiceNumbers();
 
     // When panning, mark that the user has manually adjusted both axes.
     userXZoom_ = true;
@@ -223,6 +227,7 @@ void InteractiveChartView::mouseReleaseEvent(QMouseEvent *event) {
     if (zoomRect.width() > 0 && zoomRect.height() > 0) {
       axisX_->setRange(zoomRect.left(), zoomRect.right());
       axisY_->setRange(zoomRect.top(), zoomRect.bottom());
+      axisY_->applyNiceNumbers();
       followLatest_ = false;
       userXZoom_ = true;
       userYZoom_ = true;
@@ -275,5 +280,6 @@ void InteractiveChartView::updateVerticalAxis() {
 
   if (minY < maxY) {
     axisY_->setRange(minY, maxY);
+    axisY_->applyNiceNumbers();
   }
 }
