@@ -2,9 +2,10 @@
 #define PACKET_PARSING_SERVER_AGENT_COS_DATA_HPP_
 
 #include "parsedPacket.hpp"
-#include "pk2/characterData.hpp"
-#include "pk2/itemData.hpp"
 #include "storage/item.hpp"
+
+#include <silkroad_lib/pk2/characterData.hpp>
+#include <silkroad_lib/pk2/itemData.hpp>
 
 #include <cstdint>
 #include <map>
@@ -13,7 +14,7 @@ namespace packet::parsing {
   
 class ServerAgentCosData : public ParsedPacket {
 public:
-  ServerAgentCosData(const PacketContainer &packet, const pk2::CharacterData &characterData, const pk2::ItemData &itemData);
+  ServerAgentCosData(const PacketContainer &packet, const sro::pk2::CharacterData &characterData, const sro::pk2::ItemData &itemData);
   uint32_t globalId() const;
   bool isAbilityPet() const;
   uint8_t inventorySize() const;

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 void ItemData::addItem(sro::pk2::ref::Item &&item) {
   items_.emplace(item.id, item);
@@ -44,4 +44,4 @@ const ItemData::ItemMap::size_type ItemData::size() const {
   return items_.size();
 }
 
-} // namespace pk2
+} // namespace sro::pk2

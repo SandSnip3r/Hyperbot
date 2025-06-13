@@ -1,6 +1,6 @@
 #include "session.hpp"
 
-Session::Session(const pk2::GameData &gameData,
+Session::Session(const sro::pk2::GameData &gameData,
                  broker::EventBroker &eventBroker,
                  state::WorldState &worldState,
                  ClientManagerInterface &clientManagerInterface,

@@ -2,13 +2,14 @@
 #define PACKET_PARSING_SERVER_AGENT_ALCHEMY_ELIXIR_RESPONSE_HPP_
 
 #include "packet/parsing/parsedPacket.hpp"
-#include "pk2/itemData.hpp"
+
+#include <silkroad_lib/pk2/itemData.hpp>
 
 namespace packet::parsing {
 
 class ServerAgentAlchemyElixirResponse : public ParsedPacket {
 public:
-  ServerAgentAlchemyElixirResponse(const PacketContainer &packet, const pk2::ItemData &itemData);
+  ServerAgentAlchemyElixirResponse(const PacketContainer &packet, const sro::pk2::ItemData &itemData);
 
   uint8_t result() const;
   packet::enums::AlchemyAction alchemyAction() const;

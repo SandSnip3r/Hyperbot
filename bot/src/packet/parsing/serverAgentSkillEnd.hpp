@@ -3,8 +3,8 @@
 
 #include "parsedPacket.hpp"
 #include "packet/enums/packetEnums.hpp"
-#include "pk2/skillData.hpp"
 
+#include <silkroad_lib/pk2/skillData.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
 #include <cstdint>

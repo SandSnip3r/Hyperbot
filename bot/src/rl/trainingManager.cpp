@@ -16,7 +16,7 @@
 #include <absl/strings/str_join.h>
 namespace rl {
 
-TrainingManager::TrainingManager(const pk2::GameData &gameData,
+TrainingManager::TrainingManager(const sro::pk2::GameData &gameData,
                   broker::EventBroker &eventBroker,
                   ui::RlUserInterface &rlUserInterface,
                   state::WorldState &worldState,

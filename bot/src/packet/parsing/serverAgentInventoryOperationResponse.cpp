@@ -10,7 +10,7 @@ const std::vector<structures::ItemMovement>& ServerAgentInventoryOperationRespon
   return itemMovements_;
 }
 
-ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(const PacketContainer &packet, const pk2::ItemData &itemData) : ParsedPacket(packet) {
+ServerAgentInventoryOperationResponse::ServerAgentInventoryOperationResponse(const PacketContainer &packet, const sro::pk2::ItemData &itemData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   stream.Read(result_);
   if (result_ != 1) {

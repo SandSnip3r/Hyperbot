@@ -14,7 +14,7 @@ public:
   packet::enums::FreePvpMode freePvpMode;
   EntityType entityType() const override { return EntityType::kPlayerCharacter; }
 protected:
-  std::string toStringImpl(const pk2::GameData *gameData) const override;
+  std::string toStringImpl(const sro::pk2::GameData *gameData) const override;
 };
 
 } // namespace entity

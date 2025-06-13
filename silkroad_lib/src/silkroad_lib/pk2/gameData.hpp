@@ -25,7 +25,7 @@
 #include <optional>
 #include <string>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class GameData {
 public:
@@ -96,6 +96,6 @@ private:
   void parseTextUiSystem(sro::pk2::Pk2ReaderModern &pk2Reader);
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_MEDIA_GAME_DATA_HPP

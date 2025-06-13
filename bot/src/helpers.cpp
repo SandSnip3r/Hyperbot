@@ -35,7 +35,7 @@ void initializeInventory(storage::Storage &inventory, uint8_t inventorySize, con
   }
 }
 
-void printItem(uint8_t slot, const storage::Item *item, const pk2::GameData &gameData) {
+void printItem(uint8_t slot, const storage::Item *item, const sro::pk2::GameData &gameData) {
   if (item != nullptr) {
     uint16_t quantity = 1;
     const storage::ItemExpendable *itemExpendable = dynamic_cast<const storage::ItemExpendable*>(item);

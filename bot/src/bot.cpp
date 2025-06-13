@@ -41,7 +41,7 @@
 #include <regex>
 
 Bot::Bot(SessionId sessionId,
-         const pk2::GameData &gameData,
+         const sro::pk2::GameData &gameData,
          Proxy &proxy,
          broker::EventBroker &eventBroker,
          state::WorldState &worldState,
@@ -66,7 +66,7 @@ const config::CharacterConfig* Bot::config() const {
   throw std::runtime_error("Config not yet implemented");
 }
 
-const pk2::GameData& Bot::gameData() const {
+const sro::pk2::GameData& Bot::gameData() const {
   return gameData_;
 }
 

@@ -19,10 +19,12 @@
 #include <silkroad_lib/pk2/ref/text.hpp>
 #include <silkroad_lib/pk2/ref/textZoneName.hpp>
 
+#include <absl/strings/string_view.h>
+
 #include <charconv>
 #include <filesystem>
 #include <ostream>
-#include <string_view>
+// #include <string_view>
 #include <string>
 #include <vector>
 
@@ -100,13 +102,13 @@ bool isValidMappingShopGroupLine(const std::string &line);
 bool isValidMappingShopWithTabLine(const std::string &line);
 
 // Parses string representing a line of text from skilldata_xxxx.txt in the Media.pk2 into a Skill object
-ref::Skill parseSkilldataLine(const std::vector<std::string_view> &linePieces);
+ref::Skill parseSkilldataLine(const std::vector<absl::string_view> &linePieces);
 
 // Parses string representing a line of text from characterdata_xxxx.txt in the Media.pk2 into an Character object
-ref::Character parseCharacterdataLine(const std::vector<std::string_view> &linePieces);
+ref::Character parseCharacterdataLine(const std::vector<absl::string_view> &linePieces);
 
 // Parses string representing a line of text from itemdata_xxxx.txt in the Media.pk2 into an Item object
-ref::Item parseItemdataLine(const std::vector<std::string_view> &linePieces);
+ref::Item parseItemdataLine(const std::vector<absl::string_view> &linePieces);
 
 // Parses string representing a line of text from magicoption.txt in the Media.pk2 into a MagicOption object
 //
@@ -169,15 +171,15 @@ ref::MappingShopGroup parseMappingShopGroupLine(const std::string &line);
 ref::MappingShopWithTab parseMappingShopWithTabLine(const std::string &line);
 
 // Parses string representing a line of text from textzonename.txt in the Media.pk2 into a TextZoneName object
-ref::TextZoneName parseTextZoneNameLine(const std::vector<std::string_view> &linePieces);
+ref::TextZoneName parseTextZoneNameLine(const std::vector<absl::string_view> &linePieces);
 
 // Parses string representing a line of text from textdata_equip&skill.txt or textdata_object.txt in the Media.pk2 into a Text object
 //  Note: This isn't the only type of data in these files
-ref::Text parseTextLine(const std::vector<std::string_view> &linePieces);
+ref::Text parseTextLine(const std::vector<absl::string_view> &linePieces);
 
 // Parses string representing a line of text from skillmasterydata.txt in the Media.pk2 into a Mastery object
 //  Note: This isn't the only type of data in these files
-ref::Mastery parseMasteryLine(const std::vector<std::string_view> &linePieces);
+ref::Mastery parseMasteryLine(const std::vector<absl::string_view> &linePieces);
 
 // Parses raw pk2 data into a gateway server port
 //
@@ -207,7 +209,7 @@ std::vector<std::string> split(const std::string &str, const std::string &delim)
 std::vector<std::string> splitAndSelectFields(const std::string &str, const std::string &delim, const std::vector<int> &fields);
 
 template<typename T>
-void parse(std::string_view data, T &result) {
+void parse(absl::string_view data, T &result) {
   if constexpr (std::is_integral_v<T> || std::is_enum_v<T> || std::is_floating_point_v<T>) {
     const char* begin = data.data();
     const char* end   = data.data() + data.size();

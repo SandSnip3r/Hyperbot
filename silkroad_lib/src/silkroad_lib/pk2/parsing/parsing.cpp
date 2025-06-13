@@ -280,7 +280,7 @@ bool isValidMasteryLine(const std::string &line) {
   return isValidLine(kDataCount, line);
 }
 
-ref::Character parseCharacterdataLine(const std::vector<std::string_view> &linePieces) {
+ref::Character parseCharacterdataLine(const std::vector<absl::string_view> &linePieces) {
   ref::Character character;
   parse(linePieces[0], character.service);
   parse(linePieces[1], character.id);
@@ -389,7 +389,7 @@ ref::Character parseCharacterdataLine(const std::vector<std::string_view> &lineP
   return character;
 }
 
-ref::Item parseItemdataLine(const std::vector<std::string_view> &linePieces) {
+ref::Item parseItemdataLine(const std::vector<absl::string_view> &linePieces) {
   ref::Item item;
   parse(linePieces[0], item.service);
   parse(linePieces[1], item.id);
@@ -651,7 +651,7 @@ ref::Region parseRefRegionLine(const std::string &line) {
   return region;
 }
 
-ref::Skill parseSkilldataLine(const std::vector<std::string_view> &linePieces) {
+ref::Skill parseSkilldataLine(const std::vector<absl::string_view> &linePieces) {
   ref::Skill skill;
   parse(linePieces[0], skill.service);
   parse(linePieces[1], skill.id);
@@ -943,7 +943,7 @@ ref::MappingShopWithTab parseMappingShopWithTabLine(const std::string &line) {
   return mapping;
 }
 
-ref::TextZoneName parseTextZoneNameLine(const std::vector<std::string_view> &linePieces) {
+ref::TextZoneName parseTextZoneNameLine(const std::vector<absl::string_view> &linePieces) {
   ref::TextZoneName textZoneName;
   parse(linePieces[0], textZoneName.service);
   parse(linePieces[1], textZoneName.codeName128);
@@ -963,7 +963,7 @@ ref::TextZoneName parseTextZoneNameLine(const std::vector<std::string_view> &lin
   return textZoneName;
 }
 
-ref::Text parseTextLine(const std::vector<std::string_view> &linePieces) {
+ref::Text parseTextLine(const std::vector<absl::string_view> &linePieces) {
   ref::Text text;
   parse(linePieces[0], text.service);
   parse(linePieces[1], text.codeName128);
@@ -983,7 +983,7 @@ ref::Text parseTextLine(const std::vector<std::string_view> &linePieces) {
   return text;
 }
 
-ref::Mastery parseMasteryLine(const std::vector<std::string_view> &linePieces) {
+ref::Mastery parseMasteryLine(const std::vector<absl::string_view> &linePieces) {
   ref::Mastery mastery;
   parse(linePieces[0], mastery.masteryId);
   parse(linePieces[1], mastery.masteryName);
@@ -1105,8 +1105,8 @@ void copySubstring(const char *begin, char **end, std::string &dest) {
   while (*ptr != 0 && *ptr != '\t') {
     ++ptr;
   }
-  std::string_view sv(begin, ptr-begin);
-  dest = sv;
+  absl::string_view sv(begin, ptr-begin);
+  dest = std::string(sv.data(), sv.size());
   *end = const_cast<char*>(ptr);
 }
 } // namespace

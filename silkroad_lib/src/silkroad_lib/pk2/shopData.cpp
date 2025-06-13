@@ -2,7 +2,7 @@
 
 #include <absl/log/log.h>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 Tab::Tab(const std::string &tabName) : name_(tabName) {}
 
@@ -77,4 +77,4 @@ const std::vector<Tab>& ShopData::getNpcTabs(const std::string &npcCodeName) con
   return it->second;
 }
 
-} // namespace pk2
+} // namespace sro::pk2

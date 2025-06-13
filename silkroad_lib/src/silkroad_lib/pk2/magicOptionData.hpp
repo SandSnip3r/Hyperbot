@@ -5,7 +5,7 @@
 
 #include <unordered_map>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class MagicOptionData {
 public:
@@ -16,6 +16,6 @@ private:
 	MagicOptionMap magicOptions_;
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_MAGIC_OPTION_DATA_HPP_

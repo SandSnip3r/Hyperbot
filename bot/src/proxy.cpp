@@ -14,7 +14,7 @@
 
 #include <thread>
 
-Proxy::Proxy(const pk2::GameData &gameData, PacketProcessor &processor, uint16_t port) :
+Proxy::Proxy(const sro::pk2::GameData &gameData, PacketProcessor &processor, uint16_t port) :
       gatewayPort_(gameData.gatewayPort()),
       divisionInfo_(gameData.divisionInfo()),
       packetProcessor_(processor),

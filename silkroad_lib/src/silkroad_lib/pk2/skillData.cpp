@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 void SkillData::addSkill(sro::pk2::ref::Skill &&skill) {
   skills_.emplace(skill.id, skill);
@@ -70,4 +70,4 @@ std::vector<sro::pk2::ref::SkillId> SkillData::getSkillIdsForMastery(sro::scalar
   return result;
 }
 
-} // namespace pk2
+} // namespace sro::pk2

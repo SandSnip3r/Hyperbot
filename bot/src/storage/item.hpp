@@ -1,9 +1,9 @@
 #ifndef ITEM_HPP__
 #define ITEM_HPP__
 
-#include "pk2/gameData.hpp"
 #include "type_id/typeCategory.hpp"
 
+#include <silkroad_lib/pk2/gameData.hpp>
 #include <silkroad_lib/pk2/ref/item.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
@@ -82,8 +82,8 @@ public:
   std::vector<ItemMagicParam> magicParams;
   std::vector<SocketOptionData> socketOptions;
   std::vector<AdvancedElixirOptionData> advancedElixirOptions;
-  bool repairInvalid(const pk2::GameData &gameData) const;
-  uint32_t maxDurability(const pk2::GameData &gameData) const;
+  bool repairInvalid(const sro::pk2::GameData &gameData) const;
+  uint32_t maxDurability(const sro::pk2::GameData &gameData) const;
   int degree() const;
 };
 

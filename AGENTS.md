@@ -12,9 +12,16 @@ reinforcement learning logic.
 - Private members often use a trailing underscore (`foo_`).
 - `.hpp`/`.cpp` files are preferred for headers and sources.
 - Avoid modifying anything under `third_party/` unless necessary.
+- Order include statements by project proximity:
+  1. Local headers from the current target (quoted).
+  2. Headers from `silkroad_lib` (angled).
+  3. Other third-party libraries, excluding Abseil.
+  4. Abseil headers.
+  5. Operating system headers.
+  6. C++ standard library headers.
+  Leave a blank line between each group.
 - Avoid `auto` unless the type is overwhelmingly verbose (like container iterators).
-- Place pointer asterisks next to the variable name (`Type *var`).
-- Place ampersands next to the type for references (`Type &var`).
+- Place pointer asterisks & ampersands next to the variable name (`Type *var` or `Type &var`).
 
 ## Design Philosophy
 

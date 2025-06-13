@@ -3,9 +3,9 @@
 
 #include "broker/eventBroker.hpp"
 #include "event/event.hpp"
-#include "pk2/skillData.hpp"
 #include "stateMachine.hpp"
 
+#include <silkroad_lib/pk2/skillData.hpp>
 #include <silkroad_lib/pk2/ref/mastery.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
@@ -21,7 +21,7 @@ namespace internal {
 class SkillTree {
 public:
   bool initialized() const { return initialzed_; }
-  void initialize(const pk2::SkillData &skillData, sro::pk2::ref::MasteryId masteryId, uint8_t masteryLevel, const std::vector<sro::scalar_types::ReferenceSkillId> &knownSkillIds);
+  void initialize(const sro::pk2::SkillData &skillData, sro::pk2::ref::MasteryId masteryId, uint8_t masteryLevel, const std::vector<sro::scalar_types::ReferenceSkillId> &knownSkillIds);
   bool haveSkillToLearn() const { return !skillOrdering_.empty(); }
   sro::scalar_types::ReferenceSkillId getNextSkillToLearn();
 private:

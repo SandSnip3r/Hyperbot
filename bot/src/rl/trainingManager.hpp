@@ -7,7 +7,6 @@
 #include "common/itemRequirement.hpp"
 #include "common/pvpDescriptor.hpp"
 #include "common/sessionId.hpp"
-#include "pk2/gameData.hpp"
 #include "rl/checkpointManager.hpp"
 #include "rl/jaxInterface.hpp"
 #include "rl/observationAndActionStorage.hpp"
@@ -17,6 +16,7 @@
 #include "state/worldState.hpp"
 #include "characterLoginInfo.hpp"
 
+#include <silkroad_lib/pk2/gameData.hpp>
 #include <silkroad_lib/position.hpp>
 
 #include <absl/base/thread_annotations.h>
@@ -39,7 +39,7 @@ namespace rl {
 
 class TrainingManager {
 public:
-  TrainingManager(const pk2::GameData &gameData,
+  TrainingManager(const sro::pk2::GameData &gameData,
                     broker::EventBroker &eventBroker,
                     ui::RlUserInterface &rlUserInterface,
                     state::WorldState &worldState,
@@ -96,7 +96,7 @@ private:
   std::mutex runTrainingMutex_;
   std::condition_variable runTrainingCondition_;
 
-  const pk2::GameData &gameData_;
+  const sro::pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
   ui::RlUserInterface &rlUserInterface_;
   state::WorldState &worldState_;

@@ -3,13 +3,13 @@
 
 #include "packetLogger.hpp"
 #include "silkroadConnection.hpp"
-#include "pk2/gameData.hpp"
 #include "shared/silkroad_security.h"
 
+#include <silkroad_lib/pk2/gameData.hpp>
 #include <silkroad_lib/pk2/divisionInfo.hpp>
 
-#include <boost/make_shared.hpp>
 #include <boost/asio.hpp>
+#include <boost/make_shared.hpp>
 
 #include <chrono>
 #include <deque>
@@ -24,7 +24,7 @@ class PacketProcessor;
 // Networking class (handles connections)
 class Proxy {
 public:
-  Proxy(const pk2::GameData &gameData, PacketProcessor &processor, uint16_t port = 0);
+  Proxy(const sro::pk2::GameData &gameData, PacketProcessor &processor, uint16_t port = 0);
   ~Proxy();
   void inject(const PacketContainer &packet, const PacketContainer::Direction direction);
   void runAsync();
@@ -90,3 +90,4 @@ private:
 };
 
 #endif
+
