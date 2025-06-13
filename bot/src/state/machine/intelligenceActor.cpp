@@ -33,7 +33,11 @@ IntelligenceActor::~IntelligenceActor() {
 Status IntelligenceActor::onUpdate(const event::Event *event) {
   ZoneScopedN("IntelligenceActor::onUpdate");
 
-  const bool eventIsRelevant = isRelevantEvent(event);
+  if (!isRelevantEvent(event)) {
+    // We'll return early so that we don't act on this event.
+    return Status::kNotDone;
+  }
+
   if (childState_ != nullptr) {
     // The child state machine didn't immediately finish.
     // Run the update.
@@ -45,11 +49,6 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
     // Child state is done, reset it then continue to get our next action.
     childState_.reset();
     bot_.sendActiveStateMachine();
-  }
-
-  if (!eventIsRelevant) {
-    // We'll return early so that we don't act on this event.
-    return Status::kNotDone;
   }
   CHAR_VLOG(2) << "Event: " << event::toString(event->eventCode);
 
@@ -117,7 +116,7 @@ bool IntelligenceActor::isRelevantEvent(const event::Event *event) const {
       return false;
     }
   } else if (event->eventCode == event::EventCode::kEntityMovementTimerEnded) {
-    // This is an internal event, even for our own entity. If something movement related results of it, another event will come.
+    // This is an internal event, we should not handle it even if it is for us. If something movement related results of it, another "public" event will come.
     return false;
   } else if (const event::ItemUseFailed *itemUseFailed = dynamic_cast<const event::ItemUseFailed*>(event); itemUseFailed != nullptr) {
     if (itemUseFailed->globalId != bot_.selfState()->globalId) {
@@ -125,7 +124,7 @@ bool IntelligenceActor::isRelevantEvent(const event::Event *event) const {
       return false;
     }
   } else if (event->eventCode == event::EventCode::kTimeout) {
-    if (childState_ != nullptr) {
+    if (childState_ == nullptr) {
       // Apart from Actions taken, which are run as child state machines, this state machine does not have any reason to see timeouts.
       return false;
     }

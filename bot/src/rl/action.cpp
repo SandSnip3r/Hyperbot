@@ -25,7 +25,6 @@ Status Sleep::onUpdate(const event::Event *event) {
   }
   // Have not yet sent our event.
   if (!eventId_) {
-    // CHAR_VLOG(1) << "Sleeping for " << kSleepDurationMs << "ms";
     eventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(kSleepDurationMs));
   }
   return Status::kNotDone;

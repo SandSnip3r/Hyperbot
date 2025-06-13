@@ -90,7 +90,7 @@ private:
   static constexpr float kInitialEpsilon{1.0f};
   static constexpr float kFinalEpsilon{0.01f};
   static constexpr int kEpsilonDecaySteps{200'000};
-  static constexpr int kPvpCount{32};
+  static constexpr int kPvpCount{16};
 
   std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;
