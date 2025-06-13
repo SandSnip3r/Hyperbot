@@ -8,9 +8,6 @@
 #include <silkroad_lib/pk2/parsing/regionInfoParser.hpp>
 #include <silkroad_lib/pk2/pk2.hpp>
 
-// Tracy
-#include <common/TracySystem.hpp>
-
 #include <absl/log/log.h>
 #include <absl/log/vlog_is_on.h>
 #include <absl/strings/str_format.h>
@@ -246,7 +243,6 @@ std::string getFileDataAsString(sro::pk2::Pk2ReaderModern &pk2Reader, const std:
 } // namespace (anonymous)
 
 void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
-  tracy::SetThreadName("GameData::ParseCharacterData");
   if (VLOG_IS_ON(1)) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(1) << "Parsing character data";
@@ -305,7 +301,6 @@ void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
-  tracy::SetThreadName("GameData::ParseItemData");
   if (VLOG_IS_ON(1)) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(1) << "Parsing item data";
@@ -364,7 +359,6 @@ void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
 }
 
 void GameData::parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader) {
-  tracy::SetThreadName("GameData::ParseSkillData");
   if (VLOG_IS_ON(1)) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(1) << "Parsing skill data";
