@@ -3,7 +3,6 @@
 
 #include "entity/entity.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
-#include "pk2/itemData.hpp"
 #include "shared/silkroad_security.h"
 #include "shared/stream_utility.h"
 #include "storage/item.hpp"
