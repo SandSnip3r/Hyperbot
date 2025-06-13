@@ -13,11 +13,12 @@
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
 #include <absl/strings/str_split.h>
+#include <absl/strings/string_view.h>
 
 #include <functional>
 #include <fstream>
 #include <map>
-#include <string_view>
+// #include <string_view>
 #include <thread>
 #include <vector>
 
@@ -25,11 +26,11 @@ namespace sro::pk2 {
 
 namespace {
 
-bool isEmptyOrWhitespace(std::string_view line) {
+bool isEmptyOrWhitespace(absl::string_view line) {
   return line.empty() || absl::StripAsciiWhitespace(line).empty();
 }
 
-bool isCommentLine(std::string_view line) {
+bool isCommentLine(absl::string_view line) {
   line = absl::StripLeadingAsciiWhitespace(line);
   return line.size() >= 2 && line[0] == '/' && line[1] == '/';
 }
@@ -251,18 +252,18 @@ void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kMasterCharacterdataName = "characterdata.txt";
   const std::string kMasterCharacterdataPath = kTextdataDirectory + kMasterCharacterdataName;
   const std::string characterdataFilenamesString = getFileDataAsString(pk2Reader, kMasterCharacterdataPath);
-  const std::vector<std::string_view> characterdataFilenames = absl::StrSplit(characterdataFilenamesString, "\r\n", absl::SkipWhitespace());
+  const std::vector<absl::string_view> characterdataFilenames = absl::StrSplit(characterdataFilenamesString, "\r\n", absl::SkipWhitespace());
   if (VLOG_IS_ON(2)) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(2) << "Found " << characterdataFilenames.size() << " characterdata files to parse: " << absl::StrJoin(characterdataFilenames, ", ");
   }
 
-  for (const std::string_view &characterdataFilename : characterdataFilenames) {
+  for (const absl::string_view &characterdataFilename : characterdataFilenames) {
     const std::string characterdataPath = kTextdataDirectory + std::string(characterdataFilename);
     const std::string characterdataDataString = getFileDataAsString(pk2Reader, characterdataPath);
     sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(characterdataDataString, "\r\n");
-    for (const std::string_view &line : lineIteratorContainer) {
-      std::vector<std::string_view> linePieces = absl::StrSplit(line, '\t');
+    for (const absl::string_view &line : lineIteratorContainer) {
+      std::vector<absl::string_view> linePieces = absl::StrSplit(line, '\t');
       if (isEmptyOrWhitespace(line)) {
         if (VLOG_IS_ON(4)) {
           std::unique_lock<std::mutex> lock(printMutex_);
@@ -277,7 +278,7 @@ void GameData::parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader) {
         }
         continue;
       }
-      std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
+      std::vector<absl::string_view> pieces = absl::StrSplit(line, '\t');
       if (pieces.size() < 104) {
         if (VLOG_IS_ON(4)) {
           std::unique_lock<std::mutex> lock(printMutex_);
@@ -309,18 +310,18 @@ void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kMasterItemdataName = "itemdata.txt";
   const std::string kMasterItemdataPath = kTextdataDirectory + kMasterItemdataName;
   const std::string masterItemdataStr = getFileDataAsString(pk2Reader, kMasterItemdataPath);
-  const std::vector<std::string_view> itemdataFilenames = absl::StrSplit(masterItemdataStr, "\r\n", absl::SkipWhitespace());
+  const std::vector<absl::string_view> itemdataFilenames = absl::StrSplit(masterItemdataStr, "\r\n", absl::SkipWhitespace());
   if (VLOG_IS_ON(2)) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(2) << "Found " << itemdataFilenames.size() << " itemdata files to parse: " << absl::StrJoin(itemdataFilenames, ", ");
   }
 
-  for (const std::string_view &itemdataFilename : itemdataFilenames) {
+  for (const absl::string_view &itemdataFilename : itemdataFilenames) {
     const std::string itemdataPath = kTextdataDirectory + std::string(itemdataFilename);
     const std::string itemdataStr = getFileDataAsString(pk2Reader, itemdataPath);
     sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(itemdataStr, "\r\n");
-    for (const std::string_view &line : lineIteratorContainer) {
-      std::vector<std::string_view> linePieces = absl::StrSplit(line, '\t');
+    for (const absl::string_view &line : lineIteratorContainer) {
+      std::vector<absl::string_view> linePieces = absl::StrSplit(line, '\t');
       if (isEmptyOrWhitespace(line)) {
         if (VLOG_IS_ON(4)) {
           std::unique_lock<std::mutex> lock(printMutex_);
@@ -335,7 +336,7 @@ void GameData::parseItemData(sro::pk2::Pk2ReaderModern &pk2Reader) {
         }
         continue;
       }
-      std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
+      std::vector<absl::string_view> pieces = absl::StrSplit(line, '\t');
       if (pieces.size() < 160) {
         if (VLOG_IS_ON(4)) {
           std::unique_lock<std::mutex> lock(printMutex_);
@@ -368,13 +369,13 @@ void GameData::parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kMasterSkilldataName = "skilldataenc.txt";
   const std::string kMasterSkilldataPath = kTextdataDirectory + kMasterSkilldataName;
   const std::string masterSkilldataStr = getFileDataAsString(pk2Reader, kMasterSkilldataPath);
-  const std::vector<std::string_view> skilldataFilenames = absl::StrSplit(masterSkilldataStr, "\r\n", absl::SkipWhitespace());
+  const std::vector<absl::string_view> skilldataFilenames = absl::StrSplit(masterSkilldataStr, "\r\n", absl::SkipWhitespace());
   if (VLOG_IS_ON(2)) {
     std::unique_lock<std::mutex> lock(printMutex_);
     VLOG(2) << "Found " << skilldataFilenames.size() << " skilldata files to parse: " << absl::StrJoin(skilldataFilenames, ", ");
   }
 
-  for (const std::string_view &skilldataFilename : skilldataFilenames) {
+  for (const absl::string_view &skilldataFilename : skilldataFilenames) {
     const std::string skilldataPath = kTextdataDirectory + std::string(skilldataFilename);
     sro::pk2::PK2Entry skilldataEntry = pk2Reader.getEntry(skilldataPath);
     std::vector<uint8_t> skilldataData = pk2Reader.getEntryData(skilldataEntry);
@@ -382,8 +383,8 @@ void GameData::parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader) {
     sro::pk2::parsing::decryptSkillData(skilldataData);
     const std::string skilldataStr = sro::pk2::parsing::fileDataToString(skilldataData);
     sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(skilldataStr, "\r\n");
-    for (const std::string_view &line : lineIteratorContainer) {
-      std::vector<std::string_view> linePieces = absl::StrSplit(line, '\t');
+    for (const absl::string_view &line : lineIteratorContainer) {
+      std::vector<absl::string_view> linePieces = absl::StrSplit(line, '\t');
       if (isEmptyOrWhitespace(line)) {
         if (VLOG_IS_ON(4)) {
           std::unique_lock<std::mutex> lock(printMutex_);
@@ -398,7 +399,7 @@ void GameData::parseSkillData(sro::pk2::Pk2ReaderModern &pk2Reader) {
         }
         continue;
       }
-      std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
+      std::vector<absl::string_view> pieces = absl::StrSplit(line, '\t');
       if (pieces.size() < 118) {
         if (VLOG_IS_ON(4)) {
           std::unique_lock<std::mutex> lock(printMutex_);
@@ -662,7 +663,7 @@ void GameData::parseTextZoneName(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kTextZoneNamePath = "server_dep\\silkroad\\textdata\\textzonename.txt";
   const std::string textZoneNameStr = getFileDataAsString(pk2Reader, kTextZoneNamePath);
   sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(textZoneNameStr, "\r\n");
-  for (std::string_view line : lineIteratorContainer) {
+  for (absl::string_view line : lineIteratorContainer) {
     if (isEmptyOrWhitespace(line)) {
       VLOG(4) << "Line \"" << line << "\" is empty or whitespace, skipping";
       continue;
@@ -671,7 +672,7 @@ void GameData::parseTextZoneName(sro::pk2::Pk2ReaderModern &pk2Reader) {
       VLOG(4) << "Comment line \"" << line << "\" found, skipping";
       continue;
     }
-    std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
+    std::vector<absl::string_view> pieces = absl::StrSplit(line, '\t');
     if (pieces.size() < 15) {
       VLOG(4) << "Line \"" << line << "\" has less than 15 pieces, skipping";
       continue;
@@ -691,13 +692,13 @@ void GameData::parseText(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kMasterTextDataName = "textdataname.txt";
   const std::string kMasterTextDataPath = kTextdataDirectory + kMasterTextDataName;
   const std::string masterTextDataString = getFileDataAsString(pk2Reader, kMasterTextDataPath);
-  std::vector<std::string_view> filenames = absl::StrSplit(masterTextDataString, "\r\n", absl::SkipWhitespace());
-  for (std::string_view filename : filenames) {
+  std::vector<absl::string_view> filenames = absl::StrSplit(masterTextDataString, "\r\n", absl::SkipWhitespace());
+  for (absl::string_view filename : filenames) {
     const std::string textDataPath = absl::StrCat(kTextdataDirectory, filename);
     VLOG(1) << absl::StreamFormat("  Parsing file \"%s\"", textDataPath);
     const std::string textDataString = getFileDataAsString(pk2Reader, textDataPath);
     sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(textDataString, "\r\n");
-    for (std::string_view line : lineIteratorContainer) {
+    for (absl::string_view line : lineIteratorContainer) {
       if (isEmptyOrWhitespace(line)) {
         continue;
       }
@@ -705,7 +706,7 @@ void GameData::parseText(sro::pk2::Pk2ReaderModern &pk2Reader) {
         VLOG(4) << "Comment line \"" << line << "\" found, skipping";
         continue;
       }
-      std::vector<std::string_view> pieces = absl::StrSplit(line, "\t");
+      std::vector<absl::string_view> pieces = absl::StrSplit(line, "\t");
       if (pieces.size() < 15) {
         VLOG(4) << "Line \"" << line << "\" has less than 15 pieces, skipping";
         continue;
@@ -725,7 +726,7 @@ void GameData::parseMasteryData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kPath = "server_dep\\silkroad\\textdata\\skillmasterydata.txt";
   const std::string textDataString = getFileDataAsString(pk2Reader, kPath);
   sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(textDataString, "\r\n");
-  for (std::string_view line : lineIteratorContainer) {
+  for (absl::string_view line : lineIteratorContainer) {
     if (isEmptyOrWhitespace(line)) {
       continue;
     }
@@ -733,7 +734,7 @@ void GameData::parseMasteryData(sro::pk2::Pk2ReaderModern &pk2Reader) {
       VLOG(4) << "Comment line \"" << line << "\" found, skipping";
       continue;
     }
-    std::vector<std::string_view> pieces = absl::StrSplit(line, "\t");
+    std::vector<absl::string_view> pieces = absl::StrSplit(line, "\t");
     if (pieces.size() < 13) {
       VLOG(4) << "Line \"" << line << "\" has less than 13 pieces, skipping";
       continue;
@@ -752,14 +753,14 @@ void GameData::parseTextUiSystem(sro::pk2::Pk2ReaderModern &pk2Reader) {
   const std::string kPath = "server_dep\\silkroad\\textdata\\textuisystem.txt";
   const std::string textDataString = getFileDataAsString(pk2Reader, kPath);
   sro::pk2::parsing::StringLineIteratorContainer lineIteratorContainer(textDataString, "\r\n");
-  for (std::string_view line : lineIteratorContainer) {
+  for (absl::string_view line : lineIteratorContainer) {
     if (isEmptyOrWhitespace(line)) {
       continue;
     }
     if (isCommentLine(line)) {
       continue;
     }
-    const std::vector<std::string_view> pieces = absl::StrSplit(line, '\t');
+    const std::vector<absl::string_view> pieces = absl::StrSplit(line, '\t');
     if (pieces.size() < 15) {
       LOG(WARNING) << absl::StreamFormat("When parsing textuisystem.txt for mastery names, encountered \"%s\" which has less than 15 pieces", line);
       continue;

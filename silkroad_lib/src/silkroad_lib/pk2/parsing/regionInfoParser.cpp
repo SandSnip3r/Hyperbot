@@ -4,6 +4,7 @@
 
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
+#include <absl/strings/str_split.h>
 
 #include <charconv>
 #include <optional>
@@ -17,7 +18,7 @@ RegionInfo parseRegionInfo(const std::vector<uint8_t> &data) {
   std::string fileAsString(data.begin(), data.end());
   StringLineIteratorContainer lineIteratorContainer(fileAsString, "\r\n");
 
-  auto isEmptyLine = [](std::string_view line) {
+  auto isEmptyLine = [](absl::string_view line) {
     // In this file, there are lines which are only a bunch of tabs, ending with CR/LF
     if (line.empty()) {
       return true;
@@ -36,7 +37,7 @@ RegionInfo parseRegionInfo(const std::vector<uint8_t> &data) {
     regionInfo.continents.emplace_back(*std::move(currentRegion));
   };
 
-  for (std::string_view line : lineIteratorContainer) {
+  for (absl::string_view line : lineIteratorContainer) {
     if (isEmptyLine(line)) {
       // Skip empty lines
       continue;
@@ -64,7 +65,7 @@ RegionInfo parseRegionInfo(const std::vector<uint8_t> &data) {
         throw std::runtime_error("Found a line which belongs in a section, but we're not in a section");
       }
       // Is another ALL or RECT
-      const std::vector<std::string_view> pieces = splitToStrViews(line, "\t");
+      const std::vector<absl::string_view> pieces = absl::StrSplit(line, "\t");
       if (pieces.size() < 3) {
         throw std::runtime_error(absl::StrFormat("Expecting line \"%s\" to have at least 3 pieces. It only has %d", line, pieces.size()));
       }
