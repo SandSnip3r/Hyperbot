@@ -20,6 +20,8 @@ reinforcement learning logic.
   5. Operating system headers.
   6. C++ standard library headers.
   Leave a blank line between each group.
+- Avoid `auto` unless the type is overwhelmingly verbose (like container iterators).
+- Place pointer asterisks & ampersands next to the variable name (`Type *var` or `Type &var`).
 
 ## Design Philosophy
 

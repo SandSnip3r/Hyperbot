@@ -39,6 +39,7 @@ public:
   void sendActiveStateMachine(const entity::Self &self, const std::string &stateMachine);
 private:
   static constexpr std::chrono::milliseconds kHeartbeatInterval{250};
+  static constexpr std::chrono::milliseconds kEventQueueInterval{250};
   const std::string kReqReplyAddress{"tcp://*:5555"};
   static constexpr int kPublisherPort{5556};
   const std::string kPublisherAddress{absl::StrFormat("tcp://*:%d", kPublisherPort)};
@@ -49,9 +50,11 @@ private:
   zmq::socket_t publisher_{context_, zmq::socket_type::pub};
   std::thread requestHandlingThread_;
   std::thread broadcastHeartbeatThread_;
+  std::thread eventQueueThread_;
 
   void requestLoop();
   void heartbeatLoop();
+  void eventQueueLoop();
   void handleRequest(const zmq::message_t &request, zmq::socket_t &socket);
   void broadcastMessage(const proto::rl_ui_messages::BroadcastMessage &message);
 };

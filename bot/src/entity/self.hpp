@@ -7,6 +7,7 @@
 #include "entity/geometry.hpp"
 #include "helpers.hpp"
 #include "packet/enums/packetEnums.hpp"
+#include "shared/silkroad_security.h"
 #include "packet/parsing/parsedPacket.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
 #include "state/skillEngine.hpp"
@@ -78,8 +79,12 @@ public:
   void setBodyState(packet::enums::BodyState bodyState);
   void setHwanPoints(uint8_t hwanPoints);
 
-  void setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition) override;
-  void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle) override;
+  void setMovingToDestination(const std::optional<sro::Position> &sourcePosition,
+                              const sro::Position &destinationPosition,
+                              const PacketContainer::Clock::time_point &timestamp) override;
+  void setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition,
+                            const sro::Angle angle,
+                            const PacketContainer::Clock::time_point &timestamp) override;
 
   void setCurrentMp(uint32_t mp);
   void setMaxHpMp(uint32_t maxHp, uint32_t maxMp);

@@ -4,6 +4,8 @@
 #include "event/event.hpp"
 #include "stateMachine.hpp"
 
+#include <absl/base/thread_annotations.h>
+
 #include <memory>
 #include <mutex>
 #include <string>
@@ -28,6 +30,7 @@ public:
 private:
   mutable std::recursive_mutex mutex_;
   std::deque<std::unique_ptr<StateMachine>> stateMachines_;
+  std::string privateActiveStateMachineName() const ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 };
 
 } // namespace state::machine

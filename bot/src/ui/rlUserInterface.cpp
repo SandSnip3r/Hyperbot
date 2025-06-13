@@ -19,13 +19,16 @@ RlUserInterface::RlUserInterface(zmq::context_t &context, broker::EventBroker &e
 
 RlUserInterface::~RlUserInterface() {
   VLOG(1) << "Destructing UserInterface";
-  if (requestHandlingThread_.joinable() || broadcastHeartbeatThread_.joinable()) {
+  if (requestHandlingThread_.joinable() || broadcastHeartbeatThread_.joinable() || eventQueueThread_.joinable()) {
     keepRunning_ = false;
     if (requestHandlingThread_.joinable()) {
       requestHandlingThread_.join();
     }
     if (broadcastHeartbeatThread_.joinable()) {
       broadcastHeartbeatThread_.join();
+    }
+    if (eventQueueThread_.joinable()) {
+      eventQueueThread_.join();
     }
   }
 
@@ -47,6 +50,7 @@ void RlUserInterface::runAsync() {
     keepRunning_ = true;
     requestHandlingThread_ = std::thread(&RlUserInterface::requestLoop, this);
     broadcastHeartbeatThread_ = std::thread(&RlUserInterface::heartbeatLoop, this);
+    eventQueueThread_ = std::thread(&RlUserInterface::eventQueueLoop, this);
   } catch (const std::exception &ex) {
     LOG(ERROR) << "Exception while binding to UI: \"" << ex.what() << "\"";
   } catch (...) {
@@ -134,6 +138,18 @@ void RlUserInterface::heartbeatLoop() {
   while (keepRunning_) {
     broadcastMessage(msg);
     std::this_thread::sleep_for(kHeartbeatInterval);
+  }
+}
+
+void RlUserInterface::eventQueueLoop() {
+  tracy::SetThreadName("RlUserInterface::EventQueueLoop");
+  const auto startTime = std::chrono::steady_clock::now();
+  while (keepRunning_) {
+    const auto now = std::chrono::steady_clock::now();
+    double x = std::chrono::duration_cast<std::chrono::duration<double>>(now - startTime).count();
+    double y = static_cast<double>(eventBroker_.queuedEventCount());
+    plot("event_queue_size", x, y);
+    std::this_thread::sleep_for(kEventQueueInterval);
   }
 }
 

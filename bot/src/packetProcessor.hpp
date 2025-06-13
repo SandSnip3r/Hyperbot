@@ -146,7 +146,8 @@ private:
   void serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ServerAgentEntityGroupSpawnData &packet) const;
   void serverAgentEntitySpawnReceived(const packet::parsing::ServerAgentEntitySpawn &packet) const;
   void serverAgentEntityDespawnReceived(const packet::parsing::ServerAgentEntityDespawn &packet) const;
-  void entitySpawned(std::shared_ptr<entity::Entity> entity) const;
+  void entitySpawned(std::shared_ptr<entity::Entity> entity,
+                     const PacketContainer::Clock::time_point &timestamp) const;
   void entityDespawned(sro::scalar_types::EntityGlobalId globalId) const;
   void serverAgentSkillLearnResponseReceived(const packet::parsing::ServerAgentSkillLearnResponse &packet) const;
   void serverAgentSkillMasteryLearnResponseReceived(const packet::parsing::ServerAgentSkillMasteryLearnResponse &packet) const;

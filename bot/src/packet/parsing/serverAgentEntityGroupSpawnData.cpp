@@ -14,7 +14,7 @@ ServerAgentEntityGroupSpawnData::ServerAgentEntityGroupSpawnData(const PacketCon
   uint16_t groupSpawnAmount = stream.Read<uint16_t>();
   if (groupSpawnType_ == enums::GroupSpawnType::kSpawn) {
     for (int spawnNum=0; spawnNum<groupSpawnAmount; ++spawnNum) {
-      auto entity = parseSpawn(stream, characterData, itemData, skillData, teleportData);
+      auto entity = parseSpawn(stream, packet.timestamp, characterData, itemData, skillData, teleportData);
       entities_.emplace_back(entity);
     }
   } else if (groupSpawnType_ == enums::GroupSpawnType::kDespawn) {

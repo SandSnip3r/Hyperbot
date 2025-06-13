@@ -3,6 +3,8 @@
 
 #include "entity/entity.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
+#include "pk2/itemData.hpp"
+#include "shared/silkroad_security.h"
 #include "shared/stream_utility.h"
 #include "storage/item.hpp"
 
@@ -30,6 +32,7 @@ sro::Position parsePosition(StreamUtility &stream);
 
 // It would be nice to hold entities in a `std::unique_ptr`, however, that would require removing them from packets after parsing. When handling packets, the packets are usually passed as const&.
 std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
+                                           const PacketContainer::Clock::time_point &timestamp,
                                            const sro::pk2::CharacterData &characterData,
                                            const sro::pk2::ItemData &itemData,
                                            const sro::pk2::SkillData &skillData,

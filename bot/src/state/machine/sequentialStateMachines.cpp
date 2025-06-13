@@ -14,6 +14,7 @@ Status SequentialStateMachines::onUpdate(const event::Event *event) {
   std::unique_lock lock(mutex_);
   if (!stateMachines_.empty()) {
     Status status = stateMachines_.front()->onUpdate(event);
+    bool changed=false;
     while (!stateMachines_.empty() && status == Status::kDone) {
       CHAR_VLOG(1) << "State machine is done; " << stateMachines_.size() << " left";
       // Remove this one.
@@ -22,6 +23,10 @@ Status SequentialStateMachines::onUpdate(const event::Event *event) {
       if (!stateMachines_.empty()) {
         status = stateMachines_.front()->onUpdate(event);
       }
+      changed = true;
+    }
+    if (changed) {
+      bot_.sendActiveStateMachine();
     }
   }
   if (stateMachines_.empty()) {
@@ -34,6 +39,10 @@ Status SequentialStateMachines::onUpdate(const event::Event *event) {
 
 std::string SequentialStateMachines::activeStateMachineName() const {
   std::unique_lock lock(mutex_);
+  return privateActiveStateMachineName();
+}
+
+std::string SequentialStateMachines::privateActiveStateMachineName() const {
   if (!stateMachines_.empty()) {
     return stateMachines_.front()->activeStateMachineName();
   }

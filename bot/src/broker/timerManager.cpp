@@ -132,6 +132,11 @@ std::optional<TimerManager::TimePoint> TimerManager::timerEndTime(TimerId id) co
   return {};
 }
 
+size_t TimerManager::queueSize() const {
+  std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
+  return timerDataHeap_.size();
+}
+
 void TimerManager::waitForData() {
   std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
   cv_.wait(timerDataLock, [this](){ return !keepRunning_ || !timerDataHeap_.empty(); });
