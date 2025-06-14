@@ -10,6 +10,7 @@
 #include <absl/log/log.h>
 
 #include <fstream>
+#include <filesystem>
 
 using namespace proto;
 
@@ -19,6 +20,11 @@ CheckpointManager::CheckpointManager(ui::RlUserInterface &rlUserInterface) : rlU
   std::unique_lock lock(registryMutex_);
   LOG(INFO) << "Constructing CheckpointManager";
   const std::filesystem::path appDataPath = sro::file_util::getAppDataPath();
+  const std::filesystem::path checkpointsDir = appDataPath / kCheckpointDirectoryName;
+  if (!std::filesystem::exists(checkpointsDir)) {
+    std::filesystem::create_directory(checkpointsDir);
+  }
+
   LOG(INFO) << "Loading checkpoint registry from " << appDataPath;
   std::ifstream checkpointRegistryFile(appDataPath / kCheckpointRegistryFilename);
   if (checkpointRegistryFile.is_open()) {
@@ -31,6 +37,45 @@ CheckpointManager::CheckpointManager(ui::RlUserInterface &rlUserInterface) : rlU
     // File does not exist. Create an empty one.
     LOG(INFO) << "Checkpoint registry file does not exist. Creating empty one.";
     saveCurrentRegistryNoLock();
+  }
+
+  bool registryModified = false;
+  auto *checkpoints = checkpointRegistry_.mutable_checkpoints();
+  for (auto it = checkpoints->begin(); it != checkpoints->end();) {
+    const std::filesystem::path modelPath = it->model_checkpoint_path();
+    const std::filesystem::path targetPath = it->target_model_checkpoint_path();
+    const std::filesystem::path optimizerPath = it->optimizer_checkpoint_path();
+    if (!std::filesystem::exists(modelPath) || !std::filesystem::exists(targetPath) ||
+        !std::filesystem::exists(optimizerPath)) {
+      LOG(WARNING) << "Removing missing checkpoint \"" << it->checkpoint_name() << "\" from registry";
+      it = checkpoints->erase(it);
+      registryModified = true;
+      continue;
+    }
+
+    const std::filesystem::path newBasePath = checkpointsDir / it->checkpoint_name();
+    const std::filesystem::path newModelPath = newBasePath.string() + "_model";
+    const std::filesystem::path newTargetPath = newBasePath.string() + "_target_model";
+    const std::filesystem::path newOptimizerPath = newBasePath.string() + "_optimizer_state";
+    if (modelPath != newModelPath) {
+      try {
+        std::filesystem::rename(modelPath, newModelPath);
+        std::filesystem::rename(targetPath, newTargetPath);
+        std::filesystem::rename(optimizerPath, newOptimizerPath);
+        it->set_model_checkpoint_path(newModelPath.string());
+        it->set_target_model_checkpoint_path(newTargetPath.string());
+        it->set_optimizer_checkpoint_path(newOptimizerPath.string());
+        registryModified = true;
+      } catch (const std::filesystem::filesystem_error &e) {
+        LOG(ERROR) << "Failed to move checkpoint \"" << it->checkpoint_name() << "\": " << e.what();
+      }
+    }
+    ++it;
+  }
+
+  if (registryModified) {
+    saveCurrentRegistryNoLock();
+    rlUserInterface_.sendCheckpointList(getCheckpointNames());
   }
 }
 
@@ -45,7 +90,12 @@ void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::Ja
   if (!overwrite && checkpointAlreadyExists) {
     throw std::runtime_error("Trying to create a checkpoint which already exists");
   }
-  const std::string fullCheckpointPath = "/tmp/hyperbot_checkpoints/" + checkpointName;
+  const std::filesystem::path checkpointsDir = sro::file_util::getAppDataPath() / kCheckpointDirectoryName;
+  if (!std::filesystem::exists(checkpointsDir)) {
+    std::filesystem::create_directory(checkpointsDir);
+  }
+
+  const std::string fullCheckpointPath = (checkpointsDir / checkpointName).string();
   if (checkpointAlreadyExists) {
     LOG(INFO) << "Overwriting checkpoint \"" << checkpointName << "\" at path \"" << fullCheckpointPath << "\"";
   } else {

@@ -31,6 +31,7 @@ public:
   void deleteCheckpoints(const std::vector<std::string> &checkpointNames);
 private:
   static constexpr std::string_view kCheckpointRegistryFilename{"checkpoint_registry"};
+  static constexpr std::string_view kCheckpointDirectoryName{"checkpoints"};
   ui::RlUserInterface &rlUserInterface_;
   mutable std::mutex registryMutex_;
   proto::rl_checkpointing::CheckpointRegistry checkpointRegistry_;
