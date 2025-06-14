@@ -194,6 +194,8 @@ void RlUserInterface::handleRequest(const zmq::message_t &request, zmq::socket_t
           checkpointNames.push_back(checkpointName);
         }
         eventBroker_.publishEvent<event::RlUiDeleteCheckpoints>(checkpointNames);
+      } else if (asyncRequestMsg.body_case() == rl_ui_messages::AsyncRequest::BodyCase::kRequestCharacterStatuses) {
+        eventBroker_.publishEvent(event::EventCode::kRlUiRequestCharacterStatuses);
       } else {
         throw std::runtime_error(absl::StrFormat("RlUserInterface received invalid async request \"%s\"", asyncRequestMsg.DebugString()));
       }

@@ -207,6 +207,13 @@ void Bot::handleEvent(const event::Event *event) {
         }
         break;
       }
+      case event::EventCode::kRlUiRequestCharacterStatuses: {
+        if (selfEntity_) {
+          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+          sendActiveStateMachine();
+        }
+        break;
+      }
 
       // ========================== Misc ==========================
       case event::EventCode::kEntityDespawned: {
