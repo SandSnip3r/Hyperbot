@@ -4,52 +4,125 @@
 #include <QHBoxLayout>
 #include <QPainter>
 #include <QtMath>
+#include <QStyle>
+#include <QToolButton>
+#include <cmath>
 
-#include <iostream>
+#include <absl/log/log.h>
+#include <array>
+#include <algorithm>
+#include <functional>
+#include <random>
 
-InteractiveChartView::InteractiveChartView(QWidget *parent) : QChartView(new QChart(), parent) {
+std::mt19937 InteractiveChartView::createRandomEngine() {
+  std::random_device rd;
+  std::array<int, std::mt19937::state_size> seed_data;
+  std::generate_n(seed_data.data(), seed_data.size(), std::ref(rd));
+  std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
+  return std::mt19937(seq);
+}
+
+qreal InteractiveChartView::niceNumberFloor(qreal value) {
+  if (value <= 0) {
+    return 0;
+  }
+  qreal exponent = std::floor(std::log10(value));
+  qreal fraction = value / std::pow(10.0, exponent);
+  qreal niceFraction;
+  if (fraction >= 5.0) {
+    niceFraction = 5.0;
+  } else if (fraction >= 2.0) {
+    niceFraction = 2.0;
+  } else {
+    niceFraction = 1.0;
+  }
+  return niceFraction * std::pow(10.0, exponent);
+}
+
+qreal InteractiveChartView::niceNumberCeil(qreal value) {
+  if (value <= 0) {
+    return 0;
+  }
+  qreal exponent = std::floor(std::log10(value));
+  qreal fraction = value / std::pow(10.0, exponent);
+  qreal niceFraction;
+  if (fraction <= 1.0) {
+    niceFraction = 1.0;
+  } else if (fraction <= 2.0) {
+    niceFraction = 2.0;
+  } else if (fraction <= 5.0) {
+    niceFraction = 5.0;
+  } else {
+    niceFraction = 10.0;
+  }
+  return niceFraction * std::pow(10.0, exponent);
+}
+
+void InteractiveChartView::setNiceRange(QValueAxis *axis, qreal min, qreal max,
+                                        bool preferSmaller) {
+  int ticks = axis->tickCount();
+  if (ticks < 3) {
+    ticks = 5;
+  }
+  qreal span = max - min;
+  qreal step = preferSmaller ? niceNumberFloor(span / (ticks - 1))
+                             : niceNumberCeil(span / (ticks - 1));
+  if (step <= 0) {
+    step = 1;
+  }
+  qreal niceSpan = step * (ticks - 1);
+  qreal center = (min + max) / 2.0;
+  qreal half = niceSpan / 2.0;
+  axis->setRange(center - half, center + half);
+}
+
+InteractiveChartView::InteractiveChartView(QWidget *parent)
+    : QChartView(new QChart(), parent) {
   // Set up the chart.
   chart()->legend()->hide();
   chart()->setTitle("Interactive Chart");
 
   // Create a default line series and add it to the chart.
-  QLineSeries *defaultSeries = new QLineSeries(this);
-  series_.append(defaultSeries);
-  chart()->addSeries(defaultSeries);
+  SeriesData defaultData;
+  defaultData.series = new QLineSeries(this);
+  series_.append(defaultData);
+  chart()->addSeries(defaultData.series);
 
   // Create X axis (e.g., time) and attach it to the series.
   axisX_ = new QValueAxis;
-  axisX_->setLabelFormat("%g");
+  axisX_->setLabelFormat("%.0f");
   axisX_->setTitleText("Time");
   chart()->addAxis(axisX_, Qt::AlignBottom);
-  defaultSeries->attachAxis(axisX_);
+  defaultData.series->attachAxis(axisX_);
 
   // Create Y axis (e.g., value) and attach it to the series.
   axisY_ = new QValueAxis;
-  axisY_->setLabelFormat("%g");
+  axisY_->setLabelFormat("%.0f");
   axisY_->setTitleText("Value");
   chart()->addAxis(axisY_, Qt::AlignLeft);
-  defaultSeries->attachAxis(axisY_);
+  defaultData.series->attachAxis(axisY_);
 
   // Set an initial default view range.
   // Here we assume a default horizontal width (e.g., 10 units of time) and a vertical range [0,10].
   defaultRect_ = QRectF(0, 0, 10, 10);
   axisX_->setRange(defaultRect_.left(), defaultRect_.right());
+  axisX_->applyNiceNumbers();
   axisY_->setRange(defaultRect_.top(), defaultRect_.bottom());
+  axisY_->applyNiceNumbers();
 
-  // Create and position the "Default Zoom" button.
-  homeButton_ = new QPushButton("Default Zoom", this);
-  homeButton_->setFixedSize(100, 25);
-  homeButton_->move(10, 10);
-  connect(homeButton_, &QPushButton::clicked, this, &InteractiveChartView::resetView);
-  homeButton_->raise();
+  homeButton_ = new QToolButton(this);
+  homeButton_->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+  homeButton_->setToolTip(tr("Default Zoom"));
+  homeButton_->setAutoRaise(true);
+  homeButton_->setFixedSize(24, 24);
+  connect(homeButton_, &QToolButton::clicked, this, &InteractiveChartView::resetView);
 
-  // Create and position the "Follow Data" button.
-  followButton_ = new QPushButton("Follow Data", this);
-  followButton_->setFixedSize(100, 25);
-  followButton_->move(10, 40);
-  connect(followButton_, &QPushButton::clicked, this, &InteractiveChartView::followData);
-  followButton_->raise();
+  followButton_ = new QToolButton(this);
+  followButton_->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
+  followButton_->setToolTip(tr("Follow Data"));
+  followButton_->setAutoRaise(true);
+  followButton_->setFixedSize(24, 24);
+  connect(followButton_, &QToolButton::clicked, this, &InteractiveChartView::followData);
 
   // Enable antialiasing for smoother rendering.
   setRenderHint(QPainter::Antialiasing);
@@ -60,12 +133,32 @@ void InteractiveChartView::addDataPoint(const QPointF &point, int seriesIndex) {
     return;
   }
 
-  series_[seriesIndex]->append(point);
+  SeriesData &sd = series_[seriesIndex];
+  ++sd.count;
+
+  // Assumes incoming x-values are monotonically increasing.
+  if (point.x() < latestX_) {
+    LOG(WARNING) << "InteractiveChartView: out-of-order data point";
+  }
+  latestX_ = point.x();
+
+  if (sd.reservoir.size() < static_cast<int>(kSampleSize)) {
+    sd.reservoir.append(point);
+  } else {
+    std::uniform_int_distribution<qint64> dist(0, sd.count - 1);
+    qint64 idx = dist(rng_);
+    if (idx < kSampleSize) {
+      sd.reservoir.remove(idx);
+      sd.reservoir.append(point);
+    }
+  }
+
+  sd.series->replace(sd.reservoir);
 
   // If auto-follow (x-axis) is enabled, update the x-axis range preserving the current width.
   if (followLatest_) {
     qreal currentWidth = axisX_->max() - axisX_->min();
-    axisX_->setRange(point.x() - currentWidth, point.x());
+    axisX_->setRange(latestX_ - currentWidth, latestX_);
   }
 
   // Update vertical axis only if the user has not manually set a vertical zoom.
@@ -74,21 +167,6 @@ void InteractiveChartView::addDataPoint(const QPointF &point, int seriesIndex) {
   }
 }
 
-void InteractiveChartView::setHistoricalData(const QVector<QPointF> &data, int seriesIndex) {
-  if (seriesIndex < 0 || seriesIndex >= series_.size()) {
-    return;
-  }
-
-  series_[seriesIndex]->replace(data);
-
-  // Update the x-axis range based on the historical data (if available).
-  if (!data.isEmpty()) {
-    qreal minX = data.first().x();
-    qreal maxX = data.last().x();
-    axisX_->setRange(minX, maxX);
-  }
-  updateVerticalAxis();
-}
 
 void InteractiveChartView::resetView() {
   // Reset flags to default auto-follow and auto vertical scaling.
@@ -97,20 +175,20 @@ void InteractiveChartView::resetView() {
   userYZoom_ = false;
 
   // Reset the horizontal axis to show the default width ending at the latest data point.
-  if (!series_.isEmpty() && !series_[0]->points().isEmpty()) {
-    qreal latestX = series_[0]->points().last().x();
-    axisX_->setRange(latestX - defaultRect_.width(), latestX);
+  if (!series_.isEmpty() && latestX_ != 0) {
+    axisX_->setRange(latestX_ - defaultRect_.width(), latestX_);
+    axisX_->applyNiceNumbers();
   }
   // Reset the vertical axis to default range.
   axisY_->setRange(defaultRect_.top(), defaultRect_.bottom());
+  axisY_->applyNiceNumbers();
 }
 
 void InteractiveChartView::followData() {
   // Shift the current view horizontally to follow live data while preserving the current width.
-  if (!series_.isEmpty() && !series_[0]->points().isEmpty()) {
+  if (!series_.isEmpty() && latestX_ != 0) {
     qreal currentWidth = axisX_->max() - axisX_->min();
-    qreal latestX = series_[0]->points().last().x();
-    axisX_->setRange(latestX - currentWidth, latestX);
+    axisX_->setRange(latestX_ - currentWidth, latestX_);
     followLatest_ = true;
     userXZoom_ = false;
   }
@@ -118,19 +196,22 @@ void InteractiveChartView::followData() {
 
 void InteractiveChartView::wheelEvent(QWheelEvent *event) {
   // Zoom in/out horizontally or vertically based on the wheel event.
-  if (event->angleDelta().x() != 0.0) {
+  QPoint angleDelta = event->angleDelta();
+  if (angleDelta.isNull()) {
+    angleDelta = event->pixelDelta();
+  }
+  if (angleDelta.x() != 0) {
     // Horizontal zooming:
-    qreal factor = (event->angleDelta().x() > 0) ? 0.9 : 1.1;
+    qreal factor = (angleDelta.x() > 0) ? 0.9 : 1.1;
     qreal xMin = axisX_->min();
     qreal xMax = axisX_->max();
     qreal center = (xMin + xMax) / 2.0;
     qreal halfRange = (xMax - xMin) / 2.0 * factor;
-    axisX_->setRange(center - halfRange, center + halfRange);
+    setNiceRange(axisX_, center - halfRange, center + halfRange, factor < 1.0);
 
     // Check if the new x-range max is nearly equal to the latest data point.
-    if (!series_.isEmpty() && !series_[0]->points().isEmpty()) {
-      qreal latestX = series_[0]->points().last().x();
-      if (qAbs(latestX - axisX_->max()) < 0.001) {
+    if (!series_.isEmpty() && latestX_ != 0) {
+      if (qAbs(latestX_ - axisX_->max()) < 0.001) {
         followLatest_ = true;
         userXZoom_ = false;
       } else {
@@ -138,14 +219,14 @@ void InteractiveChartView::wheelEvent(QWheelEvent *event) {
         userXZoom_ = true;
       }
     }
-  } else if (event->angleDelta().y() != 0.0) {
+  } else if (angleDelta.y() != 0) {
     // Vertical zooming:
-    qreal factor = (event->angleDelta().y() > 0) ? 0.9 : 1.1;
+    qreal factor = (angleDelta.y() > 0) ? 0.9 : 1.1;
     qreal yMin = axisY_->min();
     qreal yMax = axisY_->max();
     qreal center = (yMin + yMax) / 2.0;
     qreal halfRange = (yMax - yMin) / 2.0 * factor;
-    axisY_->setRange(center - halfRange, center + halfRange);
+    setNiceRange(axisY_, center - halfRange, center + halfRange, factor < 1.0);
     userYZoom_ = true;
   }
   event->accept();
@@ -181,9 +262,8 @@ void InteractiveChartView::mouseMoveEvent(QMouseEvent *event) {
     userYZoom_ = true;
 
     // Disable auto-follow if the latest data is not visible.
-    if (!series_.isEmpty() && !series_[0]->points().isEmpty()) {
-      qreal latestX = series_[0]->points().last().x();
-      followLatest_ = (latestX <= axisX_->max() + 0.001);
+    if (!series_.isEmpty() && latestX_ != 0) {
+      followLatest_ = (latestX_ <= axisX_->max() + 0.001);
     }
   } else if (rubberBandActive_) {
     // Update the rubberband rectangle as the user drags.
@@ -196,6 +276,8 @@ void InteractiveChartView::mouseMoveEvent(QMouseEvent *event) {
 void InteractiveChartView::mouseReleaseEvent(QMouseEvent *event) {
   if (panning_ && event->button() == Qt::RightButton) {
     panning_ = false;
+    setNiceRange(axisX_, axisX_->min(), axisX_->max(), false);
+    setNiceRange(axisY_, axisY_->min(), axisY_->max(), false);
   } else if (rubberBandActive_ && event->button() == Qt::LeftButton) {
     rubberBandActive_ = false;
     // Map the rubberband rectangle to chart coordinates.
@@ -206,8 +288,8 @@ void InteractiveChartView::mouseReleaseEvent(QMouseEvent *event) {
 
     // Only apply zoom if the rectangle has a valid (nonzero) area.
     if (zoomRect.width() > 0 && zoomRect.height() > 0) {
-      axisX_->setRange(zoomRect.left(), zoomRect.right());
-      axisY_->setRange(zoomRect.top(), zoomRect.bottom());
+      setNiceRange(axisX_, zoomRect.left(), zoomRect.right(), false);
+      setNiceRange(axisY_, zoomRect.top(), zoomRect.bottom(), false);
       followLatest_ = false;
       userXZoom_ = true;
       userYZoom_ = true;
@@ -235,7 +317,7 @@ void InteractiveChartView::paintEvent(QPaintEvent *event) {
 
 void InteractiveChartView::updateVerticalAxis() {
   // Calculate the min and max y-values for all points that fall within the current x-axis range.
-  if (series_.isEmpty() || series_[0]->points().isEmpty()) {
+  if (series_.isEmpty() || series_[0].reservoir.isEmpty()) {
     return;
   }
 
@@ -244,8 +326,8 @@ void InteractiveChartView::updateVerticalAxis() {
   qreal minY = std::numeric_limits<qreal>::max();
   qreal maxY = std::numeric_limits<qreal>::lowest();
 
-  for (QLineSeries *series : series_) {
-    const auto points = series->points();
+  for (const SeriesData &sd : series_) {
+    const auto points = sd.series->points();
     for (const QPointF &pt : points) {
       if (pt.x() >= xMin && pt.x() <= xMax) {
         if (pt.y() < minY) {
@@ -259,6 +341,6 @@ void InteractiveChartView::updateVerticalAxis() {
   }
 
   if (minY < maxY) {
-    axisY_->setRange(minY, maxY);
+    setNiceRange(axisY_, minY, maxY, false);
   }
 }

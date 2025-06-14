@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class RefRegion {
 public:
@@ -18,6 +18,6 @@ private:
 	RegionMap regions_;
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_REF_REGION_HPP_

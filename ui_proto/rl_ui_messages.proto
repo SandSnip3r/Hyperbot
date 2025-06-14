@@ -28,6 +28,7 @@ message AsyncRequest {
     SaveCheckpoint save_checkpoint = 4;
     LoadCheckpoint load_checkpoint = 5;
     DeleteCheckpoints delete_checkpoints = 6;
+    google.protobuf.Empty request_character_statuses = 7;
   }
 };
 
@@ -81,6 +82,11 @@ message CharacterStatus {
   int32 max_mp = 5;
 }
 
+message ActiveStateMachine {
+  string name = 1;
+  string state_machine = 2;
+}
+
 message BroadcastMessage {
   oneof body {
     google.protobuf.Empty heartbeat = 1;
@@ -90,6 +96,7 @@ message BroadcastMessage {
     PlotData plot_data = 5;
     CheckpointLoaded checkpoint_loaded = 6;
     CharacterStatus character_status = 7;
+    ActiveStateMachine active_state_machine = 8;
   }
 }
 

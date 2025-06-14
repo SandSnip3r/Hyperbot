@@ -6,8 +6,7 @@
 #include "entity/entity.hpp"
 #include "entityTracker.hpp"
 #include "packet/parsing/serverGatewayShardListResponse.hpp"
-#include "pk2/gameData.hpp"
-
+#include <silkroad_lib/pk2/gameData.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
 #include <tracy/Tracy.hpp>
@@ -22,27 +21,27 @@ namespace state {
 
 class WorldState {
 public:
-  WorldState(const pk2::GameData &gameData, broker::EventBroker &eventBroker);
+  WorldState(const sro::pk2::GameData &gameData, broker::EventBroker &eventBroker);
   state::EntityTracker& entityTracker();
   const state::EntityTracker& entityTracker() const;
 
   // Returns true if this is the first time we are seeing this entity.
-  bool entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker);
+  bool entitySpawned(std::shared_ptr<entity::Entity> entity, broker::EventBroker &eventBroker) ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex);
   // Returns true is this is the last time we are seeing this entity.
-  bool entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker);
+  bool entityDespawned(sro::scalar_types::EntityGlobalId globalId, broker::EventBroker &eventBroker) ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex);
 
-  void addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::BuffTokenType tokenId, entity::Character::BuffData::ClockType::time_point castTime);
-  void removeBuffs(const std::vector<sro::scalar_types::BuffTokenType> &tokenIds);
+  void addBuff(sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillRefId, sro::scalar_types::BuffTokenType tokenId, entity::Character::BuffData::ClockType::time_point castTime) ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex);
+  void removeBuffs(const std::vector<sro::scalar_types::BuffTokenType> &tokenIds) ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex);
 
   template<typename EntityType = entity::Entity>
   std::shared_ptr<EntityType> getEntity(sro::scalar_types::EntityGlobalId globalId) const {
     return entityTracker_.getEntity<EntityType>(globalId);
   }
 
-  TracyLockableN(std::mutex, mutex, "WorldState::mutex");
+  TracyLockableN(std::mutex, mutex, "WorldState");
   std::optional<packet::parsing::ServerGatewayShardListResponse> shardListResponse_;
 private:
-  const pk2::GameData &gameData_;
+  const sro::pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
   state::EntityTracker entityTracker_;
 

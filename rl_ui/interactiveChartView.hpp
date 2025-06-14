@@ -4,13 +4,14 @@
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
-#include <QPushButton>
+#include <QToolButton>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QRectF>
 #include <QVector>
 
 #include <limits>
+#include <random>
 
 class InteractiveChartView : public QChartView {
   Q_OBJECT
@@ -20,8 +21,6 @@ public:
   /// Add a new data point (streaming data). By default the data is appended to series 0.
   void addDataPoint(const QPointF &point, int seriesIndex = 0);
 
-  /// Initialize the chart with historical data.
-  void setHistoricalData(const QVector<QPointF> &data, int seriesIndex = 0);
 
 public slots:
   /// Reset the view to the default scrolling and zoom settings.
@@ -40,11 +39,34 @@ protected:
   void paintEvent(QPaintEvent *event) override;
 
 private:
+  /// Adjusts the provided axis range to nice numbers while preserving the
+  /// center. If preferSmaller is true, the resulting span will not exceed the
+  /// provided range; otherwise it may expand slightly to the next nice step.
+  void setNiceRange(QValueAxis *axis, qreal min, qreal max, bool preferSmaller);
+
+  static qreal niceNumberFloor(qreal value);
+  static qreal niceNumberCeil(qreal value);
+
+  /// Container for one series and its sampling data.
+  struct SeriesData {
+    QLineSeries *series{nullptr};
+    QVector<QPointF> reservoir;
+    qint64 count{0};
+  };
+
   /// Recalculates and updates the vertical (y) axis range based on visible data.
   void updateVerticalAxis();
 
+  /// Creates a seeded random engine for reservoir sampling.
+  static std::mt19937 createRandomEngine();
+
   // Container for one or more data series
-  QVector<QLineSeries*> series_;
+  QVector<SeriesData> series_;
+
+  // Reservoir sampling configuration
+  static constexpr int kSampleSize = 1024;
+  qreal latestX_{0};  ///< Latest observed x-value
+  std::mt19937 rng_{createRandomEngine()};
 
   // Axes for the chart
   QValueAxis *axisX_;
@@ -67,8 +89,8 @@ private:
   QRectF defaultRect_;
 
   // Buttons for resetting zoom and following data.
-  QPushButton *homeButton_;
-  QPushButton *followButton_;
+  QToolButton *homeButton_;
+  QToolButton *followButton_;
 };
 
 #endif // INTERACTIVE_CHART_VIEW_HPP_

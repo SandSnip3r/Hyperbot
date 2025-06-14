@@ -13,6 +13,7 @@
 #include <random>
 #include <set>
 #include <vector>
+#include <chrono>
 
 //-----------------------------------------------------------------------------
 
@@ -322,41 +323,39 @@ public:
     return ( uint8_t )( ( ( checksum >> 24 ) & 0xFF ) + ( ( checksum >> 8 ) & 0xFF ) + ( ( checksum >> 16 ) & 0xFF ) + ( checksum & 0xFF ) );
   }
 
-  void GenerateHandshake( uint8_t mode )
-  {
+  void GenerateHandshake( uint8_t mode ) {
     m_security_flag = mode;
     m_client_security = true;
-    PacketContainer response;
-    response.opcode = 0x5000;
-    response.data.Write< uint8_t >( mode );
-    if( m_security_flags->blowfish )
-    {
+    StreamUtility data;
+    data.Write< uint8_t >( mode );
+    if( m_security_flags->blowfish ) {
       m_initial_blowfish_key = rng();
       m_blowfish.Initialize( &m_initial_blowfish_key, sizeof( m_initial_blowfish_key ) );
-      response.data.Write< uint64_t >( m_initial_blowfish_key );
+      data.Write< uint64_t >( m_initial_blowfish_key );
     }
-    if( m_security_flags->security_bytes )
-    {
+    if (m_security_flags->security_bytes) {
       m_seed_count = static_cast< uint32_t >( rng() % 0xFF );
       SetupCountByte( m_seed_count );
       m_crc_seed = static_cast< uint32_t >( rng() % 0xFF );
-      response.data.Write< uint32_t >( m_seed_count );
-      response.data.Write< uint32_t >( m_crc_seed );
+      data.Write< uint32_t >( m_seed_count );
+      data.Write< uint32_t >( m_crc_seed );
     }
-    if( m_security_flags->handshake )
-    {
+    if (m_security_flags->handshake) {
       m_handshake_blowfish_key = rng();
       m_value_x = static_cast< uint32_t >( rng() & 0x7FFFFFFF );
       m_value_g = static_cast< uint32_t >( rng() & 0x7FFFFFFF );
       m_value_p = static_cast< uint32_t >( rng() & 0x7FFFFFFF );
       m_value_A = G_pow_X_mod_P( m_value_p, m_value_x, m_value_g );
-      response.data.Write< uint64_t >( m_handshake_blowfish_key );
-      response.data.Write< uint32_t >( m_value_g );
-      response.data.Write< uint32_t >( m_value_p );
-      response.data.Write< uint32_t >( m_value_A );
+      data.Write< uint64_t >( m_handshake_blowfish_key );
+      data.Write< uint32_t >( m_value_g );
+      data.Write< uint32_t >( m_value_p );
+      data.Write< uint32_t >( m_value_A );
     }
     std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
-    m_outgoing_packets.push_front( response );
+    m_outgoing_packets.push_front(PacketContainer(/*opcode=*/0x5000,
+                                                  std::move(data),
+                                                  /*encrypted=*/0,
+                                                  /*massive=*/0));
   }
 
   void Handshake( uint16_t packet_opcode, StreamUtility & packet_data, bool packet_encrypted )
@@ -460,12 +459,14 @@ public:
       TFlags * tmp_flags = reinterpret_cast<TFlags *>( &tmp_flag );
       tmp_flags->handshake_response = 1;
 
-      PacketContainer response;
-      response.opcode = 0x5000;
-      response.data.Write< uint8_t >( tmp_flag );
-      response.data.Write< uint64_t >( m_challenge_key );
+      StreamUtility data;
+      data.Write<uint8_t>(tmp_flag);
+      data.Write<uint64_t>(m_challenge_key);
       std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
-      m_outgoing_packets.push_front( response );
+      m_outgoing_packets.push_front(PacketContainer(/*opcode=*/0x5000,
+                                                    std::move(data),
+                                                    /*encrypted=*/0,
+                                                    /*massive=*/0));
     }
     else
     {
@@ -544,13 +545,15 @@ public:
         }
 
         // Handshake challenge
-        PacketContainer response;
-        response.opcode = 0x5000;
-        response.data.Write< uint32_t >( m_value_B );
-        response.data.Write< uint64_t >( m_client_key );
         {
+          StreamUtility data;
+          data.Write<uint32_t>(m_value_B);
+          data.Write<uint64_t>(m_client_key);
           std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
-          m_outgoing_packets.push_front( response );
+          m_outgoing_packets.push_front(PacketContainer(/*opcode=*/0x5000,
+                                                        std::move(data),
+                                                        /*encrypted=*/0,
+                                                        /*massive=*/0));
         }
 
         // The handshake has started
@@ -564,21 +567,23 @@ public:
           throw( std::runtime_error( "[SilkroadSecurityData::Handshake] Received an illogical handshake packet (duplicate 0x5000).") );
         }
 
-        // Handshake accepted
-        PacketContainer response1;
-        response1.opcode = 0x9000;
-
         // Identify
-        PacketContainer response2;
-        response2.opcode = 0x2001;
-        response2.encrypted = true;
-        response2.data.Write(m_identity_name);
-        response2.data.Write< uint8_t >( m_identity_flag );
+        StreamUtility identifyData;
+        identifyData.Write(m_identity_name);
+        identifyData.Write<uint8_t>(m_identity_flag);
 
         {
           std::unique_lock<std::mutex> outgoing_packet_lock(m_outgoing_packet_mutex);
-          m_outgoing_packets.push_front( response2 );
-          m_outgoing_packets.push_front( response1 );
+          // Identify packet
+          m_outgoing_packets.push_front(PacketContainer(/*opcode=*/0x2001,
+                                                        std::move(identifyData),
+                                                        /*encrypted=*/1,
+                                                        /*massive=*/0));
+          // Handshake accepted packet
+          m_outgoing_packets.push_front(PacketContainer(/*opcode=*/0x9000,
+                                                        /*data=*/{},
+                                                        /*encrypted=*/0,
+                                                        /*massive=*/0));
         }
 
         // Mark the handshake as accepted now
@@ -643,19 +648,15 @@ uint8_t SilkroadSecurity::HasPacketToSend() const
 //-----------------------------------------------------------------------------
 
 std::vector<uint8_t> SilkroadSecurity::GetPacketToSend() {
-  PacketContainer packet_container;
-  {
+  PacketContainer packet_container = [&]() {
     std::unique_lock<std::mutex> outgoing_packet_lock(m_data->m_outgoing_packet_mutex);
     if (m_data->m_outgoing_packets.empty()) {
-      throw( std::runtime_error( "[SilkroadSecurity::GetPacketToSend] No packets are avaliable to send.") );
+      throw std::runtime_error("[SilkroadSecurity::GetPacketToSend] No packets are available to send.");
     }
-
-    {
-      const auto &nextPacket = m_data->m_outgoing_packets.front();
-      packet_container = nextPacket;
-      m_data->m_outgoing_packets.pop_front();
-    }
-  }
+    const PacketContainer nextPacket = m_data->m_outgoing_packets.front();
+    m_data->m_outgoing_packets.pop_front();
+    return nextPacket;
+  }();
 
   if (packet_container.massive) {
     uint8_t workspace[ 4089 ];
@@ -719,7 +720,7 @@ PacketContainerAndInjected SilkroadSecurity::GetPacketToRecv()
   std::unique_lock<std::mutex> incoming_packet_lock(m_data->m_incoming_packet_mutex);
   if( m_data->m_incoming_packets.empty() )
   {
-    throw( std::runtime_error( "[SilkroadSecurity::GetPacketToRecv] No packets are avaliable to process.") );
+    throw( std::runtime_error( "[SilkroadSecurity::GetPacketToRecv] No packets are available to process.") );
   }
 
   PacketContainerAndInjected packet_container = m_data->m_incoming_packets.front();
@@ -751,17 +752,20 @@ void SilkroadSecurity::Send( uint16_t opcode, const StreamUtility & data, uint8_
 
 //-----------------------------------------------------------------------------
 
-void SilkroadSecurity::Recv( const std::vector< uint8_t > & stream )
+void SilkroadSecurity::Recv(const std::vector< uint8_t > &stream,
+                            PacketContainer::Clock::time_point timestamp)
 {
-  if( !stream.empty() )
+  if (!stream.empty())
   {
-    Recv( &stream[0], static_cast< int32_t >( stream.size() ) );
+    Recv(&stream[0], static_cast<int32_t>(stream.size()), timestamp);
   }
 }
 
 //-----------------------------------------------------------------------------
 
-void SilkroadSecurity::Recv( const uint8_t * stream, int32_t count )
+void SilkroadSecurity::Recv(const uint8_t *stream,
+                            int32_t count,
+                            PacketContainer::Clock::time_point recvTimestamp)
 {
   m_data->m_pending_stream.Write< uint8_t >( stream, count );
   int32_t total_bytes = m_data->m_pending_stream.GetStreamSize();
@@ -853,7 +857,7 @@ void SilkroadSecurity::Recv( const uint8_t * stream, int32_t count )
       }
 
       // Save the current packet's data
-      StreamUtility packet_data = m_data->m_pending_stream.Extract( 6, packet_size & 0x7FFF );
+      StreamUtility packet_data = m_data->m_pending_stream.Extract(6, packet_size & 0x7FFF);
 
       // Sliding window update of remaining bytes
       m_data->m_pending_stream.Delete( 0, required_size );
@@ -896,7 +900,12 @@ void SilkroadSecurity::Recv( const uint8_t * stream, int32_t count )
             if( m_data->m_massive_count == 0 )
             {
               std::unique_lock<std::mutex> incoming_packet_lock(m_data->m_incoming_packet_mutex);
-              m_data->m_incoming_packets.emplace_back(PacketContainer( m_data->m_massive_opcode, m_data->m_massive_packet, packet_encrypted, true ), false);
+              PacketContainer container(m_data->m_massive_opcode,
+                                        m_data->m_massive_packet,
+                                        packet_encrypted,
+                                        true,
+                                        recvTimestamp);
+              m_data->m_incoming_packets.emplace_back(std::move(container), false);
               m_data->m_massive_header = false;
               m_data->m_massive_packet = StreamUtility();
             }
@@ -905,7 +914,12 @@ void SilkroadSecurity::Recv( const uint8_t * stream, int32_t count )
         else // Everything else
         {
           std::unique_lock<std::mutex> incoming_packet_lock(m_data->m_incoming_packet_mutex);
-          m_data->m_incoming_packets.emplace_back(PacketContainer( packet_opcode, packet_data, packet_encrypted, false ), false);
+          PacketContainer container(packet_opcode,
+                                    packet_data,
+                                    packet_encrypted,
+                                    false,
+                                    recvTimestamp);
+          m_data->m_incoming_packets.emplace_back(std::move(container), false);
         }
       }
     }
@@ -1052,38 +1066,23 @@ std::vector< uint8_t > FormatPacket( SilkroadSecurity * silkroad_security, uint1
 
 //-----------------------------------------------------------------------------
 
-PacketContainer::PacketContainer()
-: opcode( 0 ), encrypted( 0 ), massive( 0 )
-{
-}
+PacketContainer::PacketContainer(uint16_t packet_opcode,
+                                 const StreamUtility &packet_data,
+                                 uint8_t packet_encrypted,
+                                 uint8_t packet_massive,
+                                 Clock::time_point packet_timestamp)
+    : opcode(packet_opcode),
+      data(packet_data),
+      encrypted(packet_encrypted),
+      massive(packet_massive),
+      timestamp(packet_timestamp) {}
 
-PacketContainer::PacketContainer( uint16_t packet_opcode, const StreamUtility & packet_data, uint8_t packet_encrypted, uint8_t packet_massive )
-: opcode( packet_opcode ), data( packet_data ), encrypted( packet_encrypted ), massive( packet_massive )
-{
-}
+PacketContainer::PacketContainer(const PacketContainer &rhs) = default;
+PacketContainer::PacketContainer(PacketContainer &&rhs) noexcept = default;
 
-PacketContainer::PacketContainer( const PacketContainer & rhs )
-{
-  opcode = rhs.opcode;
-  data = rhs.data;
-  encrypted = rhs.encrypted;
-  massive = rhs.massive;
-}
+PacketContainer &PacketContainer::operator=(const PacketContainer &rhs) = default;
+PacketContainer &PacketContainer::operator=(PacketContainer &&rhs) noexcept = default;
 
-PacketContainer & PacketContainer::operator =( const PacketContainer & rhs )
-{
-  if( this != &rhs )
-  {
-    opcode = rhs.opcode;
-    data = rhs.data;
-    encrypted = rhs.encrypted;
-    massive = rhs.massive;
-  }
-  return *this;
-}
-
-PacketContainer::~PacketContainer()
-{
-}
+PacketContainer::~PacketContainer() = default;
 
 //-----------------------------------------------------------------------------

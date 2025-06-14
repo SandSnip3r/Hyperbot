@@ -56,7 +56,7 @@ public:
   const absl::flat_hash_map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>>& getEntityMap() const; // TODO: Remove
 private:
   // Guards `entityMap_` and `entityReferenceCountMap_`.
-  mutable TracyLockableN(std::mutex, entityMapMutex_, "EntityTracker::entityMapMutex");
+  mutable TracyLockableN(std::mutex, entityMapMutex_, "EntityTracker::entityMap");
 
   absl::flat_hash_map<sro::scalar_types::EntityGlobalId, std::shared_ptr<entity::Entity>> entityMap_;
   absl::flat_hash_map<sro::scalar_types::EntityGlobalId, int> entityReferenceCountMap_;

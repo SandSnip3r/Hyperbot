@@ -112,7 +112,7 @@ void MaxMasteryAndSkills::resetTimeout() {
 
 namespace internal {
 
-void SkillTree::initialize(const pk2::SkillData &skillData, sro::pk2::ref::MasteryId masteryId, uint8_t masteryLevel, const std::vector<sro::scalar_types::ReferenceSkillId> &knownSkillIds) {
+void SkillTree::initialize(const sro::pk2::SkillData &skillData, sro::pk2::ref::MasteryId masteryId, uint8_t masteryLevel, const std::vector<sro::scalar_types::ReferenceSkillId> &knownSkillIds) {
   // Get all skills for this mastery.
   auto skills = skillData.getSkillIdsForMastery(masteryId);
   VLOG(3) << absl::StreamFormat("All skills for mastery: [%s]", absl::StrJoin(skills, ","));

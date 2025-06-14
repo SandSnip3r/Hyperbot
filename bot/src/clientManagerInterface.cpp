@@ -158,7 +158,7 @@ void ClientManagerInterface::run() {
     std::unique_lock lock(mutex_);
     conditionVariable_.wait_for(lock, kMaxHeartbeatSilence, [this]() -> bool {
       // Should we stop waiting?
-      const std::chrono::time_point<std::chrono::high_resolution_clock> now = std::chrono::high_resolution_clock::now();
+      const std::chrono::time_point<std::chrono::steady_clock> now = std::chrono::steady_clock::now();
       if (shouldStop_) {
         // We've been told to stop running.
         return true;
@@ -194,16 +194,16 @@ void ClientManagerInterface::run() {
       request.completedPromise.set_value(id);
 
       // We've sent a message. Update our last message sent time.
-      lastMessageSent_ = std::chrono::high_resolution_clock::now();
+      lastMessageSent_ = std::chrono::steady_clock::now();
       continue;
     }
 
     // We should not stop and there are no client open requests. We've been woken up because it has been too long since we've sent a message. Send a heartbeat.
-    const auto diffMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - lastMessageSent_);
+    const auto diffMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastMessageSent_);
     VLOG(20) << diffMs.count() << "ms () since last message sent. Sending heartbeat";
     try {
       sendHeartbeat();
-      lastMessageSent_ = std::chrono::high_resolution_clock::now();
+      lastMessageSent_ = std::chrono::steady_clock::now();
     } catch (const std::exception &ex) {
       LOG(ERROR) << "Error while running ClientManagerInterface: \"" << ex.what() << "\"";
     }

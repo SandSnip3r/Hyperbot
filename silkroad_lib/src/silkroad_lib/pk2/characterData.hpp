@@ -5,7 +5,7 @@
 
 #include <unordered_map>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class CharacterData {
 public:
@@ -18,6 +18,6 @@ private:
 	CharacterMap characters_;
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_MEDIA_CHARACTER_DATA_HPP_

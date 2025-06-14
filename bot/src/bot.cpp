@@ -21,6 +21,7 @@
 #include "state/machine/login.hpp"
 #include "state/machine/maxMasteryAndSkills.hpp"
 #include "state/machine/pvpManager.hpp"
+#include "ui/rlUserInterface.hpp"
 #include "state/machine/spawnAndUseRepairHammerIfNecessary.hpp"
 #include "state/machine/walking.hpp"
 #include "type_id/categories.hpp"
@@ -40,22 +41,21 @@
 #include <regex>
 
 Bot::Bot(SessionId sessionId,
-         const pk2::GameData &gameData,
+         const sro::pk2::GameData &gameData,
          Proxy &proxy,
-         broker::PacketBroker &packetBroker,
          broker::EventBroker &eventBroker,
-         state::WorldState &worldState) :
+         state::WorldState &worldState,
+         ui::RlUserInterface &rlUserInterface) :
       sessionId_(sessionId),
       gameData_(gameData),
       proxy_(proxy),
-      packetBroker_(packetBroker),
       eventBroker_(eventBroker),
-      worldState_(worldState) {
+      worldState_(worldState),
+      rlUserInterface_(rlUserInterface) {
 }
 
 void Bot::initialize() {
   subscribeToEvents();
-  packetProcessor_.initialize();
 }
 
 void Bot::setCharacter(const CharacterLoginInfo &characterLoginInfo) {
@@ -66,7 +66,7 @@ const config::CharacterConfig* Bot::config() const {
   throw std::runtime_error("Config not yet implemented");
 }
 
-const pk2::GameData& Bot::gameData() const {
+const sro::pk2::GameData& Bot::gameData() const {
   return gameData_;
 }
 
@@ -74,8 +74,8 @@ Proxy& Bot::proxy() const {
   return proxy_;
 }
 
-broker::PacketBroker& Bot::packetBroker() const {
-  return packetBroker_;
+void Bot::injectPacket(const PacketContainer &packet, PacketContainer::Direction direction) {
+  proxy_.inject(packet, direction);
 }
 
 broker::EventBroker& Bot::eventBroker() {
@@ -140,7 +140,7 @@ void Bot::handleEvent(const event::Event *event) {
               // The character has despawned and will spawn somewhere else. Since we're clientless, we need to respond with ClientAgentGameResetComplete.
               VLOG(1) << "Our game reset and we're in clientless, sending ClientAgentGameResetComplete";
               const PacketContainer packet = packet::building::ClientAgentGameResetComplete::packet();
-              packetBroker_.injectPacket(packet, PacketContainer::Direction::kBotToServer);
+              injectPacket(packet, PacketContainer::Direction::kBotToServer);
             }
           }
         }
@@ -182,6 +182,36 @@ void Bot::handleEvent(const event::Event *event) {
       // ================== Character info events =================
       case event::EventCode::kSelfSpawned: {
         handleSelfSpawned(event);
+        if (selfEntity_) {
+          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+        }
+        break;
+      }
+      case event::EventCode::kEntityHpChanged: {
+        const auto *hpEvent = dynamic_cast<const event::EntityHpChanged *>(event);
+        if (hpEvent && selfEntity_ && hpEvent->globalId == selfEntity_->globalId) {
+          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+        }
+        break;
+      }
+      case event::EventCode::kEntityMpChanged: {
+        const auto *mpEvent = dynamic_cast<const event::EntityMpChanged *>(event);
+        if (mpEvent && selfEntity_ && mpEvent->globalId == selfEntity_->globalId) {
+          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+        }
+        break;
+      }
+      case event::EventCode::kMaxHpMpChanged: {
+        if (selfEntity_) {
+          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+        }
+        break;
+      }
+      case event::EventCode::kRlUiRequestCharacterStatuses: {
+        if (selfEntity_) {
+          rlUserInterface_.sendCharacterStatus(*selfEntity_);
+          sendActiveStateMachine();
+        }
         break;
       }
 
@@ -244,6 +274,7 @@ void Bot::onUpdate(const event::Event *event) {
       LOG(INFO) << "Login state machine completed for " << selfState()->name;
       loginStateMachine_.reset();
       logInPromise_.set_value();
+      sendActiveStateMachine();
     } else {
       // Login state machine is not done, do not invoke any other state machines.
       return;
@@ -387,7 +418,7 @@ void Bot::handleInjectPacket(const event::InjectPacket &castedEvent) {
   }
   const auto packet = PacketContainer(static_cast<uint16_t>(castedEvent.opcode), stream, (kEncrypted_ ? 1 : 0), (kMassive_ ? 1 : 0));
   LOG(INFO) << "Injecting packet";
-  packetBroker_.injectPacket(packet, direction);
+  injectPacket(packet, direction);
 }
 
 // ============================================================================================================================
@@ -406,10 +437,10 @@ void Bot::handleSelfSpawned(const event::Event *event) {
   selfEntity_ = worldState_.getEntity<entity::Self>(selfSpawnedEvent->globalId);
 
   if (proxy().isClientless()) {
-    const PacketContainer gameReadyPacket = packet::building::ClientAgentGameReady::packet();
-    packetBroker_.injectPacket(gameReadyPacket, PacketContainer::Direction::kBotToServer);
+    injectPacket(packet::building::ClientAgentGameReady::packet(), PacketContainer::Direction::kBotToServer);
     VLOG(1) << absl::StreamFormat("[%s] Sent ClientAgentGameReady packet", selfEntity_->name);
   }
+  sendActiveStateMachine();
 }
 
 void Bot::handleEntityDespawned(const event::EntityDespawned &event) {
@@ -752,6 +783,7 @@ std::future<void> Bot::asyncLogIn() {
   }
   LOG(INFO) << "Logging in " << characterLoginInfo_.characterName << " for session " << sessionId_;
   loginStateMachine_ = std::make_unique<state::machine::Login>(*this, characterLoginInfo_);
+  sendActiveStateMachine();
   return logInPromise_.get_future();
 }
 
@@ -764,4 +796,21 @@ void Bot::asyncStandbyForPvp() {
     throw std::runtime_error("PvpManager state machine already set");
   }
   pvpManagerStateMachine_ = std::make_unique<state::machine::PvpManager>(*this);
+  sendActiveStateMachine();
+}
+
+std::string Bot::currentStateMachineName() const {
+  if (loginStateMachine_) {
+    return loginStateMachine_->activeStateMachineName();
+  }
+  if (pvpManagerStateMachine_) {
+    return pvpManagerStateMachine_->activeStateMachineName();
+  }
+  return "";
+}
+
+void Bot::sendActiveStateMachine() const {
+  if (selfEntity_) {
+    rlUserInterface_.sendActiveStateMachine(*selfEntity_, currentStateMachineName());
+  }
 }

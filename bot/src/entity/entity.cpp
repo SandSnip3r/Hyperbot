@@ -30,7 +30,7 @@ sro::Angle Entity::angle() const {
   return angle_;
 }
 
-std::string Entity::toStringImpl(const pk2::GameData *gameData) const {
+std::string Entity::toStringImpl(const sro::pk2::GameData *gameData) const {
   return absl::StrFormat("entity %d", globalId);
 }
 

@@ -7,7 +7,7 @@
 #include <cctype>
 #include <string_view>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 namespace {
 
@@ -42,4 +42,4 @@ const std::string& TextZoneNameData::getRegionName(const uint16_t regionId) cons
   return it->second;
 }
 
-} // namespace pk2
+} // namespace sro::pk2

@@ -72,6 +72,12 @@ void Hyperbot::requestCheckpointList() {
   sendAsyncRequest(asyncRequest);
 }
 
+void Hyperbot::requestCharacterStatuses() {
+  rl_ui_messages::AsyncRequest asyncRequest;
+  asyncRequest.mutable_request_character_statuses();
+  sendAsyncRequest(asyncRequest);
+}
+
 void Hyperbot::saveCheckpoint(const QString &checkpointName) {
   rl_ui_messages::AsyncRequest asyncRequest;
   rl_ui_messages::SaveCheckpoint *saveCheckpoint = asyncRequest.mutable_save_checkpoint();
@@ -147,6 +153,14 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
       emit characterStatusReceived(
           QString::fromStdString(status.name()), status.current_hp(),
           status.max_hp(), status.current_mp(), status.max_mp());
+      break;
+    }
+    case rl_ui_messages::BroadcastMessage::BodyCase::kActiveStateMachine: {
+      const rl_ui_messages::ActiveStateMachine &status =
+          broadcastMessage.active_state_machine();
+      emit activeStateMachineReceived(
+          QString::fromStdString(status.name()),
+          QString::fromStdString(status.state_machine()));
       break;
     }
     default: {

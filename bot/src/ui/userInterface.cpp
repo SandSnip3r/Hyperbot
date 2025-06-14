@@ -5,9 +5,10 @@
 #include "entity/geometry.hpp"
 #include "entity/item.hpp"
 #include "entity/monster.hpp"
-#include "pk2/gameData.hpp"
 #include "proto_convert/convert.hpp"
 #include "state/worldState.hpp"
+
+#include <silkroad_lib/pk2/gameData.hpp>
 
 #include <ui_proto/request.pb.h>
 
@@ -37,7 +38,7 @@ proto::broadcast::LifeState lifeStateToProto(sro::entity::LifeState lifeState) {
 
 namespace ui {
 
-UserInterface::UserInterface(zmq::context_t &context, const pk2::GameData &gameData, broker::EventBroker &eventBroker) : context_(context), gameData_(gameData), eventBroker_(eventBroker) {
+UserInterface::UserInterface(zmq::context_t &context, const sro::pk2::GameData &gameData, broker::EventBroker &eventBroker) : context_(context), gameData_(gameData), eventBroker_(eventBroker) {
   //
 }
 

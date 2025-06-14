@@ -1,6 +1,6 @@
 #include "magicOptionData.hpp"
 
-namespace pk2 {
+namespace sro::pk2 {
 
 void MagicOptionData::addItem(sro::pk2::ref::MagicOption &&magOpt) {
   magicOptions_.emplace(magOpt.id, magOpt);
@@ -14,4 +14,4 @@ const sro::pk2::ref::MagicOption& MagicOptionData::getMagicOptionById(sro::pk2::
   return it->second;
 }
 
-} // namespace pk2
+} // namespace sro::pk2

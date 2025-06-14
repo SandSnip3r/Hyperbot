@@ -69,7 +69,7 @@
 
 namespace packet::parsing {
 
-PacketParser::PacketParser(const state::EntityTracker &entityTracker, const pk2::GameData &gameData) :
+PacketParser::PacketParser(const state::EntityTracker &entityTracker, const sro::pk2::GameData &gameData) :
       entityTracker_(entityTracker),
       gameData_(gameData) {
   //
@@ -192,8 +192,6 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
         return std::make_unique<ServerAgentEntitySyncPosition>(packet);
       case Opcode::kServerAgentCosData:
         return std::make_unique<ServerAgentCosData>(packet, gameData_.characterData(), gameData_.itemData());
-      case Opcode::kClientAgentAuthRequest:
-        throw std::runtime_error("Trying to parse client agent auth request"); // TODO: Properly parse. This exception was put here just to see when we're trying to parse this packet.
       case Opcode::kServerGatewayLoginIbuvChallenge:
         return std::make_unique<ServerGatewayLoginIbuvChallenge>(packet);
       case Opcode::kServerAgentSkillLearnResponse:
@@ -209,7 +207,7 @@ std::unique_ptr<ParsedPacket> PacketParser::parsePacket(const PacketContainer &p
       case Opcode::kServerAgentInventoryEquipCountdownStart:
         return std::make_unique<ServerAgentInventoryEquipCountdownStart>(packet);
     }
-    LOG(WARNING) << "No packet parser found for opcode " << std::hex << (int)packet.opcode << std::dec << '(' << toString(opcode) << ")";
+    VLOG(2) << "No packet parser found for opcode " << std::hex << (int)packet.opcode << std::dec << '(' << toString(opcode) << ")";
   } catch (std::exception &ex) {
     LOG(ERROR) << "Exception while parsing packet! \"" << ex.what() << '"';
   }

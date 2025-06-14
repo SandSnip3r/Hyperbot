@@ -22,8 +22,6 @@ add_executable(${PROJECT_NAME}
   src/bot.hpp
   src/broker/eventBroker.cpp
   src/broker/eventBroker.hpp
-  src/broker/packetBroker.cpp
-  src/broker/packetBroker.hpp
   src/broker/timerManager.cpp
   src/broker/timerManager.hpp
   src/characterLoginInfo.hpp
@@ -293,30 +291,6 @@ add_executable(${PROJECT_NAME}
   src/packetLogger.hpp
   src/packetProcessor.cpp
   src/packetProcessor.hpp
-  src/pk2/characterData.cpp
-  src/pk2/characterData.hpp
-  src/pk2/gameData.cpp
-  src/pk2/gameData.hpp
-  src/pk2/itemData.cpp
-  src/pk2/itemData.hpp
-  src/pk2/levelData.cpp
-  src/pk2/levelData.hpp
-  src/pk2/magicOptionData.cpp
-  src/pk2/magicOptionData.hpp
-  src/pk2/masteryData.cpp
-  src/pk2/masteryData.hpp
-  src/pk2/refRegion.cpp
-  src/pk2/refRegion.hpp
-  src/pk2/shopData.cpp
-  src/pk2/shopData.hpp
-  src/pk2/skillData.cpp
-  src/pk2/skillData.hpp
-  src/pk2/teleportData.cpp
-  src/pk2/teleportData.hpp
-  src/pk2/textData.cpp
-  src/pk2/textData.hpp
-  src/pk2/textZoneNameData.cpp
-  src/pk2/textZoneNameData.hpp
   src/proto_convert/convert.cpp
   src/proto_convert/convert.hpp
   src/proxy.cpp

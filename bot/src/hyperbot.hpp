@@ -3,7 +3,8 @@
 
 #include "broker/eventBroker.hpp"
 #include "config/serverConfig.hpp"
-#include "pk2/gameData.hpp"
+
+#include <silkroad_lib/pk2/gameData.hpp>
 
 class Hyperbot {
 public:
@@ -12,7 +13,7 @@ public:
 private:
   config::ServerConfig serverConfig_;
   broker::EventBroker eventBroker_;
-  pk2::GameData gameData_;
+  sro::pk2::GameData gameData_;
 
   void parseConfig();
   void initializeGameData();

@@ -5,7 +5,7 @@
 
 #include <unordered_map>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class MasteryData {
 public:
@@ -17,6 +17,6 @@ private:
   MasteryMap masteries_;
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_MASTERY_DATA_HPP

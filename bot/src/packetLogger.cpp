@@ -40,7 +40,10 @@ PacketLogger::PacketLogger(const std::string &logDirectoryPath) : logFileDirecto
 }
 
 void PacketLogger::logPacket(const PacketContainer &packet, bool blocked, PacketContainer::Direction direction) {
-  int64_t msSinceEpoch = getMsSinceEpoch();
+  const int64_t msSinceEpoch =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          packet.timestamp.time_since_epoch())
+          .count();
   if (kLogToFile) {
     logPacketToFile(msSinceEpoch, packet, blocked, direction);
   }
@@ -94,6 +97,7 @@ void PacketLogger::logPacketToConsole(int64_t msSinceEpoch, const PacketContaine
   } else if (direction == PacketContainer::Direction::kBotToClient) {
     ss << " (B->C)";
   }
+  ss << msSinceEpoch << ',';
   ss << (int)blocked << ',';
   ss << (int)packet.encrypted << ',';
   ss << (int)packet.massive << ',';

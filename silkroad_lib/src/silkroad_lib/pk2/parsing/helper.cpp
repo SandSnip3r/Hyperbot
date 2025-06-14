@@ -24,7 +24,7 @@ bool StringLineIteratorContainer::Iterator::operator!=(const Iterator &other) co
   return pos_ != other.pos_;
 }
 
-std::string_view StringLineIteratorContainer::Iterator::operator*() const {
+absl::string_view StringLineIteratorContainer::Iterator::operator*() const {
   if (pos_ >= container_.str_.size()) {
     throw std::runtime_error("Iterator out of bounds");
   }
@@ -32,7 +32,7 @@ std::string_view StringLineIteratorContainer::Iterator::operator*() const {
   if (nextPos == std::string::npos) {
     nextPos = container_.str_.size();
   }
-  return std::string_view(container_.str_.data() + pos_, nextPos - pos_);
+  return absl::string_view(container_.str_.data() + pos_, nextPos - pos_);
 }
 
 StringLineIteratorContainer::Iterator StringLineIteratorContainer::begin() const {
@@ -43,19 +43,19 @@ StringLineIteratorContainer::Iterator StringLineIteratorContainer::end() const {
   return Iterator(*this, str_.size());
 }
 
-std::vector<std::string_view> splitToStrViews(std::string_view str, const std::string &delim) {
-  std::vector<std::string_view> result;
-  size_t start = 0;
-  size_t pos = str.find(delim);
-  while (pos != std::string::npos) {
-    result.emplace_back(str.data() + start, pos - start);
-    start = pos + delim.size();
-    pos = str.find(delim, start);
-  }
-  if (start < str.size()) {
-    result.emplace_back(str.data() + start, str.size() - start);
-  }
-  return result;
-}
+// std::vector<absl::string_view> splitToStrViews(absl::string_view str, const std::string &delim) {
+//   std::vector<absl::string_view> result;
+//   size_t start = 0;
+//   size_t pos = str.find(delim);
+//   while (pos != std::string::npos) {
+//     result.emplace_back(str.data() + start, pos - start);
+//     start = pos + delim.size();
+//     pos = str.find(delim, start);
+//   }
+//   if (start < str.size()) {
+//     result.emplace_back(str.data() + start, str.size() - start);
+//   }
+//   return result;
+// }
 
 } // namespace sro::pk2::parsing

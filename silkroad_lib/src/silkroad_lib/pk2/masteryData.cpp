@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 void MasteryData::addMastery(sro::pk2::ref::Mastery &&mastery) {
   masteries_.emplace(mastery.masteryId, mastery);
@@ -28,4 +28,4 @@ sro::pk2::ref::MasteryId MasteryData::getMasteryIdByMasteryNameCode(std::string_
   throw std::runtime_error(absl::StrFormat("Cannot find mastery id for MasteryNameCode \"%s\"", masteryNameCode));
 }
 
-} // namespace pk2
+} // namespace sro::pk2

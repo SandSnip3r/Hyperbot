@@ -14,9 +14,9 @@ namespace state {
 class WorldState;
 } // namespace state
 
-namespace pk2 {
+namespace sro::pk2 {
 class GameData;
-} // namespace pk2
+} // namespace sro::pk2
 
 namespace entity {
 
@@ -46,13 +46,13 @@ public:
   virtual ~Entity() = default;
   virtual EntityType entityType() const = 0;
   std::string toString() const { return toStringImpl(nullptr); }
-  std::string toString(const pk2::GameData &gameData) const { return toStringImpl(&gameData); }
+  std::string toString(const sro::pk2::GameData &gameData) const { return toStringImpl(&gameData); }
 protected:
   sro::Position position_;
   sro::Angle angle_;
   broker::EventBroker *eventBroker_{nullptr};
   state::WorldState *worldState_{nullptr};
-  virtual std::string toStringImpl(const pk2::GameData *gameData) const;
+  virtual std::string toStringImpl(const sro::pk2::GameData *gameData) const;
 };
 
 std::string_view toString(EntityType entityType);

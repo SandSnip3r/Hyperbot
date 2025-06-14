@@ -119,22 +119,23 @@ Status MoveItem::onUpdate(const event::Event *event) {
     }
   }
 
-  PacketContainer moveItemPacket;
-  if (source_.storage == sro::storage::Storage::kInventory && destination_.storage == sro::storage::Storage::kInventory) {
-    // Move item within inventory
-    CHAR_VLOG(1) << absl::StreamFormat("Moving item within inventory from %d to %d", source_.slotNum, destination_.slotNum);
-    moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::withinInventoryPacket(source_.slotNum, destination_.slotNum, /*quantity=*/1);
-  } else if (source_.storage == sro::storage::Storage::kInventory && destination_.storage == sro::storage::Storage::kAvatarInventory) {
-    // Move item from inventory to avatar
-    CHAR_VLOG(1) << absl::StreamFormat("Moving item from inventory-%d to avatar-%d", source_.slotNum, destination_.slotNum);
-    moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::inventoryToAvatarPacket(source_.slotNum, destination_.slotNum);
-  } else if (source_.storage == sro::storage::Storage::kAvatarInventory && destination_.storage == sro::storage::Storage::kInventory) {
-    // Move item from avatar to inventory
-    CHAR_VLOG(1) << absl::StreamFormat("Moving item from avatar-%d to inventory-%d", source_.slotNum, destination_.slotNum);
-    moveItemPacket = packet::building::ClientAgentInventoryOperationRequest::avatarToInventoryPacket(source_.slotNum, destination_.slotNum);
-  } else {
-    throw std::runtime_error(absl::StrFormat("Unhandled source %s and destination %s", toString(source_.storage), toString(destination_.storage)));
-  }
+  const PacketContainer moveItemPacket = [&]() {
+    if (source_.storage == sro::storage::Storage::kInventory && destination_.storage == sro::storage::Storage::kInventory) {
+      // Move item within inventory
+      CHAR_VLOG(1) << absl::StreamFormat("Moving item within inventory from %d to %d", source_.slotNum, destination_.slotNum);
+      return packet::building::ClientAgentInventoryOperationRequest::withinInventoryPacket(source_.slotNum, destination_.slotNum, /*quantity=*/1);
+    } else if (source_.storage == sro::storage::Storage::kInventory && destination_.storage == sro::storage::Storage::kAvatarInventory) {
+      // Move item from inventory to avatar
+      CHAR_VLOG(1) << absl::StreamFormat("Moving item from inventory-%d to avatar-%d", source_.slotNum, destination_.slotNum);
+      return packet::building::ClientAgentInventoryOperationRequest::inventoryToAvatarPacket(source_.slotNum, destination_.slotNum);
+    } else if (source_.storage == sro::storage::Storage::kAvatarInventory && destination_.storage == sro::storage::Storage::kInventory) {
+      // Move item from avatar to inventory
+      CHAR_VLOG(1) << absl::StreamFormat("Moving item from avatar-%d to inventory-%d", source_.slotNum, destination_.slotNum);
+      return packet::building::ClientAgentInventoryOperationRequest::avatarToInventoryPacket(source_.slotNum, destination_.slotNum);
+    } else {
+      throw std::runtime_error(absl::StrFormat("Unhandled source %s and destination %s", toString(source_.storage), toString(destination_.storage)));
+    }
+  }();
   injectPacket(moveItemPacket, PacketContainer::Direction::kBotToServer);
   timeoutEventId_ = bot_.eventBroker().publishDelayedEvent(event::EventCode::kTimeout, std::chrono::milliseconds(1000));
   ++attemptCount_;

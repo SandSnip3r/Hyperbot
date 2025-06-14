@@ -30,7 +30,7 @@ bool optionalValueIsDifferentFromNewValue(const std::optional<T> &oldOptional, c
 
 } // anonymous namespace
 
-Self::Self(const pk2::GameData &gameData, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId) :
+Self::Self(const sro::pk2::GameData &gameData, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceObjectId refObjId, uint32_t jId) :
     gameData_(gameData)/* , globalId(globalId), refObjId(refObjId) */, jId(jId) {
   // TODO: Assignment of globalId and refObjId could be delegated to the Entity constructor.
   this->globalId = globalId;
@@ -190,13 +190,17 @@ void Self::setHwanPoints(uint8_t hwanPoints) {
   }
 }
 
-void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition, const sro::Position &destinationPosition) {
-  PlayerCharacter::setMovingToDestination(sourcePosition, destinationPosition);
+void Self::setMovingToDestination(const std::optional<sro::Position> &sourcePosition,
+                                  const sro::Position &destinationPosition,
+                                  const PacketContainer::Clock::time_point &timestamp) {
+  PlayerCharacter::setMovingToDestination(sourcePosition, destinationPosition, timestamp);
   checkIfWillLeaveRegionAndSetTimer();
 }
 
-void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition, const sro::Angle angle) {
-  PlayerCharacter::setMovingTowardAngle(sourcePosition, angle);
+void Self::setMovingTowardAngle(const std::optional<sro::Position> &sourcePosition,
+                                const sro::Angle angle,
+                                const PacketContainer::Clock::time_point &timestamp) {
+  PlayerCharacter::setMovingTowardAngle(sourcePosition, angle, timestamp);
   checkIfWillLeaveRegionAndSetTimer();
 }
 
@@ -409,7 +413,7 @@ void Self::setStateBitmask(uint32_t stateBitmask) {
   stateBitmask_ = stateBitmask;
 }
 
-void Self::setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect, std::chrono::high_resolution_clock::time_point endTime, std::chrono::milliseconds totalDuration) {
+void Self::setLegacyStateEffect(packet::enums::AbnormalStateFlag flag, uint16_t effect, std::chrono::steady_clock::time_point endTime, std::chrono::milliseconds totalDuration) {
   const int index = helpers::toBitNum(flag);
   legacyStateEffects_.at(index) = effect;
   legacyStateEndTimes_.at(index) = endTime;

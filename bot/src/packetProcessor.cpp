@@ -44,7 +44,7 @@ do {                                                                         \
 
 ABSL_FLAG(bool, log_skills, false, "Log commands & skills");
 
-WrappedCommand::WrappedCommand(const packet::structures::ActionCommand &command, const pk2::GameData &gameData) : actionCommand(command), gameData_(gameData) {
+WrappedCommand::WrappedCommand(const packet::structures::ActionCommand &command, const sro::pk2::GameData &gameData) : actionCommand(command), gameData_(gameData) {
 
 }
 
@@ -102,96 +102,18 @@ bool skillActionKilledTarget(sro::scalar_types::EntityGlobalId targetGlobalId, c
 
 PacketProcessor::PacketProcessor(SessionId sessionId,
                                  state::WorldState &worldState,
-                                 broker::PacketBroker &brokerSystem,
                                  broker::EventBroker &eventBroker,
-                                 const pk2::GameData &gameData) :
+                                 const sro::pk2::GameData &gameData) :
       sessionId_(sessionId),
       worldState_(worldState),
-      packetBroker_(brokerSystem),
       eventBroker_(eventBroker),
       gameData_(gameData) {
-}
-
-void PacketProcessor::initialize() {
-  subscribeToPackets();
 }
 
 std::shared_ptr<entity::Self> PacketProcessor::getSelfEntity() const {
   return selfEntity_;
 }
 
-void PacketProcessor::subscribeToPackets() {
-  auto packetHandleFunction = std::bind(&PacketProcessor::handlePacket, this, std::placeholders::_1);
-
-  // Server packets
-  //   Login packets
-  // packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentAuthRequest, packetHandleFunction); // TODO: Do we want to see this packet?
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayPatchResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayShardListResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayLoginResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kFrameworkMessageIdentify, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAuthResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterSelectionActionResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterSelectionJoinResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerGatewayLoginIbuvChallenge, packetHandleFunction);
-  // packetBroker_.subscribeToServerPacket(static_cast<packet::Opcode>(0x6005), packetHandleFunction);
-  //   Movement packets
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateAngle, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMovement, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePosition, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySyncPosition, packetHandleFunction);
-  //   Character info packets
-  packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentInventoryOperationRequest, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterData, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCosData, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryStorageData, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateHwanLevel, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateState, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateStatus, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityDamageEffect, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAbnormalInfo, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterUpdateStats, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterIncreaseIntResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentCharacterIncreaseStrResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryItemUseResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryOperationResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateMoveSpeed, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityRemoveOwnership, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityGroupspawnData, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntitySpawn, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityDespawn, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillLearnResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillMasteryLearnResponse, packetHandleFunction);
-
-  //   Misc. packets
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionDeselectResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionSelectResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionTalkResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAlchemyElixirResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentAlchemyStoneResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryRepairResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryUpdateDurability, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryUpdateItem, packetHandleFunction);
-  // packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionDeselectRequest, packetHandleFunction);
-  // packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionSelectRequest, packetHandleFunction);
-  packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionTalkRequest, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdatePoints, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentEntityUpdateExperience, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentGuildStorageData, packetHandleFunction);
-  packetBroker_.subscribeToClientPacket(packet::Opcode::kClientAgentActionCommandRequest, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentActionCommandResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillBegin, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentSkillEnd, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffAdd, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffLink, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentBuffRemove, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentChatUpdate, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentGameReset, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentResurrectOption, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentOperatorResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentFreePvpUpdateResponse, packetHandleFunction);
-  packetBroker_.subscribeToServerPacket(packet::Opcode::kServerAgentInventoryEquipCountdownStart, packetHandleFunction);
-}
 
 void PacketProcessor::handlePacket(const PacketContainer &packet) {
   ZoneScopedN("PacketProcessor::handlePacket");
@@ -202,16 +124,25 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
   {
     // Do a quick check to see if any packets are coming while Self is despawned.
     static const absl::flat_hash_set<packet::Opcode> expectedOpcodes = {
+      packet::Opcode::kClientAgentAuthRequest,
       packet::Opcode::kFrameworkMessageIdentify,
       packet::Opcode::kServerGatewayPatchResponse,
       packet::Opcode::kServerGatewayShardListResponse,
       packet::Opcode::kServerGatewayLoginResponse,
-      packet::Opcode::kFrameworkMessageIdentify,
+      packet::Opcode::kFrameworkStateNotify,
+      packet::Opcode::kFrameworkStateRequest,
       packet::Opcode::kServerAgentAuthResponse,
       packet::Opcode::kServerAgentCharacterData,
       packet::Opcode::kServerAgentCharacterSelectionActionResponse,
       packet::Opcode::kServerAgentCharacterSelectionJoinResponse,
-      packet::Opcode::kServerGatewayLoginIbuvChallenge
+      packet::Opcode::kServerGatewayLoginIbuvChallenge,
+      packet::Opcode::kClientAgentCharacterSelectionActionRequest,
+      packet::Opcode::kClientGatewayShardListRequest,
+      packet::Opcode::kClientGatewayLoginRequest,
+      packet::Opcode::kClientGatewayLoginIbuvAnswer,
+      packet::Opcode::kServerGatewayLoginIbuvResult,
+      packet::Opcode::kClientGatewayShardListRequest,
+      packet::Opcode::kClientAgentCharacterSelectionJoinRequest
     };
     const packet::Opcode thisPacketOpcode = static_cast<packet::Opcode>(packet.opcode);
     if (!expectedOpcodes.contains(thisPacketOpcode)) {
@@ -230,7 +161,6 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
 
   if (!parsedPacket) {
     // Not yet parsing this packet
-    LOG(ERROR) << "Subscribed to a packet which we're not yet parsing " << std::hex << packet.opcode << std::dec;
     return;
   }
   std::unique_lock worldStateLock(worldState_.mutex);
@@ -309,7 +239,7 @@ void PacketProcessor::handlePacket(const PacketContainer &packet) {
     return;
   }
 
-  LOG(WARNING) << absl::StreamFormat("Unhandled packet (%s; %#06x) subscribed to.", packet::toString(static_cast<packet::Opcode>(packet.opcode)), packet.opcode);
+  VLOG(2) << absl::StreamFormat("Unhandled packet (%s; %#06x) subscribed to.", packet::toString(static_cast<packet::Opcode>(packet.opcode)), packet.opcode);
   return;
 }
 
@@ -457,7 +387,7 @@ void PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::Serv
     }
     if (mobileEntity->angle() != packet.angle()) {
       // Changed angle while running
-      mobileEntity->setMovingTowardAngle(std::nullopt, packet.angle());
+      mobileEntity->setMovingTowardAngle(std::nullopt, packet.angle(), packet.timestamp());
     }
   } else {
     mobileEntity->setAngle(packet.angle());
@@ -466,7 +396,7 @@ void PacketProcessor::serverAgentEntityUpdateAngleReceived(packet::parsing::Serv
 
 void PacketProcessor::serverAgentEntitySyncPositionReceived(packet::parsing::ServerAgentEntitySyncPosition &packet) const {
   std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
-  mobileEntity->syncPosition(packet.position());
+  mobileEntity->syncPosition(packet.position(), packet.timestamp());
 }
 
 void PacketProcessor::serverAgentEntityUpdatePositionReceived(packet::parsing::ServerAgentEntityUpdatePosition &packet) const {
@@ -482,9 +412,9 @@ void PacketProcessor::serverAgentEntityUpdateMovementReceived(packet::parsing::S
     sourcePosition = packet.sourcePosition();
   }
   if (packet.hasDestination()) {
-    mobileEntity->setMovingToDestination(sourcePosition, packet.destinationPosition());
+    mobileEntity->setMovingToDestination(sourcePosition, packet.destinationPosition(), packet.timestamp());
   } else {
-    mobileEntity->setMovingTowardAngle(sourcePosition, packet.angle());
+    mobileEntity->setMovingTowardAngle(sourcePosition, packet.angle(), packet.timestamp());
   }
 }
 
@@ -518,8 +448,8 @@ void initializeSelfFromCharacterDataPacket(entity::Self &self, const packet::par
   self.initializeAngle(packet.angle());
 
   // State
-  self.setLifeState(packet.lifeState());
-  self.setMotionState(packet.motionState());
+  self.setLifeState(packet.lifeState(), packet.timestamp());
+  self.setMotionState(packet.motionState(), packet.timestamp());
   self.initializeBodyState(packet.bodyState());
 
   // Buffs
@@ -527,7 +457,7 @@ void initializeSelfFromCharacterDataPacket(entity::Self &self, const packet::par
   // worldState_.addBuff(packet.globalId(), packet.skillRefId(), packet.activeBuffToken());
 
   // Speed
-  self.setSpeed(packet.walkSpeed(), packet.runSpeed());
+  self.setSpeed(packet.walkSpeed(), packet.runSpeed(), packet.timestamp());
   self.setHwanSpeed(packet.hwanSpeed());
   self.name = packet.characterName();
   self.initializeGold(packet.gold());
@@ -644,11 +574,11 @@ void PacketProcessor::serverAgentEntityUpdateHwanLevelReceived(packet::parsing::
 void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::ServerAgentEntityUpdateState &packet) const {
   if (packet.stateType() == packet::enums::StateType::kMotionState) {
     std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
-    mobileEntity->setMotionState(static_cast<entity::MotionState>(packet.state()));
+    mobileEntity->setMotionState(static_cast<entity::MotionState>(packet.state()), packet.timestamp());
   } else if (packet.stateType() == packet::enums::StateType::kLifeState) {
     std::shared_ptr<entity::Character> characterEntity = worldState_.getEntity<entity::Character>(packet.globalId());
     const auto newLifeState = static_cast<sro::entity::LifeState>(packet.state());
-    characterEntity->setLifeState(newLifeState);
+    characterEntity->setLifeState(newLifeState, packet.timestamp());
   } else if (selfEntity_ && packet.globalId() == selfEntity_->globalId) {
     if (packet.stateType() == packet::enums::StateType::kBodyState) {
       selfEntity_->setBodyState(static_cast<packet::enums::BodyState>(packet.state()));
@@ -658,7 +588,7 @@ void PacketProcessor::serverAgentEntityUpdateStateReceived(packet::parsing::Serv
 
 void PacketProcessor::serverAgentEntityUpdateMoveSpeedReceived(const packet::parsing::ServerAgentEntityUpdateMoveSpeed &packet) const {
   std::shared_ptr<entity::MobileEntity> mobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.globalId());
-  mobileEntity->setSpeed(packet.walkSpeed(), packet.runSpeed());
+  mobileEntity->setSpeed(packet.walkSpeed(), packet.runSpeed(), packet.timestamp());
 }
 
 void PacketProcessor::serverAgentEntityRemoveOwnershipReceived(const packet::parsing::ServerAgentEntityRemoveOwnership &packet) const {
@@ -713,7 +643,7 @@ void PacketProcessor::serverAgentAbnormalInfoReceived(const packet::parsing::Ser
       const std::chrono::milliseconds stateTotalTime{state.totalTime * 100};
       // It is possible for time elapsed to be greater than total time.
       const std::chrono::milliseconds stateRemainingTime = std::max(std::chrono::milliseconds(0), stateTotalTime - std::chrono::milliseconds(state.timeElapsed * 100));
-      selfEntity_->setLegacyStateEffect(helpers::fromBitNum<packet::enums::AbnormalStateFlag>(bitNum), state.effectOrLevel, std::chrono::high_resolution_clock::now() + stateRemainingTime, stateTotalTime);
+      selfEntity_->setLegacyStateEffect(helpers::fromBitNum<packet::enums::AbnormalStateFlag>(bitNum), state.effectOrLevel, std::chrono::steady_clock::now() + stateRemainingTime, stateTotalTime);
     }
   }
   if (changed) {
@@ -1105,7 +1035,7 @@ void PacketProcessor::serverAgentEntityGroupSpawnDataReceived(const packet::pars
   if (packet.groupSpawnType() == packet::enums::GroupSpawnType::kSpawn) {
     for (const std::shared_ptr<entity::Entity> &entity : packet.entities()) {
       if (entity) {
-        entitySpawned(entity);
+        entitySpawned(entity, packet.timestamp());
       } else {
         LOG(INFO) << "Received null entity from group spawn";
       }
@@ -1117,9 +1047,10 @@ void PacketProcessor::serverAgentEntityGroupSpawnDataReceived(const packet::pars
   }
 }
 
-void PacketProcessor::serverAgentEntitySpawnReceived(const packet::parsing::ServerAgentEntitySpawn &packet) const {
+void PacketProcessor::serverAgentEntitySpawnReceived(
+    const packet::parsing::ServerAgentEntitySpawn &packet) const {
   if (packet.entity()) {
-    entitySpawned(std::move(packet.entity()));
+    entitySpawned(std::move(packet.entity()), packet.timestamp());
   } else {
     LOG(INFO) << "Received null entity from spawn";
   }
@@ -1129,7 +1060,8 @@ void PacketProcessor::serverAgentEntityDespawnReceived(const packet::parsing::Se
   entityDespawned(packet.globalId());
 }
 
-void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) const {
+void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity,
+                                   const PacketContainer::Clock::time_point &timestamp) const {
   const sro::scalar_types::EntityGlobalId entityGlobalId = entity->globalId;
   const bool firstTimeSeeingEntity = worldState_.entitySpawned(std::move(entity), eventBroker_);
   if (!firstTimeSeeingEntity) {
@@ -1154,9 +1086,13 @@ void PacketProcessor::entitySpawned(std::shared_ptr<entity::Entity> entity) cons
     LOG(INFO) << "Entity is moving, making some changes";
     if (mobileEntity->destinationPosition) {
       // Entity spawned and is moving to a destination
-      mobileEntity->setMovingToDestination(mobileEntity->position(), *mobileEntity->destinationPosition);
+      mobileEntity->setMovingToDestination(mobileEntity->positionAtTime(timestamp),
+                                           *mobileEntity->destinationPosition,
+                                           timestamp);
     } else {
-      mobileEntity->setMovingTowardAngle(mobileEntity->position(), mobileEntity->angle());
+      mobileEntity->setMovingTowardAngle(mobileEntity->positionAtTime(timestamp),
+                                         mobileEntity->angle(),
+                                         timestamp);
     }
   }
 }
@@ -1392,6 +1328,10 @@ void PacketProcessor::serverAgentGuildStorageDataReceived(const packet::parsing:
 
 void PacketProcessor::clientAgentActionCommandRequestReceived(const packet::parsing::ClientAgentActionCommandRequest &packet) const {
   CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "<Packet> ClientAgentActionCommandRequest: " << packet.actionCommand().toString();
+  if (!selfEntity_) {
+    LOG(WARNING) << "Received action command request, but we don't have a self entity";
+    return;
+  }
   selfEntity_->skillEngine.pendingCommandQueue.push_back(packet.actionCommand());
   printCommandQueues();
 }
@@ -1495,8 +1435,8 @@ ActionActionDuration is the amount of time it takes for the skill to cast before
 ActionReuseDelay is the skill's cooldown
 */
 
-void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::ServerAgentSkillBegin &packet) const {
-  const broker::EventBroker::ClockType::time_point currentTime = broker::EventBroker::ClockType::now();
+void PacketProcessor::serverAgentSkillBeginReceived(
+    const packet::parsing::ServerAgentSkillBegin &packet) const {
   CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << "<Packet> ServerAgentSkillBeginReceived";
   if (packet.result() == 2) {
     // Error
@@ -1576,12 +1516,12 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
     auto &thing = tracked_[packet.castId()];
     thing.refSkillId = packet.refSkillId();;
     thing.casterGlobalId = packet.casterGlobalId();;
-    thing.expTime = std::chrono::high_resolution_clock::now() + std::chrono::seconds(10);
+    thing.expTime = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     thing.expectEnd = expectEnd;
     // Run through all of these and see if any expired on time
     for (auto it=tracked_.begin(); it!=tracked_.end();) {
       auto &trackedItem = it->second;
-      if (trackedItem.expTime <= std::chrono::high_resolution_clock::now()) {
+      if (trackedItem.expTime <= std::chrono::steady_clock::now()) {
         // This one expired
         if (trackedItem.expectEnd) {
           logNoEnd(trackedItem.refSkillId);
@@ -1688,7 +1628,10 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
           // TODO: Move the sending of this event into the entity!
           // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-          selfEntity_->skillCooldownBegin(packet.refSkillId(), currentTime + std::chrono::milliseconds(skillData.actionReuseDelay));
+          selfEntity_->skillCooldownBegin(
+              packet.refSkillId(),
+              packet.timestamp() +
+                  std::chrono::milliseconds(skillData.actionReuseDelay));
         }
         if (skillData.basicActivity == 1) {
           // No "End" will come for Basic_Activity == 1, delete the item from the accepted command queue
@@ -1748,7 +1691,7 @@ void PacketProcessor::serverAgentSkillBeginReceived(const packet::parsing::Serve
         // Will stop you if you're running
         std::shared_ptr<entity::MobileEntity> casterAsMobileEntity = worldState_.getEntity<entity::MobileEntity>(packet.casterGlobalId());
         if (casterAsMobileEntity->moving()) {
-          casterAsMobileEntity->setStationaryAtPosition(casterAsMobileEntity->position());
+          casterAsMobileEntity->setStationaryAtPosition(casterAsMobileEntity->positionAtTime(packet.timestamp()));
         }
         break;
       }

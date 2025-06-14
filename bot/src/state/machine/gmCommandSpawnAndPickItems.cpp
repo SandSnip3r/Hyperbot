@@ -42,6 +42,7 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
     const bool childStateWasPick = dynamic_cast<PickItem*>(childState_.get()) != nullptr;
     const bool childStateWasWalking = dynamic_cast<Walking*>(childState_.get()) != nullptr;
     childState_.reset();
+    bot_.sendActiveStateMachine();
     if (childStateWasPick) {
       CHAR_VLOG(1) << "Finished picking item";
       // If we're not at our original position, move back to it.

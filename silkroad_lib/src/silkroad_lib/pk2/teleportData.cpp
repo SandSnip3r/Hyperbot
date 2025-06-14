@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 void TeleportData::addTeleport(sro::pk2::ref::Teleport &&teleport) {
   teleports_.emplace(teleport.id, teleport);
@@ -25,4 +25,4 @@ const TeleportData::TeleportMap::size_type TeleportData::size() const {
   return teleports_.size();
 }
 
-} // namespace pk2
+} // namespace sro::pk2

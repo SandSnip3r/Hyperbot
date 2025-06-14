@@ -88,6 +88,7 @@ Status Townlooping::onUpdate(const event::Event *event) {
       waitingForSpawn_ = true;
     }
     childState_.reset();
+    bot_.sendActiveStateMachine();
   }
 
   if (event != nullptr) {

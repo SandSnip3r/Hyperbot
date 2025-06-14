@@ -7,7 +7,7 @@
 
 namespace packet::parsing {
 
-ServerAgentAlchemyStoneResponse::ServerAgentAlchemyStoneResponse(const PacketContainer &packet, const pk2::ItemData &itemData) :
+ServerAgentAlchemyStoneResponse::ServerAgentAlchemyStoneResponse(const PacketContainer &packet, const sro::pk2::ItemData &itemData) :
       ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   stream.Read(result_);

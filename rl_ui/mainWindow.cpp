@@ -24,6 +24,7 @@
 MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot, QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow), config_(std::move(config)), hyperbot_(hyperbot) {
   ui->setupUi(this);
   ui->checkpointWidget->setHyperbot(hyperbot_);
+  ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
   connectSignals();
   // testChart();
@@ -43,11 +44,15 @@ void MainWindow::connectSignals() {
   connect(ui->startTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::startTraining);
   connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
   connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
+  connect(&hyperbot_, &Hyperbot::disconnected, ui->dashboardWidget,
+          &DashboardWidget::clearStatusTable);
 
   // TODO: Organize this better
   connect(&hyperbot_, &Hyperbot::plotData, this, &MainWindow::addDataPoint);
   connect(&hyperbot_, &Hyperbot::characterStatusReceived, ui->dashboardWidget,
           &DashboardWidget::onCharacterStatusReceived);
+  connect(&hyperbot_, &Hyperbot::activeStateMachineReceived, ui->dashboardWidget,
+          &DashboardWidget::onActiveStateMachine);
 }
 
 void MainWindow::showConnectionWindow(const QString &windowTitle) {
@@ -82,6 +87,7 @@ void MainWindow::onConnectedToHyperbot() {
   connectionWindow_ = nullptr;
   this->setEnabled(true);
   hyperbot_.requestCheckpointList();
+  hyperbot_.requestCharacterStatuses();
 }
 
 void MainWindow::onDisconnectedFromHyperbot() {

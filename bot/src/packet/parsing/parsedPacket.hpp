@@ -2,14 +2,14 @@
 #include "packet/opcode.hpp"
 #include "packet/enums/packetEnums.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
-#include "pk2/characterData.hpp"
-#include "pk2/gameData.hpp"
-#include "pk2/itemData.hpp"
-#include "pk2/skillData.hpp"
-#include "pk2/teleportData.hpp"
 #include "shared/silkroad_security.h"
 #include "storage/item.hpp"
 
+#include <silkroad_lib/pk2/characterData.hpp>
+#include <silkroad_lib/pk2/gameData.hpp>
+#include <silkroad_lib/pk2/itemData.hpp>
+#include <silkroad_lib/pk2/skillData.hpp>
+#include <silkroad_lib/pk2/teleportData.hpp>
 #include <silkroad_lib/position.hpp>
 
 #include <array>
@@ -25,11 +25,17 @@ namespace packet::parsing {
 //=========================================================================================================================================================
 
 class ParsedPacket {
+public:
+  using Clock = PacketContainer::Clock;
+
 protected:
   const Opcode opcode_;
+  const Clock::time_point timestamp_;
+
 public:
   ParsedPacket(const PacketContainer &packet);
   Opcode opcode() const;
+  const Clock::time_point& timestamp() const;
   virtual ~ParsedPacket() = 0;
 };
 

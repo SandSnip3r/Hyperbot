@@ -2,7 +2,6 @@
 #define PACKET_PROCESSOR_HPP_
 
 #include "broker/eventBroker.hpp"
-#include "broker/packetBroker.hpp"
 #include "entity/self.hpp"
 // #include "packet/parsing/clientAgentActionDeselectRequest.hpp"
 // #include "packet/parsing/clientAgentActionSelectRequest.hpp"
@@ -64,19 +63,20 @@
 #include "packet/parsing/serverGatewayPatchResponse.hpp"
 #include "packet/parsing/serverGatewayShardListResponse.hpp"
 #include "packet/parsing/packetParser.hpp"
-#include "pk2/gameData.hpp"
 #include "state/worldState.hpp"
 #include "common/sessionId.hpp"
+
+#include <silkroad_lib/pk2/gameData.hpp>
 
 #define ENFORCE_PURIFICATION_PILL_COOLDOWN
 
 class WrappedCommand {
 public:
-  WrappedCommand(const packet::structures::ActionCommand &command, const pk2::GameData &gameData);
+  WrappedCommand(const packet::structures::ActionCommand &command, const sro::pk2::GameData &gameData);
   std::optional<std::string> skillName() const;
   const packet::structures::ActionCommand &actionCommand;
 private:
-  const pk2::GameData &gameData_;
+  const sro::pk2::GameData &gameData_;
 };
 
 std::ostream& operator<<(std::ostream &stream, const WrappedCommand &wrappedCommand);
@@ -88,18 +88,15 @@ class PacketProcessor {
 public:
   PacketProcessor(SessionId sessionId,
                   state::WorldState &worldState,
-                  broker::PacketBroker &brokerSystem,
                   broker::EventBroker &eventBroker,
-                  const pk2::GameData &gameData);
+                  const sro::pk2::GameData &gameData);
 
-  void initialize();
   void handlePacket(const PacketContainer &packet);
 private:
   const SessionId sessionId_;
   state::WorldState &worldState_;
-  broker::PacketBroker &packetBroker_;
   broker::EventBroker &eventBroker_;
-  const pk2::GameData &gameData_;
+  const sro::pk2::GameData &gameData_;
   packet::parsing::PacketParser packetParser_{worldState_.entityTracker(), gameData_};
   std::shared_ptr<entity::Self> selfEntity_;
   std::shared_ptr<entity::Self> getSelfEntity() const;
@@ -108,13 +105,12 @@ private:
   struct TrackedSkill {
     uint32_t refSkillId;
     uint32_t casterGlobalId;
-    std::chrono::high_resolution_clock::time_point expTime;
+    std::chrono::steady_clock::time_point expTime;
     bool expectEnd;
   };
   mutable std::map<uint32_t, TrackedSkill> tracked_;
   // END DEBUGGING SkillBegin/SkillEnd
 
-  void subscribeToPackets();
 
   // Packet handle functions
   //  In principal, each of these functions should only update the state and maybe publish an event.
@@ -150,7 +146,8 @@ private:
   void serverAgentEntityGroupSpawnDataReceived(const packet::parsing::ServerAgentEntityGroupSpawnData &packet) const;
   void serverAgentEntitySpawnReceived(const packet::parsing::ServerAgentEntitySpawn &packet) const;
   void serverAgentEntityDespawnReceived(const packet::parsing::ServerAgentEntityDespawn &packet) const;
-  void entitySpawned(std::shared_ptr<entity::Entity> entity) const;
+  void entitySpawned(std::shared_ptr<entity::Entity> entity,
+                     const PacketContainer::Clock::time_point &timestamp) const;
   void entityDespawned(sro::scalar_types::EntityGlobalId globalId) const;
   void serverAgentSkillLearnResponseReceived(const packet::parsing::ServerAgentSkillLearnResponse &packet) const;
   void serverAgentSkillMasteryLearnResponseReceived(const packet::parsing::ServerAgentSkillMasteryLearnResponse &packet) const;

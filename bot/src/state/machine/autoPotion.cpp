@@ -31,6 +31,7 @@ Status AutoPotion::onUpdate(const event::Event *event) {
           if (childState_) {
             // We should destroy this child state.
             childState_.reset();
+            bot_.sendActiveStateMachine();
           }
         }
       }
@@ -48,6 +49,7 @@ Status AutoPotion::onUpdate(const event::Event *event) {
     if (status == Status::kDone) {
       // Must be done using an item
       childState_.reset();
+      bot_.sendActiveStateMachine();
     } else {
       // Still using an item, nothing to do
       return Status::kNotDone;

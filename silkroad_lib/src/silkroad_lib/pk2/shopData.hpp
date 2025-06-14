@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 class Tab {
 public:
@@ -33,6 +33,6 @@ private:
   std::map<std::string, std::vector<Tab>> npcTabs_;
 };
 
-} // namespace pk2
+} // namespace sro::pk2
 
 #endif // PK2_SHOP_DATA_HPP_

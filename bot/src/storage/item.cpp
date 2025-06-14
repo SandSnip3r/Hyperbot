@@ -37,7 +37,7 @@ Item::~Item() {}
 
 ItemEquipment::ItemEquipment() : Item(ItemType::kItemEquipment) {}
 
-bool ItemEquipment::repairInvalid(const pk2::GameData &gameData) const {
+bool ItemEquipment::repairInvalid(const sro::pk2::GameData &gameData) const {
   for (const auto &blue : magicParams) {
     const auto &magicOption = gameData.magicOptionData().getMagicOptionById(blue.type);
     // Rather than string comparisons, we could use the 2-4 character string from Param1, but string comparison is actually what the client uses.
@@ -48,7 +48,7 @@ bool ItemEquipment::repairInvalid(const pk2::GameData &gameData) const {
   return false;
 }
 
-uint32_t ItemEquipment::maxDurability(const pk2::GameData &gameData) const {
+uint32_t ItemEquipment::maxDurability(const sro::pk2::GameData &gameData) const {
   // The durability is the first 5 bits within the variance
   // TODO: Extracting this from the variance should be done in a more general way
   const uint64_t kDurabilityMask{0b11111};

@@ -3,7 +3,7 @@
 
 namespace packet::parsing {
 
-ServerAgentGuildStorageData::ServerAgentGuildStorageData(const PacketContainer &packet, const pk2::ItemData &itemData) : ParsedPacket(packet) {
+ServerAgentGuildStorageData::ServerAgentGuildStorageData(const PacketContainer &packet, const sro::pk2::ItemData &itemData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
   gold_ = stream.Read<uint64_t>();
   storageSize_ = stream.Read<uint8_t>();

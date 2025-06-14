@@ -4,12 +4,12 @@
 namespace packet::parsing {
 
 ServerAgentEntitySpawn::ServerAgentEntitySpawn(const PacketContainer &packet,
-                                   const pk2::CharacterData &characterData,
-                                   const pk2::ItemData &itemData,
-                                   const pk2::SkillData &skillData,
-                                   const pk2::TeleportData &teleportData) : ParsedPacket(packet) {
+                                   const sro::pk2::CharacterData &characterData,
+                                   const sro::pk2::ItemData &itemData,
+                                   const sro::pk2::SkillData &skillData,
+                                   const sro::pk2::TeleportData &teleportData) : ParsedPacket(packet) {
   StreamUtility stream = packet.data;
-  entity_ = parseSpawn(stream, characterData, itemData, skillData, teleportData);
+  entity_ = parseSpawn(stream, packet.timestamp, characterData, itemData, skillData, teleportData);
   if (entity_) {
     // TODO: Handle "skill objects", like the recovery circle (will be nullptr)
     if (entity_->typeId1 == 1 || entity_->typeId1 == 4) {

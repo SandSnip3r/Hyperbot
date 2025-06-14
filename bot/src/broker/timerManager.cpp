@@ -34,7 +34,7 @@ void TimerManager::runAsync() {
 }
 
 TimerManager::TimerId TimerManager::registerTimer(std::chrono::milliseconds timerDuration, std::unique_ptr<Payload> &&payload) {
-  const auto timerEndTimePoint = std::chrono::high_resolution_clock::now() + timerDuration;
+  const auto timerEndTimePoint = ClockType::now() + timerDuration;
   return registerTimer(timerEndTimePoint, std::move(payload));
 }
 
@@ -66,7 +66,7 @@ void TimerManager::triggerInstantTimer(std::unique_ptr<Payload> &&payload) {
   {
     std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
       // Add the new "timer" on the "heap"
-    timerDataHeap_.emplace_back(timerIdCounter_, /*isInstant=*/true, std::chrono::high_resolution_clock::now(), std::move(payload));
+    timerDataHeap_.emplace_back(timerIdCounter_, /*isInstant=*/true, ClockType::now(), std::move(payload));
     std::push_heap(timerDataHeap_.begin(), timerDataHeap_.end(), std::greater<Timer>());
     ++timerIdCounter_;
   }
@@ -112,7 +112,7 @@ bool TimerManager::cancelTimer(TimerId id) {
 }
 
 std::optional<std::chrono::milliseconds> TimerManager::timeRemainingOnTimer(TimerId id) const {
-  const auto currentTime = std::chrono::high_resolution_clock::now();
+  const auto currentTime = ClockType::now();
   std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
   for (auto it=timerDataHeap_.begin(), end=timerDataHeap_.end(); it!=end; ++it) {
     if (it->id == id) {
@@ -132,6 +132,11 @@ std::optional<TimerManager::TimePoint> TimerManager::timerEndTime(TimerId id) co
   return {};
 }
 
+size_t TimerManager::queueSize() const {
+  std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
+  return timerDataHeap_.size();
+}
+
 void TimerManager::waitForData() {
   std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
   cv_.wait(timerDataLock, [this](){ return !keepRunning_ || !timerDataHeap_.empty(); });
@@ -140,7 +145,7 @@ void TimerManager::waitForData() {
 bool TimerManager::mostRecentTimerIsFinished() {
   std::unique_lock<std::mutex> timerDataLock(timerDataMutex_);
   if (!timerDataHeap_.empty()) {
-    if (timerDataHeap_.front().endTime <= std::chrono::high_resolution_clock::now()) {
+    if (timerDataHeap_.front().endTime <= ClockType::now()) {
       return true;
     }
   }
@@ -172,7 +177,7 @@ void TimerManager::run() {
               //  cv_.wait_until() is now going to awake at the wrong time
               const bool soonerTimerAdded = currentSoonestTime < soonestTime;
               // Wake up if our timer has expired
-              const bool timeExpired = std::chrono::high_resolution_clock::now() >= currentSoonestTime;
+              const bool timeExpired = ClockType::now() >= currentSoonestTime;
               return (soonerTimerAdded || timeExpired);
             } else {
               // Wake up if no timer exists

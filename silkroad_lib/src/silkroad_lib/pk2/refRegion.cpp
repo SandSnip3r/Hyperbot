@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace pk2 {
+namespace sro::pk2 {
 
 void RefRegion::addRegion(sro::pk2::ref::Region &&region) {
   regions_.emplace(region.wRegionID, region);
@@ -20,4 +20,4 @@ const sro::pk2::ref::Region& RefRegion::getRegion(sro::RegionId regionId) const 
   return it->second;
 }
 
-} // namespace pk2
+} // namespace sro::pk2

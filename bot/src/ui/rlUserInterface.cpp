@@ -1,5 +1,6 @@
 #include "broker/eventBroker.hpp"
 #include "event/event.hpp"
+#include "entity/self.hpp"
 #include "ui/rlUserInterface.hpp"
 
 // Tracy
@@ -11,13 +12,14 @@ using namespace proto;
 
 namespace ui {
 
-RlUserInterface::RlUserInterface(zmq::context_t &context, broker::EventBroker &eventBroker) : context_(context), eventBroker_(eventBroker) {
+RlUserInterface::RlUserInterface(zmq::context_t &context, broker::EventBroker &eventBroker)
+    : context_(context), eventBroker_(eventBroker) {
 
 }
 
 RlUserInterface::~RlUserInterface() {
   VLOG(1) << "Destructing UserInterface";
-  if (requestHandlingThread_.joinable() || broadcastHeartbeatThread_.joinable()) {
+  if (requestHandlingThread_.joinable() || broadcastHeartbeatThread_.joinable() || eventQueueThread_.joinable()) {
     keepRunning_ = false;
     if (requestHandlingThread_.joinable()) {
       requestHandlingThread_.join();
@@ -25,12 +27,14 @@ RlUserInterface::~RlUserInterface() {
     if (broadcastHeartbeatThread_.joinable()) {
       broadcastHeartbeatThread_.join();
     }
+    if (eventQueueThread_.joinable()) {
+      eventQueueThread_.join();
+    }
   }
 
 }
 
 void RlUserInterface::initialize() {
-
 }
 
 void RlUserInterface::runAsync() {
@@ -46,6 +50,7 @@ void RlUserInterface::runAsync() {
     keepRunning_ = true;
     requestHandlingThread_ = std::thread(&RlUserInterface::requestLoop, this);
     broadcastHeartbeatThread_ = std::thread(&RlUserInterface::heartbeatLoop, this);
+    eventQueueThread_ = std::thread(&RlUserInterface::eventQueueLoop, this);
   } catch (const std::exception &ex) {
     LOG(ERROR) << "Exception while binding to UI: \"" << ex.what() << "\"";
   } catch (...) {
@@ -136,6 +141,18 @@ void RlUserInterface::heartbeatLoop() {
   }
 }
 
+void RlUserInterface::eventQueueLoop() {
+  tracy::SetThreadName("RlUserInterface::EventQueueLoop");
+  const auto startTime = std::chrono::steady_clock::now();
+  while (keepRunning_) {
+    const auto now = std::chrono::steady_clock::now();
+    double x = std::chrono::duration_cast<std::chrono::duration<double>>(now - startTime).count();
+    double y = static_cast<double>(eventBroker_.queuedEventCount());
+    plot("event_queue_size", x, y);
+    std::this_thread::sleep_for(kEventQueueInterval);
+  }
+}
+
 void RlUserInterface::handleRequest(const zmq::message_t &request, zmq::socket_t &socket) {
   rl_ui_messages::ReplyMessage replyMsg;
   // Parse the request
@@ -177,6 +194,8 @@ void RlUserInterface::handleRequest(const zmq::message_t &request, zmq::socket_t
           checkpointNames.push_back(checkpointName);
         }
         eventBroker_.publishEvent<event::RlUiDeleteCheckpoints>(checkpointNames);
+      } else if (asyncRequestMsg.body_case() == rl_ui_messages::AsyncRequest::BodyCase::kRequestCharacterStatuses) {
+        eventBroker_.publishEvent(event::EventCode::kRlUiRequestCharacterStatuses);
       } else {
         throw std::runtime_error(absl::StrFormat("RlUserInterface received invalid async request \"%s\"", asyncRequestMsg.DebugString()));
       }
@@ -197,6 +216,25 @@ void RlUserInterface::handleRequest(const zmq::message_t &request, zmq::socket_t
 void RlUserInterface::broadcastMessage(const rl_ui_messages::BroadcastMessage &message) {
   std::unique_lock lock(publisherMutex_);
   publisher_.send(zmq::message_t(message.SerializeAsString()), zmq::send_flags::none);
+}
+
+void RlUserInterface::sendCharacterStatus(const entity::Self &self) {
+  rl_ui_messages::BroadcastMessage msg;
+  auto *status = msg.mutable_character_status();
+  status->set_name(self.name);
+  status->set_current_hp(self.currentHp());
+  status->set_max_hp(self.maxHp().value_or(self.currentHp()));
+  status->set_current_mp(self.currentMp());
+  status->set_max_mp(self.maxMp().value_or(self.currentMp()));
+  broadcastMessage(msg);
+}
+
+void RlUserInterface::sendActiveStateMachine(const entity::Self &self, const std::string &stateMachine) {
+  rl_ui_messages::BroadcastMessage msg;
+  auto *payload = msg.mutable_active_state_machine();
+  payload->set_name(self.name);
+  payload->set_state_machine(stateMachine);
+  broadcastMessage(msg);
 }
 
 } // namespace ui

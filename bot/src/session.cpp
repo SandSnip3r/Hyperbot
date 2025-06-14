@@ -1,12 +1,14 @@
 #include "session.hpp"
 
-Session::Session(const pk2::GameData &gameData,
+Session::Session(const sro::pk2::GameData &gameData,
                  broker::EventBroker &eventBroker,
                  state::WorldState &worldState,
-                 ClientManagerInterface &clientManagerInterface) :
+                 ClientManagerInterface &clientManagerInterface,
+                 ui::RlUserInterface &rlUserInterface) :
     gameData_(gameData),
     eventBroker_(eventBroker),
-    bot_(sessionId_, gameData_, proxy_, packetBroker_, eventBroker_, worldState),
+    worldState_(worldState),
+    rlUserInterface_(rlUserInterface),
     clientManagerInterface_(clientManagerInterface) {
   eventBroker_.subscribeToEvent(event::EventCode::kClientDied, std::bind(&Session::handleClientDiedEvent, this, std::placeholders::_1));
 }
@@ -31,7 +33,7 @@ void Session::runAsync() {
 }
 
 const state::WorldState& Session::getWorldState() const {
-  return bot_.worldState();
+  return worldState_;
 }
 
 Bot& Session::getBot() {

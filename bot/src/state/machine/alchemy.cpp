@@ -82,6 +82,7 @@ Status Alchemy::onUpdate(const event::Event *event) {
     const Status status = childState_->onUpdate(event);
     if (status == Status::kDone) {
       childState_.reset();
+      bot_.sendActiveStateMachine();
     } else {
       // Dont execute anything else in this function until the child state is done
       return Status::kNotDone;

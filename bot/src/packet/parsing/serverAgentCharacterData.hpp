@@ -5,10 +5,10 @@
 #include "parsedPacket.hpp"
 #include "packet/enums/packetEnums.hpp"
 #include "packet/structures/packetInnerStructures.hpp"
-#include "pk2/itemData.hpp"
-#include "pk2/skillData.hpp"
 #include "shared/silkroad_security.h"
 
+#include <silkroad_lib/pk2/itemData.hpp>
+#include <silkroad_lib/pk2/skillData.hpp>
 #include <silkroad_lib/entity.hpp>
 #include <silkroad_lib/position.hpp>
 #include <silkroad_lib/scalar_types.hpp>
@@ -22,7 +22,7 @@ namespace packet::parsing {
 
 class ServerAgentCharacterData : public ParsedPacket {
 public:
-  ServerAgentCharacterData(const PacketContainer &packet, const pk2::ItemData &itemData, const pk2::SkillData &skillData);
+  ServerAgentCharacterData(const PacketContainer &packet, const sro::pk2::ItemData &itemData, const sro::pk2::SkillData &skillData);
   sro::scalar_types::ReferenceObjectId refObjId() const { return refObjId_; }
   uint8_t curLevel() const;
   uint64_t currentExperience() const;

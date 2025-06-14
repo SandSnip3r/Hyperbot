@@ -2,7 +2,8 @@
 #define PACKET_PARSING_CLIENT_AGENT_BUFF_ADD_HPP
 
 #include "parsedPacket.hpp"
-#include "pk2/skillData.hpp"
+
+#include <silkroad_lib/pk2/skillData.hpp>
 
 #include <silkroad_lib/scalar_types.hpp>
 
@@ -12,7 +13,7 @@ namespace packet::parsing {
 
 class ServerAgentBuffAdd : public ParsedPacket {
 public:
-  ServerAgentBuffAdd(const PacketContainer &packet, const pk2::SkillData &skillData);
+  ServerAgentBuffAdd(const PacketContainer &packet, const sro::pk2::SkillData &skillData);
   sro::scalar_types::EntityGlobalId globalId() const { return globalId_; }
   sro::scalar_types::ReferenceSkillId skillRefId() const { return skillRefId_; }
   sro::scalar_types::BuffTokenType activeBuffToken() const { return activeBuffToken_; }

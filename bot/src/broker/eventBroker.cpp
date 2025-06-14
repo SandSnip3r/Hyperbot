@@ -14,6 +14,10 @@ EventBroker::~EventBroker() {
   VLOG(1) << "Destructing EventBroker";
 }
 
+size_t EventBroker::queuedEventCount() const {
+  return timerManager_.queueSize();
+}
+
 void EventBroker::runAsync() {
   timerManager_.runAsync();
 }

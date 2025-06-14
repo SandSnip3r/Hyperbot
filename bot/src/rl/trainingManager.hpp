@@ -7,7 +7,6 @@
 #include "common/itemRequirement.hpp"
 #include "common/pvpDescriptor.hpp"
 #include "common/sessionId.hpp"
-#include "pk2/gameData.hpp"
 #include "rl/checkpointManager.hpp"
 #include "rl/jaxInterface.hpp"
 #include "rl/observationAndActionStorage.hpp"
@@ -17,6 +16,7 @@
 #include "state/worldState.hpp"
 #include "characterLoginInfo.hpp"
 
+#include <silkroad_lib/pk2/gameData.hpp>
 #include <silkroad_lib/position.hpp>
 
 #include <absl/base/thread_annotations.h>
@@ -39,7 +39,7 @@ namespace rl {
 
 class TrainingManager {
 public:
-  TrainingManager(const pk2::GameData &gameData,
+  TrainingManager(const sro::pk2::GameData &gameData,
                     broker::EventBroker &eventBroker,
                     ui::RlUserInterface &rlUserInterface,
                     state::WorldState &worldState,
@@ -72,7 +72,7 @@ private:
 
   static constexpr int kPastObservationStackSize{16};
   static constexpr float kPvpStartingCenterOffset{40.0f};
-  static constexpr int kBatchSize{128};
+  static constexpr int kBatchSize{256};
   static constexpr int kReplayBufferMinimumBeforeTraining{40'000};
   static constexpr int kReplayBufferCapacity{1'000'000};
   static constexpr int kTargetNetworkUpdateInterval{10'000};
@@ -86,17 +86,17 @@ private:
   static constexpr float kPerAlpha{0.5f};
   static constexpr float kPerBetaStart{0.4f};
   static constexpr float kPerBetaEnd{1.0f};
-  static constexpr int kPerTrainStepCountAnneal{250'000};
+  static constexpr int kPerTrainStepCountAnneal{500'000};
   static constexpr float kInitialEpsilon{1.0f};
   static constexpr float kFinalEpsilon{0.01f};
-  static constexpr int kEpsilonDecaySteps{200'000};
+  static constexpr int kEpsilonDecaySteps{500'000};
   static constexpr int kPvpCount{16};
 
   std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;
   std::condition_variable runTrainingCondition_;
 
-  const pk2::GameData &gameData_;
+  const sro::pk2::GameData &gameData_;
   broker::EventBroker &eventBroker_;
   ui::RlUserInterface &rlUserInterface_;
   state::WorldState &worldState_;
@@ -114,16 +114,16 @@ private:
 
   // Sample collection rate tracking
   int sampleCount_{0};
-  std::chrono::high_resolution_clock::time_point lastSampleTime_{std::chrono::high_resolution_clock::now()};
+  std::chrono::steady_clock::time_point lastSampleTime_{std::chrono::steady_clock::now()};
   static constexpr std::chrono::milliseconds kSampleRateReportInterval{2000};
 
   // Replay buffer size tracking
-  std::chrono::high_resolution_clock::time_point lastReplayBufferSizeUpdateTime_{std::chrono::high_resolution_clock::now()};
+  std::chrono::steady_clock::time_point lastReplayBufferSizeUpdateTime_{std::chrono::steady_clock::now()};
   static constexpr std::chrono::milliseconds kReplayBufferSizeUpdateInterval{5000};
 
   // Training rate tracking
   int trainingCount_{0};
-  std::chrono::high_resolution_clock::time_point lastTrainingTime_{std::chrono::high_resolution_clock::now()};
+  std::chrono::steady_clock::time_point lastTrainingTime_{std::chrono::steady_clock::now()};
   static constexpr std::chrono::milliseconds kTrainRateReportInterval{2000};
 
   void precompileModels();
@@ -142,7 +142,7 @@ private:
   std::vector<common::ItemRequirement> itemRequirements_;
 
   using ReplayBufferType = ReplayBuffer<ObservationAndActionStorage::Id>;
-  mutable std::mutex replayBufferAndStorageMutex_;
+  mutable TracyLockableN(std::mutex, replayBufferAndStorageMutex_, "ReplayBuffer");
   ObservationAndActionStorage observationAndActionStorage_{kReplayBufferCapacity}                                      ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
   ReplayBufferType replayBuffer_{kReplayBufferCapacity, kPerAlpha, /*epsilon=*/1e-5f}                                  ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
   absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> observationIdToTransitionIdMap_ ABSL_GUARDED_BY(replayBufferAndStorageMutex_);

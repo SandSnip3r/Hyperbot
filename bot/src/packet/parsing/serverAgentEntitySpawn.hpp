@@ -13,10 +13,10 @@ class ServerAgentEntitySpawn : public ParsedPacket {
 public:
 public:
   ServerAgentEntitySpawn(const PacketContainer &packet,
-                         const pk2::CharacterData &characterData,
-                         const pk2::ItemData &itemData,
-                         const pk2::SkillData &skillData,
-                         const pk2::TeleportData &teleportData);
+                         const sro::pk2::CharacterData &characterData,
+                         const sro::pk2::ItemData &itemData,
+                         const sro::pk2::SkillData &skillData,
+                         const sro::pk2::TeleportData &teleportData);
   std::shared_ptr<entity::Entity> entity() const;
 private:
   std::shared_ptr<entity::Entity> entity_;

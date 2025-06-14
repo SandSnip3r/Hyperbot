@@ -1,5 +1,7 @@
-#include "broker/packetBroker.hpp"
 #include "stateMachine.hpp"
+
+#include <absl/debugging/internal/demangle.h>
+#include <typeinfo>
 
 #include "bot.hpp"
 namespace state::machine {
@@ -39,7 +41,7 @@ void StateMachine::injectPacket(const PacketContainer &packet, PacketContainer::
     parent_->injectPacket(packet, direction);
   } else {
     // No parent, inject the packet ourselves.
-    bot_.packetBroker().injectPacket(packet, direction);
+    bot_.injectPacket(packet, direction);
   }
 }
 
@@ -61,6 +63,14 @@ void StateMachine::setChildStateMachine(std::unique_ptr<StateMachine> &&newChild
     throw std::runtime_error("Cannot set a nullptr child state machine");
   }
   childState_ = std::move(newChildStateMachine);
+  bot_.sendActiveStateMachine();
+}
+
+std::string StateMachine::activeStateMachineName() const {
+  if (childState_) {
+    return childState_->activeStateMachineName();
+  }
+  return absl::debugging_internal::DemangleString(typeid(*this).name());
 }
 
 std::ostream& operator<<(std::ostream &stream, Npc npc) {

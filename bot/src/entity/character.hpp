@@ -4,6 +4,8 @@
 #include "mobileEntity.hpp"
 #include "broker/eventBroker.hpp"
 
+#include "shared/silkroad_security.h"
+
 #include <silkroad_lib/entity.hpp>
 #include <silkroad_lib/scalar_types.hpp>
 
@@ -23,12 +25,13 @@ public:
   virtual bool currentHpIsKnown() const;
   uint32_t currentHp() const;
 
-  void setLifeState(sro::entity::LifeState newLifeState);
+  void setLifeState(sro::entity::LifeState newLifeState,
+                    const PacketContainer::Clock::time_point &timestamp);
   void setCurrentHp(uint32_t hp);
 
   // ---- Buffs ----
   struct BuffData {
-    using ClockType = std::chrono::high_resolution_clock;
+    using ClockType = std::chrono::steady_clock;
     sro::scalar_types::ReferenceSkillId skillRefId;
     std::optional<ClockType::time_point> castTime;
   };

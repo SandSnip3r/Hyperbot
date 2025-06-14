@@ -19,7 +19,7 @@ namespace packet::parsing {
 
 namespace {
 
-std::shared_ptr<entity::Entity> newObjectFromId(sro::scalar_types::ReferenceObjectId refObjId, const pk2::CharacterData &characterData, const pk2::ItemData &itemData, const pk2::TeleportData &teleportData) {
+std::shared_ptr<entity::Entity> newObjectFromId(sro::scalar_types::ReferenceObjectId refObjId, const sro::pk2::CharacterData &characterData, const sro::pk2::ItemData &itemData, const sro::pk2::TeleportData &teleportData) {
   if (characterData.haveCharacterWithId(refObjId) &&
       characterData.getCharacterById(refObjId).typeId1 == 1) {
     const auto &character = characterData.getCharacterById(refObjId);
@@ -72,7 +72,7 @@ std::shared_ptr<entity::Entity> newObjectFromId(sro::scalar_types::ReferenceObje
 
 } // anonymous namespace
 
-std::shared_ptr<storage::Item> parseGenericItem(StreamUtility &stream, const pk2::ItemData &itemData) {
+std::shared_ptr<storage::Item> parseGenericItem(StreamUtility &stream, const sro::pk2::ItemData &itemData) {
   auto rentInfo = parseRentInfo(stream);
 
   uint32_t refItemId = stream.Read<uint32_t>();
@@ -328,10 +328,11 @@ sro::Position parsePosition(StreamUtility &stream) {
 }
 
 std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
-                                           const pk2::CharacterData &characterData,
-                                           const pk2::ItemData &itemData,
-                                           const pk2::SkillData &skillData,
-                                           const pk2::TeleportData &teleportData) {
+                                           const PacketContainer::Clock::time_point &timestamp,
+                                           const sro::pk2::CharacterData &characterData,
+                                           const sro::pk2::ItemData &itemData,
+                                           const sro::pk2::SkillData &skillData,
+                                           const sro::pk2::TeleportData &teleportData) {
   using namespace type_id;
   const auto refObjId = stream.Read<sro::scalar_types::ReferenceObjectId>();
   if (refObjId == std::numeric_limits<sro::scalar_types::ReferenceObjectId>::max()) {
@@ -463,12 +464,12 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
         offsetY = stream.Read<int16_t>();
         offsetZ = stream.Read<int16_t>();
       }
-      if (std::trunc(characterPtr->position().xOffset()) == offsetX &&
-          std::trunc(characterPtr->position().zOffset()) == offsetZ) {
+      if (std::trunc(characterPtr->positionAtTime(timestamp).xOffset()) == offsetX &&
+          std::trunc(characterPtr->positionAtTime(timestamp).zOffset()) == offsetZ) {
         // Entity is not actually moving
       } else {
         // Entity is currently moving
-        characterPtr->initializeAsMoving({destinationRegionId, offsetX, offsetY, offsetZ});
+        characterPtr->initializeAsMoving({destinationRegionId, offsetX, offsetY, offsetZ}, timestamp);
       }
     } else {
       packet::enums::AngleAction angleAction_ = static_cast<packet::enums::AngleAction>(stream.Read<uint8_t>());
@@ -476,7 +477,7 @@ std::shared_ptr<entity::Entity> parseSpawn(StreamUtility &stream,
       // For monsters, I think this means that they have never moved before, otherwise, they will have a destination that is the last point they moved to
       if (angleAction_ == packet::enums::AngleAction::kGoForward) {
         // Entity is currently moving
-        characterPtr->initializeAsMoving(angle);
+        characterPtr->initializeAsMoving(angle, timestamp);
       }
     }
 
