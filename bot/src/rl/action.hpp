@@ -33,7 +33,7 @@ public:
   Sleep(StateMachine *parent) : Action(parent) {}
   state::machine::Status onUpdate(const event::Event *event) override;
 private:
-  static constexpr int kSleepDurationMs{200};
+  static constexpr int kSleepDurationMs{500};
   std::optional<broker::EventBroker::EventId> eventId_;
 };
 
