@@ -110,6 +110,7 @@
   F(RlUiSaveCheckpoint) \
   F(RlUiLoadCheckpoint) \
   F(RlUiDeleteCheckpoints) \
+  F(RlUiRequestCharacterStatuses) \
   F(Dummy)
 
 namespace event {

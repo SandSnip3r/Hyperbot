@@ -72,6 +72,12 @@ void Hyperbot::requestCheckpointList() {
   sendAsyncRequest(asyncRequest);
 }
 
+void Hyperbot::requestCharacterStatuses() {
+  rl_ui_messages::AsyncRequest asyncRequest;
+  asyncRequest.mutable_request_character_statuses();
+  sendAsyncRequest(asyncRequest);
+}
+
 void Hyperbot::saveCheckpoint(const QString &checkpointName) {
   rl_ui_messages::AsyncRequest asyncRequest;
   rl_ui_messages::SaveCheckpoint *saveCheckpoint = asyncRequest.mutable_save_checkpoint();

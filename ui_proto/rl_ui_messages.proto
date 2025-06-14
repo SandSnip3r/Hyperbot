@@ -28,6 +28,7 @@ message AsyncRequest {
     SaveCheckpoint save_checkpoint = 4;
     LoadCheckpoint load_checkpoint = 5;
     DeleteCheckpoints delete_checkpoints = 6;
+    google.protobuf.Empty request_character_statuses = 7;
   }
 };
 

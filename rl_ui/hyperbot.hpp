@@ -29,6 +29,7 @@ public:
   void startTraining();
   void stopTraining();
   void requestCheckpointList();
+  void requestCharacterStatuses();
   void saveCheckpoint(const QString &checkpointName);
   void loadCheckpoint(const QString &checkpointName);
   void deleteCheckpoints(const QList<QString> &checkpointNames);
