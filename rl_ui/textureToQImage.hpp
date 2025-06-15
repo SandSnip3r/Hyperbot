@@ -1,9 +1,14 @@
 #ifndef RL_UI_TEXTURE_TO_QIMAGE_HPP_
 #define RL_UI_TEXTURE_TO_QIMAGE_HPP_
 
-#include <QImage>
 #include <gli/texture2d.hpp>
 #include <glm/common.hpp>
+#include <gli/load_dds.hpp>
+#include <gli/sampler2d.hpp>
+
+#include <QImage>
+
+#include <stdexcept>
 
 namespace texture_to_image {
 
