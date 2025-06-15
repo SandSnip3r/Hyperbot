@@ -93,5 +93,6 @@ target_link_libraries(
 
 include(GoogleTest)
 gtest_discover_tests(${TEST_NAME}
-WORKING_DIRECTORY
-${CMAKE_CURRENT_SOURCE_DIR})
+  WORKING_DIRECTORY
+  ${CMAKE_CURRENT_SOURCE_DIR}
+)
