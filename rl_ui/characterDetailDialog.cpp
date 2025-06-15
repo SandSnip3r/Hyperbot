@@ -54,8 +54,12 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
                      << ": " << ex.what();
       }
     }
+    const QString skillName =
+        QString::fromStdString(gameData_.getSkillName(cooldown.skillId));
     const double seconds = cooldown.remainingMs / 1000.0;
-    item->setText(QString::number(seconds, 'f', 1));
+    item->setText(QString("%1 (%2s)")
+                      .arg(skillName)
+                      .arg(seconds, 0, 'f', 1));
     ui_->skillCooldownList->addItem(item);
   }
 
