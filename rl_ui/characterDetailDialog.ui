@@ -28,18 +28,21 @@
      </property>
     </widget>
    </item>
-   <item>
-    <widget class="QProgressBar" name="mpBar">
-     <property name="format">
-      <string>0/0</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="stateMachineLabel">
-     <property name="text">
-      <string>State Machine</string>
-     </property>
+    <item>
+      <widget class="QProgressBar" name="mpBar">
+       <property name="format">
+        <string>0/0</string>
+       </property>
+      </widget>
+    </item>
+    <item>
+     <widget class="QListWidget" name="skillCooldownList"/>
+    </item>
+    <item>
+      <widget class="QLabel" name="stateMachineLabel">
+       <property name="text">
+        <string>State Machine</string>
+       </property>
      <property name="wordWrap">
       <bool>true</bool>
      </property>

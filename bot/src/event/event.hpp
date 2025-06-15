@@ -113,6 +113,15 @@ public:
   virtual ~SkillCooldownEnded() = default;
 };
 
+struct SkillCooldownStarted : public Event {
+public:
+  SkillCooldownStarted(EventId id, sro::scalar_types::EntityGlobalId globalId,
+                       sro::scalar_types::ReferenceSkillId skillId);
+  const sro::scalar_types::EntityGlobalId globalId;
+  const sro::scalar_types::ReferenceSkillId skillRefId;
+  virtual ~SkillCooldownStarted() = default;
+};
+
 // Note that new items arriving are represented as a null source. Items leaving are represented as a null destination. This is the case for simple quantity increases/decreases too.
 struct ItemMoved : public Event {
 public:

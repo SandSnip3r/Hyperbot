@@ -1,11 +1,25 @@
 #ifndef CHARACTER_DETAIL_DIALOG_HPP_
 #define CHARACTER_DETAIL_DIALOG_HPP_
 
-#include <QDialog>
+#include "textureToQImage.hpp"
 
+#include <silkroad_lib/scalar_types.hpp>
+#include <silkroad_lib/pk2/gameData.hpp>
+
+#include <QDialog>
+#include <QList>
+#include <QString>
+
+#include <filesystem>
+#include <memory>
 namespace Ui {
 class CharacterDetailDialog;
 }
+
+struct SkillCooldown {
+  sro::scalar_types::ReferenceSkillId skillId{0};
+  int remainingMs{0};
+};
 
 struct CharacterData {
   int currentHp{0};
@@ -13,12 +27,13 @@ struct CharacterData {
   int currentMp{0};
   int maxMp{0};
   QString stateMachine;
+  QList<SkillCooldown> skillCooldowns;
 };
 
 class CharacterDetailDialog : public QDialog {
   Q_OBJECT
 public:
-  explicit CharacterDetailDialog(QWidget *parent = nullptr);
+  explicit CharacterDetailDialog(const sro::pk2::GameData &gameData, QWidget *parent = nullptr);
   ~CharacterDetailDialog();
 
   void setCharacterName(const QString &name);
@@ -30,10 +45,12 @@ public slots:
 private:
   Ui::CharacterDetailDialog *ui_;
   QString name_;
+  const sro::pk2::GameData &gameData_;
 };
 
 #include <QMetaType>
 
+Q_DECLARE_METATYPE(SkillCooldown)
 Q_DECLARE_METATYPE(CharacterData)
 
 #endif // CHARACTER_DETAIL_DIALOG_HPP_

@@ -184,6 +184,7 @@ void Bot::handleEvent(const event::Event *event) {
         handleSelfSpawned(event);
         if (selfEntity_) {
           rlUserInterface_.sendCharacterStatus(*selfEntity_);
+          rlUserInterface_.sendSkillCooldowns(*selfEntity_);
         }
         break;
       }
@@ -210,6 +211,7 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kRlUiRequestCharacterStatuses: {
         if (selfEntity_) {
           rlUserInterface_.sendCharacterStatus(*selfEntity_);
+          rlUserInterface_.sendSkillCooldowns(*selfEntity_);
           sendActiveStateMachine();
         }
         break;
@@ -236,6 +238,20 @@ void Bot::handleEvent(const event::Event *event) {
       case event::EventCode::kChatReceived: {
         const auto &castedEvent = dynamic_cast<const event::ChatReceived&>(*event);
         handleChatCommand(castedEvent);
+        break;
+      }
+      case event::EventCode::kSkillCooldownStarted: {
+        const auto *skillStarted = dynamic_cast<const event::SkillCooldownStarted *>(event);
+        if (skillStarted && selfEntity_ && skillStarted->globalId == selfEntity_->globalId) {
+          rlUserInterface_.sendSkillCooldowns(*selfEntity_);
+        }
+        break;
+      }
+      case event::EventCode::kSkillCooldownEnded: {
+        const auto *skillEnded = dynamic_cast<const event::SkillCooldownEnded*>(event);
+        if (skillEnded && selfEntity_ && skillEnded->globalId == selfEntity_->globalId) {
+          rlUserInterface_.sendSkillCooldowns(*selfEntity_);
+        }
         break;
       }
       case event::EventCode::kSetCurrentPositionAsTrainingCenter: {

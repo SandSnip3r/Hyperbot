@@ -15,6 +15,7 @@
   F(EntityStatesChanged) \
   F(InternalSkillCooldownEnded) \
   F(SkillCooldownEnded) \
+  F(SkillCooldownStarted) \
   F(ItemMoved) \
   F(ItemMoveFailed) \
   F(SkillCastAboutToEnd) \
