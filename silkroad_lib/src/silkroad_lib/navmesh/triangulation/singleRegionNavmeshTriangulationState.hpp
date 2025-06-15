@@ -1,7 +1,7 @@
 #ifndef SRO_NAVMESH_TRIANGULATION_SINGLE_REGION_NAVMESH_TRIANGULATION_STATE_H_
 #define SRO_NAVMESH_TRIANGULATION_SINGLE_REGION_NAVMESH_TRIANGULATION_STATE_H_
 
-#include <pathfinder/navmesh_astar_state.hpp>
+#include <pathfinder/navmesh_astar_state.h>
 
 #include <cstdint>
 #include <optional>
