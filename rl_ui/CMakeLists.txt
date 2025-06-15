@@ -45,7 +45,7 @@ target_link_libraries(rl_ui PRIVATE
   Qt6::Qml
   silkroad_lib
   ui_proto
-gli
+  gli
 )
 
 set_target_properties(rl_ui PROPERTIES
