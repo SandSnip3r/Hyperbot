@@ -3,7 +3,6 @@
 
 #include <QImage>
 #include <gli/texture2d.hpp>
-#include <gli/detail/dxt.hpp>
 #include <glm/common.hpp>
 
 namespace texture_to_image {
