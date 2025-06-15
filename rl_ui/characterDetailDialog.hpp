@@ -8,10 +8,14 @@
 
 #include <QDialog>
 #include <QElapsedTimer>
+#include <QHash>
 #include <QList>
 #include <QProgressBar>
+#include <QListWidget>
+#include <QPixmap>
 #include <QTimer>
 #include <QString>
+#include <QWidget>
 
 namespace Ui {
 class CharacterDetailDialog;
@@ -48,8 +52,12 @@ private:
     sro::scalar_types::ReferenceSkillId skillId{0};
     int startMs{0};
     QElapsedTimer timer;
+    QListWidgetItem *item{nullptr};
+    QWidget *container{nullptr};
     QProgressBar *bar{nullptr};
     QString skillName;
+
+    int remainingMs() const { return startMs - timer.elapsed(); }
   };
 
   Ui::CharacterDetailDialog *ui_;
@@ -57,8 +65,11 @@ private:
   const sro::pk2::GameData &gameData_;
   QTimer *cooldownTimer_{nullptr};
   QList<CooldownItem> cooldownItems_;
+  QHash<sro::scalar_types::ReferenceSkillId, QPixmap> iconCache_;
 
   void updateCooldownDisplays();
+  QPixmap getSkillPixmap(sro::scalar_types::ReferenceSkillId id);
+  void sortCooldowns();
 };
 
 #include <QMetaType>
