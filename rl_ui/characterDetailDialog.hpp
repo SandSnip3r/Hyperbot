@@ -48,7 +48,8 @@ public slots:
 private:
   struct CooldownItem {
     sro::scalar_types::ReferenceSkillId skillId{0};
-    int startMs{0};
+    int totalMs{0};
+    int startRemainingMs{0};
     QElapsedTimer timer;
     QProgressBar *bar{nullptr};
     QString skillName;
@@ -57,7 +58,8 @@ private:
   Ui::CharacterDetailDialog *ui_;
   QString name_;
   const sro::pk2::GameData &gameData_;
-  QTimer *cooldownTimer_{nullptr};
+  static QTimer *sharedCooldownTimer_;
+  static int activeDialogCount_;
   QList<CooldownItem> cooldownItems_;
   QHash<sro::scalar_types::ReferenceSkillId, QPixmap> iconCache_;
 

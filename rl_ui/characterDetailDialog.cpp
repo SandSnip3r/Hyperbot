@@ -12,12 +12,16 @@
 #include <QLabel>
 #include <QProgressBar>
 #include <QTimer>
+#include <QCoreApplication>
 #include <QHash>
 
 #include <absl/log/log.h>
 #include <algorithm>
 #include <memory>
 #include <stdexcept>
+
+QTimer *CharacterDetailDialog::sharedCooldownTimer_ = nullptr;
+int CharacterDetailDialog::activeDialogCount_ = 0;
 
 namespace {
 } // namespace
@@ -28,16 +32,24 @@ CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
   ui_->setupUi(this);
   setupHpBar(ui_->hpBar);
   setupMpBar(ui_->mpBar);
-  cooldownTimer_ = new QTimer(this);
-  cooldownTimer_->setInterval(50);
-  connect(cooldownTimer_, &QTimer::timeout, this,
+  if (sharedCooldownTimer_ == nullptr) {
+    sharedCooldownTimer_ = new QTimer(QCoreApplication::instance());
+    sharedCooldownTimer_->setInterval(50);
+    sharedCooldownTimer_->start();
+  }
+  connect(sharedCooldownTimer_, &QTimer::timeout, this,
           &CharacterDetailDialog::updateCooldownDisplays);
-  cooldownTimer_->start();
+  ++activeDialogCount_;
 }
 
 CharacterDetailDialog::~CharacterDetailDialog() {
-  if (cooldownTimer_ != nullptr) {
-    cooldownTimer_->stop();
+  disconnect(sharedCooldownTimer_, &QTimer::timeout, this,
+             &CharacterDetailDialog::updateCooldownDisplays);
+  --activeDialogCount_;
+  if (activeDialogCount_ == 0 && sharedCooldownTimer_ != nullptr) {
+    sharedCooldownTimer_->stop();
+    sharedCooldownTimer_->deleteLater();
+    sharedCooldownTimer_ = nullptr;
   }
   delete ui_;
 }
@@ -57,7 +69,6 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
   ui_->mpBar->setValue(data.currentMp);
   ui_->mpBar->setFormat(QString("%1/%2").arg(data.currentMp).arg(data.maxMp));
 
-  cooldownTimer_->stop();
   ui_->skillCooldownList->clear();
   cooldownItems_.clear();
 
@@ -94,7 +105,9 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
     }
 
     QProgressBar *bar = new QProgressBar(container);
-    bar->setRange(0, cooldown.remainingMs);
+    const auto &skill =
+        gameData_.skillData().getSkillById(cooldown.skillId);
+    bar->setRange(0, skill.actionReuseDelay);
     bar->setValue(cooldown.remainingMs);
 
     const QString skillName =
@@ -114,15 +127,12 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
 
     CooldownItem ci;
     ci.skillId = cooldown.skillId;
-    ci.startMs = cooldown.remainingMs;
+    ci.totalMs = skill.actionReuseDelay;
+    ci.startRemainingMs = cooldown.remainingMs;
     ci.bar = bar;
     ci.skillName = skillName;
     ci.timer.start();
     cooldownItems_.append(ci);
-  }
-
-  if (!cooldownItems_.isEmpty()) {
-    cooldownTimer_->start();
   }
 
   ui_->stateMachineLabel->setText(data.stateMachine);
@@ -138,7 +148,7 @@ void CharacterDetailDialog::onCharacterDataUpdated(QString name,
 void CharacterDetailDialog::updateCooldownDisplays() {
   for (CooldownItem &item : cooldownItems_) {
     const int elapsed = item.timer.elapsed();
-    int remaining = item.startMs - elapsed;
+    int remaining = item.startRemainingMs - elapsed;
     if (remaining < 0) {
       remaining = 0;
     }
