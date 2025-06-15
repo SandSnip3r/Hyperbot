@@ -171,6 +171,7 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
         SkillCooldown cooldown;
         cooldown.skillId = cd.skill_id();
         cooldown.remainingMs = cd.remaining_ms();
+        cooldown.timestampMs = cd.timestamp_ms();
         cooldowns.append(cooldown);
       }
       emit skillCooldownsReceived(

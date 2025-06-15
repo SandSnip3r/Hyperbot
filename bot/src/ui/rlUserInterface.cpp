@@ -8,6 +8,8 @@
 
 #include <absl/log/log.h>
 
+#include <chrono>
+
 using namespace proto;
 
 namespace ui {
@@ -251,6 +253,10 @@ void RlUserInterface::sendSkillCooldowns(const entity::Self &self) {
     rl_ui_messages::SkillCooldown *cd = payload->add_cooldowns();
     cd->set_skill_id(pair.first);
     cd->set_remaining_ms(static_cast<int32_t>(remaining->count()));
+    int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::system_clock::now().time_since_epoch())
+                     .count();
+    cd->set_timestamp_ms(now);
   }
   broadcastMessage(msg);
 }
