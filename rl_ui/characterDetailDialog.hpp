@@ -9,6 +9,10 @@
 #include <QDialog>
 #include <QList>
 #include <QString>
+#include <QMap>
+#include <QProgressBar>
+#include <QTimer>
+#include <QListWidgetItem>
 
 #include <filesystem>
 #include <memory>
@@ -46,6 +50,15 @@ private:
   Ui::CharacterDetailDialog *ui_;
   QString name_;
   const sro::pk2::GameData &gameData_;
+  struct CooldownWidget {
+    QListWidgetItem *item{nullptr};
+    QProgressBar *bar{nullptr};
+    double totalMs{0};
+    double remainingMs{0};
+  };
+  QMap<sro::scalar_types::ReferenceSkillId, CooldownWidget> cooldownWidgets_;
+  QTimer updateTimer_;
+  void updateCooldownBars();
 };
 
 #include <QMetaType>
