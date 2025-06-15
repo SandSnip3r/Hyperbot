@@ -817,7 +817,7 @@ void GameData::parseSkillIcons(sro::pk2::Pk2ReaderModern &pk2Reader) {
       std::vector<uint8_t> data = pk2Reader.getEntryData(entry);
       constexpr int kJoymaxHeaderSize = 20;
       const char *buffer = reinterpret_cast<const char *>(data.data() + kJoymaxHeaderSize);
-      gli::texture2d texture = gli::load_dds(buffer, data.size() - kJoymaxHeaderSize);
+      gli::texture2d texture(gli::load_dds(buffer, data.size() - kJoymaxHeaderSize));
       if (texture.size() != 0) {
         skillIcons_.emplace(id, std::move(texture));
       }
