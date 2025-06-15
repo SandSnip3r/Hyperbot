@@ -809,11 +809,15 @@ void GameData::parseSkillIcons(sro::pk2::Pk2ReaderModern &pk2Reader) {
     if (skill.uiIconFile.empty()) {
       continue;
     }
-    if (!pk2Reader.hasEntry(skill.uiIconFile)) {
+    if (skill.uiIconFile == "xxx") {
+      continue;
+    }
+    const std::string path = "icon\\" + skill.uiIconFile;
+    if (!pk2Reader.hasEntry(path)) {
       continue;
     }
     try {
-      sro::pk2::PK2Entry entry = pk2Reader.getEntry(skill.uiIconFile);
+      sro::pk2::PK2Entry entry = pk2Reader.getEntry(path);
       std::vector<uint8_t> data = pk2Reader.getEntryData(entry);
       constexpr int kJoymaxHeaderSize = 20;
       const char *buffer = reinterpret_cast<const char *>(data.data() + kJoymaxHeaderSize);
