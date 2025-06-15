@@ -7,11 +7,16 @@
 #include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QDialog>
+#include <QElapsedTimer>
 #include <QList>
+#include <QProgressBar>
+#include <QTimer>
+#include <QHash>
+#include <QPixmap>
+#include <QListWidgetItem>
+#include <QWidget>
 #include <QString>
 
-#include <filesystem>
-#include <memory>
 namespace Ui {
 class CharacterDetailDialog;
 }
@@ -43,9 +48,26 @@ public slots:
   void onCharacterDataUpdated(QString name, CharacterData data);
 
 private:
+  struct CooldownItem {
+    sro::scalar_types::ReferenceSkillId skillId{0};
+    int totalMs{0};
+    int startRemainingMs{0};
+    QElapsedTimer timer;
+    QProgressBar *bar{nullptr};
+    QListWidgetItem *listItem{nullptr};
+    QWidget *container{nullptr};
+    QString skillName;
+  };
+
   Ui::CharacterDetailDialog *ui_;
   QString name_;
   const sro::pk2::GameData &gameData_;
+  static QTimer *sharedCooldownTimer_;
+  static int activeDialogCount_;
+  QHash<sro::scalar_types::ReferenceSkillId, CooldownItem> cooldownItems_;
+  QHash<sro::scalar_types::ReferenceSkillId, QPixmap> iconCache_;
+
+  void updateCooldownDisplays();
 };
 
 #include <QMetaType>

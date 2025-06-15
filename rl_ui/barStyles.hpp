@@ -5,5 +5,6 @@
 
 void setupHpBar(QProgressBar *bar);
 void setupMpBar(QProgressBar *bar);
+void setupCooldownBar(QProgressBar *bar);
 
 #endif // BAR_STYLES_HPP_
