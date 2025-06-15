@@ -27,3 +27,17 @@ void setupMpBar(QProgressBar *bar) {
     }
   )");
 }
+
+void setupCooldownBar(QProgressBar *bar) {
+  bar->setStyleSheet(R"(
+    QProgressBar {
+      border: 1px solid black;
+      border-radius: 2px;
+      color: white;
+      background-color: #131113;
+    }
+    QProgressBar::chunk {
+      background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #006f3c, stop: 1 #2fe976);
+    }
+  )");
+}
