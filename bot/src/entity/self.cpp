@@ -820,6 +820,7 @@ void Self::skillCooldownBegin(sro::scalar_types::ReferenceSkillId skillId, broke
   }
   const broker::EventBroker::EventId cooldownEndTimerId = eventBroker_->publishDelayedEvent<event::InternalSkillCooldownEnded>(cooldownEndTime, globalId, skillId);
   skillEngine.skillCooldownBegin(skillId, cooldownEndTimerId);
+  eventBroker_->publishEvent<event::SkillCooldownStarted>(globalId, skillId);
 }
 
 std::optional<std::chrono::milliseconds> Self::skillRemainingCooldown(sro::scalar_types::ReferenceSkillId skillId) const {

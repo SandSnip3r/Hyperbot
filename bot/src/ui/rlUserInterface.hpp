@@ -37,6 +37,7 @@ public:
   void plot(std::string_view plotName, double x, double y);
   void sendCharacterStatus(const entity::Self &self);
   void sendActiveStateMachine(const entity::Self &self, const std::string &stateMachine);
+  void sendSkillCooldowns(const entity::Self &self);
 private:
   static constexpr std::chrono::milliseconds kHeartbeatInterval{250};
   static constexpr std::chrono::milliseconds kEventQueueInterval{250};

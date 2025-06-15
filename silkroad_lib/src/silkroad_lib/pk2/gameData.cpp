@@ -8,6 +8,8 @@
 #include <silkroad_lib/pk2/parsing/regionInfoParser.hpp>
 #include <silkroad_lib/pk2/pk2.hpp>
 
+#include <gli/load_dds.hpp>
+
 #include <absl/log/log.h>
 #include <absl/log/vlog_is_on.h>
 #include <absl/strings/str_format.h>
@@ -37,7 +39,8 @@ bool isCommentLine(absl::string_view line) {
 
 } // anonymous namespace
 
-void GameData::parseSilkroadFiles(const std::filesystem::path &clientPath) {
+void GameData::parseSilkroadFiles(const std::filesystem::path &clientPath,
+                                  ParseOptions options) {
   LOG(INFO) << "Parsing Silkroad files at path \"" << clientPath.string() << "\"";
   try {
     const auto kDataPath = clientPath / "Data.pk2";
@@ -49,7 +52,7 @@ void GameData::parseSilkroadFiles(const std::filesystem::path &clientPath) {
   try {
     const auto kMediaPath = clientPath / "Media.pk2";
     sro::pk2::Pk2ReaderModern pk2Reader{kMediaPath};
-    parseMedia(pk2Reader);
+    parseMedia(pk2Reader, options);
   } catch (std::exception &ex) {
     throw std::runtime_error(std::string("Failed to parse Media.Pk2 at path \""+clientPath.string()+"\". Error: \"")+ex.what()+"\"");
   }
@@ -64,7 +67,8 @@ void GameData::parseData(sro::pk2::Pk2ReaderModern &pk2Reader) {
   VLOG(1) << "Done parsing Data.pk2";
 }
 
-void GameData::parseMedia(sro::pk2::Pk2ReaderModern &pk2Reader) {
+void GameData::parseMedia(sro::pk2::Pk2ReaderModern &pk2Reader,
+                          const ParseOptions &options) {
   VLOG(1) << "Parsing Media.pk2";
   std::vector<std::thread> thrs;
   parseGatewayPort(pk2Reader);
@@ -81,6 +85,9 @@ void GameData::parseMedia(sro::pk2::Pk2ReaderModern &pk2Reader) {
   parseTeleportData(pk2Reader);
   for (auto &thr : thrs) {
     thr.join();
+  }
+  if (options.parseIcons) {
+    parseSkillIcons(pk2Reader);
   }
   VLOG(1) << "Done parsing Media.pk2";
 }
@@ -785,6 +792,44 @@ void GameData::parseRegionInfo(sro::pk2::Pk2ReaderModern &pk2Reader) {
   VLOG(2) << absl::StreamFormat("  Cached %d continent(s) with region counts [%s]", regionInfo_.continents.size(), absl::StrJoin(regionInfo_.continents, ", ", [](std::string *out, const sro::pk2::RegionInfo::Continent &continent) {
     absl::StrAppend(out, std::to_string(continent.regionRects.size()));
   }));
+}
+
+const gli::texture2d* GameData::getSkillIcon(sro::scalar_types::ReferenceSkillId id) const {
+  auto it = skillIcons_.find(id);
+  if (it == skillIcons_.end()) {
+    return nullptr;
+  }
+  return &it->second;
+}
+
+void GameData::parseSkillIcons(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(2) << "Parsing skill icons";
+  for (sro::pk2::ref::SkillId id : skillData_.getAllSkillIds()) {
+    const sro::pk2::ref::Skill &skill = skillData_.getSkillById(id);
+    if (skill.uiIconFile.empty()) {
+      continue;
+    }
+    if (skill.uiIconFile == "xxx") {
+      continue;
+    }
+    const std::string path = "icon\\" + skill.uiIconFile;
+    if (!pk2Reader.hasEntry(path)) {
+      continue;
+    }
+    try {
+      sro::pk2::PK2Entry entry = pk2Reader.getEntry(path);
+      std::vector<uint8_t> data = pk2Reader.getEntryData(entry);
+      constexpr int kJoymaxHeaderSize = 20;
+      const char *buffer = reinterpret_cast<const char *>(data.data() + kJoymaxHeaderSize);
+      gli::texture2d texture(gli::load_dds(buffer, data.size() - kJoymaxHeaderSize));
+      if (texture.size() != 0) {
+        skillIcons_.emplace(id, std::move(texture));
+      }
+    } catch (const std::exception &ex) {
+      LOG(WARNING) << "Failed to load icon for skill id " << id << ": " << ex.what();
+    }
+  }
+  VLOG(2) << "  Cached " << skillIcons_.size() << " skill icon(s)";
 }
 
 } // namespace sro::pk2

@@ -23,6 +23,7 @@ public:
   sro::scalar_types::ReferenceSkillId getRootSkillRefId(sro::scalar_types::ReferenceSkillId id) const;
 
   std::vector<sro::pk2::ref::SkillId> getSkillIdsForMastery(sro::scalar_types::ReferenceMasteryId masteryId) const;
+  std::vector<sro::pk2::ref::SkillId> getAllSkillIds() const;
 private:
   SkillMap skills_;
 };

@@ -1,12 +1,12 @@
 [submodule "Pathfinder"]
 	path = third_party/pathfinder
 	url = git@github.com:SandSnip3r/Pathfinder.git
-[submodule "ui/gli"]
-	path = ui/gli
-	url = https://github.com/g-truc/gli
 [submodule "third_party/tracy"]
 	path = third_party/tracy
 	url = git@github.com:wolfpld/tracy.git
 [submodule "third_party/pybind11"]
 	path = third_party/pybind11
 	url = git@github.com:pybind/pybind11.git
+[submodule "third_party/gli"]
+	path = third_party/gli
+	url = git@github.com:g-truc/gli.git

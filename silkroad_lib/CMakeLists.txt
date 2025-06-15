@@ -66,9 +66,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
+target_link_libraries(${PROJECT_NAME} PUBLIC
   Pathfinder
   absl::str_format
+  gli
 )
 
 # ==============================================================================
@@ -92,5 +93,6 @@ target_link_libraries(
 
 include(GoogleTest)
 gtest_discover_tests(${TEST_NAME}
-WORKING_DIRECTORY
-${CMAKE_CURRENT_SOURCE_DIR})
+  WORKING_DIRECTORY
+  ${CMAKE_CURRENT_SOURCE_DIR}
+)

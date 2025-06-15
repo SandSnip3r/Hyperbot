@@ -19,6 +19,9 @@
 #include <silkroad_lib/pk2/pk2ReaderModern.hpp>
 #include <silkroad_lib/pk2/regionInfo.hpp>
 
+#include <absl/container/flat_hash_map.h>
+#include <gli/texture2d.hpp>
+
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -27,10 +30,15 @@
 
 namespace sro::pk2 {
 
+struct ParseOptions {
+  bool parseIcons{false};
+};
+
 class GameData {
 public:
   // Opens Media.PK2 and Data.PK2, parses game data into memory, then closes Media.pk2 and Data.PK2
-  void parseSilkroadFiles(const std::filesystem::path &clientPath);
+  void parseSilkroadFiles(const std::filesystem::path &clientPath,
+                          ParseOptions options = {});
   const uint16_t gatewayPort() const;
   const sro::pk2::DivisionInfo& divisionInfo() const;
   const CharacterData& characterData() const;
@@ -46,6 +54,7 @@ public:
   const TeleportData& teleportData() const;
   const sro::navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
   const sro::pk2::RegionInfo& regionInfo() const;
+  const gli::texture2d* getSkillIcon(sro::scalar_types::ReferenceSkillId id) const;
 
   std::string getSkillName(sro::scalar_types::ReferenceSkillId skillRefId) const;
   std::string getItemName(sro::scalar_types::ReferenceObjectId itemRefId) const;
@@ -69,6 +78,8 @@ private:
   TextZoneNameData textZoneNameData_;
   TeleportData teleportData_;
 
+  absl::flat_hash_map<sro::pk2::ref::SkillId, gli::texture2d> skillIcons_;
+
   std::optional<sro::navmesh::Navmesh> navmesh_;
   std::optional<sro::navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
 
@@ -78,7 +89,7 @@ private:
   void parseNavmeshData(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseRegionInfo(sro::pk2::Pk2ReaderModern &pk2Reader);
 
-  void parseMedia(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseMedia(sro::pk2::Pk2ReaderModern &pk2Reader, const ParseOptions &options);
   void parseGatewayPort(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseDivisionInfo(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseCharacterData(sro::pk2::Pk2ReaderModern &pk2Reader);
@@ -94,6 +105,7 @@ private:
   void parseTextZoneName(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseText(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseTextUiSystem(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseSkillIcons(sro::pk2::Pk2ReaderModern &pk2Reader);
 };
 
 } // namespace sro::pk2

@@ -30,6 +30,7 @@ qt_add_executable(rl_ui
   dashboardWidget.hpp dashboardWidget.cpp dashboardwidget.ui
   characterDetailDialog.hpp characterDetailDialog.cpp characterDetailDialog.ui
   barStyles.hpp barStyles.cpp
+  textureToQImage.hpp
 )
 
 target_link_libraries(rl_ui PRIVATE
@@ -44,11 +45,8 @@ target_link_libraries(rl_ui PRIVATE
   Qt6::Qml
   silkroad_lib
   ui_proto
+  gli
 )
-
-if(TRACY_ENABLE)
-  target_link_libraries(rl_ui PRIVATE Tracy::TracyClient)
-endif()
 
 set_target_properties(rl_ui PROPERTIES
     ${BUNDLE_ID_OPTION}

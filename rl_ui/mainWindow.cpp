@@ -3,14 +3,13 @@
 #include "mainWindow.hpp"
 #include "./ui_mainwindow.h"
 
-#if TRACY_ENABLE
-#include <tracy/Tracy.hpp>
-#endif
-
-#include <absl/log/log.h>
+#include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QtCharts/QChart>
 #include <QtCharts/QLineSeries>
+#include <QVBoxLayout>
+
+#include <absl/log/log.h>
 
 #include <random>
 
@@ -21,11 +20,24 @@
 //  - Epsilon
 //  - Win rate
 
-MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot, QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow), config_(std::move(config)), hyperbot_(hyperbot) {
+MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
+                       const sro::pk2::GameData &gameData,
+                       QWidget *parent)
+    : QMainWindow(parent),
+      ui(new Ui::MainWindow),
+      config_(std::move(config)),
+      hyperbot_(hyperbot),
+      gameData_(gameData) {
   ui->setupUi(this);
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
+  dashboardWidget_ = new DashboardWidget(gameData_, this);
+  QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
+  if (!layout) {
+    layout = new QVBoxLayout(ui->dashboardContainer);
+  }
+  layout->addWidget(dashboardWidget_);
   connectSignals();
   // testChart();
 }
@@ -44,15 +56,17 @@ void MainWindow::connectSignals() {
   connect(ui->startTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::startTraining);
   connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
   connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
-  connect(&hyperbot_, &Hyperbot::disconnected, ui->dashboardWidget,
+  connect(&hyperbot_, &Hyperbot::disconnected, dashboardWidget_,
           &DashboardWidget::clearStatusTable);
 
   // TODO: Organize this better
   connect(&hyperbot_, &Hyperbot::plotData, this, &MainWindow::addDataPoint);
-  connect(&hyperbot_, &Hyperbot::characterStatusReceived, ui->dashboardWidget,
+  connect(&hyperbot_, &Hyperbot::characterStatusReceived, dashboardWidget_,
           &DashboardWidget::onCharacterStatusReceived);
-  connect(&hyperbot_, &Hyperbot::activeStateMachineReceived, ui->dashboardWidget,
+  connect(&hyperbot_, &Hyperbot::activeStateMachineReceived, dashboardWidget_,
           &DashboardWidget::onActiveStateMachine);
+  connect(&hyperbot_, &Hyperbot::skillCooldownsReceived, dashboardWidget_,
+          &DashboardWidget::onSkillCooldowns);
 }
 
 void MainWindow::showConnectionWindow(const QString &windowTitle) {

@@ -237,4 +237,22 @@ void RlUserInterface::sendActiveStateMachine(const entity::Self &self, const std
   broadcastMessage(msg);
 }
 
+void RlUserInterface::sendSkillCooldowns(const entity::Self &self) {
+  rl_ui_messages::BroadcastMessage msg;
+  auto *payload = msg.mutable_skill_cooldowns();
+  payload->set_name(self.name);
+  const auto &cooldownMap = self.skillEngine.getSkillCooldownEventIdMap();
+  for (const auto &pair : cooldownMap) {
+    std::optional<std::chrono::milliseconds> remaining =
+        eventBroker_.timeRemainingOnDelayedEvent(pair.second);
+    if (!remaining) {
+      continue;
+    }
+    rl_ui_messages::SkillCooldown *cd = payload->add_cooldowns();
+    cd->set_skill_id(pair.first);
+    cd->set_remaining_ms(static_cast<int32_t>(remaining->count()));
+  }
+  broadcastMessage(msg);
+}
+
 } // namespace ui

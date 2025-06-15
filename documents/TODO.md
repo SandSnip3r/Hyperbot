@@ -30,7 +30,6 @@
   - Implement a similar mechanism for items
 - Handle any kind of teleportation (spawn & despawn) while pvping & preparing for pvp
 - Fix bug in EventBroker where an event cannot unsubscribe from itself
-- Move GameData & parsing to silkroad lib
 - PR/issue to Tracy to not clutter the "<common/>" include path
 - Add move ctor/ass for PacketContainer, this should remove an unecessary alloc when taking a packet from SilkroadSecurity::GetPacketToRecv()
 - Move Proxy::ProcessPackets to properly triggered async wakeups, not a looping timer
@@ -44,7 +43,6 @@
 - Display state machine trees in UI
 - Prevent any user input while pvping
 - Figure out how the client knows about the remaining buff duration when a character spawns. Currently, the parsing of the spawn packet does not contain a cast time.
-- Add debuffs to Observation
 - Make sure that the agent is receiving:
   - Skill use failed because insufficient MP
   - Item use failed because trying to use item which does not exist
@@ -52,4 +50,5 @@
 - If login error code is 3, there is no way to rectify by trying again. We actually need to kill the client (server connection, actually), and restart it.
 - When a state machine is done, we should pop blocked opcodes. As opposed to how we currently only pop blocked ones on destruction.
 - We can get more pvp throughput if we pair characters which are completely ready to fight. For example, there might be 4 characters who are preparing to pvp: A, B, C, and D. A & B are set to fight each other and C & D also. If A and C are both stuck waiting for a couple minutes due to a long skill cooldown, all 4 are stuck idle. Instead, B and D might be able to fight against each other.
-- Add timestamps to the creation of Events as well as the reception of packets
+- Add timestamps to the creation of Events
+- Update pathfinder to have a better include path system

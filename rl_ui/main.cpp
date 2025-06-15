@@ -39,10 +39,24 @@ int main(int argc, char *argv[]) {
 
   Hyperbot bot;
 
+  sro::pk2::GameData gameData;
+  const char *sroPath = std::getenv("SRO_PATH");
+  if (sroPath) {
+    try {
+      sro::pk2::ParseOptions options;
+      options.parseIcons = true;
+      gameData.parseSilkroadFiles(sroPath, options);
+    } catch (const std::exception &ex) {
+      LOG(WARNING) << "Failed to parse Silkroad files: " << ex.what();
+    }
+  } else {
+    LOG(WARNING) << "SRO_PATH not set. Skill icons will not be shown.";
+  }
+
   QApplication a(argc, argv);
   a.setStyle(QStyleFactory::create("Fusion"));
   // Note: QApplication must be constructed before any QWidget.
-  MainWindow *mainWindow = new MainWindow(std::move(config), bot);
+  MainWindow *mainWindow = new MainWindow(std::move(config), bot, gameData);
   mainWindow->show();
   return a.exec();
 }

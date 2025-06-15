@@ -70,4 +70,13 @@ std::vector<sro::pk2::ref::SkillId> SkillData::getSkillIdsForMastery(sro::scalar
   return result;
 }
 
+std::vector<sro::pk2::ref::SkillId> SkillData::getAllSkillIds() const {
+  std::vector<sro::pk2::ref::SkillId> ids;
+  ids.reserve(skills_.size());
+  for (const auto &pair : skills_) {
+    ids.push_back(pair.first);
+  }
+  return ids;
+}
+
 } // namespace sro::pk2

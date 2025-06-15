@@ -83,3 +83,4 @@ _Note: I believe `DTRACY_DELAYED_INIT` is required because we're running in WSL 
 - Once the configuration completes, you should still be in Qt Creator's "Projects" view, specifically in the "Build Settings" view. Under the "CMake" section, click "Details" on the right side of the "Build Steps" section. In the "Targets:" section check "rl_ui" and then uncheck "all"
 - While still in the "Projects" view, on the left, under your kit, select "Run" (instead of "Build")
 - Look for "Run configuration:" in the "Run" section and change this to "rl_ui"
+- Add `SRO_PATH=C:\path\to\sro_client_dir\` to the environment

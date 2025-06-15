@@ -163,6 +163,20 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
           QString::fromStdString(status.state_machine()));
       break;
     }
+    case rl_ui_messages::BroadcastMessage::BodyCase::kSkillCooldowns: {
+      const rl_ui_messages::CharacterSkillCooldowns &cooldownsMsg =
+          broadcastMessage.skill_cooldowns();
+      QList<SkillCooldown> cooldowns;
+      for (const auto &cd : cooldownsMsg.cooldowns()) {
+        SkillCooldown cooldown;
+        cooldown.skillId = cd.skill_id();
+        cooldown.remainingMs = cd.remaining_ms();
+        cooldowns.append(cooldown);
+      }
+      emit skillCooldownsReceived(
+          QString::fromStdString(cooldownsMsg.name()), cooldowns);
+      break;
+    }
     default: {
       LOG(WARNING) << "Received unexpected broadcast message.";
       break;

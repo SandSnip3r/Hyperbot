@@ -1,15 +1,17 @@
 #include "dashboardWidget.hpp"
 #include "ui_dashboardwidget.h"
 
+#include "barStyles.hpp"
+#include <silkroad_lib/pk2/gameData.hpp>
 #include <QProgressBar>
 #include <QTableWidgetItem>
-#include "barStyles.hpp"
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QRegularExpression>
 
-DashboardWidget::DashboardWidget(QWidget *parent)
-    : QWidget(parent), ui(new Ui::DashboardWidget) {
+DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
+                                 QWidget *parent)
+    : QWidget(parent), ui(new Ui::DashboardWidget), gameData_(gameData) {
   ui->setupUi(this);
   QStringList headers;
   headers << "Character" << "HP" << "MP" << "State";
@@ -22,6 +24,7 @@ DashboardWidget::DashboardWidget(QWidget *parent)
   connect(ui->statusTable, &QTableWidget::cellDoubleClicked, this,
           &DashboardWidget::showCharacterDetail);
   qRegisterMetaType<CharacterData>("CharacterData");
+  qRegisterMetaType<QList<SkillCooldown>>("QList<SkillCooldown>");
 }
 
 static int characterId(const QString &name) {
@@ -115,6 +118,11 @@ void DashboardWidget::onActiveStateMachine(QString name, QString stateMachine) {
   emit characterDataUpdated(name, characterData_.value(name));
 }
 
+void DashboardWidget::onSkillCooldowns(QString name, QList<SkillCooldown> cooldowns) {
+  characterData_[name].skillCooldowns = cooldowns;
+  emit characterDataUpdated(name, characterData_.value(name));
+}
+
 void DashboardWidget::clearStatusTable() {
   ui->statusTable->setRowCount(0);
   characterData_.clear();
@@ -127,7 +135,7 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
     return;
   }
   const QString name = item->text();
-  CharacterDetailDialog *dialog = new CharacterDetailDialog(this);
+  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, this);
   dialog->setAttribute(Qt::WA_DeleteOnClose);
   dialog->setCharacterName(name);
   dialog->updateCharacterData(characterData_.value(name));

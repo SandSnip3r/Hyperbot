@@ -43,6 +43,10 @@ InternalSkillCooldownEnded::InternalSkillCooldownEnded(EventId id, sro::scalar_t
 SkillCooldownEnded::SkillCooldownEnded(EventId id, sro::scalar_types::EntityGlobalId globalId, sro::scalar_types::ReferenceSkillId skillId) :
     Event(id, EventCode::kSkillCooldownEnded), globalId(globalId), skillRefId(skillId) {}
 
+SkillCooldownStarted::SkillCooldownStarted(EventId id, sro::scalar_types::EntityGlobalId globalId,
+                                           sro::scalar_types::ReferenceSkillId skillId) :
+    Event(id, EventCode::kSkillCooldownStarted), globalId(globalId), skillRefId(skillId) {}
+
 ItemMoved::ItemMoved(EventId id, sro::scalar_types::EntityGlobalId globalId, std::optional<sro::storage::Position> source, std::optional<sro::storage::Position> destination) :
     Event(id, EventCode::kItemMoved), globalId(globalId), source(source), destination(destination) {}
 

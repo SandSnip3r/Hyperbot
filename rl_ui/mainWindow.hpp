@@ -4,6 +4,7 @@
 #include "config.hpp"
 #include "hyperbot.hpp"
 #include "dashboardWidget.hpp"
+#include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QMainWindow>
 #include <QStringList>
@@ -21,7 +22,9 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 
 public:
-  explicit MainWindow(Config &&config, Hyperbot &hyperbot, QWidget *parent = nullptr);
+  explicit MainWindow(Config &&config, Hyperbot &hyperbot,
+                      const sro::pk2::GameData &gameData,
+                      QWidget *parent = nullptr);
   ~MainWindow();
 
 protected:
@@ -37,6 +40,8 @@ private:
   Ui::MainWindow *ui;
   Config config_;
   Hyperbot &hyperbot_;
+  const sro::pk2::GameData &gameData_;
+  DashboardWidget *dashboardWidget_{nullptr};
   bool connectionWindowShown_{false};
   QMainWindow *connectionWindow_{nullptr};
   QLineSeries *series_;
