@@ -162,7 +162,7 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
     }
   }
 
-  ui_->skillCooldownList->sortItems(Qt::AscendingOrder);
+  ui_->skillCooldownList->sortItems(Qt::DescendingOrder);
 
   ui_->stateMachineLabel->setText(data.stateMachine);
 }
