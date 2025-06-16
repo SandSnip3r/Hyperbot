@@ -8,10 +8,14 @@
 
 #include <QDialog>
 #include <QList>
+#include <QProgressBar>
+#include <QListWidgetItem>
+#include <QWidget>
+#include <QTimer>
+#include <QHash>
+#include <QPixmap>
 #include <QString>
 
-#include <filesystem>
-#include <memory>
 namespace Ui {
 class CharacterDetailDialog;
 }
@@ -19,6 +23,7 @@ class CharacterDetailDialog;
 struct SkillCooldown {
   sro::scalar_types::ReferenceSkillId skillId{0};
   int remainingMs{0};
+  qint64 timestampMs{0};
 };
 
 struct CharacterData {
@@ -43,9 +48,27 @@ public slots:
   void onCharacterDataUpdated(QString name, CharacterData data);
 
 private:
+  struct CooldownItem {
+    sro::scalar_types::ReferenceSkillId skillId{0};
+    int totalMs{0};
+    int remainingMs{0};
+    qint64 timestampMs{0};
+    QListWidgetItem *item{nullptr};
+    QWidget *container{nullptr};
+    QProgressBar *bar{nullptr};
+    QString skillName;
+  };
+
   Ui::CharacterDetailDialog *ui_;
   QString name_;
   const sro::pk2::GameData &gameData_;
+  static QTimer *sharedCooldownTimer_;
+  static int activeDialogCount_;
+  QHash<sro::scalar_types::ReferenceSkillId, CooldownItem> cooldownItems_;
+  QHash<sro::scalar_types::ReferenceSkillId, QPixmap> iconCache_;
+
+  QPixmap getIconForSkillId(sro::scalar_types::ReferenceSkillId skillId);
+  void updateCooldownDisplays();
 };
 
 #include <QMetaType>

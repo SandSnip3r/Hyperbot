@@ -2,6 +2,7 @@
 
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
+#include <QTimer>
 
 using namespace proto;
 
@@ -112,6 +113,8 @@ void Hyperbot::onConnectionCancelled() {
 void Hyperbot::onConnected(int broadcastPort) {
   connected_ = true;
   setupSubscriber(broadcastPort);
+  QTimer::singleShot(0, this, &Hyperbot::requestCharacterStatuses);
+  QTimer::singleShot(0, this, &Hyperbot::requestCheckpointList);
   emit connected();
 }
 
@@ -171,6 +174,7 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
         SkillCooldown cooldown;
         cooldown.skillId = cd.skill_id();
         cooldown.remainingMs = cd.remaining_ms();
+        cooldown.timestampMs = cd.timestamp_ms();
         cooldowns.append(cooldown);
       }
       emit skillCooldownsReceived(
