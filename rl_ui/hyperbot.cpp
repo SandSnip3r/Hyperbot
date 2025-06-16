@@ -2,6 +2,7 @@
 
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
+#include <QTimer>
 
 using namespace proto;
 
@@ -112,6 +113,7 @@ void Hyperbot::onConnectionCancelled() {
 void Hyperbot::onConnected(int broadcastPort) {
   connected_ = true;
   setupSubscriber(broadcastPort);
+  QTimer::singleShot(0, this, &Hyperbot::requestCharacterStatuses);
   emit connected();
 }
 

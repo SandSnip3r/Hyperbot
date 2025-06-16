@@ -82,14 +82,23 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
   for (const SkillCooldown &cooldown : cooldowns) {
     incomingIds.insert(cooldown.skillId);
 
+    if (!gameData_.skillData().haveSkillWithId(cooldown.skillId)) {
+      LOG(WARNING) << "Unknown skill id " << cooldown.skillId
+                   << " received in cooldown update";
+      continue;
+    }
+
+    const sro::pk2::ref::Skill &skill =
+        gameData_.skillData().getSkillById(cooldown.skillId);
+
     int predicted = cooldown.remainingMs -
                     static_cast<int>(now - cooldown.timestampMs);
     if (predicted < 0) {
       predicted = 0;
     }
-
-    const sro::pk2::ref::Skill &skill =
-        gameData_.skillData().getSkillById(cooldown.skillId);
+    if (predicted > skill.actionReuseDelay) {
+      predicted = skill.actionReuseDelay;
+    }
 
     CooldownItem *ci = nullptr;
     if (cooldownItems_.contains(cooldown.skillId)) {
