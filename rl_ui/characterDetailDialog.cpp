@@ -112,7 +112,7 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
       QLabel *iconLabel = new QLabel(container);
       QPixmap pixmap = getIconForSkillId(cooldown.skillId);
       if (!pixmap.isNull()) {
-        iconLabel->setPixmap(pixmap.scaled(24, 24));
+        iconLabel->setPixmap(pixmap.scaled(16, 16));
       }
 
       QProgressBar *bar = new QProgressBar(container);
@@ -123,6 +123,8 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
       layout->addWidget(bar);
       container->setLayout(layout);
       item->setSizeHint(container->sizeHint());
+      item->setData(Qt::UserRole, predicted);
+      item->setData(Qt::DisplayRole, -predicted);
       ui_->skillCooldownList->addItem(item);
       ui_->skillCooldownList->setItemWidget(item, container);
 
@@ -147,6 +149,7 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
                            .arg(ci->skillName)
                            .arg(seconds, 0, 'f', 1));
     ci->item->setData(Qt::UserRole, ci->remainingMs);
+    ci->item->setData(Qt::DisplayRole, -ci->remainingMs);
   }
 
   for (auto it = cooldownItems_.begin(); it != cooldownItems_.end();) {
@@ -159,7 +162,7 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
     }
   }
 
-  ui_->skillCooldownList->sortItems(Qt::DescendingOrder);
+  ui_->skillCooldownList->sortItems(Qt::AscendingOrder);
 
   ui_->stateMachineLabel->setText(data.stateMachine);
 }
