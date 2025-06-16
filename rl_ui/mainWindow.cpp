@@ -100,7 +100,6 @@ void MainWindow::onConnectedToHyperbot() {
   connectionWindowShown_ = false;
   connectionWindow_ = nullptr;
   this->setEnabled(true);
-  hyperbot_.requestCheckpointList();
 }
 
 void MainWindow::onDisconnectedFromHyperbot() {

@@ -73,13 +73,8 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
   const qint64 now = QDateTime::currentMSecsSinceEpoch();
 
   QSet<sro::scalar_types::ReferenceSkillId> incomingIds;
-  QList<SkillCooldown> cooldowns = data.skillCooldowns;
-  std::sort(cooldowns.begin(), cooldowns.end(),
-            [](const SkillCooldown &a, const SkillCooldown &b) {
-              return a.remainingMs > b.remainingMs;
-            });
 
-  for (const SkillCooldown &cooldown : cooldowns) {
+  for (const SkillCooldown &cooldown : data.skillCooldowns) {
     incomingIds.insert(cooldown.skillId);
 
     if (!gameData_.skillData().haveSkillWithId(cooldown.skillId)) {
@@ -117,7 +112,7 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
       QLabel *iconLabel = new QLabel(container);
       QPixmap pixmap = getIconForSkillId(cooldown.skillId);
       if (!pixmap.isNull()) {
-        iconLabel->setPixmap(pixmap.scaled(16, 16));
+        iconLabel->setPixmap(pixmap.scaled(24, 24));
       }
 
       QProgressBar *bar = new QProgressBar(container);

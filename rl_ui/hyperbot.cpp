@@ -114,6 +114,7 @@ void Hyperbot::onConnected(int broadcastPort) {
   connected_ = true;
   setupSubscriber(broadcastPort);
   QTimer::singleShot(0, this, &Hyperbot::requestCharacterStatuses);
+  QTimer::singleShot(0, this, &Hyperbot::requestCheckpointList);
   emit connected();
 }
 
