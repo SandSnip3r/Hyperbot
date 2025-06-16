@@ -7,7 +7,6 @@
 #include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QDialog>
-#include <QElapsedTimer>
 #include <QList>
 #include <QProgressBar>
 #include <QListWidgetItem>
@@ -54,7 +53,6 @@ private:
     int totalMs{0};
     int remainingMs{0};
     qint64 timestampMs{0};
-    QElapsedTimer timer;
     QListWidgetItem *item{nullptr};
     QWidget *container{nullptr};
     QProgressBar *bar{nullptr};

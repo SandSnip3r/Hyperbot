@@ -7,7 +7,6 @@
 
 #include <QListWidget>
 #include <QIcon>
-#include <QElapsedTimer>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QProgressBar>
@@ -96,10 +95,9 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
     if (cooldownItems_.contains(cooldown.skillId)) {
       ci = &cooldownItems_[cooldown.skillId];
       int currentRemaining =
-          std::max(0, ci->remainingMs - ci->timer.elapsed());
-      ci->timer.restart();
+          std::max(0, ci->remainingMs - static_cast<int>(now - ci->timestampMs));
       ci->remainingMs = std::min(currentRemaining, predicted);
-      ci->timestampMs = cooldown.timestampMs;
+      ci->timestampMs = now;
       ci->totalMs = skill.actionReuseDelay;
     } else {
       QListWidgetItem *item = new QListWidgetItem;
@@ -110,7 +108,7 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
       QLabel *iconLabel = new QLabel(container);
       QPixmap pixmap = getIconForSkillId(cooldown.skillId);
       if (!pixmap.isNull()) {
-        iconLabel->setPixmap(pixmap.scaled(24, 24));
+        iconLabel->setPixmap(pixmap.scaled(16, 16));
       }
 
       QProgressBar *bar = new QProgressBar(container);
@@ -128,13 +126,12 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
       newItem.skillId = cooldown.skillId;
       newItem.totalMs = skill.actionReuseDelay;
       newItem.remainingMs = predicted;
-      newItem.timestampMs = cooldown.timestampMs;
+      newItem.timestampMs = now;
       newItem.item = item;
       newItem.container = container;
       newItem.bar = bar;
       newItem.skillName =
           QString::fromStdString(gameData_.getSkillName(cooldown.skillId));
-      newItem.timer.start();
       cooldownItems_.insert(cooldown.skillId, newItem);
       ci = &cooldownItems_[cooldown.skillId];
     }
@@ -171,14 +168,13 @@ void CharacterDetailDialog::onCharacterDataUpdated(QString name,
 }
 
 void CharacterDetailDialog::updateCooldownDisplays() {
+  const qint64 now = QDateTime::currentMSecsSinceEpoch();
   for (auto it = cooldownItems_.begin(); it != cooldownItems_.end(); ++it) {
     CooldownItem &item = it.value();
-    const int elapsed = item.timer.restart();
-    if (elapsed > 0) {
-      item.remainingMs = std::max(0, item.remainingMs - elapsed);
-    }
-    item.bar->setValue(item.remainingMs);
-    const double seconds = item.remainingMs / 1000.0;
+    int remaining =
+        std::max(0, item.remainingMs - static_cast<int>(now - item.timestampMs));
+    item.bar->setValue(remaining);
+    const double seconds = remaining / 1000.0;
     item.bar->setFormat(QString("%1 (%2s)")
                             .arg(item.skillName)
                             .arg(seconds, 0, 'f', 1));
