@@ -59,6 +59,15 @@ private:
     QString skillName;
   };
 
+  class CooldownListItem : public QListWidgetItem {
+  public:
+    using QListWidgetItem::QListWidgetItem;
+
+    bool operator<(const QListWidgetItem &other) const override {
+      return data(Qt::UserRole).toInt() < other.data(Qt::UserRole).toInt();
+    }
+  };
+
   Ui::CharacterDetailDialog *ui_;
   QString name_;
   const sro::pk2::GameData &gameData_;
