@@ -19,3 +19,6 @@ Here you can find various documentation I'm keeping on this project
 
 ### Dump
 [This page](dump.md) is where I'll be putting my random ideas and thoughts to be organized later.
+
+### RL UI Redesign
+[Proposals for a new reinforcement learning UI](rl_ui_redesign/Readme.md)
