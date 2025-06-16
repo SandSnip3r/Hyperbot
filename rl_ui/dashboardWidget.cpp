@@ -37,6 +37,12 @@ static int characterId(const QString &name) {
 }
 
 DashboardWidget::~DashboardWidget() {
+  for (auto dialog : detailDialogs_) {
+    if (dialog) {
+      dialog->close();
+    }
+  }
+  detailDialogs_.clear();
   delete ui;
 }
 
@@ -128,6 +134,15 @@ void DashboardWidget::clearStatusTable() {
   characterData_.clear();
 }
 
+void DashboardWidget::onHyperbotConnected() {
+  for (auto dialog : detailDialogs_) {
+    if (dialog) {
+      dialog->close();
+    }
+  }
+  detailDialogs_.clear();
+}
+
 void DashboardWidget::showCharacterDetail(int row, int column) {
   Q_UNUSED(column);
   QTableWidgetItem *item = ui->statusTable->item(row, 0);
@@ -135,8 +150,19 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
     return;
   }
   const QString name = item->text();
+  if (detailDialogs_.contains(name)) {
+    CharacterDetailDialog *dialog = detailDialogs_.value(name);
+    if (dialog) {
+      dialog->raise();
+      dialog->activateWindow();
+    }
+    return;
+  }
   CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, this);
   dialog->setAttribute(Qt::WA_DeleteOnClose);
+  detailDialogs_.insert(name, dialog);
+  connect(dialog, &QObject::destroyed, this,
+          [this, name]() { detailDialogs_.remove(name); });
   dialog->setCharacterName(name);
   dialog->updateCharacterData(characterData_.value(name));
   connect(this, &DashboardWidget::characterDataUpdated, dialog,

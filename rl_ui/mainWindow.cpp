@@ -58,6 +58,8 @@ void MainWindow::connectSignals() {
   connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
   connect(&hyperbot_, &Hyperbot::disconnected, dashboardWidget_,
           &DashboardWidget::clearStatusTable);
+  connect(&hyperbot_, &Hyperbot::connected, dashboardWidget_,
+          &DashboardWidget::onHyperbotConnected);
 
   // TODO: Organize this better
   connect(&hyperbot_, &Hyperbot::plotData, this, &MainWindow::addDataPoint);

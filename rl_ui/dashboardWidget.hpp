@@ -25,6 +25,7 @@ public slots:
   void onActiveStateMachine(QString name, QString stateMachine);
   void onSkillCooldowns(QString name, QList<SkillCooldown> cooldowns);
   void clearStatusTable();
+  void onHyperbotConnected();
 
 signals:
   void characterDataUpdated(QString name, CharacterData data);
@@ -32,6 +33,7 @@ signals:
 private:
   Ui::DashboardWidget *ui;
   QMap<QString, CharacterData> characterData_;
+  QMap<QString, CharacterDetailDialog *> detailDialogs_;
   const sro::pk2::GameData &gameData_;
   int ensureRowForCharacter(const QString &name);
   void showCharacterDetail(int row, int column);

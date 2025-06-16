@@ -104,7 +104,7 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
       ci->timestampMs = now;
       ci->totalMs = skill.actionReuseDelay;
     } else {
-      QListWidgetItem *item = new QListWidgetItem;
+      CooldownListItem *item = new CooldownListItem;
       QWidget *container = new QWidget;
       QHBoxLayout *layout = new QHBoxLayout(container);
       layout->setContentsMargins(2, 2, 2, 2);
@@ -112,7 +112,7 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
       QLabel *iconLabel = new QLabel(container);
       QPixmap pixmap = getIconForSkillId(cooldown.skillId);
       if (!pixmap.isNull()) {
-        iconLabel->setPixmap(pixmap.scaled(16, 16));
+        iconLabel->setPixmap(pixmap.scaled(24, 24));
       }
 
       QProgressBar *bar = new QProgressBar(container);
@@ -124,7 +124,7 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
       container->setLayout(layout);
       item->setSizeHint(container->sizeHint());
       item->setData(Qt::UserRole, predicted);
-      item->setData(Qt::DisplayRole, -predicted);
+      item->setText("");
       ui_->skillCooldownList->addItem(item);
       ui_->skillCooldownList->setItemWidget(item, container);
 
@@ -149,7 +149,7 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
                            .arg(ci->skillName)
                            .arg(seconds, 0, 'f', 1));
     ci->item->setData(Qt::UserRole, ci->remainingMs);
-    ci->item->setData(Qt::DisplayRole, -ci->remainingMs);
+    ci->item->setText("");
   }
 
   for (auto it = cooldownItems_.begin(); it != cooldownItems_.end();) {
