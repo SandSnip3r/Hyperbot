@@ -3,7 +3,7 @@
 
 #include "config.hpp"
 #include "hyperbot.hpp"
-#include "dashboardWidget.hpp"
+#include "cardDashboardWidget.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QMainWindow>
@@ -41,7 +41,7 @@ private:
   Config config_;
   Hyperbot &hyperbot_;
   const sro::pk2::GameData &gameData_;
-  DashboardWidget *dashboardWidget_{nullptr};
+  CardDashboardWidget *dashboardWidget_{nullptr};
   bool connectionWindowShown_{false};
   QMainWindow *connectionWindow_{nullptr};
   QLineSeries *series_;

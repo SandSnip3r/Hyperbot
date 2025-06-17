@@ -1,6 +1,7 @@
 #include "checkpointWidget.hpp"
 #include "hyperbotConnect.hpp"
 #include "mainWindow.hpp"
+#include "cardDashboardWidget.hpp"
 #include "./ui_mainwindow.h"
 
 #include <silkroad_lib/pk2/gameData.hpp>
@@ -32,7 +33,7 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
-  dashboardWidget_ = new DashboardWidget(gameData_, this);
+  dashboardWidget_ = new CardDashboardWidget(gameData_, this);
   QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
   if (!layout) {
     layout = new QVBoxLayout(ui->dashboardContainer);
@@ -57,18 +58,18 @@ void MainWindow::connectSignals() {
   connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
   connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
   connect(&hyperbot_, &Hyperbot::disconnected, dashboardWidget_,
-          &DashboardWidget::clearStatusTable);
+          &CardDashboardWidget::clearStatus);
   connect(&hyperbot_, &Hyperbot::connected, dashboardWidget_,
-          &DashboardWidget::onHyperbotConnected);
+          &CardDashboardWidget::onHyperbotConnected);
 
   // TODO: Organize this better
   connect(&hyperbot_, &Hyperbot::plotData, this, &MainWindow::addDataPoint);
   connect(&hyperbot_, &Hyperbot::characterStatusReceived, dashboardWidget_,
-          &DashboardWidget::onCharacterStatusReceived);
+          &CardDashboardWidget::onCharacterStatusReceived);
   connect(&hyperbot_, &Hyperbot::activeStateMachineReceived, dashboardWidget_,
-          &DashboardWidget::onActiveStateMachine);
+          &CardDashboardWidget::onActiveStateMachine);
   connect(&hyperbot_, &Hyperbot::skillCooldownsReceived, dashboardWidget_,
-          &DashboardWidget::onSkillCooldowns);
+          &CardDashboardWidget::onSkillCooldowns);
 }
 
 void MainWindow::showConnectionWindow(const QString &windowTitle) {
