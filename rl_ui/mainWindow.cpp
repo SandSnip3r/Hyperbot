@@ -8,6 +8,9 @@
 #include <QtCharts/QChart>
 #include <QtCharts/QLineSeries>
 #include <QVBoxLayout>
+#include <QToolBar>
+#include <QAction>
+#include <QSettings>
 
 #include <absl/log/log.h>
 
@@ -31,13 +34,25 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
   ui->setupUi(this);
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
-  setWindowTitle(tr("Hyperbot"));
+  setWindowTitle(tr("Fleet Manager"));
+  restoreGeometry(settings_.value("geometry").toByteArray());
+  restoreState(settings_.value("state").toByteArray());
   dashboardWidget_ = new DashboardWidget(gameData_, this);
   QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
   if (!layout) {
     layout = new QVBoxLayout(ui->dashboardContainer);
   }
   layout->addWidget(dashboardWidget_);
+  toolbar_ = addToolBar(tr("Actions"));
+  connectAction_ = toolbar_->addAction(tr("Connect"));
+  startTrainingAction_ = toolbar_->addAction(tr("Start Training"));
+  stopTrainingAction_ = toolbar_->addAction(tr("Stop Training"));
+  connect(connectAction_, &QAction::triggered, this,
+          [this]() { showConnectionWindow(tr("Connect to Hyperbot")); });
+  connect(startTrainingAction_, &QAction::triggered, &hyperbot_,
+          &Hyperbot::startTraining);
+  connect(stopTrainingAction_, &QAction::triggered, &hyperbot_,
+          &Hyperbot::stopTraining);
   connectSignals();
   // testChart();
 }
@@ -49,6 +64,8 @@ void MainWindow::showEvent(QShowEvent *event) {
 }
 
 MainWindow::~MainWindow() {
+  settings_.setValue("geometry", saveGeometry());
+  settings_.setValue("state", saveState());
   delete ui;
 }
 

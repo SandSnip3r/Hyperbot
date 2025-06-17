@@ -11,6 +11,9 @@
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
 #include <QTimer>
+#include <QSettings>
+#include <QToolBar>
+#include <QAction>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -51,6 +54,12 @@ private:
   float maxX_{0};
   float minY_{0};
   float maxY_{0};
+
+  QSettings settings_{"Hyperbot", "FleetManager"};
+  QToolBar *toolbar_{nullptr};
+  QAction *connectAction_{nullptr};
+  QAction *startTrainingAction_{nullptr};
+  QAction *stopTrainingAction_{nullptr};
 
   void connectSignals();
   void showConnectionWindow(const QString &windowTitle);
