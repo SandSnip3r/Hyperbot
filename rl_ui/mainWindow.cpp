@@ -1,6 +1,7 @@
 #include "checkpointWidget.hpp"
 #include "hyperbotConnect.hpp"
 #include "mainWindow.hpp"
+#include "pairSplitViewWidget.hpp"
 #include "./ui_mainwindow.h"
 
 #include <silkroad_lib/pk2/gameData.hpp>
@@ -32,11 +33,13 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
+  pairSplitView_ = new PairSplitViewWidget(this);
   dashboardWidget_ = new DashboardWidget(gameData_, this);
   QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
   if (!layout) {
     layout = new QVBoxLayout(ui->dashboardContainer);
   }
+  layout->addWidget(pairSplitView_);
   layout->addWidget(dashboardWidget_);
   connectSignals();
   // testChart();

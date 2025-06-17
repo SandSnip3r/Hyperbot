@@ -28,6 +28,7 @@ qt_add_executable(rl_ui
   hyperbotSubscriberWorker.hpp hyperbotSubscriberWorker.cpp
   checkpointWidget.hpp checkpointWidget.cpp checkpointwidget.ui
   dashboardWidget.hpp dashboardWidget.cpp dashboardwidget.ui
+  pairSplitViewWidget.hpp pairSplitViewWidget.cpp pairSplitViewWidget.ui
   characterDetailDialog.hpp characterDetailDialog.cpp characterDetailDialog.ui
   barStyles.hpp barStyles.cpp
   textureToQImage.hpp

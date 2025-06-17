@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PairSplitViewWidget</class>
+ <widget class="QWidget" name="PairSplitViewWidget">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="listLayout">
+     <item>
+      <widget class="QTableWidget" name="teamATable">
+       <property name="columnCount">
+        <number>1</number>
+       </property>
+       <column>
+        <property name="text">
+         <string>Team A</string>
+        </property>
+       </column>
+      </widget>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="teamBTable">
+       <property name="columnCount">
+        <number>1</number>
+       </property>
+       <column>
+        <property name="text">
+         <string>Team B</string>
+        </property>
+       </column>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="detailTabs">
+     <widget class="QWidget" name="statusTab">
+      <attribute name="title">
+       <string>Status</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="statusLayout">
+       <item>
+        <widget class="QLabel" name="statusPlaceholder">
+         <property name="text">
+          <string>Status detail goes here</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="inventoryTab">
+      <attribute name="title">
+       <string>Inventory</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="inventoryLayout">
+       <item>
+        <widget class="QLabel" name="inventoryPlaceholder">
+         <property name="text">
+          <string>Inventory items go here</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="rlTab">
+      <attribute name="title">
+       <string>RL Prefs</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="rlLayout">
+       <item>
+        <widget class="QLabel" name="rlPlaceholder">
+         <property name="text">
+          <string>RL charts go here</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
