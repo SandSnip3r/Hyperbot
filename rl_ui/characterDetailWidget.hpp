@@ -1,23 +1,22 @@
-#ifndef CHARACTER_DETAIL_DIALOG_HPP_
-#define CHARACTER_DETAIL_DIALOG_HPP_
+#ifndef CHARACTER_DETAIL_WIDGET_HPP_
+#define CHARACTER_DETAIL_WIDGET_HPP_
 
 #include "textureToQImage.hpp"
 
 #include <silkroad_lib/scalar_types.hpp>
 #include <silkroad_lib/pk2/gameData.hpp>
 
-#include <QDialog>
+#include <QWidget>
 #include <QList>
 #include <QProgressBar>
 #include <QListWidgetItem>
-#include <QWidget>
 #include <QTimer>
 #include <QHash>
 #include <QPixmap>
 #include <QString>
 
 namespace Ui {
-class CharacterDetailDialog;
+class CharacterDetailWidget;
 }
 
 struct SkillCooldown {
@@ -35,11 +34,12 @@ struct CharacterData {
   QList<SkillCooldown> skillCooldowns;
 };
 
-class CharacterDetailDialog : public QDialog {
+class CharacterDetailWidget : public QWidget {
   Q_OBJECT
 public:
-  explicit CharacterDetailDialog(const sro::pk2::GameData &gameData, QWidget *parent = nullptr);
-  ~CharacterDetailDialog();
+  explicit CharacterDetailWidget(const sro::pk2::GameData &gameData,
+                                 QWidget *parent = nullptr);
+  ~CharacterDetailWidget();
 
   void setCharacterName(const QString &name);
   void updateCharacterData(const CharacterData &data);
@@ -68,11 +68,11 @@ private:
     }
   };
 
-  Ui::CharacterDetailDialog *ui_;
+  Ui::CharacterDetailWidget *ui_;
   QString name_;
   const sro::pk2::GameData &gameData_;
   static QTimer *sharedCooldownTimer_;
-  static int activeDialogCount_;
+  static int activeWidgetCount_;
   QHash<sro::scalar_types::ReferenceSkillId, CooldownItem> cooldownItems_;
   QHash<sro::scalar_types::ReferenceSkillId, QPixmap> iconCache_;
 
@@ -85,4 +85,4 @@ private:
 Q_DECLARE_METATYPE(SkillCooldown)
 Q_DECLARE_METATYPE(CharacterData)
 
-#endif // CHARACTER_DETAIL_DIALOG_HPP_
+#endif // CHARACTER_DETAIL_WIDGET_HPP_

@@ -21,8 +21,15 @@ DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
   // Set the last column to stretch to fill the remaining space
   ui->statusTable->horizontalHeader()->setSectionResizeMode(
       ui->statusTable->columnCount() - 1, QHeaderView::Stretch);
-  connect(ui->statusTable, &QTableWidget::cellDoubleClicked, this,
+  connect(ui->statusTable, &QTableWidget::cellClicked, this,
           &DashboardWidget::showCharacterDetail);
+  QVBoxLayout *detailLayout = new QVBoxLayout(ui->detailContainer);
+  detailLayout->setContentsMargins(0, 0, 0, 0);
+  detailWidget_ = new CharacterDetailWidget(gameData_, ui->detailContainer);
+  detailLayout->addWidget(detailWidget_);
+  detailWidget_->hide();
+  connect(this, &DashboardWidget::characterDataUpdated, detailWidget_,
+          &CharacterDetailWidget::onCharacterDataUpdated);
   qRegisterMetaType<CharacterData>("CharacterData");
   qRegisterMetaType<QList<SkillCooldown>>("QList<SkillCooldown>");
 }
@@ -37,12 +44,6 @@ static int characterId(const QString &name) {
 }
 
 DashboardWidget::~DashboardWidget() {
-  for (auto dialog : detailDialogs_) {
-    if (dialog) {
-      dialog->close();
-    }
-  }
-  detailDialogs_.clear();
   delete ui;
 }
 
@@ -135,12 +136,8 @@ void DashboardWidget::clearStatusTable() {
 }
 
 void DashboardWidget::onHyperbotConnected() {
-  for (auto dialog : detailDialogs_) {
-    if (dialog) {
-      dialog->close();
-    }
-  }
-  detailDialogs_.clear();
+  detailWidget_->hide();
+  currentCharacter_.clear();
 }
 
 void DashboardWidget::showCharacterDetail(int row, int column) {
@@ -150,22 +147,8 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
     return;
   }
   const QString name = item->text();
-  if (detailDialogs_.contains(name)) {
-    CharacterDetailDialog *dialog = detailDialogs_.value(name);
-    if (dialog) {
-      dialog->raise();
-      dialog->activateWindow();
-    }
-    return;
-  }
-  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, this);
-  dialog->setAttribute(Qt::WA_DeleteOnClose);
-  detailDialogs_.insert(name, dialog);
-  connect(dialog, &QObject::destroyed, this,
-          [this, name]() { detailDialogs_.remove(name); });
-  dialog->setCharacterName(name);
-  dialog->updateCharacterData(characterData_.value(name));
-  connect(this, &DashboardWidget::characterDataUpdated, dialog,
-          &CharacterDetailDialog::onCharacterDataUpdated);
-  dialog->show();
+  currentCharacter_ = name;
+  detailWidget_->setCharacterName(name);
+  detailWidget_->updateCharacterData(characterData_.value(name));
+  detailWidget_->show();
 }

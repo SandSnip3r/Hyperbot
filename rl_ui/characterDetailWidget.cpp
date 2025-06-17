@@ -1,5 +1,5 @@
-#include "characterDetailDialog.hpp"
-#include "ui_characterDetailDialog.h"
+#include "characterDetailWidget.hpp"
+#include "ui_characterDetailWidget.h"
 #include "barStyles.hpp"
 #include "textureToQImage.hpp"
 
@@ -21,15 +21,17 @@
 #include <memory>
 #include <stdexcept>
 
-QTimer *CharacterDetailDialog::sharedCooldownTimer_ = nullptr;
-int CharacterDetailDialog::activeDialogCount_ = 0;
+QTimer *CharacterDetailWidget::sharedCooldownTimer_ = nullptr;
+int CharacterDetailWidget::activeWidgetCount_ = 0;
 
 namespace {
 } // namespace
 
-CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
+CharacterDetailWidget::CharacterDetailWidget(const sro::pk2::GameData &gameData,
                                              QWidget *parent)
-    : QDialog(parent), ui_(new Ui::CharacterDetailDialog), gameData_(gameData) {
+    : QWidget(parent),
+      ui_(new Ui::CharacterDetailWidget),
+      gameData_(gameData) {
   ui_->setupUi(this);
   setupHpBar(ui_->hpBar);
   setupMpBar(ui_->mpBar);
@@ -39,15 +41,15 @@ CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
     sharedCooldownTimer_->start();
   }
   connect(sharedCooldownTimer_, &QTimer::timeout, this,
-          &CharacterDetailDialog::updateCooldownDisplays);
-  ++activeDialogCount_;
+          &CharacterDetailWidget::updateCooldownDisplays);
+  ++activeWidgetCount_;
 }
 
-CharacterDetailDialog::~CharacterDetailDialog() {
+CharacterDetailWidget::~CharacterDetailWidget() {
   disconnect(sharedCooldownTimer_, &QTimer::timeout, this,
-             &CharacterDetailDialog::updateCooldownDisplays);
-  --activeDialogCount_;
-  if (activeDialogCount_ == 0 && sharedCooldownTimer_ != nullptr) {
+             &CharacterDetailWidget::updateCooldownDisplays);
+  --activeWidgetCount_;
+  if (activeWidgetCount_ == 0 && sharedCooldownTimer_ != nullptr) {
     sharedCooldownTimer_->stop();
     sharedCooldownTimer_->deleteLater();
     sharedCooldownTimer_ = nullptr;
@@ -55,13 +57,13 @@ CharacterDetailDialog::~CharacterDetailDialog() {
   delete ui_;
 }
 
-void CharacterDetailDialog::setCharacterName(const QString &name) {
+void CharacterDetailWidget::setCharacterName(const QString &name) {
   name_ = name;
   setWindowTitle(name_);
   ui_->nameLabel->setText(name_);
 }
 
-void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
+void CharacterDetailWidget::updateCharacterData(const CharacterData &data) {
   ui_->hpBar->setRange(0, data.maxHp);
   ui_->hpBar->setValue(data.currentHp);
   ui_->hpBar->setFormat(QString("%1/%2").arg(data.currentHp).arg(data.maxHp));
@@ -167,14 +169,14 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
   ui_->stateMachineLabel->setText(data.stateMachine);
 }
 
-void CharacterDetailDialog::onCharacterDataUpdated(QString name,
+void CharacterDetailWidget::onCharacterDataUpdated(QString name,
                                                    CharacterData data) {
   if (name == name_) {
     updateCharacterData(data);
   }
 }
 
-void CharacterDetailDialog::updateCooldownDisplays() {
+void CharacterDetailWidget::updateCooldownDisplays() {
   const qint64 now = QDateTime::currentMSecsSinceEpoch();
   for (auto it = cooldownItems_.begin(); it != cooldownItems_.end(); ++it) {
     CooldownItem &item = it.value();
@@ -188,7 +190,7 @@ void CharacterDetailDialog::updateCooldownDisplays() {
   }
 }
 
-QPixmap CharacterDetailDialog::getIconForSkillId(
+QPixmap CharacterDetailWidget::getIconForSkillId(
     sro::scalar_types::ReferenceSkillId skillId) {
   if (iconCache_.contains(skillId)) {
     return iconCache_.value(skillId);
