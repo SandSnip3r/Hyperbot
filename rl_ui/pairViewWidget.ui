@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PairViewWidget</class>
+ <widget class="QWidget" name="PairViewWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>600</width>
+    <height>400</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTableWidget" name="pairTable">
+     <property name="rowCount">
+      <number>0</number>
+     </property>
+     <property name="columnCount">
+      <number>2</number>
+     </property>
+     <column>
+      <property name="text">
+       <string>Team A</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Team B</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="detailTabs">
+     <widget class="QWidget" name="statusTab">
+      <attribute name="title">
+       <string>Status</string>
+      </attribute>
+      <layout class="QHBoxLayout" name="statusLayout">
+       <item>
+        <widget class="QLabel" name="teamALabel">
+         <property name="text">
+          <string>Team A</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="teamBLabel">
+         <property name="text">
+          <string>Team B</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="inventoryTab">
+      <attribute name="title">
+       <string>Inventory</string>
+      </attribute>
+      <layout class="QHBoxLayout" name="inventoryLayout"/>
+     </widget>
+     <widget class="QWidget" name="rlTab">
+      <attribute name="title">
+       <string>RL</string>
+      </attribute>
+      <layout class="QHBoxLayout" name="rlLayout"/>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

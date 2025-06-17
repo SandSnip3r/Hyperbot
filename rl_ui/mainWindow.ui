@@ -89,7 +89,7 @@
        </layout>
       </item>
       <item>
-       <widget class="QWidget" name="dashboardContainer" native="true">
+       <widget class="PairViewWidget" name="dashboardContainer" native="true">
         <property name="minimumSize">
          <size>
           <width>1000</width>
@@ -122,12 +122,18 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>InteractiveChartView</class>
+  <class>InteractiveChartView</class>
+  <extends>QWidget</extends>
+  <header>interactiveChartView.hpp</header>
+  <container>1</container>
+ </customwidget>
+  <customwidget>
+   <class>PairViewWidget</class>
    <extends>QWidget</extends>
-   <header>interactiveChartView.hpp</header>
+   <header>pairViewWidget.hpp</header>
    <container>1</container>
   </customwidget>
- </customwidgets>
+</customwidgets>
  <resources/>
  <connections/>
 </ui>
