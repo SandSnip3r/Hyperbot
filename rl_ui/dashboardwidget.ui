@@ -10,35 +10,15 @@
     <height>360</height>
    </rect>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QTableWidget" name="statusTable">
-     <property name="rowCount">
-      <number>0</number>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
      </property>
-     <property name="columnCount">
-      <number>4</number>
-     </property>
-     <column>
-      <property name="text">
-       <string>Character</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>HP</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>MP</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>State</string>
-      </property>
-     </column>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <layout class="QGridLayout" name="gridLayout"/>
+     </widget>
     </widget>
    </item>
   </layout>

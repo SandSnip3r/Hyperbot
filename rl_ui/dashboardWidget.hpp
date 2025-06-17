@@ -1,12 +1,15 @@
 #ifndef DASHBOARD_WIDGET_HPP_
 #define DASHBOARD_WIDGET_HPP_
 
+#include "characterCardWidget.hpp"
 #include "characterDetailDialog.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QStringList>
 #include <QWidget>
 #include <QMap>
+#include <QGridLayout>
+#include <QVector>
 
 namespace Ui {
 class DashboardWidget;
@@ -34,9 +37,14 @@ private:
   Ui::DashboardWidget *ui;
   QMap<QString, CharacterData> characterData_;
   QMap<QString, CharacterDetailDialog *> detailDialogs_;
+  QMap<QString, CharacterCardWidget *> cardWidgets_;
+  QWidget *gridContainer_;
+  QGridLayout *gridLayout_;
   const sro::pk2::GameData &gameData_;
-  int ensureRowForCharacter(const QString &name);
-  void showCharacterDetail(int row, int column);
+
+  CharacterCardWidget *ensureCardForCharacter(const QString &name);
+  void showCharacterDetail(QString name);
+  QColor colorForPair(int pair) const;
 };
 
 #endif // DASHBOARD_WIDGET_HPP_
