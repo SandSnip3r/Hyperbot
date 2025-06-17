@@ -7,6 +7,8 @@
 #include <QStringList>
 #include <QWidget>
 #include <QMap>
+#include <QTreeWidgetItem>
+#include <QHash>
 
 namespace Ui {
 class DashboardWidget;
@@ -32,11 +34,31 @@ signals:
 
 private:
   Ui::DashboardWidget *ui;
+  struct CharacterWidgets {
+    QTreeWidgetItem *item{nullptr};
+    QProgressBar *hpBar{nullptr};
+    QProgressBar *mpBar{nullptr};
+  };
+
+  struct PairWidgets {
+    QTreeWidgetItem *item{nullptr};
+    QProgressBar *hpBar{nullptr};
+    QProgressBar *mpBar{nullptr};
+    QString first;
+    QString second;
+  };
+
   QMap<QString, CharacterData> characterData_;
+  QHash<QString, CharacterWidgets> characterWidgets_;
+  QHash<int, PairWidgets> pairWidgets_;
   QMap<QString, CharacterDetailDialog *> detailDialogs_;
   const sro::pk2::GameData &gameData_;
-  int ensureRowForCharacter(const QString &name);
-  void showCharacterDetail(int row, int column);
+  CharacterWidgets &ensureCharacterWidgets(const QString &name);
+  PairWidgets &ensurePairWidgets(int pairId);
+  static int characterId(const QString &name);
+  static int pairIdForName(const QString &name);
+  void updatePairSummary(int pairId);
+  void showCharacterDetail(QTreeWidgetItem *item, int column);
 };
 
 #endif // DASHBOARD_WIDGET_HPP_
