@@ -7,10 +7,13 @@
 #include <QStringList>
 #include <QWidget>
 #include <QMap>
+#include <QGridLayout>
 
 namespace Ui {
 class DashboardWidget;
 }
+
+class CharacterCardWidget;
 
 class DashboardWidget : public QWidget {
   Q_OBJECT
@@ -34,9 +37,11 @@ private:
   Ui::DashboardWidget *ui;
   QMap<QString, CharacterData> characterData_;
   QMap<QString, CharacterDetailDialog *> detailDialogs_;
+  QMap<QString, CharacterCardWidget *> cards_;
   const sro::pk2::GameData &gameData_;
-  int ensureRowForCharacter(const QString &name);
-  void showCharacterDetail(int row, int column);
+  QGridLayout *gridLayout_{nullptr};
+  int ensureCardForCharacter(const QString &name);
+  void showCharacterDetail(QString name);
 };
 
 #endif // DASHBOARD_WIDGET_HPP_

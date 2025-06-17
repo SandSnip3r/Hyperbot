@@ -16,3 +16,6 @@
 - Highly visual overview ideal for large fleets.
 - Side pane workflow makes it fast to jump between characters without extra windows.
 - Thumbnails help diagnose stuck clients at a glance.
+
+## Status
+Implemented in the `rl_ui` application.
