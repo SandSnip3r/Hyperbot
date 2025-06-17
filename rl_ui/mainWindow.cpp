@@ -1,5 +1,6 @@
 #include "checkpointWidget.hpp"
 #include "hyperbotConnect.hpp"
+#include "pairViewWidget.hpp"
 #include "mainWindow.hpp"
 #include "./ui_mainwindow.h"
 
@@ -33,11 +34,14 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
   dashboardWidget_ = new DashboardWidget(gameData_, this);
+  pairViewWidget_ = new PairViewWidget(this);
   QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
   if (!layout) {
     layout = new QVBoxLayout(ui->dashboardContainer);
   }
+  layout->addWidget(pairViewWidget_);
   layout->addWidget(dashboardWidget_);
+  pairViewWidget_->setPairList({tr("A1"), tr("A2")}, {tr("B1"), tr("B2")});
   connectSignals();
   // testChart();
 }

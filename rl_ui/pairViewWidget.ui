@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PairViewWidget</class>
+ <widget class="QWidget" name="PairViewWidget">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="listLayout">
+     <item>
+      <widget class="QListWidget" name="teamAList"/>
+     </item>
+     <item>
+      <widget class="QListWidget" name="teamBList"/>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="detailTabs">
+     <widget class="QWidget" name="statusTab">
+      <attribute name="title">
+       <string>Status</string>
+      </attribute>
+      <layout class="QHBoxLayout" name="statusLayout">
+       <item>
+        <widget class="QLabel" name="statusALabel">
+         <property name="text">
+          <string>Team A</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="statusBLabel">
+         <property name="text">
+          <string>Team B</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="inventoryTab">
+      <attribute name="title">
+       <string>Inventory</string>
+      </attribute>
+     </widget>
+     <widget class="QWidget" name="rlTab">
+      <attribute name="title">
+       <string>RL</string>
+      </attribute>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
