@@ -4,6 +4,7 @@
 #include "config.hpp"
 #include "hyperbot.hpp"
 #include "dashboardWidget.hpp"
+#include "fleetManagerWindow.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QMainWindow>
@@ -42,6 +43,7 @@ private:
   Hyperbot &hyperbot_;
   const sro::pk2::GameData &gameData_;
   DashboardWidget *dashboardWidget_{nullptr};
+  FleetManagerWindow *fleetManagerWindow_{nullptr};
   bool connectionWindowShown_{false};
   QMainWindow *connectionWindow_{nullptr};
   QLineSeries *series_;

@@ -30,6 +30,7 @@ qt_add_executable(rl_ui
   dashboardWidget.hpp dashboardWidget.cpp dashboardwidget.ui
   characterDetailDialog.hpp characterDetailDialog.cpp characterDetailDialog.ui
   barStyles.hpp barStyles.cpp
+  fleetManagerWindow.hpp fleetManagerWindow.cpp
   textureToQImage.hpp
 )
 

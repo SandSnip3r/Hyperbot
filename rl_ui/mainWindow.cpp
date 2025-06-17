@@ -1,6 +1,7 @@
 #include "checkpointWidget.hpp"
 #include "hyperbotConnect.hpp"
 #include "mainWindow.hpp"
+#include "fleetManagerWindow.hpp"
 #include "./ui_mainwindow.h"
 
 #include <silkroad_lib/pk2/gameData.hpp>
@@ -38,6 +39,18 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
     layout = new QVBoxLayout(ui->dashboardContainer);
   }
   layout->addWidget(dashboardWidget_);
+  QMenu *windowMenu = menuBar()->addMenu(tr("&Window"));
+  QAction *fleetAction = windowMenu->addAction(tr("Fleet Manager"));
+  connect(fleetAction, &QAction::triggered, this, [this]() {
+    if (!fleetManagerWindow_) {
+      fleetManagerWindow_ = new FleetManagerWindow(hyperbot_, gameData_, this);
+      connect(fleetManagerWindow_, &QObject::destroyed, this,
+              [this]() { fleetManagerWindow_ = nullptr; });
+    }
+    fleetManagerWindow_->show();
+    fleetManagerWindow_->raise();
+    fleetManagerWindow_->activateWindow();
+  });
   connectSignals();
   // testChart();
 }
