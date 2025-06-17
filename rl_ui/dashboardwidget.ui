@@ -12,7 +12,7 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <widget class="QTableWidget" name="statusTable">
+    <widget class="StatusTableWidget" name="statusTable">
      <property name="rowCount">
       <number>0</number>
      </property>
@@ -43,6 +43,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>StatusTableWidget</class>
+   <extends>QTableWidget</extends>
+   <header>statusTableWidget.hpp</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -29,7 +29,7 @@ namespace {
 
 CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
                                              QWidget *parent)
-    : QDialog(parent), ui_(new Ui::CharacterDetailDialog), gameData_(gameData) {
+    : QWidget(parent), ui_(new Ui::CharacterDetailDialog), gameData_(gameData) {
   ui_->setupUi(this);
   setupHpBar(ui_->hpBar);
   setupMpBar(ui_->mpBar);

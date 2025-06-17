@@ -6,7 +6,7 @@
 #include <silkroad_lib/scalar_types.hpp>
 #include <silkroad_lib/pk2/gameData.hpp>
 
-#include <QDialog>
+#include <QWidget>
 #include <QList>
 #include <QProgressBar>
 #include <QListWidgetItem>
@@ -35,7 +35,7 @@ struct CharacterData {
   QList<SkillCooldown> skillCooldowns;
 };
 
-class CharacterDetailDialog : public QDialog {
+class CharacterDetailDialog : public QWidget {
   Q_OBJECT
 public:
   explicit CharacterDetailDialog(const sro::pk2::GameData &gameData, QWidget *parent = nullptr);

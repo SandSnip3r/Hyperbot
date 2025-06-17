@@ -29,11 +29,14 @@ public slots:
 
 signals:
   void characterDataUpdated(QString name, CharacterData data);
+  void characterDetailRequested(QString name);
+
+public:
+  CharacterData getCharacterData(const QString &name) const;
 
 private:
   Ui::DashboardWidget *ui;
   QMap<QString, CharacterData> characterData_;
-  QMap<QString, CharacterDetailDialog *> detailDialogs_;
   const sro::pk2::GameData &gameData_;
   int ensureRowForCharacter(const QString &name);
   void showCharacterDetail(int row, int column);

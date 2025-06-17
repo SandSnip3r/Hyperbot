@@ -1,5 +1,7 @@
 # UI Redesign Proposal - Version 3: Dashboard with Draggable Panels
 
+**Status: Implemented**
+
 ## Overview
 A customizable dashboard where each type of information is a draggable widget. Users can arrange the layout to suit different monitoring scenarios.
 

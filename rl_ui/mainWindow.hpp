@@ -7,10 +7,12 @@
 #include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QMainWindow>
+#include <QDockWidget>
 #include <QStringList>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
 #include <QTimer>
+#include <QMap>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -30,6 +32,8 @@ public:
 protected:
   // This is called when this window is shown.
   void showEvent(QShowEvent *event) override;
+  void dragEnterEvent(QDragEnterEvent *event) override;
+  void dropEvent(QDropEvent *event) override;
 
 public slots:
   void onConnectedToHyperbot();
@@ -42,6 +46,7 @@ private:
   Hyperbot &hyperbot_;
   const sro::pk2::GameData &gameData_;
   DashboardWidget *dashboardWidget_{nullptr};
+  QMap<QString, QDockWidget *> characterDocks_;
   bool connectionWindowShown_{false};
   QMainWindow *connectionWindow_{nullptr};
   QLineSeries *series_;
@@ -56,5 +61,6 @@ private:
   void showConnectionWindow(const QString &windowTitle);
   void testChart();
   void addDataPoint(qreal x, qreal y);
+  void openCharacterDock(const QString &name);
 };
 #endif // MAIN_WINDOW_HPP_
