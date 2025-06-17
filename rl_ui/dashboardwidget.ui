@@ -12,10 +12,7 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <widget class="QTableWidget" name="statusTable">
-     <property name="rowCount">
-      <number>0</number>
-     </property>
+    <widget class="QTreeWidget" name="statusTree">
      <property name="columnCount">
       <number>4</number>
      </property>
