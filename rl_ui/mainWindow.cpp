@@ -32,12 +32,16 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
-  dashboardWidget_ = new DashboardWidget(gameData_, this);
+  cardDashboardWidget_ = new CardDashboardWidget(gameData_, this);
   QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
   if (!layout) {
     layout = new QVBoxLayout(ui->dashboardContainer);
   }
-  layout->addWidget(dashboardWidget_);
+  layout->addWidget(cardDashboardWidget_);
+  detailDock_ = new QDockWidget(tr("Character Detail"), this);
+  detailDock_->setAllowedAreas(Qt::RightDockWidgetArea | Qt::LeftDockWidgetArea);
+  detailDock_->hide();
+  addDockWidget(Qt::RightDockWidgetArea, detailDock_);
   connectSignals();
   // testChart();
 }
@@ -56,19 +60,35 @@ void MainWindow::connectSignals() {
   connect(ui->startTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::startTraining);
   connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
   connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
-  connect(&hyperbot_, &Hyperbot::disconnected, dashboardWidget_,
-          &DashboardWidget::clearStatusTable);
-  connect(&hyperbot_, &Hyperbot::connected, dashboardWidget_,
-          &DashboardWidget::onHyperbotConnected);
+  connect(&hyperbot_, &Hyperbot::disconnected, cardDashboardWidget_,
+          &CardDashboardWidget::clearCards);
+  connect(&hyperbot_, &Hyperbot::connected, cardDashboardWidget_,
+          &CardDashboardWidget::onHyperbotConnected);
 
   // TODO: Organize this better
   connect(&hyperbot_, &Hyperbot::plotData, this, &MainWindow::addDataPoint);
-  connect(&hyperbot_, &Hyperbot::characterStatusReceived, dashboardWidget_,
-          &DashboardWidget::onCharacterStatusReceived);
-  connect(&hyperbot_, &Hyperbot::activeStateMachineReceived, dashboardWidget_,
-          &DashboardWidget::onActiveStateMachine);
-  connect(&hyperbot_, &Hyperbot::skillCooldownsReceived, dashboardWidget_,
-          &DashboardWidget::onSkillCooldowns);
+  connect(&hyperbot_, &Hyperbot::characterStatusReceived, cardDashboardWidget_,
+          &CardDashboardWidget::onCharacterStatusReceived);
+  connect(&hyperbot_, &Hyperbot::activeStateMachineReceived, cardDashboardWidget_,
+          &CardDashboardWidget::onActiveStateMachine);
+  connect(&hyperbot_, &Hyperbot::skillCooldownsReceived, cardDashboardWidget_,
+          &CardDashboardWidget::onSkillCooldowns);
+  connect(cardDashboardWidget_, &CardDashboardWidget::cardSelected, this,
+          [this](const QString &name) {
+            if (!detailDock_) {
+              return;
+            }
+            if (detailDialog_) {
+              detailDialog_->deleteLater();
+            }
+            detailDialog_ = new CharacterDetailDialog(gameData_, detailDock_);
+            detailDialog_->setCharacterName(name);
+            detailDock_->setWidget(detailDialog_);
+            detailDock_->show();
+            connect(cardDashboardWidget_, &CardDashboardWidget::characterDataUpdated,
+                    detailDialog_, &CharacterDetailDialog::onCharacterDataUpdated,
+                    Qt::UniqueConnection);
+          });
 }
 
 void MainWindow::showConnectionWindow(const QString &windowTitle) {
