@@ -5,8 +5,9 @@
 #include <silkroad_lib/pk2/gameData.hpp>
 #include <QProgressBar>
 #include <QTableWidgetItem>
-#include <QTableWidget>
 #include <QHeaderView>
+#include <QTableWidget>
+#include <QAbstractItemView>
 #include <QRegularExpression>
 
 DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
@@ -21,6 +22,9 @@ DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
   // Set the last column to stretch to fill the remaining space
   ui->statusTable->horizontalHeader()->setSectionResizeMode(
       ui->statusTable->columnCount() - 1, QHeaderView::Stretch);
+  ui->statusTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+  ui->statusTable->setDragEnabled(true);
+  ui->statusTable->setDragDropMode(QAbstractItemView::DragOnly);
   connect(ui->statusTable, &QTableWidget::cellDoubleClicked, this,
           &DashboardWidget::showCharacterDetail);
   qRegisterMetaType<CharacterData>("CharacterData");
@@ -37,13 +41,11 @@ static int characterId(const QString &name) {
 }
 
 DashboardWidget::~DashboardWidget() {
-  for (auto dialog : detailDialogs_) {
-    if (dialog) {
-      dialog->close();
-    }
-  }
-  detailDialogs_.clear();
   delete ui;
+}
+
+CharacterData DashboardWidget::getCharacterData(QString name) const {
+  return characterData_.value(name);
 }
 
 int DashboardWidget::ensureRowForCharacter(const QString &name) {
@@ -134,14 +136,7 @@ void DashboardWidget::clearStatusTable() {
   characterData_.clear();
 }
 
-void DashboardWidget::onHyperbotConnected() {
-  for (auto dialog : detailDialogs_) {
-    if (dialog) {
-      dialog->close();
-    }
-  }
-  detailDialogs_.clear();
-}
+void DashboardWidget::onHyperbotConnected() {}
 
 void DashboardWidget::showCharacterDetail(int row, int column) {
   Q_UNUSED(column);
@@ -150,22 +145,5 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
     return;
   }
   const QString name = item->text();
-  if (detailDialogs_.contains(name)) {
-    CharacterDetailDialog *dialog = detailDialogs_.value(name);
-    if (dialog) {
-      dialog->raise();
-      dialog->activateWindow();
-    }
-    return;
-  }
-  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, this);
-  dialog->setAttribute(Qt::WA_DeleteOnClose);
-  detailDialogs_.insert(name, dialog);
-  connect(dialog, &QObject::destroyed, this,
-          [this, name]() { detailDialogs_.remove(name); });
-  dialog->setCharacterName(name);
-  dialog->updateCharacterData(characterData_.value(name));
-  connect(this, &DashboardWidget::characterDataUpdated, dialog,
-          &CharacterDetailDialog::onCharacterDataUpdated);
-  dialog->show();
+  emit characterDetailRequested(name);
 }

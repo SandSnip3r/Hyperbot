@@ -2,6 +2,7 @@
 #define DASHBOARD_WIDGET_HPP_
 
 #include "characterDetailDialog.hpp"
+#include "draggableTableWidget.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QStringList>
@@ -19,6 +20,8 @@ public:
                            QWidget *parent = nullptr);
   ~DashboardWidget();
 
+  CharacterData getCharacterData(QString name) const;
+
 public slots:
   void onCharacterStatusReceived(QString name, int currentHp, int maxHp,
                                  int currentMp, int maxMp);
@@ -29,11 +32,11 @@ public slots:
 
 signals:
   void characterDataUpdated(QString name, CharacterData data);
+  void characterDetailRequested(QString name);
 
 private:
   Ui::DashboardWidget *ui;
   QMap<QString, CharacterData> characterData_;
-  QMap<QString, CharacterDetailDialog *> detailDialogs_;
   const sro::pk2::GameData &gameData_;
   int ensureRowForCharacter(const QString &name);
   void showCharacterDetail(int row, int column);

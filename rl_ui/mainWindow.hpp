@@ -11,6 +11,10 @@
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
 #include <QTimer>
+#include <QDockWidget>
+#include <QMap>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -30,6 +34,8 @@ public:
 protected:
   // This is called when this window is shown.
   void showEvent(QShowEvent *event) override;
+  void dragEnterEvent(QDragEnterEvent *event) override;
+  void dropEvent(QDropEvent *event) override;
 
 public slots:
   void onConnectedToHyperbot();
@@ -42,6 +48,10 @@ private:
   Hyperbot &hyperbot_;
   const sro::pk2::GameData &gameData_;
   DashboardWidget *dashboardWidget_{nullptr};
+  QDockWidget *fleetDock_{nullptr};
+  QDockWidget *checkpointDock_{nullptr};
+  QDockWidget *chartDock_{nullptr};
+  QMap<QString, QDockWidget *> detailDocks_;
   bool connectionWindowShown_{false};
   QMainWindow *connectionWindow_{nullptr};
   QLineSeries *series_;
@@ -56,5 +66,6 @@ private:
   void showConnectionWindow(const QString &windowTitle);
   void testChart();
   void addDataPoint(qreal x, qreal y);
+  void openCharacterDetailDock(const QString &name);
 };
 #endif // MAIN_WINDOW_HPP_

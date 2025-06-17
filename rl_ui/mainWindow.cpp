@@ -8,6 +8,8 @@
 #include <QtCharts/QChart>
 #include <QtCharts/QLineSeries>
 #include <QVBoxLayout>
+#include <QDockWidget>
+#include <QMimeData>
 
 #include <absl/log/log.h>
 
@@ -29,15 +31,30 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
       hyperbot_(hyperbot),
       gameData_(gameData) {
   ui->setupUi(this);
+  setAcceptDrops(true);
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
   dashboardWidget_ = new DashboardWidget(gameData_, this);
-  QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
-  if (!layout) {
-    layout = new QVBoxLayout(ui->dashboardContainer);
-  }
-  layout->addWidget(dashboardWidget_);
+
+  fleetDock_ = new QDockWidget(tr("Fleet"), this);
+  fleetDock_->setObjectName("fleetDock");
+  fleetDock_->setWidget(dashboardWidget_);
+  addDockWidget(Qt::LeftDockWidgetArea, fleetDock_);
+
+  checkpointDock_ = new QDockWidget(tr("Checkpoints"), this);
+  checkpointDock_->setObjectName("checkpointDock");
+  checkpointDock_->setWidget(ui->checkpointWidget);
+  addDockWidget(Qt::LeftDockWidgetArea, checkpointDock_);
+
+  chartDock_ = new QDockWidget(tr("Queue Size"), this);
+  chartDock_->setObjectName("chartDock");
+  chartDock_->setWidget(ui->graphWidget);
+  addDockWidget(Qt::RightDockWidgetArea, chartDock_);
+
+  ui->dashboardContainer->setParent(nullptr);
+  ui->checkpointWidget->setParent(nullptr);
+  ui->graphWidget->setParent(nullptr);
   connectSignals();
   // testChart();
 }
@@ -69,6 +86,18 @@ void MainWindow::connectSignals() {
           &DashboardWidget::onActiveStateMachine);
   connect(&hyperbot_, &Hyperbot::skillCooldownsReceived, dashboardWidget_,
           &DashboardWidget::onSkillCooldowns);
+
+  connect(dashboardWidget_, &DashboardWidget::characterDetailRequested, this,
+          &MainWindow::openCharacterDetailDock);
+  connect(dashboardWidget_, &DashboardWidget::characterDataUpdated, this,
+          [this](QString name, CharacterData data) {
+            if (detailDocks_.contains(name)) {
+              auto *dialog = qobject_cast<CharacterDetailDialog *>(detailDocks_[name]->widget());
+              if (dialog) {
+                dialog->onCharacterDataUpdated(name, data);
+              }
+            }
+          });
 }
 
 void MainWindow::showConnectionWindow(const QString &windowTitle) {
@@ -124,4 +153,35 @@ void MainWindow::addDataPoint(qreal x, qreal y) {
     LOG(INFO) << "Adding data point #" << count;
   }
   ui->graphWidget->addDataPoint({x,y});
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
+  if (event->mimeData()->hasText()) {
+    event->acceptProposedAction();
+  }
+}
+
+void MainWindow::dropEvent(QDropEvent *event) {
+  QString name = event->mimeData()->text();
+  openCharacterDetailDock(name);
+  event->acceptProposedAction();
+}
+
+void MainWindow::openCharacterDetailDock(const QString &name) {
+  if (detailDocks_.contains(name)) {
+    detailDocks_[name]->raise();
+    return;
+  }
+  QDockWidget *dock = new QDockWidget(name, this);
+  dock->setAttribute(Qt::WA_DeleteOnClose);
+  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, dock);
+  dialog->setCharacterName(name);
+  dialog->updateCharacterData(dashboardWidget_->getCharacterData(name));
+  connect(dock, &QObject::destroyed, this,
+          [this, name]() { detailDocks_.remove(name); });
+  connect(dashboardWidget_, &DashboardWidget::characterDataUpdated, dialog,
+          &CharacterDetailDialog::onCharacterDataUpdated);
+  dock->setWidget(dialog);
+  addDockWidget(Qt::RightDockWidgetArea, dock);
+  detailDocks_.insert(name, dock);
 }
