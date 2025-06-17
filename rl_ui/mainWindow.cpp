@@ -32,12 +32,12 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
-  dashboardWidget_ = new DashboardWidget(gameData_, this);
+  gridWidget_ = new CharacterGridWidget(gameData_, this);
   QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
   if (!layout) {
     layout = new QVBoxLayout(ui->dashboardContainer);
   }
-  layout->addWidget(dashboardWidget_);
+  layout->addWidget(gridWidget_);
   connectSignals();
   // testChart();
 }
@@ -56,19 +56,19 @@ void MainWindow::connectSignals() {
   connect(ui->startTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::startTraining);
   connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
   connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
-  connect(&hyperbot_, &Hyperbot::disconnected, dashboardWidget_,
-          &DashboardWidget::clearStatusTable);
-  connect(&hyperbot_, &Hyperbot::connected, dashboardWidget_,
-          &DashboardWidget::onHyperbotConnected);
+  connect(&hyperbot_, &Hyperbot::disconnected, gridWidget_,
+          &CharacterGridWidget::clearCharacters);
+  connect(&hyperbot_, &Hyperbot::connected, gridWidget_,
+          &CharacterGridWidget::clearCharacters);
 
   // TODO: Organize this better
   connect(&hyperbot_, &Hyperbot::plotData, this, &MainWindow::addDataPoint);
-  connect(&hyperbot_, &Hyperbot::characterStatusReceived, dashboardWidget_,
-          &DashboardWidget::onCharacterStatusReceived);
-  connect(&hyperbot_, &Hyperbot::activeStateMachineReceived, dashboardWidget_,
-          &DashboardWidget::onActiveStateMachine);
-  connect(&hyperbot_, &Hyperbot::skillCooldownsReceived, dashboardWidget_,
-          &DashboardWidget::onSkillCooldowns);
+  connect(&hyperbot_, &Hyperbot::characterStatusReceived, gridWidget_,
+          &CharacterGridWidget::onCharacterStatusReceived);
+  connect(&hyperbot_, &Hyperbot::activeStateMachineReceived, gridWidget_,
+          &CharacterGridWidget::onActiveStateMachine);
+  connect(&hyperbot_, &Hyperbot::skillCooldownsReceived, gridWidget_,
+          &CharacterGridWidget::onSkillCooldowns);
 }
 
 void MainWindow::showConnectionWindow(const QString &windowTitle) {

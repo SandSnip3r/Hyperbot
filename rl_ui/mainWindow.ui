@@ -122,12 +122,18 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>InteractiveChartView</class>
-   <extends>QWidget</extends>
-   <header>interactiveChartView.hpp</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
+    <class>InteractiveChartView</class>
+    <extends>QWidget</extends>
+    <header>interactiveChartView.hpp</header>
+    <container>1</container>
+   </customwidget>
+   <customwidget>
+    <class>CharacterGridWidget</class>
+    <extends>QWidget</extends>
+    <header>characterGridWidget.hpp</header>
+    <container>1</container>
+   </customwidget>
+  </customwidgets>
  <resources/>
  <connections/>
 </ui>
