@@ -23,8 +23,11 @@ DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
       ui->statusTable->columnCount() - 1, QHeaderView::Stretch);
   connect(ui->statusTable, &QTableWidget::cellDoubleClicked, this,
           &DashboardWidget::showCharacterDetail);
+  detailWidget_ = ui->detailWidget;
   qRegisterMetaType<CharacterData>("CharacterData");
   qRegisterMetaType<QList<SkillCooldown>>("QList<SkillCooldown>");
+  connect(this, &DashboardWidget::characterDataUpdated, detailWidget_,
+          &CharacterDetailWidget::onCharacterDataUpdated);
 }
 
 static int characterId(const QString &name) {
@@ -37,12 +40,6 @@ static int characterId(const QString &name) {
 }
 
 DashboardWidget::~DashboardWidget() {
-  for (auto dialog : detailDialogs_) {
-    if (dialog) {
-      dialog->close();
-    }
-  }
-  detailDialogs_.clear();
   delete ui;
 }
 
@@ -135,37 +132,21 @@ void DashboardWidget::clearStatusTable() {
 }
 
 void DashboardWidget::onHyperbotConnected() {
-  for (auto dialog : detailDialogs_) {
-    if (dialog) {
-      dialog->close();
-    }
+  if (detailWidget_) {
+    detailWidget_->setCharacterName("");
   }
-  detailDialogs_.clear();
 }
 
 void DashboardWidget::showCharacterDetail(int row, int column) {
   Q_UNUSED(column);
+  if (!detailWidget_) {
+    return;
+  }
   QTableWidgetItem *item = ui->statusTable->item(row, 0);
   if (!item) {
     return;
   }
   const QString name = item->text();
-  if (detailDialogs_.contains(name)) {
-    CharacterDetailDialog *dialog = detailDialogs_.value(name);
-    if (dialog) {
-      dialog->raise();
-      dialog->activateWindow();
-    }
-    return;
-  }
-  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, this);
-  dialog->setAttribute(Qt::WA_DeleteOnClose);
-  detailDialogs_.insert(name, dialog);
-  connect(dialog, &QObject::destroyed, this,
-          [this, name]() { detailDialogs_.remove(name); });
-  dialog->setCharacterName(name);
-  dialog->updateCharacterData(characterData_.value(name));
-  connect(this, &DashboardWidget::characterDataUpdated, dialog,
-          &CharacterDetailDialog::onCharacterDataUpdated);
-  dialog->show();
+  detailWidget_->setCharacterName(name);
+  detailWidget_->updateCharacterData(characterData_.value(name));
 }

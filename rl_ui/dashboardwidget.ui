@@ -39,10 +39,20 @@
        <string>State</string>
       </property>
      </column>
-    </widget>
+   </widget>
+  </item>
+   <item>
+    <widget class="CharacterDetailWidget" name="detailWidget"/>
    </item>
-  </layout>
- </widget>
- <resources/>
- <connections/>
+ </layout>
+</widget>
+ <customwidgets>
+  <customwidget>
+   <class>CharacterDetailWidget</class>
+   <extends>QWidget</extends>
+   <header>characterDetailWidget.hpp</header>
+  </customwidget>
+ </customwidgets>
+<resources/>
+<connections/>
 </ui>

@@ -1,7 +1,7 @@
 #ifndef DASHBOARD_WIDGET_HPP_
 #define DASHBOARD_WIDGET_HPP_
 
-#include "characterDetailDialog.hpp"
+#include "characterDetailWidget.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QStringList>
@@ -33,7 +33,7 @@ signals:
 private:
   Ui::DashboardWidget *ui;
   QMap<QString, CharacterData> characterData_;
-  QMap<QString, CharacterDetailDialog *> detailDialogs_;
+  CharacterDetailWidget *detailWidget_{nullptr};
   const sro::pk2::GameData &gameData_;
   int ensureRowForCharacter(const QString &name);
   void showCharacterDetail(int row, int column);

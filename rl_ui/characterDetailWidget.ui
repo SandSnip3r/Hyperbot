@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>CharacterDetailWidget</class>
+ <widget class="QWidget" name="CharacterDetailWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>300</width>
+    <height>200</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="nameLabel">
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter</set>
+     </property>
+     <property name="text">
+      <string>Character Name</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="hpBar">
+     <property name="format">
+      <string>0/0</string>
+     </property>
+    </widget>
+   </item>
+    <item>
+      <widget class="QProgressBar" name="mpBar">
+       <property name="format">
+        <string>0/0</string>
+       </property>
+      </widget>
+    </item>
+    <item>
+     <widget class="QListWidget" name="skillCooldownList">
+      <property name="iconSize">
+       <size>
+        <width>24</width>
+        <height>24</height>
+       </size>
+      </property>
+     </widget>
+    </item>
+    <item>
+      <widget class="QLabel" name="stateMachineLabel">
+       <property name="text">
+        <string>State Machine</string>
+       </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
