@@ -1,6 +1,7 @@
 #include "checkpointWidget.hpp"
 #include "hyperbotConnect.hpp"
 #include "mainWindow.hpp"
+#include "pairSplitWidget.hpp"
 #include "./ui_mainwindow.h"
 
 #include <silkroad_lib/pk2/gameData.hpp>
@@ -55,6 +56,7 @@ MainWindow::~MainWindow() {
 void MainWindow::connectSignals() {
   connect(ui->startTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::startTraining);
   connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
+  connect(ui->pairViewButton, &QPushButton::clicked, this, &MainWindow::onPairViewButtonClicked);
   connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
   connect(&hyperbot_, &Hyperbot::disconnected, dashboardWidget_,
           &DashboardWidget::clearStatusTable);
@@ -124,4 +126,13 @@ void MainWindow::addDataPoint(qreal x, qreal y) {
     LOG(INFO) << "Adding data point #" << count;
   }
   ui->graphWidget->addDataPoint({x,y});
+}
+
+void MainWindow::onPairViewButtonClicked() {
+  if (!pairWidget_) {
+    pairWidget_ = new PairSplitWidget(this);
+  }
+  pairWidget_->show();
+  pairWidget_->raise();
+  pairWidget_->activateWindow();
 }

@@ -29,6 +29,7 @@ qt_add_executable(rl_ui
   checkpointWidget.hpp checkpointWidget.cpp checkpointwidget.ui
   dashboardWidget.hpp dashboardWidget.cpp dashboardwidget.ui
   characterDetailDialog.hpp characterDetailDialog.cpp characterDetailDialog.ui
+  pairSplitWidget.hpp pairSplitWidget.cpp pairSplitWidget.ui
   barStyles.hpp barStyles.cpp
   textureToQImage.hpp
 )

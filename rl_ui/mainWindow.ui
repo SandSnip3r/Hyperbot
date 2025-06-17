@@ -29,9 +29,16 @@
         <property name="text">
          <string>Stop Training</string>
         </property>
-       </widget>
-      </item>
-      <item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pairViewButton">
+       <property name="text">
+        <string>Pair View</string>
+       </property>
+      </widget>
+     </item>
+     <item>
        <spacer name="buttonSpacer">
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>

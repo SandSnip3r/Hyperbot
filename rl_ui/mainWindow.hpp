@@ -4,6 +4,7 @@
 #include "config.hpp"
 #include "hyperbot.hpp"
 #include "dashboardWidget.hpp"
+#include "pairSplitWidget.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QMainWindow>
@@ -35,6 +36,7 @@ public slots:
   void onConnectedToHyperbot();
   void onDisconnectedFromHyperbot();
   void onTimerTriggered();
+  void onPairViewButtonClicked();
 
 private:
   Ui::MainWindow *ui;
@@ -42,6 +44,7 @@ private:
   Hyperbot &hyperbot_;
   const sro::pk2::GameData &gameData_;
   DashboardWidget *dashboardWidget_{nullptr};
+  PairSplitWidget *pairWidget_{nullptr};
   bool connectionWindowShown_{false};
   QMainWindow *connectionWindow_{nullptr};
   QLineSeries *series_;
