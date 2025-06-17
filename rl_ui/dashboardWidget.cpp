@@ -8,6 +8,7 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QRegularExpression>
+#include <QSettings>
 
 DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
                                  QWidget *parent)
@@ -25,6 +26,11 @@ DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
           &DashboardWidget::showCharacterDetail);
   qRegisterMetaType<CharacterData>("CharacterData");
   qRegisterMetaType<QList<SkillCooldown>>("QList<SkillCooldown>");
+  QSettings settings("Hyperbot", "RL_UI");
+  const QStringList open = settings.value("detail/openDialogs").toStringList();
+  for (const QString &name : open) {
+    openDialogs_.insert(name);
+  }
 }
 
 static int characterId(const QString &name) {
@@ -43,6 +49,8 @@ DashboardWidget::~DashboardWidget() {
     }
   }
   detailDialogs_.clear();
+  QSettings settings("Hyperbot", "RL_UI");
+  settings.setValue("detail/openDialogs", QStringList(openDialogs_.values()));
   delete ui;
 }
 
@@ -114,6 +122,9 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
   if (!ui->statusTable->item(row, 3)) {
     ui->statusTable->setItem(row, 3, new QTableWidgetItem(""));
   }
+  if (openDialogs_.contains(name) && !detailDialogs_.contains(name)) {
+    showCharacterDetail(row, 0);
+  }
   emit characterDataUpdated(name, data);
 }
 
@@ -161,11 +172,14 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
   CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, this);
   dialog->setAttribute(Qt::WA_DeleteOnClose);
   detailDialogs_.insert(name, dialog);
-  connect(dialog, &QObject::destroyed, this,
-          [this, name]() { detailDialogs_.remove(name); });
+  connect(dialog, &QObject::destroyed, this, [this, name]() {
+    detailDialogs_.remove(name);
+    openDialogs_.remove(name);
+  });
   dialog->setCharacterName(name);
   dialog->updateCharacterData(characterData_.value(name));
   connect(this, &DashboardWidget::characterDataUpdated, dialog,
           &CharacterDetailDialog::onCharacterDataUpdated);
+  openDialogs_.insert(name);
   dialog->show();
 }

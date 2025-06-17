@@ -8,6 +8,7 @@
 #include <QtCharts/QChart>
 #include <QtCharts/QLineSeries>
 #include <QVBoxLayout>
+#include <QSettings>
 
 #include <absl/log/log.h>
 
@@ -29,15 +30,29 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
       hyperbot_(hyperbot),
       gameData_(gameData) {
   ui->setupUi(this);
+  QSettings settings("Hyperbot", "RL_UI");
+  restoreGeometry(settings.value("mainWindow/geometry").toByteArray());
+  restoreState(settings.value("mainWindow/state").toByteArray());
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
   dashboardWidget_ = new DashboardWidget(gameData_, this);
-  QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
-  if (!layout) {
-    layout = new QVBoxLayout(ui->dashboardContainer);
-  }
-  layout->addWidget(dashboardWidget_);
+  fleetDock_ = new QDockWidget(tr("Fleet Manager"), this);
+  fleetDock_->setObjectName("fleetDock");
+  fleetDock_->setWidget(dashboardWidget_);
+  addDockWidget(Qt::RightDockWidgetArea, fleetDock_);
+
+  toolBar_ = addToolBar(tr("Actions"));
+  startAction_ = toolBar_->addAction(tr("Start"));
+  stopAction_ = toolBar_->addAction(tr("Stop"));
+  pauseAction_ = toolBar_->addAction(tr("Pause"));
+  connectAction_ = toolBar_->addAction(tr("Connect"));
+  toolBar_->setMovable(true);
+  toolBar_->setFloatable(true);
+  connect(startAction_, &QAction::triggered, &hyperbot_, &Hyperbot::startTraining);
+  connect(stopAction_, &QAction::triggered, &hyperbot_, &Hyperbot::stopTraining);
+  connect(connectAction_, &QAction::triggered, this,
+          [this]() { showConnectionWindow(tr("Connect to Hyperbot")); });
   connectSignals();
   // testChart();
 }
@@ -49,6 +64,9 @@ void MainWindow::showEvent(QShowEvent *event) {
 }
 
 MainWindow::~MainWindow() {
+  QSettings settings("Hyperbot", "RL_UI");
+  settings.setValue("mainWindow/geometry", saveGeometry());
+  settings.setValue("mainWindow/state", saveState());
   delete ui;
 }
 

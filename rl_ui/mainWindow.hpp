@@ -11,6 +11,10 @@
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
 #include <QTimer>
+#include <QDockWidget>
+#include <QToolBar>
+#include <QAction>
+#include <QSettings>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -42,6 +46,12 @@ private:
   Hyperbot &hyperbot_;
   const sro::pk2::GameData &gameData_;
   DashboardWidget *dashboardWidget_{nullptr};
+  QDockWidget *fleetDock_{nullptr};
+  QToolBar *toolBar_{nullptr};
+  QAction *startAction_{nullptr};
+  QAction *stopAction_{nullptr};
+  QAction *connectAction_{nullptr};
+  QAction *pauseAction_{nullptr};
   bool connectionWindowShown_{false};
   QMainWindow *connectionWindow_{nullptr};
   QLineSeries *series_;

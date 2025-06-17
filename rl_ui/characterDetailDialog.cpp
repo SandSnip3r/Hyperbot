@@ -13,6 +13,7 @@
 #include <QTimer>
 #include <QCoreApplication>
 #include <QHash>
+#include <QSettings>
 #include <QDateTime>
 #include <QSet>
 
@@ -52,6 +53,8 @@ CharacterDetailDialog::~CharacterDetailDialog() {
     sharedCooldownTimer_->deleteLater();
     sharedCooldownTimer_ = nullptr;
   }
+  QSettings settings("Hyperbot", "RL_UI");
+  settings.setValue(QString("detail/%1/geometry").arg(name_), saveGeometry());
   delete ui_;
 }
 
@@ -59,6 +62,8 @@ void CharacterDetailDialog::setCharacterName(const QString &name) {
   name_ = name;
   setWindowTitle(name_);
   ui_->nameLabel->setText(name_);
+  QSettings settings("Hyperbot", "RL_UI");
+  restoreGeometry(settings.value(QString("detail/%1/geometry").arg(name_)).toByteArray());
 }
 
 void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
