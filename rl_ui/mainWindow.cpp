@@ -29,15 +29,31 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
       hyperbot_(hyperbot),
       gameData_(gameData) {
   ui->setupUi(this);
+  setWindowTitle(tr("Hyperbot"));
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
-  setWindowTitle(tr("Hyperbot"));
+
   dashboardWidget_ = new DashboardWidget(gameData_, this);
-  QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
-  if (!layout) {
-    layout = new QVBoxLayout(ui->dashboardContainer);
-  }
-  layout->addWidget(dashboardWidget_);
+  aggregatedStatsWidget_ = new AggregatedStatsWidget(this);
+
+  setCentralWidget(ui->centralwidget);
+
+  QDockWidget *tableDock = new QDockWidget(tr("Characters"), this);
+  tableDock->setWidget(dashboardWidget_);
+  addDockWidget(Qt::LeftDockWidgetArea, tableDock);
+
+  QDockWidget *chartDock = new QDockWidget(tr("Metrics"), this);
+  chartDock->setWidget(ui->graphWidget);
+  addDockWidget(Qt::RightDockWidgetArea, chartDock);
+
+  QDockWidget *checkpointDock = new QDockWidget(tr("Checkpoints"), this);
+  checkpointDock->setWidget(ui->checkpointWidget);
+  addDockWidget(Qt::LeftDockWidgetArea, checkpointDock);
+
+  QDockWidget *statsDock = new QDockWidget(tr("Stats"), this);
+  statsDock->setWidget(aggregatedStatsWidget_);
+  addDockWidget(Qt::RightDockWidgetArea, statsDock);
+
   connectSignals();
   // testChart();
 }
@@ -60,6 +76,8 @@ void MainWindow::connectSignals() {
           &DashboardWidget::clearStatusTable);
   connect(&hyperbot_, &Hyperbot::connected, dashboardWidget_,
           &DashboardWidget::onHyperbotConnected);
+  connect(dashboardWidget_, &DashboardWidget::characterDataUpdated,
+          aggregatedStatsWidget_, &AggregatedStatsWidget::onCharacterDataUpdated);
 
   // TODO: Organize this better
   connect(&hyperbot_, &Hyperbot::plotData, this, &MainWindow::addDataPoint);

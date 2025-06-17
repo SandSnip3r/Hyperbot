@@ -37,12 +37,12 @@ static int characterId(const QString &name) {
 }
 
 DashboardWidget::~DashboardWidget() {
-  for (auto dialog : detailDialogs_) {
-    if (dialog) {
-      dialog->close();
+  for (auto dock : detailDocks_) {
+    if (dock) {
+      dock->close();
     }
   }
-  detailDialogs_.clear();
+  detailDocks_.clear();
   delete ui;
 }
 
@@ -135,12 +135,12 @@ void DashboardWidget::clearStatusTable() {
 }
 
 void DashboardWidget::onHyperbotConnected() {
-  for (auto dialog : detailDialogs_) {
-    if (dialog) {
-      dialog->close();
+  for (auto dock : detailDocks_) {
+    if (dock) {
+      dock->close();
     }
   }
-  detailDialogs_.clear();
+  detailDocks_.clear();
 }
 
 void DashboardWidget::showCharacterDetail(int row, int column) {
@@ -150,22 +150,31 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
     return;
   }
   const QString name = item->text();
-  if (detailDialogs_.contains(name)) {
-    CharacterDetailDialog *dialog = detailDialogs_.value(name);
-    if (dialog) {
-      dialog->raise();
-      dialog->activateWindow();
+  if (detailDocks_.contains(name)) {
+    QDockWidget *dock = detailDocks_.value(name);
+    if (dock) {
+      dock->raise();
+      dock->show();
     }
     return;
   }
-  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, this);
+  QMainWindow *mw = qobject_cast<QMainWindow *>(window());
+  if (!mw) {
+    return;
+  }
+  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, mw);
   dialog->setAttribute(Qt::WA_DeleteOnClose);
-  detailDialogs_.insert(name, dialog);
-  connect(dialog, &QObject::destroyed, this,
-          [this, name]() { detailDialogs_.remove(name); });
   dialog->setCharacterName(name);
   dialog->updateCharacterData(characterData_.value(name));
   connect(this, &DashboardWidget::characterDataUpdated, dialog,
           &CharacterDetailDialog::onCharacterDataUpdated);
-  dialog->show();
+
+  QDockWidget *dock = new QDockWidget(name, mw);
+  dock->setWidget(dialog);
+  dock->setAttribute(Qt::WA_DeleteOnClose);
+  mw->addDockWidget(Qt::RightDockWidgetArea, dock);
+  detailDocks_.insert(name, dock);
+  connect(dock, &QObject::destroyed, this,
+          [this, name]() { detailDocks_.remove(name); });
+  dock->show();
 }

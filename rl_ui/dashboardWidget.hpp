@@ -7,6 +7,7 @@
 #include <QStringList>
 #include <QWidget>
 #include <QMap>
+#include <QDockWidget>
 
 namespace Ui {
 class DashboardWidget;
@@ -33,7 +34,7 @@ signals:
 private:
   Ui::DashboardWidget *ui;
   QMap<QString, CharacterData> characterData_;
-  QMap<QString, CharacterDetailDialog *> detailDialogs_;
+  QMap<QString, QDockWidget *> detailDocks_;
   const sro::pk2::GameData &gameData_;
   int ensureRowForCharacter(const QString &name);
   void showCharacterDetail(int row, int column);
