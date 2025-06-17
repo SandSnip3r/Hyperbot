@@ -19,6 +19,8 @@ public:
                            QWidget *parent = nullptr);
   ~DashboardWidget();
 
+  CharacterData getCharacterData(const QString &name) const;
+
 public slots:
   void onCharacterStatusReceived(QString name, int currentHp, int maxHp,
                                  int currentMp, int maxMp);
@@ -29,14 +31,19 @@ public slots:
 
 signals:
   void characterDataUpdated(QString name, CharacterData data);
+  void aggregatedStatsUpdated(float averageHpPercent);
 
-private:
+ private:
   Ui::DashboardWidget *ui;
   QMap<QString, CharacterData> characterData_;
   QMap<QString, CharacterDetailDialog *> detailDialogs_;
   const sro::pk2::GameData &gameData_;
+  QPoint dragStartPos_;
   int ensureRowForCharacter(const QString &name);
   void showCharacterDetail(int row, int column);
+  void updateAggregatedStats();
+
+  bool eventFilter(QObject *obj, QEvent *event) override;
 };
 
 #endif // DASHBOARD_WIDGET_HPP_

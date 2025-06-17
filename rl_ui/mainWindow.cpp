@@ -1,6 +1,8 @@
 #include "checkpointWidget.hpp"
 #include "hyperbotConnect.hpp"
 #include "mainWindow.hpp"
+#include "aggregatedStatsWidget.hpp"
+#include "characterDetailWidget.hpp"
 #include "./ui_mainwindow.h"
 
 #include <silkroad_lib/pk2/gameData.hpp>
@@ -29,15 +31,36 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
       hyperbot_(hyperbot),
       gameData_(gameData) {
   ui->setupUi(this);
+  setAcceptDrops(true);
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
   dashboardWidget_ = new DashboardWidget(gameData_, this);
-  QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
-  if (!layout) {
-    layout = new QVBoxLayout(ui->dashboardContainer);
-  }
-  layout->addWidget(dashboardWidget_);
+  aggregatedWidget_ = new AggregatedStatsWidget(this);
+
+  dashboardDock_ = new QDockWidget(tr("Fleet"), this);
+  dashboardDock_->setWidget(dashboardWidget_);
+  addDockWidget(Qt::LeftDockWidgetArea, dashboardDock_);
+
+  chartDock_ = new QDockWidget(tr("Metrics"), this);
+  chartDock_->setWidget(ui->graphWidget);
+  addDockWidget(Qt::RightDockWidgetArea, chartDock_);
+
+  checkpointDock_ = new QDockWidget(tr("Checkpoints"), this);
+  checkpointDock_->setWidget(ui->checkpointWidget);
+  addDockWidget(Qt::LeftDockWidgetArea, checkpointDock_);
+  tabifyDockWidget(dashboardDock_, checkpointDock_);
+
+  aggregatedDock_ = new QDockWidget(tr("Aggregated Stats"), this);
+  aggregatedDock_->setWidget(aggregatedWidget_);
+  addDockWidget(Qt::BottomDockWidgetArea, aggregatedDock_);
+
+  ui->dashboardContainer->hide();
+  ui->graphWidget->setParent(nullptr);
+  ui->checkpointWidget->setParent(nullptr);
+
+  connect(dashboardWidget_, &DashboardWidget::aggregatedStatsUpdated,
+          aggregatedWidget_, &AggregatedStatsWidget::onAggregatedStats);
   connectSignals();
   // testChart();
 }
@@ -124,4 +147,36 @@ void MainWindow::addDataPoint(qreal x, qreal y) {
     LOG(INFO) << "Adding data point #" << count;
   }
   ui->graphWidget->addDataPoint({x,y});
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
+  if (event->mimeData()->hasFormat("application/x-hyperbot-character")) {
+    event->acceptProposedAction();
+  }
+}
+
+void MainWindow::dropEvent(QDropEvent *event) {
+  if (event->mimeData()->hasFormat("application/x-hyperbot-character")) {
+    QString name = QString::fromUtf8(
+        event->mimeData()->data("application/x-hyperbot-character"));
+    if (detailDocks_.contains(name)) {
+      detailDocks_[name]->raise();
+      detailDocks_[name]->activateWindow();
+    } else {
+      CharacterDetailWidget *widget =
+          new CharacterDetailWidget(gameData_, this);
+      widget->setCharacterName(name);
+      widget->updateCharacterData(dashboardWidget_->getCharacterData(name));
+      connect(dashboardWidget_, &DashboardWidget::characterDataUpdated, widget,
+              &CharacterDetailWidget::onCharacterDataUpdated);
+      QDockWidget *dock = new QDockWidget(name, this);
+      dock->setWidget(widget);
+      dock->setAttribute(Qt::WA_DeleteOnClose);
+      addDockWidget(Qt::RightDockWidgetArea, dock);
+      detailDocks_.insert(name, dock);
+      connect(dock, &QObject::destroyed, this,
+              [this, name]() { detailDocks_.remove(name); });
+    }
+    event->acceptProposedAction();
+  }
 }

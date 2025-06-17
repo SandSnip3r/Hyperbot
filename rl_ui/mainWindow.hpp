@@ -4,6 +4,8 @@
 #include "config.hpp"
 #include "hyperbot.hpp"
 #include "dashboardWidget.hpp"
+#include "aggregatedStatsWidget.hpp"
+#include "characterDetailWidget.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QMainWindow>
@@ -11,6 +13,10 @@
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
 #include <QTimer>
+#include <QDockWidget>
+#include <QMap>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -36,12 +42,22 @@ public slots:
   void onDisconnectedFromHyperbot();
   void onTimerTriggered();
 
+protected:
+  void dragEnterEvent(QDragEnterEvent *event) override;
+  void dropEvent(QDropEvent *event) override;
+
 private:
   Ui::MainWindow *ui;
   Config config_;
   Hyperbot &hyperbot_;
   const sro::pk2::GameData &gameData_;
   DashboardWidget *dashboardWidget_{nullptr};
+  AggregatedStatsWidget *aggregatedWidget_{nullptr};
+  QDockWidget *dashboardDock_{nullptr};
+  QDockWidget *chartDock_{nullptr};
+  QDockWidget *checkpointDock_{nullptr};
+  QDockWidget *aggregatedDock_{nullptr};
+  QMap<QString, QDockWidget *> detailDocks_;
   bool connectionWindowShown_{false};
   QMainWindow *connectionWindow_{nullptr};
   QLineSeries *series_;

@@ -8,6 +8,10 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QRegularExpression>
+#include <QMouseEvent>
+#include <QDrag>
+#include <QMimeData>
+#include <QApplication>
 
 DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
                                  QWidget *parent)
@@ -25,6 +29,9 @@ DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
           &DashboardWidget::showCharacterDetail);
   qRegisterMetaType<CharacterData>("CharacterData");
   qRegisterMetaType<QList<SkillCooldown>>("QList<SkillCooldown>");
+  ui->statusTable->installEventFilter(this);
+  setMouseTracking(true);
+  ui->statusTable->setMouseTracking(true);
 }
 
 static int characterId(const QString &name) {
@@ -115,6 +122,7 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
     ui->statusTable->setItem(row, 3, new QTableWidgetItem(""));
   }
   emit characterDataUpdated(name, data);
+  updateAggregatedStats();
 }
 
 void DashboardWidget::onActiveStateMachine(QString name, QString stateMachine) {
@@ -122,16 +130,19 @@ void DashboardWidget::onActiveStateMachine(QString name, QString stateMachine) {
   ui->statusTable->setItem(row, 3, new QTableWidgetItem(stateMachine));
   characterData_[name].stateMachine = stateMachine;
   emit characterDataUpdated(name, characterData_.value(name));
+  updateAggregatedStats();
 }
 
 void DashboardWidget::onSkillCooldowns(QString name, QList<SkillCooldown> cooldowns) {
   characterData_[name].skillCooldowns = cooldowns;
   emit characterDataUpdated(name, characterData_.value(name));
+  updateAggregatedStats();
 }
 
 void DashboardWidget::clearStatusTable() {
   ui->statusTable->setRowCount(0);
   characterData_.clear();
+  updateAggregatedStats();
 }
 
 void DashboardWidget::onHyperbotConnected() {
@@ -141,6 +152,7 @@ void DashboardWidget::onHyperbotConnected() {
     }
   }
   detailDialogs_.clear();
+  updateAggregatedStats();
 }
 
 void DashboardWidget::showCharacterDetail(int row, int column) {
@@ -168,4 +180,53 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
   connect(this, &DashboardWidget::characterDataUpdated, dialog,
           &CharacterDetailDialog::onCharacterDataUpdated);
   dialog->show();
+}
+
+CharacterData DashboardWidget::getCharacterData(const QString &name) const {
+  return characterData_.value(name);
+}
+
+void DashboardWidget::updateAggregatedStats() {
+  if (characterData_.isEmpty()) {
+    emit aggregatedStatsUpdated(0.0f);
+    return;
+  }
+  int currentHpTotal = 0;
+  int maxHpTotal = 0;
+  for (const CharacterData &data : characterData_) {
+    currentHpTotal += data.currentHp;
+    maxHpTotal += data.maxHp;
+  }
+  float avg = 0.0f;
+  if (maxHpTotal > 0) {
+    avg = static_cast<float>(currentHpTotal) / static_cast<float>(maxHpTotal) * 100.0f;
+  }
+  emit aggregatedStatsUpdated(avg);
+}
+
+bool DashboardWidget::eventFilter(QObject *obj, QEvent *event) {
+  if (obj == ui->statusTable && event->type() == QEvent::MouseButtonPress) {
+    QMouseEvent *me = static_cast<QMouseEvent *>(event);
+    if (me->button() == Qt::LeftButton) {
+      dragStartPos_ = me->pos();
+    }
+  }
+  if (obj == ui->statusTable && event->type() == QEvent::MouseMove) {
+    QMouseEvent *me = static_cast<QMouseEvent *>(event);
+    if ((me->buttons() & Qt::LeftButton) &&
+        (me->pos() - dragStartPos_).manhattanLength() >=
+            QApplication::startDragDistance()) {
+      QModelIndex index = ui->statusTable->indexAt(me->pos());
+      if (index.isValid()) {
+        QString name = ui->statusTable->item(index.row(), 0)->text();
+        QMimeData *mimeData = new QMimeData;
+        mimeData->setData("application/x-hyperbot-character", name.toUtf8());
+        QDrag *drag = new QDrag(this);
+        drag->setMimeData(mimeData);
+        drag->exec(Qt::CopyAction);
+        return true;
+      }
+    }
+  }
+  return QWidget::eventFilter(obj, event);
 }
