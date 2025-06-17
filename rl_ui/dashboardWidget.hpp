@@ -1,12 +1,14 @@
 #ifndef DASHBOARD_WIDGET_HPP_
 #define DASHBOARD_WIDGET_HPP_
 
+#include "characterCellWidget.hpp"
 #include "characterDetailDialog.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>
 
 #include <QStringList>
 #include <QWidget>
 #include <QMap>
+#include <QGridLayout>
 
 namespace Ui {
 class DashboardWidget;
@@ -24,19 +26,20 @@ public slots:
                                  int currentMp, int maxMp);
   void onActiveStateMachine(QString name, QString stateMachine);
   void onSkillCooldowns(QString name, QList<SkillCooldown> cooldowns);
-  void clearStatusTable();
+  void clearStatus();
   void onHyperbotConnected();
+  void onCellExpandRequested(CharacterCellWidget *cell);
 
 signals:
   void characterDataUpdated(QString name, CharacterData data);
 
 private:
   Ui::DashboardWidget *ui;
+  QGridLayout *gridLayout_;
+  QMap<QString, CharacterCellWidget *> cellWidgets_;
   QMap<QString, CharacterData> characterData_;
-  QMap<QString, CharacterDetailDialog *> detailDialogs_;
   const sro::pk2::GameData &gameData_;
-  int ensureRowForCharacter(const QString &name);
-  void showCharacterDetail(int row, int column);
+  int ensureCellForCharacter(const QString &name);
 };
 
 #endif // DASHBOARD_WIDGET_HPP_

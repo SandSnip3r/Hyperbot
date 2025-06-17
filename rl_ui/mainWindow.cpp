@@ -57,7 +57,7 @@ void MainWindow::connectSignals() {
   connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
   connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
   connect(&hyperbot_, &Hyperbot::disconnected, dashboardWidget_,
-          &DashboardWidget::clearStatusTable);
+          &DashboardWidget::clearStatus);
   connect(&hyperbot_, &Hyperbot::connected, dashboardWidget_,
           &DashboardWidget::onHyperbotConnected);
 
