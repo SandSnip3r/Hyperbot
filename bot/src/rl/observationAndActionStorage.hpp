@@ -43,6 +43,7 @@ public:
 
   // Throws an exception if there is no previous observation.
   Id getPreviousId(Id id) const;
+  Id getNextId(Id id) const;
 
 private:
   const size_t capacity_;

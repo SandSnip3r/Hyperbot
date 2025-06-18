@@ -26,6 +26,7 @@ TrainingManager::TrainingManager(const sro::pk2::GameData &gameData,
                       rlUserInterface_(rlUserInterface),
                       worldState_(worldState),
                       clientManagerInterface_(clientManagerInterface) {
+  static_assert(kTdLookahead > 0, "kTdLookahead must be greater than 0");
 }
 
 void TrainingManager::run() {
@@ -248,44 +249,65 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
       }
     }
 
-    const Id observationId = observationIdAndDeletedObservationIds.first;
-    if (observationAndActionStorage_.hasPrevious(observationId)) {
-      // There was an observation before this one. We can store a full transition in the replay buffer (a transition traditionally is a (S,A,R,S') tuple).
-      const ReplayBufferType::TransitionId transitionId = replayBuffer_.addTransition(observationId);
-      observationIdToTransitionIdMap_[observationId] = transitionId;
-      transitionIdToObservationIdMap_[transitionId] = observationId;
+    auto maybeAddObservation = [&](Id observationIdToInsert) {
+      if (observationAndActionStorage_.hasPrevious(observationIdToInsert)) {
+        // There was an observation before this one. We can store a full transition in the replay buffer (a transition traditionally is a (S,A,R,S') tuple).
+        const ReplayBufferType::TransitionId transitionId = replayBuffer_.addTransition(observationIdToInsert);
+        observationIdToTransitionIdMap_[observationIdToInsert] = transitionId;
+        transitionIdToObservationIdMap_[transitionId] = observationIdToInsert;
 
-      // Track sample collection rate
-      sampleCount_++;
-      const std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
-      const std::chrono::steady_clock::duration sampleCountTimeDiff = currentTime - lastSampleTime_;
-      if (sampleCountTimeDiff > kSampleRateReportInterval) {
-        sampleRate = static_cast<float>(sampleCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(sampleCountTimeDiff).count()/1000.0);
-        sampleCount_ = 0;
-        lastSampleTime_ = currentTime;
-      }
+        // Track sample collection rate
+        sampleCount_++;
+        const std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+        const std::chrono::steady_clock::duration sampleCountTimeDiff = currentTime - lastSampleTime_;
+        if (sampleCountTimeDiff > kSampleRateReportInterval) {
+          sampleRate = static_cast<float>(sampleCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(sampleCountTimeDiff).count()/1000.0);
+          sampleCount_ = 0;
+          lastSampleTime_ = currentTime;
+        }
 
-      // Track replay buffer size
-      const std::chrono::steady_clock::duration replayBufferSizeTimeDiff = currentTime - lastReplayBufferSizeUpdateTime_;
-      if (replayBufferSizeTimeDiff > kReplayBufferSizeUpdateInterval) {
-        replayBufferSize = replayBuffer_.size();
-        lastReplayBufferSizeUpdateTime_ = currentTime;
+        // Track replay buffer size
+        const std::chrono::steady_clock::duration replayBufferSizeTimeDiff = currentTime - lastReplayBufferSizeUpdateTime_;
+        if (replayBufferSizeTimeDiff > kReplayBufferSizeUpdateInterval) {
+          replayBufferSize = replayBuffer_.size();
+          lastReplayBufferSizeUpdateTime_ = currentTime;
+        }
+      } else {
       }
+    };
+
+    const Id currentObservationId = observationIdAndDeletedObservationIds.first;
+    std::deque<Id> &pendingObservationsForPvp = pendingObservations_[pvpId][intelligenceName];
+    pendingObservationsForPvp.push_back(currentObservationId);
+    // In order to compute rewards, we need to have at least kTdLookahead observations in the buffer. Rather than expect the replay buffer to check if it has enough observations, we instead only insert a transition once we have enough observations.
+    if (pendingObservationsForPvp.size() >= kTdLookahead) {
+      // We have enough observations to now add a transition to the replay buffer.
+      const Id observationToInsert = pendingObservationsForPvp.front();
+      pendingObservationsForPvp.pop_front();
+      maybeAddObservation(observationToInsert);
     }
 
     if (!actionIndex) {
-      // This is the end of the episode, calculate & report the episode return.
+      // This is the end of the episode.
+      // Push the rest of the pending observations into the replay buffer.
+      std::deque<Id> &pendingObservationsForPvp = pendingObservations_[pvpId][intelligenceName];
+      while (!pendingObservationsForPvp.empty()) {
+        const Id observationToInsert = pendingObservationsForPvp.front();
+        pendingObservationsForPvp.pop_front();
+        maybeAddObservation(observationToInsert);
+      }
+      // Calculate & report the episode return.
       cumulativeReward = 0.0f;
-      Id currentObservationId = observationId;
-      const ObservationAndActionType *currentObservationAndAction = &observationAndActionStorage_.getObservationAndAction(currentObservationId);
+      Id tmpObservationId = currentObservationId;
+      const ObservationAndActionType *currentObservationAndAction = &observationAndActionStorage_.getObservationAndAction(tmpObservationId);
       // Go backwards and sum this agent's rewards.
-      while (observationAndActionStorage_.hasPrevious(currentObservationId)) {
-        const Id previousObservationId = observationAndActionStorage_.getPreviousId(currentObservationId);
+      while (observationAndActionStorage_.hasPrevious(tmpObservationId)) {
+        const Id previousObservationId = observationAndActionStorage_.getPreviousId(tmpObservationId);
         const ObservationAndActionType &previousObservationAndAction = observationAndActionStorage_.getObservationAndAction(previousObservationId);
         const bool isTerminal = !currentObservationAndAction->actionIndex.has_value();
         const float reward = calculateReward(previousObservationAndAction.observation, currentObservationAndAction->observation, isTerminal);
         *cumulativeReward += reward;
-        currentObservationId = previousObservationId;
+        tmpObservationId = previousObservationId;
         currentObservationAndAction = &previousObservationAndAction;
       }
     }
@@ -523,35 +545,43 @@ model_inputs::BatchedTrainingInput TrainingManager::buildModelInputsFromReplayBu
   batchedTrainingInput.importanceSamplingWeights.reserve(sampleSize);
 
   // Batch look up all observation IDs at once.
-  std::vector<ObservationAndActionStorage::Id> observationIds(sampleSize);
+  std::vector<ObservationAndActionStorage::Id> successorObservationIds(sampleSize);
   for (int i=0; i<sampleSize; ++i) {
-    observationIds[i] = transitionIdToObservationIdMap_.at(samples[i].transitionId);
+    successorObservationIds[i] = transitionIdToObservationIdMap_.at(samples[i].transitionId);
   }
 
+  // For each sample, insert it into the batched training input.
   for (int i=0; i<samples.size(); ++i) {
     const ReplayBufferType::SampleResult &sample = samples.at(i);
 
-    const ObservationAndActionStorage::Id observationId = observationIds.at(i);
-    const ObservationAndActionStorage::Id previousObservationId = observationAndActionStorage_.getPreviousId(observationId);
+    // Via TD-lookahead, calculate reward.
+    ObservationAndActionStorage::Id successorObservationId = successorObservationIds.at(i);
+    const ObservationAndActionStorage::Id currentObservationId = observationAndActionStorage_.getPreviousId(successorObservationId);
+    ObservationAndActionStorage::Id tmpCurrentObservationId = observationAndActionStorage_.getPreviousId(successorObservationId);
+    float reward = 0.0f;
+    for (int j=0; j<kTdLookahead; ++j) {
+      const ObservationAndActionStorage::ObservationAndActionType &currentObservationAndAction = observationAndActionStorage_.getObservationAndAction(tmpCurrentObservationId);
+      const ObservationAndActionStorage::ObservationAndActionType &successorObservationAndAction = observationAndActionStorage_.getObservationAndAction(successorObservationId);
+      const bool isTerminal = !successorObservationAndAction.actionIndex.has_value();
+      reward += calculateReward(currentObservationAndAction.observation, successorObservationAndAction.observation, isTerminal);
+      if (isTerminal || j == kTdLookahead-1) {
+        break;
+      }
+      tmpCurrentObservationId = successorObservationId;
+      successorObservationId = observationAndActionStorage_.getNextId(successorObservationId);
+    }
 
-    const ObservationAndActionStorage::ObservationAndActionType &previousObservationAndAction = batchedTrainingInput.getObservationAndAction(previousObservationId, observationAndActionStorage_);
-    const Observation &observation0 = previousObservationAndAction.observation;
-    const std::optional<int> &actionIndex0 = previousObservationAndAction.actionIndex;
+    // Construct model inputs.
+    const ObservationAndActionStorage::ObservationAndActionType &currentObservationAndAction = batchedTrainingInput.getObservationAndAction(currentObservationId, observationAndActionStorage_);
+    const ObservationAndActionStorage::ObservationAndActionType &successorObservationAndAction = batchedTrainingInput.getObservationAndAction(successorObservationId, observationAndActionStorage_);
 
-    const ObservationAndActionStorage::ObservationAndActionType &observationAndAction = batchedTrainingInput.getObservationAndAction(observationId, observationAndActionStorage_);
-    const Observation &observation1 = observationAndAction.observation;
-    const std::optional<int> &actionIndex1 = observationAndAction.actionIndex;
-
-    const bool isTerminal = !actionIndex1.has_value();
-    const float reward = calculateReward(observation0, observation1, isTerminal);
+    model_inputs::ModelInputView oldModelInputView = buildModelInputUpToObservation(currentObservationId, batchedTrainingInput);
+    model_inputs::ModelInputView newModelInputView = buildModelInputUpToObservation(successorObservationId, batchedTrainingInput);
     const float weight = sample.weight;
 
-    model_inputs::ModelInputView oldModelInputView = buildModelInputUpToObservation(previousObservationId, batchedTrainingInput);
-    model_inputs::ModelInputView newModelInputView = buildModelInputUpToObservation(observationId, batchedTrainingInput);
-
     batchedTrainingInput.oldModelInputViews.push_back(std::move(oldModelInputView));
-    batchedTrainingInput.actionsTaken.push_back(actionIndex0.value());
-    batchedTrainingInput.isTerminals.push_back(isTerminal);
+    batchedTrainingInput.actionsTaken.push_back(currentObservationAndAction.actionIndex.value());
+    batchedTrainingInput.isTerminals.push_back(!currentObservationAndAction.actionIndex.has_value());
     batchedTrainingInput.rewards.push_back(reward);
     batchedTrainingInput.newModelInputViews.push_back(std::move(newModelInputView));
     batchedTrainingInput.importanceSamplingWeights.push_back(weight);

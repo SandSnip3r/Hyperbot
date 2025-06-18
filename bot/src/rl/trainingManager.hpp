@@ -22,14 +22,16 @@
 #include <absl/base/thread_annotations.h>
 #include <absl/container/flat_hash_map.h>
 
+#include <chrono>
 #include <condition_variable>
+#include <deque>
+#include <map>
 #include <memory>
 #include <mutex>
-#include <string>
-#include <vector>
-#include <chrono>
-#include <utility>
 #include <optional>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace ui {
 class RlUserInterface;
@@ -90,7 +92,8 @@ private:
   static constexpr float kInitialEpsilon{1.0f};
   static constexpr float kFinalEpsilon{0.01f};
   static constexpr int kEpsilonDecaySteps{500'000};
-  static constexpr int kPvpCount{16};
+  static constexpr int kPvpCount{4};
+  static constexpr int kTdLookahead{5};
 
   std::atomic<bool> runTraining_{true};
   std::mutex runTrainingMutex_;
@@ -143,12 +146,13 @@ private:
 
   using ReplayBufferType = ReplayBuffer<ObservationAndActionStorage::Id>;
   mutable TracyLockableN(std::mutex, replayBufferAndStorageMutex_, "ReplayBuffer");
-  ObservationAndActionStorage observationAndActionStorage_{kReplayBufferCapacity}                                      ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
-  ReplayBufferType replayBuffer_{kReplayBufferCapacity, kPerAlpha, /*epsilon=*/1e-5f}                                  ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
-  absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> observationIdToTransitionIdMap_ ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
-  absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> transitionIdToObservationIdMap_ ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
-  std::set<ReplayBufferType::TransitionId> deletedTransitionIds_                                                       ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
-  bool holdingSample_{false}                                                                                           ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
+  ObservationAndActionStorage observationAndActionStorage_{kReplayBufferCapacity}                                                  ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
+  ReplayBufferType replayBuffer_{kReplayBufferCapacity, kPerAlpha, /*epsilon=*/1e-5f}                                              ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
+  absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> observationIdToTransitionIdMap_             ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
+  absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> transitionIdToObservationIdMap_             ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
+  std::set<ReplayBufferType::TransitionId> deletedTransitionIds_                                                                   ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
+  bool holdingSample_{false}                                                                                                       ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
+  std::map<common::PvpDescriptor::PvpId, std::map<std::string, std::deque<ObservationAndActionStorage::Id>>> pendingObservations_  ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
 
   float calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const;
   void saveCheckpoint(const std::string &checkpointName, bool overwrite);

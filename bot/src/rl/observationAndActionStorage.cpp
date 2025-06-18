@@ -111,6 +111,21 @@ ObservationAndActionStorage::Id ObservationAndActionStorage::getPreviousId(Id id
   return it1->second;
 }
 
+ObservationAndActionStorage::Id ObservationAndActionStorage::getNextId(Id id) const {
+  std::unique_lock lock{mutex_};
+  auto it = idToIndexMap_.find(id);
+  if (it == idToIndexMap_.end()) {
+    throw std::out_of_range("getNextId: ID not found in buffer.");
+  }
+  const BufferIndices &index = it->second;
+  BufferIndices nextIndex(index.pvpId, index.intelligenceName, index.actionIndex + 1);
+  auto it1 = indexToIdMap_.find(nextIndex);
+  if (it1 == indexToIdMap_.end()) {
+    throw std::out_of_range("Next ID not found in buffer.");
+  }
+  return it1->second;
+}
+
 size_t ObservationAndActionStorage::size() const {
   size_t totalSize = 0;
   for (const auto &pvpPair : buffer_) {
