@@ -89,13 +89,24 @@
        </layout>
       </item>
       <item>
-       <widget class="QWidget" name="dashboardContainer" native="true">
-        <property name="minimumSize">
-         <size>
-          <width>1000</width>
-          <height>0</height>
-         </size>
-        </property>
+       <widget class="QTabWidget" name="tabWidget">
+        <widget class="QWidget" name="fleetTab">
+         <attribute name="title">
+          <string>Fleet</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="fleetLayout">
+          <item>
+           <widget class="QWidget" name="dashboardContainer" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>1000</width>
+              <height>0</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
      </layout>

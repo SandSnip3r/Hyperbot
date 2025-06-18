@@ -8,6 +8,7 @@
 #include <QtCharts/QChart>
 #include <QtCharts/QLineSeries>
 #include <QVBoxLayout>
+#include <QTabWidget>
 
 #include <absl/log/log.h>
 
@@ -32,8 +33,9 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
+  tabWidget_ = ui->tabWidget;
   dashboardWidget_ = new DashboardWidget(gameData_, this);
-  QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
+  QVBoxLayout *layout = qobject_cast<QVBoxLayout *>(ui->dashboardContainer->layout());
   if (!layout) {
     layout = new QVBoxLayout(ui->dashboardContainer);
   }
