@@ -11,6 +11,7 @@
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
 #include <QTimer>
+#include <vector>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -35,13 +36,14 @@ public slots:
   void onConnectedToHyperbot();
   void onDisconnectedFromHyperbot();
   void onTimerTriggered();
+  void onAddTab();
 
 private:
   Ui::MainWindow *ui;
   Config config_;
   Hyperbot &hyperbot_;
   const sro::pk2::GameData &gameData_;
-  DashboardWidget *dashboardWidget_{nullptr};
+  std::vector<DashboardWidget *> dashboardWidgets_;
   bool connectionWindowShown_{false};
   QMainWindow *connectionWindow_{nullptr};
   QLineSeries *series_;
@@ -53,8 +55,11 @@ private:
   float maxY_{0};
 
   void connectSignals();
+  void connectDashboardSignals(DashboardWidget *widget);
   void showConnectionWindow(const QString &windowTitle);
   void testChart();
   void addDataPoint(qreal x, qreal y);
+  DashboardWidget *addDashboardTab(const QString &title,
+                                   const QStringList &filter);
 };
 #endif // MAIN_WINDOW_HPP_

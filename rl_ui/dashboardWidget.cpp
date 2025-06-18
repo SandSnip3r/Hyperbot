@@ -10,8 +10,12 @@
 #include <QRegularExpression>
 
 DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
-                                 QWidget *parent)
-    : QWidget(parent), ui(new Ui::DashboardWidget), gameData_(gameData) {
+                                 QWidget *parent,
+                                 QStringList filterCharacters)
+    : QWidget(parent),
+      ui(new Ui::DashboardWidget),
+      gameData_(gameData),
+      filterCharacters_(std::move(filterCharacters)) {
   ui->setupUi(this);
   QStringList headers;
   headers << "Character" << "HP" << "MP" << "State";
@@ -21,10 +25,18 @@ DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
   // Set the last column to stretch to fill the remaining space
   ui->statusTable->horizontalHeader()->setSectionResizeMode(
       ui->statusTable->columnCount() - 1, QHeaderView::Stretch);
-  connect(ui->statusTable, &QTableWidget::cellDoubleClicked, this,
+  ui->statusTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+  ui->statusTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+  connect(ui->statusTable, &QTableWidget::cellClicked, this,
           &DashboardWidget::showCharacterDetail);
+  detailDialog_ = new CharacterDetailDialog(gameData_, this);
+  detailDialog_->setWindowFlags(Qt::Widget);
+  ui->detailContainerLayout->addWidget(detailDialog_);
+  detailDialog_->hide();
   qRegisterMetaType<CharacterData>("CharacterData");
   qRegisterMetaType<QList<SkillCooldown>>("QList<SkillCooldown>");
+  connect(this, &DashboardWidget::characterDataUpdated, detailDialog_,
+          &CharacterDetailDialog::onCharacterDataUpdated);
 }
 
 static int characterId(const QString &name) {
@@ -37,16 +49,13 @@ static int characterId(const QString &name) {
 }
 
 DashboardWidget::~DashboardWidget() {
-  for (auto dialog : detailDialogs_) {
-    if (dialog) {
-      dialog->close();
-    }
-  }
-  detailDialogs_.clear();
   delete ui;
 }
 
 int DashboardWidget::ensureRowForCharacter(const QString &name) {
+  if (!filterCharacters_.isEmpty() && !filterCharacters_.contains(name)) {
+    return -1;
+  }
   int row = -1;
   for (int i = 0; i < ui->statusTable->rowCount(); ++i) {
     QTableWidgetItem *item = ui->statusTable->item(i, 0);
@@ -90,6 +99,9 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
                                                int maxHp, int currentMp,
                                                int maxMp) {
   int row = ensureRowForCharacter(name);
+  if (row == -1) {
+    return;
+  }
 
   CharacterData &data = characterData_[name];
   data.currentHp = currentHp;
@@ -119,12 +131,18 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
 
 void DashboardWidget::onActiveStateMachine(QString name, QString stateMachine) {
   int row = ensureRowForCharacter(name);
+  if (row == -1) {
+    return;
+  }
   ui->statusTable->setItem(row, 3, new QTableWidgetItem(stateMachine));
   characterData_[name].stateMachine = stateMachine;
   emit characterDataUpdated(name, characterData_.value(name));
 }
 
 void DashboardWidget::onSkillCooldowns(QString name, QList<SkillCooldown> cooldowns) {
+  if (!filterCharacters_.isEmpty() && !filterCharacters_.contains(name)) {
+    return;
+  }
   characterData_[name].skillCooldowns = cooldowns;
   emit characterDataUpdated(name, characterData_.value(name));
 }
@@ -135,12 +153,7 @@ void DashboardWidget::clearStatusTable() {
 }
 
 void DashboardWidget::onHyperbotConnected() {
-  for (auto dialog : detailDialogs_) {
-    if (dialog) {
-      dialog->close();
-    }
-  }
-  detailDialogs_.clear();
+  detailDialog_->hide();
 }
 
 void DashboardWidget::showCharacterDetail(int row, int column) {
@@ -150,22 +163,22 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
     return;
   }
   const QString name = item->text();
-  if (detailDialogs_.contains(name)) {
-    CharacterDetailDialog *dialog = detailDialogs_.value(name);
-    if (dialog) {
-      dialog->raise();
-      dialog->activateWindow();
+  detailDialog_->setCharacterName(name);
+  detailDialog_->updateCharacterData(characterData_.value(name));
+  detailDialog_->show();
+}
+
+QStringList DashboardWidget::selectedCharacters() const {
+  QStringList names;
+  const auto ranges = ui->statusTable->selectedRanges();
+  for (const QTableWidgetSelectionRange &range : ranges) {
+    for (int r = range.topRow(); r <= range.bottomRow(); ++r) {
+      QTableWidgetItem *item = ui->statusTable->item(r, 0);
+      if (item) {
+        names.append(item->text());
+      }
     }
-    return;
   }
-  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, this);
-  dialog->setAttribute(Qt::WA_DeleteOnClose);
-  detailDialogs_.insert(name, dialog);
-  connect(dialog, &QObject::destroyed, this,
-          [this, name]() { detailDialogs_.remove(name); });
-  dialog->setCharacterName(name);
-  dialog->updateCharacterData(characterData_.value(name));
-  connect(this, &DashboardWidget::characterDataUpdated, dialog,
-          &CharacterDetailDialog::onCharacterDataUpdated);
-  dialog->show();
+  names.removeDuplicates();
+  return names;
 }

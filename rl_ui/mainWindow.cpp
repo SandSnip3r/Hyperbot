@@ -32,12 +32,7 @@ MainWindow::MainWindow(Config &&config, Hyperbot &hyperbot,
   ui->checkpointWidget->setHyperbot(hyperbot_);
   ui->graphWidget->chart()->setTitle(tr("Event Queue Size"));
   setWindowTitle(tr("Hyperbot"));
-  dashboardWidget_ = new DashboardWidget(gameData_, this);
-  QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(ui->dashboardContainer->layout());
-  if (!layout) {
-    layout = new QVBoxLayout(ui->dashboardContainer);
-  }
-  layout->addWidget(dashboardWidget_);
+  addDashboardTab(tr("Fleet"), {});
   connectSignals();
   // testChart();
 }
@@ -53,22 +48,19 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::connectSignals() {
-  connect(ui->startTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::startTraining);
-  connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_, &Hyperbot::stopTraining);
-  connect(&hyperbot_, &Hyperbot::disconnected, this, &MainWindow::onDisconnectedFromHyperbot);
-  connect(&hyperbot_, &Hyperbot::disconnected, dashboardWidget_,
-          &DashboardWidget::clearStatusTable);
-  connect(&hyperbot_, &Hyperbot::connected, dashboardWidget_,
-          &DashboardWidget::onHyperbotConnected);
+  connect(ui->startTrainingButton, &QPushButton::clicked, &hyperbot_,
+          &Hyperbot::startTraining);
+  connect(ui->stopTrainingButton, &QPushButton::clicked, &hyperbot_,
+          &Hyperbot::stopTraining);
+  connect(ui->newTabButton, &QPushButton::clicked, this, &MainWindow::onAddTab);
+  connect(&hyperbot_, &Hyperbot::disconnected, this,
+          &MainWindow::onDisconnectedFromHyperbot);
 
   // TODO: Organize this better
   connect(&hyperbot_, &Hyperbot::plotData, this, &MainWindow::addDataPoint);
-  connect(&hyperbot_, &Hyperbot::characterStatusReceived, dashboardWidget_,
-          &DashboardWidget::onCharacterStatusReceived);
-  connect(&hyperbot_, &Hyperbot::activeStateMachineReceived, dashboardWidget_,
-          &DashboardWidget::onActiveStateMachine);
-  connect(&hyperbot_, &Hyperbot::skillCooldownsReceived, dashboardWidget_,
-          &DashboardWidget::onSkillCooldowns);
+  for (DashboardWidget *widget : dashboardWidgets_) {
+    connectDashboardSignals(widget);
+  }
 }
 
 void MainWindow::showConnectionWindow(const QString &windowTitle) {
@@ -124,4 +116,42 @@ void MainWindow::addDataPoint(qreal x, qreal y) {
     LOG(INFO) << "Adding data point #" << count;
   }
   ui->graphWidget->addDataPoint({x,y});
+}
+
+DashboardWidget *MainWindow::addDashboardTab(const QString &title,
+                                             const QStringList &filter) {
+  DashboardWidget *widget = new DashboardWidget(gameData_, this, filter);
+  QWidget *container = new QWidget;
+  QVBoxLayout *layout = new QVBoxLayout(container);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->addWidget(widget);
+  container->setLayout(layout);
+  ui->dashboardTabs->addTab(container, title);
+  dashboardWidgets_.push_back(widget);
+  connectDashboardSignals(widget);
+  return widget;
+}
+
+void MainWindow::connectDashboardSignals(DashboardWidget *widget) {
+  connect(&hyperbot_, &Hyperbot::disconnected, widget,
+          &DashboardWidget::clearStatusTable);
+  connect(&hyperbot_, &Hyperbot::connected, widget,
+          &DashboardWidget::onHyperbotConnected);
+  connect(&hyperbot_, &Hyperbot::characterStatusReceived, widget,
+          &DashboardWidget::onCharacterStatusReceived);
+  connect(&hyperbot_, &Hyperbot::activeStateMachineReceived, widget,
+          &DashboardWidget::onActiveStateMachine);
+  connect(&hyperbot_, &Hyperbot::skillCooldownsReceived, widget,
+          &DashboardWidget::onSkillCooldowns);
+}
+
+void MainWindow::onAddTab() {
+  int index = ui->dashboardTabs->currentIndex();
+  if (index < 0 || index >= static_cast<int>(dashboardWidgets_.size())) {
+    return;
+  }
+  DashboardWidget *current = dashboardWidgets_[index];
+  QStringList selection = current->selectedCharacters();
+  QString title = tr("Tab %1").arg(ui->dashboardTabs->count() + 1);
+  addDashboardTab(title, selection);
 }
