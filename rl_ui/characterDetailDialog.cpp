@@ -20,6 +20,8 @@
 #include <algorithm>
 #include <memory>
 #include <stdexcept>
+#include <limits>
+#include <cmath>
 
 QTimer *CharacterDetailDialog::sharedCooldownTimer_ = nullptr;
 int CharacterDetailDialog::activeDialogCount_ = 0;
@@ -165,6 +167,35 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
   ui_->skillCooldownList->sortItems(Qt::DescendingOrder);
 
   ui_->stateMachineLabel->setText(data.stateMachine);
+
+  ui_->qValueTable->setRowCount(data.qValues.size());
+  double maxValue = -std::numeric_limits<double>::infinity();
+  for (float v : data.qValues) {
+    if (v > maxValue && std::isfinite(v)) {
+      maxValue = v;
+    }
+  }
+  if (!std::isfinite(maxValue)) {
+    maxValue = 0.0;
+  }
+  for (int i = 0; i < data.qValues.size(); ++i) {
+    float value = data.qValues[i];
+    ui_->qValueTable->setItem(i, 0, new QTableWidgetItem(QString::number(i)));
+    QProgressBar *bar = new QProgressBar;
+    bar->setRange(0, 100);
+    if (std::isfinite(value) && maxValue > 0) {
+      int percent = static_cast<int>((value / maxValue) * 100.0);
+      if (percent < 0) {
+        percent = 0;
+      }
+      bar->setValue(percent);
+      bar->setFormat(QString::number(value, 'f', 2));
+    } else {
+      bar->setValue(0);
+      bar->setFormat("-inf");
+    }
+    ui_->qValueTable->setCellWidget(i, 1, bar);
+  }
 }
 
 void CharacterDetailDialog::onCharacterDataUpdated(QString name,

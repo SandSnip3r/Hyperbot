@@ -261,4 +261,15 @@ void RlUserInterface::sendSkillCooldowns(const entity::Self &self) {
   broadcastMessage(msg);
 }
 
+void RlUserInterface::sendActionQValues(const entity::Self &self,
+                                        const std::vector<float> &qValues) {
+  rl_ui_messages::BroadcastMessage msg;
+  auto *payload = msg.mutable_q_values();
+  payload->set_name(self.name);
+  for (float value : qValues) {
+    payload->add_q_values(value);
+  }
+  broadcastMessage(msg);
+}
+
 } // namespace ui

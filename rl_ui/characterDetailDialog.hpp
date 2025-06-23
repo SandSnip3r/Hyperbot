@@ -10,6 +10,7 @@
 #include <QList>
 #include <QProgressBar>
 #include <QListWidgetItem>
+#include <QTableWidget>
 #include <QWidget>
 #include <QTimer>
 #include <QHash>
@@ -33,6 +34,7 @@ struct CharacterData {
   int maxMp{0};
   QString stateMachine;
   QList<SkillCooldown> skillCooldowns;
+  QList<float> qValues;
 };
 
 class CharacterDetailDialog : public QDialog {

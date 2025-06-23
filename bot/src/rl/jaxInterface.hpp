@@ -65,8 +65,14 @@ public:
   Optimizer getOptimizer() const;
   Optimizer getDummyOptimizer() const;
 
+  struct ActionSelection {
+    int actionIndex;
+    std::vector<float> qValues;
+  };
+
   // `canSendPacket` is used for action masking to limit the rate at which packets are sent.
-  int selectAction(const model_inputs::ModelInputView &modelInputView, bool canSendPacket);
+  ActionSelection selectAction(const model_inputs::ModelInputView &modelInputView,
+                               bool canSendPacket);
 
   struct TrainAuxOutput {
     float globalNorm;

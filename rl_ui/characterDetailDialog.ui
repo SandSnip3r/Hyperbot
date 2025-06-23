@@ -46,13 +46,33 @@
      </widget>
     </item>
     <item>
-      <widget class="QLabel" name="stateMachineLabel">
-       <property name="text">
-        <string>State Machine</string>
-       </property>
+    <widget class="QLabel" name="stateMachineLabel">
+      <property name="text">
+       <string>State Machine</string>
+      </property>
      <property name="wordWrap">
       <bool>true</bool>
      </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="qValueTable">
+     <property name="rowCount">
+      <number>0</number>
+     </property>
+     <property name="columnCount">
+      <number>2</number>
+     </property>
+     <column>
+      <property name="text">
+       <string>Action</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Q-Value</string>
+      </property>
+     </column>
     </widget>
    </item>
   </layout>

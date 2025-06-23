@@ -25,6 +25,7 @@ DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
           &DashboardWidget::showCharacterDetail);
   qRegisterMetaType<CharacterData>("CharacterData");
   qRegisterMetaType<QList<SkillCooldown>>("QList<SkillCooldown>");
+  qRegisterMetaType<QList<float>>("QList<float>");
 }
 
 static int characterId(const QString &name) {
@@ -126,6 +127,11 @@ void DashboardWidget::onActiveStateMachine(QString name, QString stateMachine) {
 
 void DashboardWidget::onSkillCooldowns(QString name, QList<SkillCooldown> cooldowns) {
   characterData_[name].skillCooldowns = cooldowns;
+  emit characterDataUpdated(name, characterData_.value(name));
+}
+
+void DashboardWidget::onActionQValues(QString name, QList<float> qValues) {
+  characterData_[name].qValues = qValues;
   emit characterDataUpdated(name, characterData_.value(name));
 }
 
