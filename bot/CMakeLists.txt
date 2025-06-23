@@ -521,7 +521,7 @@ add_executable(
 
 target_link_libraries(
   observation_serialization_test
-  silkroad_lib
+  absl::log
   GTest::Main
 )
 

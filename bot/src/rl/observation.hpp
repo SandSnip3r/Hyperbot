@@ -12,8 +12,6 @@
 #include <ostream>
 #include <istream>
 
-class Bot;
-
 namespace event {
 class Event;
 } // namespace event
@@ -23,7 +21,7 @@ namespace rl {
 class Observation {
 public:
   Observation() = default;
-  Observation(const Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId);
+  // Observation data is filled externally. No Bot dependency here.
   std::string toString() const;
 
   void saveToStream(std::ostream &out) const;
