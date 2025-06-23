@@ -2,7 +2,6 @@
 #include "ui_characterDetailDialog.h"
 #include "barStyles.hpp"
 #include "textureToQImage.hpp"
-#include "hyperbot.hpp"
 
 #include <silkroad_lib/pk2/gameData.hpp>
 
@@ -32,9 +31,8 @@ namespace {
 } // namespace
 
 CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
-                                             Hyperbot &hyperbot,
                                              QWidget *parent)
-    : QDialog(parent), ui_(new Ui::CharacterDetailDialog), gameData_(gameData), hyperbot_(hyperbot) {
+    : QDialog(parent), ui_(new Ui::CharacterDetailDialog), gameData_(gameData) {
   ui_->setupUi(this);
   setupHpBar(ui_->hpBar);
   setupMpBar(ui_->mpBar);

@@ -160,7 +160,7 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
     }
     return;
   }
-  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, hyperbot_, this);
+  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, this);
   dialog->setAttribute(Qt::WA_DeleteOnClose);
   detailDialogs_.insert(name, dialog);
   connect(dialog, &QObject::destroyed, this,

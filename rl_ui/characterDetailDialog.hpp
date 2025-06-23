@@ -17,7 +17,7 @@
 #include <QString>
 #include <QVector>
 
-#include "hyperbot.hpp"
+class Hyperbot;
 
 namespace Ui {
 class CharacterDetailDialog;
@@ -42,7 +42,6 @@ class CharacterDetailDialog : public QDialog {
   Q_OBJECT
 public:
   explicit CharacterDetailDialog(const sro::pk2::GameData &gameData,
-                                 Hyperbot &hyperbot,
                                  QWidget *parent = nullptr);
   ~CharacterDetailDialog();
 
@@ -77,7 +76,6 @@ private:
   Ui::CharacterDetailDialog *ui_;
   QString name_;
   const sro::pk2::GameData &gameData_;
-  Hyperbot &hyperbot_;
   static QTimer *sharedCooldownTimer_;
   static int activeDialogCount_;
   QHash<sro::scalar_types::ReferenceSkillId, CooldownItem> cooldownItems_;

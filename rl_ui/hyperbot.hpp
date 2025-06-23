@@ -12,7 +12,6 @@
 #include <QStringList>
 #include <QTimer>
 #include <QThread>
-#include "characterDetailDialog.hpp"
 
 #include <atomic>
 #include <cstdint>
