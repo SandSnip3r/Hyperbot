@@ -168,9 +168,9 @@ JaxInterface::Optimizer JaxInterface::getDummyOptimizer() const {
   return Optimizer(py::module::import("copy").attr("deepcopy")(*optimizerState_));
 }
 
-int JaxInterface::selectAction(const model_inputs::ModelInputView &modelInputView, bool canSendPacket) {
+JaxInterface::ActionSelection JaxInterface::selectAction(const model_inputs::ModelInputView &modelInputView, bool canSendPacket) {
   ZoneScopedN("JaxInterface::selectAction");
-  int actionIndex;
+  ActionSelection result;
   try {
     waitingToSelectAction_ = true;
     std::unique_lock lock(modelMutex_);
@@ -200,15 +200,19 @@ int JaxInterface::selectAction(const model_inputs::ModelInputView &modelInputVie
                                                         numpyModelInput.currentObservation,
                                                         actionMask);
     }
-    actionIndex = actionPyObject.cast<int>();
+    py::tuple tup = actionPyObject.cast<py::tuple>();
+    result.actionIndex = tup[0].cast<int>();
+    py::array_t<float> valuesArray = tup[1].cast<py::array_t<float>>();
+    result.qValues.resize(valuesArray.size());
+    std::copy(valuesArray.data(0), valuesArray.data(0) + valuesArray.size(), result.qValues.begin());
   } catch (std::exception &ex) {
     LOG(ERROR) << "Caught exception in JaxInterface::selectAction: " << ex.what();
     modelConditionVariable_.notify_all();
     throw;
   }
   modelConditionVariable_.notify_all();
-  VLOG(1) << "Chose action " << actionIndex;
-  return actionIndex;
+  VLOG(1) << "Chose action " << result.actionIndex;
+  return result;
 }
 
 JaxInterface::TrainAuxOutput JaxInterface::train(const Model &model,

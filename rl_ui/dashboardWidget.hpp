@@ -24,11 +24,13 @@ public slots:
                                  int currentMp, int maxMp);
   void onActiveStateMachine(QString name, QString stateMachine);
   void onSkillCooldowns(QString name, QList<SkillCooldown> cooldowns);
+  void onQValues(QString name, QVector<float> values);
   void clearStatusTable();
   void onHyperbotConnected();
 
 signals:
   void characterDataUpdated(QString name, CharacterData data);
+  void qValuesReceived(QString name, QVector<float> values);
 
 private:
   Ui::DashboardWidget *ui;
