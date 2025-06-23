@@ -2,11 +2,17 @@
 #define RL_CHECKPOINT_MANAGER_HPP_
 
 #include "rl/jaxInterface.hpp"
+#include "rl/observationAndActionStorage.hpp"
+#include "rl/replayBuffer.hpp"
 
 #include <ui_proto/rl_checkpointing.pb.h>
 
+#include <absl/container/flat_hash_map.h>
+
 #include <mutex>
+#include <set>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace ui {
@@ -17,21 +23,31 @@ namespace rl {
 
 struct CheckpointValues {
   int stepCount;
-  std::string modelPath;
-  std::string targetModelPath;
-  std::string optimizerPath;
-  std::string replayBufferPath;
-  std::string observationStoragePath;
 };
 
 class CheckpointManager {
 public:
   CheckpointManager(ui::RlUserInterface &rlUserInterface);
   ~CheckpointManager();
-  CheckpointValues saveCheckpoint(const std::string &checkpointName, int stepCount, bool overwrite);
+  using ReplayBufferType = ReplayBuffer<ObservationAndActionStorage::Id>;
+
+  void saveCheckpoint(const std::string &checkpointName, JaxInterface &jaxInterface,
+                      int stepCount, const ObservationAndActionStorage &observationStorage,
+                      const ReplayBufferType &replayBuffer,
+                      const absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> &observationIdToTransitionIdMap,
+                      const absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> &transitionIdToObservationIdMap,
+                      const std::set<ReplayBufferType::TransitionId> &deletedTransitionIds,
+                      std::mutex &replayBufferMutex,
+                      bool overwrite);
   bool checkpointExists(const std::string &checkpointName) const;
   std::vector<std::string> getCheckpointNames() const;
-  CheckpointValues loadCheckpoint(const std::string &checkpointName);
+  CheckpointValues loadCheckpoint(const std::string &checkpointName, JaxInterface &jaxInterface,
+                                  ReplayBufferType &replayBuffer,
+                                  ObservationAndActionStorage &observationStorage,
+                                  absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> &observationIdToTransitionIdMap,
+                                  absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> &transitionIdToObservationIdMap,
+                                  std::set<ReplayBufferType::TransitionId> &deletedTransitionIds,
+                                  std::mutex &replayBufferMutex);
   void deleteCheckpoints(const std::vector<std::string> &checkpointNames);
 private:
   static constexpr std::string_view kCheckpointRegistryFilename{"checkpoint_registry"};
@@ -39,6 +55,7 @@ private:
   ui::RlUserInterface &rlUserInterface_;
   mutable std::mutex registryMutex_;
   proto::rl_checkpointing::CheckpointRegistry checkpointRegistry_;
+  std::thread checkpointingThread_;
 
   // Note: Expects lock to be held.
   void saveCurrentRegistryNoLock();

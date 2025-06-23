@@ -79,9 +79,20 @@ CheckpointManager::CheckpointManager(ui::RlUserInterface &rlUserInterface) : rlU
   }
 }
 
-CheckpointManager::~CheckpointManager() = default;
+CheckpointManager::~CheckpointManager() {
+  if (checkpointingThread_.joinable()) {
+    checkpointingThread_.join();
+  }
+}
 
-CheckpointValues CheckpointManager::saveCheckpoint(const std::string &checkpointName, int stepCount, bool overwrite) {
+void CheckpointManager::saveCheckpoint(const std::string &checkpointName, JaxInterface &jaxInterface,
+                                       int stepCount, const ObservationAndActionStorage &observationStorage,
+                                       const ReplayBufferType &replayBuffer,
+                                       const absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> &observationIdToTransitionIdMap,
+                                       const absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> &transitionIdToObservationIdMap,
+                                       const std::set<ReplayBufferType::TransitionId> &deletedTransitionIds,
+                                       std::mutex &replayBufferMutex,
+                                       bool overwrite) {
   const bool checkpointAlreadyExists = checkpointExists(checkpointName);
   if (!overwrite && checkpointAlreadyExists) {
     throw std::runtime_error("Trying to create a checkpoint which already exists");
@@ -126,16 +137,55 @@ CheckpointValues CheckpointManager::saveCheckpoint(const std::string &checkpoint
     }
     saveCurrentRegistryNoLock();
   }
-  rlUserInterface_.sendSavingCheckpoint();
+  if (checkpointingThread_.joinable()) {
+    VLOG(1) << "Checkpointing thread is already running. Waiting for it to finish.";
+    checkpointingThread_.join();
+  }
 
-  CheckpointValues result;
-  result.stepCount = stepCount;
-  result.modelPath = modelCheckpointPath;
-  result.targetModelPath = targetModelCheckpointPath;
-  result.optimizerPath = optimizerCheckpointPath;
-  result.replayBufferPath = replayBufferPath;
-  result.observationStoragePath = observationStoragePath;
-  return result;
+  checkpointingThread_ = std::thread([this, checkpointName, modelCheckpointPath, targetModelCheckpointPath,
+                                      optimizerCheckpointPath, replayBufferPath, observationStoragePath, &jaxInterface,
+                                      &observationStorage, &replayBuffer, &observationIdToTransitionIdMap,
+                                      &transitionIdToObservationIdMap, &deletedTransitionIds, &replayBufferMutex]() {
+    tracy::SetThreadName("CheckpointManager");
+    rlUserInterface_.sendSavingCheckpoint();
+    jaxInterface.saveCheckpoint(modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath);
+
+    std::unique_lock lock(replayBufferMutex);
+    {
+      std::ofstream obsOut(observationStoragePath, std::ios::binary);
+      if (!obsOut) {
+        throw std::runtime_error("Failed to open observation storage file for writing");
+      }
+      observationStorage.saveToStream(obsOut);
+    }
+    {
+      std::ofstream rbOut(replayBufferPath, std::ios::binary);
+      if (!rbOut) {
+        throw std::runtime_error("Failed to open replay buffer file for writing");
+      }
+      replayBuffer.saveToStream(rbOut);
+      size_t mapSize = observationIdToTransitionIdMap.size();
+      rbOut.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
+      for (const auto &p : observationIdToTransitionIdMap) {
+        rbOut.write(reinterpret_cast<const char*>(&p.first), sizeof(p.first));
+        rbOut.write(reinterpret_cast<const char*>(&p.second), sizeof(p.second));
+      }
+      mapSize = transitionIdToObservationIdMap.size();
+      rbOut.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
+      for (const auto &p : transitionIdToObservationIdMap) {
+        rbOut.write(reinterpret_cast<const char*>(&p.first), sizeof(p.first));
+        rbOut.write(reinterpret_cast<const char*>(&p.second), sizeof(p.second));
+      }
+      mapSize = deletedTransitionIds.size();
+      rbOut.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
+      for (const auto &id : deletedTransitionIds) {
+        rbOut.write(reinterpret_cast<const char*>(&id), sizeof(id));
+      }
+    }
+
+    rlUserInterface_.sendCheckpointList(getCheckpointNames());
+    LOG(INFO) << "Saved checkpoint \"" << checkpointName << "\"";
+  });
 }
 
 bool CheckpointManager::checkpointExists(const std::string &checkpointName) const {
@@ -157,19 +207,66 @@ std::vector<std::string> CheckpointManager::getCheckpointNames() const {
   return checkpointNames;
 }
 
-CheckpointValues CheckpointManager::loadCheckpoint(const std::string &checkpointName) {
+CheckpointValues CheckpointManager::loadCheckpoint(const std::string &checkpointName, JaxInterface &jaxInterface,
+                                                  ReplayBufferType &replayBuffer,
+                                                  ObservationAndActionStorage &observationStorage,
+                                                  absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> &observationIdToTransitionIdMap,
+                                                  absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> &transitionIdToObservationIdMap,
+                                                  std::set<ReplayBufferType::TransitionId> &deletedTransitionIds,
+                                                  std::mutex &replayBufferMutex) {
   std::unique_lock lock(registryMutex_);
   for (const rl_checkpointing::Checkpoint &checkpoint : checkpointRegistry_.checkpoints()) {
     if (checkpoint.checkpoint_name() == checkpointName) {
+      const std::string modelCheckpointPath = checkpoint.model_checkpoint_path();
+      const std::string targetModelCheckpointPath = checkpoint.target_model_checkpoint_path();
+      const std::string optimizerCheckpointPath = checkpoint.optimizer_checkpoint_path();
+      const std::string replayBufferPath = checkpoint.replay_buffer_path();
+      const std::string observationStoragePath = checkpoint.observation_storage_path();
       CheckpointValues result;
-      result.modelPath = checkpoint.model_checkpoint_path();
-      result.targetModelPath = checkpoint.target_model_checkpoint_path();
-      result.optimizerPath = checkpoint.optimizer_checkpoint_path();
-      result.replayBufferPath = checkpoint.replay_buffer_path();
-      result.observationStoragePath = checkpoint.observation_storage_path();
       result.stepCount = checkpoint.step_count();
       LOG(INFO) << "Loading checkpoint \"" << checkpointName << "\"";
-      // Notify the UI that a checkpoint has been loaded
+      jaxInterface.loadCheckpoint(modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath);
+
+      {
+        std::unique_lock dataLock(replayBufferMutex);
+        std::ifstream obsIn(observationStoragePath, std::ios::binary);
+        if (!obsIn) {
+          throw std::runtime_error("Failed to open observation storage file for reading");
+        }
+        observationStorage.loadFromStream(obsIn);
+
+        std::ifstream rbIn(replayBufferPath, std::ios::binary);
+        if (!rbIn) {
+          throw std::runtime_error("Failed to open replay buffer file for reading");
+        }
+        replayBuffer.loadFromStream(rbIn);
+        size_t mapSize;
+        rbIn.read(reinterpret_cast<char*>(&mapSize), sizeof(mapSize));
+        observationIdToTransitionIdMap.clear();
+        for (size_t i=0;i<mapSize;++i) {
+          ObservationAndActionStorage::Id obsId;
+          ReplayBufferType::TransitionId transId;
+          rbIn.read(reinterpret_cast<char*>(&obsId), sizeof(obsId));
+          rbIn.read(reinterpret_cast<char*>(&transId), sizeof(transId));
+          observationIdToTransitionIdMap[obsId] = transId;
+        }
+        rbIn.read(reinterpret_cast<char*>(&mapSize), sizeof(mapSize));
+        transitionIdToObservationIdMap.clear();
+        for (size_t i=0;i<mapSize;++i) {
+          ReplayBufferType::TransitionId transId;
+          ObservationAndActionStorage::Id obsId;
+          rbIn.read(reinterpret_cast<char*>(&transId), sizeof(transId));
+          rbIn.read(reinterpret_cast<char*>(&obsId), sizeof(obsId));
+          transitionIdToObservationIdMap[transId] = obsId;
+        }
+        rbIn.read(reinterpret_cast<char*>(&mapSize), sizeof(mapSize));
+        deletedTransitionIds.clear();
+        for (size_t i=0;i<mapSize;++i) {
+          ReplayBufferType::TransitionId tid;
+          rbIn.read(reinterpret_cast<char*>(&tid), sizeof(tid));
+          deletedTransitionIds.insert(tid);
+        }
+      }
       rlUserInterface_.sendCheckpointLoaded(checkpointName);
       return result;
     }
