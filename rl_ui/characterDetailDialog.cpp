@@ -279,16 +279,25 @@ void CharacterDetailDialog::updateQValues(const QVector<float> &qValues) {
     }
   }
 
+  float minVal = std::numeric_limits<float>::infinity();
   float maxVal = -std::numeric_limits<float>::infinity();
   for (float v : qValues) {
-    if (v != -std::numeric_limits<float>::infinity() && v > maxVal) {
+    if (v == -std::numeric_limits<float>::infinity()) {
+      continue;
+    }
+    if (v < minVal) {
+      minVal = v;
+    }
+    if (v > maxVal) {
       maxVal = v;
     }
   }
-  if (maxVal == -std::numeric_limits<float>::infinity()) {
+  if (minVal == std::numeric_limits<float>::infinity()) {
+    minVal = 0.0f;
     maxVal = 0.0f;
   }
 
+  const float range = maxVal - minVal;
   for (int i = 0; i < qValues.size(); ++i) {
     QProgressBar *bar = qValueBars_.value(i);
     if (!bar) {
@@ -297,12 +306,15 @@ void CharacterDetailDialog::updateQValues(const QVector<float> &qValues) {
     if (qValues[i] == -std::numeric_limits<float>::infinity()) {
       bar->setValue(0);
       bar->setFormat("-inf");
-    } else if (maxVal == 0.0f) {
+    } else if (range == 0.0f) {
       bar->setValue(100);
       bar->setFormat(QString::number(qValues[i], 'f', 2));
     } else {
-      int pct = static_cast<int>((qValues[i] / maxVal) * 100.0f);
+      float pctF = (qValues[i] - minVal) / range;
+      int pct = static_cast<int>(pctF * 100.0f);
       if (pct < 0) pct = 0;
+      if (pct == 0 && qValues[i] != minVal) pct = 1;
+      if (pct > 100) pct = 100;
       bar->setValue(pct);
       bar->setFormat(QString::number(qValues[i], 'f', 2));
     }
