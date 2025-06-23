@@ -39,6 +39,7 @@ CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
   QStringList headers;
   headers << "Action" << "Q-Value";
   qValuesTable_->setHorizontalHeaderLabels(headers);
+  qValuesTable_->verticalHeader()->setDefaultSectionSize(18);
   ui_->verticalLayout->addWidget(qValuesTable_);
   if (sharedCooldownTimer_ == nullptr) {
     sharedCooldownTimer_ = new QTimer(QCoreApplication::instance());
@@ -68,20 +69,28 @@ void CharacterDetailDialog::setCharacterName(const QString &name) {
   ui_->nameLabel->setText(name_);
 }
 
-void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
-  ui_->hpBar->setRange(0, data.maxHp);
-  ui_->hpBar->setValue(data.currentHp);
-  ui_->hpBar->setFormat(QString("%1/%2").arg(data.currentHp).arg(data.maxHp));
+void CharacterDetailDialog::updateHpMp(int currentHp, int maxHp, int currentMp,
+                                       int maxMp) {
+  ui_->hpBar->setRange(0, maxHp);
+  ui_->hpBar->setValue(currentHp);
+  ui_->hpBar->setFormat(QString("%1/%2").arg(currentHp).arg(maxHp));
 
-  ui_->mpBar->setRange(0, data.maxMp);
-  ui_->mpBar->setValue(data.currentMp);
-  ui_->mpBar->setFormat(QString("%1/%2").arg(data.currentMp).arg(data.maxMp));
+  ui_->mpBar->setRange(0, maxMp);
+  ui_->mpBar->setValue(currentMp);
+  ui_->mpBar->setFormat(QString("%1/%2").arg(currentMp).arg(maxMp));
+}
 
+void CharacterDetailDialog::updateStateMachine(const QString &stateMachine) {
+  ui_->stateMachineLabel->setText(stateMachine);
+}
+
+void CharacterDetailDialog::updateSkillCooldowns(
+    const QList<SkillCooldown> &cooldowns) {
   const qint64 now = QDateTime::currentMSecsSinceEpoch();
 
   QSet<sro::scalar_types::ReferenceSkillId> incomingIds;
 
-  for (const SkillCooldown &cooldown : data.skillCooldowns) {
+  for (const SkillCooldown &cooldown : cooldowns) {
     incomingIds.insert(cooldown.skillId);
 
     if (!gameData_.skillData().haveSkillWithId(cooldown.skillId)) {
@@ -170,12 +179,26 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
   }
 
   ui_->skillCooldownList->sortItems(Qt::DescendingOrder);
+}
 
-  // Update Q-value table
-  qValuesTable_->clearContents();
-  qValuesTable_->setRowCount(data.qValues.size());
+void CharacterDetailDialog::updateQValues(const QVector<float> &qValues) {
+  if (qValuesTable_->rowCount() != qValues.size()) {
+    qValuesTable_->clearContents();
+    qValuesTable_->setRowCount(qValues.size());
+    qValueBars_.clear();
+    for (int i = 0; i < qValues.size(); ++i) {
+      QTableWidgetItem *indexItem = new QTableWidgetItem(QString::number(i));
+      qValuesTable_->setItem(i, 0, indexItem);
+      QProgressBar *bar = new QProgressBar;
+      bar->setRange(0, 100);
+      qValuesTable_->setCellWidget(i, 1, bar);
+      qValuesTable_->setRowHeight(i, 18);
+      qValueBars_.append(bar);
+    }
+  }
+
   float maxVal = -std::numeric_limits<float>::infinity();
-  for (float v : data.qValues) {
+  for (float v : qValues) {
     if (v != -std::numeric_limits<float>::infinity() && v > maxVal) {
       maxVal = v;
     }
@@ -183,33 +206,67 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
   if (maxVal == -std::numeric_limits<float>::infinity()) {
     maxVal = 0.0f;
   }
-  for (int i = 0; i < data.qValues.size(); ++i) {
-    QTableWidgetItem *indexItem = new QTableWidgetItem(QString::number(i));
-    qValuesTable_->setItem(i, 0, indexItem);
-    QProgressBar *bar = new QProgressBar;
-    bar->setRange(0, 100);
-    if (data.qValues[i] == -std::numeric_limits<float>::infinity()) {
+
+  for (int i = 0; i < qValues.size(); ++i) {
+    QProgressBar *bar = qValueBars_.value(i);
+    if (!bar) {
+      continue;
+    }
+    if (qValues[i] == -std::numeric_limits<float>::infinity()) {
       bar->setValue(0);
       bar->setFormat("-inf");
     } else if (maxVal == 0.0f) {
       bar->setValue(100);
-      bar->setFormat(QString::number(data.qValues[i], 'f', 2));
+      bar->setFormat(QString::number(qValues[i], 'f', 2));
     } else {
-      int pct = static_cast<int>((data.qValues[i] / maxVal) * 100.0f);
+      int pct = static_cast<int>((qValues[i] / maxVal) * 100.0f);
       if (pct < 0) pct = 0;
       bar->setValue(pct);
-      bar->setFormat(QString::number(data.qValues[i], 'f', 2));
+      bar->setFormat(QString::number(qValues[i], 'f', 2));
     }
-    qValuesTable_->setCellWidget(i, 1, bar);
   }
+}
 
-  ui_->stateMachineLabel->setText(data.stateMachine);
+void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
+  updateHpMp(data.currentHp, data.maxHp, data.currentMp, data.maxMp);
+  updateSkillCooldowns(data.skillCooldowns);
+  updateQValues(data.qValues);
+  updateStateMachine(data.stateMachine);
 }
 
 void CharacterDetailDialog::onCharacterDataUpdated(QString name,
                                                    CharacterData data) {
   if (name == name_) {
     updateCharacterData(data);
+  }
+}
+
+void CharacterDetailDialog::onCharacterStatusUpdated(QString name, int currentHp,
+                                                     int maxHp, int currentMp,
+                                                     int maxMp) {
+  if (name == name_) {
+    updateHpMp(currentHp, maxHp, currentMp, maxMp);
+  }
+}
+
+void CharacterDetailDialog::onActiveStateMachineUpdated(QString name,
+                                                        QString stateMachine) {
+  if (name == name_) {
+    updateStateMachine(stateMachine);
+  }
+}
+
+void CharacterDetailDialog::onSkillCooldownsUpdated(QString name,
+                                                    QList<SkillCooldown> cooldowns) {
+  if (name == name_) {
+    updateSkillCooldowns(cooldowns);
+  }
+}
+
+void CharacterDetailDialog::onQValuesUpdated(QString name,
+                                             QVector<float> qValues) {
+  if (name == name_) {
+    updateQValues(qValues);
   }
 }
 

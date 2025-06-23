@@ -30,7 +30,11 @@ public slots:
   void onHyperbotConnected();
 
 signals:
-  void characterDataUpdated(QString name, CharacterData data);
+  void characterStatusUpdated(QString name, int currentHp, int maxHp,
+                              int currentMp, int maxMp);
+  void activeStateMachineUpdated(QString name, QString stateMachine);
+  void skillCooldownsUpdated(QString name, QList<SkillCooldown> cooldowns);
+  void qValuesUpdated(QString name, QVector<float> qValues);
 
 private:
   Ui::DashboardWidget *ui;

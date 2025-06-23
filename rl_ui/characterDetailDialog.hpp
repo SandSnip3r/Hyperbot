@@ -46,9 +46,18 @@ public:
 
   void setCharacterName(const QString &name);
   void updateCharacterData(const CharacterData &data);
+  void updateHpMp(int currentHp, int maxHp, int currentMp, int maxMp);
+  void updateStateMachine(const QString &stateMachine);
+  void updateSkillCooldowns(const QList<SkillCooldown> &cooldowns);
+  void updateQValues(const QVector<float> &qValues);
 
 public slots:
   void onCharacterDataUpdated(QString name, CharacterData data);
+  void onCharacterStatusUpdated(QString name, int currentHp, int maxHp,
+                                int currentMp, int maxMp);
+  void onActiveStateMachineUpdated(QString name, QString stateMachine);
+  void onSkillCooldownsUpdated(QString name, QList<SkillCooldown> cooldowns);
+  void onQValuesUpdated(QString name, QVector<float> qValues);
 
 private:
   struct CooldownItem {
@@ -79,6 +88,7 @@ private:
   QHash<sro::scalar_types::ReferenceSkillId, CooldownItem> cooldownItems_;
   QHash<sro::scalar_types::ReferenceSkillId, QPixmap> iconCache_;
   QTableWidget *qValuesTable_{nullptr};
+  QVector<QProgressBar *> qValueBars_;
 
   QPixmap getIconForSkillId(sro::scalar_types::ReferenceSkillId skillId);
   void updateCooldownDisplays();
