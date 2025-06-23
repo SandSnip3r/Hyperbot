@@ -516,10 +516,12 @@ gtest_discover_tests(replay_buffer_test
 add_executable(
   observation_serialization_test
   test/observationSerializationTest.cpp
+  src/rl/observation.cpp
 )
 
 target_link_libraries(
   observation_serialization_test
+  silkroad_lib
   GTest::Main
 )
 
