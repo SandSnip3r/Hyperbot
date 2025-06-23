@@ -7,6 +7,7 @@
 #include <QStringList>
 #include <QWidget>
 #include <QMap>
+#include <QVector>
 
 namespace Ui {
 class DashboardWidget;
@@ -24,11 +25,16 @@ public slots:
                                  int currentMp, int maxMp);
   void onActiveStateMachine(QString name, QString stateMachine);
   void onSkillCooldowns(QString name, QList<SkillCooldown> cooldowns);
+  void onQValues(QString name, QVector<float> qValues);
   void clearStatusTable();
   void onHyperbotConnected();
 
 signals:
-  void characterDataUpdated(QString name, CharacterData data);
+  void characterStatusUpdated(QString name, int currentHp, int maxHp,
+                              int currentMp, int maxMp);
+  void activeStateMachineUpdated(QString name, QString stateMachine);
+  void skillCooldownsUpdated(QString name, QList<SkillCooldown> cooldowns);
+  void qValuesUpdated(QString name, QVector<float> qValues);
 
 private:
   Ui::DashboardWidget *ui;

@@ -114,6 +114,7 @@ public:
   void asyncStandbyForPvp();
   std::string currentStateMachineName() const;
   void sendActiveStateMachine() const;
+  void sendQValues(const std::vector<float> &qValues) const;
 
 private:
   // Data for RL training interface.

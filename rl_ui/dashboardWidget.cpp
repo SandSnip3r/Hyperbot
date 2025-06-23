@@ -114,19 +114,24 @@ void DashboardWidget::onCharacterStatusReceived(QString name, int currentHp,
   if (!ui->statusTable->item(row, 3)) {
     ui->statusTable->setItem(row, 3, new QTableWidgetItem(""));
   }
-  emit characterDataUpdated(name, data);
+  emit characterStatusUpdated(name, currentHp, maxHp, currentMp, maxMp);
 }
 
 void DashboardWidget::onActiveStateMachine(QString name, QString stateMachine) {
   int row = ensureRowForCharacter(name);
   ui->statusTable->setItem(row, 3, new QTableWidgetItem(stateMachine));
   characterData_[name].stateMachine = stateMachine;
-  emit characterDataUpdated(name, characterData_.value(name));
+  emit activeStateMachineUpdated(name, stateMachine);
 }
 
 void DashboardWidget::onSkillCooldowns(QString name, QList<SkillCooldown> cooldowns) {
   characterData_[name].skillCooldowns = cooldowns;
-  emit characterDataUpdated(name, characterData_.value(name));
+  emit skillCooldownsUpdated(name, cooldowns);
+}
+
+void DashboardWidget::onQValues(QString name, QVector<float> qValues) {
+  characterData_[name].qValues = qValues;
+  emit qValuesUpdated(name, qValues);
 }
 
 void DashboardWidget::clearStatusTable() {
@@ -165,7 +170,13 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
           [this, name]() { detailDialogs_.remove(name); });
   dialog->setCharacterName(name);
   dialog->updateCharacterData(characterData_.value(name));
-  connect(this, &DashboardWidget::characterDataUpdated, dialog,
-          &CharacterDetailDialog::onCharacterDataUpdated);
+  connect(this, &DashboardWidget::characterStatusUpdated, dialog,
+          &CharacterDetailDialog::onCharacterStatusUpdated);
+  connect(this, &DashboardWidget::activeStateMachineUpdated, dialog,
+          &CharacterDetailDialog::onActiveStateMachineUpdated);
+  connect(this, &DashboardWidget::skillCooldownsUpdated, dialog,
+          &CharacterDetailDialog::onSkillCooldownsUpdated);
+  connect(this, &DashboardWidget::qValuesUpdated, dialog,
+          &CharacterDetailDialog::onQValuesUpdated);
   dialog->show();
 }

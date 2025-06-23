@@ -80,7 +80,7 @@ def printWeights(model):
 def selectAction(model, pastObservationStack, pastObservationTimestamps, pastActions, pastMask, currentObservation, actionMask):
   values = model(pastObservationStack, pastObservationTimestamps, pastActions, pastMask, currentObservation, deterministic=True)
   values += actionMask
-  return jnp.argmax(values)
+  return jnp.argmax(values), values
 
 # Function to compute weighted loss and TD error for a SINGLE transition
 def computeWeightedLossAndTdErrorSingle(model, targetModel, transition, weight, gamma, rngKey):
