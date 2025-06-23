@@ -330,6 +330,11 @@ float TrainingManager::getEpsilon() const {
   return std::min(kInitialEpsilon, std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(trainStepCount_) / kEpsilonDecaySteps));
 }
 
+void TrainingManager::sendCharacterQValues(const std::string &name,
+                                           const std::vector<float> &qValues) {
+  rlUserInterface_.sendCharacterQValues(name, qValues);
+}
+
 void TrainingManager::createSessions() {
   LOG(INFO) << "Creating sessions for " << characterPairings_.size() << " total character pairings";
 

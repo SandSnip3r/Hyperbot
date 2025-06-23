@@ -15,6 +15,9 @@
 #include <QHash>
 #include <QPixmap>
 #include <QString>
+#include <QVector>
+
+#include "hyperbot.hpp"
 
 namespace Ui {
 class CharacterDetailDialog;
@@ -38,7 +41,9 @@ struct CharacterData {
 class CharacterDetailDialog : public QDialog {
   Q_OBJECT
 public:
-  explicit CharacterDetailDialog(const sro::pk2::GameData &gameData, QWidget *parent = nullptr);
+  explicit CharacterDetailDialog(const sro::pk2::GameData &gameData,
+                                 Hyperbot &hyperbot,
+                                 QWidget *parent = nullptr);
   ~CharacterDetailDialog();
 
   void setCharacterName(const QString &name);
@@ -46,6 +51,7 @@ public:
 
 public slots:
   void onCharacterDataUpdated(QString name, CharacterData data);
+  void onQValuesReceived(QString name, QVector<float> qValues);
 
 private:
   struct CooldownItem {
@@ -71,10 +77,12 @@ private:
   Ui::CharacterDetailDialog *ui_;
   QString name_;
   const sro::pk2::GameData &gameData_;
+  Hyperbot &hyperbot_;
   static QTimer *sharedCooldownTimer_;
   static int activeDialogCount_;
   QHash<sro::scalar_types::ReferenceSkillId, CooldownItem> cooldownItems_;
   QHash<sro::scalar_types::ReferenceSkillId, QPixmap> iconCache_;
+  QVector<QProgressBar*> qValueBars_;
 
   QPixmap getIconForSkillId(sro::scalar_types::ReferenceSkillId skillId);
   void updateCooldownDisplays();

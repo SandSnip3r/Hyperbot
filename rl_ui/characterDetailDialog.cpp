@@ -2,6 +2,7 @@
 #include "ui_characterDetailDialog.h"
 #include "barStyles.hpp"
 #include "textureToQImage.hpp"
+#include "hyperbot.hpp"
 
 #include <silkroad_lib/pk2/gameData.hpp>
 
@@ -10,11 +11,14 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QProgressBar>
+#include <QTableWidget>
+#include <QHeaderView>
 #include <QTimer>
 #include <QCoreApplication>
 #include <QHash>
 #include <QDateTime>
 #include <QSet>
+#include <QVector>
 
 #include <absl/log/log.h>
 #include <algorithm>
@@ -28,11 +32,17 @@ namespace {
 } // namespace
 
 CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
+                                             Hyperbot &hyperbot,
                                              QWidget *parent)
-    : QDialog(parent), ui_(new Ui::CharacterDetailDialog), gameData_(gameData) {
+    : QDialog(parent), ui_(new Ui::CharacterDetailDialog), gameData_(gameData), hyperbot_(hyperbot) {
   ui_->setupUi(this);
   setupHpBar(ui_->hpBar);
   setupMpBar(ui_->mpBar);
+  QStringList headers;
+  headers << tr("Action") << tr("Q-Value");
+  ui_->qValueTable->setColumnCount(2);
+  ui_->qValueTable->setHorizontalHeaderLabels(headers);
+  ui_->qValueTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
   if (sharedCooldownTimer_ == nullptr) {
     sharedCooldownTimer_ = new QTimer(QCoreApplication::instance());
     sharedCooldownTimer_->setInterval(50);
@@ -206,5 +216,37 @@ QPixmap CharacterDetailDialog::getIconForSkillId(
     LOG(WARNING) << "Failed to convert skill icon for id " << skillId << ": "
                  << ex.what();
     return QPixmap();
+  }
+}
+
+void CharacterDetailDialog::onQValuesReceived(QString name, QVector<float> qValues) {
+  if (name != name_) {
+    return;
+  }
+  if (ui_->qValueTable->rowCount() != qValues.size()) {
+    ui_->qValueTable->setRowCount(qValues.size());
+    qValueBars_.clear();
+    for (int i = 0; i < qValues.size(); ++i) {
+      ui_->qValueTable->setItem(i, 0, new QTableWidgetItem(QString::number(i)));
+      QProgressBar *bar = new QProgressBar;
+      bar->setRange(0, 100);
+      ui_->qValueTable->setCellWidget(i, 1, bar);
+      qValueBars_.append(bar);
+    }
+  }
+  float maxVal = 0.0f;
+  for (float v : qValues) {
+    if (v > maxVal) {
+      maxVal = v;
+    }
+  }
+  if (maxVal == 0.0f) {
+    maxVal = 1.0f;
+  }
+  for (int i = 0; i < qValues.size(); ++i) {
+    QProgressBar *bar = qValueBars_.at(i);
+    int percent = static_cast<int>((qValues[i] / maxVal) * 100.0f);
+    bar->setValue(percent);
+    bar->setFormat(QString::number(qValues[i], 'f', 2));
   }
 }

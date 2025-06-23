@@ -59,6 +59,7 @@ public:
   int getTrainStepCount() const { return trainStepCount_.load(); }
   constexpr int getPastObservationStackSize() const { return kPastObservationStackSize; }
   float getEpsilon() const;
+  void sendCharacterQValues(const std::string &name, const std::vector<float> &qValues);
 
 private:
   // Definition for a character pairing at a specific position

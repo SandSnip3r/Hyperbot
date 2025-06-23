@@ -58,6 +58,7 @@ signals:
                                int currentMp, int maxMp);
   void activeStateMachineReceived(QString name, QString stateMachine);
   void skillCooldownsReceived(QString name, QList<SkillCooldown> cooldowns);
+  void qValuesReceived(QString name, QVector<float> qValues);
 
 private:
   static constexpr int kHeartbeatIntervalMs = 500;

@@ -98,6 +98,11 @@ message CharacterSkillCooldowns {
   repeated SkillCooldown cooldowns = 2;
 }
 
+message CharacterQValues {
+  string name = 1;
+  repeated float q_values = 2;
+}
+
 message BroadcastMessage {
   oneof body {
     google.protobuf.Empty heartbeat = 1;
@@ -109,6 +114,7 @@ message BroadcastMessage {
     CharacterStatus character_status = 7;
     ActiveStateMachine active_state_machine = 8;
     CharacterSkillCooldowns skill_cooldowns = 9;
+    CharacterQValues character_q_values = 10;
   }
 }
 

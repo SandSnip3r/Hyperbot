@@ -50,13 +50,16 @@
        <property name="text">
         <string>State Machine</string>
        </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+    </item>
+    <item>
+      <widget class="QTableWidget" name="qValueTable"/>
+    </item>
   </layout>
- </widget>
+</widget>
  <resources/>
  <connections/>
 </ui>

@@ -2,6 +2,7 @@
 #include "ui_dashboardwidget.h"
 
 #include "barStyles.hpp"
+#include "hyperbot.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>
 #include <QProgressBar>
 #include <QTableWidgetItem>
@@ -10,8 +11,9 @@
 #include <QRegularExpression>
 
 DashboardWidget::DashboardWidget(const sro::pk2::GameData &gameData,
+                                 Hyperbot &hyperbot,
                                  QWidget *parent)
-    : QWidget(parent), ui(new Ui::DashboardWidget), gameData_(gameData) {
+    : QWidget(parent), ui(new Ui::DashboardWidget), gameData_(gameData), hyperbot_(hyperbot) {
   ui->setupUi(this);
   QStringList headers;
   headers << "Character" << "HP" << "MP" << "State";
@@ -158,7 +160,7 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
     }
     return;
   }
-  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, this);
+  CharacterDetailDialog *dialog = new CharacterDetailDialog(gameData_, hyperbot_, this);
   dialog->setAttribute(Qt::WA_DeleteOnClose);
   detailDialogs_.insert(name, dialog);
   connect(dialog, &QObject::destroyed, this,
@@ -167,5 +169,6 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
   dialog->updateCharacterData(characterData_.value(name));
   connect(this, &DashboardWidget::characterDataUpdated, dialog,
           &CharacterDetailDialog::onCharacterDataUpdated);
+  connect(&hyperbot_, &Hyperbot::qValuesReceived, dialog, &CharacterDetailDialog::onQValuesReceived);
   dialog->show();
 }

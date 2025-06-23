@@ -12,10 +12,13 @@ namespace Ui {
 class DashboardWidget;
 }
 
+class Hyperbot;
+
 class DashboardWidget : public QWidget {
   Q_OBJECT
 public:
   explicit DashboardWidget(const sro::pk2::GameData &gameData,
+                           Hyperbot &hyperbot,
                            QWidget *parent = nullptr);
   ~DashboardWidget();
 
@@ -35,6 +38,7 @@ private:
   QMap<QString, CharacterData> characterData_;
   QMap<QString, CharacterDetailDialog *> detailDialogs_;
   const sro::pk2::GameData &gameData_;
+  Hyperbot &hyperbot_;
   int ensureRowForCharacter(const QString &name);
   void showCharacterDetail(int row, int column);
 };
