@@ -83,13 +83,11 @@ CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
   ui_->setupUi(this);
   setupHpBar(ui_->hpBar);
   setupMpBar(ui_->mpBar);
-  qValuesTable_ = new QTableWidget(this);
-  qValuesTable_->setColumnCount(2);
+  ui_->qValuesTable->setColumnCount(2);
   QStringList headers;
   headers << "Action" << "Q-Value";
-  qValuesTable_->setHorizontalHeaderLabels(headers);
-  qValuesTable_->verticalHeader()->setDefaultSectionSize(24);
-  ui_->verticalLayout->addWidget(qValuesTable_);
+  ui_->qValuesTable->setHorizontalHeaderLabels(headers);
+  ui_->qValuesTable->verticalHeader()->setDefaultSectionSize(24);
   if (sharedCooldownTimer_ == nullptr) {
     sharedCooldownTimer_ = new QTimer(QCoreApplication::instance());
     sharedCooldownTimer_->setInterval(50);
@@ -231,9 +229,9 @@ void CharacterDetailDialog::updateSkillCooldowns(
 }
 
 void CharacterDetailDialog::updateQValues(const QVector<float> &qValues) {
-  if (qValuesTable_->rowCount() != qValues.size()) {
-    qValuesTable_->clearContents();
-    qValuesTable_->setRowCount(qValues.size());
+  if (ui_->qValuesTable->rowCount() != qValues.size()) {
+    ui_->qValuesTable->clearContents();
+    ui_->qValuesTable->setRowCount(qValues.size());
     qValueBars_.clear();
     for (int i = 0; i < qValues.size(); ++i) {
       QTableWidgetItem *indexItem = new QTableWidgetItem;
@@ -249,19 +247,19 @@ void CharacterDetailDialog::updateQValues(const QVector<float> &qValues) {
           if (!pm.isNull()) indexItem->setData(Qt::DecorationRole, pm.scaled(24, 24));
         }
       }
-      qValuesTable_->setItem(i, 0, indexItem);
+      ui_->qValuesTable->setItem(i, 0, indexItem);
       QProgressBar *bar = new QProgressBar;
       bar->setRange(0, 100);
-      qValuesTable_->setCellWidget(i, 1, bar);
-      qValuesTable_->setRowHeight(i, 24);
+      ui_->qValuesTable->setCellWidget(i, 1, bar);
+      ui_->qValuesTable->setRowHeight(i, 24);
       qValueBars_.append(bar);
     }
   } else {
     for (int i = 0; i < qValues.size(); ++i) {
-      QTableWidgetItem *item = qValuesTable_->item(i, 0);
+      QTableWidgetItem *item = ui_->qValuesTable->item(i, 0);
       if (!item) {
         item = new QTableWidgetItem;
-        qValuesTable_->setItem(i, 0, item);
+        ui_->qValuesTable->setItem(i, 0, item);
       }
       if (i < static_cast<int>(std::size(kActionInfos))) {
         const ActionInfo &info = kActionInfos[i];
@@ -277,7 +275,7 @@ void CharacterDetailDialog::updateQValues(const QVector<float> &qValues) {
           if (!pm.isNull()) item->setData(Qt::DecorationRole, pm.scaled(24,24));
         }
       }
-      qValuesTable_->setRowHeight(i, 24);
+      ui_->qValuesTable->setRowHeight(i, 24);
     }
   }
 

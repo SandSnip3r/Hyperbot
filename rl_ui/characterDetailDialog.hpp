@@ -88,7 +88,6 @@ private:
   QHash<sro::scalar_types::ReferenceSkillId, CooldownItem> cooldownItems_;
   QHash<sro::scalar_types::ReferenceSkillId, QPixmap> iconCache_;
   QHash<sro::scalar_types::ReferenceObjectId, QPixmap> itemIconCache_;
-  QTableWidget *qValuesTable_{nullptr};
   QVector<QProgressBar *> qValueBars_;
 
   QPixmap getIconForSkillId(sro::scalar_types::ReferenceSkillId skillId);
