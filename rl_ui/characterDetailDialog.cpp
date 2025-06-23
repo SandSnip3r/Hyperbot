@@ -22,11 +22,59 @@
 #include <algorithm>
 #include <memory>
 #include <stdexcept>
+#include <array>
+#include <cstddef>
 
 QTimer *CharacterDetailDialog::sharedCooldownTimer_ = nullptr;
 int CharacterDetailDialog::activeDialogCount_ = 0;
 
 namespace {
+enum class ActionType { Text, Skill, Item };
+
+struct ActionInfo {
+  ActionType type;
+  const char *text;
+  sro::scalar_types::ReferenceSkillId skillId;
+  sro::scalar_types::ReferenceObjectId itemId;
+};
+
+const ActionInfo kActionInfos[] = {
+    {ActionType::Text, "Sleep", 0, 0},                     // 0
+    {ActionType::Text, "Attack", 0, 0},                    // 1
+    {ActionType::Skill, nullptr, 28, 0},                   // 2
+    {ActionType::Skill, nullptr, 131, 0},                  // 3
+    {ActionType::Skill, nullptr, 554, 0},                  // 4
+    {ActionType::Skill, nullptr, 1253, 0},                 // 5
+    {ActionType::Skill, nullptr, 1256, 0},                 // 6
+    {ActionType::Skill, nullptr, 1271, 0},                 // 7
+    {ActionType::Skill, nullptr, 1272, 0},                 // 8
+    {ActionType::Skill, nullptr, 1281, 0},                 // 9
+    {ActionType::Skill, nullptr, 1335, 0},                 // 10
+    {ActionType::Skill, nullptr, 1377, 0},                 // 11
+    {ActionType::Skill, nullptr, 1380, 0},                 // 12
+    {ActionType::Skill, nullptr, 1398, 0},                 // 13
+    {ActionType::Skill, nullptr, 1399, 0},                 // 14
+    {ActionType::Skill, nullptr, 1410, 0},                 // 15
+    {ActionType::Skill, nullptr, 1421, 0},                 // 16
+    {ActionType::Skill, nullptr, 1441, 0},                 // 17
+    {ActionType::Skill, nullptr, 30577, 0},                // 18
+    {ActionType::Skill, nullptr, 37, 0},                   // 19
+    {ActionType::Skill, nullptr, 114, 0},                  // 20
+    {ActionType::Skill, nullptr, 298, 0},                  // 21
+    {ActionType::Skill, nullptr, 300, 0},                  // 22
+    {ActionType::Skill, nullptr, 322, 0},                  // 23
+    {ActionType::Skill, nullptr, 339, 0},                  // 24
+    {ActionType::Skill, nullptr, 371, 0},                  // 25
+    {ActionType::Skill, nullptr, 588, 0},                  // 26
+    {ActionType::Skill, nullptr, 610, 0},                  // 27
+    {ActionType::Skill, nullptr, 644, 0},                  // 28
+    {ActionType::Skill, nullptr, 1315, 0},                 // 29
+    {ActionType::Skill, nullptr, 1343, 0},                 // 30
+    {ActionType::Skill, nullptr, 1449, 0},                 // 31
+    {ActionType::Item, nullptr, 0, 5},                     // 32
+    {ActionType::Item, nullptr, 0, 12},                    // 33
+    {ActionType::Item, nullptr, 0, 56},                    // 34
+};
 } // namespace
 
 CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
@@ -40,7 +88,7 @@ CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
   QStringList headers;
   headers << "Action" << "Q-Value";
   qValuesTable_->setHorizontalHeaderLabels(headers);
-  qValuesTable_->verticalHeader()->setDefaultSectionSize(18);
+  qValuesTable_->verticalHeader()->setDefaultSectionSize(24);
   ui_->verticalLayout->addWidget(qValuesTable_);
   if (sharedCooldownTimer_ == nullptr) {
     sharedCooldownTimer_ = new QTimer(QCoreApplication::instance());
@@ -188,13 +236,48 @@ void CharacterDetailDialog::updateQValues(const QVector<float> &qValues) {
     qValuesTable_->setRowCount(qValues.size());
     qValueBars_.clear();
     for (int i = 0; i < qValues.size(); ++i) {
-      QTableWidgetItem *indexItem = new QTableWidgetItem(QString::number(i));
+      QTableWidgetItem *indexItem = new QTableWidgetItem;
+      if (i < static_cast<int>(std::size(kActionInfos))) {
+        const ActionInfo &info = kActionInfos[i];
+        if (info.type == ActionType::Text) {
+          indexItem->setText(QString::fromLatin1(info.text));
+        } else if (info.type == ActionType::Skill) {
+          QPixmap pm = getIconForSkillId(info.skillId);
+          if (!pm.isNull()) indexItem->setData(Qt::DecorationRole, pm.scaled(24, 24));
+        } else if (info.type == ActionType::Item) {
+          QPixmap pm = getIconForItemId(info.itemId);
+          if (!pm.isNull()) indexItem->setData(Qt::DecorationRole, pm.scaled(24, 24));
+        }
+      }
       qValuesTable_->setItem(i, 0, indexItem);
       QProgressBar *bar = new QProgressBar;
       bar->setRange(0, 100);
       qValuesTable_->setCellWidget(i, 1, bar);
-      qValuesTable_->setRowHeight(i, 18);
+      qValuesTable_->setRowHeight(i, 24);
       qValueBars_.append(bar);
+    }
+  } else {
+    for (int i = 0; i < qValues.size(); ++i) {
+      QTableWidgetItem *item = qValuesTable_->item(i, 0);
+      if (!item) {
+        item = new QTableWidgetItem;
+        qValuesTable_->setItem(i, 0, item);
+      }
+      if (i < static_cast<int>(std::size(kActionInfos))) {
+        const ActionInfo &info = kActionInfos[i];
+        item->setData(Qt::DecorationRole, QVariant());
+        item->setText(QString());
+        if (info.type == ActionType::Text) {
+          item->setText(QString::fromLatin1(info.text));
+        } else if (info.type == ActionType::Skill) {
+          QPixmap pm = getIconForSkillId(info.skillId);
+          if (!pm.isNull()) item->setData(Qt::DecorationRole, pm.scaled(24,24));
+        } else if (info.type == ActionType::Item) {
+          QPixmap pm = getIconForItemId(info.itemId);
+          if (!pm.isNull()) item->setData(Qt::DecorationRole, pm.scaled(24,24));
+        }
+      }
+      qValuesTable_->setRowHeight(i, 24);
     }
   }
 
@@ -301,6 +384,27 @@ QPixmap CharacterDetailDialog::getIconForSkillId(
     return pixmap;
   } catch (const std::exception &ex) {
     LOG(WARNING) << "Failed to convert skill icon for id " << skillId << ": "
+                 << ex.what();
+    return QPixmap();
+  }
+}
+
+QPixmap CharacterDetailDialog::getIconForItemId(
+    sro::scalar_types::ReferenceObjectId itemId) {
+  if (itemIconCache_.contains(itemId)) {
+    return itemIconCache_.value(itemId);
+  }
+  const gli::texture2d *texture = gameData_.getItemIcon(itemId);
+  if (texture == nullptr) {
+    return QPixmap();
+  }
+  try {
+    QImage img = texture_to_image::texture2dToQImage(*texture);
+    QPixmap pixmap = QPixmap::fromImage(img);
+    itemIconCache_.insert(itemId, pixmap);
+    return pixmap;
+  } catch (const std::exception &ex) {
+    LOG(WARNING) << "Failed to convert item icon for id " << itemId << ": "
                  << ex.what();
     return QPixmap();
   }

@@ -44,4 +44,13 @@ const ItemData::ItemMap::size_type ItemData::size() const {
   return items_.size();
 }
 
+std::vector<sro::pk2::ref::ItemId> ItemData::getAllItemIds() const {
+  std::vector<sro::pk2::ref::ItemId> ids;
+  ids.reserve(items_.size());
+  for (const auto &kv : items_) {
+    ids.push_back(kv.first);
+  }
+  return ids;
+}
+
 } // namespace sro::pk2
