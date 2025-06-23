@@ -83,13 +83,12 @@ CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
   ui_->setupUi(this);
   setupHpBar(ui_->hpBar);
   setupMpBar(ui_->mpBar);
-  qValuesTable_ = new QTableWidget(this);
+  qValuesTable_ = ui_->qValuesTable;
   qValuesTable_->setColumnCount(2);
   QStringList headers;
   headers << "Action" << "Q-Value";
   qValuesTable_->setHorizontalHeaderLabels(headers);
   qValuesTable_->verticalHeader()->setDefaultSectionSize(24);
-  ui_->verticalLayout->addWidget(qValuesTable_);
   if (sharedCooldownTimer_ == nullptr) {
     sharedCooldownTimer_ = new QTimer(QCoreApplication::instance());
     sharedCooldownTimer_->setInterval(50);
