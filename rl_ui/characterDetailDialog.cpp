@@ -15,6 +15,7 @@
 #include <QHash>
 #include <QDateTime>
 #include <QSet>
+#include <QHeaderView>
 #include <limits>
 
 #include <absl/log/log.h>
