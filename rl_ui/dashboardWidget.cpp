@@ -129,6 +129,11 @@ void DashboardWidget::onSkillCooldowns(QString name, QList<SkillCooldown> cooldo
   emit characterDataUpdated(name, characterData_.value(name));
 }
 
+void DashboardWidget::onQValues(QString name, QVector<float> qValues) {
+  characterData_[name].qValues = qValues;
+  emit characterDataUpdated(name, characterData_.value(name));
+}
+
 void DashboardWidget::clearStatusTable() {
   ui->statusTable->setRowCount(0);
   characterData_.clear();

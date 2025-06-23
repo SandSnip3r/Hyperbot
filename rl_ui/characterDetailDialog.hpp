@@ -9,12 +9,14 @@
 #include <QDialog>
 #include <QList>
 #include <QProgressBar>
+#include <QTableWidget>
 #include <QListWidgetItem>
 #include <QWidget>
 #include <QTimer>
 #include <QHash>
 #include <QPixmap>
 #include <QString>
+#include <QVector>
 
 namespace Ui {
 class CharacterDetailDialog;
@@ -33,6 +35,7 @@ struct CharacterData {
   int maxMp{0};
   QString stateMachine;
   QList<SkillCooldown> skillCooldowns;
+  QVector<float> qValues;
 };
 
 class CharacterDetailDialog : public QDialog {
@@ -75,6 +78,7 @@ private:
   static int activeDialogCount_;
   QHash<sro::scalar_types::ReferenceSkillId, CooldownItem> cooldownItems_;
   QHash<sro::scalar_types::ReferenceSkillId, QPixmap> iconCache_;
+  QTableWidget *qValuesTable_{nullptr};
 
   QPixmap getIconForSkillId(sro::scalar_types::ReferenceSkillId skillId);
   void updateCooldownDisplays();

@@ -830,3 +830,9 @@ void Bot::sendActiveStateMachine() const {
     rlUserInterface_.sendActiveStateMachine(*selfEntity_, currentStateMachineName());
   }
 }
+
+void Bot::sendQValues(const std::vector<float> &qValues) const {
+  if (selfEntity_) {
+    rlUserInterface_.sendQValues(*selfEntity_, qValues);
+  }
+}

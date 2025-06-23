@@ -15,6 +15,7 @@
 #include <QHash>
 #include <QDateTime>
 #include <QSet>
+#include <limits>
 
 #include <absl/log/log.h>
 #include <algorithm>
@@ -33,6 +34,12 @@ CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
   ui_->setupUi(this);
   setupHpBar(ui_->hpBar);
   setupMpBar(ui_->mpBar);
+  qValuesTable_ = new QTableWidget(this);
+  qValuesTable_->setColumnCount(2);
+  QStringList headers;
+  headers << "Action" << "Q-Value";
+  qValuesTable_->setHorizontalHeaderLabels(headers);
+  ui_->verticalLayout->addWidget(qValuesTable_);
   if (sharedCooldownTimer_ == nullptr) {
     sharedCooldownTimer_ = new QTimer(QCoreApplication::instance());
     sharedCooldownTimer_->setInterval(50);
@@ -163,6 +170,38 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
   }
 
   ui_->skillCooldownList->sortItems(Qt::DescendingOrder);
+
+  // Update Q-value table
+  qValuesTable_->clearContents();
+  qValuesTable_->setRowCount(data.qValues.size());
+  float maxVal = -std::numeric_limits<float>::infinity();
+  for (float v : data.qValues) {
+    if (v != -std::numeric_limits<float>::infinity() && v > maxVal) {
+      maxVal = v;
+    }
+  }
+  if (maxVal == -std::numeric_limits<float>::infinity()) {
+    maxVal = 0.0f;
+  }
+  for (int i = 0; i < data.qValues.size(); ++i) {
+    QTableWidgetItem *indexItem = new QTableWidgetItem(QString::number(i));
+    qValuesTable_->setItem(i, 0, indexItem);
+    QProgressBar *bar = new QProgressBar;
+    bar->setRange(0, 100);
+    if (data.qValues[i] == -std::numeric_limits<float>::infinity()) {
+      bar->setValue(0);
+      bar->setFormat("-inf");
+    } else if (maxVal == 0.0f) {
+      bar->setValue(100);
+      bar->setFormat(QString::number(data.qValues[i], 'f', 2));
+    } else {
+      int pct = static_cast<int>((data.qValues[i] / maxVal) * 100.0f);
+      if (pct < 0) pct = 0;
+      bar->setValue(pct);
+      bar->setFormat(QString::number(data.qValues[i], 'f', 2));
+    }
+    qValuesTable_->setCellWidget(i, 1, bar);
+  }
 
   ui_->stateMachineLabel->setText(data.stateMachine);
 }
