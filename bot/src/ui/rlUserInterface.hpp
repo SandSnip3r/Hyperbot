@@ -38,6 +38,7 @@ public:
   void sendCharacterStatus(const entity::Self &self);
   void sendActiveStateMachine(const entity::Self &self, const std::string &stateMachine);
   void sendSkillCooldowns(const entity::Self &self);
+  void sendQValues(const entity::Self &self, const std::vector<float> &qValues);
 private:
   static constexpr std::chrono::milliseconds kHeartbeatInterval{250};
   static constexpr std::chrono::milliseconds kEventQueueInterval{250};

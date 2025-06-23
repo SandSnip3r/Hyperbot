@@ -12,12 +12,15 @@
 #include <QProgressBar>
 #include <QTimer>
 #include <QCoreApplication>
+#include <QHeaderView>
 #include <QHash>
 #include <QDateTime>
 #include <QSet>
 
 #include <absl/log/log.h>
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 
@@ -33,6 +36,12 @@ CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
   ui_->setupUi(this);
   setupHpBar(ui_->hpBar);
   setupMpBar(ui_->mpBar);
+  qValueTable_ = ui_->qValueTable;
+  qValueTable_->setColumnCount(2);
+  QStringList headers;
+  headers << "Action" << "Q-Value";
+  qValueTable_->setHorizontalHeaderLabels(headers);
+  qValueTable_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
   if (sharedCooldownTimer_ == nullptr) {
     sharedCooldownTimer_ = new QTimer(QCoreApplication::instance());
     sharedCooldownTimer_->setInterval(50);
@@ -165,6 +174,47 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
   ui_->skillCooldownList->sortItems(Qt::DescendingOrder);
 
   ui_->stateMachineLabel->setText(data.stateMachine);
+}
+
+void CharacterDetailDialog::updateQValues(const QVector<float> &values) {
+  refreshQValueTable(values);
+}
+
+void CharacterDetailDialog::onQValuesReceived(QString name, QVector<float> values) {
+  if (name == name_) {
+    updateQValues(values);
+  }
+}
+
+void CharacterDetailDialog::refreshQValueTable(const QVector<float> &values) {
+  if (!qValueTable_) {
+    return;
+  }
+  qValueTable_->clearContents();
+  qValueTable_->setRowCount(values.size());
+  float maxValue = -std::numeric_limits<float>::infinity();
+  for (float v : values) {
+    if (v != -std::numeric_limits<float>::infinity() && v > maxValue) {
+      maxValue = v;
+    }
+  }
+  if (!std::isfinite(maxValue)) {
+    maxValue = 1.0f;
+  }
+  for (int i = 0; i < values.size(); ++i) {
+    QTableWidgetItem *indexItem = new QTableWidgetItem(QString::number(i));
+    qValueTable_->setItem(i, 0, indexItem);
+    QProgressBar *bar = new QProgressBar;
+    bar->setRange(0, static_cast<int>(std::ceil(maxValue)));
+    if (values[i] == -std::numeric_limits<float>::infinity()) {
+      bar->setValue(0);
+      bar->setFormat("-inf");
+    } else {
+      bar->setValue(static_cast<int>(values[i]));
+      bar->setFormat(QString::number(values[i], 'f', 2));
+    }
+    qValueTable_->setCellWidget(i, 1, bar);
+  }
 }
 
 void CharacterDetailDialog::onCharacterDataUpdated(QString name,

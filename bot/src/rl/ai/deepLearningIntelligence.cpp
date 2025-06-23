@@ -37,7 +37,11 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
         modelInputView.pastActionStack.push_back(pastObservationsAndActions_[i].second);
       }
 
-      actionIndex = trainingManager_.getJaxInterface().selectAction(modelInputView, canSendPacket);
+      rl::JaxInterface::ActionSelection result = trainingManager_.getJaxInterface().selectAction(modelInputView, canSendPacket);
+      actionIndex = result.actionIndex;
+      if (bot.selfState()) {
+        bot.rlUserInterface().sendQValues(*bot.selfState(), result.qValues);
+      }
       bot.worldState().mutex.lock();
     } else {
       // We cannot send a packet, we'll entirely side-step JAX and immediately return the do-nothing action

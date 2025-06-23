@@ -52,6 +52,7 @@ public:
   const state::EntityTracker& entityTracker() const;
   std::shared_ptr<entity::Self> selfState() const;
   const storage::Storage& inventory() const;
+  ui::RlUserInterface& rlUserInterface() { return rlUserInterface_; }
   SessionId sessionId() const { return sessionId_; }
 protected:
   friend class broker::EventBroker;

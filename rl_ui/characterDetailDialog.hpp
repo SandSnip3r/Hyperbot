@@ -15,6 +15,8 @@
 #include <QHash>
 #include <QPixmap>
 #include <QString>
+#include <QTableWidget>
+#include <QVector>
 
 namespace Ui {
 class CharacterDetailDialog;
@@ -43,9 +45,11 @@ public:
 
   void setCharacterName(const QString &name);
   void updateCharacterData(const CharacterData &data);
+  void updateQValues(const QVector<float> &values);
 
 public slots:
   void onCharacterDataUpdated(QString name, CharacterData data);
+  void onQValuesReceived(QString name, QVector<float> values);
 
 private:
   struct CooldownItem {
@@ -75,9 +79,11 @@ private:
   static int activeDialogCount_;
   QHash<sro::scalar_types::ReferenceSkillId, CooldownItem> cooldownItems_;
   QHash<sro::scalar_types::ReferenceSkillId, QPixmap> iconCache_;
+  QTableWidget *qValueTable_{nullptr};
 
   QPixmap getIconForSkillId(sro::scalar_types::ReferenceSkillId skillId);
   void updateCooldownDisplays();
+  void refreshQValueTable(const QVector<float> &values);
 };
 
 #include <QMetaType>

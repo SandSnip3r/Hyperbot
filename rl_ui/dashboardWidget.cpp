@@ -129,6 +129,16 @@ void DashboardWidget::onSkillCooldowns(QString name, QList<SkillCooldown> cooldo
   emit characterDataUpdated(name, characterData_.value(name));
 }
 
+void DashboardWidget::onQValues(QString name, QVector<float> values) {
+  if (detailDialogs_.contains(name)) {
+    CharacterDetailDialog *dialog = detailDialogs_.value(name);
+    if (dialog) {
+      dialog->updateQValues(values);
+    }
+  }
+  emit qValuesReceived(name, values);
+}
+
 void DashboardWidget::clearStatusTable() {
   ui->statusTable->setRowCount(0);
   characterData_.clear();
@@ -167,5 +177,7 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
   dialog->updateCharacterData(characterData_.value(name));
   connect(this, &DashboardWidget::characterDataUpdated, dialog,
           &CharacterDetailDialog::onCharacterDataUpdated);
+  connect(this, &DashboardWidget::qValuesReceived, dialog,
+          &CharacterDetailDialog::onQValuesReceived);
   dialog->show();
 }
