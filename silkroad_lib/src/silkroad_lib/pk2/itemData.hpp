@@ -5,6 +5,7 @@
 
 #include <functional>
 #include <unordered_map>
+#include <vector>
 
 namespace sro::pk2 {
 
@@ -16,7 +17,8 @@ public:
 	const sro::pk2::ref::Item& getItemById(sro::pk2::ref::ItemId id) const;
 	const sro::pk2::ref::Item& getItemByCodeName128(const std::string &codeName) const;
   sro::pk2::ref::ItemId getItemId(std::function<bool(const sro::pk2::ref::Item&)> predicate) const;
-	const ItemMap::size_type size() const;
+        const ItemMap::size_type size() const;
+  std::vector<sro::pk2::ref::ItemId> getAllItemIds() const;
 private:
 	ItemMap items_;
 };

@@ -55,6 +55,7 @@ public:
   const sro::navmesh::triangulation::NavmeshTriangulation& navmeshTriangulation() const;
   const sro::pk2::RegionInfo& regionInfo() const;
   const gli::texture2d* getSkillIcon(sro::scalar_types::ReferenceSkillId id) const;
+  const gli::texture2d* getItemIcon(sro::scalar_types::ReferenceObjectId id) const;
 
   std::string getSkillName(sro::scalar_types::ReferenceSkillId skillRefId) const;
   std::string getItemName(sro::scalar_types::ReferenceObjectId itemRefId) const;
@@ -79,6 +80,7 @@ private:
   TeleportData teleportData_;
 
   absl::flat_hash_map<sro::pk2::ref::SkillId, gli::texture2d> skillIcons_;
+  absl::flat_hash_map<sro::pk2::ref::ItemId, gli::texture2d> itemIcons_;
 
   std::optional<sro::navmesh::Navmesh> navmesh_;
   std::optional<sro::navmesh::triangulation::NavmeshTriangulation> navmeshTriangulation_;
@@ -106,6 +108,7 @@ private:
   void parseText(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseTextUiSystem(sro::pk2::Pk2ReaderModern &pk2Reader);
   void parseSkillIcons(sro::pk2::Pk2ReaderModern &pk2Reader);
+  void parseItemIcons(sro::pk2::Pk2ReaderModern &pk2Reader);
 };
 
 } // namespace sro::pk2

@@ -88,6 +88,7 @@ void GameData::parseMedia(sro::pk2::Pk2ReaderModern &pk2Reader,
   }
   if (options.parseIcons) {
     parseSkillIcons(pk2Reader);
+    parseItemIcons(pk2Reader);
   }
   VLOG(1) << "Done parsing Media.pk2";
 }
@@ -802,6 +803,14 @@ const gli::texture2d* GameData::getSkillIcon(sro::scalar_types::ReferenceSkillId
   return &it->second;
 }
 
+const gli::texture2d* GameData::getItemIcon(sro::scalar_types::ReferenceObjectId id) const {
+  auto it = itemIcons_.find(id);
+  if (it == itemIcons_.end()) {
+    return nullptr;
+  }
+  return &it->second;
+}
+
 void GameData::parseSkillIcons(sro::pk2::Pk2ReaderModern &pk2Reader) {
   VLOG(2) << "Parsing skill icons";
   for (sro::pk2::ref::SkillId id : skillData_.getAllSkillIds()) {
@@ -830,6 +839,33 @@ void GameData::parseSkillIcons(sro::pk2::Pk2ReaderModern &pk2Reader) {
     }
   }
   VLOG(2) << "  Cached " << skillIcons_.size() << " skill icon(s)";
+}
+
+void GameData::parseItemIcons(sro::pk2::Pk2ReaderModern &pk2Reader) {
+  VLOG(2) << "Parsing item icons";
+  for (sro::pk2::ref::ItemId id : itemData_.getAllItemIds()) {
+    const sro::pk2::ref::Item &item = itemData_.getItemById(id);
+    if (item.assocFileIcon128.empty() || item.assocFileIcon128 == "xxx") {
+      continue;
+    }
+    const std::string path = "icon\\" + item.assocFileIcon128;
+    if (!pk2Reader.hasEntry(path)) {
+      continue;
+    }
+    try {
+      sro::pk2::PK2Entry entry = pk2Reader.getEntry(path);
+      std::vector<uint8_t> data = pk2Reader.getEntryData(entry);
+      constexpr int kJoymaxHeaderSize = 20;
+      const char *buffer = reinterpret_cast<const char *>(data.data() + kJoymaxHeaderSize);
+      gli::texture2d texture(gli::load_dds(buffer, data.size() - kJoymaxHeaderSize));
+      if (texture.size() != 0) {
+        itemIcons_.emplace(id, std::move(texture));
+      }
+    } catch (const std::exception &ex) {
+      LOG(WARNING) << "Failed to load icon for item id " << id << ": " << ex.what();
+    }
+  }
+  VLOG(2) << "  Cached " << itemIcons_.size() << " item icon(s)";
 }
 
 } // namespace sro::pk2
