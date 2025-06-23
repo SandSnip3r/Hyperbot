@@ -10,6 +10,9 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QProgressBar>
+#include <QTableWidget>
+#include <QAbstractItemView>
+#include <QHeaderView>
 #include <QTimer>
 #include <QCoreApplication>
 #include <QHash>
@@ -33,6 +36,10 @@ CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
   ui_->setupUi(this);
   setupHpBar(ui_->hpBar);
   setupMpBar(ui_->mpBar);
+  ui_->qValuesTable->horizontalHeader()->setStretchLastSection(true);
+  ui_->qValuesTable->verticalHeader()->setVisible(false);
+  ui_->qValuesTable->setSelectionMode(QAbstractItemView::NoSelection);
+  ui_->qValuesTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
   if (sharedCooldownTimer_ == nullptr) {
     sharedCooldownTimer_ = new QTimer(QCoreApplication::instance());
     sharedCooldownTimer_->setInterval(50);
@@ -165,6 +172,29 @@ void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
   ui_->skillCooldownList->sortItems(Qt::DescendingOrder);
 
   ui_->stateMachineLabel->setText(data.stateMachine);
+
+  // Update Q-values table
+  QTableWidget *table = ui_->qValuesTable;
+  table->setRowCount(data.qValues.size());
+  float maxValue = 0.0f;
+  for (float v : data.qValues) {
+    if (v > maxValue) {
+      maxValue = v;
+    }
+  }
+  for (int i = 0; i < data.qValues.size(); ++i) {
+    QTableWidgetItem *indexItem = new QTableWidgetItem(QString::number(i));
+    table->setItem(i, 0, indexItem);
+    QProgressBar *bar = new QProgressBar;
+    bar->setRange(0, 100);
+    int value = 0;
+    if (maxValue > 0.0f) {
+      value = static_cast<int>((data.qValues[i] / maxValue) * 100.0f);
+    }
+    bar->setValue(value);
+    bar->setFormat(QString::number(data.qValues[i], 'f', 3));
+    table->setCellWidget(i, 1, bar);
+  }
 }
 
 void CharacterDetailDialog::onCharacterDataUpdated(QString name,

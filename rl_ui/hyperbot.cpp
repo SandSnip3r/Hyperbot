@@ -181,6 +181,16 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
           QString::fromStdString(cooldownsMsg.name()), cooldowns);
       break;
     }
+    case rl_ui_messages::BroadcastMessage::BodyCase::kActionValues: {
+      const rl_ui_messages::ActionValues &valuesMsg =
+          broadcastMessage.action_values();
+      QList<float> values;
+      for (float v : valuesMsg.q_values()) {
+        values.append(v);
+      }
+      emit actionValuesReceived(QString::fromStdString(valuesMsg.name()), values);
+      break;
+    }
     default: {
       LOG(WARNING) << "Received unexpected broadcast message.";
       break;

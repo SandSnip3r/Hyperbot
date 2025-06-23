@@ -50,9 +50,29 @@
        <property name="text">
         <string>State Machine</string>
        </property>
-     <property name="wordWrap">
+    <property name="wordWrap">
       <bool>true</bool>
      </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="qValuesTable">
+     <property name="columnCount">
+      <number>2</number>
+     </property>
+     <property name="rowCount">
+      <number>0</number>
+     </property>
+     <column>
+      <property name="text">
+       <string>Action</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Q-Value</string>
+      </property>
+     </column>
     </widget>
    </item>
   </layout>

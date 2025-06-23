@@ -24,6 +24,7 @@ public slots:
                                  int currentMp, int maxMp);
   void onActiveStateMachine(QString name, QString stateMachine);
   void onSkillCooldowns(QString name, QList<SkillCooldown> cooldowns);
+  void onActionValues(QString name, QList<float> qValues);
   void clearStatusTable();
   void onHyperbotConnected();
 
