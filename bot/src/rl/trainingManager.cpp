@@ -14,6 +14,7 @@
 #include <silkroad_lib/position_math.hpp>
 
 #include <absl/strings/str_join.h>
+#include <fstream>
 namespace rl {
 
 TrainingManager::TrainingManager(const sro::pk2::GameData &gameData,
@@ -206,8 +207,12 @@ void TrainingManager::onUpdate(const event::Event *event) {
       throw std::runtime_error("Received kRlUiLoadCheckpoint event but failed to cast to event::RlUiLoadCheckpoint");
     }
     LOG(INFO) << "Received load checkpoint request for " << loadCheckpointEvent->checkpointName;
-    const CheckpointValues checkpointValues = checkpointManager_.loadCheckpoint(loadCheckpointEvent->checkpointName, jaxInterface_);
+    const CheckpointValues checkpointValues = checkpointManager_.loadCheckpoint(loadCheckpointEvent->checkpointName);
+    jaxInterface_.loadCheckpoint(checkpointValues.modelPath,
+                                 checkpointValues.targetModelPath,
+                                 checkpointValues.optimizerPath);
     trainStepCount_ = checkpointValues.stepCount;
+    loadReplayBufferAndStorage(checkpointValues.replayBufferPath, checkpointValues.observationStoragePath);
     LOG(INFO) << "Done loading";
     newCheckpointLoaded_ = true;
   } else if (event->eventCode == event::EventCode::kRlUiDeleteCheckpoints) {
@@ -536,7 +541,9 @@ void TrainingManager::saveCheckpoint(const std::string &checkpointName, bool ove
     LOG(INFO) << "  Checkpoint does not yet exist";
   }
 
-  checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, trainStepCount_, overwrite);
+  CheckpointValues paths = checkpointManager_.saveCheckpoint(checkpointName, trainStepCount_, overwrite);
+  jaxInterface_.saveCheckpoint(paths.modelPath, paths.targetModelPath, paths.optimizerPath);
+  saveReplayBufferAndStorage(paths.replayBufferPath, paths.observationStoragePath);
 }
 
 model_inputs::BatchedTrainingInput TrainingManager::buildModelInputsFromReplayBufferSamples(const std::vector<ReplayBufferType::SampleResult> &samples) const {
@@ -623,6 +630,85 @@ model_inputs::ModelInputView TrainingManager::buildModelInputUpToObservation(Obs
     }
   }
   return modelInput;
+}
+
+void TrainingManager::saveReplayBufferAndStorage(const std::string &replayBufferPath, const std::string &observationStoragePath) const {
+  std::unique_lock lock(replayBufferAndStorageMutex_);
+  {
+    std::ofstream obsOut(observationStoragePath, std::ios::binary);
+    if (!obsOut) {
+      throw std::runtime_error("Failed to open observation storage file for writing");
+    }
+    observationAndActionStorage_.saveToStream(obsOut);
+  }
+  {
+    std::ofstream rbOut(replayBufferPath, std::ios::binary);
+    if (!rbOut) {
+      throw std::runtime_error("Failed to open replay buffer file for writing");
+    }
+    replayBuffer_.saveToStream(rbOut);
+    size_t mapSize = observationIdToTransitionIdMap_.size();
+    rbOut.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
+    for (const auto &p : observationIdToTransitionIdMap_) {
+      rbOut.write(reinterpret_cast<const char*>(&p.first), sizeof(p.first));
+      rbOut.write(reinterpret_cast<const char*>(&p.second), sizeof(p.second));
+    }
+    mapSize = transitionIdToObservationIdMap_.size();
+    rbOut.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
+    for (const auto &p : transitionIdToObservationIdMap_) {
+      rbOut.write(reinterpret_cast<const char*>(&p.first), sizeof(p.first));
+      rbOut.write(reinterpret_cast<const char*>(&p.second), sizeof(p.second));
+    }
+    mapSize = deletedTransitionIds_.size();
+    rbOut.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
+    for (const auto &id : deletedTransitionIds_) {
+      rbOut.write(reinterpret_cast<const char*>(&id), sizeof(id));
+    }
+  }
+}
+
+void TrainingManager::loadReplayBufferAndStorage(const std::string &replayBufferPath, const std::string &observationStoragePath) {
+  std::unique_lock lock(replayBufferAndStorageMutex_);
+  {
+    std::ifstream obsIn(observationStoragePath, std::ios::binary);
+    if (!obsIn) {
+      throw std::runtime_error("Failed to open observation storage file for reading");
+    }
+    observationAndActionStorage_.loadFromStream(obsIn);
+  }
+  {
+    std::ifstream rbIn(replayBufferPath, std::ios::binary);
+    if (!rbIn) {
+      throw std::runtime_error("Failed to open replay buffer file for reading");
+    }
+    replayBuffer_.loadFromStream(rbIn);
+    size_t mapSize;
+    rbIn.read(reinterpret_cast<char*>(&mapSize), sizeof(mapSize));
+    observationIdToTransitionIdMap_.clear();
+    for (size_t i=0;i<mapSize;++i) {
+      ObservationAndActionStorage::Id obsId;
+      ReplayBufferType::TransitionId transId;
+      rbIn.read(reinterpret_cast<char*>(&obsId), sizeof(obsId));
+      rbIn.read(reinterpret_cast<char*>(&transId), sizeof(transId));
+      observationIdToTransitionIdMap_[obsId] = transId;
+    }
+    rbIn.read(reinterpret_cast<char*>(&mapSize), sizeof(mapSize));
+    transitionIdToObservationIdMap_.clear();
+    for (size_t i=0;i<mapSize;++i) {
+      ReplayBufferType::TransitionId transId;
+      ObservationAndActionStorage::Id obsId;
+      rbIn.read(reinterpret_cast<char*>(&transId), sizeof(transId));
+      rbIn.read(reinterpret_cast<char*>(&obsId), sizeof(obsId));
+      transitionIdToObservationIdMap_[transId] = obsId;
+    }
+    rbIn.read(reinterpret_cast<char*>(&mapSize), sizeof(mapSize));
+    deletedTransitionIds_.clear();
+    for (size_t i=0;i<mapSize;++i) {
+      ReplayBufferType::TransitionId tid;
+      rbIn.read(reinterpret_cast<char*>(&tid), sizeof(tid));
+      deletedTransitionIds_.insert(tid);
+    }
+  }
 }
 
 void TrainingManager::precompileModels() {

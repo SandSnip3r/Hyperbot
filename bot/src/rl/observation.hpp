@@ -9,6 +9,8 @@
 #include <chrono>
 #include <cstdint>
 #include <string>
+#include <ostream>
+#include <istream>
 
 class Bot;
 
@@ -23,6 +25,9 @@ public:
   Observation() = default;
   Observation(const Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId);
   std::string toString() const;
+
+  void saveToStream(std::ostream &out) const;
+  static Observation loadFromStream(std::istream &in);
 // private:
   std::chrono::steady_clock::time_point timestamp_;
   event::EventCode eventCode_;

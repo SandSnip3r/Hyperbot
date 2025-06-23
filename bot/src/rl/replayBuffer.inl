@@ -245,3 +245,77 @@ template<typename TransitionType>
 float ReplayBuffer<TransitionType>::getTotalPriority() const {
   return sumTree_[0];
 }
+
+template<typename T>
+static void writeBinary(std::ostream &out, const T &value) {
+  out.write(reinterpret_cast<const char *>(&value), sizeof(T));
+}
+
+template<typename T>
+static void readBinary(std::istream &in, T &value) {
+  in.read(reinterpret_cast<char *>(&value), sizeof(T));
+}
+
+template<typename TransitionType>
+void ReplayBuffer<TransitionType>::saveToStream(std::ostream &out) const {
+  std::unique_lock lock{replayBufferMutex_};
+  writeBinary(out, capacity_);
+  writeBinary(out, alpha_);
+  writeBinary(out, epsilon_);
+  size_t treeSize = sumTree_.size();
+  writeBinary(out, treeSize);
+  for (float v : sumTree_) {
+    writeBinary(out, v);
+  }
+  bool hasNext = nextLeafIndex_.has_value();
+  writeBinary(out, hasNext);
+  if (hasNext) {
+    writeBinary(out, *nextLeafIndex_);
+  }
+  size_t queueSize = nextLeafIndices_.size();
+  writeBinary(out, queueSize);
+  for (LeafIndexType idx : nextLeafIndices_) {
+    writeBinary(out, idx);
+  }
+  writeBinary(out, currentBufferSize_);
+  writeBinary(out, maxPriority_);
+}
+
+template<typename TransitionType>
+void ReplayBuffer<TransitionType>::loadFromStream(std::istream &in) {
+  std::unique_lock lock{replayBufferMutex_};
+  size_t capacity;
+  float alpha;
+  float epsilon;
+  readBinary(in, capacity);
+  readBinary(in, alpha);
+  readBinary(in, epsilon);
+  if (capacity != capacity_ || std::abs(alpha - alpha_) > 1e-6f || std::abs(epsilon - epsilon_) > 1e-6f) {
+    throw std::runtime_error("ReplayBuffer configuration mismatch during load");
+  }
+  size_t treeSize;
+  readBinary(in, treeSize);
+  sumTree_.resize(treeSize);
+  for (size_t i = 0; i < treeSize; ++i) {
+    readBinary(in, sumTree_[i]);
+  }
+  bool hasNext;
+  readBinary(in, hasNext);
+  if (hasNext) {
+    LeafIndexType val;
+    readBinary(in, val);
+    nextLeafIndex_ = val;
+  } else {
+    nextLeafIndex_.reset();
+  }
+  size_t queueSize;
+  readBinary(in, queueSize);
+  nextLeafIndices_.clear();
+  for (size_t i = 0; i < queueSize; ++i) {
+    LeafIndexType idx;
+    readBinary(in, idx);
+    nextLeafIndices_.push_back(idx);
+  }
+  readBinary(in, currentBufferSize_);
+  readBinary(in, maxPriority_);
+}

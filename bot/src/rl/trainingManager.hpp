@@ -157,6 +157,8 @@ private:
 
   float calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const;
   void saveCheckpoint(const std::string &checkpointName, bool overwrite);
+  void saveReplayBufferAndStorage(const std::string &replayBufferPath, const std::string &observationStoragePath) const;
+  void loadReplayBufferAndStorage(const std::string &replayBufferPath, const std::string &observationStoragePath);
 
   model_inputs::BatchedTrainingInput buildModelInputsFromReplayBufferSamples(const std::vector<ReplayBufferType::SampleResult> &samples) const;
   model_inputs::ModelInputView buildModelInputUpToObservation(ObservationAndActionStorage::Id currentObservationId, model_inputs::BatchedTrainingInput &batchedTrainingInput) const;

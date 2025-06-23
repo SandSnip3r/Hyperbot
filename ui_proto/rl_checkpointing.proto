@@ -71,6 +71,8 @@ message Checkpoint {
   string target_model_checkpoint_path = 3;
   string optimizer_checkpoint_path = 4;
   int32 step_count = 5;
+  string replay_buffer_path = 6;
+  string observation_storage_path = 7;
 }
 
 message CheckpointRegistry {

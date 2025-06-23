@@ -136,4 +136,114 @@ size_t ObservationAndActionStorage::size() const {
   return totalSize;
 }
 
+template<typename T>
+static void writeBinary(std::ostream &out, const T &value) {
+  out.write(reinterpret_cast<const char *>(&value), sizeof(T));
+}
+
+template<typename T>
+static void readBinary(std::istream &in, T &value) {
+  in.read(reinterpret_cast<char *>(&value), sizeof(T));
+}
+
+void ObservationAndActionStorage::saveToStream(std::ostream &out) const {
+  std::unique_lock lock{mutex_};
+  writeBinary(out, capacity_);
+  writeBinary(out, nextId_);
+  size_t pvpCount = buffer_.size();
+  writeBinary(out, pvpCount);
+  for (const auto &[pvpId, intelligenceMap] : buffer_) {
+    writeBinary(out, pvpId);
+    size_t intCount = intelligenceMap.size();
+    writeBinary(out, intCount);
+    for (const auto &[name, deque] : intelligenceMap) {
+      uint32_t nameLen = name.size();
+      writeBinary(out, nameLen);
+      out.write(name.data(), nameLen);
+      size_t obsCount = deque.size();
+      writeBinary(out, obsCount);
+      for (size_t i = 0; i < deque.size(); ++i) {
+        BufferIndices idx(pvpId, name, i);
+        Id id = indexToIdMap_.at(idx);
+        writeBinary(out, id);
+        deque[i].observation.saveToStream(out);
+        bool hasAct = deque[i].actionIndex.has_value();
+        writeBinary(out, hasAct);
+        if (hasAct) {
+          int32_t act = deque[i].actionIndex.value();
+          writeBinary(out, act);
+        }
+      }
+    }
+  }
+  size_t dequeSize = pvpIdAndIntelligenceNameDeque_.size();
+  writeBinary(out, dequeSize);
+  for (const auto &[pvpId, name] : pvpIdAndIntelligenceNameDeque_) {
+    writeBinary(out, pvpId);
+    uint32_t nameLen = name.size();
+    writeBinary(out, nameLen);
+    out.write(name.data(), nameLen);
+  }
+}
+
+void ObservationAndActionStorage::loadFromStream(std::istream &in) {
+  std::unique_lock lock{mutex_};
+  size_t capacity;
+  readBinary(in, capacity);
+  if (capacity != capacity_) {
+    throw std::runtime_error("ObservationAndActionStorage capacity mismatch");
+  }
+  readBinary(in, nextId_);
+  buffer_.clear();
+  idToIndexMap_.clear();
+  indexToIdMap_.clear();
+  size_t pvpCount;
+  readBinary(in, pvpCount);
+  for (size_t p = 0; p < pvpCount; ++p) {
+    common::PvpDescriptor::PvpId pvpId;
+    readBinary(in, pvpId);
+    size_t intCount;
+    readBinary(in, intCount);
+    for (size_t j = 0; j < intCount; ++j) {
+      uint32_t nameLen;
+      readBinary(in, nameLen);
+      std::string name(nameLen, '\0');
+      in.read(name.data(), nameLen);
+      size_t obsCount;
+      readBinary(in, obsCount);
+      std::deque<ObservationAndActionType> &dq = buffer_[pvpId][name];
+      dq.resize(obsCount);
+      for (size_t i = 0; i < obsCount; ++i) {
+        Id id;
+        readBinary(in, id);
+        dq[i].observation = Observation::loadFromStream(in);
+        bool hasAct;
+        readBinary(in, hasAct);
+        if (hasAct) {
+          int32_t act;
+          readBinary(in, act);
+          dq[i].actionIndex = act;
+        } else {
+          dq[i].actionIndex.reset();
+        }
+        BufferIndices idx(pvpId, name, i);
+        idToIndexMap_[id] = idx;
+        indexToIdMap_[idx] = id;
+      }
+    }
+  }
+  pvpIdAndIntelligenceNameDeque_.clear();
+  size_t dequeSize;
+  readBinary(in, dequeSize);
+  for (size_t i = 0; i < dequeSize; ++i) {
+    common::PvpDescriptor::PvpId pvpId;
+    readBinary(in, pvpId);
+    uint32_t nameLen;
+    readBinary(in, nameLen);
+    std::string name(nameLen, '\0');
+    in.read(name.data(), nameLen);
+    pvpIdAndIntelligenceNameDeque_.emplace_back(pvpId, name);
+  }
+}
+
 } // namespace rl

@@ -79,13 +79,9 @@ CheckpointManager::CheckpointManager(ui::RlUserInterface &rlUserInterface) : rlU
   }
 }
 
-CheckpointManager::~CheckpointManager() {
-  if (checkpointingThread_.joinable()) {
-    checkpointingThread_.join();
-  }
-}
+CheckpointManager::~CheckpointManager() = default;
 
-void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, int stepCount, bool overwrite) {
+CheckpointValues CheckpointManager::saveCheckpoint(const std::string &checkpointName, int stepCount, bool overwrite) {
   const bool checkpointAlreadyExists = checkpointExists(checkpointName);
   if (!overwrite && checkpointAlreadyExists) {
     throw std::runtime_error("Trying to create a checkpoint which already exists");
@@ -104,6 +100,8 @@ void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::Ja
   const std::string modelCheckpointPath = fullCheckpointPath + "_model";
   const std::string targetModelCheckpointPath = fullCheckpointPath + "_target_model";
   const std::string optimizerCheckpointPath = fullCheckpointPath + "_optimizer_state";
+  const std::string replayBufferPath = fullCheckpointPath + "_replay_buffer";
+  const std::string observationStoragePath = fullCheckpointPath + "_observation_storage";
   if (!checkpointAlreadyExists) {
     std::unique_lock lock(registryMutex_);
     rl_checkpointing::Checkpoint *newCheckpointProto = checkpointRegistry_.add_checkpoints();
@@ -111,6 +109,8 @@ void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::Ja
     newCheckpointProto->set_model_checkpoint_path(modelCheckpointPath);
     newCheckpointProto->set_target_model_checkpoint_path(targetModelCheckpointPath);
     newCheckpointProto->set_optimizer_checkpoint_path(optimizerCheckpointPath);
+    newCheckpointProto->set_replay_buffer_path(replayBufferPath);
+    newCheckpointProto->set_observation_storage_path(observationStoragePath);
     newCheckpointProto->set_step_count(stepCount);
     saveCurrentRegistryNoLock();
   } else {
@@ -119,23 +119,23 @@ void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::Ja
     for (rl_checkpointing::Checkpoint &checkpoint : *checkpointRegistry_.mutable_checkpoints()) {
       if (checkpoint.checkpoint_name() == checkpointName) {
         checkpoint.set_step_count(stepCount);
+        checkpoint.set_replay_buffer_path(replayBufferPath);
+        checkpoint.set_observation_storage_path(observationStoragePath);
         break;
       }
     }
     saveCurrentRegistryNoLock();
   }
-  if (checkpointingThread_.joinable()) {
-    VLOG(1) << "Checkpointing thread is already running. Waiting for it to finish.";
-    checkpointingThread_.join();
-  }
-  checkpointingThread_ = std::thread([this, checkpointName, modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath, &jaxInterface]() {
-    // TODO: This class should entirely be run on another thread. Any request should get queued to that thread.
-    tracy::SetThreadName("CheckpointManager");
-    rlUserInterface_.sendSavingCheckpoint();
-    jaxInterface.saveCheckpoint(modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath);
-    rlUserInterface_.sendCheckpointList(getCheckpointNames());
-    LOG(INFO) << "Saved checkpoint \"" << checkpointName << "\"";
-  });
+  rlUserInterface_.sendSavingCheckpoint();
+
+  CheckpointValues result;
+  result.stepCount = stepCount;
+  result.modelPath = modelCheckpointPath;
+  result.targetModelPath = targetModelCheckpointPath;
+  result.optimizerPath = optimizerCheckpointPath;
+  result.replayBufferPath = replayBufferPath;
+  result.observationStoragePath = observationStoragePath;
+  return result;
 }
 
 bool CheckpointManager::checkpointExists(const std::string &checkpointName) const {
@@ -157,17 +157,18 @@ std::vector<std::string> CheckpointManager::getCheckpointNames() const {
   return checkpointNames;
 }
 
-CheckpointValues CheckpointManager::loadCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface) {
+CheckpointValues CheckpointManager::loadCheckpoint(const std::string &checkpointName) {
   std::unique_lock lock(registryMutex_);
   for (const rl_checkpointing::Checkpoint &checkpoint : checkpointRegistry_.checkpoints()) {
     if (checkpoint.checkpoint_name() == checkpointName) {
       CheckpointValues result;
-      const std::string modelCheckpointPath = checkpoint.model_checkpoint_path();
-      const std::string targetModelCheckpointPath = checkpoint.target_model_checkpoint_path();
-      const std::string optimizerCheckpointPath = checkpoint.optimizer_checkpoint_path();
-      LOG(INFO) << "Loading checkpoint \"" << checkpointName << "\" from paths \"" << modelCheckpointPath << "\", \"" << targetModelCheckpointPath << "\", and \"" << optimizerCheckpointPath << "\"";
-      jaxInterface.loadCheckpoint(modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath);
+      result.modelPath = checkpoint.model_checkpoint_path();
+      result.targetModelPath = checkpoint.target_model_checkpoint_path();
+      result.optimizerPath = checkpoint.optimizer_checkpoint_path();
+      result.replayBufferPath = checkpoint.replay_buffer_path();
+      result.observationStoragePath = checkpoint.observation_storage_path();
       result.stepCount = checkpoint.step_count();
+      LOG(INFO) << "Loading checkpoint \"" << checkpointName << "\"";
       // Notify the UI that a checkpoint has been loaded
       rlUserInterface_.sendCheckpointLoaded(checkpointName);
       return result;

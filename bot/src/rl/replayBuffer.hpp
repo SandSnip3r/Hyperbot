@@ -9,6 +9,7 @@
 #include <optional>
 #include <random>
 #include <stdexcept>
+#include <cmath>
 
 namespace rl {
 
@@ -49,6 +50,10 @@ public:
 
   size_t size() const;
   size_t capacity() const { return capacity_; }
+
+  // Serialization helpers
+  void saveToStream(std::ostream &out) const;
+  void loadFromStream(std::istream &in);
 
 private:
   // --- Configuration ---
