@@ -18,6 +18,8 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <ostream>
+#include <istream>
 
 namespace rl {
 
@@ -44,6 +46,9 @@ public:
   // Throws an exception if there is no previous observation.
   Id getPreviousId(Id id) const;
   Id getNextId(Id id) const;
+
+  void saveToStream(std::ostream &out) const;
+  void loadFromStream(std::istream &in);
 
 private:
   const size_t capacity_;

@@ -512,3 +512,23 @@ gtest_discover_tests(navmesh_triangulation_test
 )
 gtest_discover_tests(replay_buffer_test
 )
+
+add_executable(
+  observation_serialization_test
+  test/observationSerializationTest.cpp
+  src/rl/observation.cpp
+)
+
+target_link_libraries(
+  observation_serialization_test
+  absl::log
+  GTest::Main
+)
+
+target_include_directories(observation_serialization_test PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/src"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/src"
+)
+
+gtest_discover_tests(observation_serialization_test
+)

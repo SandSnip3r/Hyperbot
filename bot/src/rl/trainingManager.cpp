@@ -14,6 +14,7 @@
 #include <silkroad_lib/position_math.hpp>
 
 #include <absl/strings/str_join.h>
+#include <fstream>
 namespace rl {
 
 TrainingManager::TrainingManager(const sro::pk2::GameData &gameData,
@@ -206,7 +207,11 @@ void TrainingManager::onUpdate(const event::Event *event) {
       throw std::runtime_error("Received kRlUiLoadCheckpoint event but failed to cast to event::RlUiLoadCheckpoint");
     }
     LOG(INFO) << "Received load checkpoint request for " << loadCheckpointEvent->checkpointName;
-    const CheckpointValues checkpointValues = checkpointManager_.loadCheckpoint(loadCheckpointEvent->checkpointName, jaxInterface_);
+    const CheckpointValues checkpointValues = checkpointManager_.loadCheckpoint(loadCheckpointEvent->checkpointName,
+                                                                              jaxInterface_,
+                                                                              replayBuffer_, observationAndActionStorage_,
+                                                                              observationIdToTransitionIdMap_, transitionIdToObservationIdMap_,
+                                                                              deletedTransitionIds_, replayBufferAndStorageMutex_);
     trainStepCount_ = checkpointValues.stepCount;
     LOG(INFO) << "Done loading";
     newCheckpointLoaded_ = true;
@@ -536,7 +541,10 @@ void TrainingManager::saveCheckpoint(const std::string &checkpointName, bool ove
     LOG(INFO) << "  Checkpoint does not yet exist";
   }
 
-  checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, trainStepCount_, overwrite);
+  checkpointManager_.saveCheckpoint(checkpointName, jaxInterface_, trainStepCount_,
+                                    observationAndActionStorage_, replayBuffer_,
+                                    observationIdToTransitionIdMap_, transitionIdToObservationIdMap_,
+                                    deletedTransitionIds_, replayBufferAndStorageMutex_, overwrite);
 }
 
 model_inputs::BatchedTrainingInput TrainingManager::buildModelInputsFromReplayBufferSamples(const std::vector<ReplayBufferType::SampleResult> &samples) const {
@@ -624,6 +632,7 @@ model_inputs::ModelInputView TrainingManager::buildModelInputUpToObservation(Obs
   }
   return modelInput;
 }
+
 
 void TrainingManager::precompileModels() {
   // Create some spoof inputs so that we can invoke the model and trigger compilation.
