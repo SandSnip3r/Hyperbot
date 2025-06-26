@@ -72,13 +72,6 @@ void TrainingManager::train() {
   JaxInterface::Optimizer optimizer = jaxInterface_.getOptimizer();
   JaxInterface::Model targetModel = jaxInterface_.getTargetModel();
   while (runTraining_) {
-    if (newCheckpointLoaded_) {
-      LOG(INFO) << "A checkpoint was loaded, reloading JAX model and optimizer in training loop";
-      model = jaxInterface_.getModel();
-      optimizer = jaxInterface_.getOptimizer();
-      targetModel = jaxInterface_.getTargetModel();
-      newCheckpointLoaded_ = false;
-    }
     try {
       std::unique_lock lock(replayBufferAndStorageMutex_);
       if (replayBuffer_.size() < kBatchSize || replayBuffer_.size() < kReplayBufferMinimumBeforeTraining) {
@@ -207,10 +200,13 @@ void TrainingManager::onUpdate(const event::Event *event) {
       throw std::runtime_error("Received kRlUiLoadCheckpoint event but failed to cast to event::RlUiLoadCheckpoint");
     }
     LOG(INFO) << "Received load checkpoint request for " << loadCheckpointEvent->checkpointName;
+    if (runTraining_) {
+      LOG(ERROR) << "Can not load checkpoint while training is running!";
+      return;
+    }
     const CheckpointValues checkpointValues = checkpointManager_.loadCheckpoint(loadCheckpointEvent->checkpointName, jaxInterface_);
     trainStepCount_ = checkpointValues.stepCount;
     LOG(INFO) << "Done loading";
-    newCheckpointLoaded_ = true;
   } else if (event->eventCode == event::EventCode::kRlUiDeleteCheckpoints) {
     const auto *deleteCheckpointsEvent = dynamic_cast<const event::RlUiDeleteCheckpoints*>(event);
     if (deleteCheckpointsEvent == nullptr) {

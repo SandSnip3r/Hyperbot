@@ -110,7 +110,6 @@ private:
   JaxInterface jaxInterface_{kPastObservationStackSize, kGamma, kLearningRate};
   CheckpointManager checkpointManager_{rlUserInterface_};
   std::atomic<int> trainStepCount_{0};
-  std::atomic<bool> newCheckpointLoaded_{false};
 
   // New variables for character pairings and positions
   std::vector<sro::Position> pvpPositions_;
