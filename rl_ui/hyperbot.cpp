@@ -126,11 +126,15 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
     }
     case rl_ui_messages::BroadcastMessage::BodyCase::kCheckpointList: {
       const rl_ui_messages::CheckpointList &checkpointList = broadcastMessage.checkpoint_list();
-      QStringList checkpointListStr;
+      QList<CheckpointInfo> checkpointListInfo;
       for (const rl_ui_messages::Checkpoint &checkpoint : checkpointList.checkpoints()) {
-        checkpointListStr.append(QString::fromStdString(checkpoint.name()));
+        CheckpointInfo info;
+        info.name = QString::fromStdString(checkpoint.name());
+        info.timestampMs = checkpoint.timestamp_ms();
+        info.trainStepCount = checkpoint.train_step_count();
+        checkpointListInfo.append(info);
       }
-      emit checkpointListReceived(checkpointListStr);
+      emit checkpointListReceived(checkpointListInfo);
       break;
     }
     case rl_ui_messages::BroadcastMessage::BodyCase::kCheckpointAlreadyExists: {

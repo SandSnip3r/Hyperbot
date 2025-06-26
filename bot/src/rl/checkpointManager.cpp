@@ -11,6 +11,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include <chrono>
 
 using namespace proto;
 
@@ -75,7 +76,7 @@ CheckpointManager::CheckpointManager(ui::RlUserInterface &rlUserInterface) : rlU
 
   if (registryModified) {
     saveCurrentRegistryNoLock();
-    rlUserInterface_.sendCheckpointList(getCheckpointNames());
+    rlUserInterface_.sendCheckpointList(getCheckpoints());
   }
 }
 
@@ -112,6 +113,9 @@ void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::Ja
     newCheckpointProto->set_target_model_checkpoint_path(targetModelCheckpointPath);
     newCheckpointProto->set_optimizer_checkpoint_path(optimizerCheckpointPath);
     newCheckpointProto->set_step_count(stepCount);
+    const auto now = std::chrono::system_clock::now();
+    newCheckpointProto->set_timestamp_ms(
+        std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count());
     saveCurrentRegistryNoLock();
   } else {
     // Need to update the step count.
@@ -119,6 +123,9 @@ void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::Ja
     for (rl_checkpointing::Checkpoint &checkpoint : *checkpointRegistry_.mutable_checkpoints()) {
       if (checkpoint.checkpoint_name() == checkpointName) {
         checkpoint.set_step_count(stepCount);
+        const auto now = std::chrono::system_clock::now();
+        checkpoint.set_timestamp_ms(
+            std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count());
         break;
       }
     }
@@ -133,7 +140,7 @@ void CheckpointManager::saveCheckpoint(const std::string &checkpointName, rl::Ja
     tracy::SetThreadName("CheckpointManager");
     rlUserInterface_.sendSavingCheckpoint();
     jaxInterface.saveCheckpoint(modelCheckpointPath, targetModelCheckpointPath, optimizerCheckpointPath);
-    rlUserInterface_.sendCheckpointList(getCheckpointNames());
+    rlUserInterface_.sendCheckpointList(getCheckpoints());
     LOG(INFO) << "Saved checkpoint \"" << checkpointName << "\"";
   });
 }
@@ -148,13 +155,14 @@ bool CheckpointManager::checkpointExists(const std::string &checkpointName) cons
   return false;
 }
 
-std::vector<std::string> CheckpointManager::getCheckpointNames() const {
+std::vector<rl_checkpointing::Checkpoint> CheckpointManager::getCheckpoints() const {
   std::unique_lock lock(registryMutex_);
-  std::vector<std::string> checkpointNames;
+  std::vector<rl_checkpointing::Checkpoint> checkpoints;
+  checkpoints.reserve(checkpointRegistry_.checkpoints_size());
   for (const rl_checkpointing::Checkpoint &checkpoint : checkpointRegistry_.checkpoints()) {
-    checkpointNames.push_back(checkpoint.checkpoint_name());
+    checkpoints.push_back(checkpoint);
   }
-  return checkpointNames;
+  return checkpoints;
 }
 
 CheckpointValues CheckpointManager::loadCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface) {
@@ -212,7 +220,7 @@ void CheckpointManager::deleteCheckpoints(const std::vector<std::string> &checkp
     saveCurrentRegistryNoLock();
   }
   LOG(INFO) << "Sending new checkpoint list to UI";
-  rlUserInterface_.sendCheckpointList(getCheckpointNames());
+  rlUserInterface_.sendCheckpointList(getCheckpoints());
   LOG(INFO) << "Sent new checkpoint list to UI";
 }
 

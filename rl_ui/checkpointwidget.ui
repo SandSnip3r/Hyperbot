@@ -49,7 +49,7 @@
        </widget>
       </item>
       <item row="1" column="0" rowspan="3">
-       <widget class="QListView" name="checkpointsListView">
+       <widget class="QTableView" name="checkpointsTableView">
         <property name="selectionMode">
          <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
         </property>

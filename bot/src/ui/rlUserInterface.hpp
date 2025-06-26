@@ -2,6 +2,7 @@
 #define UI_RL_USERINTERFACE_HPP_
 
 #include <ui_proto/rl_ui_messages.pb.h>
+#include <ui_proto/rl_checkpointing.pb.h>
 
 #include <zmq.hpp>
 
@@ -30,7 +31,7 @@ public:
   void initialize();
   void runAsync();
 
-  void sendCheckpointList(const std::vector<std::string> &checkpointList);
+  void sendCheckpointList(const std::vector<proto::rl_checkpointing::Checkpoint> &checkpointList);
   void sendCheckpointAlreadyExists(const std::string &checkpointName);
   void sendSavingCheckpoint();
   void sendCheckpointLoaded(const std::string &checkpointName);

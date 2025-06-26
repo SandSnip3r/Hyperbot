@@ -7,6 +7,7 @@
 #include "session.hpp"
 #include "type_id/categories.hpp"
 #include "ui/rlUserInterface.hpp"
+#include <ui_proto/rl_checkpointing.pb.h>
 
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 
@@ -191,8 +192,8 @@ void TrainingManager::onUpdate(const event::Event *event) {
     // Stop training.
     runTraining_ = false;
   } else if (event->eventCode == event::EventCode::kRlUiRequestCheckpointList) {
-    const std::vector<std::string> checkpointNames = checkpointManager_.getCheckpointNames();
-    rlUserInterface_.sendCheckpointList(checkpointNames);
+    const std::vector<proto::rl_checkpointing::Checkpoint> checkpoints = checkpointManager_.getCheckpoints();
+    rlUserInterface_.sendCheckpointList(checkpoints);
   } else if (event->eventCode == event::EventCode::kRlUiSaveCheckpoint) {
     const auto *saveCheckpointEvent = dynamic_cast<const event::RlUiSaveCheckpoint*>(event);
     if (saveCheckpointEvent == nullptr) {
