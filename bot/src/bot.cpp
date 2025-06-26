@@ -11,6 +11,7 @@
 #include "packet/building/clientAgentInventoryOperationRequest.hpp"
 #include "packet/building/clientAgentInventoryStorageOpenRequest.hpp"
 #include "proto_convert/convert.hpp"
+#include "rl/trainingManager.hpp"
 #include "state/machine/alchemy.hpp"
 #include "state/machine/applyStatPoints.hpp"
 #include "state/machine/autoPotion.hpp"
@@ -21,18 +22,17 @@
 #include "state/machine/login.hpp"
 #include "state/machine/maxMasteryAndSkills.hpp"
 #include "state/machine/pvpManager.hpp"
-#include "ui/rlUserInterface.hpp"
 #include "state/machine/spawnAndUseRepairHammerIfNecessary.hpp"
 #include "state/machine/walking.hpp"
-#include "type_id/categories.hpp"
 #include "storage/storage.hpp"
 #include "storage/item.hpp"
-
-#include <silkroad_lib/pk2/itemData.hpp>
+#include "type_id/categories.hpp"
+#include "ui/rlUserInterface.hpp"
 
 #include "pathfinder.h"
 
 #include <silkroad_lib/game_constants.hpp>
+#include <silkroad_lib/pk2/itemData.hpp>
 #include <silkroad_lib/position_math.hpp>
 
 #include <tracy/Tracy.hpp>
@@ -64,6 +64,7 @@ int countItem(const storage::Storage &inv,
 }
 
 sro::scalar_types::ReferenceObjectId getHpPotionId(const sro::pk2::GameData &gameData) {
+  // TODO: This logic is repeated in rl::TrainingManager.
   return gameData.itemData().getItemId([](const sro::pk2::ref::Item &item) {
     return type_id::categories::kHpPotion.contains(type_id::getTypeId(item)) &&
            item.itemClass == 2;
@@ -71,6 +72,7 @@ sro::scalar_types::ReferenceObjectId getHpPotionId(const sro::pk2::GameData &gam
 }
 
 sro::scalar_types::ReferenceObjectId getMpPotionId(const sro::pk2::GameData &gameData) {
+  // TODO: This logic is repeated in rl::TrainingManager.
   return gameData.itemData().getItemId([](const sro::pk2::ref::Item &item) {
     return type_id::categories::kMpPotion.contains(type_id::getTypeId(item)) &&
            item.itemClass == 2;
