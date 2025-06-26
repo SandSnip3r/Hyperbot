@@ -105,6 +105,12 @@ message CharacterQValues {
   repeated float q_values = 2;
 }
 
+message CharacterItemCount {
+  string name = 1;
+  uint32 item_ref_id = 2;
+  int32 count = 3;
+}
+
 message BroadcastMessage {
   oneof body {
     google.protobuf.Empty heartbeat = 1;
@@ -117,6 +123,7 @@ message BroadcastMessage {
     ActiveStateMachine active_state_machine = 8;
     CharacterSkillCooldowns skill_cooldowns = 9;
     CharacterQValues character_q_values = 10;
+    CharacterItemCount item_count = 11;
   }
 }
 

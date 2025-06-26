@@ -3,6 +3,7 @@
 
 #include "characterDetailDialog.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <QStringList>
 #include <QWidget>
@@ -26,6 +27,8 @@ public slots:
   void onActiveStateMachine(QString name, QString stateMachine);
   void onSkillCooldowns(QString name, QList<SkillCooldown> cooldowns);
   void onQValues(QString name, QVector<float> qValues);
+  void onItemCount(QString name, sro::scalar_types::ReferenceObjectId itemRefId,
+                   int count);
   void clearStatusTable();
   void onHyperbotConnected();
 
@@ -35,6 +38,9 @@ signals:
   void activeStateMachineUpdated(QString name, QString stateMachine);
   void skillCooldownsUpdated(QString name, QList<SkillCooldown> cooldowns);
   void qValuesUpdated(QString name, QVector<float> qValues);
+  void itemCountUpdated(QString name,
+                        sro::scalar_types::ReferenceObjectId itemRefId,
+                        int count);
 
 private:
   Ui::DashboardWidget *ui;

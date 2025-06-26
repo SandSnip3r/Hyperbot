@@ -21,20 +21,34 @@
      </property>
     </widget>
    </item>
-   <item>
-    <widget class="QProgressBar" name="hpBar">
-     <property name="format">
-      <string>0/0</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QProgressBar" name="mpBar">
-     <property name="format">
-      <string>0/0</string>
-     </property>
-    </widget>
-   </item>
+    <item>
+     <layout class="QHBoxLayout" name="hpLayout">
+      <item>
+       <widget class="QLabel" name="hpPotionIcon"/>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="hpBar">
+        <property name="format">
+         <string>0/0</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="mpLayout">
+      <item>
+       <widget class="QLabel" name="mpPotionIcon"/>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="mpBar">
+        <property name="format">
+         <string>0/0</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
    <item>
     <layout class="QHBoxLayout" name="cooldownQValuesLayout">
      <item>

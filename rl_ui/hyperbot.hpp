@@ -5,6 +5,7 @@
 #include "hyperbotSubscriberWorker.hpp"
 
 #include <ui_proto/rl_ui_messages.pb.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <zmq.hpp>
 
@@ -70,6 +71,9 @@ signals:
   void activeStateMachineReceived(QString name, QString stateMachine);
   void skillCooldownsReceived(QString name, QList<SkillCooldown> cooldowns);
   void qValuesReceived(QString name, QVector<float> qValues);
+  void itemCountReceived(QString name,
+                         sro::scalar_types::ReferenceObjectId itemRefId,
+                         int count);
 
 private:
   static constexpr int kHeartbeatIntervalMs = 500;

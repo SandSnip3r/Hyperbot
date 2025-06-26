@@ -52,3 +52,4 @@
 - We can get more pvp throughput if we pair characters which are completely ready to fight. For example, there might be 4 characters who are preparing to pvp: A, B, C, and D. A & B are set to fight each other and C & D also. If A and C are both stuck waiting for a couple minutes due to a long skill cooldown, all 4 are stuck idle. Instead, B and D might be able to fight against each other.
 - Add timestamps to the creation of Events
 - Update pathfinder to have a better include path system
+- Both Bot and TrainingManager specify HP/MP potion IDs, which are used by the agent. This needs to be centralized.

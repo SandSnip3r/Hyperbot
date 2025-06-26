@@ -16,6 +16,7 @@
 #include <QDateTime>
 #include <QSet>
 #include <QHeaderView>
+#include <QPainter>
 #include <limits>
 
 #include <absl/log/log.h>
@@ -81,6 +82,10 @@ CharacterDetailDialog::CharacterDetailDialog(const sro::pk2::GameData &gameData,
                                              QWidget *parent)
     : QDialog(parent), ui_(new Ui::CharacterDetailDialog), gameData_(gameData) {
   ui_->setupUi(this);
+  hpPotionIconLabel_ = ui_->hpPotionIcon;
+  mpPotionIconLabel_ = ui_->mpPotionIcon;
+  updateItemCount(static_cast<sro::scalar_types::ReferenceObjectId>(5), 0);
+  updateItemCount(static_cast<sro::scalar_types::ReferenceObjectId>(12), 0);
   setupHpBar(ui_->hpBar);
   setupMpBar(ui_->mpBar);
   ui_->qValuesTable->setColumnCount(2);
@@ -125,6 +130,36 @@ void CharacterDetailDialog::updateHpMp(int currentHp, int maxHp, int currentMp,
   ui_->mpBar->setRange(0, maxMp);
   ui_->mpBar->setValue(currentMp);
   ui_->mpBar->setFormat(QString("%1/%2").arg(currentMp).arg(maxMp));
+}
+
+void CharacterDetailDialog::updateItemCount(sro::scalar_types::ReferenceObjectId itemRefId, int count) {
+  const int iconSize = 30;
+  const int fontSize = 9;
+
+  QLabel *label = nullptr;
+  if (itemRefId == 5) {
+    label = hpPotionIconLabel_;
+  } else if (itemRefId == 12) {
+    label = mpPotionIconLabel_;
+  } else {
+    return;
+  }
+
+  QPixmap base = getIconForItemId(itemRefId);
+  if (base.isNull()) {
+    label->clear();
+    return;
+  }
+  QPixmap pm = base.scaled(iconSize, iconSize, Qt::KeepAspectRatio,
+                           Qt::SmoothTransformation);
+  QPainter painter(&pm);
+  painter.setPen(Qt::white);
+  QFont font = painter.font();
+  font.setPixelSize(fontSize);
+  painter.setFont(font);
+  painter.drawText(QPoint(2, fontSize), QString::number(count));
+  painter.end();
+  label->setPixmap(pm);
 }
 
 void CharacterDetailDialog::updateStateMachine(const QString &stateMachine) {
@@ -323,6 +358,10 @@ void CharacterDetailDialog::updateQValues(const QVector<float> &qValues) {
 
 void CharacterDetailDialog::updateCharacterData(const CharacterData &data) {
   updateHpMp(data.currentHp, data.maxHp, data.currentMp, data.maxMp);
+  updateItemCount(static_cast<sro::scalar_types::ReferenceObjectId>(5),
+                  data.itemCounts.value(5));
+  updateItemCount(static_cast<sro::scalar_types::ReferenceObjectId>(12),
+                  data.itemCounts.value(12));
   updateSkillCooldowns(data.skillCooldowns);
   updateQValues(data.qValues);
   updateStateMachine(data.stateMachine);
@@ -361,6 +400,14 @@ void CharacterDetailDialog::onQValuesUpdated(QString name,
                                              QVector<float> qValues) {
   if (name == name_) {
     updateQValues(qValues);
+  }
+}
+
+void CharacterDetailDialog::onItemCountUpdated(QString name,
+                                               sro::scalar_types::ReferenceObjectId itemRefId,
+                                               int count) {
+  if (name == name_) {
+    updateItemCount(itemRefId, count);
   }
 }
 

@@ -3,6 +3,7 @@
 
 #include "barStyles.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>
+#include <silkroad_lib/scalar_types.hpp>
 #include <QProgressBar>
 #include <QTableWidgetItem>
 #include <QTableWidget>
@@ -134,6 +135,14 @@ void DashboardWidget::onQValues(QString name, QVector<float> qValues) {
   emit qValuesUpdated(name, qValues);
 }
 
+void DashboardWidget::onItemCount(QString name,
+                                  sro::scalar_types::ReferenceObjectId itemRefId,
+                                  int count) {
+  CharacterData &data = characterData_[name];
+  data.itemCounts[itemRefId] = count;
+  emit itemCountUpdated(name, itemRefId, count);
+}
+
 void DashboardWidget::clearStatusTable() {
   ui->statusTable->setRowCount(0);
   characterData_.clear();
@@ -178,5 +187,7 @@ void DashboardWidget::showCharacterDetail(int row, int column) {
           &CharacterDetailDialog::onSkillCooldownsUpdated);
   connect(this, &DashboardWidget::qValuesUpdated, dialog,
           &CharacterDetailDialog::onQValuesUpdated);
+  connect(this, &DashboardWidget::itemCountUpdated, dialog,
+          &CharacterDetailDialog::onItemCountUpdated);
   dialog->show();
 }
