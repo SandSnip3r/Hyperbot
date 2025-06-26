@@ -58,6 +58,8 @@ message ReplyMessage {
 
 message Checkpoint {
   string name = 1;
+  int64 timestamp_ms = 2;
+  int32 train_step_count = 3;
 }
 
 message CheckpointList {

@@ -8,6 +8,8 @@
 
 #include <absl/log/log.h>
 
+#include <ui_proto/rl_checkpointing.pb.h>
+
 #include <chrono>
 
 using namespace proto;
@@ -64,13 +66,15 @@ void RlUserInterface::runAsync() {
 // ===================================== Send =====================================
 // ================================================================================
 
-void RlUserInterface::sendCheckpointList(const std::vector<std::string> &checkpointList) {
+void RlUserInterface::sendCheckpointList(const std::vector<proto::rl_checkpointing::Checkpoint> &checkpointList) {
   VLOG(1) << "Sending checkpoint list to UI";
   rl_ui_messages::BroadcastMessage msg;
   rl_ui_messages::CheckpointList *checkpointListMsg = msg.mutable_checkpoint_list();
-  for (const std::string &checkpointName : checkpointList) {
+  for (const auto &checkpointProto : checkpointList) {
     rl_ui_messages::Checkpoint *checkpoint = checkpointListMsg->add_checkpoints();
-    checkpoint->set_name(checkpointName);
+    checkpoint->set_name(checkpointProto.checkpoint_name());
+    checkpoint->set_timestamp_ms(checkpointProto.timestamp_ms());
+    checkpoint->set_train_step_count(checkpointProto.step_count());
   }
   broadcastMessage(msg);
 }

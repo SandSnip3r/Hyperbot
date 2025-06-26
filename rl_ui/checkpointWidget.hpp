@@ -4,7 +4,7 @@
 #include "hyperbot.hpp"
 
 #include <QStringList>
-#include <QStringListModel>
+#include <QStandardItemModel>
 #include <QWidget>
 
 namespace Ui {
@@ -20,14 +20,14 @@ public:
 
   void setHyperbot(Hyperbot &hyperbot);
 public slots:
-  void onCheckpointListReceived(QStringList checkpointList);
+  void onCheckpointListReceived(QList<CheckpointInfo> checkpointList);
   void onSaveCheckpointClicked();
   void onDeleteCheckpointClicked();
   void onCheckpointLoaded(QString checkpointName);
 
 private:
   Ui::CheckpointWidget *ui;
-  QStringListModel *checkpointModel_{nullptr};
+  QStandardItemModel *checkpointModel_{nullptr};
   Hyperbot *hyperbot_{nullptr};
 };
 

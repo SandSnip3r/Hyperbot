@@ -10,15 +10,25 @@
 
 #include <QObject>
 #include <QStringList>
+#include <QList>
 #include <QTimer>
 #include <QThread>
 #include <QVector>
+#include <QMetaType>
 #include "characterDetailDialog.hpp"
 
 #include <atomic>
 #include <cstdint>
 #include <string>
 #include <thread>
+
+struct CheckpointInfo {
+  QString name;
+  qint64 timestampMs{0};
+  int trainStepCount{0};
+};
+
+Q_DECLARE_METATYPE(CheckpointInfo)
 
 class Hyperbot : public QObject {
   Q_OBJECT
@@ -50,7 +60,7 @@ signals:
   void disconnected();
 
   // Broadcast messages.
-  void checkpointListReceived(QStringList str);
+  void checkpointListReceived(QList<CheckpointInfo> checkpoints);
   void checkpointAlreadyExists(QString checkpointName);
   void savingCheckpoint();
   void checkpointLoaded(QString checkpointName);

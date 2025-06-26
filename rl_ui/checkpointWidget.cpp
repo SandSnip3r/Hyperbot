@@ -2,7 +2,9 @@
 #include "ui_checkpointwidget.h"
 
 #include <QMessageBox>
-#include <QStringListModel>
+#include <QStandardItemModel>
+#include <QDateTime>
+#include <QHeaderView>
 
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
@@ -13,16 +15,19 @@ CheckpointWidget::CheckpointWidget(QWidget *parent) : QWidget(parent), ui(new Ui
   ui->loadCheckpointButton->setEnabled(false);
 
   // Create an empty model and set it on the view
-  checkpointModel_ = new QStringListModel(this);
-  ui->checkpointsListView->setModel(checkpointModel_);
+  checkpointModel_ = new QStandardItemModel(this);
+  checkpointModel_->setHorizontalHeaderLabels({"Name", "Save Date", "Train Step Count"});
+  ui->checkpointsTableView->setModel(checkpointModel_);
+  ui->checkpointsTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+  ui->checkpointsTableView->horizontalHeader()->setStretchLastSection(true);
 
   // Get the selection model for the list view
-  QItemSelectionModel *selectionModel = ui->checkpointsListView->selectionModel();
+  QItemSelectionModel *selectionModel = ui->checkpointsTableView->selectionModel();
 
   // Connect to the selectionChanged signal to update the button state
   connect(selectionModel, &QItemSelectionModel::selectionChanged, this, [this, selectionModel]() {
     // Check the total number of selected indexes in the list view.
-    int selectedCount = selectionModel->selectedIndexes().size();
+    int selectedCount = selectionModel->selectedRows().size();
     ui->loadCheckpointButton->setEnabled(selectedCount == 1);
     ui->deleteCheckpointButton->setEnabled(selectedCount > 0);
   });
@@ -49,19 +54,28 @@ void CheckpointWidget::setHyperbot(Hyperbot &hyperbot) {
   // Connect the button click to load the selected checkpoint
   connect(ui->loadCheckpointButton, &QPushButton::clicked, this, [this]() {
     // Ensure exactly one item is selected before proceeding
-    QItemSelectionModel *selectionModel = ui->checkpointsListView->selectionModel();
-    QModelIndexList selected = selectionModel->selectedIndexes();
+    QItemSelectionModel *selectionModel = ui->checkpointsTableView->selectionModel();
+    QModelIndexList selected = selectionModel->selectedRows();
     if (selected.size() == 1) {
-      QString selectedCheckpoint = selected.first().data(Qt::DisplayRole).toString();
+      const int row = selected.first().row();
+      QString selectedCheckpoint = checkpointModel_->item(row, 0)->text();
       hyperbot_->loadCheckpoint(selectedCheckpoint);
     }
   });
 }
 
-void CheckpointWidget::onCheckpointListReceived(QStringList list) {
-  VLOG(1) << "Received checkpoint list: " << list.join(", ").toStdString();
-  // Update the model's data instead of creating a new one
-  checkpointModel_->setStringList(list);
+void CheckpointWidget::onCheckpointListReceived(QList<CheckpointInfo> list) {
+  checkpointModel_->removeRows(0, checkpointModel_->rowCount());
+  int row = 0;
+  for (const CheckpointInfo &info : list) {
+    QList<QStandardItem *> items;
+    items.append(new QStandardItem(info.name));
+    QDateTime dt = QDateTime::fromMSecsSinceEpoch(info.timestampMs);
+    items.append(new QStandardItem(dt.toString()));
+    items.append(new QStandardItem(QString::number(info.trainStepCount)));
+    checkpointModel_->appendRow(items);
+    ++row;
+  }
   ui->saveCheckpointButton->setEnabled(true);
 }
 
@@ -71,9 +85,9 @@ void CheckpointWidget::onSaveCheckpointClicked() {
 }
 
 void CheckpointWidget::onDeleteCheckpointClicked() {
-  QModelIndexList selectedIndices = ui->checkpointsListView->selectionModel()->selectedIndexes();
+  QModelIndexList selectedIndices = ui->checkpointsTableView->selectionModel()->selectedRows();
   std::string confirmationString = absl::StrFormat("Are you sure you want to delete checkpoint(s):\n%s", absl::StrJoin(selectedIndices, "\n", [](std::string *out, QModelIndex index) {
-    absl::StrAppend(out, index.data(Qt::DisplayRole).toString().toStdString());
+    absl::StrAppend(out, checkpointModel_->item(index.row(), 0)->text().toStdString());
   }));
   QMessageBox::StandardButton reply;
   reply = QMessageBox::question(
@@ -90,7 +104,7 @@ void CheckpointWidget::onDeleteCheckpointClicked() {
   // User clicked "Yes".
   QStringList checkpointNamesToDelete;
   for (const QModelIndex &index : selectedIndices) {
-    checkpointNamesToDelete.append(index.data(Qt::DisplayRole).toString());
+    checkpointNamesToDelete.append(checkpointModel_->item(index.row(), 0)->text());
   }
   hyperbot_->deleteCheckpoints(checkpointNamesToDelete);
 }

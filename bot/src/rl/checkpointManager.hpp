@@ -26,7 +26,7 @@ public:
   ~CheckpointManager();
   void saveCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface, int stepCount, bool overwrite);
   bool checkpointExists(const std::string &checkpointName) const;
-  std::vector<std::string> getCheckpointNames() const;
+  std::vector<proto::rl_checkpointing::Checkpoint> getCheckpoints() const;
   CheckpointValues loadCheckpoint(const std::string &checkpointName, rl::JaxInterface &jaxInterface);
   void deleteCheckpoints(const std::vector<std::string> &checkpointNames);
 private:
