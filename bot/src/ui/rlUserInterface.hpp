@@ -3,6 +3,7 @@
 
 #include <ui_proto/rl_ui_messages.pb.h>
 #include <ui_proto/rl_checkpointing.pb.h>
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <zmq.hpp>
 
@@ -41,6 +42,8 @@ public:
   void sendActiveStateMachine(const entity::Self &self, const std::string &stateMachine);
   void sendSkillCooldowns(const entity::Self &self);
   void sendQValues(const entity::Self &self, const std::vector<float> &qValues);
+  void sendItemCount(const entity::Self &self,
+                     sro::scalar_types::ReferenceObjectId itemId, int count);
 private:
   static constexpr std::chrono::milliseconds kHeartbeatInterval{250};
   static constexpr std::chrono::milliseconds kEventQueueInterval{250};

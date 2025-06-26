@@ -25,6 +25,10 @@
 #include "state/machine/spawnAndUseRepairHammerIfNecessary.hpp"
 #include "state/machine/walking.hpp"
 #include "type_id/categories.hpp"
+#include "storage/storage.hpp"
+#include "storage/item.hpp"
+
+#include <silkroad_lib/pk2/itemData.hpp>
 
 #include "pathfinder.h"
 
@@ -39,6 +43,41 @@
 #include <absl/strings/str_split.h>
 
 #include <regex>
+
+namespace {
+
+int countItem(const storage::Storage &inv,
+              sro::scalar_types::ReferenceObjectId id) {
+  int count = 0;
+  for (const storage::Item &item : inv) {
+    if (item.refItemId != id) {
+      continue;
+    }
+    const auto *exp = dynamic_cast<const storage::ItemExpendable *>(&item);
+    if (exp) {
+      count += exp->quantity;
+    } else {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+sro::scalar_types::ReferenceObjectId getHpPotionId(const sro::pk2::GameData &gameData) {
+  return gameData.itemData().getItemId([](const sro::pk2::ref::Item &item) {
+    return type_id::categories::kHpPotion.contains(type_id::getTypeId(item)) &&
+           item.itemClass == 2;
+  });
+}
+
+sro::scalar_types::ReferenceObjectId getMpPotionId(const sro::pk2::GameData &gameData) {
+  return gameData.itemData().getItemId([](const sro::pk2::ref::Item &item) {
+    return type_id::categories::kMpPotion.contains(type_id::getTypeId(item)) &&
+           item.itemClass == 2;
+  });
+}
+
+} // namespace
 
 Bot::Bot(SessionId sessionId,
          const sro::pk2::GameData &gameData,
@@ -185,6 +224,12 @@ void Bot::handleEvent(const event::Event *event) {
         if (selfEntity_) {
           rlUserInterface_.sendCharacterStatus(*selfEntity_);
           rlUserInterface_.sendSkillCooldowns(*selfEntity_);
+          sro::scalar_types::ReferenceObjectId hpId = getHpPotionId(gameData_);
+          sro::scalar_types::ReferenceObjectId mpId = getMpPotionId(gameData_);
+          int hpCount = countItem(selfEntity_->inventory, hpId);
+          int mpCount = countItem(selfEntity_->inventory, mpId);
+          sendItemCount(hpId, hpCount);
+          sendItemCount(mpId, mpCount);
         }
         break;
       }
@@ -208,10 +253,50 @@ void Bot::handleEvent(const event::Event *event) {
         }
         break;
       }
+      case event::EventCode::kItemMoved: {
+        const auto *im = dynamic_cast<const event::ItemMoved *>(event);
+        if (im && selfEntity_ && im->globalId == selfEntity_->globalId) {
+          sro::scalar_types::ReferenceObjectId hpId = getHpPotionId(gameData_);
+          sro::scalar_types::ReferenceObjectId mpId = getMpPotionId(gameData_);
+          bool hpChanged = false;
+          bool mpChanged = false;
+          auto checkSlot = [&](const std::optional<sro::storage::Position> &pos) {
+            if (!pos || pos->storage != sro::storage::Storage::kInventory) {
+              return;
+            }
+            const storage::Item *item = selfEntity_->inventory.getItem(pos->slotNum);
+            if (!item) {
+              return;
+            }
+            if (item->refItemId == hpId) {
+              hpChanged = true;
+            } else if (item->refItemId == mpId) {
+              mpChanged = true;
+            }
+          };
+          checkSlot(im->source);
+          checkSlot(im->destination);
+          if (hpChanged) {
+            int hpCount = countItem(selfEntity_->inventory, hpId);
+            sendItemCount(hpId, hpCount);
+          }
+          if (mpChanged) {
+            int mpCount = countItem(selfEntity_->inventory, mpId);
+            sendItemCount(mpId, mpCount);
+          }
+        }
+        break;
+      }
       case event::EventCode::kRlUiRequestCharacterStatuses: {
         if (selfEntity_) {
           rlUserInterface_.sendCharacterStatus(*selfEntity_);
           rlUserInterface_.sendSkillCooldowns(*selfEntity_);
+          sro::scalar_types::ReferenceObjectId hpId = getHpPotionId(gameData_);
+          sro::scalar_types::ReferenceObjectId mpId = getMpPotionId(gameData_);
+          int hpCount = countItem(selfEntity_->inventory, hpId);
+          int mpCount = countItem(selfEntity_->inventory, mpId);
+          sendItemCount(hpId, hpCount);
+          sendItemCount(mpId, mpCount);
           sendActiveStateMachine();
         }
         break;
@@ -836,3 +921,11 @@ void Bot::sendQValues(const std::vector<float> &qValues) const {
     rlUserInterface_.sendQValues(*selfEntity_, qValues);
   }
 }
+
+void Bot::sendItemCount(sro::scalar_types::ReferenceObjectId itemId,
+                        int count) const {
+  if (selfEntity_) {
+    rlUserInterface_.sendItemCount(*selfEntity_, itemId, count);
+  }
+}
+

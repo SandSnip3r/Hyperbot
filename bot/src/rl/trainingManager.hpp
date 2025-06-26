@@ -1,7 +1,6 @@
 #ifndef RL_RL_TRAINING_MANAGER_HPP_
 #define RL_RL_TRAINING_MANAGER_HPP_
 
-#include "bot.hpp"
 #include "broker/eventBroker.hpp"
 #include "clientManagerInterface.hpp"
 #include "common/itemRequirement.hpp"
@@ -37,6 +36,8 @@ namespace ui {
 class RlUserInterface;
 } // namespace ui
 
+class Bot;
+
 namespace rl {
 
 class TrainingManager {
@@ -59,6 +60,9 @@ public:
   int getTrainStepCount() const { return trainStepCount_.load(); }
   constexpr int getPastObservationStackSize() const { return kPastObservationStackSize; }
   float getEpsilon() const;
+
+  sro::scalar_types::ReferenceObjectId hpPotionRefId() const;
+  sro::scalar_types::ReferenceObjectId mpPotionRefId() const;
 
 private:
   // Definition for a character pairing at a specific position
@@ -144,6 +148,9 @@ private:
 
   void buildItemRequirementList();
   std::vector<common::ItemRequirement> itemRequirements_;
+
+  std::optional<sro::scalar_types::ReferenceObjectId> hpPotionRefId_;
+  std::optional<sro::scalar_types::ReferenceObjectId> mpPotionRefId_;
 
   using ReplayBufferType = ReplayBuffer<ObservationAndActionStorage::Id>;
   mutable TracyLockableN(std::mutex, replayBufferAndStorageMutex_, "ReplayBuffer");

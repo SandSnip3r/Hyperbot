@@ -15,6 +15,7 @@
 #include <QTimer>
 #include <QHash>
 #include <QPixmap>
+#include <QLabel>
 #include <QString>
 #include <QVector>
 
@@ -33,6 +34,7 @@ struct CharacterData {
   int maxHp{0};
   int currentMp{0};
   int maxMp{0};
+  QHash<sro::scalar_types::ReferenceObjectId, int> itemCounts;
   QString stateMachine;
   QList<SkillCooldown> skillCooldowns;
   QVector<float> qValues;
@@ -47,6 +49,7 @@ public:
   void setCharacterName(const QString &name);
   void updateCharacterData(const CharacterData &data);
   void updateHpMp(int currentHp, int maxHp, int currentMp, int maxMp);
+  void updateItemCount(sro::scalar_types::ReferenceObjectId itemRefId, int count);
   void updateStateMachine(const QString &stateMachine);
   void updateSkillCooldowns(const QList<SkillCooldown> &cooldowns);
   void updateQValues(const QVector<float> &qValues);
@@ -58,6 +61,7 @@ public slots:
   void onActiveStateMachineUpdated(QString name, QString stateMachine);
   void onSkillCooldownsUpdated(QString name, QList<SkillCooldown> cooldowns);
   void onQValuesUpdated(QString name, QVector<float> qValues);
+  void onItemCountUpdated(QString name, sro::scalar_types::ReferenceObjectId itemRefId, int count);
 
 private:
   struct CooldownItem {
@@ -89,6 +93,8 @@ private:
   QHash<sro::scalar_types::ReferenceSkillId, QPixmap> iconCache_;
   QHash<sro::scalar_types::ReferenceObjectId, QPixmap> itemIconCache_;
   QVector<QProgressBar *> qValueBars_;
+  QLabel *hpPotionIconLabel_{nullptr};
+  QLabel *mpPotionIconLabel_{nullptr};
 
   QPixmap getIconForSkillId(sro::scalar_types::ReferenceSkillId skillId);
   QPixmap getIconForItemId(sro::scalar_types::ReferenceObjectId itemId);

@@ -71,6 +71,8 @@ void MainWindow::connectSignals() {
           &DashboardWidget::onSkillCooldowns);
   connect(&hyperbot_, &Hyperbot::qValuesReceived, dashboardWidget_,
           &DashboardWidget::onQValues);
+  connect(&hyperbot_, &Hyperbot::itemCountReceived, dashboardWidget_,
+          &DashboardWidget::onItemCount);
 }
 
 void MainWindow::showConnectionWindow(const QString &windowTitle) {

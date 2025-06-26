@@ -1,4 +1,5 @@
 #include "hyperbot.hpp"
+#include <silkroad_lib/scalar_types.hpp>
 
 #include <absl/log/log.h>
 #include <absl/strings/str_format.h>
@@ -183,6 +184,13 @@ void Hyperbot::handleBroadcastMessage(proto::rl_ui_messages::BroadcastMessage br
       }
       emit skillCooldownsReceived(
           QString::fromStdString(cooldownsMsg.name()), cooldowns);
+      break;
+    }
+    case rl_ui_messages::BroadcastMessage::BodyCase::kItemCount: {
+      const rl_ui_messages::CharacterItemCount &countMsg =
+          broadcastMessage.item_count();
+      emit itemCountReceived(QString::fromStdString(countMsg.name()),
+                             countMsg.item_ref_id(), countMsg.count());
       break;
     }
     case rl_ui_messages::BroadcastMessage::BodyCase::kCharacterQValues: {

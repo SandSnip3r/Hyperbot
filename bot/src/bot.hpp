@@ -115,6 +115,7 @@ public:
   std::string currentStateMachineName() const;
   void sendActiveStateMachine() const;
   void sendQValues(const std::vector<float> &qValues) const;
+  void sendItemCount(sro::scalar_types::ReferenceObjectId itemId, int count) const;
 
 private:
   // Data for RL training interface.

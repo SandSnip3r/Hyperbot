@@ -275,4 +275,15 @@ void RlUserInterface::sendQValues(const entity::Self &self, const std::vector<fl
   broadcastMessage(msg);
 }
 
+void RlUserInterface::sendItemCount(const entity::Self &self,
+                                    sro::scalar_types::ReferenceObjectId itemId,
+                                    int count) {
+  rl_ui_messages::BroadcastMessage msg;
+  auto *payload = msg.mutable_item_count();
+  payload->set_name(self.name);
+  payload->set_item_ref_id(itemId);
+  payload->set_count(count);
+  broadcastMessage(msg);
+}
+
 } // namespace ui

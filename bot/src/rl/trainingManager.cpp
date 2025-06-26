@@ -17,6 +17,7 @@
 #include <absl/strings/str_join.h>
 namespace rl {
 
+
 TrainingManager::TrainingManager(const sro::pk2::GameData &gameData,
                   broker::EventBroker &eventBroker,
                   ui::RlUserInterface &rlUserInterface,
@@ -339,6 +340,20 @@ float TrainingManager::getEpsilon() const {
   return std::min(kInitialEpsilon, std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(trainStepCount_) / kEpsilonDecaySteps));
 }
 
+sro::scalar_types::ReferenceObjectId TrainingManager::hpPotionRefId() const {
+  if (!hpPotionRefId_) {
+    throw std::runtime_error("HP potion ID not set");
+  }
+  return *hpPotionRefId_;
+}
+
+sro::scalar_types::ReferenceObjectId TrainingManager::mpPotionRefId() const {
+  if (!mpPotionRefId_) {
+    throw std::runtime_error("MP potion ID not set");
+  }
+  return *mpPotionRefId_;
+}
+
 void TrainingManager::createSessions() {
   LOG(INFO) << "Creating sessions for " << characterPairings_.size() << " total character pairings";
 
@@ -501,6 +516,9 @@ void TrainingManager::buildItemRequirementList() {
   itemRequirements_.push_back({smallHpPotionRefId, kSmallHpPotionRequiredCount});
   itemRequirements_.push_back({smallMpPotionRefId, kSmallMpPotionRequiredCount});
   itemRequirements_.push_back({mediumUniversalPillRefId, kMediumUniversalPillRequiredCount});
+
+  hpPotionRefId_ = smallHpPotionRefId;
+  mpPotionRefId_ = smallMpPotionRefId;
 }
 
 float TrainingManager::calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const {
