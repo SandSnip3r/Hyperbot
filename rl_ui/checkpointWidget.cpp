@@ -86,7 +86,7 @@ void CheckpointWidget::onSaveCheckpointClicked() {
 
 void CheckpointWidget::onDeleteCheckpointClicked() {
   QModelIndexList selectedIndices = ui->checkpointsTableView->selectionModel()->selectedRows();
-  std::string confirmationString = absl::StrFormat("Are you sure you want to delete checkpoint(s):\n%s", absl::StrJoin(selectedIndices, "\n", [](std::string *out, QModelIndex index) {
+  std::string confirmationString = absl::StrFormat("Are you sure you want to delete checkpoint(s):\n%s", absl::StrJoin(selectedIndices, "\n", [this](std::string *out, QModelIndex index) {
     absl::StrAppend(out, checkpointModel_->item(index.row(), 0)->text().toStdString());
   }));
   QMessageBox::StandardButton reply;
