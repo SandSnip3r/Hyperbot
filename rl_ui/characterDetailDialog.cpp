@@ -134,7 +134,7 @@ void CharacterDetailDialog::updateHpMp(int currentHp, int maxHp, int currentMp,
 
 void CharacterDetailDialog::updateItemCount(sro::scalar_types::ReferenceObjectId itemRefId, int count) {
   const int iconSize = 30;
-  const int fontSize = 7; // ~23% of 30px
+  const int fontSize = 9;
 
   QLabel *label = nullptr;
   if (itemRefId == 5) {
