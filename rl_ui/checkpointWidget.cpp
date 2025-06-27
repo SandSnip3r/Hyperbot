@@ -1,5 +1,5 @@
 #include "checkpointWidget.hpp"
-#include "ui_checkpointwidget.h"
+#include "ui_checkpointWidget.h"
 
 #include <QMessageBox>
 #include <QStandardItemModel>

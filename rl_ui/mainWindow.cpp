@@ -1,7 +1,7 @@
 #include "checkpointWidget.hpp"
 #include "hyperbotConnect.hpp"
 #include "mainWindow.hpp"
-#include "./ui_mainwindow.h"
+#include "./ui_mainWindow.h"
 
 #include <silkroad_lib/pk2/gameData.hpp>
 

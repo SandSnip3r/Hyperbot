@@ -39,6 +39,18 @@
         "USE_ASAN": "OFF",
         "CMAKE_PREFIX_PATH": "C:/Qt/6.8.2/msvc2022_64"
       }
+    },
+    {
+      "name": "linux_x64_qt_rl_ui",
+      "displayName": "Linux x64 Qt Configure (rl_ui only)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build_linux_x64_qt_rl_ui",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "BUILD_UI": "ON",
+        "CMAKE_PREFIX_PATH": "/usr/lib/x86_64-linux-gnu/cmake/Qt6"
+      }
     }
   ],
   "buildPresets": [
@@ -57,6 +69,13 @@
       "displayName": "Win64 Qt Build (rl_ui only)",
       "configurePreset": "win64_qt_rl_ui",
       "configuration": "Debug"
+    },
+    {
+      "name": "linux_x64_qt_rl_ui",
+      "displayName": "Linux x64 Qt Build (rl_ui only)",
+      "configurePreset": "linux_x64_qt_rl_ui",
+      "configuration": "Debug",
+      "targets": [ "rl_ui" ]
     }
   ]
 }

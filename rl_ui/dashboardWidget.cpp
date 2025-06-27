@@ -1,5 +1,5 @@
 #include "dashboardWidget.hpp"
-#include "ui_dashboardwidget.h"
+#include "ui_dashboardWidget.h"
 
 #include "barStyles.hpp"
 #include <silkroad_lib/pk2/gameData.hpp>

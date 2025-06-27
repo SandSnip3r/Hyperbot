@@ -1,6 +1,6 @@
 #include "hyperbotConnect.hpp"
 #include "mainWindow.hpp"
-#include "ui_hyperbotconnect.h"
+#include "ui_hyperbotConnect.h"
 
 #include <absl/log/log.h>
 #include <absl/log/log_sink_registry.h>
