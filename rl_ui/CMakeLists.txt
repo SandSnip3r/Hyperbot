@@ -18,7 +18,6 @@ set(PROJECT_SOURCES
 )
 
 qt_add_executable(rl_ui
-  MANUAL_FINALIZATION
   ${PROJECT_SOURCES}
   hyperbotConnect.hpp hyperbotConnect.cpp hyperbotConnect.ui
   hyperbot.hpp hyperbot.cpp
@@ -48,6 +47,8 @@ target_link_libraries(rl_ui PRIVATE
   gli
 )
 
+target_include_directories(rl_ui PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
 set_target_properties(rl_ui PROPERTIES
     ${BUNDLE_ID_OPTION}
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
@@ -62,5 +63,3 @@ install(TARGETS rl_ui
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-
-qt_finalize_executable(rl_ui)

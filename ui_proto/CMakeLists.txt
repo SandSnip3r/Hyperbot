@@ -1,6 +1,11 @@
 project(ui_proto LANGUAGES CXX)
 
-find_package(Protobuf REQUIRED)
+find_package(Protobuf CONFIG REQUIRED)
+
+if(NOT TARGET protobuf::libprotobuf)
+  message(FATAL_ERROR "CONFIG mode was not used – protobuf::libprotobuf is missing")
+endif()
+
 
 # include_directories(${Protobuf_INCLUDE_DIRS})
 

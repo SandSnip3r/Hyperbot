@@ -5,6 +5,14 @@ project(hyperbot_top_level)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# --- make CMake prefer xxx-config.cmake over Findxxx.cmake ---
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+
+# --- make sure the vcpkg copy is found in CONFIG mode ---
+# (vcpkg toolchain already adds its share/ path to CMAKE_PREFIX_PATH,
+#  so this "find_package" will succeed.)
+find_package(Protobuf CONFIG REQUIRED)
+
 option(USE_ASAN "Enable AddressSanitizer" OFF)
 option(TRACY_ENABLE "Enable Tracy Profiler" OFF)
 

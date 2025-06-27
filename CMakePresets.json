@@ -62,7 +62,8 @@
     {
       "name": "linux_x64",
       "displayName": "x64 build step",
-      "configurePreset": "linux_x64"
+      "configurePreset": "linux_x64",
+      "targets": [ "hyperbot" ]
     },
     {
       "name": "win64_qt_rl_ui",

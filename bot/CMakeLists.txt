@@ -13,8 +13,6 @@ set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.67.0 REQUIRED COMPONENTS asio bind)
 include_directories(${Boost_INCLUDE_DIRS})
 
-include(FindProtobuf)
-
 find_package(cppzmq CONFIG REQUIRED)
 
 add_executable(${PROJECT_NAME}
@@ -481,7 +479,7 @@ target_link_libraries(
   Pathfinder
   silkroad_lib
   absl::str_format
-  GTest::Main
+  GTest::gtest_main
 )
 
 target_include_directories(navmesh_triangulation_test PRIVATE
@@ -498,7 +496,7 @@ add_executable(
 target_link_libraries(
   replay_buffer_test
   absl::log
-  GTest::Main
+  GTest::gtest_main
 )
 
 target_include_directories(replay_buffer_test PRIVATE
