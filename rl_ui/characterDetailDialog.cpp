@@ -277,9 +277,18 @@ void CharacterDetailDialog::updateQValues(const QVector<float> &qValues) {
         } else if (info.type == ActionType::Skill) {
           QPixmap pm = getIconForSkillId(info.skillId);
           if (!pm.isNull()) indexItem->setData(Qt::DecorationRole, pm.scaled(24, 24));
+          QString toolTip = QString("%1 (%2)")
+                                .arg(QString::fromStdString(gameData_.getSkillName(info.skillId)))
+                                .arg(info.skillId);
+          indexItem->setToolTip(toolTip);
         } else if (info.type == ActionType::Item) {
           QPixmap pm = getIconForItemId(info.itemId);
           if (!pm.isNull()) indexItem->setData(Qt::DecorationRole, pm.scaled(24, 24));
+          QString toolTip = QString("%1 (%2)")
+                                .arg(QString::fromStdString(
+                                    gameData_.getItemName(info.itemId)))
+                                .arg(info.itemId);
+          indexItem->setToolTip(toolTip);
         }
       }
       ui_->qValuesTable->setItem(i, 0, indexItem);
@@ -305,9 +314,18 @@ void CharacterDetailDialog::updateQValues(const QVector<float> &qValues) {
         } else if (info.type == ActionType::Skill) {
           QPixmap pm = getIconForSkillId(info.skillId);
           if (!pm.isNull()) item->setData(Qt::DecorationRole, pm.scaled(24,24));
+          QString toolTip = QString("%1 (%2)")
+                                .arg(QString::fromStdString(gameData_.getSkillName(info.skillId)))
+                                .arg(info.skillId);
+          item->setToolTip(toolTip);
         } else if (info.type == ActionType::Item) {
           QPixmap pm = getIconForItemId(info.itemId);
-          if (!pm.isNull()) item->setData(Qt::DecorationRole, pm.scaled(24,24));
+          if (!pm.isNull()) item->setData(Qt::DecorationRole, pm.scaled(24, 24));
+          QString toolTip = QString("%1 (%2)")
+                                .arg(QString::fromStdString(
+                                    gameData_.getItemName(info.itemId)))
+                                .arg(info.itemId);
+          item->setToolTip(toolTip);
         }
       }
       ui_->qValuesTable->setRowHeight(i, 24);
