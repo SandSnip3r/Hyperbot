@@ -6,9 +6,6 @@ if(NOT TARGET protobuf::libprotobuf)
   message(FATAL_ERROR "CONFIG mode was not used – protobuf::libprotobuf is missing")
 endif()
 
-
-# include_directories(${Protobuf_INCLUDE_DIRS})
-
 # Root for generated files
 set(GENERATED_PROTO_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 # Put headers in a subfolder

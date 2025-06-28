@@ -17,16 +17,6 @@
       }
     },
     {
-      "name": "linux_x64",
-      "displayName": "x64 configure step for Linux",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build_linux_x64",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
       "name": "win64_qt_rl_ui",
       "displayName": "Win64 Qt Configure (rl_ui only)",
       "generator": "NMake Makefiles JOM",
@@ -41,10 +31,21 @@
       }
     },
     {
-      "name": "linux_x64_qt_rl_ui",
+      "name": "linux_hyperbot",
+      "displayName": "x64 configure step for Linux",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build_linux_hyperbot",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_UI": "OFF"
+      }
+    },
+    {
+      "name": "linux_rl_ui",
       "displayName": "Linux x64 Qt Configure (rl_ui only)",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build_linux_x64_qt_rl_ui",
+      "binaryDir": "${sourceDir}/build_linux_rl_ui",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
@@ -60,21 +61,20 @@
       "configurePreset": "win32"
     },
     {
-      "name": "linux_x64",
-      "displayName": "x64 build step",
-      "configurePreset": "linux_x64",
-      "targets": [ "hyperbot" ]
-    },
-    {
       "name": "win64_qt_rl_ui",
       "displayName": "Win64 Qt Build (rl_ui only)",
       "configurePreset": "win64_qt_rl_ui",
       "configuration": "Debug"
     },
     {
-      "name": "linux_x64_qt_rl_ui",
+      "name": "linux_hyperbot",
+      "displayName": "x64 build step",
+      "configurePreset": "linux_hyperbot"
+    },
+    {
+      "name": "linux_rl_ui",
       "displayName": "Linux x64 Qt Build (rl_ui only)",
-      "configurePreset": "linux_x64_qt_rl_ui",
+      "configurePreset": "linux_rl_ui",
       "configuration": "Debug",
       "targets": [ "rl_ui" ]
     }
