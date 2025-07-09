@@ -2,19 +2,30 @@ cmake_minimum_required(VERSION 3.20)
 
 project(hyperbot_top_level)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # --- make CMake prefer xxx-config.cmake over Findxxx.cmake ---
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
+option(USE_ASAN "Enable AddressSanitizer" OFF)
+option(TRACY_ENABLE "Enable Tracy Profiler" OFF)
+option(BUILD_UI "Enable building the UI with Qt" OFF)
+option(BUILD_BOT "Enable building the bot" OFF)
+option(BUILD_CLIENT_MANAGER "Enable building the client manager" OFF)
+
+message(STATUS "BUILD_UI: ${BUILD_UI}")
+message(STATUS "BUILD_BOT: ${BUILD_BOT}")
+message(STATUS "BUILD_CLIENT_MANAGER: ${BUILD_CLIENT_MANAGER}")
+
+if(NOT BUILD_UI AND NOT BUILD_BOT AND NOT BUILD_CLIENT_MANAGER)
+  message(FATAL_ERROR "At least one of BUILD_UI, BUILD_BOT, or BUILD_CLIENT_MANAGER must be enabled.")
+endif()
+
 # --- make sure the vcpkg copy is found in CONFIG mode ---
 # (vcpkg toolchain already adds its share/ path to CMAKE_PREFIX_PATH,
 #  so this "find_package" will succeed.)
 find_package(Protobuf CONFIG REQUIRED)
-
-option(USE_ASAN "Enable AddressSanitizer" OFF)
-option(TRACY_ENABLE "Enable Tracy Profiler" OFF)
 
 if(USE_ASAN)
   # AddressSanitizer does not play well with CUDA! If you must use it, set JAX_PLATFORMS=cpu.
@@ -31,19 +42,18 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/pybind11/include)
 endif()
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (BUILD_BOT AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_subdirectory(bot)
 endif()
+
 add_subdirectory(ui_proto)
 add_subdirectory(silkroad_lib)
 add_subdirectory(third_party)
 
-if ((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
+if (BUILD_CLIENT_MANAGER AND (CMAKE_SYSTEM_NAME STREQUAL "Windows") AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
   add_subdirectory(client_manager)
   add_subdirectory(loader_dll)
 endif()
-
-option(BUILD_UI "Enable building the UI with Qt" ON)
 
 if(BUILD_UI)
   find_package(Qt6 COMPONENTS Core Gui Widgets LinguistTools OpenGLWidgets QUIET)

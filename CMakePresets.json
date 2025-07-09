@@ -13,7 +13,8 @@
       "binaryDir": "${sourceDir}/build_win32",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "USE_ASAN": "OFF"
+        "USE_ASAN": "OFF",
+        "BUILD_CLIENT_MANAGER": "ON"
       }
     },
     {
@@ -38,7 +39,7 @@
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "CMAKE_BUILD_TYPE": "Debug",
-        "BUILD_UI": "OFF"
+        "BUILD_BOT": "ON"
       }
     },
     {
