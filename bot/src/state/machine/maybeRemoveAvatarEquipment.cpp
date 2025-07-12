@@ -65,6 +65,7 @@ Status MaybeRemoveAvatarEquipment::onUpdate(const event::Event *event) {
   unequipping_ = true;
   setChildStateMachine<MoveItem>(sro::storage::Position(sro::storage::Storage::kAvatarInventory, avatarSlot_),
                                  sro::storage::Position(sro::storage::Storage::kInventory, intermediateSlot_));
+  // TODO: Moving an item might not go to our exact target slot. We should track the item ID to be able to catch the actual destination(intermediate) slot that the item goes to so that we can then move it to the real destination slot.
   return onUpdate(nullptr);
 }
 

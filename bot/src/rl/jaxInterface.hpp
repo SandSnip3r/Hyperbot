@@ -1,6 +1,7 @@
 #ifndef RL_JAX_INTERFACE_HPP_
 #define RL_JAX_INTERFACE_HPP_
 
+#include "event/eventCode.hpp"
 #include "rl/modelInputs.hpp"
 #include "rl/observation.hpp"
 
@@ -102,7 +103,6 @@ public:
 
   void addScalar(std::string_view name, double yValue, double xValue);
 private:
-  static constexpr size_t kActionSpaceSize{35}; // TODO: If changed, also change rl::ActionBuilder
   static constexpr int kSeed{0};
 
   // Store gamma and learning rate as member variables
@@ -138,13 +138,7 @@ private:
   // Convert a vector of ModelInputs to batches of corresponding numpy arrays
   detail::ModelInputNumpy modelInputsToNumpy(const std::vector<model_inputs::ModelInputView> &modelInputViews);
 
-  // Note, this also works with a default constructed observation.
-  size_t getObservationNumpySize(const Observation &observation) const;
-
-  size_t writeEmptyObservationToRawArray(size_t observationSize, float *array);
-
-  // Returns the number of floats written to the array.
-  size_t writeObservationToRawArray(const Observation &observation, float *array);
+  size_t writeZerosToRawArray(size_t count, float *array);
 
   size_t writeOneHotEvent(event::EventCode eventCode, float *array);
 

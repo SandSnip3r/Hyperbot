@@ -1,5 +1,5 @@
 #include "bot.hpp"
-#include "rl/actionBuilder.hpp"
+#include "rl/actionSpace.hpp"
 #include "rl/ai/randomIntelligence.hpp"
 
 namespace rl::ai {
@@ -8,7 +8,7 @@ int RandomIntelligence::selectAction(Bot &bot, const Observation &observation, b
   int actionIndex;
   if (canSendPacket) {
     // Choose a truly random action.
-    std::uniform_int_distribution<int> actionDist(0, ActionBuilder::actionSpaceSize()-1);
+    std::uniform_int_distribution<int> actionDist(0, ActionSpace::size()-1);
     actionIndex = actionDist(randomEngine_);
   } else {
     actionIndex = 0;

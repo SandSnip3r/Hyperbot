@@ -4,8 +4,9 @@
 #include "packet/building/clientAgentInventoryItemUseRequest.hpp"
 #include "packet/building/clientAgentActionCommandRequest.hpp"
 #include "rl/action.hpp"
-#include "rl/actionBuilder.hpp"
+#include "rl/actionSpace.hpp"
 #include "rl/observation.hpp"
+#include "rl/observationBuilder.hpp"
 #include "rl/trainingManager.hpp"
 #include "type_id/categories.hpp"
 
@@ -14,14 +15,6 @@
 #include <absl/log/log.h>
 
 namespace state::machine {
-
-namespace {
-
-rl::Observation buildObservation(const Bot &bot, const event::Event *event, sro::scalar_types::ReferenceObjectId opponentGlobalId) {
-  return {bot, event, opponentGlobalId};
-}
-
-} // namespace
 
 IntelligenceActor::IntelligenceActor(StateMachine *parent, std::shared_ptr<rl::ai::BaseIntelligence> intelligence, common::PvpDescriptor::PvpId pvpId, sro::scalar_types::EntityGlobalId opponentGlobalId) : StateMachine(parent), intelligence_(std::move(intelligence)), pvpId_(pvpId), opponentGlobalId_(opponentGlobalId) {
   VLOG(1) << "Constructed " << intelligence_->name() << " intelligence actor!";
@@ -52,7 +45,8 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   }
   CHAR_VLOG(2) << "Event: " << event::toString(event->eventCode);
 
-  const rl::Observation observation = buildObservation(bot_, event, opponentGlobalId_);
+  rl::Observation observation;
+  rl::ObservationBuilder::buildObservationFromBot(bot_, observation, opponentGlobalId_);
 
   // Check if this is a terminal state.
   if (event != nullptr) {
@@ -82,7 +76,7 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   const int actionIndex = intelligence_->selectAction(bot_, observation, canSendPacket);
   CHAR_VLOG(2) << "Action " << actionIndex;
   intelligence_->trainingManager().reportObservationAndAction(pvpId_, intelligence_->name(), observation, actionIndex);
-  setChildStateMachine(rl::ActionBuilder::buildAction(this, opponentGlobalId_, actionIndex));
+  setChildStateMachine(rl::ActionSpace::buildAction(this, bot_.gameData(), opponentGlobalId_, actionIndex));
 
   // Run one update on the child state machine to let it start.
   const Status status = childState_->onUpdate(event);

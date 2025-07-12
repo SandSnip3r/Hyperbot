@@ -17,7 +17,7 @@ public:
   ~MaybeRemoveAvatarEquipment() override;
   Status onUpdate(const event::Event *event) override;
 private:
-static inline std::string kName{"MaybeRemoveAvatarEquipment"};
+  static inline std::string kName{"MaybeRemoveAvatarEquipment"};
   sro::scalar_types::StorageIndexType avatarSlot_;
   std::function<sro::scalar_types::StorageIndexType(Bot&)> targetSlot_;
   sro::scalar_types::StorageIndexType intermediateSlot_;

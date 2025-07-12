@@ -76,7 +76,7 @@ private:
     std::optional<SessionId> session2Id;
   };
 
-  static constexpr int kPastObservationStackSize{16};
+  static constexpr int kPastObservationStackSize{8};
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{256};
   static constexpr int kReplayBufferMinimumBeforeTraining{40'000};
@@ -97,9 +97,9 @@ private:
   static constexpr float kFinalEpsilon{0.01f};
   static constexpr int kEpsilonDecaySteps{500'000};
   static constexpr int kPvpCount{4};
-  static constexpr int kTdLookahead{5};
+  static constexpr int kTdLookahead{8};
 
-  std::atomic<bool> runTraining_{true};
+  std::atomic<bool> runTraining_{false};
   std::mutex runTrainingMutex_;
   std::condition_variable runTrainingCondition_;
 

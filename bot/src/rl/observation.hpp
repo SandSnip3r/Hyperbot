@@ -1,56 +1,56 @@
 #ifndef RL_OBSERVATION_HPP_
 #define RL_OBSERVATION_HPP_
 
-#include "event/eventCode.hpp"
-
-#include <silkroad_lib/scalar_types.hpp>
+#include "rl/items.hpp"
+#include "rl/model_data/modelData.hpp"
+#include "rl/skills.hpp"
 
 #include <array>
 #include <chrono>
 #include <cstdint>
 #include <string>
 
-class Bot;
-
-namespace event {
-class Event;
-} // namespace event
-
 namespace rl {
+
+// Forward declaration for friend declaration.
+class ObservationBuilder;
 
 class Observation {
 public:
-  Observation() = default;
-  Observation(const Bot &bot, const event::Event *event, sro::scalar_types::EntityGlobalId opponentGlobalId);
   std::string toString() const;
-// private:
+
+  // Returns the count of f32s in the observation.
+  static consteval size_t size() {
+    size_t sum = 0;
+    sum += decltype(skillData_)::value_type::size() * std::tuple_size<decltype(skillData_)>();
+    sum += decltype(itemData_)::value_type::size() * std::tuple_size<decltype(itemData_)>();
+    sum += decltype(ourHpData_)::size();
+    sum += decltype(ourMpData_)::size();
+    sum += decltype(opponentHpData_)::size();
+    return sum;
+  }
+
+  // Writes the observation to a raw buffer of floats.
+  // Returns the number of floats written to the buffer.
+  size_t writeToArray(float *buffer) const;
+
+  // Getters for reward calculation.
+  uint32_t ourCurrentHp() const;
+  uint32_t ourMaxHp() const;
+  uint32_t opponentCurrentHp() const;
+  uint32_t opponentMaxHp() const;
+
+  // Public timestamp for other model input.
   std::chrono::steady_clock::time_point timestamp_;
-  event::EventCode eventCode_;
-  uint32_t ourCurrentHp_;
-  uint32_t ourMaxHp_;
-  uint32_t ourCurrentMp_;
-  uint32_t ourMaxMp_;
-  bool weAreKnockedDown_;
-  uint32_t opponentCurrentHp_;
-  uint32_t opponentMaxHp_;
-  uint32_t opponentCurrentMp_;
-  uint32_t opponentMaxMp_;
-  bool opponentIsKnockedDown_;
-  int hpPotionCount_; // TODO: Normalize here rather than in JaxInterface
 
-  // Normalized to [0,1] for buff duration.
-  std::array<float, 17> remainingTimeOurBuffs_;
-  std::array<float, 17> remainingTimeOpponentBuffs_;
+private:
+  friend class ObservationBuilder;
 
-  // Normalized to [0,1] for debuff duration. For now, this only refers to legacy debuffs.
-  std::array<float, 12> remainingTimeOurDebuffs_;
-  std::array<float, 12> remainingTimeOpponentDebuffs_;
-
-  // Normalized to [0,1] for skill cooldown.
-  std::array<float, 32> skillCooldowns_;
-
-  // Normalized to [0,1] for item cooldown.
-  std::array<float, 3> itemCooldowns_;
+  std::array<model_data::SkillModelData, kSkillIdsForObservations.size()> skillData_;
+  std::array<model_data::ItemModelData, kItemIdsForObservations.size()> itemData_;
+  model_data::VitalModelData ourHpData_;
+  model_data::VitalModelData ourMpData_;
+  model_data::VitalModelData opponentHpData_;
 };
 
 } // namespace rl

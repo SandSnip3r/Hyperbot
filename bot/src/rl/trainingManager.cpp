@@ -502,16 +502,16 @@ void TrainingManager::buildItemRequirementList() {
   const sro::scalar_types::ReferenceObjectId smallMpPotionRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
     return type_id::categories::kMpPotion.contains(type_id::getTypeId(item)) && item.itemClass == 2;
   });
-  const sro::scalar_types::ReferenceObjectId mediumUniversalPillRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
-    return type_id::categories::kUniversalPill.contains(type_id::getTypeId(item)) && item.itemClass == 2;
-  });
+  // const sro::scalar_types::ReferenceObjectId mediumUniversalPillRefId = gameData_.itemData().getItemId([](const sro::pk2::ref::Item &item) {
+  //   return type_id::categories::kUniversalPill.contains(type_id::getTypeId(item)) && item.itemClass == 2;
+  // });
 
-  constexpr int kSmallHpPotionRequiredCount = 5; // IF-CHANGE: If we change this, also change the max potion count in JaxInterface::writeObservationToRawArray
-  constexpr int kSmallMpPotionRequiredCount = 5;
-  constexpr int kMediumUniversalPillRequiredCount = 5;
+  constexpr int kSmallHpPotionRequiredCount = 5; // IF-CHANGE: If we change this, also change the max potion count in ObservationBuilder::buildObservationFromBot
+  constexpr int kSmallMpPotionRequiredCount = 5; // IF-CHANGE: If we change this, also change the max potion count in ObservationBuilder::buildObservationFromBot
+  // constexpr int kMediumUniversalPillRequiredCount = 5;
   itemRequirements_.push_back({smallHpPotionRefId, kSmallHpPotionRequiredCount});
   itemRequirements_.push_back({smallMpPotionRefId, kSmallMpPotionRequiredCount});
-  itemRequirements_.push_back({mediumUniversalPillRefId, kMediumUniversalPillRequiredCount});
+  // itemRequirements_.push_back({mediumUniversalPillRefId, kMediumUniversalPillRequiredCount});
 
   hpPotionRefId_ = smallHpPotionRefId;
   mpPotionRefId_ = smallMpPotionRefId;
@@ -520,19 +520,19 @@ void TrainingManager::buildItemRequirementList() {
 float TrainingManager::calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const {
   float reward = 0.0f;
   // We get some positive reward proportional to how much our health increased, negative if it decreased.
-  reward += (static_cast<int64_t>(observation.ourCurrentHp_) - lastObservation.ourCurrentHp_) / static_cast<double>(observation.ourMaxHp_);
+  reward += (static_cast<int64_t>(observation.ourCurrentHp()) - lastObservation.ourCurrentHp()) / static_cast<double>(observation.ourMaxHp());
   // We get some positive reward proportional to how much our opponent's health decreased, negative if it increased.
-  reward += (static_cast<int64_t>(lastObservation.opponentCurrentHp_) - observation.opponentCurrentHp_) / static_cast<double>(observation.opponentMaxHp_);
+  reward += (static_cast<int64_t>(lastObservation.opponentCurrentHp()) - observation.opponentCurrentHp()) / static_cast<double>(observation.opponentMaxHp());
   // We get some negative reward if the event is an error.
-  if (observation.eventCode_ == event::EventCode::kCommandError ||
-      observation.eventCode_ == event::EventCode::kItemUseFailed) {
-    reward -= 0.0005f;
-  }
+  // if (observation.eventCode_ == event::EventCode::kCommandError ||
+  //     observation.eventCode_ == event::EventCode::kItemUseFailed) {
+  //   reward -= 0.0005f;
+  // }
   if (isTerminal) {
     // Give an extra bump for a win or loss.
-    if (observation.ourCurrentHp_ == 0) {
+    if (observation.ourCurrentHp() == 0) {
       reward -= 2.0f;
-    } else if (observation.opponentCurrentHp_ == 0) {
+    } else if (observation.opponentCurrentHp() == 0) {
       reward += 2.0f;
     }
   }

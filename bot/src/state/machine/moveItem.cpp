@@ -41,7 +41,11 @@ Status MoveItem::onUpdate(const event::Event *event) {
             throw std::runtime_error("Item is gone");
           }
           if (*itemMovedEvent->destination != destination_) {
-            throw std::runtime_error("Item was moved to somewhere else");
+            // I have seen this happen in the following case:
+            //  We are removing an avatar equipment to inventory slot 17, for example. At the time of sending the packet, slot 17 is the first free slot. However, slot 17 could be filled be another item before the server handles this packet. Similarly, an earlier slot can be filled by another item before the server handles this packet. In either case, removing an avatar item always goes to the first free slot in the inventory. So then, the packet from the server comes back and tells us that the item is now in a different destination than we originally requested. There is nothing we can do about this now.
+            // TODO: The caller of this state machine needs to understand when MoveItem fails to place the item in the requested destination slot. The caller should then decide whether or not moving the item to that exact destination was necessary.
+            LOG(WARNING) << absl::StreamFormat("Item was moved to %s, but expected to be moved to %s", itemMovedEvent->destination->toString(), destination_.toString());
+            // throw std::runtime_error(absl::StrFormat("Item was moved to %s, but expected to be moved to %s", itemMovedEvent->destination->toString(), destination_.toString()));
           }
           // Item was moved to our specified destination position.
           return Status::kDone;

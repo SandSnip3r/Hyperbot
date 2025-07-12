@@ -295,8 +295,8 @@ add_executable(${PROJECT_NAME}
   src/proxy.hpp
   src/rl/action.cpp
   src/rl/action.hpp
-  src/rl/actionBuilder.cpp
-  src/rl/actionBuilder.hpp
+  src/rl/actionSpace.cpp
+  src/rl/actionSpace.hpp
   src/rl/ai/baseIntelligence.cpp
   src/rl/ai/baseIntelligence.hpp
   src/rl/ai/deepLearningIntelligence.cpp
@@ -305,15 +305,22 @@ add_executable(${PROJECT_NAME}
   src/rl/ai/randomIntelligence.hpp
   src/rl/checkpointManager.cpp
   src/rl/checkpointManager.hpp
+  src/rl/items.hpp
   src/rl/jaxInterface.cpp
   src/rl/jaxInterface.hpp
+  src/rl/model_data/modelData.cpp
+  src/rl/model_data/modelData.hpp
+  src/rl/model_data/modelData.inl
   src/rl/modelInputs.cpp
   src/rl/modelInputs.hpp
   src/rl/observation.cpp
   src/rl/observation.hpp
   src/rl/observationAndActionStorage.cpp
   src/rl/observationAndActionStorage.hpp
+  src/rl/observationBuilder.cpp
+  src/rl/observationBuilder.hpp
   src/rl/replayBuffer.hpp
+  src/rl/skills.hpp
   src/rl/trainingManager.cpp
   src/rl/trainingManager.hpp
   src/session.cpp

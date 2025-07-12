@@ -273,6 +273,7 @@ void PvpManager::setPrepareForPvpStateMachine() {
   sequentialStateMachines.emplace<state::machine::MaybeRemoveAvatarEquipment>(
       /*slot=*/sro::game_constants::kAvatarHatSlot,
       /*targetSlot=*/[](Bot &bot) {
+        // Find the last free slot in our inventory.
         for (int i=bot.inventory().size()-1; i>=0; --i) {
           if (!bot.inventory().hasItem(i)) {
             return i;

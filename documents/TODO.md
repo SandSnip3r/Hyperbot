@@ -53,3 +53,4 @@
 - Add timestamps to the creation of Events
 - Update pathfinder to have a better include path system
 - Both Bot and TrainingManager specify HP/MP potion IDs, which are used by the agent. This needs to be centralized.
+- Support MoveItem failing to move an item (if, for example, the target slot gets filled)
