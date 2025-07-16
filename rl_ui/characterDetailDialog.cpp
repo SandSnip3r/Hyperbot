@@ -42,39 +42,39 @@ struct ActionInfo {
 const ActionInfo kActionInfos[] = {
     {ActionType::Text, "Sleep", 0, 0},                     // 0
     {ActionType::Text, "Attack", 0, 0},                    // 1
-    {ActionType::Skill, nullptr, 28, 0},                   // 2
-    {ActionType::Skill, nullptr, 131, 0},                  // 3
-    {ActionType::Skill, nullptr, 554, 0},                  // 4
-    {ActionType::Skill, nullptr, 1253, 0},                 // 5
-    {ActionType::Skill, nullptr, 1256, 0},                 // 6
-    {ActionType::Skill, nullptr, 1271, 0},                 // 7
-    {ActionType::Skill, nullptr, 1272, 0},                 // 8
-    {ActionType::Skill, nullptr, 1281, 0},                 // 9
-    {ActionType::Skill, nullptr, 1335, 0},                 // 10
-    {ActionType::Skill, nullptr, 1377, 0},                 // 11
-    {ActionType::Skill, nullptr, 1380, 0},                 // 12
-    {ActionType::Skill, nullptr, 1398, 0},                 // 13
-    {ActionType::Skill, nullptr, 1399, 0},                 // 14
-    {ActionType::Skill, nullptr, 1410, 0},                 // 15
-    {ActionType::Skill, nullptr, 1421, 0},                 // 16
-    {ActionType::Skill, nullptr, 1441, 0},                 // 17
-    {ActionType::Skill, nullptr, 30577, 0},                // 18
-    {ActionType::Skill, nullptr, 37, 0},                   // 19
-    {ActionType::Skill, nullptr, 114, 0},                  // 20
-    {ActionType::Skill, nullptr, 298, 0},                  // 21
-    {ActionType::Skill, nullptr, 300, 0},                  // 22
-    {ActionType::Skill, nullptr, 322, 0},                  // 23
-    {ActionType::Skill, nullptr, 339, 0},                  // 24
-    {ActionType::Skill, nullptr, 371, 0},                  // 25
-    {ActionType::Skill, nullptr, 588, 0},                  // 26
-    {ActionType::Skill, nullptr, 610, 0},                  // 27
-    {ActionType::Skill, nullptr, 644, 0},                  // 28
-    {ActionType::Skill, nullptr, 1315, 0},                 // 29
-    {ActionType::Skill, nullptr, 1343, 0},                 // 30
-    {ActionType::Skill, nullptr, 1449, 0},                 // 31
+    // {ActionType::Skill, nullptr, 28, 0},                   // 2
+    // {ActionType::Skill, nullptr, 131, 0},                  // 3
+    // {ActionType::Skill, nullptr, 554, 0},                  // 4
+    // {ActionType::Skill, nullptr, 1253, 0},                 // 5
+    // {ActionType::Skill, nullptr, 1256, 0},                 // 6
+    // {ActionType::Skill, nullptr, 1271, 0},                 // 7
+    // {ActionType::Skill, nullptr, 1272, 0},                 // 8
+    // {ActionType::Skill, nullptr, 1281, 0},                 // 9
+    // {ActionType::Skill, nullptr, 1335, 0},                 // 10
+    // {ActionType::Skill, nullptr, 1377, 0},                 // 11
+    // {ActionType::Skill, nullptr, 1380, 0},                 // 12
+    // {ActionType::Skill, nullptr, 1398, 0},                 // 13
+    // {ActionType::Skill, nullptr, 1399, 0},                 // 14
+    // {ActionType::Skill, nullptr, 1410, 0},                 // 15
+    // {ActionType::Skill, nullptr, 1421, 0},                 // 16
+    // {ActionType::Skill, nullptr, 1441, 0},                 // 17
+    // {ActionType::Skill, nullptr, 30577, 0},                // 18
+    // {ActionType::Skill, nullptr, 37, 0},                   // 19
+    // {ActionType::Skill, nullptr, 114, 0},                  // 20
+    // {ActionType::Skill, nullptr, 298, 0},                  // 21
+    // {ActionType::Skill, nullptr, 300, 0},                  // 22 // Stab Smash
+    // {ActionType::Skill, nullptr, 322, 0},                  // 23
+    // {ActionType::Skill, nullptr, 339, 0},                  // 24
+    // {ActionType::Skill, nullptr, 371, 0},                  // 25
+    // {ActionType::Skill, nullptr, 588, 0},                  // 26 // Soul Cut Blade
+    // {ActionType::Skill, nullptr, 610, 0},                  // 27
+    // {ActionType::Skill, nullptr, 644, 0},                  // 28
+    // {ActionType::Skill, nullptr, 1315, 0},                 // 29
+    // {ActionType::Skill, nullptr, 1343, 0},                 // 30
+    // {ActionType::Skill, nullptr, 1449, 0},                 // 31
     {ActionType::Item, nullptr, 0, 5},                     // 32
-    {ActionType::Item, nullptr, 0, 12},                    // 33
-    {ActionType::Item, nullptr, 0, 56},                    // 34
+    // {ActionType::Item, nullptr, 0, 12},                    // 33
+    // {ActionType::Item, nullptr, 0, 56},                    // 34
 };
 } // namespace
 
