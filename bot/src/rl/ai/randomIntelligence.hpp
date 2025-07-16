@@ -9,7 +9,7 @@ namespace rl::ai {
 class RandomIntelligence : public BaseIntelligence {
 public:
   using BaseIntelligence::BaseIntelligence;
-  int selectAction(Bot &bot, const Observation &observation, bool canSendPacket) override;
+  int selectAction(Bot &bot, const Observation &observation, bool canSendPacket, std::optional<std::string> metadata = std::nullopt) override;
   const std::string& name() const override { return name_; }
 
 protected:

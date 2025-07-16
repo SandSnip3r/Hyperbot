@@ -54,3 +54,4 @@
 - Update pathfinder to have a better include path system
 - Both Bot and TrainingManager specify HP/MP potion IDs, which are used by the agent. This needs to be centralized.
 - Support MoveItem failing to move an item (if, for example, the target slot gets filled)
+- In TrainingManager::train(), we sleep between training steps to give the timer manager thread a chance to clear all of it's pending action selection requests. Our existing solution using mutexes & condition variables is not sufficient to prevent starvation of the action selection thread.

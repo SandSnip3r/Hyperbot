@@ -21,6 +21,7 @@ uint16_t countItemsInInventory(const Bot &bot, sro::scalar_types::ReferenceObjec
 void ObservationBuilder::buildObservationFromBot(const Bot &bot,
                              Observation &observation,
                              sro::scalar_types::EntityGlobalId opponentGlobalId) {
+  observation.timestamp_ = std::chrono::steady_clock::now();
   // =================================================== Skills ===================================================
   for (size_t i=0; i<kSkillIdsForObservations.size(); ++i) {
     const sro::scalar_types::ReferenceSkillId skillId = kSkillIdsForObservations[i];

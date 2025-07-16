@@ -23,7 +23,7 @@ class ActionSpace {
 public:
   // Returns the size of the action space.
   static constexpr size_t size() {
-    return 1 /*sleep*/ +
+    return 1 /*sleep*/ + // IF-CHANGE: Sleep is supposed to be the first action in the action space.
            kSkillIdsForObservations.size() +
            kItemIdsForObservations.size();
   }

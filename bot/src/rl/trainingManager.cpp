@@ -73,6 +73,7 @@ void TrainingManager::train() {
   JaxInterface::Optimizer optimizer = jaxInterface_.getOptimizer();
   JaxInterface::Model targetModel = jaxInterface_.getTargetModel();
   while (runTraining_) {
+    ZoneScopedN("TrainingManager::train_iter");
     try {
       std::unique_lock lock(replayBufferAndStorageMutex_);
       if (replayBuffer_.size() < kBatchSize || replayBuffer_.size() < kReplayBufferMinimumBeforeTraining) {
@@ -102,7 +103,6 @@ void TrainingManager::train() {
         lastTrainingTime_ = currentTime;
       }
       trainingCount_ += kBatchSize;
-
 
       const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(model,
                                                                            optimizer,
@@ -163,6 +163,8 @@ void TrainingManager::train() {
     } catch (std::exception &ex) {
       LOG(ERROR) << "Caught exception while training: " << ex.what();
     }
+    // Give agents a chance to use the model for a bit before we grab it again.
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
   }
   LOG(INFO) << "Done with training loop. Exiting train()";
 }
@@ -660,7 +662,7 @@ void TrainingManager::precompileModels() {
   LOG(INFO) << "Precompiling selectAction";
   jaxInterface_.selectAction(modelInputView, /*canSendPacket=*/false);
   LOG(INFO) << "Precompiling train";
-  JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(dummyModel, dummyOptimizer, dummyTargetModel, pastModelInputViews, actionsTaken, isTerminals, rewards, currentModelInputViews, importanceSamplingWeights);
+  jaxInterface_.train(dummyModel, dummyOptimizer, dummyTargetModel, pastModelInputViews, actionsTaken, isTerminals, rewards, currentModelInputViews, importanceSamplingWeights);
   LOG(INFO) << "Precompilation complete";
 }
 

@@ -5,13 +5,15 @@
 #include "rl/jaxInterface.hpp"
 
 #include <deque>
+#include <optional>
+#include <string>
 
 namespace rl::ai {
 
 class DeepLearningIntelligence : public RandomIntelligence {
 public:
   using RandomIntelligence::RandomIntelligence;
-  int selectAction(Bot &bot, const Observation &observation, bool canSendPacket) override;
+  int selectAction(Bot &bot, const Observation &observation, bool canSendPacket, std::optional<std::string> metadata) override;
   const std::string& name() const override { return name_; }
 private:
   const std::string name_{"DeepLearning"};

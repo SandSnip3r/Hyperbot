@@ -72,7 +72,7 @@ public:
   };
 
   // `canSendPacket` is used for action masking to limit the rate at which packets are sent.
-  ActionSelectionResult selectAction(const model_inputs::ModelInputView &modelInputView, bool canSendPacket);
+  ActionSelectionResult selectAction(const model_inputs::ModelInputView &modelInputView, bool canSendPacket, std::optional<std::string> metadata = std::nullopt);
 
   struct TrainAuxOutput {
     float globalNorm;
@@ -123,10 +123,8 @@ private:
 
   // We use a special synchronization routine to give action selection a higher priority than everything else, since it requires low latency.
   // Context: https://github.com/SandSnip3r/ContentionBenchmark
-  mutable std::mutex modelMutex_;
-  // Tracy lockable does not seem to work with a condition variable.
-  // TracyLockableN(std::mutex, modelMutex_, "JaxInterface::modelMutex");
-  std::condition_variable modelConditionVariable_;
+  mutable TracyLockableN(std::mutex, modelMutex_, "JaxInterface::modelMutex");
+  std::condition_variable_any modelConditionVariable_;
   std::atomic<bool> waitingToSelectAction_{false};
 
   pybind11::object getPythonOptimizer();

@@ -4,7 +4,7 @@
 
 namespace rl::ai {
 
-int RandomIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket) {
+int RandomIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket, std::optional<std::string> metadata) {
   int actionIndex;
   if (canSendPacket) {
     // Choose a truly random action.

@@ -5,6 +5,7 @@ namespace rl {
 
 std::unique_ptr<Action> ActionSpace::buildAction(state::machine::StateMachine *parentStateMachine, const sro::pk2::GameData &gameData, sro::scalar_types::EntityGlobalId opponentGlobalId, size_t actionIndex) {
   if (actionIndex == 0) {
+    // IF-CHANGE: Sleep is supposed to be the first action in the action space.
     return std::make_unique<Sleep>(parentStateMachine);
   }
   actionIndex -= 1;

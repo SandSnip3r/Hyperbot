@@ -23,7 +23,7 @@ public:
 protected:
   void injectPacket(const PacketContainer &packet, PacketContainer::Direction direction) override;
 private:
-  static inline std::chrono::milliseconds kPacketSendCooldown{50};
+  static inline std::chrono::milliseconds kPacketSendCooldown{200};
   static inline std::string kName{"IntelligenceActor"};
   std::shared_ptr<rl::ai::BaseIntelligence> intelligence_;
   const common::PvpDescriptor::PvpId pvpId_;

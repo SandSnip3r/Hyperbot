@@ -10,7 +10,7 @@
 
 namespace rl::ai {
 
-int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket) {
+int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observation, bool canSendPacket, std::optional<std::string> metadata) {
   ZoneScopedN("DeepLearningIntelligence::selectAction");
 
   // Update epsilon.
@@ -37,8 +37,7 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
         modelInputView.pastActionStack.push_back(pastObservationsAndActions_[i].second);
       }
 
-      rl::JaxInterface::ActionSelectionResult result =
-          trainingManager_.getJaxInterface().selectAction(modelInputView, canSendPacket);
+      rl::JaxInterface::ActionSelectionResult result = trainingManager_.getJaxInterface().selectAction(modelInputView, canSendPacket, metadata);
       actionIndex = result.actionIndex;
       bot.sendQValues(result.qValues);
       bot.worldState().mutex.lock();
@@ -58,6 +57,5 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
 
   return actionIndex;
 }
-
 
 } // namespace rl::ai

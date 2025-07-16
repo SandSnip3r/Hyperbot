@@ -12,6 +12,7 @@
 #include <absl/strings/str_format.h>
 
 #include <algorithm>
+#include <fstream>
 #include <thread>
 
 namespace py = pybind11;
@@ -28,6 +29,116 @@ bool checkHasAttr(py::object &obj, const std::string &attr_name) {
 
   // Call hasattr function
   return hasattr_func(obj, attr_name).cast<bool>();
+}
+
+void logToCsvFile(const std::string &metadata, const std::chrono::steady_clock::time_point &timestamp, const detail::ModelInputNumpy &modelInputNumpy, const std::vector<float> &qValues, int actionIndex) {
+  // Log the following to a CSV file:
+  // ms_since_epoch, pvp_id, *observation_data, action_index, *q_values
+  std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch());
+  static bool firstRun = true;
+  if (firstRun) {
+    // Write the header only once.
+    constexpr std::array headers = {
+      "ms_since_epoch",
+      "pvp_id",
+      "po0_stab_smash_avail",
+      "po0_hp_pot_avail",
+      "po0_hp_pot_count",
+      "po0_mp_pot_avail",
+      "po0_mp_pot_count",
+      "po0_hp",
+      "po0_mp",
+      "po0_opp_hp",
+      "po1_stab_smash_avail",
+      "po1_hp_pot_avail",
+      "po1_hp_pot_count",
+      "po1_mp_pot_avail",
+      "po1_mp_pot_count",
+      "po1_hp",
+      "po1_mp",
+      "po1_opp_hp",
+      "po2_stab_smash_avail",
+      "po2_hp_pot_avail",
+      "po2_hp_pot_count",
+      "po2_mp_pot_avail",
+      "po2_mp_pot_count",
+      "po2_hp",
+      "po2_mp",
+      "po2_opp_hp",
+      "po3_stab_smash_avail",
+      "po3_hp_pot_avail",
+      "po3_hp_pot_count",
+      "po3_mp_pot_avail",
+      "po3_mp_pot_count",
+      "po3_hp",
+      "po3_mp",
+      "po3_opp_hp",
+      "po0_timestamp",
+      "po1_timestamp",
+      "po2_timestamp",
+      "po3_timestamp",
+      "po0_action_stab_smash",
+      "po0_action_hp_pot",
+      "po0_action_hp_pot",
+      "po0_action_mp_pot",
+      "po1_action_stab_smash",
+      "po1_action_hp_pot",
+      "po1_action_hp_pot",
+      "po1_action_mp_pot",
+      "po2_action_stab_smash",
+      "po2_action_hp_pot",
+      "po2_action_hp_pot",
+      "po2_action_mp_pot",
+      "po3_action_stab_smash",
+      "po3_action_hp_pot",
+      "po3_action_hp_pot",
+      "po3_action_mp_pot",
+      "po0_mask",
+      "po1_mask",
+      "po2_mask",
+      "po3_mask",
+      "curr_stab_smash_avail",
+      "curr_hp_pot_avail",
+      "curr_hp_pot_count",
+      "curr_mp_pot_avail",
+      "curr_mp_pot_count",
+      "curr_hp",
+      "curr_mp",
+      "curr_opp_hp",
+      "q_val_sleep",
+      "q_val_stab_smash",
+      "q_val_hp_pot",
+      "q_val_mp_pot",
+      "action_index"
+    };
+    std::ofstream csvFile("intelligence_actor_log.csv");
+    csvFile << absl::StrJoin(headers, ",") << std::endl;
+    firstRun = false;
+  }
+  std::ofstream csvFile("intelligence_actor_log.csv", std::ios::app);
+  csvFile << msSinceEpoch.count() << ','
+          << metadata << ',';
+  auto printFlattenedArray = [&csvFile](const py::array_t<float> &array) {
+    // Request a buffer info object
+    py::buffer_info buffer = array.request();
+
+    // Get the pointer to the data
+    float* data_ptr = static_cast<float*>(buffer.ptr);
+
+    // Iterate over the data as a flattened array
+    for (size_t i=0; i<buffer.size; ++i) {
+      csvFile << data_ptr[i] << ',';
+    }
+  };
+  printFlattenedArray(modelInputNumpy.pastObservationStack);
+  printFlattenedArray(modelInputNumpy.pastObservationTimestamps);
+  printFlattenedArray(modelInputNumpy.pastActions);
+  printFlattenedArray(modelInputNumpy.pastMask);
+  printFlattenedArray(modelInputNumpy.currentObservation);
+  for (const float f : qValues) {
+    csvFile << f << ',';
+  }
+  csvFile << actionIndex << '\n';
 }
 
 } // namespace
@@ -170,14 +281,15 @@ JaxInterface::Optimizer JaxInterface::getDummyOptimizer() const {
   return Optimizer(py::module::import("copy").attr("deepcopy")(*optimizerState_));
 }
 
-JaxInterface::ActionSelectionResult JaxInterface::selectAction(const model_inputs::ModelInputView &modelInputView, bool canSendPacket) {
+JaxInterface::ActionSelectionResult JaxInterface::selectAction(const model_inputs::ModelInputView &modelInputView, bool canSendPacket, std::optional<std::string> metadata) {
   ZoneScopedN("JaxInterface::selectAction");
   ActionSelectionResult result;
   try {
     waitingToSelectAction_ = true;
-    std::unique_lock lock(modelMutex_);
+    std::unique_lock modelLock(modelMutex_);
     waitingToSelectAction_ = false;
     py::gil_scoped_acquire acquire;
+    ZoneScopedN("JaxInterface::selectAction_GIL");
     // Convert C++ observation into numpy observation
     detail::ModelInputNumpy numpyModelInput = modelInputToNumpy(modelInputView);
     // Create an action mask based on whether or not we can send a packet
@@ -193,7 +305,6 @@ JaxInterface::ActionSelectionResult JaxInterface::selectAction(const model_input
       // - pastMask:                  (stackSize, 1)
       // - currentObservation:        (observationSize)
       // - actionMask:                (actionSpaceSize)
-      // - rngKey
       actionPyObject = dqnModule_->attr("selectAction")(*model_,
                                                         numpyModelInput.pastObservationStack,
                                                         numpyModelInput.pastObservationTimestamps,
@@ -206,6 +317,9 @@ JaxInterface::ActionSelectionResult JaxInterface::selectAction(const model_input
     result.actionIndex = resultTuple[0].cast<int>();
     py::array_t<float> qValuesArray = resultTuple[1].cast<py::array_t<float>>();
     result.qValues.assign(qValuesArray.data(), qValuesArray.data() + qValuesArray.size());
+    if (metadata) {
+      logToCsvFile(metadata.value(), modelInputView.currentObservation->timestamp_, numpyModelInput, result.qValues, result.actionIndex);
+    }
   } catch (std::exception &ex) {
     LOG(ERROR) << "Caught exception in JaxInterface::selectAction: " << ex.what();
     modelConditionVariable_.notify_all();
@@ -245,6 +359,7 @@ JaxInterface::TrainAuxOutput JaxInterface::train(const Model &model,
       return !waitingToSelectAction_.load();
     });
     py::gil_scoped_acquire acquire;
+    ZoneScopedN("JaxInterface::train_GIL");
     try {
       detail::ModelInputNumpy pastModelInputsNumpy = modelInputsToNumpy(pastModelInputViews);
       py::tuple pastModelInputTuple = py::make_tuple(
@@ -435,7 +550,7 @@ py::array_t<float> JaxInterface::createActionMaskNumpy(bool canSendPacket) {
   constexpr size_t kActionSpaceSize = ActionSpace::size();
   py::array_t<float> array(kActionSpaceSize);
   auto mutableArray = array.mutable_unchecked<1>();
-  mutableArray(0) = 0.0;
+  mutableArray(0) = 0.0; // IF-CHANGE: Sleep is supposed to be the first action in the action space.
   const float packetMaskValue = canSendPacket ? 0.0 : -std::numeric_limits<float>::infinity();
   std::fill_n(mutableArray.mutable_data(1), kActionSpaceSize-1, packetMaskValue);
   return array;

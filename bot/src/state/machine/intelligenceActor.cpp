@@ -5,6 +5,7 @@
 #include "packet/building/clientAgentActionCommandRequest.hpp"
 #include "rl/action.hpp"
 #include "rl/actionSpace.hpp"
+#include "rl/ai/deepLearningIntelligence.hpp"
 #include "rl/observation.hpp"
 #include "rl/observationBuilder.hpp"
 #include "rl/trainingManager.hpp"
@@ -13,6 +14,7 @@
 #include <tracy/Tracy.hpp>
 
 #include <absl/log/log.h>
+#include <absl/strings/str_join.h>
 
 namespace state::machine {
 
@@ -64,7 +66,9 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
           // Someone died, the pvp is over.
           // We will not query the intelligence for a chosen action, for obvious reasons.
           // We will report the state, so that it can be saved in the replay buffer.
-          intelligence_->trainingManager().reportObservationAndAction(pvpId_, intelligence_->name(), observation, std::nullopt);
+          if (dynamic_cast<rl::ai::DeepLearningIntelligence*>(intelligence_.get()) != nullptr) {
+            intelligence_->trainingManager().reportObservationAndAction(pvpId_, intelligence_->name(), observation, std::nullopt);
+          }
           return Status::kDone;
         }
       }
@@ -73,9 +77,11 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
 
   // Since actions are state machines, immediately set the selected action as our current active child state machine.
   const bool canSendPacket = !lastPacketTime_.has_value() || (std::chrono::steady_clock::now() - lastPacketTime_.value() > kPacketSendCooldown);
-  const int actionIndex = intelligence_->selectAction(bot_, observation, canSendPacket);
+  const int actionIndex = intelligence_->selectAction(bot_, observation, canSendPacket, std::to_string(pvpId_));
   CHAR_VLOG(2) << "Action " << actionIndex;
-  intelligence_->trainingManager().reportObservationAndAction(pvpId_, intelligence_->name(), observation, actionIndex);
+  if (dynamic_cast<rl::ai::DeepLearningIntelligence*>(intelligence_.get()) != nullptr) {
+    intelligence_->trainingManager().reportObservationAndAction(pvpId_, intelligence_->name(), observation, actionIndex);
+  }
   setChildStateMachine(rl::ActionSpace::buildAction(this, bot_.gameData(), opponentGlobalId_, actionIndex));
 
   // Run one update on the child state machine to let it start.
@@ -213,7 +219,7 @@ bool IntelligenceActor::isRelevantEvent(const event::Event *event) const {
   } else if (event->eventCode == event::EventCode::kReadyForPvp ||
              event->eventCode == event::EventCode::kPvpManagerReadyForAssignment ||
              event->eventCode == event::EventCode::kBeginPvp)  {
-    // These events which come now are for someone else's pvp. The fact that we're here now means that PvpManager has already handled ours and initiated our pvp.
+    // We are already PVPing (we would not be in this function if we were not). These are for someone else's PVP.
     return false;
   } else if (const event::KnockedDown *knockedDown = dynamic_cast<const event::KnockedDown*>(event); knockedDown != nullptr) {
     if (knockedDown->globalId != bot_.selfState()->globalId && knockedDown->globalId != opponentGlobalId_) {
