@@ -7,7 +7,7 @@
   "configurePresets": [
     {
       "name": "win32",
-      "displayName": "Win32 configure step with vcpkg toolchain",
+      "displayName": "Configure Win32 for Client Manager",
       "generator": "Visual Studio 17 2022",
       "architecture": "Win32",
       "binaryDir": "${sourceDir}/build_win32",
@@ -19,7 +19,7 @@
     },
     {
       "name": "win64_qt_rl_ui",
-      "displayName": "Win64 Qt Configure (rl_ui only)",
+      "displayName": "Configure Win64 for RL UI",
       "generator": "NMake Makefiles JOM",
       "architecture": "x64",
       "binaryDir": "${sourceDir}/build_win64_qt_rl_ui",
@@ -33,7 +33,7 @@
     },
     {
       "name": "linux_hyperbot",
-      "displayName": "x64 configure step for Linux",
+      "displayName": "Configure Linux for Hyperbot",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build_linux_hyperbot",
       "cacheVariables": {
@@ -44,7 +44,7 @@
     },
     {
       "name": "linux_rl_ui",
-      "displayName": "Linux x64 Qt Configure (rl_ui only)",
+      "displayName": "Configure Linux for RL UI",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build_linux_rl_ui",
       "cacheVariables": {
@@ -58,23 +58,23 @@
   "buildPresets": [
     {
       "name": "win32",
-      "displayName": "Win32 build step",
+      "displayName": "Win32 Client Manager Build",
       "configurePreset": "win32"
     },
     {
       "name": "win64_qt_rl_ui",
-      "displayName": "Win64 Qt Build (rl_ui only)",
+      "displayName": "Win64 RL UI Build",
       "configurePreset": "win64_qt_rl_ui",
       "configuration": "Debug"
     },
     {
       "name": "linux_hyperbot",
-      "displayName": "x64 build step",
+      "displayName": "Linux Hyperbot Build",
       "configurePreset": "linux_hyperbot"
     },
     {
       "name": "linux_rl_ui",
-      "displayName": "Linux x64 Qt Build (rl_ui only)",
+      "displayName": "Linux RL UI Build",
       "configurePreset": "linux_rl_ui",
       "configuration": "Debug",
       "targets": [ "rl_ui" ]
