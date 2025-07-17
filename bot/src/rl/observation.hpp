@@ -25,7 +25,7 @@ public:
     sum += decltype(skillData_)::value_type::size() * std::tuple_size<decltype(skillData_)>();
     sum += decltype(itemData_)::value_type::size() * std::tuple_size<decltype(itemData_)>();
     sum += decltype(ourHpData_)::size();
-    sum += decltype(ourMpData_)::size();
+    // sum += decltype(ourMpData_)::size();
     sum += decltype(opponentHpData_)::size();
     return sum;
   }
@@ -49,7 +49,7 @@ private:
   std::array<model_data::SkillModelData, kSkillIdsForObservations.size()> skillData_;
   std::array<model_data::ItemModelData, kItemIdsForObservations.size()> itemData_;
   model_data::VitalModelData ourHpData_;
-  model_data::VitalModelData ourMpData_;
+  // model_data::VitalModelData ourMpData_;
   model_data::VitalModelData opponentHpData_;
 };
 

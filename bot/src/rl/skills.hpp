@@ -7,8 +7,8 @@
 
 namespace rl {
 
-constexpr std::array kSkillIdsForObservations = {
-  sro::scalar_types::ReferenceSkillId{300} // Stab Smash
+constexpr std::array<sro::scalar_types::ReferenceSkillId,0> kSkillIdsForObservations = {
+  // sro::scalar_types::ReferenceSkillId{300} // Stab Smash
   // sro::scalar_types::ReferenceSkillId{588} // Soul Cut Blade
 };
 

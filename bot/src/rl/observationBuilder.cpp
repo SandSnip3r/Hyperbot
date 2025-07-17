@@ -53,7 +53,7 @@ void ObservationBuilder::buildObservationFromBot(const Bot &bot,
   }
   // =================================================== HP/MP ====================================================
   observation.ourHpData_.setCurrentAndMax(bot.selfState()->currentHp(), bot.selfState()->maxHp().value());
-  observation.ourMpData_.setCurrentAndMax(bot.selfState()->currentMp(), bot.selfState()->maxMp().value());
+  // observation.ourMpData_.setCurrentAndMax(bot.selfState()->currentMp(), bot.selfState()->maxMp().value());
 
   std::shared_ptr<entity::Self> opponent = bot.entityTracker().getEntity<entity::Self>(opponentGlobalId);
   if (!opponent) {

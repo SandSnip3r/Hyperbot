@@ -10,6 +10,11 @@ std::unique_ptr<Action> ActionSpace::buildAction(state::machine::StateMachine *p
   }
   actionIndex -= 1;
 
+  if (actionIndex == 0) {
+    return std::make_unique<CommonAttack>(parentStateMachine, opponentGlobalId);
+  }
+  actionIndex -= 1;
+
   if (actionIndex < kSkillIdsForObservations.size()) {
     const sro::scalar_types::ReferenceSkillId skillId = kSkillIdsForObservations[actionIndex];
     const sro::pk2::ref::Skill &skill = gameData.skillData().getSkillById(skillId);

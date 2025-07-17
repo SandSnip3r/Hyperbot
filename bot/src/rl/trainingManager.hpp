@@ -80,14 +80,14 @@ private:
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{256};
   static constexpr int kReplayBufferMinimumBeforeTraining{40'000};
-  static constexpr int kReplayBufferCapacity{1'000'000};
+  static constexpr int kReplayBufferCapacity{100'000};
   static constexpr int kTargetNetworkUpdateInterval{10'000};
   static constexpr int kTrainStepCheckpointInterval{10'000};
   static constexpr float kTargetNetworkPolyakTau{0.0004f};
   static constexpr int kTargetNetworkPolyakUpdateInterval{16};
   static constexpr bool kTargetNetworkPolyakEnabled{true};
   static constexpr float kGamma{0.997f};
-  static constexpr float kLearningRate{3e-5f};
+  static constexpr float kLearningRate{1e-6f};
   static constexpr float kDropoutRate{0.05f};
   static constexpr float kPerAlpha{0.5f};
   static constexpr float kPerBetaStart{0.4f};
@@ -95,7 +95,7 @@ private:
   static constexpr int kPerTrainStepCountAnneal{500'000};
   static constexpr float kInitialEpsilon{1.0f};
   static constexpr float kFinalEpsilon{0.01f};
-  static constexpr int kEpsilonDecaySteps{500'000};
+  static constexpr int kEpsilonDecaySteps{50'000};
   static constexpr int kPvpCount{4};
   static constexpr int kTdLookahead{4};
 

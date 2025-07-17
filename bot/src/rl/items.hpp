@@ -9,7 +9,7 @@ namespace rl {
 
 constexpr std::array kItemIdsForObservations = {
   sro::scalar_types::ReferenceObjectId{5},
-  sro::scalar_types::ReferenceObjectId{12}
+  // sro::scalar_types::ReferenceObjectId{12}
 };
 
 } // namespace rl
