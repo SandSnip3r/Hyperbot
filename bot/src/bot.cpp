@@ -268,6 +268,9 @@ void Bot::handleEvent(const event::Event *event) {
             }
             const storage::Item *item = selfEntity_->inventory.getItem(pos->slotNum);
             if (!item) {
+              // The last of an item was probably used, we should recount our potions just to be sure.
+              hpChanged = true;
+              mpChanged = true;
               return;
             }
             if (item->refItemId == hpId) {

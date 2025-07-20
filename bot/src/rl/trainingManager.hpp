@@ -76,7 +76,7 @@ private:
     std::optional<SessionId> session2Id;
   };
 
-  static constexpr int kPastObservationStackSize{4};
+  static constexpr int kPastObservationStackSize{8};
   static constexpr float kPvpStartingCenterOffset{40.0f};
   static constexpr int kBatchSize{256};
   static constexpr int kReplayBufferMinimumBeforeTraining{40'000};
@@ -92,7 +92,7 @@ private:
   static constexpr float kPerAlpha{0.5f};
   static constexpr float kPerBetaStart{0.4f};
   static constexpr float kPerBetaEnd{1.0f};
-  static constexpr int kPerTrainStepCountAnneal{500'000};
+  static constexpr int kPerTrainStepCountAnneal{50'000};
   static constexpr float kInitialEpsilon{1.0f};
   static constexpr float kFinalEpsilon{0.01f};
   static constexpr int kEpsilonDecaySteps{50'000};
