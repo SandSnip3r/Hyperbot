@@ -321,7 +321,7 @@ void PacketProcessor::serverGatewayShardListResponseReceived(const packet::parsi
       throw std::runtime_error("Received a different shard list than what we already have");
     }
 
-    // While we say the shards are the same, that's not entirely true. They might be the same shards, but the current online count might have changed. As long as the shards themselves didnt fundamentally change, we're fine. Overwrite with the new list.
+    // While we say the shards are the same, that's not entirely true. They might be the same shards, but the current online count might have changed. As long as the shards themselves didn't fundamentally change, we're fine. Overwrite with the new list.
     worldState_.shardListResponse_.emplace(packet);
   }
   eventBroker_.publishEvent<event::ShardListReceived>(sessionId_, packet.shards());
@@ -719,7 +719,7 @@ void PacketProcessor::serverAgentInventoryItemUseResponseReceived(const packet::
     // Update the item's quantity.
     expendableItemPtr->quantity = packet.remainingCount();
     // Figure out the cooldown of this item.
-    const auto itemCooldown = getItemCooldownMs(*expendableItemPtr);
+    const std::optional<std::chrono::milliseconds> itemCooldown = getItemCooldownMs(*expendableItemPtr);
     selfEntity_->usedAnItem(packet.typeData(), itemCooldown);
 
     // TODO: It feels a bit weird to have redundant information across the following 2 events.
@@ -881,7 +881,7 @@ void PacketProcessor::serverAgentInventoryOperationResponseReceived(const packet
                                                           std::nullopt,
                                                           sro::storage::Position(sro::storage::Storage::kInventory, movement.destSlot));
             } else {
-              // Multiple destination slots, must be unstackable items like equipment
+              // Multiple destination slots, must be items like equipment which are not stackable
               for (auto destSlot : movement.destSlots) {
                 auto item = helpers::createItemFromScrap(itemInfo, itemRef);
                 selfEntity_->inventory.addItem(destSlot, item);
@@ -1383,7 +1383,7 @@ void PacketProcessor::serverAgentActionCommandResponseReceived(const packet::par
         CHAR_LOG(WARNING) << "Command ended, but we had no accepted command";
       }
     } else {
-      // We arent told which command ended, we just assume it was the most recent.
+      // We aren't told which command ended, we just assume it was the most recent.
       // If we have multiple, it could actually be the most recent.
       const auto firstCommandIt = selfEntity_->skillEngine.acceptedCommandQueue.begin();
       CHAR_LOG_IF(INFO, absl::GetFlag(FLAGS_log_skills)) << selfEntity_->name << " Command end: "  << firstCommandIt->command.toString();

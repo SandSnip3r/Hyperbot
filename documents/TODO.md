@@ -55,3 +55,9 @@
 - Both Bot and TrainingManager specify HP/MP potion IDs, which are used by the agent. This needs to be centralized.
 - Support MoveItem failing to move an item (if, for example, the target slot gets filled)
 - In TrainingManager::train(), we sleep between training steps to give the timer manager thread a chance to clear all of it's pending action selection requests. Our existing solution using mutexes & condition variables is not sufficient to prevent starvation of the action selection thread.
+- There seems to be something wrong with the data we're logging (to the select action csv)
+  - The last thing for a pvp is very often not a state where someone is dead
+  - There is never a case where a health potion is unavailable but while we still have one (cooldown should be 1s, right?)
+- Fix MoveItem bug, need to return/signal failure
+- Redesign UI to be pvp-centric, change bot to create initial pvp pairings that never change
+- sro::scalar_types::ReferenceObjectId is implicitly convertable to type_id::TypeId. This led to a bug. This should have been a compiler error instead.

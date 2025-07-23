@@ -33,7 +33,7 @@ void ObservationBuilder::buildObservationFromBot(const Bot &bot,
   const std::map<type_id::TypeId, broker::EventBroker::EventId> &itemCooldownEventIds = bot.selfState()->getItemCooldownEventIdMap();
   for (size_t i=0; i<kItemIdsForObservations.size(); ++i) {
     const sro::scalar_types::ReferenceObjectId itemId = kItemIdsForObservations[i];
-    const auto it = itemCooldownEventIds.find(itemId);
+    const auto it = itemCooldownEventIds.find(type_id::getTypeId(bot.gameData().itemData().getItemById(itemId)));
     const bool isOnCooldown = [&]() {
       if (it == itemCooldownEventIds.end()) {
         return false;
@@ -47,7 +47,7 @@ void ObservationBuilder::buildObservationFromBot(const Bot &bot,
         }
       }
     }();
-    uint16_t countAvailable = countItemsInInventory(bot, itemId);
+    const uint16_t countAvailable = countItemsInInventory(bot, itemId);
     constexpr uint16_t maxCount = 5; // IF-CHANGE: If we change this, also change TrainingManager::buildItemRequirementList
     observation.itemData_[i].setItemOnCooldownAndCount(itemId, isOnCooldown, countAvailable, maxCount);
   }
