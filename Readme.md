@@ -1,47 +1,66 @@
 # Hyperbot
-This is a bot to automate everything a human player can do in an online MMORPG called [Silkroad Online](http://www.joymax.com/silkroad/).
+*A Multi-Agent Reinforcement Learning Framework for Silkroad Online*
 
-## Silkroad
-Silkroad Online is a historical fantasy MMORPG from Joymax based on the history of China along the famous Silk Road. Reproducing 7th century Silk Road trading while adding fantastic elements, Silkroad Online allows players to create their own characters, complete quests, fight monsters, level up, obtain pets, craft items, engage in PvP, and more.
+[![Watch the Demo](https://img.youtube.com/vi/6NusfkLRzpk/0.jpg)](https://youtube.com/watch?v=6NusfkLRzpk)
 
-The official Silkroad Online game has had a shifting in community with the introduction of pay-to-win strategies. I think the level 110 cap was the best level cap because of the effort required to get a full Egyptian set with weapons & accessories. The good news is that the private server community is huge. Different versions of the gameservers have been released and we can host our own local 110 level cap Silkroad server. There is also a pretty big development community around this game which a lot of my work is based on.
+---
 
-The main components of the game worth automating are:
-- Movement
-- Killing a target (enemy or player)
-- Item management
-- Equipment ehancements (alchemy)
+## Current Status
+**Status:** Experimental
 
-## Timeline
+Hyperbot is an actively developed research framework designed to connect reinforcement learning with the rich, dynamic world of *Silkroad Online* — a live MMORPG featuring complex combat systems, player interactions, inventories, trading, and long-term progression.
 
-#### Past
-I've spent some time removing a lot of excess code and have trimmed down Drew Benton's loader and Weeman's phconnector proxy. I combined them into a single object to allow multiple bots in the same program to be a straightforward expansion.
+The project currently supports **1v1 Player-vs-Player (PvP)** battles through a fully automated agent interface. Multiple characters can be controlled concurrently, allowing large-scale data collection in real-time. Agents interact directly with the game server through a low-level TCP interface — no game client is required.
 
-#### Present
-Currently, the focus is on an extensible framework that abstracts the packet parsing process and adds an internal event layer for information transmission.
+While the current API is not yet finalized, all necessary infrastructure exists for defining and training RL agents in **real-time asynchronous environments**, where the world continues evolving regardless of inference latency.
 
-#### Future
-Near term, I'm starting to work on a pvp bot as a quick demoable proof of concept. The focus during this development will be good architecture. I plan to try to reuse as much code as possible for a grinding bot.
-Long term, I want to create a 90ish cap chinese race-only, cooperating, and coordinating goldbot farm.
-Ultralong term, the goal is to create a bot, that when set free in an empty server, can reach the level cap in the minimum amount of time and produce the strongest character possible. This includes but is not limited to:
-- Advanced algorithms to select a dynamic leveling route up to the level cap
-- A main dynamic party optimized for killing monsters in the specific leveling spot
-- Additional luring bots to feed monsters to the main party
-- Bot farms in the fields to collect gold, resources, and equipment for the main party
-- Bot assembly lines to filter and enhance the best equipment for the main party
-- An academy farm running to give King/Gold/Silver/Bronze Honor Buffs to the main character and party
-- Dungeon running parties to build Egyptian sets and find Egyptian weapons & shields for the main character and party
-- Pvp bots battling in battle arena for coins to build Egyptian accessories for the main character and party
+---
 
-## Other bots as inspiration
-There are a few popular single-character bots that have been used by players such as:
-- mBot
-- Sbot
-- Centerbot
-- phBot
+## Overview
+Hyperbot is an ambitious exploration into **Reinforcement Learning in a Live Online Multiplayer World**. Unlike synthetic or simulated benchmarks, Hyperbot operates inside an authentic MMORPG, making it a unique testbed for developing agents that must reason, plan, and adapt in persistent, human-designed environments.
 
-Some people have also made some tools like an automatic alchemy tool or an auto staller.
+The framework’s long-term goal is to enable agents that can **understand and master MMORPG gameplay** — from individual duels to coordinated multi-agent combat, cooperative monster hunting, dynamic economies, and large-scale strategy.
 
-## Documentation
-More of my documentation can be found in the [documentation directory](documents).
+---
 
+## Why an MMORPG?
+Most reinforcement learning environments today are either:
+- **Highly abstract** (e.g. grid worlds, Atari), or
+- **Fully simulated** and **resettable** (e.g. Mujoco, Crafter, Procgen).
+
+By contrast, *Silkroad Online* offers:
+- **Persistent State** – The world evolves even when the agent does not act.
+- **Rich Semantics** – Combat, trading, exploration, skill trees, inventory systems, and social dynamics.
+- **Hierarchical Goals** – From micro-level tactics (skill & item use, positioning) to macro-level strategy (gear optimization, party formation).
+- **Partial Observability** – Information is incomplete, noisy, and temporally extended.
+- **Multi-Agent Interactions** – Both cooperative and adversarial behaviors emerge naturally.
+
+These properties make MMORPGs a fertile environment for *next-generation RL research* — where agents must operate asynchronously, generalize across long horizons, and make decisions with delayed or sparse feedback.
+
+---
+
+## Project Goals
+
+### Short-Term
+- Develop and benchmark agents for **1v1 PvP combat**.
+- Formalize the asynchronous API for agent interaction.
+- Document baseline performance (non-acting, random, scripted, and a landmark RL algorithm).
+
+### Medium-Term
+- Support multiple sub-environments within the overall MMORPG.
+- Explore curriculum learning for complex behaviors (e.g. group tactics).
+- Introduce flexible reward shaping and evaluation metrics.
+
+### Long-Term
+- Build agents capable of **holistic MMORPG mastery**, including:
+  - Dynamic questing and leveling routes
+  - Resource management and equipment optimization
+  - Multi-agent coordination in large-scale battles
+  - Strategic reasoning across thousands of concurrent states
+
+---
+
+## Key Features
+- **Real MMORPG Environment** – Interact with a production-grade game world featuring authentic network protocols and state transitions.
+- **Asynchronous Control** – The environment evolves continuously; agents must act in real time.
+- **Multi-Agent Capability** – Designed to manage and coordinate multiple characters concurrently.
