@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -181,10 +182,6 @@ const std::vector<uint64_t>& Item::getMagicOptions() const {
   return magicOptions_;
 }
 
-void printMagicOptionsAsQuery(const std::vector<uint64_t> &magicOptions) {
-  std::cout << std::endl;
-}
-
 string Item::getUpdateQuery() const {
   stringstream ss;
   ss << "OptLevel=" << to_string(plus_);
@@ -202,7 +199,7 @@ void Item::setPlus(int plus) {
 
 void Item::addBlue(MagOpt opt, uint64_t value) {
   const auto magParamId = MagOptIdMachine::instance().getMagParamId(opt, degree_);
-  magicOptions_.push_back(value<<32 | magParamId&0xFFFFFFFF);
+  magicOptions_.push_back((value<<32) | (magParamId&0xFFFFFFFF));
 }
 
 void Item::addWhite(uint8_t index, double targetPercent) {
@@ -359,7 +356,7 @@ public:
     for (int i=1; i<slots.size(); ++i) {
       slotsSS << ',' << slots.at(i);
     }
-    string queryPiece1 = 
+    string queryPiece1 =
 R"(UPDATE [SRO_VT_SHARD].[dbo].[_Items]
   SET )";
     string queryPiece2 = R"(
