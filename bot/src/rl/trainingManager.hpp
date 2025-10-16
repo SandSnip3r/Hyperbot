@@ -95,8 +95,8 @@ private:
   static constexpr int kPerTrainStepCountAnneal{50'000};
   static constexpr float kInitialEpsilon{1.0f};
   static constexpr float kFinalEpsilon{0.01f};
-  static constexpr int kEpsilonDecaySteps{50'000};
-  static constexpr int kPvpCount{4};
+  static constexpr int kEpsilonStepCountAnneal{50'000};
+  static constexpr int kPvpCount{8};
   static constexpr int kTdLookahead{4};
 
   std::atomic<bool> runTraining_{false};

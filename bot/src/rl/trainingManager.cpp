@@ -335,7 +335,7 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
 }
 
 float TrainingManager::getEpsilon() const {
-  return std::min(kInitialEpsilon, std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(trainStepCount_) / kEpsilonDecaySteps));
+  return std::min(kInitialEpsilon, std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(trainStepCount_) / kEpsilonStepCountAnneal));
 }
 
 sro::scalar_types::ReferenceObjectId TrainingManager::hpPotionRefId() const {
