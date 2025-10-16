@@ -37,11 +37,17 @@ pip install -r bot/src/rl/python/requirements.txt
 ```
 As mentioned above, Hyperbot needs to run on Linux. We will build it in Ubuntu24 in WSL 2 (not WSL 1, like in the past). We will also use VCPkg for dependency management. It can easily be installed in Linux by following [these instructions](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash#1---set-up-vcpkg).
 
+Run the configure and build commands:
+```
+cmake --preset linux_hyperbot
+cmake --build --preset linux_hyperbot
+```
+
 #### Building With Tracy
 
 Run CMake's configure step with the following cmake variable definitions:
 ```
-cmake -DTRACY_ENABLE=ON -DTRACY_DELAYED_INIT=ON --preset linux_x64
+cmake -DTRACY_ENABLE=ON -DTRACY_DELAYED_INIT=ON --preset linux_hyperbot
 ```
 _Note: I believe `DTRACY_DELAYED_INIT` is required because we're running in WSL 2 which might not play well with Tracy's precise timing for profiling._
 
