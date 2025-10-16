@@ -30,37 +30,37 @@ using namespace std;
 
 #if TRACY_ENABLE
 
-// Override global new operator
-void* operator new(size_t size) {
-  void* ptr = malloc(size);
-  if (!ptr) {
-    throw std::bad_alloc();
-  }
-  TracyAlloc(ptr, size);
-  return ptr;
-}
+// // Override global new operator
+// void* operator new(size_t size) {
+//   void* ptr = malloc(size);
+//   if (!ptr) {
+//     throw std::bad_alloc();
+//   }
+//   TracyAlloc(ptr, size);
+//   return ptr;
+// }
 
-// Override global new[] operator
-void* operator new[](size_t size) {
-  void* ptr = malloc(size);
-  if (!ptr) {
-    throw std::bad_alloc();
-  }
-  TracyAlloc(ptr, size);
-  return ptr;
-}
+// // Override global new[] operator
+// void* operator new[](size_t size) {
+//   void* ptr = malloc(size);
+//   if (!ptr) {
+//     throw std::bad_alloc();
+//   }
+//   TracyAlloc(ptr, size);
+//   return ptr;
+// }
 
-// Override global delete operator
-void operator delete(void* ptr) noexcept {
-  TracyFree(ptr);
-  free(ptr);
-}
+// // Override global delete operator
+// void operator delete(void* ptr) noexcept {
+//   TracyFree(ptr);
+//   free(ptr);
+// }
 
-// Override global delete[] operator
-void operator delete[](void* ptr) noexcept {
-  TracyFree(ptr);
-  free(ptr);
-}
+// // Override global delete[] operator
+// void operator delete[](void* ptr) noexcept {
+//   TracyFree(ptr);
+//   free(ptr);
+// }
 
 #endif
 
