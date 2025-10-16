@@ -12,7 +12,42 @@ Hyperbot is comprised of 3 separate components:
 
 ## Building
 
-### ClientManager
+### Hyperbot
+
+As mentioned above, Hyperbot needs to run on Linux. We will build it in Ubuntu24 in WSL 2 (not WSL 1, like before). We will also use vcpkg for dependency management. It can easily be installed in Linux by following [these instructions](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash#1---set-up-vcpkg).
+
+Make sure your system has the necessary tools for building C++ software:
+```
+sudo apt-get update
+sudo apt-get install pkg-config autoconf cmake ninja-build clang python3-dev python-is-python3 python3.12-venv
+```
+_Note: Notice that python3.12-venv references a specific version number. You should make sure this matches the version of python you have installed._
+
+Install dependencies using the default triplet (x64-linux) via vcpkg:
+```
+cd Hyperbot
+vcpkg install
+```
+
+Install Python packages:
+```
+cd Hyperbot
+python -m venv venv
+pip install -r bot/src/rl/python/requirements.txt
+```
+As mentioned above, Hyperbot needs to run on Linux. We will build it in Ubuntu24 in WSL 2 (not WSL 1, like in the past). We will also use VCPkg for dependency management. It can easily be installed in Linux by following [these instructions](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash#1---set-up-vcpkg).
+
+#### Building With Tracy
+
+Run CMake's configure step with the following cmake variable definitions:
+```
+cmake -DTRACY_ENABLE=ON -DTRACY_DELAYED_INIT=ON --preset linux_x64
+```
+_Note: I believe `DTRACY_DELAYED_INIT` is required because we're running in WSL 2 which might not play well with Tracy's precise timing for profiling._
+
+### ClientManager _(Optional)_
+
+_The ClientManager is optional because Hyperbot supports running characters without a client. See `setClientless` in [proxy.hpp](../bot/src/proxy.hpp)._
 
 Since ClientManager must be run on Windows, we must also build it in Windows. Below I will outline the steps to build ClientManager on Windows using Ubuntu24 in WSL 1 (primarily for the bash command line).
 
@@ -35,40 +70,9 @@ cd Hyperbot
 vcpkg.exe install --triplet=x86-windows
 ```
 
-### Hyperbot
+### RL User Interface _(Optional)_
 
-As mentioned above, Hyperbot needs to run on Linux. We will build it in Ubuntu24 in WSL 2 (not WSL 1, like before). We will also use vcpkg for dependency management. It can easily be installed in Linux by following [these instructions](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash#1---set-up-vcpkg).
-
-Make sure your system has the necessary tools for building C++ software:
-```
-sudo apt-get update
-sudo apt-get install pkg-config autoconf cmake ninja-build clang python3-dev python-is-python3 python3.12-venv
-```
-_Note: Notice that python3.12-venv references a specific version number. You should make sure this matches the version of python you have installed._
-
-Similar to step 3 from ClientManager, use vcpkg to install dependencies (this time using the default triplet, which should be x64-linux):
-```
-cd Hyperbot
-vcpkg install
-```
-
-Install Python packages:
-```
-cd Hyperbot
-python -m venv venv
-pip install -r bot/src/rl/python/requirements.txt
-```
-As mentioned above, Hyperbot needs to run on Linux. We will build it in Ubuntu24 in WSL 2 (not WSL 1, like before). We will also use VCPkg for dependency management. It can easily be installed in Linux by following [these instructions](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash#1---set-up-vcpkg).
-
-#### Building With Tracy
-
-Run CMake's configure step:
-```
-cmake -DTRACY_ENABLE=ON -DTRACY_DELAYED_INIT=ON --preset linux_x64
-```
-_Note: I believe `DTRACY_DELAYED_INIT` is required because we're running in WSL 2 which might not play well with Tracy's precise timing for profiling._
-
-### RL User Interface
+_The RL User Interface is optional because it is not required for Hyperbot to run. However, currently, initiating training is done via this user interface. Alternatively, a simple code change could be made to immediately begin training once Hyperbot launches._
 
 - Install Qt Creator 16.0
 - Install Qt 6.9.0

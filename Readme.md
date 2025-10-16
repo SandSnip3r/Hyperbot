@@ -64,3 +64,7 @@ These properties make MMORPGs a fertile environment for *next-generation RL rese
 - **Real MMORPG Environment** – Interact with a production-grade game world featuring authentic network protocols and state transitions.
 - **Asynchronous Control** – The environment evolves continuously; agents must act in real time.
 - **Multi-Agent Capability** – Designed to manage and coordinate multiple characters concurrently.
+
+## Getting Started
+
+See the [build documentation](documents/build.md) to get started with this project.
