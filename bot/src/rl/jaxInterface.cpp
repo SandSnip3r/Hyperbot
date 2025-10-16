@@ -32,6 +32,8 @@ bool checkHasAttr(py::object &obj, const std::string &attr_name) {
 }
 
 void logToCsvFile(const std::string &metadata, const std::chrono::steady_clock::time_point &timestamp, const detail::ModelInputNumpy &modelInputNumpy, const std::vector<float> &qValues, int actionIndex) {
+  // TODO: For now, we've disabled this.
+  return;
   // Log the following to a CSV file:
   // ms_since_epoch, pvp_id, *observation_data, action_index, *q_values
   std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch());
