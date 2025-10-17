@@ -1,15 +1,16 @@
 #include "bot.hpp"
 #include "characterLoginInfo.hpp"
 #include "common/pvpDescriptor.hpp"
+#include "packet/building/clientAgentCharacterMoveRequest.hpp"
 #include "rl/ai/deepLearningIntelligence.hpp"
 #include "rl/ai/randomIntelligence.hpp"
 #include "rl/trainingManager.hpp"
 #include "session.hpp"
+#include "tensorboard.hpp"
 #include "type_id/categories.hpp"
 #include "ui/rlUserInterface.hpp"
-#include <ui_proto/rl_checkpointing.pb.h>
 
-#include "packet/building/clientAgentCharacterMoveRequest.hpp"
+#include <ui_proto/rl_checkpointing.pb.h>
 
 #include <silkroad_lib/position.hpp>
 #include <silkroad_lib/position_math.hpp>
@@ -91,14 +92,14 @@ void TrainingManager::train() {
       const model_inputs::BatchedTrainingInput modelInputs = buildModelInputsFromReplayBufferSamples(sampleResult);
       lock.unlock();
 
-      jaxInterface_.addScalar("anneal/Beta", beta, trainStepCount_);
+      Tensorboard::instance().addScalar("anneal/Beta", beta, trainStepCount_);
 
       // Track training rate
       const std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
       const std::chrono::steady_clock::duration timeDiff = currentTime - lastTrainingTime_;
       if (timeDiff > kTrainRateReportInterval) {
         const float trainingRate = static_cast<float>(trainingCount_) / (std::chrono::duration_cast<std::chrono::milliseconds>(timeDiff).count()/1000.0);
-        jaxInterface_.addScalar("perf/Training Rate", trainingRate, trainStepCount_);
+        Tensorboard::instance().addScalar("perf/Training Rate", trainingRate, trainStepCount_);
         trainingCount_ = 0;
         lastTrainingTime_ = currentTime;
       }
@@ -138,13 +139,14 @@ void TrainingManager::train() {
       const float minTdError = *std::min_element(trainOutput.tdErrors.begin(), trainOutput.tdErrors.end());
       const float meanTdError = std::accumulate(trainOutput.tdErrors.begin(), trainOutput.tdErrors.end(), 0.0f) / trainOutput.tdErrors.size();
       const float maxTdError = *std::max_element(trainOutput.tdErrors.begin(), trainOutput.tdErrors.end());
-      jaxInterface_.addScalar("Global Norm", trainOutput.globalNorm, trainStepCount_);
-      jaxInterface_.addScalar("TD_Error/Min", minTdError, trainStepCount_);
-      jaxInterface_.addScalar("TD_Error/Mean", meanTdError, trainStepCount_);
-      jaxInterface_.addScalar("TD_Error/Max", maxTdError, trainStepCount_);
-      jaxInterface_.addScalar("Q_Value/Min", trainOutput.meanMinQValue, trainStepCount_);
-      jaxInterface_.addScalar("Q_Value/Mean", trainOutput.meanMeanQValue, trainStepCount_);
-      jaxInterface_.addScalar("Q_Value/Max", trainOutput.meanMaxQValue, trainStepCount_);
+      Tensorboard &tensorboard = Tensorboard::instance();
+      tensorboard.addScalar("Global Norm", trainOutput.globalNorm, trainStepCount_);
+      tensorboard.addScalar("TD_Error/Min", minTdError, trainStepCount_);
+      tensorboard.addScalar("TD_Error/Mean", meanTdError, trainStepCount_);
+      tensorboard.addScalar("TD_Error/Max", maxTdError, trainStepCount_);
+      tensorboard.addScalar("Q_Value/Min", trainOutput.meanMinQValue, trainStepCount_);
+      tensorboard.addScalar("Q_Value/Mean", trainOutput.meanMeanQValue, trainStepCount_);
+      tensorboard.addScalar("Q_Value/Max", trainOutput.meanMaxQValue, trainStepCount_);
       ++trainStepCount_;
       if (kTargetNetworkPolyakEnabled) {
         if (trainStepCount_ % kTargetNetworkPolyakUpdateInterval == 0) {
@@ -322,15 +324,16 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
   }
 
   // Report metrics.
-  jaxInterface_.addScalar("anneal/Epsilon", getEpsilon(), trainStepCount_);
+  Tensorboard &tensorboard = Tensorboard::instance();
+  tensorboard.addScalar("anneal/Epsilon", getEpsilon(), trainStepCount_);
   if (sampleRate) {
-    jaxInterface_.addScalar("perf/Sample Collection Rate", *sampleRate, trainStepCount_);
+    tensorboard.addScalar("perf/Sample Collection Rate", *sampleRate, trainStepCount_);
   }
   if (replayBufferSize) {
-    jaxInterface_.addScalar("perf/Replay Buffer Size", *replayBufferSize, trainStepCount_);
+    tensorboard.addScalar("perf/Replay Buffer Size", *replayBufferSize, trainStepCount_);
   }
   if (cumulativeReward) {
-    jaxInterface_.addScalar(absl::StrFormat("Episode_Return/%s", intelligenceName), *cumulativeReward, trainStepCount_);
+    tensorboard.addScalar(absl::StrFormat("Episode_Return/%s", intelligenceName), *cumulativeReward, trainStepCount_);
   }
 }
 

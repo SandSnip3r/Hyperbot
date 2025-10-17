@@ -60,6 +60,8 @@ add_executable(${PROJECT_NAME}
   src/event/event.hpp
   src/event/eventCode.cpp
   src/event/eventCode.hpp
+  src/flags.cpp
+  src/flags.hpp
   src/helpers.cpp
   src/helpers.hpp
   src/hyperbot.cpp
@@ -421,6 +423,8 @@ add_executable(${PROJECT_NAME}
   src/storage/itemList.hpp
   src/storage/storage.cpp
   src/storage/storage.hpp
+  src/tensorboard.cpp
+  src/tensorboard.hpp
   src/type_id/categories.cpp
   src/type_id/categories.hpp
   src/type_id/typeCategory.cpp

@@ -1,3 +1,4 @@
+#include "flags.hpp"
 #include "rl/jaxInterface.hpp"
 #include "rl/actionSpace.hpp"
 
@@ -16,8 +17,6 @@
 #include <thread>
 
 namespace py = pybind11;
-
-ABSL_FLAG(bool, debug_nans, false, "Debug nan values");
 
 namespace rl {
 
@@ -172,9 +171,6 @@ JaxInterface::~JaxInterface() {
   if (optaxModule_.has_value()) {
     optaxModule_.reset();
   }
-  if (summaryWriter_.has_value()) {
-    summaryWriter_.reset();
-  }
   if (rngKey_.has_value()) {
     rngKey_.reset();
   }
@@ -204,10 +200,6 @@ void JaxInterface::initialize(float dropoutRate) {
     py::gil_scoped_acquire acquire;
     py::object DqnModelType;
     py::tuple graphAndWeights;
-
-    // Initialize Tensorboard for logging statistics.
-    py::module tensorboardX = py::module::import("tensorboardX");
-    summaryWriter_ = tensorboardX.attr("SummaryWriter")("flush_secs"_a=1);
 
     // Load our python module which has our RL code.
     dqnModule_ = py::module::import("rl.python.dqn");
@@ -514,22 +506,6 @@ void JaxInterface::loadCheckpoint(const std::string &modelCheckpointPath, const 
     throw;
   }
   modelConditionVariable_.notify_all();
-}
-
-void JaxInterface::addScalar(std::string_view name, double yValue, double xValue) {
-  if (absl::GetFlag(FLAGS_debug_nans)) {
-    if (std::isnan(yValue)) {
-      LOG(ERROR) << "[" << name << "] yValue is nan: " << yValue;
-    } else if (std::isinf(yValue)) {
-      if (yValue > 0) {
-        LOG(ERROR) << "[" << name << "] yValue is +inf: " << yValue;
-      } else {
-        LOG(ERROR) << "[" << name << "] yValue is -inf: " << yValue;
-      }
-    }
-  }
-  py::gil_scoped_acquire acquire;
-  summaryWriter_->attr("add_scalar")(name, yValue, xValue);
 }
 
 py::object JaxInterface::getPythonOptimizer() {
