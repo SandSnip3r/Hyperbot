@@ -20,9 +20,11 @@ namespace ai {
 class BaseIntelligence {
 public:
   BaseIntelligence(TrainingManager &trainingManager);
-  virtual int selectAction(Bot &bot, const Observation &observation, bool canSendPacket, std::optional<std::string> metadata = std::nullopt) = 0;
-  virtual const std::string& name() const = 0;
   TrainingManager& trainingManager() { return trainingManager_; }
+
+  virtual const std::string& name() const = 0;
+  virtual int selectAction(Bot &bot, const Observation &observation, bool canSendPacket, std::optional<std::string> metadata = std::nullopt) = 0;
+  virtual sro::scalar_types::ReferenceObjectId avatarHatRefId() const = 0;
 
 protected:
   TrainingManager &trainingManager_;

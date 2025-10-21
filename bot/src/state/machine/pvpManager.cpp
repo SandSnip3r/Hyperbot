@@ -253,8 +253,6 @@ Status PvpManager::onUpdate(const event::Event *event) {
 }
 
 void PvpManager::setPrepareForPvpStateMachine() {
-  sro::scalar_types::ReferenceObjectId deepLearningHatRefId = 23958; // Wizard's Hat (M)
-  sro::scalar_types::ReferenceObjectId randomHatRefId = 24302; // Joker Hat (M)
 
   CHAR_VLOG(1) << "Setting state machine to prepare for PVP";
   // Start with a sequence of actions that will prepare the character for PVP.
@@ -302,13 +300,13 @@ void PvpManager::setPrepareForPvpStateMachine() {
   sequentialStateMachines.emplace<state::machine::EnablePvpMode>();
 
   // Equip an avatar hat depending on which intelligence we are.
-  std::string ourIntelligenceName;
+  sro::scalar_types::ReferenceObjectId avatarHatId;
   if (ourPlayer(*pvpDescriptor_, bot_.selfState()->name) == Player::kPlayer1) {
-    ourIntelligenceName = pvpDescriptor_->player1Intelligence->name();
+    avatarHatId = pvpDescriptor_->player1Intelligence->avatarHatRefId();
   } else {
-    ourIntelligenceName = pvpDescriptor_->player2Intelligence->name();
+    avatarHatId = pvpDescriptor_->player2Intelligence->avatarHatRefId();
   }
-  sequentialStateMachines.emplace<state::machine::EquipItem>(ourIntelligenceName == "Random" ? randomHatRefId : deepLearningHatRefId);
+  sequentialStateMachines.emplace<state::machine::EquipItem>(avatarHatId);
 
   sequentialStateMachines.emplace<state::machine::DisableGmInvisible>();
   sequentialStateMachines.emplace<state::machine::WaitForAllCooldownsToEnd>();

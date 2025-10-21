@@ -3,6 +3,7 @@
 #include "common/pvpDescriptor.hpp"
 #include "packet/building/clientAgentCharacterMoveRequest.hpp"
 #include "rl/ai/deepLearningIntelligence.hpp"
+#include "rl/ai/noOpIntelligence.hpp"
 #include "rl/ai/randomIntelligence.hpp"
 #include "rl/trainingManager.hpp"
 #include "session.hpp"
@@ -480,7 +481,7 @@ common::PvpDescriptor TrainingManager::buildPvpDescriptor(Session &char1, Sessio
 
   pvpDescriptor.itemRequirements = itemRequirements_;
 
-  pvpDescriptor.player1Intelligence = std::make_shared<rl::ai::RandomIntelligence>(*this);
+  pvpDescriptor.player1Intelligence = std::make_shared<rl::ai::NoOpIntelligence>(*this);
   pvpDescriptor.player2Intelligence = std::make_shared<rl::ai::DeepLearningIntelligence>(*this);
 
   return pvpDescriptor;
@@ -493,11 +494,6 @@ Session& TrainingManager::getSession(SessionId sessionId) {
     }
   }
   throw std::runtime_error("Session not found");
-}
-
-void TrainingManager::pvp(Bot &char1, Bot &char2) {
-  // Start the fight by sending an event.
-  eventBroker_.publishEvent(event::EventCode::kRlStartPvp);
 }
 
 void TrainingManager::buildItemRequirementList() {
@@ -523,25 +519,15 @@ void TrainingManager::buildItemRequirementList() {
 }
 
 float TrainingManager::calculateReward(const Observation &lastObservation, const Observation &observation, bool isTerminal) const {
-  float reward = 0.0f;
-  // We get some positive reward proportional to how much our health increased, negative if it decreased.
-  reward += (static_cast<int64_t>(observation.ourCurrentHp()) - lastObservation.ourCurrentHp()) / static_cast<double>(observation.ourMaxHp());
-  // We get some positive reward proportional to how much our opponent's health decreased, negative if it increased.
-  reward += (static_cast<int64_t>(lastObservation.opponentCurrentHp()) - observation.opponentCurrentHp()) / static_cast<double>(observation.opponentMaxHp());
-  // We get some negative reward if the event is an error.
-  // if (observation.eventCode_ == event::EventCode::kCommandError ||
-  //     observation.eventCode_ == event::EventCode::kItemUseFailed) {
-  //   reward -= 0.0005f;
-  // }
+  // The goal is to kill the opponent as quickly as possible.
+  // Currently, the opponent does not take any actions, so a small negative reward on every time step should suffice.
+  //
+  // Ideally, the magnitude of the reward should be proportional to the duration of time since the last observation.
+  // However, if the RL algorithm must learn to directly predict the value of the reward, doing so will be more difficult.
   if (isTerminal) {
-    // Give an extra bump for a win or loss.
-    if (observation.ourCurrentHp() == 0) {
-      reward -= 2.0f;
-    } else if (observation.opponentCurrentHp() == 0) {
-      reward += 2.0f;
-    }
+    return 0.0f;
   }
-  return reward;
+  return -0.01f;
 }
 
 void TrainingManager::saveCheckpoint(const std::string &checkpointName, bool overwrite) {

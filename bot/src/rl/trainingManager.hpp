@@ -143,8 +143,6 @@ private:
   void checkAndPublishPvpDescriptors();
   Session& getSession(SessionId sessionId);
 
-  void pvp(Bot &char1, Bot &char2);
-
   void buildItemRequirementList();
   std::vector<common::ItemRequirement> itemRequirements_;
 

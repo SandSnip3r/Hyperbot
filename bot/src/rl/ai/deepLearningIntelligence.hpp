@@ -4,6 +4,8 @@
 #include "rl/ai/randomIntelligence.hpp"
 #include "rl/jaxInterface.hpp"
 
+#include <silkroad_lib/scalar_types.hpp>
+
 #include <deque>
 #include <optional>
 #include <string>
@@ -13,8 +15,9 @@ namespace rl::ai {
 class DeepLearningIntelligence : public RandomIntelligence {
 public:
   using RandomIntelligence::RandomIntelligence;
-  int selectAction(Bot &bot, const Observation &observation, bool canSendPacket, std::optional<std::string> metadata) override;
   const std::string& name() const override { return name_; }
+  int selectAction(Bot &bot, const Observation &observation, bool canSendPacket, std::optional<std::string> metadata) override;
+  sro::scalar_types::ReferenceObjectId avatarHatRefId() const override;
 private:
   const std::string name_{"DeepLearning"};
 

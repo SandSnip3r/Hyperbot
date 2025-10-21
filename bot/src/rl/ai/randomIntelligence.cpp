@@ -16,4 +16,8 @@ int RandomIntelligence::selectAction(Bot &bot, const Observation &observation, b
   return actionIndex;
 }
 
+sro::scalar_types::ReferenceObjectId RandomIntelligence::avatarHatRefId() const {
+  return 24302; // Joker Hat (M)
+}
+
 } // namespace rl::ai

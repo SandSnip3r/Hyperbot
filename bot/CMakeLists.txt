@@ -303,6 +303,8 @@ add_executable(${PROJECT_NAME}
   src/rl/ai/baseIntelligence.hpp
   src/rl/ai/deepLearningIntelligence.cpp
   src/rl/ai/deepLearningIntelligence.hpp
+  src/rl/ai/noOpIntelligence.cpp
+  src/rl/ai/noOpIntelligence.hpp
   src/rl/ai/randomIntelligence.cpp
   src/rl/ai/randomIntelligence.hpp
   src/rl/checkpointManager.cpp

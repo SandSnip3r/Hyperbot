@@ -20,6 +20,7 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
   if (randomActionDistribution(randomEngine_)) {
     // Do a random action.
     actionIndex = RandomIntelligence::selectAction(bot, observation, canSendPacket);
+    VLOG(1) << "Acting randomly (esp=" << epsilon << ") with action " << actionIndex;
   } else {
     if (canSendPacket) {
       // Release the world state mutex while we call into JAX
@@ -39,12 +40,14 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
 
       rl::JaxInterface::ActionSelectionResult result = trainingManager_.getJaxInterface().selectAction(modelInputView, canSendPacket, metadata);
       actionIndex = result.actionIndex;
+      VLOG(1) << "Can send packet, queried model and taking action " << actionIndex;
       bot.sendQValues(result.qValues);
       bot.worldState().mutex.lock();
     } else {
       // We cannot send a packet, we'll entirely side-step JAX and immediately return the do-nothing action
       // TODO: If we ever have more than one non-packet action, we should still call into JAX to let the model decide which to do.
       actionIndex = 0;
+      VLOG(1) << "Cannot send packet, doing action " << actionIndex;
     }
   }
 
@@ -56,6 +59,10 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
   pastObservationsAndActions_.emplace_back(observation, actionIndex);
 
   return actionIndex;
+}
+
+sro::scalar_types::ReferenceObjectId DeepLearningIntelligence::avatarHatRefId() const {
+  return 23958; // Wizard's Hat (M)
 }
 
 } // namespace rl::ai
