@@ -1,5 +1,5 @@
-#ifndef RL_RL_TRAINING_MANAGER_HPP_
-#define RL_RL_TRAINING_MANAGER_HPP_
+#ifndef RL_TRAINING_MANAGER_HPP_
+#define RL_TRAINING_MANAGER_HPP_
 
 #include "broker/eventBroker.hpp"
 #include "clientManagerInterface.hpp"
@@ -7,6 +7,7 @@
 #include "common/pvpDescriptor.hpp"
 #include "common/sessionId.hpp"
 #include "rl/checkpointManager.hpp"
+#include "rl/hyperparameters.hpp"
 #include "rl/jaxInterface.hpp"
 #include "rl/observationAndActionStorage.hpp"
 #include "rl/replayBuffer.hpp"
@@ -58,7 +59,7 @@ public:
 
   JaxInterface& getJaxInterface() { return jaxInterface_; }
   int getTrainStepCount() const { return trainStepCount_.load(); }
-  constexpr int getPastObservationStackSize() const { return kPastObservationStackSize; }
+  constexpr int getPastObservationStackSize() const { return hyperparameters::kPastObservationStackSize; }
   float getEpsilon() const;
 
   sro::scalar_types::ReferenceObjectId hpPotionRefId() const;
@@ -76,28 +77,8 @@ private:
     std::optional<SessionId> session2Id;
   };
 
-  static constexpr int kPastObservationStackSize{8};
   static constexpr float kPvpStartingCenterOffset{40.0f};
-  static constexpr int kBatchSize{256};
-  static constexpr int kReplayBufferMinimumBeforeTraining{40'000};
-  static constexpr int kReplayBufferCapacity{100'000};
-  static constexpr int kTargetNetworkUpdateInterval{10'000};
-  static constexpr int kTrainStepCheckpointInterval{10'000};
-  static constexpr float kTargetNetworkPolyakTau{0.0004f};
-  static constexpr int kTargetNetworkPolyakUpdateInterval{16};
-  static constexpr bool kTargetNetworkPolyakEnabled{true};
-  static constexpr float kGamma{0.997f};
-  static constexpr float kLearningRate{1e-6f};
-  static constexpr float kDropoutRate{0.05f};
-  static constexpr float kPerAlpha{0.5f};
-  static constexpr float kPerBetaStart{0.4f};
-  static constexpr float kPerBetaEnd{1.0f};
-  static constexpr int kPerTrainStepCountAnneal{50'000};
-  static constexpr float kInitialEpsilon{1.0f};
-  static constexpr float kFinalEpsilon{0.01f};
-  static constexpr int kEpsilonStepCountAnneal{50'000};
   static constexpr int kPvpCount{8};
-  static constexpr int kTdLookahead{4};
 
   std::atomic<bool> runTraining_{false};
   std::mutex runTrainingMutex_;
@@ -111,7 +92,7 @@ private:
   std::vector<std::unique_ptr<Session>> sessions_;
   std::vector<SessionId> sessionsReadyForAssignment_;
   common::PvpDescriptor::PvpId nextPvpId_{0};
-  JaxInterface jaxInterface_{kPastObservationStackSize, kGamma, kLearningRate};
+  JaxInterface jaxInterface_{hyperparameters::kPastObservationStackSize, hyperparameters::kGamma, hyperparameters::kLearningRate};
   CheckpointManager checkpointManager_{rlUserInterface_};
   std::atomic<int> trainStepCount_{0};
 
@@ -151,8 +132,8 @@ private:
 
   using ReplayBufferType = ReplayBuffer<ObservationAndActionStorage::Id>;
   mutable TracyLockableN(std::mutex, replayBufferAndStorageMutex_, "ReplayBuffer");
-  ObservationAndActionStorage observationAndActionStorage_{kReplayBufferCapacity}                                                  ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
-  ReplayBufferType replayBuffer_{kReplayBufferCapacity, kPerAlpha, /*epsilon=*/1e-5f}                                              ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
+  ObservationAndActionStorage observationAndActionStorage_{hyperparameters::kReplayBufferCapacity}                                 ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
+  ReplayBufferType replayBuffer_{hyperparameters::kReplayBufferCapacity, hyperparameters::kPerAlpha, /*epsilon=*/1e-5f}            ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
   absl::flat_hash_map<ObservationAndActionStorage::Id, ReplayBufferType::TransitionId> observationIdToTransitionIdMap_             ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
   absl::flat_hash_map<ReplayBufferType::TransitionId, ObservationAndActionStorage::Id> transitionIdToObservationIdMap_             ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
   std::set<ReplayBufferType::TransitionId> deletedTransitionIds_                                                                   ABSL_GUARDED_BY(replayBufferAndStorageMutex_);
@@ -168,4 +149,4 @@ private:
 
 } // namespace rl
 
-#endif // RL_RL_TRAINING_MANAGER_HPP_
+#endif // RL_TRAINING_MANAGER_HPP_

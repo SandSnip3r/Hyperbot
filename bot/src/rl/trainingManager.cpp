@@ -30,7 +30,7 @@ TrainingManager::TrainingManager(const sro::pk2::GameData &gameData,
                       rlUserInterface_(rlUserInterface),
                       worldState_(worldState),
                       clientManagerInterface_(clientManagerInterface) {
-  static_assert(kTdLookahead > 0, "kTdLookahead must be greater than 0");
+  static_assert(hyperparameters::kTdLookahead > 0, "kTdLookahead must be greater than 0");
 }
 
 void TrainingManager::run() {
@@ -47,7 +47,7 @@ void TrainingManager::run() {
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiLoadCheckpoint, eventHandleFunction);
   eventBroker_.subscribeToEvent(event::EventCode::kRlUiDeleteCheckpoints, eventHandleFunction);
 
-  jaxInterface_.initialize(kDropoutRate);
+  jaxInterface_.initialize(hyperparameters::kDropoutRate);
   precompileModels();
 
   // 1. Wait here until we're told to start training.
@@ -78,7 +78,7 @@ void TrainingManager::train() {
     ZoneScopedN("TrainingManager::train_iter");
     try {
       std::unique_lock lock(replayBufferAndStorageMutex_);
-      if (replayBuffer_.size() < kBatchSize || replayBuffer_.size() < kReplayBufferMinimumBeforeTraining) {
+      if (replayBuffer_.size() < hyperparameters::kBatchSize || replayBuffer_.size() < hyperparameters::kReplayBufferMinimumBeforeTraining) {
         // We don't have enough transitions to sample from yet.
         lock.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -86,8 +86,8 @@ void TrainingManager::train() {
       }
 
       // Sample a batch of transitions from the replay buffer.
-      const float beta = std::min(kPerBetaEnd, kPerBetaStart + (kPerBetaEnd - kPerBetaStart) * (static_cast<float>(trainStepCount_) / static_cast<float>(kPerTrainStepCountAnneal)));
-      const std::vector<ReplayBufferType::SampleResult> sampleResult = replayBuffer_.sample(kBatchSize, randomEngine, beta);
+      const float beta = std::min(hyperparameters::kPerBetaEnd, hyperparameters::kPerBetaStart + (hyperparameters::kPerBetaEnd - hyperparameters::kPerBetaStart) * (static_cast<float>(trainStepCount_) / static_cast<float>(hyperparameters::kPerTrainStepCountAnneal)));
+      const std::vector<ReplayBufferType::SampleResult> sampleResult = replayBuffer_.sample(hyperparameters::kBatchSize, randomEngine, beta);
       holdingSample_ = true;
 
       const model_inputs::BatchedTrainingInput modelInputs = buildModelInputsFromReplayBufferSamples(sampleResult);
@@ -104,7 +104,7 @@ void TrainingManager::train() {
         trainingCount_ = 0;
         lastTrainingTime_ = currentTime;
       }
-      trainingCount_ += kBatchSize;
+      trainingCount_ += hyperparameters::kBatchSize;
 
       const JaxInterface::TrainAuxOutput trainOutput = jaxInterface_.train(model,
                                                                            optimizer,
@@ -149,17 +149,17 @@ void TrainingManager::train() {
       tensorboard.addScalar("Q_Value/Mean", trainOutput.meanMeanQValue, trainStepCount_);
       tensorboard.addScalar("Q_Value/Max", trainOutput.meanMaxQValue, trainStepCount_);
       ++trainStepCount_;
-      if (kTargetNetworkPolyakEnabled) {
-        if (trainStepCount_ % kTargetNetworkPolyakUpdateInterval == 0) {
+      if (hyperparameters::kTargetNetworkPolyakEnabled) {
+        if (trainStepCount_ % hyperparameters::kTargetNetworkPolyakUpdateInterval == 0) {
           // Soft update target network every step with Polyak averaging
-          jaxInterface_.updateTargetModelPolyak(kTargetNetworkPolyakTau);
+          jaxInterface_.updateTargetModelPolyak(hyperparameters::kTargetNetworkPolyakTau);
         }
-      } else if (trainStepCount_ % kTargetNetworkUpdateInterval == 0) {
+      } else if (trainStepCount_ % hyperparameters::kTargetNetworkUpdateInterval == 0) {
         // Hard update target network at fixed intervals
         LOG(INFO) << "Train step #" << trainStepCount_ << ". Updating target network";
         jaxInterface_.updateTargetModel();
       }
-      if (trainStepCount_ % kTrainStepCheckpointInterval == 0) {
+      if (trainStepCount_ % hyperparameters::kTrainStepCheckpointInterval == 0) {
         LOG(INFO) << "Train step #" << trainStepCount_ << ". Saving checkpoint";
         saveCheckpoint("backup_checkpoint", /*overwrite=*/true);
       }
@@ -291,7 +291,7 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
     std::deque<Id> &pendingObservationsForPvp = pendingObservations_[pvpId][intelligenceName];
     pendingObservationsForPvp.push_back(currentObservationId);
     // In order to compute rewards, we need to have at least kTdLookahead observations in the buffer. Rather than expect the replay buffer to check if it has enough observations, we instead only insert a transition once we have enough observations.
-    if (pendingObservationsForPvp.size() >= kTdLookahead) {
+    if (pendingObservationsForPvp.size() >= hyperparameters::kTdLookahead) {
       // We have enough observations to now add a transition to the replay buffer.
       const Id observationToInsert = pendingObservationsForPvp.front();
       pendingObservationsForPvp.pop_front();
@@ -339,7 +339,7 @@ void TrainingManager::reportObservationAndAction(common::PvpDescriptor::PvpId pv
 }
 
 float TrainingManager::getEpsilon() const {
-  return std::min(kInitialEpsilon, std::max(kFinalEpsilon, kInitialEpsilon - static_cast<float>(trainStepCount_) / kEpsilonStepCountAnneal));
+  return std::min(hyperparameters::kInitialEpsilon, std::max(hyperparameters::kFinalEpsilon, hyperparameters::kInitialEpsilon - static_cast<float>(trainStepCount_) / hyperparameters::kEpsilonStepCountAnneal));
 }
 
 sro::scalar_types::ReferenceObjectId TrainingManager::hpPotionRefId() const {
@@ -573,12 +573,12 @@ model_inputs::BatchedTrainingInput TrainingManager::buildModelInputsFromReplayBu
     const ObservationAndActionStorage::Id currentObservationId = observationAndActionStorage_.getPreviousId(successorObservationId);
     ObservationAndActionStorage::Id tmpCurrentObservationId = observationAndActionStorage_.getPreviousId(successorObservationId);
     float reward = 0.0f;
-    for (int j=0; j<kTdLookahead; ++j) {
+    for (int j=0; j<hyperparameters::kTdLookahead; ++j) {
       const ObservationAndActionStorage::ObservationAndActionType &currentObservationAndAction = observationAndActionStorage_.getObservationAndAction(tmpCurrentObservationId);
       const ObservationAndActionStorage::ObservationAndActionType &successorObservationAndAction = observationAndActionStorage_.getObservationAndAction(successorObservationId);
       const bool isTerminal = !successorObservationAndAction.actionIndex.has_value();
       reward += calculateReward(currentObservationAndAction.observation, successorObservationAndAction.observation, isTerminal);
-      if (isTerminal || j == kTdLookahead-1) {
+      if (isTerminal || j == hyperparameters::kTdLookahead-1) {
         break;
       }
       tmpCurrentObservationId = successorObservationId;
@@ -607,13 +607,13 @@ model_inputs::BatchedTrainingInput TrainingManager::buildModelInputsFromReplayBu
 model_inputs::ModelInputView TrainingManager::buildModelInputUpToObservation(ObservationAndActionStorage::Id currentObservationId, model_inputs::BatchedTrainingInput &batchedTrainingInput) const {
   model_inputs::ModelInputView modelInput;
   modelInput.currentObservation = &batchedTrainingInput.getObservationAndAction(currentObservationId, observationAndActionStorage_).observation;
-  modelInput.pastObservationStack.reserve(kPastObservationStackSize);
+  modelInput.pastObservationStack.reserve(hyperparameters::kPastObservationStackSize);
   {
     std::vector<std::pair<const Observation*, int>> pastObservationsAndActions;
-    pastObservationsAndActions.reserve(kPastObservationStackSize);
+    pastObservationsAndActions.reserve(hyperparameters::kPastObservationStackSize);
 
     ObservationAndActionStorage::Id tmp = currentObservationId;
-    while (pastObservationsAndActions.size() < kPastObservationStackSize && observationAndActionStorage_.hasPrevious(tmp)) {
+    while (pastObservationsAndActions.size() < hyperparameters::kPastObservationStackSize && observationAndActionStorage_.hasPrevious(tmp)) {
       tmp = observationAndActionStorage_.getPreviousId(tmp);
       const ObservationAndActionStorage::ObservationAndActionType &obsAndAction = batchedTrainingInput.getObservationAndAction(tmp, observationAndActionStorage_);
       if (!obsAndAction.actionIndex) {
@@ -635,19 +635,19 @@ void TrainingManager::precompileModels() {
   // Create some spoof inputs so that we can invoke the model and trigger compilation.
   Observation observation;
   model_inputs::ModelInputView modelInputView;
-  modelInputView.pastObservationStack.resize(kPastObservationStackSize, &observation);
-  modelInputView.pastActionStack.resize(kPastObservationStackSize, 0);
+  modelInputView.pastObservationStack.resize(hyperparameters::kPastObservationStackSize, &observation);
+  modelInputView.pastActionStack.resize(hyperparameters::kPastObservationStackSize, 0);
   modelInputView.currentObservation = &observation;
 
   JaxInterface::Model dummyModel = jaxInterface_.getDummyModel();
   JaxInterface::Optimizer dummyOptimizer = jaxInterface_.getDummyOptimizer();
   JaxInterface::Model dummyTargetModel = jaxInterface_.getDummyModel();
-  std::vector<model_inputs::ModelInputView> pastModelInputViews(kBatchSize, modelInputView);
-  std::vector<int> actionsTaken(kBatchSize, 0);
-  std::vector<bool> isTerminals(kBatchSize, false);
-  std::vector<float> rewards(kBatchSize, 0.0f);
-  std::vector<model_inputs::ModelInputView> currentModelInputViews(kBatchSize, modelInputView);
-  std::vector<float> importanceSamplingWeights(kBatchSize, 0.0f);
+  std::vector<model_inputs::ModelInputView> pastModelInputViews(hyperparameters::kBatchSize, modelInputView);
+  std::vector<int> actionsTaken(hyperparameters::kBatchSize, 0);
+  std::vector<bool> isTerminals(hyperparameters::kBatchSize, false);
+  std::vector<float> rewards(hyperparameters::kBatchSize, 0.0f);
+  std::vector<model_inputs::ModelInputView> currentModelInputViews(hyperparameters::kBatchSize, modelInputView);
+  std::vector<float> importanceSamplingWeights(hyperparameters::kBatchSize, 0.0f);
   LOG(INFO) << "Precompiling selectAction";
   jaxInterface_.selectAction(modelInputView, /*canSendPacket=*/false);
   LOG(INFO) << "Precompiling train";

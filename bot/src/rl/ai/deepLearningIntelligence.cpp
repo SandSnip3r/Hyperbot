@@ -1,5 +1,6 @@
 #include "bot.hpp"
 #include "rl/ai/deepLearningIntelligence.hpp"
+#include "rl/hyperparameters.hpp"
 #include "rl/modelInputs.hpp"
 #include "rl/trainingManager.hpp"
 
@@ -52,7 +53,7 @@ int DeepLearningIntelligence::selectAction(Bot &bot, const Observation &observat
   }
 
   // Add the current observation and action to the stack.
-  if (pastObservationsAndActions_.size() >= trainingManager_.getPastObservationStackSize()) {
+  if (pastObservationsAndActions_.size() >= hyperparameters::kPastObservationStackSize) {
     // We are at capacity, remove the oldest one.
     pastObservationsAndActions_.pop_front();
   }

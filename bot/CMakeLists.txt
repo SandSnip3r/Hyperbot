@@ -309,6 +309,7 @@ add_executable(${PROJECT_NAME}
   src/rl/ai/randomIntelligence.hpp
   src/rl/checkpointManager.cpp
   src/rl/checkpointManager.hpp
+  src/rl/hyperparameters.hpp
   src/rl/items.hpp
   src/rl/jaxInterface.cpp
   src/rl/jaxInterface.hpp
