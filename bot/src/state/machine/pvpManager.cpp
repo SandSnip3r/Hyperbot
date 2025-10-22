@@ -94,7 +94,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
     } else if (const auto *lifeStateChanged = dynamic_cast<const event::EntityLifeStateChanged*>(event); lifeStateChanged != nullptr) {
       // Maybe someone died.
       // We don't care about this event if we're already resurrecting ourself.
-      const bool childStateIsResurrect = childState_ != nullptr && dynamic_cast<ResurrectInPlace*>(childState_.get()) != nullptr;
+      const bool childStateIsResurrect = haveChild() && childIsType<ResurrectInPlace>();
       if (!childStateIsResurrect) {
         const std::shared_ptr<entity::PlayerCharacter> playerCharacter = bot_.entityTracker().getEntity<entity::PlayerCharacter>(lifeStateChanged->globalId);
         if (playerCharacter->lifeState == sro::entity::LifeState::kDead) {
@@ -108,10 +108,8 @@ Status PvpManager::onUpdate(const event::Event *event) {
                 playerCharacter->name == pvpDescriptor_->player2Name) {
               CHAR_LOG(INFO) << "Either we or our opponent died! The pvp is over. " << playerCharacter->name << " died, we are " << bot_.selfState()->globalId;
               // Call the child state once more, so that it may report the final state to the replay buffer.
-              Status childStatus = childState_->onUpdate(event);
-              (void)childStatus; // We do not care what the child state returns because we are going to reset it regardless.
-              childState_.reset();
-              bot_.sendActiveStateMachine();
+              const Status childStatus = onUpdateChild(event);
+              resetChild();
               pvpDescriptor_.reset();
               // If it was the opponent who died, we can immediately report that we're ready for our next assignment.
               if (!opponentGlobalId_) {
@@ -132,7 +130,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
           if (lifeStateChanged->globalId == bot_.selfState()->globalId) {
             // If we died, we need to resurrect ourself, regardless of what we're doing.
             CHAR_VLOG(1) << "We died, resurrecting";
-            setChildStateMachine<ResurrectInPlace>(receivedResurrectionOption_);
+            setChild<ResurrectInPlace>(receivedResurrectionOption_);
             return onUpdate(event);
           }
         }
@@ -153,7 +151,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
       }
     } else if (const auto *resurrectOption = dynamic_cast<const event::ResurrectOption*>(event)) {
       if (resurrectOption->globalId == bot_.selfState()->globalId) {
-        if (childState_ != nullptr && dynamic_cast<ResurrectInPlace*>(childState_.get()) != nullptr) {
+        if (haveChild() && childIsType<ResurrectInPlace>()) {
           // Not yet resurrecting in place. Take note that we received this so that when the ResurrectInPlace state machine is run, it knows not to wait for this.
           // We need to do this because the (resurrect options) and (died) packets can come in any order.
           if (resurrectOption->option != packet::enums::ResurrectionOptionFlag::kAtPresentPoint) {
@@ -183,7 +181,7 @@ Status PvpManager::onUpdate(const event::Event *event) {
           opponentGlobalId_ = opponent->globalId;
           publishedThatWeAreReadyForAssignment_ = false;
           CHAR_VLOG(1) << "We've been told to fight against " << opponentName << "!";
-          if (childState_ == nullptr) {
+          if (!haveChild()) {
             setPrepareForPvpStateMachine();
             return onUpdate(nullptr);
           } else {
@@ -194,24 +192,22 @@ Status PvpManager::onUpdate(const event::Event *event) {
     }
   }
 
-  if (childState_ != nullptr) {
+  if (haveChild()) {
     // Have a child state machine, delegate to it.
-    const Status status = childState_->onUpdate(event);
+    const Status status = onUpdateChild(event);
     if (status == Status::kNotDone) {
       return Status::kNotDone;
     }
 
     CHAR_VLOG(1) << "Child state machine is done";
-    const bool childStateWasIntelligenceActor = dynamic_cast<IntelligenceActor*>(childState_.get()) != nullptr;
+    const bool childStateWasIntelligenceActor = childIsType<IntelligenceActor>();
     if (childStateWasIntelligenceActor) {
       // The only time an intelligence actor should end is when the pvp is over, which is dictated by this state machine. Upon which, this state machine will reset the child state machine.
       throw std::runtime_error("Intelligence actor should never naturally end");
     }
-    const bool childStateWasResurrect = dynamic_cast<ResurrectInPlace*>(childState_.get()) != nullptr;
-    const bool childStateWasSequential =
-        dynamic_cast<SequentialStateMachines*>(childState_.get()) != nullptr;
-    childState_.reset();
-    bot_.sendActiveStateMachine();
+    const bool childStateWasResurrect = childIsType<ResurrectInPlace>();
+    const bool childStateWasSequential = childIsType<SequentialStateMachines>();
+    resetChild();
     if (childStateWasResurrect) {
       // We're done resurrecting.
       CHAR_VLOG(1) << "Finished resurrecting";
@@ -264,11 +260,11 @@ void PvpManager::setPrepareForPvpStateMachine() {
   //  6. Repair all items.
   //  7. Enable PVP mode.
   //  8. Ensure we're visible.
-  setChildStateMachine<state::machine::SequentialStateMachines>();
-  state::machine::SequentialStateMachines &sequentialStateMachines = dynamic_cast<state::machine::SequentialStateMachines&>(*childState_);
+  setChild<state::machine::SequentialStateMachines>();
+  SequentialStateMachines &sequentialStateMachinesChild = getChildAsSequentialStateMachines();
 
   // Take off any avatar hats we may be wearing.
-  sequentialStateMachines.emplace<state::machine::MaybeRemoveAvatarEquipment>(
+  sequentialStateMachinesChild.emplace<state::machine::MaybeRemoveAvatarEquipment>(
       /*slot=*/sro::game_constants::kAvatarHatSlot,
       /*targetSlot=*/[](Bot &bot) {
         // Find the last free slot in our inventory.
@@ -287,17 +283,17 @@ void PvpManager::setPrepareForPvpStateMachine() {
     ourPvpPosition = pvpDescriptor_->pvpPositionPlayer2;
   }
 
-  sequentialStateMachines.emplace<state::machine::GmWarpToPosition>(ourPvpPosition);
-  sequentialStateMachines.emplace<state::machine::DispelActiveBuffs>();
+  sequentialStateMachinesChild.emplace<state::machine::GmWarpToPosition>(ourPvpPosition);
+  sequentialStateMachinesChild.emplace<state::machine::DispelActiveBuffs>();
 
   // The two different players need to start from different positions.
   std::vector<packet::building::NetworkReadyPosition> waypoints = {ourPvpPosition};
-  sequentialStateMachines.emplace<state::machine::Walking>(waypoints);
+  sequentialStateMachinesChild.emplace<state::machine::Walking>(waypoints);
 
-  sequentialStateMachines.emplace<state::machine::EnsureFullVitalsAndNoStatuses>();
-  sequentialStateMachines.emplace<state::machine::GmCommandSpawnAndPickItems>(pvpDescriptor_->itemRequirements);
-  sequentialStateMachines.emplace<state::machine::SpawnAndUseRepairHammerIfNecessary>();
-  sequentialStateMachines.emplace<state::machine::EnablePvpMode>();
+  sequentialStateMachinesChild.emplace<state::machine::EnsureFullVitalsAndNoStatuses>();
+  sequentialStateMachinesChild.emplace<state::machine::GmCommandSpawnAndPickItems>(pvpDescriptor_->itemRequirements);
+  sequentialStateMachinesChild.emplace<state::machine::SpawnAndUseRepairHammerIfNecessary>();
+  sequentialStateMachinesChild.emplace<state::machine::EnablePvpMode>();
 
   // Equip an avatar hat depending on which intelligence we are.
   sro::scalar_types::ReferenceObjectId avatarHatId;
@@ -306,10 +302,10 @@ void PvpManager::setPrepareForPvpStateMachine() {
   } else {
     avatarHatId = pvpDescriptor_->player2Intelligence->avatarHatRefId();
   }
-  sequentialStateMachines.emplace<state::machine::EquipItem>(avatarHatId);
+  sequentialStateMachinesChild.emplace<state::machine::EquipItem>(avatarHatId);
 
-  sequentialStateMachines.emplace<state::machine::DisableGmInvisible>();
-  sequentialStateMachines.emplace<state::machine::WaitForAllCooldownsToEnd>();
+  sequentialStateMachinesChild.emplace<state::machine::DisableGmInvisible>();
+  sequentialStateMachinesChild.emplace<state::machine::WaitForAllCooldownsToEnd>();
 }
 
 Status PvpManager::startPvp(const event::Event *event) {
@@ -326,11 +322,11 @@ Status PvpManager::startPvp(const event::Event *event) {
   if (!opponentGlobalId_) {
     throw std::runtime_error("Starting pvp but we don't have an opponent global id");
   }
-  setChildStateMachine<state::machine::IntelligenceActor>(std::move(ourIntelligence), pvpDescriptor_->pvpId, *opponentGlobalId_);
+  setChild<state::machine::IntelligenceActor>(std::move(ourIntelligence), pvpDescriptor_->pvpId, *opponentGlobalId_);
   CHAR_VLOG(2) << "  child state machine set";
-  Status result = childState_->onUpdate(event);
-  CHAR_VLOG(2) << "  child state machine run, result: " << toString(result);
-  return result;
+  const Status status = onUpdateChild(event);
+  CHAR_VLOG(2) << "  child state machine run, status: " << toString(status);
+  return status;
 }
 
 void PvpManager::resetAndNotifyReadyForAssignment() {
@@ -342,8 +338,8 @@ void PvpManager::resetAndNotifyReadyForAssignment() {
 }
 
 bool PvpManager::isPvping() const {
-  if (childState_ != nullptr) {
-    if (dynamic_cast<IntelligenceActor*>(childState_.get()) != nullptr) {
+  if (haveChild()) {
+    if (childIsType<IntelligenceActor>()) {
       return true;
     }
   }

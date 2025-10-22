@@ -77,12 +77,11 @@ Status Alchemy::onUpdate(const event::Event *event) {
     }
   }
 
-  if (childState_) {
+  if (haveChild()) {
     // Have a child state, it takes priority
-    const Status status = childState_->onUpdate(event);
+    const Status status = onUpdateChild(event);
     if (status == Status::kDone) {
-      childState_.reset();
-      bot_.sendActiveStateMachine();
+      resetChild();
     } else {
       // Dont execute anything else in this function until the child state is done
       return Status::kNotDone;
@@ -101,7 +100,7 @@ Status Alchemy::onUpdate(const event::Event *event) {
             makeItemTimedOutEventId_.reset();
           }
           // This is the item we created. Pick it up.
-          setChildStateMachine<PickItem>(entitySpawnedEvent->globalId);
+          setChild<PickItem>(entitySpawnedEvent->globalId);
           return onUpdate(event);
         }
       }
@@ -120,7 +119,7 @@ Status Alchemy::onUpdate(const event::Event *event) {
   const double distance = sro::position_math::calculateDistance2d(startPosition_, bot_.selfState()->position());
   if (distance > 25.0) {
     // Need to walk back to center.
-    setChildStateMachine<Walking>(std::vector<packet::building::NetworkReadyPosition>({packet::building::NetworkReadyPosition(startPosition_)}));
+    setChild<Walking>(std::vector<packet::building::NetworkReadyPosition>({packet::building::NetworkReadyPosition(startPosition_)}));
     return onUpdate(event);
   }
 
@@ -155,7 +154,7 @@ Status Alchemy::onUpdate(const event::Event *event) {
   if (blade->optLevel == 0) {
     // We just failed. Let's drop this sword.
     LOG(INFO) << "Want to drop blade";
-    setChildStateMachine<DropItem>(slotsWithBlade.front());
+    setChild<DropItem>(slotsWithBlade.front());
     return onUpdate(event);
   }
 

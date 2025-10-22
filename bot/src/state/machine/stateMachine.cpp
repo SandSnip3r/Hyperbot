@@ -15,16 +15,6 @@ StateMachine::~StateMachine() {
   for (const auto opcode : blockedOpcodes_) {
     bot_.proxy().unblockOpcode(opcode);
   }
-  if (destructionPromise_.has_value()) {
-    destructionPromise_->set_value();
-  }
-}
-
-std::future<void> StateMachine::getDestructionFuture() {
-  if (!destructionPromise_.has_value()) {
-    destructionPromise_.emplace();
-  }
-  return destructionPromise_->get_future();
 }
 
 void StateMachine::pushBlockedOpcode(packet::Opcode opcode) {
@@ -57,13 +47,40 @@ bool StateMachine::canMove() const {
   return !(bot_.selfState()->stunnedFromKnockback || bot_.selfState()->stunnedFromKnockdown);
 }
 
-void StateMachine::setChildStateMachine(std::unique_ptr<StateMachine> &&newChildStateMachine) {
+Status StateMachine::onUpdateChild(const event::Event *event) {
+  if (!childState_) {
+    throw std::runtime_error("Cannot run onUpdate for child state machine because we do not have a child state machine");
+  }
+  return childState_->onUpdate(event);
+}
+
+bool StateMachine::haveChild() const {
+  return static_cast<bool>(childState_);
+}
+
+void StateMachine::setChild(std::unique_ptr<StateMachine> &&newChildStateMachine) {
   childState_.reset();
   if (newChildStateMachine == nullptr) {
     throw std::runtime_error("Cannot set a nullptr child state machine");
   }
   childState_ = std::move(newChildStateMachine);
   bot_.sendActiveStateMachine();
+}
+
+void StateMachine::resetChild() {
+  childState_.reset();
+  bot_.sendActiveStateMachine();
+}
+
+SequentialStateMachines& StateMachine::getChildAsSequentialStateMachines() {
+  if (!haveChild()) {
+    throw std::runtime_error("Cannot get child as SequentialStateMachines because there is no child state machine.");
+  }
+  SequentialStateMachines *sequentialStateMachines = dynamic_cast<SequentialStateMachines*>(childState_.get());
+  if (sequentialStateMachines == nullptr) {
+    throw std::runtime_error("Cannot get child as SequentialStateMachines because the child state machine is not a SequentialStateMachines.");
+  }
+  return *sequentialStateMachines;
 }
 
 std::string StateMachine::activeStateMachineName() const {

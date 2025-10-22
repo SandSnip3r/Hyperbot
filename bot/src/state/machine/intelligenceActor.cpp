@@ -33,17 +33,16 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
     return Status::kNotDone;
   }
 
-  if (childState_ != nullptr) {
+  if (haveChild()) {
     // The child state machine didn't immediately finish.
     // Run the update.
-    const Status status = childState_->onUpdate(event);
+    const Status status = onUpdateChild(event);
     if (status == Status::kNotDone) {
       // Child state is not done, nothing to do for now.
       return status;
     }
     // Child state is done, reset it then continue to get our next action.
-    childState_.reset();
-    bot_.sendActiveStateMachine();
+    resetChild();
   }
   CHAR_VLOG(2) << "Event: " << event::toString(event->eventCode);
 
@@ -82,14 +81,13 @@ Status IntelligenceActor::onUpdate(const event::Event *event) {
   if (dynamic_cast<rl::ai::DeepLearningIntelligence*>(intelligence_.get()) != nullptr) {
     intelligence_->trainingManager().reportObservationAndAction(pvpId_, intelligence_->name(), observation, actionIndex);
   }
-  setChildStateMachine(rl::ActionSpace::buildAction(this, bot_.gameData(), opponentGlobalId_, actionIndex));
+  setChild(rl::ActionSpace::buildAction(this, bot_.gameData(), opponentGlobalId_, actionIndex));
 
   // Run one update on the child state machine to let it start.
-  const Status status = childState_->onUpdate(event);
+  const Status status = onUpdateChild(event);
   if (status == Status::kDone) {
     // If the action immediately completes, deconstruct it.
-    childState_.reset();
-    bot_.sendActiveStateMachine();
+    resetChild();
   }
 
   // We are never done.
@@ -124,7 +122,7 @@ bool IntelligenceActor::isRelevantEvent(const event::Event *event) const {
       return false;
     }
   } else if (event->eventCode == event::EventCode::kTimeout) {
-    if (childState_ == nullptr) {
+    if (!haveChild()) {
       // Apart from Actions taken, which are run as child state machines, this state machine does not have any reason to see timeouts.
       return false;
     }

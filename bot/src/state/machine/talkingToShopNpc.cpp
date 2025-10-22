@@ -170,31 +170,30 @@ Status TalkingToShopNpc::onUpdate(const event::Event *event) {
       waitingForTalkResponse_ = false;
       if (!slotsToSell_.empty()) {
         // First, sell items
-        setChildStateMachine<SellingItems>(slotsToSell_);
+        setChild<SellingItems>(slotsToSell_);
       } else {
-        setChildStateMachine<BuyingItems>(itemsToBuy_);
+        setChild<BuyingItems>(itemsToBuy_);
       }
     }
 
     // Now that we are talking to the npc, start buying items
-    if (!childState_) {
+    if (!haveChild()) {
       throw std::runtime_error("If we reach this point, the state must be SellingItems or BuyingItems");
     }
-    const Status status = childState_->onUpdate(event);
+    const Status status = onUpdateChild(event);
     if (status == Status::kNotDone) {
       // Still selling or buying items, do not continue
       return Status::kNotDone;
     }
     // Done with child state machine
-    if (dynamic_cast<const SellingItems*>(childState_.get()) != nullptr) {
+    if (childIsType<SellingItems>()) {
       // Finished selling items, switch to buying items.
       doneSellingItems_ = true;
-      setChildStateMachine<BuyingItems>(itemsToBuy_);
+      setChild<BuyingItems>(itemsToBuy_);
       return onUpdate(event);
     } else {
       doneBuyingItems_ = true;
-      childState_.reset();
-      bot_.sendActiveStateMachine();
+      resetChild();
     }
 
     // Done buying items at this point

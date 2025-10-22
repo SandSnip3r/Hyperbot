@@ -55,11 +55,11 @@ private:
 
   template<typename StateMachineType, typename ...Args>
   void possiblyOverwriteChildStateMachine(Args&& ...args) {
-    if (childState_ && dynamic_cast<Walking*>(childState_.get()) == nullptr) {
+    if (haveChild() && !childIsType<Walking>()) {
       throw std::runtime_error("Cannot overwrite a child state which is not Walking");
     }
     walkingTargetAndAttack_.reset();
-    setChildStateMachine<StateMachineType>(std::forward<Args>(args)...);
+    setChild<StateMachineType>(std::forward<Args>(args)...);
   }
 
   std::tuple<ItemList, MonsterList> getItemsAndMonstersInRange() const;

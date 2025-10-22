@@ -23,18 +23,17 @@ UseReturnScroll::UseReturnScroll(StateMachine *parent, sro::scalar_types::Storag
   if (!type_id::categories::kReturnScroll.contains(itemAsExpendable->typeId())) {
     throw std::runtime_error("Item is not a return scroll");
   }
-  setChildStateMachine<UseItem>(inventoryIndex_);
+  setChild<UseItem>(inventoryIndex_);
 }
 
 UseReturnScroll::~UseReturnScroll() {}
 
 Status UseReturnScroll::onUpdate(const event::Event *event) {
-  if (childState_) {
+  if (haveChild()) {
     // Have a child state, it takes priority
-    const Status status = childState_->onUpdate(event);
+    const Status status = onUpdateChild(event);
     if (status == Status::kDone) {
-      childState_.reset();
-      bot_.sendActiveStateMachine();
+      resetChild();
     } else {
       // Dont execute anything else in this function until the child state is done
       return Status::kNotDone;

@@ -16,14 +16,13 @@ MaybeRemoveAvatarEquipment::~MaybeRemoveAvatarEquipment() {
 }
 
 Status MaybeRemoveAvatarEquipment::onUpdate(const event::Event *event) {
-  if (childState_) {
+  if (haveChild()) {
     // Have a child state, it takes priority
-    const Status status = childState_->onUpdate(event);
+    const Status status = onUpdateChild(event);
     if (status == Status::kDone) {
       // Child state is done
       CHAR_VLOG(2) << absl::StreamFormat("Child state is done");
-      childState_.reset();
-      bot_.sendActiveStateMachine();
+      resetChild();
       if (unequipping_) {
         CHAR_VLOG(2) << "Was unequipping, now maybe need to move item to target slot";
         unequipping_ = false;
@@ -34,7 +33,7 @@ Status MaybeRemoveAvatarEquipment::onUpdate(const event::Event *event) {
         } else {
           // Now need to do one more move to the target slot.
           CHAR_VLOG(1) << absl::StreamFormat("Moving item from intermediate slot %d to target slot %d", intermediateSlot_, targetSlot);
-          setChildStateMachine<MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, intermediateSlot_),
+          setChild<MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, intermediateSlot_),
                                          sro::storage::Position(sro::storage::Storage::kInventory, targetSlot));
           return onUpdate(nullptr);
         }
@@ -63,7 +62,7 @@ Status MaybeRemoveAvatarEquipment::onUpdate(const event::Event *event) {
   intermediateSlot_ = *firstFreeSlot;
   CHAR_VLOG(1) << absl::StreamFormat("Constructing state machine to move item from avatar inventory %d to inventory %d", avatarSlot_, intermediateSlot_);
   unequipping_ = true;
-  setChildStateMachine<MoveItem>(sro::storage::Position(sro::storage::Storage::kAvatarInventory, avatarSlot_),
+  setChild<MoveItem>(sro::storage::Position(sro::storage::Storage::kAvatarInventory, avatarSlot_),
                                  sro::storage::Position(sro::storage::Storage::kInventory, intermediateSlot_));
   // TODO: Moving an item might not go to our exact target slot. We should track the item ID to be able to catch the actual destination(intermediate) slot that the item goes to so that we can then move it to the real destination slot.
   return onUpdate(nullptr);

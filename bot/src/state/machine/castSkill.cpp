@@ -145,12 +145,11 @@ Status CastSkill::onUpdate(const event::Event *event) {
     megaDebug = true;
   }
 
-  if (childState_) {
+  if (haveChild()) {
     // Have a child state, it takes priority
-    const Status status = childState_->onUpdate(event);
+    const Status status = onUpdateChild(event);
     if (status == Status::kDone) {
-      childState_.reset();
-      bot_.sendActiveStateMachine();
+      resetChild();
     } else {
       // Dont execute anything else in this function until the child state is done
       return Status::kNotDone;
@@ -288,7 +287,7 @@ Status CastSkill::onUpdate(const event::Event *event) {
 
   if (weaponSlot_) {
     // Need to move weapon, create child state to do so
-    setChildStateMachine<MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, *weaponSlot_), sro::storage::Position(sro::storage::Storage::kInventory, kWeaponInventorySlot_));
+    setChild<MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, *weaponSlot_), sro::storage::Position(sro::storage::Storage::kInventory, kWeaponInventorySlot_));
     // We assume that the child state will complete successfully, so we will reset the weaponSlot_ here
     weaponSlot_.reset();
     return onUpdate(event);
@@ -296,7 +295,7 @@ Status CastSkill::onUpdate(const event::Event *event) {
 
   if (shieldSlot_) {
     // Need to move shield, create child state to do so
-    setChildStateMachine<MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, *shieldSlot_), sro::storage::Position(sro::storage::Storage::kInventory, kShieldInventorySlot_));
+    setChild<MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, *shieldSlot_), sro::storage::Position(sro::storage::Storage::kInventory, kShieldInventorySlot_));
     // We assume that the child state will complete successfully, so we will reset the shieldSlot_ here
     shieldSlot_.reset();
     return onUpdate(event);
@@ -322,7 +321,7 @@ Status CastSkill::onUpdate(const event::Event *event) {
       if (!bot_.selfState()->skillEngine.skillIsOnCooldown(*imbueSkillRefId_)) {
         // Imbue is not on cooldown; creating child CastSkill to cast it
         CastSkillStateMachineBuilder builder(bot_, *imbueSkillRefId_);
-        setChildStateMachine(builder.create());
+        setChild(builder.create());
         return onUpdate(event);
       }
       // Imbue is not active but must be on cooldown. Need to wait for it.
@@ -347,7 +346,7 @@ Status CastSkill::onUpdate(const event::Event *event) {
           // Imbue does not have too long of a cooldown
           // TODO: Add a data structure that tracks skills which were successfully cast, which should give us a buff, but for when we haven't yet received BuffBegin. Like a "anticipated buffs" list.
           CastSkillStateMachineBuilder builder(bot_, *imbueSkillRefId_);
-          setChildStateMachine(builder.create());
+          setChild(builder.create());
           // If the timing overlaps, the buff will not be removed and re-added. Instead, the new buff will be added, there will be a brief moment where we have two instances of the same buff, and then the old one will be removed.
           return onUpdate(event);
         }

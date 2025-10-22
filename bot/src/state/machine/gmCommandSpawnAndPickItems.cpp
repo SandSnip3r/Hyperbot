@@ -32,23 +32,22 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
     initialized_ = true;
   }
 
-  if (childState_) {
-    const Status status = childState_->onUpdate(event);
+  if (haveChild()) {
+    const Status status = onUpdateChild(event);
     if (status != Status::kDone) {
       // Do not do anything else while child state machine is active.
       return Status::kNotDone;
     }
     // Child state machine is done.
-    const bool childStateWasPick = dynamic_cast<PickItem*>(childState_.get()) != nullptr;
-    const bool childStateWasWalking = dynamic_cast<Walking*>(childState_.get()) != nullptr;
-    childState_.reset();
-    bot_.sendActiveStateMachine();
+    const bool childStateWasPick = childIsType<PickItem>();
+    const bool childStateWasWalking = childIsType<Walking>();
+    resetChild();
     if (childStateWasPick) {
       CHAR_VLOG(1) << "Finished picking item";
       // If we're not at our original position, move back to it.
       if (bot_.selfState()->position() != originalPosition_) {
         CHAR_VLOG(1) << "  Moving back to original position";
-        setChildStateMachine<Walking>(std::vector<packet::building::NetworkReadyPosition>{originalPosition_});
+        setChild<Walking>(std::vector<packet::building::NetworkReadyPosition>{originalPosition_});
         return onUpdate(event);
       }
     } else if (childStateWasWalking && tryingNudgePosition_) {
@@ -86,7 +85,7 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
                 bot_.eventBroker().cancelDelayedEvent(*requestTimeoutEventId_);
                 requestTimeoutEventId_.reset();
               }
-              setChildStateMachine<PickItem>(itemEntity->globalId);
+              setChild<PickItem>(itemEntity->globalId);
               return onUpdate(event);
             } else {
               CHAR_VLOG(1) << absl::StreamFormat("Spawned item %d is too far (%f - us:%s, item:%s, original pos:%s) away to pick.", itemEntity->globalId, distance, bot_.selfState()->position().toString(), itemEntity->position().toString(), originalPosition_.toString());
@@ -125,7 +124,7 @@ Status GmCommandSpawnAndPickItems::onUpdate(const event::Event *event) {
         std::vector<packet::building::NetworkReadyPosition> steps;
         steps.push_back(sro::position_math::createNewPositionWith2dOffset(originalPosition_, 30.0, 30.0));
         steps.push_back(originalPosition_);
-        setChildStateMachine<Walking>(steps);
+        setChild<Walking>(steps);
         timeoutCount_ = 0;
         tryingNudgePosition_ = true;
         return onUpdate(event);

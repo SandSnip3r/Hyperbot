@@ -48,30 +48,30 @@ Townlooping::Townlooping(StateMachine *parent) : StateMachine(parent) {
 Townlooping::~Townlooping() {}
 
 Status Townlooping::onUpdate(const event::Event *event) {
-  if (childState_) {
-    const Status status = childState_->onUpdate(event);
+  if (haveChild()) {
+    const Status status = onUpdateChild(event);
     if (status == Status::kNotDone) {
       // Child still running, nothing to do.
       return Status::kNotDone;
     }
     // Child state is done, figure out what to do next.
-    if (dynamic_cast<Walking*>(childState_.get()) != nullptr) {
+    if (childIsType<Walking>()) {
       // Done walking, update state to have us now talk to the NPC we just arrived at.
       // Doing it this way means that there's no opportunity to cast buffs before talking to the NPC, but I think that's ok.
       if (npcsToVisit_[currentNpcIndex_] == Npc::kStorage) {
-        setChildStateMachine<TalkingToStorageNpc>();
+        setChild<TalkingToStorageNpc>();
       } else {
         if (!soldItems_) {
           // Only sell items to the first NPC
-          setChildStateMachine<TalkingToShopNpc>(npcsToVisit_[currentNpcIndex_], shoppingList_, slotsToSell_);
+          setChild<TalkingToShopNpc>(npcsToVisit_[currentNpcIndex_], shoppingList_, slotsToSell_);
           soldItems_ = true;
         } else {
-          setChildStateMachine<TalkingToShopNpc>(npcsToVisit_[currentNpcIndex_], shoppingList_);
+          setChild<TalkingToShopNpc>(npcsToVisit_[currentNpcIndex_], shoppingList_);
         }
       }
       return onUpdate(event);
-    } else if (dynamic_cast<TalkingToStorageNpc*>(childState_.get()) != nullptr ||
-               dynamic_cast<TalkingToShopNpc*>(childState_.get()) != nullptr) {
+    } else if (childIsType<TalkingToStorageNpc>() ||
+               childIsType<TalkingToShopNpc>()) {
       // We just finished with an npc, advance our state.
       ++currentNpcIndex_;
       if (done()) {
@@ -81,14 +81,13 @@ Status Townlooping::onUpdate(const event::Event *event) {
       }
       // Update our state to walk to the next npc.
       const auto pathToNpc = bot_.calculatePathToDestination(positionOfNpc(npcsToVisit_[currentNpcIndex_]));
-      setChildStateMachine<Walking>(pathToNpc);
+      setChild<Walking>(pathToNpc);
       return onUpdate(event);
-    } else if (dynamic_cast<UseReturnScroll*>(childState_.get()) != nullptr) {
+    } else if (childIsType<UseReturnScroll>()) {
       // Finished using a return scroll
       waitingForSpawn_ = true;
     }
-    childState_.reset();
-    bot_.sendActiveStateMachine();
+    resetChild();
   }
 
   if (event != nullptr) {
@@ -123,7 +122,7 @@ Status Townlooping::onUpdate(const event::Event *event) {
           throw std::runtime_error("We already used a return scroll and want to use another. Something is wrong");
         }
         // TODO: Make a decision of which to use; for now, we just use the first.
-        setChildStateMachine<UseReturnScroll>(returnScrollSlots.front());
+        setChild<UseReturnScroll>(returnScrollSlots.front());
         sanityCheckUsedReturnScroll_ = true;
         return onUpdate(event);
       }
@@ -151,13 +150,13 @@ Status Townlooping::onUpdate(const event::Event *event) {
       castSkillBuilder.withTarget(bot_.selfState()->globalId);
     }
 
-    setChildStateMachine(castSkillBuilder.create());
+    setChild(castSkillBuilder.create());
     return onUpdate(event);
   }
 
   // Done with buffs, walk to next NPC.
   const auto pathToNpc = bot_.calculatePathToDestination(positionOfNpc(npcsToVisit_[currentNpcIndex_]));
-  setChildStateMachine<Walking>(pathToNpc);
+  setChild<Walking>(pathToNpc);
   return onUpdate(event);
 }
 

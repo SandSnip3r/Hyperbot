@@ -44,15 +44,14 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
     }
   }
 
-  if (childState_ != nullptr) {
+  if (haveChild()) {
     // If we're in the middle of something, keep doing it.
-    const Status status = childState_->onUpdate(event);
+    const Status status = onUpdateChild(event);
     if (status == Status::kNotDone) {
       return status;
     }
     CHAR_VLOG(1) << "Child state machine is done";
-    childState_.reset();
-    bot_.sendActiveStateMachine();
+    resetChild();
   }
 
   if (waitForPotionEventId_) {
@@ -106,20 +105,20 @@ Status EnsureFullVitalsAndNoStatuses::onUpdate(const event::Event *event) {
   }
 
   CHAR_VLOG(1) << "Vitals are not full or there are statuses. Spawning, picking, and using " << fullVitalsItemRequirements.size() << " items";
-  setChildStateMachine<state::machine::SequentialStateMachines>();
-  state::machine::SequentialStateMachines &sequentialStateMachines = dynamic_cast<state::machine::SequentialStateMachines&>(*childState_);
-  sequentialStateMachines.emplace<state::machine::GmCommandSpawnAndPickItems>(fullVitalsItemRequirements);
+  setChild<SequentialStateMachines>();
+  SequentialStateMachines &sequentialStateMachinesChild = getChildAsSequentialStateMachines();
+  sequentialStateMachinesChild.emplace<GmCommandSpawnAndPickItems>(fullVitalsItemRequirements);
   if (spawnAndUseVigor) {
-    sequentialStateMachines.emplace<state::machine::UseItem>(vigorPotionItemId_);
+    sequentialStateMachinesChild.emplace<UseItem>(vigorPotionItemId_);
   }
   if (haveLegacyState) {
-    sequentialStateMachines.emplace<state::machine::UseItem>(universalPillItemId_);
+    sequentialStateMachinesChild.emplace<UseItem>(universalPillItemId_);
   }
   if (haveModernState) {
-    sequentialStateMachines.emplace<state::machine::UseItem>(purificationPillItemId_);
+    sequentialStateMachinesChild.emplace<UseItem>(purificationPillItemId_);
   }
   // TODO: It is not enough to simply use the item to know that our vitals are good. Shortly after using the item, we expect a vitals-changed event. If we evaluate our vitals after we used the item but before this update comes, we'll falsely assume our vitals are still bad.
-  return childState_->onUpdate(event);
+  return onUpdateChild(event);
 }
 
 } // namespace state::machine

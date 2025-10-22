@@ -22,7 +22,7 @@ Status DisableGmInvisible::onUpdate(const event::Event *event) {
     if (bot_.selfState()->bodyState() == packet::enums::BodyState::kInvisibleGm) {
       CHAR_VLOG(1) << "Constructing child state machine";
       // We just became invisible, toggle it off.
-      setChildStateMachine<ExecuteGmCommand>(packet::enums::OperatorCommand::kInvisible, packet::building::ClientAgentOperatorRequest::toggleInvisible());
+      setChild<ExecuteGmCommand>(packet::enums::OperatorCommand::kInvisible, packet::building::ClientAgentOperatorRequest::toggleInvisible());
       return onUpdate(event);
     }
   }
@@ -33,28 +33,27 @@ Status DisableGmInvisible::onUpdate(const event::Event *event) {
       if (castedEvent->globalId == bot_.selfState()->globalId) {
         if (bot_.selfState()->bodyState() == packet::enums::BodyState::kInvisibleGm) {
           CHAR_VLOG(1) << "Just received event that we've become invisible";
-          if (childState_ != nullptr) {
+          if (haveChild()) {
             CHAR_VLOG(1) << "We're already in the process of toggling invisibility, skipping";
           } else {
             CHAR_VLOG(1) << "Constructing child state machine";
             // We just became invisible, toggle it off.
-            setChildStateMachine<ExecuteGmCommand>(packet::enums::OperatorCommand::kInvisible, packet::building::ClientAgentOperatorRequest::toggleInvisible());
+            setChild<ExecuteGmCommand>(packet::enums::OperatorCommand::kInvisible, packet::building::ClientAgentOperatorRequest::toggleInvisible());
             return onUpdate(event);
           }
         } else {
-          CHAR_VLOG(1) << "Body state updated and we're not invisible. Have child? " << (childState_ != nullptr);
+          CHAR_VLOG(1) << "Body state updated and we're not invisible. Have child? " << haveChild();
           return Status::kDone;
         }
       }
     }
   }
 
-  if (childState_ != nullptr) {
+  if (haveChild()) {
     CHAR_VLOG(1) << "Running child state machine";
-    const Status status = childState_->onUpdate(event);
+    const Status status = onUpdateChild(event);
     if (status == Status::kDone) {
-      childState_.reset();
-      bot_.sendActiveStateMachine();
+      resetChild();
       CHAR_VLOG(1) << "  GM command completed";
     }
     return Status::kNotDone;

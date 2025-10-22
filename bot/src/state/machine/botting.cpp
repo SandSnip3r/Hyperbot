@@ -35,37 +35,37 @@ void Botting::initializeChildState() {
   //  there's a chance we have everything we need, then Townlooping will immediately finish and we'll move onto the next state as per the normal flow
   if (selfEntity->inTown() || bot_.needToGoToTown()) {
     LOG(INFO) << "Initializing state as Townlooping";
-    setChildStateMachine<Townlooping>();
+    setChild<Townlooping>();
   } else {
     LOG(INFO) << "Initializing state as Training";
-    setChildStateMachine<Training>(trainingAreaGeometry_->clone());
+    setChild<Training>(trainingAreaGeometry_->clone());
   }
 }
 
 Botting::~Botting() {}
 
 Status Botting::onUpdate(const event::Event *event) {
-  if (!childState_) {
+  if (!haveChild()) {
     throw std::runtime_error("Botting must always have a child state when onUpdate is called");
   }
 
   // TODO: Handle config changes.
 
-  const Status status = childState_->onUpdate(event);
+  const Status status = onUpdateChild(event);
   if (status == Status::kDone) {
     // Move on to the next thing
-    if (dynamic_cast<Townlooping*>(childState_.get())) {
+    if (childIsType<Townlooping>()) {
       // Done with the townloop, start training
       static int townloopCount = 0;
       LOG(INFO) << "Townloop count: " << ++townloopCount;
-      setChildStateMachine<Training>(trainingAreaGeometry_->clone());
-    } else if (dynamic_cast<Training*>(childState_.get())) {
+      setChild<Training>(trainingAreaGeometry_->clone());
+    } else if (childIsType<Training>()) {
       // Done training, go back to town
       std::shared_ptr<entity::Self> selfEntity = bot_.selfState();
       if (selfEntity->lifeState == sro::entity::LifeState::kDead) {
         // We died. For now, we let Townlooping figure out what to do, since Training didn't want to handle it.
       }
-      setChildStateMachine<Townlooping>();
+      setChild<Townlooping>();
     } else {
       throw std::runtime_error("Botting's child state is not valid");
     }

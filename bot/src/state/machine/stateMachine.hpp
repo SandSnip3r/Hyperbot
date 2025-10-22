@@ -5,9 +5,7 @@
 #include "packet/opcode.hpp"
 #include "shared/silkroad_security.h"
 
-#include <future>
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -30,6 +28,8 @@ enum class Npc { kStorage, kPotion, kGrocery, kBlacksmith, kProtector, kStable }
 
 enum class Status { kDone, kNotDone };
 
+class SequentialStateMachines;
+
 class StateMachine {
 public:
   StateMachine(Bot &bot);
@@ -39,7 +39,6 @@ public:
   // When this is called, `Bot` will have already processed the event.
   virtual Status onUpdate(const event::Event *event) = 0;
 
-  std::future<void> getDestructionFuture();
   virtual std::string activeStateMachineName() const;
 protected:
   Bot &bot_;
@@ -50,18 +49,45 @@ protected:
 
   bool canMove() const;
 
+  // ============ Interact with child state machine ============
+  Status onUpdateChild(const event::Event *event);
+  bool haveChild() const;
+  void setChild(std::unique_ptr<StateMachine> &&newChildStateMachine);
+  void resetChild();
+  SequentialStateMachines& getChildAsSequentialStateMachines();
+
+  template<typename StateMachineType>
+  bool childIsType() const {
+    // Since we already add a const below in the dynamic_cast, the user does not need to add a const. If this assert were not here, the redundant const would simply be ignored. I have added this assert to help the user maintain consistent code. Having mixed call sites with and without const throughout the codebase would be a bit confusing for a newcomer.
+    static_assert(!std::is_const<StateMachineType>::value, "Qualifying with const is not necessary. Please use childIsType<Type>() instead.");
+    if (!haveChild()) {
+      throw std::runtime_error("Cannot check child state machine type because we do not have a child state machine");
+    }
+    return dynamic_cast<const StateMachineType*>(childState_.get()) != nullptr;
+  }
+
   template<typename StateMachineType, typename... Args>
-  void setChildStateMachine(Args&&... args) {
+  void setChild(Args&&... args) {
     auto child = std::unique_ptr<StateMachineType>(
         new StateMachineType(this, std::forward<Args>(args)...));
-    setChildStateMachine(std::move(child));
+    setChild(std::move(child));
   }
-  void setChildStateMachine(std::unique_ptr<StateMachine> &&newChildStateMachine);
-  std::unique_ptr<StateMachine> childState_;
-private:
+
+  // template<typename StateMachineType, typename... Args>
+  // void emplaceSequentialChild(Args&&... args) {
+  //   if (!childIsType<SequentialStateMachines>()) {
+  //     throw std::runtime_error("Cannot emplace a sequential child state machine because the current child state is not a SequentialStateMachine.");
+  //   }
+  //   SequentialStateMachines &sequentialStateMachines = dynamic_cast<SequentialStateMachines&>(*childState_);
+  //   sequentialStateMachines.emplace<StateMachineType>(std::forward<Args>(args)...);
+  // }
+
+  // ===========================================================
+
+  private:
   StateMachine *parent_{nullptr};
+  std::unique_ptr<StateMachine> childState_;
   std::vector<packet::Opcode> blockedOpcodes_;
-  std::optional<std::promise<void>> destructionPromise_;
 };
 
 std::ostream& operator<<(std::ostream &stream, Npc npc);

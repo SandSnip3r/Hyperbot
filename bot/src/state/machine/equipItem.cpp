@@ -16,17 +16,22 @@ EquipItem::~EquipItem() {
 }
 
 Status EquipItem::onUpdate(const event::Event *event) {
-  if (childState_) {
-    // Delegate to child state machine
-    Status childStatus = childState_->onUpdate(event);
-    if (childStatus == Status::kNotDone) {
-      return Status::kNotDone;
+  if (haveChild()) {
+    try {
+      // Delegate to child state machine
+      Status childStatus = onUpdateChild(event);
+      if (childStatus == Status::kNotDone) {
+        return Status::kNotDone;
+      }
+      // Child state finished, we're done.
+      CHAR_VLOG(2) << "Child state finished, we're done.";
+      resetChild();
+      return Status::kDone;
+    } catch (const std::exception &ex) {
+      CHAR_LOG(ERROR) << "Exception while running MoveItem child state machine from EquipItem state machine: \"" << ex.what() << "\"";
+      CHAR_LOG(INFO) << "Resetting child and hoping everything goes fine";
+      resetChild();
     }
-    // Child state finished, we're done.
-    CHAR_VLOG(2) << "Child state finished, we're done.";
-    childState_.reset();
-    bot_.sendActiveStateMachine();
-    return Status::kDone;
   }
 
   std::optional<sro::scalar_types::StorageIndexType> itemSlot = bot_.inventory().findFirstItemWithRefId(itemRefId_);
@@ -45,7 +50,7 @@ Status EquipItem::onUpdate(const event::Event *event) {
   }
   CHAR_VLOG(1) << absl::StreamFormat("Item %s is an avatar hat, moving from inventory slot %d to avatar slot %d", bot_.gameData().getItemName(itemRefId_), *itemSlot, sro::game_constants::kAvatarHatSlot);
 
-  setChildStateMachine<state::machine::MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, *itemSlot),
+  setChild<state::machine::MoveItem>(sro::storage::Position(sro::storage::Storage::kInventory, *itemSlot),
                                                  sro::storage::Position(sro::storage::Storage::kAvatarInventory, sro::game_constants::kAvatarHatSlot));
   return onUpdate(event);
 }

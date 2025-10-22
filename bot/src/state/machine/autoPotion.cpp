@@ -28,10 +28,9 @@ Status AutoPotion::onUpdate(const event::Event *event) {
       if (lifeStateUpdateEvent->globalId == bot_.selfState()->globalId) {
         if (bot_.selfState()->lifeState == sro::entity::LifeState::kDead) {
           // We died!
-          if (childState_) {
+          if (haveChild()) {
             // We should destroy this child state.
-            childState_.reset();
-            bot_.sendActiveStateMachine();
+            resetChild();
           }
         }
       }
@@ -44,12 +43,11 @@ Status AutoPotion::onUpdate(const event::Event *event) {
   }
 
   // First, prefer to defer to child state
-  if (childState_) {
-    const Status status = childState_->onUpdate(event);
+  if (haveChild()) {
+    const Status status = onUpdateChild(event);
     if (status == Status::kDone) {
       // Must be done using an item
-      childState_.reset();
-      bot_.sendActiveStateMachine();
+      resetChild();
     } else {
       // Still using an item, nothing to do
       return Status::kNotDone;
@@ -329,10 +327,10 @@ bool AutoPotion::usePotion(const type_id::TypeCategory &potionType) {
 }
 
 void AutoPotion::useItem(sro::scalar_types::StorageIndexType itemIndex) {
-  if (childState_) {
+  if (haveChild()) {
     throw std::runtime_error("Trying to use an item, but we already have a child state");
   }
-  setChildStateMachine<UseItem>(itemIndex);
+  setChild<UseItem>(itemIndex);
 }
 
 } // namespace state::machine

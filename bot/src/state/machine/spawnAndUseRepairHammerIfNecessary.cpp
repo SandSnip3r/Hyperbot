@@ -59,18 +59,16 @@ Status SpawnAndUseRepairHammerIfNecessary::onUpdate(const event::Event *event) {
     }
   }
 
-  if (childState_ != nullptr) {
-    const Status childStatus = childState_->onUpdate(event);
+  if (haveChild()) {
+    const Status childStatus = onUpdateChild(event);
     if (childStatus == Status::kNotDone) {
       // Do not continue until our child state machine is done.
       return childStatus;
     }
     // Child state machine is done.
-    const bool wasUseItem = dynamic_cast<const UseItem*>(childState_.get()) != nullptr;
-    const bool wasGmSpawning =
-        dynamic_cast<const GmCommandSpawnAndPickItems*>(childState_.get()) != nullptr;
-    childState_.reset();
-    bot_.sendActiveStateMachine();
+    const bool wasUseItem = childIsType<UseItem>();
+    const bool wasGmSpawning = childIsType<GmCommandSpawnAndPickItems>();
+    resetChild();
     if (wasGmSpawning) {
       // We finished spawning and picking up the repair hammer.
       haveRepairHammer_ = true;
@@ -85,7 +83,7 @@ Status SpawnAndUseRepairHammerIfNecessary::onUpdate(const event::Event *event) {
     CHAR_VLOG(1) << "Need to get a repair hammer; creating state machine to spawn it with a GM command and then pick it";
     // One hammer repairs all equipment in the inventory.
     std::vector<common::ItemRequirement> repairHammerRequirements{{repairHammerRefId_, 1}};
-    setChildStateMachine<GmCommandSpawnAndPickItems>(repairHammerRequirements);
+    setChild<GmCommandSpawnAndPickItems>(repairHammerRequirements);
     return onUpdate(event);
   }
 
@@ -108,7 +106,7 @@ Status SpawnAndUseRepairHammerIfNecessary::onUpdate(const event::Event *event) {
 
   // Found the hammer.
   CHAR_VLOG(1) << "Constructing state machine to use repair hammer";
-  setChildStateMachine<UseItem>(*hammerSlot);
+  setChild<UseItem>(*hammerSlot);
   return onUpdate(event);
 }
 

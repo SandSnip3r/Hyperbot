@@ -219,15 +219,14 @@ Status Training::onUpdate(const event::Event *event) {
     }
   }
 
-  if (childState_) {
+  if (haveChild()) {
     // Either casting a skill, picking up an item ourself, picking up an item with COS, or walking somewhere.
-    const Status status = childState_->onUpdate(event);
+    const Status status = onUpdateChild(event);
     if (status == Status::kDone) {
-      childState_.reset();
-      bot_.sendActiveStateMachine();
+      resetChild();
     } else {
       // Child state is not yet done.
-      if (dynamic_cast<Walking*>(childState_.get()) == nullptr) {
+      if (!childIsType<Walking>()) {
         // The Walking state machine is always interruptable. For every other state machine, we have nothing else to do in this function.
         return Status::kNotDone;
       }
@@ -269,11 +268,11 @@ Status Training::onUpdate(const event::Event *event) {
   if (!trainingAreaGeometry_->pointIsInside(bot_.selfState()->position())) {
     // We are not in the training area.
     // Are we already walking there?
-    if (childState_ && dynamic_cast<Walking*>(childState_.get()) != nullptr) {
+    if (haveChild() && childIsType<Walking>()) {
       // We are already walking there. Nothing else to do.
       // TODO: We assume that this Walking is to the training area.
       return Status::kNotDone;
-    } else if (childState_) {
+    } else if (haveChild()) {
       throw std::runtime_error("We're not in the training area, not walking to it, all buffs are good, but we still have some child state?");
     }
 
@@ -284,7 +283,7 @@ Status Training::onUpdate(const event::Event *event) {
     }
     // Not in training area, navigating to the center of the training area
     const auto pathToTrainingAreaCenter = bot_.calculatePathToDestination(trainingAreaCircle->center());
-    setChildStateMachine<Walking>(pathToTrainingAreaCenter);
+    setChild<Walking>(pathToTrainingAreaCenter);
     return onUpdate(event);
   }
 
@@ -309,7 +308,7 @@ Status Training::onUpdate(const event::Event *event) {
 
   // TODO: Calculate if entire training geometry is visible, if so, do not explore.
   // Nothing left to do except explore the training area. Randomly walk to a point.
-  if (childState_ && dynamic_cast<Walking*>(childState_.get()) != nullptr) {
+  if (haveChild() && childIsType<Walking>()) {
     // Already walking somewhere.
     return Status::kNotDone;
   }
@@ -367,7 +366,7 @@ bool Training::tryPickItem(const ItemList &itemList) {
         bool justFinishedWalking{false};
         if (walkingToItemTarget_ && *walkingToItemTarget_ == targetItemGlobalId) {
           // We were/are walking to pick an item.
-          if (childState_) {
+          if (haveChild()) {
             // Still walking to it.
             return false;
           } else {
@@ -412,7 +411,7 @@ bool Training::tryAttackMonster(const MonsterList &monsterList) {
   }
   bool finishedWalking{false};
   if (walkingTargetAndAttack_ && walkingTargetAndAttack_->skillId == targetAndAttack->skillId && walkingTargetAndAttack_->targetId == targetAndAttack->targetId) {
-    if (childState_) {
+    if (haveChild()) {
       // We're already walking to this goal.
       return false;
     } else {
@@ -486,7 +485,7 @@ bool Training::walkToRandomPoint() {
   for (int i=0; i<kMaxTryCount; ++i) {
     try {
       const auto pathToRandomPoint = bot_.calculatePathToDestination(randomPointInGeometry(trainingAreaGeometry_.get()));
-      setChildStateMachine<Walking>(pathToRandomPoint);
+      setChild<Walking>(pathToRandomPoint);
       success = true;
       break;
     } catch (std::exception &ex) {
@@ -573,11 +572,11 @@ bool Training::checkBuffs(const SkillList &buffList) {
 }
 
 void Training::possiblyOverwriteChildStateMachine(std::unique_ptr<StateMachine> newChildStateMachine) {
-  if (childState_ && dynamic_cast<Walking*>(childState_.get()) == nullptr) {
+  if (haveChild() && !childIsType<Walking>()) {
     throw std::runtime_error("Cannot overwrite a child state which is not Walking");
   }
   walkingTargetAndAttack_.reset();
-  setChildStateMachine(std::move(newChildStateMachine));
+  setChild(std::move(newChildStateMachine));
 }
 
 std::optional<sro::Position> Training::calculateWhereToWalkToAttackEntityWithSkill(const entity::MobileEntity &entity, sro::scalar_types::ReferenceObjectId attackRefId) {
