@@ -11,6 +11,7 @@ std::unique_ptr<Action> ActionSpace::buildAction(state::machine::StateMachine *p
   actionIndex -= 1;
 
   if (actionIndex == 0) {
+     // IF-CHANGE: CommonAttack is supposed to be the second action in the action space.
     return std::make_unique<CommonAttack>(parentStateMachine, opponentGlobalId);
   }
   actionIndex -= 1;

@@ -7,6 +7,7 @@
 namespace rl {
 
 std::string Observation::toString() const {
+  // return absl::StrFormat("{our mp:%d/%d, opponent hp:%d/%d}", ourCurrentMp(),  ourMaxMp(), opponentCurrentHp(),  opponentMaxHp());
   return absl::StrFormat("{hp:%d/%d, opponentHp:%d/%d}", ourCurrentHp(),  ourMaxHp(), opponentCurrentHp(),  opponentMaxHp());
   // return absl::StrFormat("{hp:%d/%d, mp:%d/%d, opponentHp:%d/%d}", ourCurrentHp(),  ourMaxHp(), ourMpData_.currentValue(),  ourMpData_.maxValue(), opponentCurrentHp(),  opponentMaxHp());
 }
@@ -32,6 +33,14 @@ uint32_t Observation::ourCurrentHp() const {
 uint32_t Observation::ourMaxHp() const {
   return ourHpData_.maxValue();
 }
+
+// uint32_t Observation::ourCurrentMp() const {
+  // return ourMpData_.currentValue();
+// }
+
+// uint32_t Observation::ourMaxMp() const {
+  // return ourMpData_.maxValue();
+// }
 
 uint32_t Observation::opponentCurrentHp() const {
   return opponentHpData_.currentValue();

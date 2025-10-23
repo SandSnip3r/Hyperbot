@@ -37,6 +37,8 @@ public:
   // Getters for reward calculation.
   uint32_t ourCurrentHp() const;
   uint32_t ourMaxHp() const;
+  // uint32_t ourCurrentMp() const;
+  // uint32_t ourMaxMp() const;
   uint32_t opponentCurrentHp() const;
   uint32_t opponentMaxHp() const;
 
